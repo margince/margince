@@ -86,6 +86,7 @@ type HiddenWork struct {
 	PastHorizon int
 	Unlinked    int
 	Colleagues  int
+	InformsUs   int
 	// Truncated says a read stopped at its own scan bound, which makes every
 	// figure a floor. The module states why it is fatal to Clear rather than
 	// merely noted beside it.
@@ -96,7 +97,7 @@ type HiddenWork struct {
 func (h HiddenWork) Clear() bool {
 	return !h.Truncated &&
 		h.SetAside == 0 && h.NotSales == 0 && h.PastHorizon == 0 && h.Unlinked == 0 &&
-		h.Colleagues == 0
+		h.Colleagues == 0 && h.InformsUs == 0
 }
 
 // WaitingCustomer is one message nobody has answered.
@@ -246,6 +247,7 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 		PastHorizon: work.PastHorizon,
 		Unlinked:    work.Unlinked,
 		Colleagues:  work.Colleagues,
+		InformsUs:   work.InformsUs,
 		Truncated:   work.Truncated,
 		// Derived from the same struct the figures came from, so the flag and
 		// the numbers cannot disagree — a client reading `clear` over four

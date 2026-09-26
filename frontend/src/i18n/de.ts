@@ -9966,6 +9966,9 @@ export const de = {
   "worklist.hidden.colleagues": "Von den Domains deines Unternehmens",
   "worklist.hidden.colleagues.detail":
     "Wird als intern behandelt. Eine falsch eingetragene Unternehmensdomain kann einen echten Kontakt verbergen.",
+  "worklist.hidden.informsUs": "Als reine Information eingestuft",
+  "worklist.hidden.informsUs.detail":
+    "Die KI hat diese als Bericht oder Hinweis gelesen. Gezählt nur für diese Regel. Eine angenommene Anfrage wird nie ausgeblendet.",
   "worklist.hidden.notSales": "Als nicht vertriebsrelevant markiert",
   "worklist.hidden.notSales.detail":
     "Für das gesamte Unternehmen ausgeblendet. Das läuft nicht ab.",

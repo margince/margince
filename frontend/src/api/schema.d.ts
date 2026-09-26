@@ -8571,7 +8571,7 @@ export interface paths {
         /**
          * What the queue is not showing, and which rule is holding it back.
          * @description The Worklist is designed to look finite: a rep works it to the bottom and the day
-         *     is done. Five rules make a waiting customer disappear from it, and nothing on the
+         *     is done. Six rules make a waiting customer disappear from it, and nothing on the
          *     page can say whether any of them is hiding real work — a rep who marks every hard
          *     reply `not_sales` produces a page identical to a rep with a clean queue. The
          *     failure is invisible by construction, which is the one shape of defect a finite
@@ -8581,8 +8581,9 @@ export interface paths {
          *     runs, with ONE hiding rule relaxed, so a difference is attributable rather than a
          *     single number nobody can act on: a reader is told which rule to look at.
          *
-         *     THE TARGET IS ZERO, and every figure is a defect rather than a statistic. Two of
-         *     the rules are somebody's choice and two are nobody's — see each field.
+         *     THE TARGET IS ZERO, and every figure is a defect rather than a statistic. Some
+         *     rules are somebody's choice, one is a model's and the rest are nobody's — see each
+         *     field.
          *
          *     Counted under the CALLER's own visibility, like `/worklist/team`'s counts are: a
          *     figure summing rows the reader may not open would publish work they have no
@@ -8621,7 +8622,7 @@ export interface paths {
          *     guardrail could not answer while it carried counts alone.
          *
          *     A SECOND read rather than ids carried on the summary. The summary is read on every
-         *     worklist load, and four id arrays would ride every one of them; this is asked only
+         *     worklist load, and an id array per rule would ride every one of them; this is asked only
          *     when somebody clicks a figure.
          *
          *     The rows are the DIFFERENCE the figure reports: what the queue finds with this one
@@ -36507,7 +36508,7 @@ export interface components {
              * @description Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
              * @enum {string}
              */
-            rule: "set_aside" | "not_sales" | "past_horizon" | "unlinked" | "colleagues";
+            rule: "set_aside" | "not_sales" | "past_horizon" | "unlinked" | "colleagues" | "informs_us";
             rows: components["schemas"]["HiddenBacklogRow"][];
         };
         /**
@@ -36546,7 +36547,7 @@ export interface components {
              *     page. Measuring it here would mean a second copy of that baseline inside the
              *     database, drifting from the first.
              *
-             *     The four hidden figures are differences between runs of THIS query, so they
+             *     The hidden figures are differences between runs of THIS query, so they
              *     are counted the same way and the proportions hold. It is the absolute figure
              *     that is a near neighbour of the page's own count rather than equal to it.
              */
@@ -36597,11 +36598,19 @@ export interface components {
              */
             colleagues: number;
             /**
+             * @description Mail the classifier judged to ask nothing of us — a report, a receipt, a
+             *     notification — hidden by this rule alone. A MODEL'S CHOICE, and watched for
+             *     that reason: one model call's opinion about a customer's mail ends the
+             *     obligation, so a wrong verdict has to show up somewhere a lead can see it. A
+             *     request a human accepted is never hidden by it, whatever the verdict.
+             */
+            informs_us: number;
+            /**
              * @description True when a read stopped at its own scan bound, which makes every figure above
              *     it a FLOOR rather than a count.
              *
              *     The bound is on the shared statement, so the strict read and every relaxed read
-             *     clip at the same number. On a queue already at the cap all five return it, every
+             *     clip at the same number. On a queue already at the cap every read returns it, every
              *     difference is zero, and a guardrail without this flag would report a clear
              *     backlog over the installation most likely to be hiding work.
              *
@@ -51653,8 +51662,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Which hiding rule to open. The same five `GET /worklist/hidden` counts. */
-                rule: "set_aside" | "not_sales" | "past_horizon" | "unlinked" | "colleagues";
+                /** @description Which hiding rule to open. The same rules `GET /worklist/hidden` counts. */
+                rule: "set_aside" | "not_sales" | "past_horizon" | "unlinked" | "colleagues" | "informs_us";
             };
             cookie?: never;
         };

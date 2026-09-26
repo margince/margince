@@ -9187,6 +9187,7 @@ func (e HeldEntityType) Valid() bool {
 // Defines values for HiddenBacklogRowsRule.
 const (
 	HiddenBacklogRowsRuleColleagues  HiddenBacklogRowsRule = "colleagues"
+	HiddenBacklogRowsRuleInformsUs   HiddenBacklogRowsRule = "informs_us"
 	HiddenBacklogRowsRuleNotSales    HiddenBacklogRowsRule = "not_sales"
 	HiddenBacklogRowsRulePastHorizon HiddenBacklogRowsRule = "past_horizon"
 	HiddenBacklogRowsRuleSetAside    HiddenBacklogRowsRule = "set_aside"
@@ -9197,6 +9198,8 @@ const (
 func (e HiddenBacklogRowsRule) Valid() bool {
 	switch e {
 	case HiddenBacklogRowsRuleColleagues:
+		return true
+	case HiddenBacklogRowsRuleInformsUs:
 		return true
 	case HiddenBacklogRowsRuleNotSales:
 		return true
@@ -18853,6 +18856,7 @@ func (e GetWorklistParamsFilter) Valid() bool {
 // Defines values for GetHiddenBacklogRowsParamsRule.
 const (
 	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
+	GetHiddenBacklogRowsParamsRuleInformsUs   GetHiddenBacklogRowsParamsRule = "informs_us"
 	GetHiddenBacklogRowsParamsRuleNotSales    GetHiddenBacklogRowsParamsRule = "not_sales"
 	GetHiddenBacklogRowsParamsRulePastHorizon GetHiddenBacklogRowsParamsRule = "past_horizon"
 	GetHiddenBacklogRowsParamsRuleSetAside    GetHiddenBacklogRowsParamsRule = "set_aside"
@@ -18863,6 +18867,8 @@ const (
 func (e GetHiddenBacklogRowsParamsRule) Valid() bool {
 	switch e {
 	case GetHiddenBacklogRowsParamsRuleColleagues:
+		return true
+	case GetHiddenBacklogRowsParamsRuleInformsUs:
 		return true
 	case GetHiddenBacklogRowsParamsRuleNotSales:
 		return true
@@ -30693,6 +30699,13 @@ type HiddenBacklog struct {
 	// see. A contractor's genuine account at a customer must not read as internal.
 	Colleagues int `json:"colleagues"`
 
+	// InformsUs Mail the classifier judged to ask nothing of us — a report, a receipt, a
+	// notification — hidden by this rule alone. A MODEL'S CHOICE, and watched for
+	// that reason: one model call's opinion about a customer's mail ends the
+	// obligation, so a wrong verdict has to show up somewhere a lead can see it. A
+	// request a human accepted is never hidden by it, whatever the verdict.
+	InformsUs int `json:"informs_us"`
+
 	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
 	// the judgement worth watching: it hides the thread from the WHOLE workspace and
 	// never lifts, so one rep's mistake removes a customer from everybody's day
@@ -30733,7 +30746,7 @@ type HiddenBacklog struct {
 	// page. Measuring it here would mean a second copy of that baseline inside the
 	// database, drifting from the first.
 	//
-	// The four hidden figures are differences between runs of THIS query, so they
+	// The hidden figures are differences between runs of THIS query, so they
 	// are counted the same way and the proportions hold. It is the absolute figure
 	// that is a near neighbour of the page's own count rather than equal to it.
 	Shown int `json:"shown"`
@@ -30742,7 +30755,7 @@ type HiddenBacklog struct {
 	// it a FLOOR rather than a count.
 	//
 	// The bound is on the shared statement, so the strict read and every relaxed read
-	// clip at the same number. On a queue already at the cap all five return it, every
+	// clip at the same number. On a queue already at the cap every read returns it, every
 	// difference is zero, and a guardrail without this flag would report a clear
 	// backlog over the installation most likely to be hiding work.
 	//

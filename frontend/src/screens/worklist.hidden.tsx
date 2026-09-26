@@ -99,7 +99,7 @@ export function HiddenBacklogPanel({
   );
 }
 
-// The four figures.
+// One figure per hiding rule.
 //
 // Exported for its story: the panel above fetches, so a story that mounted it
 // would draw a loading skeleton and never the readings it exists to show.
@@ -145,6 +145,15 @@ export function HiddenFigures({
           count={backlog.colleagues}
           label={t("worklist.hidden.colleagues")}
           detail={t("worklist.hidden.colleagues.detail")}
+          locale={locale}
+          t={t}
+        />
+        {/* A model's judgement sits between the two: nobody chose it, and
+            it can still be wrong about a customer. */}
+        <Reading
+          count={backlog.informs_us}
+          label={t("worklist.hidden.informsUs")}
+          detail={t("worklist.hidden.informsUs.detail")}
           locale={locale}
           t={t}
         />

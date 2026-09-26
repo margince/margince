@@ -52,7 +52,7 @@ func (w attentionWaiting) Answered(
 
 // Hidden asks the module what its own hiding rules are keeping off the queue.
 //
-// A pass-through: the arithmetic is five reads of the eligibility query and
+// A pass-through: the arithmetic is one read of the eligibility query per rule and
 // belongs beside that query, not here. What this seam does is what every seam
 // here does — carry the answer across in compose's own vocabulary.
 func (w attentionWaiting) Hidden(
@@ -69,6 +69,7 @@ func (w attentionWaiting) Hidden(
 		PastHorizon: got.PastHorizon,
 		Unlinked:    got.Unlinked,
 		Colleagues:  got.Colleagues,
+		InformsUs:   got.InformsUs,
 		Truncated:   got.Truncated,
 	}, nil
 }

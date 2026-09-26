@@ -10146,6 +10146,9 @@ export const en = {
   "worklist.hidden.colleagues": "From your company’s domains",
   "worklist.hidden.colleagues.detail":
     "Treated as a colleague. A mistyped company domain can hide a real customer.",
+  "worklist.hidden.informsUs": "Judged to ask nothing",
+  "worklist.hidden.informsUs.detail":
+    "The AI read these as reports or notices. Counted for this rule alone. A request someone accepted is never hidden.",
   "worklist.hidden.notSales": "Marked not sales work",
   "worklist.hidden.notSales.detail":
     "Hidden for the whole company. This does not expire.",

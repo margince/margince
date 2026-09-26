@@ -26,6 +26,7 @@ function backlog(over: Partial<HiddenBacklog> = {}): HiddenBacklog {
     past_horizon: 0,
     unlinked: 0,
     colleagues: 0,
+    informs_us: 0,
     truncated: false,
     clear: true,
     ...over,
@@ -80,6 +81,17 @@ describe("the hidden-backlog panel", () => {
     expect(screen.getByText("3 waiting")).toBeTruthy();
     expect(screen.getByText("Marked not sales work")).toBeTruthy();
     expect(screen.getByText("7 waiting")).toBeTruthy();
+  });
+
+  // The model's own hiding rule has its figure like the others, so a wrong
+  // verdict about a customer shows up where a lead looks.
+  it("counts what the informs_us verdict holds back", async () => {
+    draw(backlog({ clear: false, informs_us: 4 }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Judged to ask nothing")).toBeTruthy(),
+    );
+    expect(screen.getByText("4 waiting")).toBeTruthy();
   });
 
   // A rule holding nothing back is not news. Four rows of zeros would bury the
