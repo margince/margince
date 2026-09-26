@@ -397,9 +397,11 @@ func writeAICertGrading(page *strings.Builder, rule string, selfJudged int, bars
 		fmt.Fprintf(page, "     %d older results were scored by the model they tested or one of its family; the\n"+
 			"     next re-check replaces them.\n", selfJudged)
 	}
-	fmt.Fprintf(page, "4. **Every score is checked %d times.** The scoring model grades every try %d times\n"+
-		"   and the middle score counts, so one odd reading can neither fail a good answer\n"+
-		"   nor pass a poor one.\n", aicert.JudgeOpinions, aicert.JudgeOpinions)
+	fmt.Fprintf(page, "4. **A close score is checked again.** The scoring model grades every try once. A\n"+
+		"   score within %d points of one of the test case's bars is asked for a second time,\n"+
+		"   and two readings more than %d apart for a third; the middle one counts (the\n"+
+		"   average, of two). So one odd reading cannot decide a close call, and a clear one\n"+
+		"   is not paid for %d times.\n", aicert.ReaskBandMargin, aicert.ReaskDisagreement, aicert.MaxJudgeOpinions)
 	page.WriteString("5. **The grade.** All the tries of a feature are then read together:\n\n")
 	page.WriteString("| Grade | Right answers | Every test case | Quality |\n|---|---|---|---|\n")
 	fmt.Fprintf(page, "| %s | at least %d of every 100 tries, and enough tries to be sure of at least %d | right in at least half its tries, and not clearly broken | good on average across all tries, even allowing for doubt |\n",
@@ -424,7 +426,10 @@ func writeAICertExactRule(page *strings.Builder, rule string, selfJudged int) {
 	page.WriteString("```text\n" + rule + "\n```\n\n")
 	page.WriteString("Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`), so\n")
 	page.WriteString("the pooled judge criterion averages every run's distance from its own case's bar.\n")
-	fmt.Fprintf(page, "Every run is graded %d times and scored at the median of the opinions that parsed.\n", aicert.JudgeOpinions)
+	fmt.Fprintf(page, "Every run is graded once, again when that score is within %d of any of its case's bands,\n"+
+		"and a third time when the two differ by more than %d, at most %d opinions; it scores at the\n"+
+		"median of the opinions that parsed (the mean of two).\n",
+		aicert.ReaskBandMargin, aicert.ReaskDisagreement, aicert.MaxJudgeOpinions)
 	fmt.Fprintf(page, "A case runs %d times, then %d more at a time up to %d while it is borderline: its pass\n"+
 		"count k of n satisfies (2k − n)² ≤ n, or its median score is within one standard\n"+
 		"error of `certified_min` or `degraded_min`. Every case extends while the pool is\n"+
@@ -497,7 +502,8 @@ func writeAICertThresholds(page *strings.Builder, bars []aiCertQualityBar) {
 		aicert.VetoPassPercent, aiCertReady, aiCertCare, aiCertReady)
 	fmt.Fprintf(page, "| Tries per test case | %d at first (`RUNS=` changes it for one run); a borderline case gets %d more at a time, up to %d |\n",
 		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
-	fmt.Fprintf(page, "| Quality opinions per try | %d, and the middle one counts |\n", aicert.JudgeOpinions)
+	fmt.Fprintf(page, "| Quality opinions per try | 1; a 2nd when it is within %d points of a bar, a 3rd when the two are more than %d apart; the middle one counts |\n",
+		aicert.ReaskBandMargin, aicert.ReaskDisagreement)
 	fmt.Fprintf(page, "| How sure every bound is | one-sided 90%% (z = %v for a pass rate, Student's t for an average score, whose spread is taken as at least %d points) |\n",
 		aicert.ConfidenceZ, aicert.JudgeScoreSDFloor)
 	for _, bar := range bars {

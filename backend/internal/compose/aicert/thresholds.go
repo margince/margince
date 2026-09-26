@@ -46,17 +46,24 @@ var tQuantile90 = [...]float64{
 const defaultRepeats = 3
 
 // adaptiveRound is how many runs a borderline case gains per extension, and
-// adaptiveMaxRuns the most any case reaches. Every run pays judgeOpinions judge
-// calls, so a case costs at most 9 candidate and 27 judge calls: nine times the
-// judge spend of three runs graded once.
+// adaptiveMaxRuns the most any case reaches: at most 9 candidate calls a case,
+// and at most maxJudgeOpinions judge calls for each.
 const (
 	adaptiveRound   = 3
 	adaptiveMaxRuns = 9
 )
 
-// judgeOpinions is how many times the judge grades every run; the run scores
-// at their median. Three is the fewest whose median outvotes one outlier.
-const judgeOpinions = 3
+// A run is graded once, and asked again only where one reading could decide
+// something: a first score within reaskBandMargin of any of its case's bands
+// earns a second, and two more than reaskDisagreement apart earn a third. The
+// run scores at the median of what it was given. Replayed over 538 journaled
+// runs graded three times each, this flipped no case and asked 5.6 opinions a
+// case instead of 12; one opinion with no re-ask flipped 3.7% of cases.
+const (
+	reaskBandMargin   = 10
+	reaskDisagreement = 5
+	maxJudgeOpinions  = 3
+)
 
 // judgeScoreSDFloor is the least standard deviation, in points, a mean's bound
 // assumes. The judge scores in steps of about ten, so three identical scores

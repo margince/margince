@@ -117,8 +117,8 @@ func TestTheJudgeIsShownTheTurnTheCandidateWasGiven(t *testing.T) {
 	}
 
 	judgeCalls := judgeFake.Calls()
-	if len(judgeCalls) != judgeOpinions {
-		t.Fatalf("the judge was called %d times, want the %d opinions this single run is scored from", len(judgeCalls), judgeOpinions)
+	if len(judgeCalls) != 1 {
+		t.Fatalf("the judge was called %d times, want the one opinion a clear score is taken on", len(judgeCalls))
 	}
 	minted := factory.lastMinted(t)
 	if !strings.Contains(string(judgeCalls[0].Payload), minted) {
@@ -197,8 +197,8 @@ func TestTheJudgeIsShownTheProductRulesAndTheExpectedAnswer(t *testing.T) {
 	}
 
 	judgeCalls := judgeFake.Calls()
-	if len(judgeCalls) != judgeOpinions {
-		t.Fatalf("the judge was called %d times, want the %d opinions this single run is scored from", len(judgeCalls), judgeOpinions)
+	if len(judgeCalls) != 1 {
+		t.Fatalf("the judge was called %d times, want the one opinion a clear score is taken on", len(judgeCalls))
 	}
 	payload := string(judgeCalls[0].Payload)
 	for what, want := range map[string]string{
@@ -242,8 +242,8 @@ func TestACheckerSpecNeverReachesTheGrader(t *testing.T) {
 	}
 
 	judgeCalls := judgeFake.Calls()
-	if len(judgeCalls) != judgeOpinions {
-		t.Fatalf("the judge was called %d times, want the %d opinions this single run is scored from", len(judgeCalls), judgeOpinions)
+	if len(judgeCalls) != 1 {
+		t.Fatalf("the judge was called %d times, want the one opinion a clear score is taken on", len(judgeCalls))
 	}
 	payload := string(judgeCalls[0].Payload)
 	if strings.Contains(payload, "Expected answer") {

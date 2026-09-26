@@ -30,7 +30,8 @@ web page — plus the answer we expect. It lives in
  │     right label? right record cited? nothing invented?           │
  │        │ pass / fail                                             │
  │        ▼                                                         │
- │  ② JUDGE (a second model) asked 3 times, the middle score counts │
+ │  ② JUDGE (a second model) asked once; again if near a bar, and a │
+ │     third time if those two disagree; the middle score counts    │
  │     sees: rubric, product rules, input, expected answer, answer  │
  │     gives: 0–100 "is it GOOD?"                                   │
  │                                                                  │
@@ -45,8 +46,11 @@ web page — plus the answer we expect. It lives in
 3. **① Is it right?** The product's own validator and the expected answer decide
    pass or fail. Strict, and no AI involved.
 4. **② Is it good?** A second model, the judge, scores the answer 0–100 against
-   the scenario's rubric. It is asked **three times** and the middle score counts,
-   so one odd reading cannot swing a result. It sees the product's rules, so it
+   the scenario's rubric. It is asked **once**. A score within 10 points of one of
+   the scenario's bars is asked for a **second** time, and two readings more than 5
+   apart for a **third**; the middle one counts (the average, of two). So one odd
+   reading cannot swing a close call, and a clear one is not paid for three times.
+   It sees the product's rules, so it
    never marks down what the product allows. It never sees ①'s verdict. Where the
    "expected answer" is a check list (phrases that must not appear) rather than a
    model answer, it is not shown to the judge at all.
@@ -134,8 +138,9 @@ refuse a real weakness.
 
 ## What a run costs
 
-Every try costs one candidate call and three judge calls, and an uncertain scenario
-can run up to 9 tries — so the judge is almost all of the cost. On the default
+Every try costs one candidate call and one to three judge calls — about 1.4 on
+average, three only on a close and contested score — and an uncertain scenario can
+run up to 9 tries, so the judge is still most of the cost. On the default
 `claude_cli` judge that is subscription usage rather than money, and the
 subscription's session limit is shared with everything else using it: keep a sweep
 to two or three tasks in parallel.

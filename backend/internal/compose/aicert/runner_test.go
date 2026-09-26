@@ -58,10 +58,10 @@ func scoreJSON(score int) string {
 
 var wideBands = Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
 
-// opinionsOf scripts every opinion runs graded runs ask the judge for, each
-// scoring score.
+// opinionsOf scripts runs graded runs' opinions, one each: score must sit more
+// than reaskBandMargin from every wideBands bar, where a run is asked once.
 func opinionsOf(score, runs int) []string {
-	return slices.Repeat([]string{scoreJSON(score)}, runs*judgeOpinions)
+	return slices.Repeat([]string{scoreJSON(score)}, runs)
 }
 
 // --- certifyTask: the real router pipeline over the offline fake ---
@@ -103,7 +103,8 @@ func TestCertifyTaskSupportedDegradedOnPartialReliability(t *testing.T) {
 		"the widget is blue and durable",
 		"off topic, no keyword here",
 	)
-	judgeFake := ai.NewFakeClient().Script(opinionsOf(70, 3)...)
+	// 70 sits on the certified bar, so each run is asked twice, and agrees.
+	judgeFake := ai.NewFakeClient().Script(slices.Repeat([]string{scoreJSON(70)}, 3*2)...)
 
 	sc := testScenario("basic", wideBands)
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
@@ -175,9 +176,9 @@ func TestCertifyTaskDegradedCandidateAttemptYieldsNoRecord(t *testing.T) {
 // cost of the judge's first call (request and response text are fixed,
 // so the fake client's deterministic "4 bytes per token" arithmetic
 // makes this exact, not approximate), then size the budget so the
-// THIRD call — the run's last opinion, still against the same judge
-// router/meter as the first two — lands at ~90% utilization: squarely
-// inside the soft-degrade band regardless of small estimation error.
+// THIRD call — the run's last opinion, which its disagreeing first two
+// earn, still against the same judge router/meter — lands at ~90%
+// utilization: squarely inside the soft-degrade band.
 func TestCertifyTaskDegradedJudgeAttemptYieldsNoRecord(t *testing.T) {
 	const candidateOutput = "the widget is blue and durable"
 	sc := testScenario("basic", wideBands)
@@ -199,7 +200,7 @@ func TestCertifyTaskDegradedJudgeAttemptYieldsNoRecord(t *testing.T) {
 	budget := 2 * call1Tokens * 10 / 9 // ~90% utilization after call 2 — inside [80%,100%)
 
 	candidateFake := ai.NewFakeClient().Script(candidateOutput)
-	judgeFake := ai.NewFakeClient().Script(opinionsOf(90, 1)...)
+	judgeFake := ai.NewFakeClient().Script(scoreJSON(72), scoreJSON(60), scoreJSON(65))
 
 	_, err = certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
@@ -233,7 +234,7 @@ func TestCertifyTaskJudgeRetriesOnceOnAParseFailureThenScores(t *testing.T) {
 		t.Fatalf("judge_score_p50 = %d, want 80 (the retry's score)", rec.JudgeScoreP50)
 	}
 	if got := rec.Scenarios[0].JudgeScores; !slices.Equal(got, []int{80}) {
-		t.Fatalf("graded scores = %v, want the one run scored 80 from its three opinions", got)
+		t.Fatalf("graded scores = %v, want the one run scored 80 from its two agreeing opinions", got)
 	}
 }
 
@@ -241,9 +242,10 @@ func TestCertifyTaskJudgeRetriesOnceOnAParseFailureThenScores(t *testing.T) {
 // to grade is left out of the judge's numbers instead of dragging them to 0.
 func TestCertifyTaskLeavesARunUngradedWhenEveryJudgeAttemptFailsToParse(t *testing.T) {
 	candidateFake := ai.NewFakeClient().Script(slices.Repeat([]string{"the widget is blue and durable"}, adaptiveMaxRuns)...)
-	// Run 2's three opinions each walk the structured policy's three attempts.
+	// Run 2 finds no opinion that parses, so it is asked all three times and
+	// each walks the structured policy's three attempts.
 	judgeFake := ai.NewFakeClient().Script(slices.Concat(opinionsOf(90, 1),
-		slices.Repeat([]string{"still not json"}, 3*judgeOpinions), opinionsOf(90, adaptiveMaxRuns-2))...)
+		slices.Repeat([]string{"still not json"}, 3*maxJudgeOpinions), opinionsOf(90, adaptiveMaxRuns-2))...)
 
 	sc := testScenario("basic", wideBands)
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{

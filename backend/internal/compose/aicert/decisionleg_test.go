@@ -75,7 +75,7 @@ func certifyWithLane(t *testing.T, lane *ai.DecisionsConfig, decider *scriptedDe
 	task := ai.TaskSiteTriage
 	census := decidingCensus(t, task, defaultWidgetForm())
 	replies := slices.Repeat([]string{"the widget is blue"}, adaptiveMaxRuns*len(scenarios))
-	scores := slices.Repeat([]string{scoreJSON(90)}, judgeOpinions*len(replies))
+	scores := opinionsOf(90, len(replies))
 	candidateFake := ai.NewFakeClient().Script(replies...)
 	judgeFake := ai.NewFakeClient().Script(scores...)
 	hooks := &certifyHooks{

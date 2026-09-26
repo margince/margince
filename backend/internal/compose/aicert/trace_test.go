@@ -85,8 +85,8 @@ func TestCertifyTaskWithTraceWritesCandidateAndJudgePayloads(t *testing.T) {
 	}
 
 	lines := readTrace(t, trace.Path)
-	if len(lines) != 1+judgeOpinions {
-		t.Fatalf("trace lines = %d, want %d (the candidate + every opinion): %+v", len(lines), 1+judgeOpinions, lines)
+	if len(lines) != 2 {
+		t.Fatalf("trace lines = %d, want 2 (the candidate + the one opinion a clear score is taken on): %+v", len(lines), lines)
 	}
 	byRole := map[string]tracedCall{}
 	for _, l := range lines {

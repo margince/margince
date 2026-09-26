@@ -141,11 +141,10 @@ type judgement struct {
 // otherwise-healthy certification run: a reply that will not parse is an
 // absent opinion, not an error and not a zero.
 //
-// No run is scored on one judge's word. One judge scored a single correct
-// answer 0, 100 and 20 across three runs, so every run is graded judgeOpinions
-// times and scored at the median of the opinions that parsed. Every run, not
-// only a low one: re-asking only below the bar lifted a low outlier and never
-// lowered a high one: a point of measured bias toward the candidate, on average.
+// A run is re-asked where one reading could decide its case, never only where
+// it scored low: re-asking only below the bar lifted a low outlier and never
+// lowered a high one. wantsAnotherOpinion states the rule; the run scores at the
+// median of the opinions that parsed, the mean of two when only two were asked.
 //
 // The served model is read back from rec's own terminal trace (never
 // resp.ServedModel directly) so it carries the same resolved identity the
@@ -163,8 +162,8 @@ func judgeScore(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Sc
 		return judgement{}, err
 	}
 	mark := rec.mark()
-	opinions := make([]opinion, 0, judgeOpinions)
-	for range judgeOpinions {
+	opinions := make([]opinion, 0, maxJudgeOpinions)
+	for len(opinions) < maxJudgeOpinions && wantsAnotherOpinion(foldOpinions(opinions).scores, sc.Expect.Bands) {
 		next, err := judgeVerdict(ctx, judge, rec, sc.Name, in, log)
 		if err != nil {
 			return judgement{}, err
@@ -182,6 +181,40 @@ func judgeScore(ctx context.Context, judge *ai.Router, rec *traceRecorder, sc Sc
 	folded := foldOpinions(opinions)
 	folded.degraded = pooled.Degraded
 	return folded, nil
+}
+
+// wantsAnotherOpinion says whether a run holding the graded scores given so far
+// is asked again. An opinion that never parsed decides nothing and is replaced,
+// within the same maxJudgeOpinions calls.
+func wantsAnotherOpinion(given []int, bands Bands) bool {
+	switch len(given) {
+	case 0:
+		return true
+	case 1:
+		return nearABand(given[0], bands)
+	case 2:
+		return absDiff(given[0], given[1]) > reaskDisagreement
+	default:
+		return false
+	}
+}
+
+// nearABand says score lies within reaskBandMargin of a bar its case is held
+// to, where a second reading could move the case across it.
+func nearABand(score int, bands Bands) bool {
+	for _, bar := range []int{bands.CertifiedMin, bands.DegradedMin, bands.Floor} {
+		if absDiff(score, bar) <= reaskBandMargin {
+			return true
+		}
+	}
+	return false
+}
+
+func absDiff(a, b int) int {
+	if a > b {
+		return a - b
+	}
+	return b - a
 }
 
 // foldOpinions scores a run at the median of its graded opinions, keeping each

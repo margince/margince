@@ -21,10 +21,13 @@ const (
 	AdaptiveMaxRuns = adaptiveMaxRuns
 )
 
-// JudgeOpinions is how many times every run is graded, and JudgeScoreSDFloor
-// the least spread an average score's bound assumes.
+// ReaskBandMargin, ReaskDisagreement and MaxJudgeOpinions are when a run is
+// graded again, and JudgeScoreSDFloor the least spread an average score's bound
+// assumes.
 const (
-	JudgeOpinions     = judgeOpinions
+	ReaskBandMargin   = reaskBandMargin
+	ReaskDisagreement = reaskDisagreement
+	MaxJudgeOpinions  = maxJudgeOpinions
 	JudgeScoreSDFloor = judgeScoreSDFloor
 )
 
