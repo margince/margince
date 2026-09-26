@@ -24,7 +24,7 @@ import (
 
 const modelPortPath = "github.com/margince/margince/backend/internal/shared/ports/model"
 
-// declaredSites is every site name the task contract declares, read from the
+// declaredSites maps the site names the task contract declares, read from the
 // table generated from it.
 func declaredSites() map[string]bool {
 	sites := map[string]bool{}

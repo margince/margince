@@ -45,7 +45,7 @@ type openRouterReasoning struct {
 	DefaultEnabled *bool `json:"default_enabled"`
 }
 
-// openRouterCatalog is every listed reasoning model's `reasoning` object, by id.
+// openRouterCatalog maps a listed reasoning model's id to its `reasoning` object.
 type openRouterCatalog map[string]openRouterReasoning
 
 // openRouterReasoningFacts is the catalog cache a binding on baseURL maps its

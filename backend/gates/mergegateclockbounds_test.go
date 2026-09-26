@@ -68,6 +68,10 @@ var clockBoundsInTheMergeGate = gatekit.Waive(map[string]string{
 		"default clock IS wall time, which is a claim about the clock's identity rather than about " +
 		"how long anything took. The tolerance is a minute against a drift that would be years, so " +
 		"no load on any machine can change the answer.",
+	"internal/compose/aicert/claudecli_unix_test.go:TestALateCLIJudgeIsKilledWithItsChildren": "tells a " +
+		"killed process group from a surviving child, which holds the call for exactly cliWaitDelay. " +
+		"The cancel fires only once the child exists, so the reading is kill-to-return alone: " +
+		"milliseconds against a bound of seconds, and the other answer is the whole delay.",
 })
 
 // isTimeCall reports whether expr is `time.<name>()`.
