@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/book.test.tsx",
+    why: "The guest deliberately selects Bangkok and the test verifies that its slot labels follow that chosen zone rather than the browser default.",
+  },
+  {
     file: "screens/ai-admin.tsx",
     why: "The allowance period resets on the server’s UTC month boundary; the card explicitly labels this operational clock UTC rather than presenting it as a record or viewer date.",
   },

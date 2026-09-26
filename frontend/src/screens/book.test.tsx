@@ -78,6 +78,7 @@ const slotName = (index: number) =>
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   window.location.hash = "";
 });
 
@@ -181,4 +182,19 @@ it("recovers the existing meeting from a used personal proposal", async () => {
     await screen.findByRole("button", { name: "View your meeting" }),
   );
   expect(window.location.hash).toContain("manage-recovered-link");
+});
+
+it("shows guest slots in the city selected from the timezone dropdown", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  const user = userEvent.setup();
+  serve();
+  mount("ada-lovelace");
+  await user.click(await screen.findByRole("combobox", { name: "Time zone" }));
+  await user.keyboard("Bangkok{Enter}");
+  const expected = formatDateTime(
+    bookingSlots[0].start,
+    "en",
+    "Asia/Bangkok",
+  ).replace(/\s+/g, " ");
+  expect(await screen.findByRole("button", { name: expected })).toBeTruthy();
 });

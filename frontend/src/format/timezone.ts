@@ -249,3 +249,43 @@ export function endOfDayInZone(dateOnly: string, zone: string): string {
     instantInZone(dateOnly, zone, 23, 59, 59) + 999,
   ).toISOString();
 }
+
+/** City-first labels keep typeahead useful; values remain IANA identifiers. */
+export function timezoneOptions(locale: string, selected: string, at: Date) {
+  const zones = new Set([
+    UTC_ZONE,
+    viewerZone(),
+    ...(typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("timeZone")
+      : []),
+    ...(selected ? [selected] : []),
+  ]);
+  const collator = new Intl.Collator(locale);
+  return Array.from(zones, (zone) => timezoneOption(locale, zone, at)).sort(
+    (left, right) => collator.compare(left.label, right.label),
+  );
+}
+
+export function timezoneOption(locale: string, zone: string, at: Date) {
+  return { value: zone, label: timezoneOptionLabel(locale, zone, at) };
+}
+
+function timezoneOptionLabel(locale: string, zone: string, at: Date): string {
+  if (zone === UTC_ZONE) return UTC_ZONE;
+  const parts = zone.replaceAll("_", " ").split("/");
+  const city = parts.pop() ?? zone;
+  const place = parts.length ? `${city} (${parts.join(" / ")})` : city;
+  try {
+    const offset = new Intl.DateTimeFormat(locale, {
+      timeZone: zone,
+      timeZoneName: "shortOffset",
+    })
+      .formatToParts(at)
+      .find((part) => part.type === "timeZoneName")?.value;
+    return offset ? `${place} · ${offset.replace("GMT", "UTC")}` : place;
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    // Preserve a saved zone when the browser's timezone database is older.
+    return place;
+  }
+}

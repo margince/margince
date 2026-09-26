@@ -8623,7 +8623,7 @@ export const en = {
   "workingHours.days": "Working days",
   "workingHours.timezone": "Timezone",
   "workingHours.timezoneHelp":
-    "Timezone for the start and end times. Prefilled from this browser.",
+    "Choose a city in the same timezone. Type its name while the list is open to jump to it. The browser timezone is used until a choice is saved.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
   "workingHours.narrowed": "Customers have fewer times to choose from.",
   "workingHours.saveFailed": "Working hours not saved",

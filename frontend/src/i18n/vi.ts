@@ -8409,7 +8409,7 @@ export const vi = {
   "workingHours.days": "Những ngày bạn làm việc",
   "workingHours.timezone": "Múi giờ của bạn",
   "workingHours.timezoneHelp":
-    "Đồng hồ dùng để đọc hai mốc giờ trên. Điền sẵn từ trình duyệt này.",
+    "Chọn một thành phố có cùng múi giờ. Nhập tên khi danh sách đang mở để chuyển đến thành phố đó. Múi giờ của trình duyệt được dùng cho đến khi lưu lựa chọn.",
   "workingHours.narrowedTitle": "Bạn nhận lịch trong ít thời gian hơn",
   "workingHours.narrowed":
     "Sẽ có ít khách tìm được giờ hẹn hơn. Đó là thay đổi bạn vừa lưu, không phải lỗi.",

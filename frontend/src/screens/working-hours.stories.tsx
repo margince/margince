@@ -72,3 +72,5 @@ export const Chosen: Story = {
     </Served>
   ),
 };
+
+export const Dark: Story = { ...Chosen, globals: { theme: "dark" } };

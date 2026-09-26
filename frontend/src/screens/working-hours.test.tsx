@@ -79,6 +79,7 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("WorkingHoursCard", () => {
@@ -121,13 +122,14 @@ describe("WorkingHoursCard", () => {
   });
 
   it("writes the days ascending, whatever order they were ticked in", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(false);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<WorkingHoursCard />);
 
     const saturday = await screen.findByLabelText("Saturday");
-    await userEvent.click(saturday);
-    await userEvent.click(
+    await user.click(saturday);
+    await user.click(
       screen.getByRole("button", { name: /save working hours/i }),
     );
 
@@ -139,6 +141,7 @@ describe("WorkingHoursCard", () => {
   });
 
   it("says what narrowing the hours will do, at the moment it is saved", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(true);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<WorkingHoursCard />);
@@ -146,8 +149,8 @@ describe("WorkingHoursCard", () => {
     // Monday to Thursday instead of Friday: one day fewer, which is a narrower
     // week however long each day is.
     const friday = await screen.findByLabelText("Friday");
-    await userEvent.click(friday);
-    await userEvent.click(
+    await user.click(friday);
+    await user.click(
       screen.getByRole("button", { name: /save working hours/i }),
     );
 
@@ -155,13 +158,14 @@ describe("WorkingHoursCard", () => {
   });
 
   it("says nothing of the kind when the week did not narrow", async () => {
+    const user = userEvent.setup();
     const backend = backendFor(true);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<WorkingHoursCard />);
 
     const saturday = await screen.findByLabelText("Saturday");
-    await userEvent.click(saturday);
-    await userEvent.click(
+    await user.click(saturday);
+    await user.click(
       screen.getByRole("button", { name: /save working hours/i }),
     );
 
@@ -169,5 +173,28 @@ describe("WorkingHoursCard", () => {
     // A warning that fires on every save is one a reader learns to skip, and
     // then it is not there on the save it was written for.
     expect(screen.queryByText(/Fewer bookable hours/i)).toBeNull();
+  });
+
+  it("chooses a city with spaces by keyboard and saves its timezone identifier", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
+    const user = userEvent.setup();
+    const backend = backendFor(true);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<WorkingHoursCard />);
+
+    const picker = await screen.findByRole("combobox", { name: "Timezone" });
+    expect(picker.textContent).toContain("Berlin (Europe)");
+    await user.click(picker);
+    await user.keyboard("New York{Enter}");
+    expect(picker.textContent).toContain("New York (America) · UTC-5");
+    await user.click(picker);
+    await user.keyboard("Bangkok{Enter}");
+    expect(picker.textContent).toContain("Bangkok (Asia) · UTC+7");
+    await user.click(
+      screen.getByRole("button", { name: /save working hours/i }),
+    );
+    await waitFor(() => expect(backend.writes()).toHaveLength(1));
+    expect(backend.writes()[0].timezone).toBe("Asia/Bangkok");
   });
 });
