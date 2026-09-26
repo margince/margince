@@ -285,6 +285,10 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sce
 	return opinion{score: verdict.Score, graded: true, servedModel: term.ServedModel}, nil
 }
 
+// bedrockClaude marks a Bedrock model id serving Claude, whatever region prefix
+// precedes it.
+const bedrockClaude = "anthropic.claude"
+
 // selfJudged reports whether the judge shares the candidate's model family — a
 // judge grading its own family's output is a weaker signal than an independent
 // one, so the record names it rather than hiding it inside an unqualified score.
@@ -292,10 +296,6 @@ func judgeVerdict(ctx context.Context, judge *ai.Router, rec *traceRecorder, sce
 // is a vendor marking its own homework. An empty identity on either side never
 // counts — that is a missing trace, not a match. The pre-run refusal (sameModel)
 // stays exact on purpose: a same-family judge is allowed, and flagged here.
-// bedrockClaude marks a Bedrock model id serving Claude, whatever region prefix
-// precedes it.
-const bedrockClaude = "anthropic.claude"
-
 func selfJudged(candidateServedModel, judgeServedModel string) bool {
 	if candidateServedModel == "" || judgeServedModel == "" {
 		return false

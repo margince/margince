@@ -346,8 +346,9 @@ AICERT_TIMEOUT ?= 90m
 # makes the grader collide with every premium-led candidate — the run checks that
 # for every resolved task up front rather than failing mid-corpus after paying.
 #
-# Cost ceiling: the judge grades a run once, again within 10 points of a band, and
-# a third time when those two differ by more than 5 — about 1.4 calls a run. A
+# Cost ceiling: the judge grades a run once, again within 10 points of a band or
+# anywhere below the floor plus 10, and a third time when those two differ by more
+# than 5 — about 1.4 calls a run, more on a model that scores low. A
 # borderline scenario extends from 3 runs to at most 9, so one scenario costs at
 # most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
 e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run
