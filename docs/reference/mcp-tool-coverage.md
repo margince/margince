@@ -42,12 +42,12 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-haiku-4-5-20251001` | 21 of 21 | 10 | 11 | 30/63 | 48% |
-| `claude-opus-5` | 21 of 21 | 19 | 2 | 57/63 | 90% |
+| `claude-opus-5` | 21 of 21 | 20 | 1 | 59/63 | 94% |
 | `claude-sonnet-5` | 21 of 21 | 16 | 5 | 45/63 | 71% |
 
 > `claude-haiku-4-5-20251001` below its bar on: case10_finish_the_import, case1_log_it, case20_put_it_in_the_board_pack, case21_what_are_we_closing, case31_wrong_word_on_the_record, case32_two_words_for_one_thing, case41_close_the_project, case42_can_i_answer_on_whatsapp, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
 
-> `claude-opus-5` below its bar on: case3_spreadsheet, case6_ask_the_company
+> `claude-opus-5` below its bar on: case3_spreadsheet
 
 > `claude-sonnet-5` below its bar on: case10_finish_the_import, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
 
@@ -149,7 +149,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The contacts are named, not their seats<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The contacts are named, not their seats<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
-| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-opus-5` | **FAIL** | 1/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-haiku-4-5-20251001` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -250,6 +250,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
+| `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
@@ -340,7 +341,6 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `preview_import` | 0.50 | 3/6 | `case3_spreadsheet` | `case10_finish_the_import`, `case3_spreadsheet` |
 | `log_activity` | 0.83 | 5/6 | — | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `search_context` | 0.33 | 1/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `commit_import` | 0.67 | 2/3 | — | `case10_finish_the_import` |
 | `list_channel_providers` | 0.67 | 2/3 | — | `case42_can_i_answer_on_whatsapp` |
 | `read_import_report` | 0.67 | 2/3 | — | `case10_finish_the_import` |

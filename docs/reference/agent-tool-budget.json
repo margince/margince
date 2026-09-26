@@ -30,7 +30,7 @@
   ],
   "catalog": {
     "tools": 77,
-    "system_frame_tokens": 448,
+    "system_frame_tokens": 516,
     "tokens": 24788,
     "median_tool_tokens": 273,
     "mean_tool_tokens": 321
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 77,
-      "tokens": 3654,
+      "tokens": 3722,
       "listing_tokens": 1917,
       "step_schema_tokens": 1288,
       "percent_of_ceiling": 11,
-      "headroom_tokens": 19556,
+      "headroom_tokens": 19488,
       "dangling_cross_references": [
         "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
@@ -75,11 +75,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 77,
-      "tokens": 5046,
+      "tokens": 5114,
       "listing_tokens": 2791,
       "step_schema_tokens": 1807,
       "percent_of_ceiling": 15,
-      "headroom_tokens": 18164,
+      "headroom_tokens": 18096,
       "dangling_cross_references": [
         "at_risk_relationships → company_coverage",
         "at_risk_relationships → intro_path_to",

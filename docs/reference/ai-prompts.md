@@ -221,7 +221,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `agent_loop` / `morning_brief`
 
-`system 9,802 B (~2,450 tok)` — rules 9,520 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
+`system 10,074 B (~2,518 tok)` — rules 9,792 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
 
 <details><summary>system prompt</summary>
 
@@ -244,6 +244,7 @@ Rules:
 - The trigger is the occurrence that started this run, not a record id: never pass it to a tool as one.
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
+- When two sources disagree, say that they disagree and name both; never invent an event that would reconcile them. Where a structured field on a record (a date, an amount, a status) disagrees with prose someone wrote, the field wins: say which one you relied on and why.
 - An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.
 - A tool that LISTS `idempotency_key` accepts it as an optional string. Same key, same result; a key reused with other arguments is refused.
 LANGUAGE
@@ -602,7 +603,7 @@ Available tools:
 
 ### `agent_loop` / `overnight_at_risk_sweep`
 
-`system 13,298 B (~3,324 tok)` — rules 13,016 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
+`system 13,570 B (~3,392 tok)` — rules 13,288 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
 
 <details><summary>system prompt</summary>
 
@@ -625,6 +626,7 @@ Rules:
 - The trigger is the occurrence that started this run, not a record id: never pass it to a tool as one.
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
+- When two sources disagree, say that they disagree and name both; never invent an event that would reconcile them. Where a structured field on a record (a date, an amount, a status) disagrees with prose someone wrote, the field wins: say which one you relied on and why.
 - An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.
 - A tool that LISTS `idempotency_key` accepts it as an optional string. Same key, same result; a key reused with other arguments is refused.
 LANGUAGE
