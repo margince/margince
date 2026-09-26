@@ -546,7 +546,6 @@ export const de = {
   "palette.searchFailedTitle": "Suche fehlgeschlagen",
   "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
   "action.newDeal": "Neuer Deal",
-  "action.readCompany": "Unternehmen einlesen",
   "action.booking": "Buchungsseite",
 
   "common.undo": "Rückgängig machen",

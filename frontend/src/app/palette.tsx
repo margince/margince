@@ -95,8 +95,8 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
-  // A read ends in saving the company, which only an admin may do (contacts'
-  // requireAnchorAdministrator); any other seat would read a site it cannot keep.
+  // Company profile draws its website card for an admin seat only, so only an
+  // admin finds the page by that card's words; any other seat would land on none.
   const isAdmin = useHoldsAdminRole();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
@@ -124,12 +124,6 @@ export function useBuiltinCommands(): Command[] {
       type: "screen",
       route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
-    const readCompany: Command = {
-      id: "action:read-company",
-      label: t("action.readCompany"),
-      type: "action",
-      route: { screen: "onboarding", id: "company" },
-    };
     const actions: Command[] = [
       {
         id: "action:new-deal",
@@ -137,7 +131,6 @@ export function useBuiltinCommands(): Command[] {
         type: "action",
         route: { screen: "deals", id: CREATE_ID },
       },
-      ...(isAdmin ? [readCompany] : []),
       {
         id: "action:booking",
         label: t("action.booking"),
@@ -157,7 +150,13 @@ export function useBuiltinCommands(): Command[] {
     const settingsScreens: Command[] = visible.map((page) => ({
       id: `screen:settings-${page.id}`,
       label: t(`settings.tab.${page.id}`),
-      keywords: [page.id, ...(SETTINGS_ALIASES[page.id] ?? [])],
+      keywords: [
+        page.id,
+        ...(SETTINGS_ALIASES[page.id] ?? []),
+        ...(page.id === "company" && isAdmin
+          ? [t("settings.companyRefresh")]
+          : []),
+      ],
       type: "screen",
       route: settingsHref(page.id),
     }));

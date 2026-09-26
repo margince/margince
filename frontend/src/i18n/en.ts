@@ -553,7 +553,6 @@ export const en = {
   "palette.searchFailedTitle": "Search failed",
   "palette.searchFailed": "The commands above still work.",
   "action.newDeal": "New deal",
-  "action.readCompany": "Read a company",
   "action.booking": "Booking page",
 
   "common.undo": "Undo",
