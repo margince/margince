@@ -144,7 +144,7 @@ It also lists every settings page you may open, and **Scheduled messages**. It k
 Its first row is always **Ask your documents**.
 
 ### How do I open the command palette?
-To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux, from any screen.
+To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux, from any screen while no dialog is open.
 You can also click the search field **Search or ask Margince** in the top bar.
 Press ⌘K again, or Esc, to close it.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.

@@ -4424,7 +4424,7 @@ export const de = {
   "agent.line.justNow": "gerade eben",
   "agent.setting.edgeLight": "Leuchtender Bildschirmrand",
   "agent.tip.day": "Aufgaben, Freigaben und Duplikate stehen unter {name}.",
-  "agent.tip.ask": "Frage den Agenten überall mit ⌘K.",
+  "agent.tip.ask": "Frage den Agenten mit {chord}.",
   "agent.tip.recap": "Öffne den Agentenbereich für die heutige Aktivität.",
   "agent.tip.edge": "Der Bildschirmrand leuchtet, während der Agent arbeitet.",
 

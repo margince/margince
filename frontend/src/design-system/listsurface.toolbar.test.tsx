@@ -9,10 +9,12 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { precedes } from "../testing/domorder";
+import { Heading } from "./heading";
 import { type ListChip, ListSurface, type SortOption } from "./listsurface";
+import { Modal } from "./modal";
 
 // The toolbar as a reader meets it: what the sort dial SAYS without being
 // opened, which triggers promise a list behind them, the order the row is read
@@ -247,6 +249,29 @@ it("closes the whole menu on Escape, from either step", async () => {
   expect(
     screen.getByLabelText("Filter", { selector: "fieldset" }),
   ).toHaveAttribute("inert");
+});
+
+it("leaves Escape to a dialog raised over the open menu", async () => {
+  const onDialogClose = vi.fn();
+  const page = (dialogOpen: boolean) => (
+    <LocaleProvider initial="en">
+      <Surface />
+      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+        <Heading size="large" id="edit">
+          Edit deal
+        </Heading>
+      </Modal>
+    </LocaleProvider>
+  );
+  const user = userEvent.setup();
+  const { rerender } = rtlRender(page(false));
+  await user.click(filterTrigger());
+  rerender(page(true));
+
+  await user.keyboard("{Escape}");
+
+  expect(onDialogClose).toHaveBeenCalledOnce();
+  expect(filterTrigger()).toHaveAttribute("aria-expanded", "true");
 });
 
 // The count gives way on screen, never in the text: however narrow the row, the

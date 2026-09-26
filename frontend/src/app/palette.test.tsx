@@ -558,6 +558,23 @@ describe("the palette hotkey", () => {
     expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
+  it("opens the palette again while its own exit is still playing", async () => {
+    const exits = holdExits();
+    try {
+      render(<ShellWithDialog dialogOpen={false} />);
+      const user = userEvent.setup();
+      await user.keyboard("{Meta>}k{/Meta}");
+      await user.keyboard("{Escape}");
+      expect(document.querySelector(".palette-overlay[inert]")).not.toBeNull();
+
+      await user.keyboard("{Meta>}k{/Meta}");
+      const input = screen.getByRole("searchbox");
+      expect(input.closest("[inert]")).toBeNull();
+    } finally {
+      exits.mockRestore();
+    }
+  });
+
   it("opens over a dialog that is already on its way out", async () => {
     const exits = holdExits();
     try {

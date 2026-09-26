@@ -8,7 +8,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { Heading } from "./heading";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
+import { Modal } from "./modal";
 import { Popover } from "./popover";
 
 afterEach(() => {
@@ -66,6 +68,31 @@ it("closes on Escape and hands focus back to the trigger", async () => {
 
   expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
   expect(document.activeElement).toBe(trigger);
+});
+
+// A dialog raised over an open aside owns Escape: the aside answering too
+// closed the layer the reader cannot see and left the one they can.
+it("leaves Escape to a dialog raised over it", async () => {
+  const onDialogClose = vi.fn();
+  const page = (dialogOpen: boolean) => (
+    <>
+      <Popover label="How it stands">Two of three invoices are late.</Popover>
+      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+        <Heading size="large" id="edit">
+          Edit deal
+        </Heading>
+      </Modal>
+    </>
+  );
+  const user = userEvent.setup();
+  const { rerender } = render(page(false));
+  await user.click(screen.getByRole("button", { name: "How it stands" }));
+  rerender(page(true));
+
+  await user.keyboard("{Escape}");
+
+  expect(onDialogClose).toHaveBeenCalledOnce();
+  expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
 });
 
 it("closes when the reader clicks away from it", async () => {

@@ -7,6 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "../design-system/heading";
+import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { AccountMenu } from "./account";
 import { meFixture } from "./mefixture";
@@ -38,11 +40,13 @@ const render = (ui: Parameters<typeof rtlRender>[0]) => {
     defaultOptions: { queries: { retry: false } },
   });
   client.setQueryData(["me"], meFixture());
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
 };
 
 // The same shell, with this reader carrying a different display name and the
@@ -278,6 +282,31 @@ describe("AccountMenu", () => {
 
     await user.keyboard("{ArrowDown}");
     expect(stops()).toEqual([row("Theme")]);
+  });
+
+  // A dialog raised over the open menu owns Escape: one press closes the
+  // dialog alone, not it and the menu the reader cannot see under it.
+  it("leaves Escape to a dialog raised over it", async () => {
+    const onDialogClose = vi.fn();
+    const page = (dialogOpen: boolean) => (
+      <>
+        <AccountMenu />
+        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+          <Heading size="large" id="edit">
+            Edit deal
+          </Heading>
+        </Modal>
+      </>
+    );
+    const user = userEvent.setup();
+    const { container, rerender } = render(page(false));
+    await openMenu(user, railTrigger());
+    rerender(page(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(container.querySelector(".accountmenu")).not.toBeNull();
   });
 
   it("hands focus back to the trigger when Escape closes it", async () => {

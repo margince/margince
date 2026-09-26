@@ -149,6 +149,16 @@ export function liveDialogs(): HTMLElement[] {
   ].filter((layer) => layer.closest("[inert]") === null);
 }
 
+/**
+ * Whether a live dialog the element is not inside sits on top. A layer under
+ * one leaves Escape to it; a layer opened from inside the dialog keeps its own.
+ */
+export function coveredByDialog(element: Element | null): boolean {
+  const layers = liveDialogs();
+  const top = layers[layers.length - 1];
+  return top !== undefined && !top.contains(element);
+}
+
 function ownsKeyboard(container: HTMLElement | null): boolean {
   const layers = liveDialogs();
   const top = layers[layers.length - 1];
