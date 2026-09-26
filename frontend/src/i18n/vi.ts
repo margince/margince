@@ -2915,8 +2915,8 @@ export const vi = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.filterOwnerMe": "Deal của tôi",
-  "deals.totalsNeedOwnerFilter":
-    "Chỉ phần đã tải — chọn Deal của tôi để xem tổng",
+  "deals.totalsOwnerNotMeasurable":
+    "Chỉ phần đã tải — bạn không được xem tổng của người phụ trách này",
   "deals.totalsNoTagFilter": "Chỉ phần đã tải — không có tổng khi lọc theo thẻ",
   "deals.filterPartner": "Đối tác",
   "deals.filterPartnerAnyOne": "Mọi đối tác",

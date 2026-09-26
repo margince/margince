@@ -380,6 +380,8 @@ function stubBackend(
     pipelines?: components["schemas"]["Pipeline"][];
     agentTools?: components["schemas"]["AgentTool"][];
     stageTotalsRows?: Record<string, unknown>[];
+    // Answers the totals report with this status and a problem body instead.
+    stageTotalsStatus?: number;
     onStageTotalsBody?: (body: unknown) => void;
     savedViews?: Record<string, unknown>[];
     onCreateView?: (body: unknown) => void;
@@ -464,6 +466,12 @@ function stubBackend(
         ? await request.json()
         : JSON.parse(String(init?.body));
       opts.onStageTotalsBody?.(body);
+      if (opts.stageTotalsStatus) {
+        return jsonResponse(
+          { status: opts.stageTotalsStatus, title: "Forbidden" },
+          opts.stageTotalsStatus,
+        );
+      }
       return jsonResponse({
         report: "deals-by-stage",
         plan: {},
@@ -1086,17 +1094,7 @@ describe("DealsScreen", () => {
   // cards. The seeded card's own amount×probability would give a different,
   // WRONG figure if the board still computed it client-side — this proves
   // it renders the server's number instead.
-  // The board asks for stage totals only while the owner filter names the
-  // viewer, because that is the only selection under which the report's
-  // population and the board's card list are the same set of deals. Every test
-  // below whose subject IS the totals request has to put the board in that
-  // state first, the way a reader does by choosing "My deals".
-  function narrowToMyDeals() {
-    window.location.hash = "#/deals?owner_id=u-me";
-  }
-
   it("renders the board's column total from the deals-by-stage report, not from the loaded cards", async () => {
-    narrowToMyDeals();
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({ id: "a", stage_id: "s1", amount_minor: 1 })], {
@@ -1124,14 +1122,9 @@ describe("DealsScreen", () => {
     expect(screen.getByText("250 deals")).toBeTruthy();
   });
 
-  // The defect this guard exists for: `GET /deals` returns every deal the
-  // reader may SEE, while the deals-by-stage report measures the caller's OWN
-  // population. A Qualified column said "1 deal" over eight cards because the
-  // header counted the reader's one and the board drew all eight.
-  //
-  // With no owner filter the two sets differ, so the board asks for no total
-  // and says why, rather than printing a number it did not measure.
-  it("asks for no stage total, and says so, until the owner filter names the viewer", async () => {
+  // The report measures every deal the reader may see, which is the set the
+  // board draws as cards, so no owner filter is needed for a total.
+  it("asks for the stage totals with no owner filter set", async () => {
     let totalsAsked = false;
     vi.stubGlobal(
       "fetch",
@@ -1142,26 +1135,36 @@ describe("DealsScreen", () => {
       }),
     );
     render(<DealsScreen />);
-    await waitFor(() =>
-      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
-    );
+    await waitFor(() => expect(totalsAsked).toBe(true));
+  });
 
-    expect(totalsAsked).toBe(false);
-    // Once per stage column that holds a deal, exactly — here only s1. A
-    // column with cards owes the reader a reason where its figure would be; an
+  // An owner dial on somebody this reader may not measure is refused by the
+  // server. The column says so rather than printing the loaded cards' count as
+  // though it were the total.
+  it("says the owner is outside what the reader may measure when the totals are refused", async () => {
+    window.location.hash = "#/deals?owner_id=u-colleague";
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ id: "a", stage_id: "s1" })], {
+        stageTotalsStatus: 403,
+      }),
+    );
+    render(<DealsScreen />);
+    // Once per stage column that holds a deal, exactly — here only s1. An
     // empty column has no sum to refuse, and a board of empty columns each
     // repeating the sentence read as a board of errors.
-    expect(
-      screen.getAllByText(
-        "Loaded deals only. Filter to My deals for the total.",
-      ).length,
-    ).toBe(1);
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(
+          "Loaded deals only. This owner’s totals are outside what you may measure.",
+        ).length,
+      ).toBe(1),
+    );
   });
 
   // A tag filter withholds totals too — the report has no tag field and sending
-  // one is a 422 — and it must say THAT, not tell the reader to press an owner
-  // filter they may already have pressed.
-  it("names the tag filter, not the owner filter, when a tag is what withheld the total", async () => {
+  // one is a 422 — and it must say THAT.
+  it("names the tag filter when a tag is what withheld the total", async () => {
     window.location.hash = "#/deals?owner_id=u-me&tag_id=t1";
     vi.stubGlobal("fetch", stubBackend([deal({ id: "a", stage_id: "s1" })]));
     render(<DealsScreen />);
@@ -1175,15 +1178,9 @@ describe("DealsScreen", () => {
         "Loaded deals only. No total while a tag filter is on.",
       ).length,
     ).toBe(1);
-    expect(
-      screen.queryByText(
-        "Loaded deals only. Filter to My deals for the total.",
-      ),
-    ).toBeNull();
   });
 
   it("sends the board's active filters to the deals-by-stage totals request", async () => {
-    narrowToMyDeals();
     let sentBody: unknown;
     vi.stubGlobal(
       "fetch",
@@ -2375,13 +2372,6 @@ describe("the partner filter", () => {
       return stubBackend([d], { single: d })(request);
     });
 
-    // The owner filter comes from the address rather than from a click,
-    // because it is this test's PRECONDITION and not its subject: totals are
-    // asked for only while it names the viewer, so without it there is no
-    // report body for the partner assertion to inspect. A reader reaches the
-    // same state by choosing "My deals", and the case that covers that choice
-    // is the withheld-total one above.
-    window.location.hash = "#/deals?owner_id=u-me";
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
     await userEvent.click(screen.getByRole("button", { name: "Table" }));

@@ -357,32 +357,27 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // have told a reader whose report answered 422 to press a filter instead of
 // showing them the failure.
 //
-// The two reasons:
-//
 // A TAG has no filter field on the report — sending one is a 422 — so the
-// totals would count deals the board is not showing.
-//
-// The POPULATION differs unless the owner filter names the viewer. `GET /deals`
-// returns every deal the reader may SEE, a deal being readable by every seat,
-// while the report engine narrows to the caller's OWN records (reportwhere.go
-// applies a population clause on top of row scope, precisely because a deal is
-// an identity table whose row scope renders TRUE). On the demo installation
-// that is 35 open deals as cards against 7 in the header — the "1 deal" over
-// eight cards the rehearsal found.
-function totalsWithheldBecause(
-  f: DealFilters,
-  viewerID: string | undefined,
-): MessageKey | undefined {
+// totals would count deals the board is not showing. Every other dial is one
+// the report takes, and the report measures every deal the reader may see,
+// which is the set `GET /deals` draws as cards.
+function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
-  }
-  if (viewerID === undefined || f.filters.owner_id !== viewerID) {
-    return "deals.totalsNeedOwnerFilter";
   }
   return undefined;
 }
 
-function useStageTotals(f: DealFilters, viewerID: string | undefined) {
+// The one reason the SERVER decides: an owner dial naming somebody whose
+// totals this reader may not measure answers 403. The cards stay, because
+// reading a deal and measuring its owner are different permissions.
+function totalsRefusedBecause(
+  totals: Map<string, StageTotals> | null | undefined,
+): MessageKey | undefined {
+  return totals === null ? "deals.totalsOwnerNotMeasurable" : undefined;
+}
+
+function useStageTotals(f: DealFilters) {
   return useQuery({
     // Under ["deals"] on purpose, so the ONE invalidation every deal mutation
     // already fires refreshes the column headers along with the cards. Keyed
@@ -394,9 +389,9 @@ function useStageTotals(f: DealFilters, viewerID: string | undefined) {
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: totalsWithheldBecause(f, viewerID) === undefined,
-    queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
+    enabled: totalsWithheldBecause(f) === undefined,
+    queryFn: async (): Promise<Map<string, StageTotals> | null> => {
+      const { data, error, response } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
         body: {
           group_by: ["stage_id", "currency"],
@@ -413,6 +408,9 @@ function useStageTotals(f: DealFilters, viewerID: string | undefined) {
         },
       });
       if (error) {
+        if (response.status === 403) {
+          return null;
+        }
         throwProblem(error);
       }
       return buildStageTotals(data.rows);
@@ -2067,13 +2065,12 @@ export function DealsScreen({
   // over EVERY matching deal, not just the capped page useDeals fetches —
   // built from the SAME filter dials so cards and totals never disagree
   // about which deals are in view.
-  const stageTotalsQuery = useStageTotals(dealFilters, meQuery.data?.user.id);
+  const stageTotalsQuery = useStageTotals(dealFilters);
   // The same answer the query keys its `enabled` on, so the column explains the
   // absence by the rule that caused it.
-  const totalsWithheld = totalsWithheldBecause(
-    dealFilters,
-    meQuery.data?.user.id,
-  );
+  const totalsWithheld =
+    totalsWithheldBecause(dealFilters) ??
+    totalsRefusedBecause(stageTotalsQuery.data);
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   // The deal that just closed, while the review is on offer for it. Separate
   // from `pending`, which is the question BEFORE the close; this is the offer

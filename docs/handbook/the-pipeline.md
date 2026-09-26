@@ -268,10 +268,14 @@ totals are computed over **every** matching deal, not just the loaded page.
 Each column header carries the stage name, its win probability, how many deals
 are in it, the stage total, and beneath it the weighted total.
 
-The two totals are withheld when a tag filter is applied ("Loaded deals only.
-No total while a tag filter is on.") or when the list is not filtered to **My
-deals** ("Loaded deals only. Filter to My deals for the total."). A partial
-total presented as a whole one is the error that rule exists to prevent.
+The totals count every deal you may see, which are the deals the board draws
+as cards. They are withheld when a tag filter is applied ("Loaded deals only.
+No total while a tag filter is on."). They are also withheld when the owner
+filter names somebody whose figures you may not measure ("Loaded deals only.
+This owner’s totals are outside what you may measure."). You may measure
+yourself, the members of teams you manage, and anyone if your access covers
+the whole company. A partial total presented as a whole one is the error these
+rules exist to prevent.
 
 Every deal report has an **Explain this number** control that shows the rows the
 figure was built from. If a number looks wrong, open it rather than guessing.

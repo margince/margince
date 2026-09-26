@@ -470,6 +470,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "deals.bulkOwner",
     "deals.bulkOwnerPick",
     "deals.filterOwnerAll",
+    "deals.totalsOwnerNotMeasurable",
     "email.detail.bccWithheld",
     "extAccess.versionSkew",
     "files.originUnknown",

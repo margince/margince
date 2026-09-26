@@ -2996,8 +2996,8 @@ export const en = {
   // server aggregate the column's figure is the cards LOADED, and the board
   // pages on demand, so that number grows as the reader presses Load more.
   // Naming only the total would leave the count reading as final.
-  "deals.totalsNeedOwnerFilter":
-    "Loaded deals only. Filter to My deals for the total.",
+  "deals.totalsOwnerNotMeasurable":
+    "Loaded deals only. This owner’s totals are outside what you may measure.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
   "deals.filterPartner": "Partner",

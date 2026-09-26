@@ -2934,8 +2934,8 @@ export const de = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
   "deals.filterOwnerMe": "Meine Deals",
-  "deals.totalsNeedOwnerFilter":
-    "Nur geladene Deals. Für die Summe nach „Meine Deals“ filtern.",
+  "deals.totalsOwnerNotMeasurable":
+    "Nur geladene Deals. Die Summen dieses Zuständigen darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.filterPartner": "Partner",
