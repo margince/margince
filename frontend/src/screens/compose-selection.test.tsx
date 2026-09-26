@@ -144,13 +144,17 @@ it("selects the exact message, normalizes the reply subject, and restores each d
   const requests = setup();
   writeMessage("Body", "My new email");
   await user.click(await screen.findByRole("button", { name: /Pricing/ }));
-  await screen.findByDisplayValue("Re: Pricing");
-  await waitFor(() => expect(messageText("Body")).toBe(""));
+  await waitFor(() => {
+    expect(screen.getByDisplayValue("Re: Pricing")).toBeTruthy();
+    expect(messageText("Body")).toBe("");
+  });
   writeMessage("Body", "Answer to pricing");
   await user.click(screen.getByRole("button", { name: /Re: Delivery/ }));
-  await screen.findByDisplayValue("Re: Delivery");
+  await waitFor(() => {
+    expect(screen.getByDisplayValue("Re: Delivery")).toBeTruthy();
+    expect(messageText("Body")).toBe("");
+  });
   expect(screen.getByText(/Following up on your email/)).toBeTruthy();
-  await waitFor(() => expect(messageText("Body")).toBe(""));
   await user.click(screen.getByRole("button", { name: "Draft reply with AI" }));
   await waitFor(() => expect(messageText("Body")).toBe("The generated reply."));
   expect(
