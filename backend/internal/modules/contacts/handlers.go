@@ -48,11 +48,14 @@ type Handlers struct {
 	// through. Allocated once here rather than lazily, so a stream that never
 	// calls WithBlobstore still holds a usable, if unused, map.
 	logoWritesInFlight *sync.Map
+	// tightLogos is the legacy keys this process has seen need no crop, shared
+	// across With* copies for the same reason as the map above.
+	tightLogos *tightLogoKeys
 }
 
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
 func NewHandlers(db *database.DB) Handlers {
-	return Handlers{store: NewStore(db), logoWritesInFlight: &sync.Map{}}
+	return Handlers{store: NewStore(db), logoWritesInFlight: &sync.Map{}, tightLogos: newTightLogoKeys()}
 }
 
 // WithMatchStager wires the pass that turns this member's suggested LinkedIn

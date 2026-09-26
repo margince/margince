@@ -17,10 +17,10 @@ import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import type { CompanyNaming } from "./dealcompanymarks";
 import {
   buildColumns,
   buildStageTotals,
-  type CompanyNaming,
   DealScreen,
   DealsScreen,
   mapDealCreate,

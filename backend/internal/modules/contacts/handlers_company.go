@@ -52,6 +52,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 		RelationshipType: enumArg(params.RelationshipType),
 		Domain:           params.Domain,
 		TagIDs:           uuidArgs(params.TagId),
+		IDs:              uuidArgs(params.Id),
 	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {

@@ -288,6 +288,21 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	}
 }
 
+func TestAMarkAWebsiteReadResolvesIsStoredWithoutItsTransparentCanvas(t *testing.T) {
+	e := integration.Setup(t)
+	site := &assetSite{assets: map[string][]byte{touchIconURL: letterboxedFixture(t, 256)}}
+	blob := blobstore.NewMemory()
+	args := readTheOnboardingSite(t, e, onboardingLogoWorker(e, site, blob))
+
+	key, _ := parkedLogo(t, e, args.SiteReadID)
+	if key == nil || *key == "" {
+		t.Fatal("the dossier parked no mark")
+	}
+	if bounds := storedBounds(t, blob, *key); bounds.Dx() != 256 || bounds.Dy() != 64 {
+		t.Fatalf("the parked mark is %dx%d, want the 256x64 wordmark without its canvas", bounds.Dx(), bounds.Dy())
+	}
+}
+
 func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 	// The confirmation HANDS the object over; it does not share it. Two rows
 	// naming one key would let the next resolve of this company supersede

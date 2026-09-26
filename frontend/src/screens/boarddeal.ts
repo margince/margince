@@ -11,7 +11,7 @@ import type { components } from "../api/schema";
 import { routeHash } from "../app/router";
 import type { BoardDeal, BoardDealMail } from "../design-system/composed";
 import { idleSince } from "../format/idlebase";
-import type { CompanyNaming } from "./deals";
+import type { CompanyNaming } from "./dealcompanymarks";
 import type { OwnerNaming } from "./entityref";
 
 type Deal = components["schemas"]["Deal"];

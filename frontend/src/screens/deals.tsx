@@ -1,7 +1,6 @@
 import {
   useInfiniteQuery,
   useMutation,
-  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -123,6 +122,7 @@ import { DealRoomTab } from "./deal360/dealroomtab";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
+import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import { dealMailAside, lastMailColumn } from "./dealmailaside";
@@ -419,34 +419,6 @@ function useStageTotals(f: DealFilters, viewerID: string | undefined) {
     },
   });
 }
-
-/** A company's display name and the mark drawn beside it. */
-type CompanyMark = { name: string; logoUrl?: string | null };
-
-/**
- * Every company the loaded deals name, id → mark (`useCompanyMarks` resolves them).
- *
- * A company this reader may not read is in no map: the wire sends
- * `company_id` as null and names it in `masked_fields`, so what the card
- * needs there is the withheld READING, which the card itself spells as the mask
- * — not a name this screen could supply.
- */
-export type CompanyMarks = ReadonlyMap<string, CompanyMark>;
-
-/**
- * What the screen knows about the companies its deals name.
- *
- * `unreadable` is the reading the board used to lose. A read that FAILED — a
- * 403 because the reader holds row visibility of the company but no
- * `company:read` grant, a 5xx, a dropped connection — is not the same fact
- * as a deal that names no company, and collapsing the two told the reader the
- * most misleading of the two. The table has always had this reading through
- * `EntityRef`'s failed state; this is the board's half of it.
- */
-export type CompanyNaming = Readonly<{
-  marks: CompanyMarks;
-  unreadable: ReadonlySet<string>;
-}>;
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
 type CreateDealRequest = components["schemas"]["CreateDealRequest"];
@@ -1139,95 +1111,6 @@ export function buildStageTotals(
     });
   }
   return totals;
-}
-
-/**
- * The company marks the board draws, for every company its cards name.
- *
- * The create form's picker reads ONE capped page of companies, and the
- * board took its marks from exactly that page — so a deal whose company fell
- * outside it drew a card with no company row at all, which a reader reads as a
- * deal nobody has linked. The set that has to be resolvable is the set the
- * loaded deals actually name, so the ids that page did not cover are read one
- * at a time and cached per id: reading the same board again, or scrolling back
- * over the same companies, costs no further request.
- *
- * A withheld company is never among them — the wire sends no id to read — so
- * this cannot turn a mask into a name.
- */
-export function useCompanyMarks(
-  deals: Deal[],
-  page: Company[],
-  pageSettled: boolean,
-): CompanyNaming {
-  const fromPage = new Map<string, CompanyMark>(
-    page.map((company) => [
-      company.id,
-      { name: company.display_name, logoUrl: company.logo_url },
-    ]),
-  );
-  // Nothing is fanned out until the picker's page has ANSWERED. The two reads
-  // are issued together and settle in no fixed order, so on every render where
-  // the deals have arrived and the companies have not, `fromPage` is empty
-  // and every company a loaded deal names looks unresolved — one request each,
-  // for a page that is about to answer most of them. A cold board paint fired
-  // up to a hundred, and nothing un-sends a request.
-  const unnamed = pageSettled
-    ? [
-        ...new Set(
-          deals.flatMap((deal) =>
-            deal.company_id && !fromPage.has(deal.company_id)
-              ? [deal.company_id]
-              : [],
-          ),
-        ),
-      ]
-    : [];
-  const reads = useQueries({
-    queries: unnamed.map((id) => ({
-      queryKey: ["companies", "mark", id],
-      queryFn: async (): Promise<CompanyMark | null> => {
-        const { data, error, response } = await api.GET("/companies/{id}", {
-          params: { path: { id } },
-        });
-        if (error) {
-          // A 404 is an ANSWER — the company is archived, or row scope hides
-          // its existence from this reader — and no retry turns it into a
-          // name, so the card has no company to draw. Every other failure is a
-          // read that never arrived and throws, so it is held as an error
-          // rather than settled as an absence. The same rule the shared
-          // reference resolver states (screens/entityref.tsx).
-          if (response.status === 404) {
-            return null;
-          }
-          throwProblem(error);
-        }
-        return { name: data.display_name, logoUrl: data.logo_url };
-      },
-      // A company's name and mark change far more rarely than the board
-      // refetches, so a card that already has one does not ask again.
-      staleTime: 60_000,
-    })),
-  });
-  const marks = new Map(fromPage);
-  const unreadable = new Set<string>();
-  reads.forEach((read, index) => {
-    const id = unnamed[index];
-    if (!id) {
-      return;
-    }
-    if (read.data) {
-      marks.set(id, read.data);
-      return;
-    }
-    // The error the queryFn deliberately threw rather than settling as an
-    // absence. Read here, or the card it belongs to says "no company" — which
-    // is the one thing this read exists to stop it saying.
-    if (read.isError) {
-      unreadable.add(id);
-    }
-  });
-  return { marks, unreadable };
 }
 
 export function buildColumns(

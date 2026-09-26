@@ -56,7 +56,7 @@
 2273 frontend/src/screens/settings.tsx
 2728 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
-3311 frontend/src/screens/deals.tsx
+3195 frontend/src/screens/deals.tsx
 505 frontend/src/screens/recordchronology.tsx
 512 frontend/src/design-system/relationshipmap.tsx
 512 frontend/src/screens/documentextraction.tsx
