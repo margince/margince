@@ -127,13 +127,45 @@ var satelliteLifecyclePaths = []satellitePath{
 }
 
 // carriedElsewhere ratifies a table the merge does not write from
-// relinkContactReferences. Every entry says WHO moves it instead, or why
-// nothing should — and an entry the census never asks about is reported as
-// unmatched, so a ratification cannot outlive the reason for it.
+// relinkContactReferences, and that no port carries either. Every entry says
+// WHO handles it instead, or why nothing should — and an entry the census never
+// asks about is reported as unmatched, so a ratification cannot outlive the
+// reason for it.
 var carriedElsewhere = gatekit.Waive(map[string]string{
-	"communication_suppression": "carried by consent, through the StopCarrier port (contacts/stopcarry.go), inside the merge's own transaction. The reach above is ONE package's call graph and stops at the port on purpose: following it would mean modelling the wiring, and a gate that models wiring agrees with itself rather than with the tree. What holds the carry instead is consent's own CarryStopsTx and the merge's refusal to proceed at all when the seam is unwired and the subject holds a live stop",
-	"graph_interaction_edge":    "search owns it and REBUILDS it rather than moving it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's, which is the right shape for a table derived entirely from activities the merge has already relinked. Moving the rows instead would carry a fold computed against the pre-merge graph",
+	"graph_interaction_edge": "search owns it and REBUILDS it rather than moving it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's, which is the right shape for a table derived entirely from activities the merge has already relinked. Moving the rows instead would carry a fold computed against the pre-merge graph",
 })
+
+// portCarry names who carries one satellite through a port: the owning
+// module's implementation, and the contacts function that decides whether an
+// UNWIRED merge would strand a row of it and so must refuse.
+//
+// The reach above is ONE package's call graph and stops at a port on purpose:
+// following it would mean modelling the wiring, and a gate that models wiring
+// agrees with itself rather than with the tree. So the register is checked
+// from both ends instead, by TestEveryPortCarriesTheTablesItsRegisterEntryClaims.
+type portCarry struct {
+	pkg     string
+	carrier string
+	refusal string
+}
+
+const (
+	consentPkg       = "internal/modules/consent"
+	introductionsPkg = "internal/modules/introductions"
+)
+
+// carriedThroughAPort names the satellites another module moves inside the
+// merge's own transaction.
+var carriedThroughAPort = map[string]portCarry{
+	"communication_suppression": {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
+	"withdrawal_credential":     {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"preference_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"confirm_token":             {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"communication_basis":       {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"consent_qualifying_event":  {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"consent_doi_token":         {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "Store.carryIntrosTx"},
+}
 
 var (
 	// contactSatelliteName matches the CREATE TABLE lines this gate governs:
@@ -231,34 +263,9 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 	return satellites
 }
 
-// notYetCarried is NOT a ratification. It is a list of tables the merge does
-// not carry and SHOULD, kept apart from carriedElsewhere on purpose: that
-// register says who moves a row instead, and an entry saying "nobody, yet"
-// dressed as one would make this census report a clean merge over a defect it
-// can see. These are the defect, named.
-//
-// Each needs a port in the module that owns the table AND a decision only that
-// module can make — whether a live credential follows the survivor or is
-// revoked, whether a §7(3) flag one half held may widen who the survivor may be
-// mailed about. Tracked as #5771.
-//
-// CLOSED to new entries. It records what this census found when it was widened
-// to see them at all — before that, every one of these was invisible to it —
-// and it only shrinks. A table leaves when its owner carries it.
-var notYetCarried = gatekit.Waive(map[string]string{
-	"communication_basis":      "#5771 — the module that owns it has no carry port yet",
-	"confirm_token":            "#5771 — the module that owns it has no carry port yet",
-	"consent_doi_token":        "#5771 — the module that owns it has no carry port yet",
-	"consent_qualifying_event": "#5771 — the module that owns it has no carry port yet",
-	"preference_token":         "#5771 — the module that owns it has no carry port yet",
-	"withdrawal_credential":    "#5771 — the module that owns it has no carry port yet",
-	"intro_request":            "#5771 — the module that owns it has no carry port yet",
-})
-
 func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 	t.Parallel()
 	defer carriedElsewhere.AssertAllMatched(t)
-	defer notYetCarried.AssertAllMatched(t)
 
 	satellites := contactSatellites(t)
 	var missing []string
@@ -284,9 +291,7 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 			if path.name == mergeRelinkPath && carriedElsewhere.Waived(t, table) {
 				continue
 			}
-			// KNOWN AND UNFIXED, which is a different answer from discharged —
-			// see notYetCarried.
-			if path.name == mergeRelinkPath && notYetCarried.Waived(t, table) {
+			if _, ported := carriedThroughAPort[table]; ported && path.name == mergeRelinkPath {
 				continue
 			}
 			missing = append(missing, "contact satellite "+table+" is not handled by the "+path.name+
@@ -354,4 +359,47 @@ func reachedWrites(t *testing.T, dir, from string) map[string]bool {
 	}
 	walk(from)
 	return writes
+}
+
+// TestEveryPortCarriesTheTablesItsRegisterEntryClaims holds carriedThroughAPort
+// to the tree from both ends: the carrier writes the table, and the refusal an
+// unwired merge runs reads it. A carrier that stopped writing a table leaves it
+// on the retired record; a refusal that stopped reading one lets an unwired
+// merge strand it silently.
+func TestEveryPortCarriesTheTablesItsRegisterEntryClaims(t *testing.T) {
+	t.Parallel()
+	satellites := contactSatellites(t)
+	refusals := packageCallGraph(t, "internal/modules/contacts")
+	for table, port := range carriedThroughAPort {
+		if satellites[table] == nil {
+			t.Errorf("carriedThroughAPort names %s, which no migration gives a contact_id column — "+
+				"an entry the census never asks about looks like coverage and answers nothing", table)
+			continue
+		}
+		if !reachedWrites(t, port.pkg, port.carrier)[table] {
+			t.Errorf("%s.%s is registered as carrying %s onto the survivor and writes no such table — "+
+				"a merge would leave its rows on the retired record", port.pkg, port.carrier, table)
+		}
+		refusal, known := refusals[port.refusal]
+		if !known {
+			t.Fatalf("no function %s in internal/modules/contacts — the refusal was renamed and this "+
+				"check now reads nothing", port.refusal)
+		}
+		if !readsTable(refusal.statements, table) {
+			t.Errorf("contacts.%s decides whether an unwired merge would strand a row and never reads %s — "+
+				"a merge on an installation without the %s seam would drop those rows without refusing",
+				port.refusal, table, port.pkg)
+		}
+	}
+}
+
+// readsTable reports whether any statement names table as a FROM target.
+func readsTable(statements []string, table string) bool {
+	from := regexp.MustCompile(`(?i)\bFROM\s+` + regexp.QuoteMeta(table) + `\b`)
+	for _, statement := range statements {
+		if from.MatchString(statement) {
+			return true
+		}
+	}
+	return false
 }
