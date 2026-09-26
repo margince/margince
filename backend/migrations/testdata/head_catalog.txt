@@ -208,6 +208,14 @@ BEGIN
     RETURN NEW;
 END;
 
+public.activity_mail_reference acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_mail_reference.activity_id uuid NOT NULL gen=- def=-
+public.activity_mail_reference.activity_mail_reference_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_mail_reference.activity_mail_reference_pkey PRIMARY KEY (activity_id, referenced_id)
+public.activity_mail_reference.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_mail_reference.referenced_id text NOT NULL gen=- def=-
+public.activity_mail_reference_pkey CREATE UNIQUE INDEX activity_mail_reference_pkey ON public.activity_mail_reference USING btree (activity_id, referenced_id)
+public.activity_mail_reference_referenced_idx CREATE INDEX activity_mail_reference_referenced_idx ON public.activity_mail_reference USING btree (referenced_id)
 public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
