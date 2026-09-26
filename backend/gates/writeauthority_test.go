@@ -152,6 +152,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 
 	// Writes that touch a shareable record's machinery without changing the
 	// record, or anything a share can speak about.
+	"internal/modules/consent:PreferenceTokenForEmail": "mints the unsubscribe capability the outbound message must carry (RFC 8058). The row is the RECIPIENT's own preference-centre credential, not a field of the contact and not something a colleague's share grants or withholds; the send that mints it is gated on the activity it creates",
 
 	// Refusal-disclosure clauses: rendered so a refusal may NAME the rows it
 	// collided with, and only the ones the caller could already read. The

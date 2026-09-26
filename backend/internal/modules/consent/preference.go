@@ -188,13 +188,52 @@ type addressedContact struct {
 func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (token string, found bool, err error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		holder, held, err := lockAddressHolderTx(ctx, tx, email)
-		if err != nil || !held {
+		for pass := 0; ; pass++ {
+			holder, held, err := liveAddressHolderTx(ctx, tx, email)
+			if err != nil || !held {
+				return err
+			}
+			contactID := holder.ContactID
+			// The token this mints is a bearer credential over the recipient's
+			// consent record — it reads their per-purpose state, withdraws, and
+			// grants, all with no session. So the mint carries the SAME row-scope
+			// probe the sibling read applies (PublicPurposeStates): the object
+			// grant above says the caller may read contacts, this says they may read
+			// THIS one. Without it a row_scope=own seat obtains durable authority
+			// over a contact who 404s to them on every authenticated surface.
+			//
+			// A row-scope miss refuses the send (404, existence-hiding) rather
+			// than falling through to found=false: that branch means "this address
+			// carries no unsubscribe surface", and answering it here would
+			// transmit marketing mail with no working List-Unsubscribe URL —
+			// trading a credential leak for an RFC 8058 violation.
+			//
+			// The STRICT twin, because this mint creates a capability rather than
+			// answering a read. Statements in a read-committed transaction each
+			// take a fresh snapshot, so an Art. 17 erasure committing between the
+			// lookup above and this probe would leave the plain EnsureVisible
+			// answering "yes, still yours" for the tombstone — its own doc names
+			// that case — and this path would then mint a NEW public credential
+			// for the subject whose old one the erasure just deleted.
+			err = auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID)
+			if err == nil {
+				// HELD until the token commits, so a merge of this contact waits
+				// for it and carries it, rather than committing between the probe
+				// and the insert and leaving the link on the retired record.
+				err = auth.LockSubjectLive(ctx, tx, "contact", contactID.UUID)
+			}
+			// A merge that committed after the lookup moved the address onto its
+			// survivor, and the next pass finds it there.
+			if errors.Is(err, apperrors.ErrNotFound) && pass == 0 {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			found = true
+			token, err = ensurePreferenceTokenTx(ctx, tx, contactID, holder.EmailID)
 			return err
 		}
-		found = true
-		token, err = ensurePreferenceTokenTx(ctx, tx, holder.ContactID, holder.EmailID)
-		return err
 	})
 	if err != nil {
 		return "", false, err
@@ -202,85 +241,48 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 	return token, found, nil
 }
 
-// lockAddressHolderTx resolves the live contact holding an address and locks
-// them, so a merge cannot retire them before the caller's write commits.
-func lockAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addressedContact, bool, error) {
+// liveAddressHolderTx resolves the live contact holding an address.
+func liveAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addressedContact, bool, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return addressedContact{}, false, err
 	}
-	for pass := 0; ; pass++ {
-		// The SAME resolution the send gate applies (gate.go resolveContact), and
-		// it has to be: this mints the unsubscribe credential for a send the
-		// gate has already authorized against one contact, so a lookup that can
-		// name a different one puts that contact's link in this recipient's
-		// mailbox.
-		//
-		// Only a LIVE address resolves. uq_contact_email_dedupe is partial on
-		// archived_at IS NULL, so one string can sit archived on one contact and
-		// live on another — and the archived arm belongs to nobody who currently
-		// holds it.
-		//
-		// Ambiguity refuses rather than picks, for the reason the gate gives:
-		// a bare LIMIT 1 over two live matches is a silent choice between two
-		// contacts made by row order. The dedupe index should make that
-		// impossible; this refuses anyway rather than trusting an invariant it
-		// does not check.
-		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT pe.contact_id, pe.id
-			FROM contact_email pe
-			JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
-			WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
-			LIMIT 2`, email)
-		if err != nil {
-			return addressedContact{}, false, err
-		}
-		matches, err := pgx.CollectRows(rows, pgx.RowToStructByPos[addressedContact])
-		if err != nil {
-			return addressedContact{}, false, err
-		}
-		if len(matches) == 0 {
-			return addressedContact{}, false, nil // not a known recipient in this workspace: no token, no header
-		}
-		if len(matches) > 1 {
-			return addressedContact{}, false, fmt.Errorf("consent: the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
-				apperrors.ErrConflict)
-		}
-		contactID := matches[0].ContactID
-		// The token this mints is a bearer credential over the recipient's
-		// consent record — it reads their per-purpose state, withdraws, and
-		// grants, all with no session. So the mint carries the SAME row-scope
-		// probe the sibling read applies (PublicPurposeStates): the object
-		// grant above says the caller may read contacts, this says they may read
-		// THIS one. Without it a row_scope=own seat obtains durable authority
-		// over a contact who 404s to them on every authenticated surface.
-		//
-		// A row-scope miss refuses the send (404, existence-hiding) rather
-		// than falling through to found=false: that branch means "this address
-		// carries no unsubscribe surface", and answering it here would
-		// transmit marketing mail with no working List-Unsubscribe URL —
-		// trading a credential leak for an RFC 8058 violation.
-		//
-		// The STRICT twin, because this mint creates a capability rather than
-		// answering a read. Statements in a read-committed transaction each
-		// take a fresh snapshot, so an Art. 17 erasure committing between the
-		// lookup above and this probe would leave the plain EnsureVisible
-		// answering "yes, still yours" for the tombstone — its own doc names
-		// that case — and this path would then mint a NEW public credential
-		// for the subject whose old one the erasure just deleted.
-		err = auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID)
-		if err == nil {
-			// HELD until the token commits, so a merge of this contact waits
-			// for it and carries it, rather than committing between the probe
-			// and the insert and leaving the link on the retired record.
-			err = auth.LockSubjectLive(ctx, tx, "contact", contactID.UUID)
-		}
-		// A merge that committed after the lookup moved the address onto its
-		// survivor, and the next pass finds it there.
-		if errors.Is(err, apperrors.ErrNotFound) && pass == 0 {
-			continue
-		}
-		return matches[0], err == nil, err
+	// The SAME resolution the send gate applies (gate.go resolveContact), and
+	// it has to be: this mints the unsubscribe credential for a send the
+	// gate has already authorized against one contact, so a lookup that can
+	// name a different one puts that contact's link in this recipient's
+	// mailbox.
+	//
+	// Only a LIVE address resolves. uq_contact_email_dedupe is partial on
+	// archived_at IS NULL, so one string can sit archived on one contact and
+	// live on another — and the archived arm belongs to nobody who currently
+	// holds it.
+	//
+	// Ambiguity refuses rather than picks, for the reason the gate gives:
+	// a bare LIMIT 1 over two live matches is a silent choice between two
+	// contacts made by row order. The dedupe index should make that
+	// impossible; this refuses anyway rather than trusting an invariant it
+	// does not check.
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT pe.contact_id, pe.id
+		FROM contact_email pe
+		JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
+		WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
+		LIMIT 2`, email)
+	if err != nil {
+		return addressedContact{}, false, err
 	}
+	matches, err := pgx.CollectRows(rows, pgx.RowToStructByPos[addressedContact])
+	if err != nil {
+		return addressedContact{}, false, err
+	}
+	if len(matches) == 0 {
+		return addressedContact{}, false, nil // not a known recipient in this workspace: no token, no header
+	}
+	if len(matches) > 1 {
+		return addressedContact{}, false, fmt.Errorf("consent: the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
+			apperrors.ErrConflict)
+	}
+	return matches[0], true, nil
 }
 
 // ensurePreferenceTokenTx returns the token this message's unsubscribe link

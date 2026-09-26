@@ -98,27 +98,9 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionCreate); err != nil {
 		return ids.UUID{}, err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// Asking a colleague for a favour is a human's act. An agent holding
-		// a human's id is not that human deciding to spend their goodwill.
-		return ids.UUID{}, fmt.Errorf(
-			"introductions: asking for an introduction needs an authenticated contact: %w",
-			apperrors.ErrPermissionDenied)
-	}
-	if req.IntroducerUser == actor.UserID {
-		// An introduction has two contacts on our side, and the requester is
-		// already one of them. The graph ranks every colleague who corresponds
-		// with the contact and the reader is among them, so this is the shape a
-		// client sends when it has offered its own reader as the way in — the
-		// row it would write puts a favour in the asker's own queue and records
-		// a handoff that never happened.
-		return ids.UUID{}, fmt.Errorf(
-			"introductions: an introduction is asked of somebody else: %w",
-			apperrors.ErrInvalidArgument)
-	}
-	if req.InternalReason == "" {
-		return ids.UUID{}, errors.New("introductions: an ask says why it is worth making")
+	actor, err := requesterOf(ctx, req)
+	if err != nil {
+		return ids.UUID{}, err
 	}
 	// The contact has to be one this rep can actually see. Without it an ask
 	// would name a contact the requester cannot open, and the colleague's
@@ -195,6 +177,34 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		return ids.UUID{}, err
 	}
 	return id, nil
+}
+
+// requesterOf answers the human making an ask, refusing an ask nobody could
+// honestly have made.
+func requesterOf(ctx context.Context, req NewRequest) (principal.Principal, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+		// Asking a colleague for a favour is a human's act. An agent holding
+		// a human's id is not that human deciding to spend their goodwill.
+		return principal.Principal{}, fmt.Errorf(
+			"introductions: asking for an introduction needs an authenticated contact: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	if req.IntroducerUser == actor.UserID {
+		// An introduction has two contacts on our side, and the requester is
+		// already one of them. The graph ranks every colleague who corresponds
+		// with the contact and the reader is among them, so this is the shape a
+		// client sends when it has offered its own reader as the way in — the
+		// row it would write puts a favour in the asker's own queue and records
+		// a handoff that never happened.
+		return principal.Principal{}, fmt.Errorf(
+			"introductions: an introduction is asked of somebody else: %w",
+			apperrors.ErrInvalidArgument)
+	}
+	if req.InternalReason == "" {
+		return principal.Principal{}, errors.New("introductions: an ask says why it is worth making")
+	}
+	return actor, nil
 }
 
 // lockNamedContacts holds both contacts an ask names until it commits, so a
