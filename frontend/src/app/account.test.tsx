@@ -254,6 +254,8 @@ describe("AccountMenu", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
     await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("My booking link"));
+    await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Sign out"));
     // Wrapping, so the walk has no dead end.
     await user.keyboard("{ArrowDown}");

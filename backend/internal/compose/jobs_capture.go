@@ -116,8 +116,9 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// its delivery and its dispatch job, so it registers only where that
 		// machinery exists — a role that cannot send cannot fire either.
 		if cfg.SendDelivery != nil {
-			addDeclaredWorker[ScheduledSendArgs](reg,
-				newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing, cfg.SendOrigin))
+			worker := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendPacing, cfg.SendOrigin)
+			worker.store = worker.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry))
+			addDeclaredWorker[ScheduledSendArgs](reg, worker)
 		}
 	}
 
@@ -171,7 +172,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// rows that name an attachment while its bytes stay in a bucket would
 		// report mail as gone while it is not, which is the same reason the
 		// HTTP purge is built at the store and not at assembly.
-		purger: capturePurgerFor(pool, cfg.Blobstore, log),
+		purger: capturePurgerFor(pool, cfg.Blobstore, log, cfg.ControllerVault),
 		// The stall notice, which is the only thing that tells a seat their
 		// backlog stopped moving: an outage refunds the attempt rather than
 		// spending it, so nothing retires and nothing else surfaces it.

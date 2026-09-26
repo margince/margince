@@ -19,7 +19,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -226,11 +225,21 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	duration := defaultSlotDuration
-	if params.DurationMinutes != nil {
-		duration = time.Duration(*params.DurationMinutes) * time.Minute
+	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
 	}
-	slots, truncated, err := h.store.Availability(r.Context(), page.HostUserID, params.From, params.To, duration)
+	if !profile.Enabled || profile.Provider == "" {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if params.DurationMinutes != nil && *params.DurationMinutes != profile.DurationMinutes {
+		httperr.Write(w, r, httperr.Validation("duration_minutes", "duration", "Choose the duration offered by this booking page"))
+		return
+	}
+	duration := time.Duration(profile.DurationMinutes) * time.Minute
+	slots, truncated, err := h.store.ReliableAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -295,6 +304,35 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	if !h.bookingRequestIsWritable(w, r, req) {
 		return
 	}
+	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	intent, err := publicBookingRequestIntent(r, hostSlug, req)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	if recovered, err := h.store.recoverPublicBooking(r.Context(), page.HostUserID, intent); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	} else if recovered != nil {
+		writePublicInvitation(w, *recovered, intent.Marketing)
+		return
+	}
+	if !profile.Enabled || profile.Provider == "" {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
+		httperr.Write(w, r, httperr.Validation("end", "duration", "Choose a time offered by this booking page"))
+		return
+	}
 	purposeID, err := h.publicConsent.ScopedPurpose(r.Context(), requestedPurpose(req.Consent))
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -313,6 +351,10 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writeStoreErr(w, r, err)
 		return
 	}
+	if err := h.store.calendar.CheckRecipient(r.Context(), page.HostUserID, contactID, string(req.Booker.Email)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, BookingConsent{
 		PurposeID:     purposeID,
 		PolicyVersion: req.Consent.PolicyVersion,
@@ -324,50 +366,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	subject := "Meeting"
-	if req.Subject != nil && *req.Subject != "" {
-		subject = *req.Subject
-	}
-	booked, err := h.store.BookMeeting(r.Context(), BookMeetingInput{
-		Host:    page.HostUserID,
-		Start:   req.Start,
-		End:     req.End,
-		Subject: subject,
-		Links:   []ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
-		Source:  "public_booking",
-	})
-	if err != nil {
-		var slotTaken *SlotTakenError
-		if errors.As(err, &slotTaken) {
-			httperr.Write(w, r, httperr.Duplicate("slot_taken", ""))
-			return
-		}
-		writeStoreErr(w, r, err)
-		return
-	}
-	// They asked for this meeting, and that is what makes answering them about
-	// it lawful. Recorded here, where it happened: an inquiry leaves no inbound
-	// message for a later send to derive from, so an event this door does not
-	// write is a basis nobody has.
-	//
-	// AFTER the booking and not instead of it. The meeting is what the subject
-	// came for and it is committed; a basis that could not be stamped costs a
-	// rep a manual send later, which is the under-allowing side this whole
-	// model is deliberately on. So it is reported rather than fatal — and
-	// reported, not swallowed: an installation whose bookings stop producing a
-	// basis needs to see that in its log rather than in a rep's surprise.
-	if err := h.publicConsent.RecordBookingInquiry(r.Context(), contactID, ids.UUID(booked.Id)); err != nil {
-		slog.WarnContext(r.Context(), "booking: the inquiry that authorises answering this booker was not recorded",
-			"contact_id", contactID, "activity_id", booked.Id, "err", err)
-	}
-	// BOTH outcomes, named separately. The booking is confirmed or it is not,
-	// and the newsletter question was asked or it was not — a response saying
-	// only the first leaves a booker who ticked the box waiting for a mail that
-	// is not coming.
-	httperr.WriteJSON(w, http.StatusCreated, map[string]any{
-		"start": req.Start, "end": req.End,
-		"booking": "confirmed", "marketing": string(marketingOutcome),
-	})
+	h.bookPublicInvitation(w, r, page, req, contactID, marketingOutcome, intent)
 }
 
 // admitBookingMarketing settles the marketing tick BEFORE any write: it refuses

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// This file is the Microsoft 365 calendar provider I/O: the read-only Graph
+// This file is the Microsoft 365 calendar provider I/O: the Graph capture
 // calendar calls the connector needs. The OAuth2 handshake and the owner lookup
 // are the SAME Microsoft plumbing the mail connector uses (capture/graph) —
 // identical endpoints, identical consent parameters, a different scope — so
@@ -34,10 +34,8 @@ const graphAPIBase = "https://graph.microsoft.com/v1.0"
 // fleet-wide sync poller (http.DefaultClient has no timeout).
 const httpTimeout = 30 * time.Second
 
-// calendarReadScope is the single delegated permission the read-only calendar
-// connector requests, beside the profile lookup and the refresh token. No
-// write, no shared calendars.
-const calendarReadScope = "Calendars.Read"
+// calendarWriteScope permits capture and explicitly requested calendar invitations.
+const calendarWriteScope = "Calendars.ReadWrite"
 
 // The window the calendar view covers. Graph's calendarView needs a bounded
 // range and the delta then tracks THAT range, so these are not merely a first
@@ -116,9 +114,9 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 // offline_access for the refresh token, User.Read to resolve whose calendar it
 // is, and calendar read. Exported so compose advertises exactly what NewOAuth
 // asks for rather than a second list that can drift from it.
-func Scopes() []string { return []string{"offline_access", "User.Read", calendarReadScope} }
+func Scopes() []string { return []string{"offline_access", "User.Read", calendarWriteScope} }
 
-// API is the read-only Graph calendar surface the connector uses. All calls
+// API is the Graph capture calendar surface the connector uses. All calls
 // take a short-lived access token (minted from the refresh token per Sync).
 type API interface {
 	// Owner returns the address of the signed-in account — the

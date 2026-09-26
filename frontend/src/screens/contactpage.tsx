@@ -64,12 +64,6 @@ import {
 import "./contact360.css";
 import { buyingRoleLabel } from "./companycontacts/summary";
 
-// The contact record page V2 (ADR-0096, concept contact-record-page-v2).
-//
-// It opens on a REASON, not a record: the moment the server selected leads,
-// the facts that change how you read it sit above the fold, and the database
-// view of the contact is a tab away rather than the first thing on screen.
-
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 
@@ -231,6 +225,7 @@ function runContactMomentAction(
   action: ContactMomentAction,
   t: ReturnType<typeof useT>,
   handlers: Readonly<{
+    contactId: string;
     openComposer: (intent: string) => void;
     setDrawer: (drawer: Drawer) => void;
     openBrief: (activityId: string | null) => void;
@@ -251,6 +246,9 @@ function runContactMomentAction(
     return;
   }
   switch (destination.surface) {
+    case "booking":
+      navigate({ screen: "book", id: `contact-${handlers.contactId}` });
+      return;
     case "composer":
       handlers.openComposer(composerIntentOf(destination.prefill, t));
       return;
@@ -409,6 +407,7 @@ export function ContactPageV2({
   // so its switch's own branches are not this component's cognitive weight.
   const runAction = (action: ContactMomentAction) =>
     runContactMomentAction(action, t, {
+      contactId: id,
       openComposer,
       setDrawer,
       openBrief,

@@ -55,6 +55,7 @@ type Disclosure struct {
 // (backend/gates/outbounddisclosures_test.go)
 func Disclosures() []Disclosure {
 	return []Disclosure{
+		{Product: CalendarProduct, Endpoint: "Google Calendar or Microsoft Graph", Personal: true, Category: "attendee addresses, meeting title, description, time, location and a guest management link; calendar queries identify the host and requested time window", Control: "the host connects a calendar and authorizes scheduling; disconnecting its credential prevents further calls"},
 		{
 			Product: SearchProduct, Endpoint: "Brave Search API", Personal: true,
 			Category: "a contact's name and employer, as a search query",

@@ -64,6 +64,36 @@ func (e ActivityDirection) Valid() bool {
 	}
 }
 
+// Defines values for ActivityInvitationStatus.
+const (
+	ActivityInvitationStatusCanceled       ActivityInvitationStatus = "canceled"
+	ActivityInvitationStatusCanceling      ActivityInvitationStatus = "canceling"
+	ActivityInvitationStatusConfirmed      ActivityInvitationStatus = "confirmed"
+	ActivityInvitationStatusNeedsAttention ActivityInvitationStatus = "needs_attention"
+	ActivityInvitationStatusPending        ActivityInvitationStatus = "pending"
+	ActivityInvitationStatusRescheduling   ActivityInvitationStatus = "rescheduling"
+)
+
+// Valid indicates whether the value is a known member of the ActivityInvitationStatus enum.
+func (e ActivityInvitationStatus) Valid() bool {
+	switch e {
+	case ActivityInvitationStatusCanceled:
+		return true
+	case ActivityInvitationStatusCanceling:
+		return true
+	case ActivityInvitationStatusConfirmed:
+		return true
+	case ActivityInvitationStatusNeedsAttention:
+		return true
+	case ActivityInvitationStatusPending:
+		return true
+	case ActivityInvitationStatusRescheduling:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityKind.
 const (
 	ActivityKindCall    ActivityKind = "call"
@@ -438,6 +468,9 @@ type Activity struct {
 	HostUserId *string `json:"host_user_id,omitempty"`
 	Id         string  `json:"id"`
 
+	// InvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+	InvitationStatus *ActivityInvitationStatus `json:"invitation_status,omitempty"`
+
 	// IsDone Task only.
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
@@ -488,6 +521,9 @@ type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
 type ActivityDirection string
+
+// ActivityInvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+type ActivityInvitationStatus string
 
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string

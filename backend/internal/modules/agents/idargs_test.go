@@ -247,6 +247,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{}, nil, nil)
+	RegisterMeetingInvitationTool(r, seamProbeInviter{}, seamProbeProvider{})
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, errSeamReached })
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
@@ -589,4 +590,10 @@ func absentIDArgs(t *testing.T, tool string, inputSchema json.RawMessage, omit s
 		t.Fatalf("marshal probe args: %v", err)
 	}
 	return encoded
+}
+
+type seamProbeInviter struct{}
+
+func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
+	return crmcontracts.MeetingInvitation{}, errSeamReached
 }

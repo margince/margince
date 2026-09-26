@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -362,18 +363,12 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
-	// The busy list alone cannot be read honestly: a host with no connected
-	// calendar and a host with an empty day produce the same slots, and the
-	// caller has no other way to tell them apart.
-	//
-	// ONLY FOR THE ACTING SEAT. capture is per-user, and this tool takes any
-	// host_user_id — so asking it for an arbitrary host would answer, to anyone
-	// holding read, which colleagues have connected Google or Microsoft and
-	// whose grant has since stopped working. capture's own connections reader
-	// hard-scopes to the actor for that reason and this follows it.
 	backing, err := c.calendarBackingFor(ctx, calendarOwner)
 	if err != nil {
 		return agents.AvailabilityResult{}, err
+	}
+	if backing == agents.CalendarBacked {
+		backing = agents.CalendarBackingUnknown
 	}
 	// truncated is not decoration on this surface. The walk stops at a cap, and
 	// a model handed a capped list with nothing marking it will tell a rep there
@@ -443,4 +438,24 @@ func defaultHost(ctx context.Context, host *ids.UUID) (ids.UUID, error) {
 		return ids.Nil, fmt.Errorf("comms: no host named and the principal has no user calendar")
 	}
 	return actor.UserID, nil
+}
+
+func (c commsAdapter) InviteMeeting(ctx context.Context, in crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
+	return c.store.CreateInvitation(ctx, in)
+}
+
+func (c commsAdapter) ReliableAvailability(ctx context.Context, host *ids.UUID, from, to time.Time, minutes int) (agents.AvailabilityResult, error) {
+	user, err := defaultHost(ctx, host)
+	if err != nil {
+		return agents.AvailabilityResult{}, err
+	}
+	slots, truncated, err := c.store.ReliableAvailability(ctx, ids.From[ids.UserKind](user), from, to, time.Duration(minutes)*time.Minute)
+	if err != nil {
+		return agents.AvailabilityResult{}, err
+	}
+	result := agents.AvailabilityResult{Slots: make([]agents.FreeSlot, 0, len(slots)), Truncated: truncated, CalendarBacking: agents.CalendarBacked}
+	for _, slot := range slots {
+		result.Slots = append(result.Slots, agents.FreeSlot{Start: slot.Start, End: slot.End})
+	}
+	return result, nil
 }

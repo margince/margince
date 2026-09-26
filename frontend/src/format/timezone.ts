@@ -62,6 +62,8 @@
 //
 // Do not import it into a screen. The gate in zone-by-purpose.test.ts refuses
 // that, and names this comment when it does.
+export const UTC_ZONE = "UTC";
+
 export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
 
 /**
@@ -101,7 +103,7 @@ export function zoneNameAndOffset(locale: string, at: Date): string {
 }
 
 export function viewerZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || UTC_ZONE;
 }
 
 // The offset (ms) `zone` sits at relative to UTC at the instant `utcMs`
@@ -161,7 +163,7 @@ function instantInZone(
 // The calendar day `zone`'s wall clock reads at `utcMs`, as `yyyy-mm-dd`.
 // Derived through Intl rather than by arithmetic on the offset, because the
 // offset is what is in question at the moments this is asked about.
-function dayInZone(utcMs: number, zone: string): string {
+export function dayInZone(utcMs: number, zone: string): string {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone: zone,

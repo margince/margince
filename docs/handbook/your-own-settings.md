@@ -75,17 +75,29 @@ The Bookable hours card is personal: "Personal setting. Only you set your
 hours." Nobody sets them for you, and you set them for nobody else. Narrowing
 them says what it costs: "Customers have fewer times to choose from."
 
-Two things to know before you rely on bookable hours. Free/busy is worked out
-from **meetings recorded in Margince**, not from your actual diary, even where a
-calendar is connected. And the hours shape what a customer is *offered*; they are
-not re-checked when a booking lands.
+### How do I share a booking link?
+Open the account menu → **My booking link**. Connect or reconnect Google Calendar
+or Outlook Calendar with permission to create invitations. Set your public name,
+meeting details and availability limits, save them, then choose **Resume bookings**.
+Copy the link to share it anywhere, or choose **Copy signature link** to paste a
+clickable booking link into your email signature. Guests choose a time and enter
+their own details; you do not need to select a contact first.
 
-**The booking page is not usable yet.** The in-app one cannot complete a booking,
-and there is no way for you to obtain a public booking link — one is seeded for
-the installation's first administrator and nothing in the product hands it out.
-Margince also sends no invitation on any path: "Margince does not send an
-invitation. Share the time with your attendee directly." Set your hours if you like; do not plan
-a booking flow around them yet.
+**Preview public page** shows what guests will see. **Pause bookings** stops new
+bookings without changing the URL. **Replace booking link** invalidates the old
+URL, so update any signatures or pages where you shared it.
+
+### How do I arrange a meeting with a contact?
+Choose **Book a meeting** on the contact. Propose two or three times and review
+the email before sending, share a personal booking link, or send an invitation
+for a time already agreed. Personal links expire and can book one meeting.
+
+Calendar availability includes private and internal busy time without copying
+those details into Margince. Bookable hours, notice and buffers are checked by
+the server. **Creating your invitation…** means delivery is still pending;
+**Calendar invitation created** means the calendar provider accepted it. The
+guest's acceptance is a separate event. Open the meeting from its timeline status
+to reschedule, cancel or retry a delivery that needs attention.
 
 ## Writing voice
 

@@ -53,9 +53,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 76 | 1917 | 1288 | 3654 | 11% | 19556 | 6 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 76 | 2791 | 1807 | 5046 | 15% | 18164 | 15 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 76 | — | 24634 | — | — | 75% | — | — | — |
+| `morning_brief` | 5 | 5 of 77 | 1917 | 1288 | 3654 | 11% | 19556 | 6 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 77 | 2791 | 1807 | 5046 | 15% | 18164 | 15 | 6 |
+| _whole served catalog's listing, for scale — no run is offered it_ | 77 | — | 24788 | — | — | 75% | — | — | — |
 
 ### `morning_brief`
 
@@ -145,7 +145,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 273 tokens, mean 323, across 76 served tools.
+Median 273 tokens, mean 321, across 77 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -171,17 +171,17 @@ a term in an addition.
 | `forecast_movement` | 453 | — |
 | `advance_deal` | 446 | — |
 | `compose_analytics_report` | 440 | — |
-| `book_meeting` | 423 | — |
 | `annotate_brief` | 418 | 2 scenarios |
 | `review_commitments` | 401 | — |
 | `prep_for_meeting` | 394 | — |
 | `enrich` | 391 | — |
 | `search_records` | 383 | — |
-| `check_availability` | 366 | — |
 | `describe_report_vocabulary` | 349 | — |
 | `catch_me_up_on` | 348 | 2 scenarios |
 | `describe_record_fields` | 345 | — |
+| `book_meeting` | 344 | — |
 | `search_context` | 344 | — |
+| `check_availability` | 342 | — |
 | `advance_project_phase` | 340 | — |
 | `forecast_input_checks` | 324 | — |
 | `demote_lead` | 317 | — |
@@ -196,6 +196,7 @@ a term in an addition.
 | `list_approvals` | 268 | — |
 | `prepare_handoff` | 267 | — |
 | `describe_query_vocabulary` | 266 | — |
+| `invite_meeting` | 256 | — |
 | `company_coverage` | 246 | — |
 | `describe_report_blocks` | 245 | — |
 | `decide_approval_bundle` | 236 | — |

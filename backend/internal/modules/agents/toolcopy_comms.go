@@ -74,32 +74,17 @@ var sendMessageCopy = toolCopy{
 }
 
 var checkAvailabilityCopy = toolCopy{
-	Purpose: "Find when a host is free, so a time can be proposed to someone.",
-	Limits: "It reads free/busy over the window you ask for and books nothing. It answers for one " +
-		"host — the acting user unless another is named — not for the invitees. `calendar_backing` says " +
-		"what the window rests on: with no calendar connected the slots are only what meetings " +
-		"recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, " +
-		"because another colleague's connector state is theirs. Unless it says `calendar`, a free window " +
-		"is no evidence the host is free, and none at all that a meeting they told you about is " +
-		"missing from their diary.",
-	Instead: "Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already " +
-		"exists and the goal is walking in ready.",
-	Retain: "Keep the exact start and end of the slot you intend to take; book_meeting takes " +
-		"those, and a slot re-derived later may no longer be free.",
+	Purpose: "Find candidate times for a host without booking or sending anything.",
+	Limits:  "Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability.",
+	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting.",
+	Retain:  "Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time.",
 }
 
 var bookMeetingCopy = toolCopy{
-	Purpose: "Hold a slot in the host's calendar and record the meeting against the records it " +
-		"is about.",
-	Limits: "Needs at least one link saying what it is about. The slot is taken and the meeting " +
-		"is a real commitment, and by default it is taken when this call answers — where an " +
-		"installation has raised this verb to confirm first, the answer is a staged approval " +
-		"instead. No attendee list: who is invited is " +
-		"the calendar connection's business. Check the slot is free first — this tool does not.",
-	Instead: "Use check_availability to find the time, and log_activity to record a meeting that " +
-		"already happened.",
-	Retain: "Keep the staged approval id and re-send the identical start, end and links: the " +
-		"approval is bound to the meeting as it was described.",
+	Purpose: "Record a meeting against linked CRM records without sending an invitation.",
+	Limits:  "Reserves the recorded interval locally. It does not create a calendar event or notify attendees. Needs at least one record link.",
+	Instead: "Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past meeting.",
+	Retain:  "Keep the recorded activity id. Do not describe a record-only booking as an invitation sent.",
 }
 
 var enrichCopy = toolCopy{

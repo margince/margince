@@ -202,17 +202,18 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// Four of the fourteen are 🟢 today and stage nothing, so their entries are
 	// unreached until a tier floor tightens them; agentcommandauto.go's own doc
 	// says why they are registered anyway.
-	"sendEmail":           sendEmailCommand,
-	"sendMessage":         sendMessageCommand,
-	"sendCompanyEmail":    sendCompanyEmailCommand,
-	"bookMeeting":         bookMeetingCommand,
-	"promoteLead":         promoteLeadCommand,
-	"disqualifyLead":      disqualifyLeadCommand,
-	"demoteLead":          demoteLeadCommand,
-	"advanceProjectPhase": advanceProjectPhaseCommand,
-	"advanceDeal":         advanceDealCommand,
-	"mergeContact":        mergeCommand,
-	"mergeCompany":        mergeCommand,
+	"sendEmail":               sendEmailCommand,
+	"sendMessage":             sendMessageCommand,
+	"sendCompanyEmail":        sendCompanyEmailCommand,
+	"bookMeeting":             bookMeetingCommand,
+	"createMeetingInvitation": meetingInvitationCommand,
+	"promoteLead":             promoteLeadCommand,
+	"disqualifyLead":          disqualifyLeadCommand,
+	"demoteLead":              demoteLeadCommand,
+	"advanceProjectPhase":     advanceProjectPhaseCommand,
+	"advanceDeal":             advanceDealCommand,
+	"mergeContact":            mergeCommand,
+	"mergeCompany":            mergeCommand,
 	// mergeTags is NOT one of those two. They fold a record into another
 	// record through the SoR provider; this folds a vocabulary word, which no
 	// provider serves, so it resolves against the tag seam instead.

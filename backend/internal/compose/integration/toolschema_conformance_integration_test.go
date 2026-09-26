@@ -352,6 +352,7 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"read_import_report":   "needs a run that has been dry-run, which needs the object store above",
 	"commit_import":        "confirm-first, and needs the object store above to reach a committable run",
 	"book_meeting":         "needs a live calendar provider",
+	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
 	"send_email":           "needs an outbound mail provider",
 	"send_company_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
 	"send_message":         "needs an outbound channel provider",

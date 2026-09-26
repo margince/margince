@@ -25,12 +25,14 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -61,4 +63,24 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 // half that drifted would leave originals behind while reporting success.
 func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
 	return capture.NewPendingStore(db).PurgeRawCaptureTx
+}
+
+//nolint:ireturn // privacy owns the purge seam; compose supplies the vault adapter.
+func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
+	if vault == nil {
+		return nil
+	}
+	return controllerPayloads{v: vault}
+}
+
+func (s *Server) rewirePrivacyVault(pool *pgxpool.Pool) {
+	if pool == nil {
+		return
+	}
+	payloads := privacyPayloads(s.vault)
+	s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithBlobstore(s.blob).WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).WithPayloadVault(payloads))
+	s.privacyHandlers = s.WithPayloadVault(payloads)
+	if s.blob != nil {
+		s.purger = NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), s.blob, s.log).WithPayloadVault(payloads))
+	}
 }

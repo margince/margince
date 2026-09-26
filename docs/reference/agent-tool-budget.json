@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 76,
+    "tools": 77,
     "system_frame_tokens": 448,
-    "tokens": 24634,
+    "tokens": 24788,
     "median_tool_tokens": 273,
-    "mean_tool_tokens": 323
+    "mean_tool_tokens": 321
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 76,
+      "of_served_tools": 77,
       "tokens": 3654,
       "listing_tokens": 1917,
       "step_schema_tokens": 1288,
@@ -74,7 +74,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 76,
+      "of_served_tools": 77,
       "tokens": 5046,
       "listing_tokens": 2791,
       "step_schema_tokens": 1807,
@@ -170,10 +170,6 @@
       "tokens": 440
     },
     {
-      "name": "book_meeting",
-      "tokens": 423
-    },
-    {
       "name": "annotate_brief",
       "tokens": 418
     },
@@ -194,10 +190,6 @@
       "tokens": 383
     },
     {
-      "name": "check_availability",
-      "tokens": 366
-    },
-    {
       "name": "describe_report_vocabulary",
       "tokens": 349
     },
@@ -210,8 +202,16 @@
       "tokens": 345
     },
     {
+      "name": "book_meeting",
+      "tokens": 344
+    },
+    {
       "name": "search_context",
       "tokens": 344
+    },
+    {
+      "name": "check_availability",
+      "tokens": 342
     },
     {
       "name": "advance_project_phase",
@@ -268,6 +268,10 @@
     {
       "name": "describe_query_vocabulary",
       "tokens": 266
+    },
+    {
+      "name": "invite_meeting",
+      "tokens": 256
     },
     {
       "name": "company_coverage",

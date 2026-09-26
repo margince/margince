@@ -151,6 +151,8 @@ const (
 // (workspace + request digest) before the header's promise can be honored;
 // until then the slot's natural key refuses a duplicate booking.
 var replayableOperations = map[string]replayTarget{
+	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},

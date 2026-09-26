@@ -3,6 +3,120 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "scheduling.back": "Back to Margince",
+  "scheduling.prepare": "Prepare for this meeting",
+  "scheduling.timezone": "Time zone",
+  "scheduling.copySignature": "Copy signature link",
+  "scheduling.replace": "Replace booking link",
+  "scheduling.replaceHelp":
+    "The old link will stop accepting bookings. Update your email signature and anywhere else you have shared it. Existing meetings keep their private change links.",
+  "scheduling.reschedule": "Reschedule",
+  "scheduling.rescheduleHelp":
+    "Your current time stays reserved until the calendar confirms the change.",
+  "scheduling.saveTime": "Confirm new time",
+  "scheduling.hostRecovery":
+    "Reconnect your calendar if needed, then retry. The time remains reserved while delivery is uncertain.",
+  "scheduling.guestRecovery":
+    "The host needs to check this invitation. Your booking request is saved.",
+  "scheduling.deliveryUnknown":
+    "The server did not return an invitation. Check with the host before trying again.",
+  "scheduling.personalGuest":
+    "This invitation is for the recipient of this link. The meeting will use the email address chosen by the host.",
+  "scheduling.proposalGreeting": "Hello,",
+  "scheduling.proposalChoose": "Choose a time here, or find another opening:",
+  "scheduling.proposalReply":
+    "You can also reply with a time that works for you.",
+  "scheduling.proposalHelp":
+    "These options do not reserve your calendar. The personal link can book once and expires after seven days or the last offered time.",
+  "scheduling.createPersonalLink": "Create personal link",
+  "scheduling.reviewProposal": "Create proposal",
+  "scheduling.personalLink": "Open personal invitation",
+  "scheduling.expires": "Expires {date}",
+  "scheduling.reviewEmail": "Review email",
+  "scheduling.method": "How to arrange the meeting",
+  "scheduling.propose": "Propose times",
+  "scheduling.sharePersonal": "Share a personal link",
+  "scheduling.selectOptions_one":
+    "Choose two or three options · {count} selected",
+  "scheduling.selectOptions_other":
+    "Choose two or three options · {count} selected",
+  "scheduling.blockingCalendars": "Other calendars that block time",
+  "scheduling.blockingHelp":
+    "The event calendar always blocks time. Private event names stay in your calendar.",
+  "scheduling.savedRequest":
+    "Your meeting request is saved. Open it to check the invitation, change the time or cancel.",
+  "scheduling.openMeeting": "View your meeting",
+  "scheduling.emailReminder": "Email reminder one hour before",
+  "scheduling.reminderHelp":
+    "Applies to future meetings. Uses your connected mailbox and checks email permissions before sending.",
+  "scheduling.reminder.pending": "Email reminder scheduled.",
+  "scheduling.reminder.queued": "Email reminder queued for delivery.",
+  "scheduling.reminder.unavailable":
+    "The reminder could not be sent. Check your email connection and email the guest directly.",
+  "history.field.reminder_status": "Reminder status",
+  "scheduling.myLink": "My booking link",
+  "scheduling.linkIntro":
+    "One link for your email signature, messages and website. Anyone can choose a time within your availability.",
+  "scheduling.copyLink": "Copy link",
+  "scheduling.copied": "Copied",
+  "scheduling.copyFallback": "Select and copy the link below.",
+  "scheduling.preview": "Preview public page",
+  "scheduling.signature": "Book a meeting with me",
+  "scheduling.active": "Accepting bookings",
+  "scheduling.paused": "Public bookings paused",
+  "scheduling.pause": "Pause bookings",
+  "scheduling.resume": "Enable bookings",
+  "scheduling.settings": "Meeting settings",
+  "scheduling.save": "Save settings",
+  "scheduling.saved": "Settings saved",
+  "scheduling.provider": "Calendar provider",
+  "scheduling.proposalChanged":
+    "This link keeps the details you already created. You can create a new link for your changes; the previous link remains valid until it expires.",
+  "scheduling.proposalUpdate": "Create updated proposal",
+  "scheduling.calendar": "Event calendar",
+  "scheduling.connect": "Connect or reconnect calendar",
+  "scheduling.connectionHelp":
+    "Calendar write access is required to send invitations. Reconnect an existing read-only calendar to grant access.",
+  "scheduling.hostName": "Your public name",
+  "scheduling.companyName": "Company name",
+  "scheduling.logo": "Public company logo URL",
+  "scheduling.subject": "Meeting title",
+  "scheduling.location": "Location or meeting link",
+  "scheduling.duration": "Duration in minutes",
+  "scheduling.notice": "Minimum notice in minutes",
+  "scheduling.buffer": "Buffer in minutes",
+  "scheduling.horizon": "Booking horizon in days",
+  "scheduling.hours": "Edit bookable hours",
+  "scheduling.invite": "Send an invite",
+  "scheduling.contact": "Who are you meeting?",
+  "scheduling.guestAgenda": "What would you like to discuss?",
+  "scheduling.agenda": "Message for your guest",
+  "scheduling.chooseTime": "Choose a time",
+  "scheduling.zone": "Time zone",
+  "scheduling.date": "Starting date",
+  "scheduling.next": "More times",
+  "scheduling.noTimes": "No available times in this window. Try another date.",
+  "scheduling.review": "Review invitation",
+  "scheduling.pending": "Creating your invitation…",
+  "scheduling.confirmed": "Calendar invitation created",
+  "scheduling.needs_attention": "Invitation needs attention",
+  "scheduling.rescheduling": "Rescheduling your meeting…",
+  "scheduling.canceling": "Canceling your meeting…",
+  "scheduling.canceled": "Meeting canceled",
+  "scheduling.deliveryHelp":
+    "Calendar confirmation does not mean the guest has accepted. Their response arrives through your connected calendar.",
+  "scheduling.openCalendar": "Open in calendar",
+  "scheduling.cancel": "Cancel meeting",
+  "scheduling.cancelConfirm": "Cancel this meeting and notify the attendee?",
+  "scheduling.retry": "Retry invitation",
+  "scheduling.book": "Confirm meeting",
+  "scheduling.chooseFirst": "Select a time to continue",
+  "scheduling.unavailable":
+    "This booking page is unavailable. Contact your host.",
+  "scheduling.publicUrlMissing":
+    "Set a public address for this installation before sharing external booking links.",
+  "scheduling.new": "Arrange a meeting",
+
   "aiAdmin.allowance": "Monthly AI allowance",
   "aiAdmin.pool":
     "Shared company pool. Not an individual quota or a dollar spending cap.",
@@ -339,6 +453,8 @@ export const en = {
   "history.field.emails": "Email addresses",
   "history.field.nudge_dismissal": "Nudge dismissed",
   "history.field.phones": "Phone numbers",
+  "history.field.invitation_status": "Invitation status",
+  "history.field.proposal_status": "Meeting proposal status",
   "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_company_key": "Matched company",
   "history.field.communication_basis": "Legal basis",
@@ -1656,6 +1772,7 @@ export const en = {
   "approval.kind.send_email": "Send email",
   "approval.kind.communication_review": "Review refused email",
   "approval.kind.held_draft": "Review drafted email",
+  "approval.kind.invite_meeting": "Send a calendar invitation",
   "approval.kind.book_meeting": "Book meeting",
   "approval.kind.volume_release": "Allow agent to continue",
   "approval.kind.coldstart": "Fill in new company",
@@ -6815,17 +6932,8 @@ export const en = {
   "client.isolation": "Connects only to your company",
   "client.attribution": "Every capture is attributed and auditable.",
 
-  "book.title": "Book a meeting",
-  "book.min15": "15 min",
-  "book.min30": "30 min",
-  "book.min60": "60 min",
   "book.attendee": "Attendee email",
-  "book.welcomeBack": "Recognized: {name}",
   "book.subject": "Meeting via Margince",
-  "book.confirmed": "Meeting booked",
-  "book.tellThemYourself":
-    "Margince does not send an invitation. Share the time with your attendee directly.",
-  "book.failed": "Booking failed. Nothing was scheduled.",
   "book.name": "Your name",
   "book.email": "Your email",
   "book.consentWording":

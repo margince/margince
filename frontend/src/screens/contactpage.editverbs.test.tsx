@@ -159,6 +159,7 @@ describe("every secondary verb is a row of the header's one menu", () => {
   // quieter doors, then the destructive one last.
   const ROWS = [
     en["merge.contact"],
+    en["scheduling.new"],
     en["record.share"],
     en["record.fullHistory"],
     en["contact.action.research"],

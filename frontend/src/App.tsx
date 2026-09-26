@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { AskFromAddress } from "./app/askfromaddress";
+import { isPublicBookingId } from "./app/bookingroute";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
 import {
@@ -645,14 +646,7 @@ const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "room",
 ]);
 
-// Screens the onboarding gate must never navigate away from, beyond
-// onboarding itself. The OAuth consent screen carries a single-use,
-// cookie-bound nonce in the hash (armed by GET /oauth/authorize's 302); the
-// gate's navigate() rewrites location.hash, which would destroy that nonce
-// with nothing able to recover it — unlike an ordinary screen, there is no
-// route back once this one is skipped mid-flight. This is a narrow carve-out
-// for a request in flight, not a relaxation of the gate for the screen in
-// general.
+// OAuth consent keeps its cookie-bound, single-use nonce through onboarding.
 const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
   "onboarding",
   "oauth-consent",
@@ -678,7 +672,10 @@ export function App() {
       </RaillessFrame>
     );
   }
-  if (PUBLIC_SCREENS.has(route.screen)) {
+  if (
+    PUBLIC_SCREENS.has(route.screen) &&
+    (route.screen !== "book" || isPublicBookingId(route.id))
+  ) {
     return (
       <Shell onOpenSearch={() => undefined}>
         <ScreenView screen={route.screen} id={route.id} id2={route.id2} />

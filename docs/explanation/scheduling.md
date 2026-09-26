@@ -1,120 +1,158 @@
 # Scheduling
 
-How a meeting time is proposed, who decides which times are offerable, and which
-clock that decision is made on.
+Margince supports three ways to arrange a meeting with a contact: propose two or
+three times, send a calendar invitation for an agreed time, or share a personal
+one-use booking link. The account menu's **My booking link** is a separate,
+reusable public page suitable for an email signature. It does not require a
+contact to be selected first.
 
-This page exists because the feature was built without it. Working hours were
-`9` and `17` in a Go constant, evaluated on a UTC clock, with no way for anyone
-to change either — and the next increment was about to be an installation-wide
-setting, which is the wrong shape for a reason worth writing down once.
+## Availability and calendars
 
-## What the product offers
+Each host controls their working days, daily start and end, and IANA timezone
+under Settings → Account → Bookable hours. Unset hours use 09:00–17:00 Monday to
+Friday in the installation timezone. The scheduling profile adds duration,
+minimum notice, a buffer on both sides, and a booking horizon. Slots advance in
+15-minute increments in the host's timezone; their duration is independent of
+that increment. Guests can choose their display timezone.
 
-`Store.Availability` answers *which times is this host free*, for one host, one
-window and one slot length. Two callers ask it: the authenticated surface (a rep
-proposing times to a customer) and the public booking page, which resolves a
-`HostUserID` from the booking link before it asks. **Both know whose calendar
-they are asking about**, which is why every rule below can be a fact about a
-CONTACT rather than about the installation.
+The invitation engine checks live occupancy in the selected destination
+calendar and additional blocking calendars on the same provider. Google uses
+free/busy admission plus minimal event occupancy; Microsoft uses calendarView.
+Internal meetings, private events, focus blocks and all-day busy events count
+without becoming CRM activities. Titles, attendees and descriptions are not
+returned by the public availability API. A missing calendar, invalid response,
+failed page or exhausted pagination bound refuses availability.
 
-The answer is the window minus three things: times outside the host's working
-hours, days the host does not work, and slots overlapping a meeting already on
-their calendar.
+Local reservations and pending reschedules are included. New reservations store
+their exact duration; the exclusion constraint uses half-open intervals so
+adjacent meetings can coexist. Older reservations retain their historical
+one-hour exclusion until explicitly changed. Calendar capture preserves the
+provider's duration when it is supplied.
 
-## Working hours belong to the contact
+The server validates hours, notice, horizon, duration and live occupancy when an
+invitation is requested or moved. A host lock serializes local reservations.
+The delivery worker checks provider occupancy again immediately before writing.
+An external calendar is not part of the database transaction, so an independent
+calendar client can still race that final check.
 
-**Each contact sets their own, and nobody sets them for anybody else** — the same
-rule their display language follows.
+## Provider delivery and recovery
 
-An installation-wide pair of numbers set by an admin was the obvious next step
-and is the wrong one. Contacts on one team do not share working hours: they sit in
-different countries, some work part time, some keep hours nobody else keeps. One
-pair is wrong for most of them, and — this is the part that makes it worse than
-no setting at all — the contacts it is wrong for cannot fix it. An unconfigurable
-default is honestly wrong for everyone; an admin-set pair is authoritatively
-wrong for the majority.
+A calendar invitation requires a connected calendar with write permission.
+Existing read-only connections must be reconnected: Google adds
+`calendar.events.owned` and Microsoft uses `Calendars.ReadWrite`. The host chooses
+an owned Google calendar or an editable Microsoft calendar. Calendar connection consent explicitly includes event writes; mailbox connection consent is separate. Destination IDs are bound to the actual calendar, so reconnecting a different account cannot turn a missing event into a false cancellation. Lost calendar authority surfaces as **needs attention**. A video-call URL,
+telephone number or physical address can be entered as the location; this flow
+does not create a conferencing account or generate a new conferencing link.
 
-What a contact sets is deliberately small:
+Creating an invitation commits one activity, its delivery command, audit and
+outbox evidence. The response is **pending**. The worker creates the provider
+event and requests attendee notifications; only provider acceptance changes the
+state to **confirmed**. Confirmation proves the provider accepted the invitation,
+not that the guest read it or accepted the meeting.
 
-| | |
-|---|---|
-| **One start time and one end time** | the same range on every day they work |
-| **Which days they work** | any subset of the seven |
-| **Their timezone** | the clock the two times are read on |
+Google receives a deterministic event ID. Microsoft receives a stable
+transaction ID and a queryable extended property. An uncertain response is
+looked up before another write is attempted. Delivery uses versioned leases and
+bounded attempts, then surfaces **needs attention**. Retry operates on the same
+invitation. Provider capture resolves the organizer's echo onto the existing
+activity, including before the first receipt is committed.
 
-**One range rather than per-day hours**, because a single range plus working days
-already covers both cases that prompted this — *8–18 Monday to Saturday* and
-*9–13 Monday to Thursday* — and per-day hours can be added on top later without
-redoing this shape. Several blocks in one day is calendar territory and should
-not be built as a setting at all.
+A reschedule reserves the new interval while retaining the old reservation.
+The activity moves when the provider acknowledges the update. Cancellation
+releases the interval after the provider acknowledges it or confirms the event
+is absent. Version checks reject stale changes. Direct activity edits cannot
+silently change a managed invitation; meeting outcomes such as held and no-show
+remain available. Provider reconciliation checks recent and future confirmed
+invitations every fifteen minutes and imports changed intervals or cancellations
+onto the same activity.
 
-## Unset falls back, and the fallback is a decision
+## Public and personal links
 
-On the day this ships, everyone has set nothing. Of the three possible answers
-to that, only one leaves the product working:
+Every host can create, preview, copy, pause, resume or replace their public link.
+Replacing it revokes old public URLs; it does not revoke existing guests' private
+meeting-management links. A paused page stops new public bookings. Already issued personal proposals remain usable until their expiry; pause is not a recall of invitations. Profile
+responses contain only the public host name, company, logo, meeting details and
+availability policy needed by the guest. The logo keeps its aspect ratio and
+the footer uses the same Margince wordmark component as the external Deal Room.
 
-- Treating unset as *no constraint* lets a customer book somebody at 3am.
-- *Requiring it before booking works* breaks the feature for every existing
-  contact until they act.
-- **Falling back to 09:00–17:00, Monday to Friday, in the contact's own zone**
-  regresses nothing — and it makes the UTC bug disappear for everybody on day
-  one, before anyone has touched a setting.
+Personal proposals bind the recipient address and contact on the server. They
+expire after seven days, or the last proposed time if sooner, and can be consumed
+once. Offered times are proposals, not holds; accepting one rechecks availability.
+The guest may choose another available time. The host reviews the proposal email
+in the existing composer before sending it.
 
-The fallback is a named default (`defaultWorkingHours`) rather than a leftover
-constant, so it reads as the decision it is.
+Management and proposal tokens are random capabilities stored as hashes. A
+management and proposal URL also lives encrypted in the existing vault because the delivery
+worker needs to include it in the invitation. Public responses exclude calendar
+IDs, provider event URLs, recipient addresses and internal record links. Access
+logs redact the capability segment and public responses disable caching and
+referrers. Consent is captured separately from optional marketing consent.
+Calendar invite descriptions include a management link. Anyone with the full
+invite, including calendar delegates and readers, can use it to reschedule or
+cancel; hosts should share their calendar accordingly.
 
-## Which clock
+Erasure deletes proposals and destroys corresponding vault material. A minimal
+cancellation tombstone retains provider request/event identifiers so delivery
+that raced erasure can still be canceled. It contains no attendee, subject,
+description or management capability. Cleanup retries while provider access is
+unavailable, and the tombstone suppresses capture of late provider echoes; subject-access exports include the meeting data without tokens
+or internal delivery identifiers.
 
-The hours are the contact's own, so they are read on the contact's own zone.
+## One engine and explicit invitation intent
 
-`app_user.timezone` is that zone. It was `NOT NULL DEFAULT 'UTC'` and nothing in
-the product ever wrote it, so every value in it was the default rather than a
-choice — which is why it is nullable now, exactly as `locale` beside it is:
-**absent means nobody has chosen**, and a contact who has not chosen is read on
-the installation's reporting timezone rather than on UTC. A browser's own zone
-pre-fills the field the first time somebody opens the setting, so choosing is
-usually confirming.
+Browser and agent invitation writes use the same activities store and provider
+adapter. `invite_meeting` is a confirm-first, send-scoped operation. The approval
+names the recipient, interval, subject, location and the full description sent externally. The delivery worker rechecks
+the acting host's live permissions and any originating passport's send authority.
 
-Before this, `freeSlots` read `cursor.Hour()` and `cursor.Weekday()` off a UTC
-instant. "9am" therefore meant 4pm in Ho Chi Minh City, and a Monday morning in
-Saigon was still Sunday to the scheduler.
+For compatibility, `book_meeting` and `/bookings` remain record-only operations:
+they send no invite. `/availability` without `reliable=true` remains a CRM-only
+read and the agent response carries a caveat. New booking screens always request
+reliable availability and calendar delivery. There is no email/ICS fallback that
+silently turns a failed provider write into a claim of confirmation.
 
-That defect and its repair belong to two different owners, and the division
-matters because either can land first:
+The activity projection carries `invitation_status` independently of
+`meeting_status`. Timeline controls open delivery status, retry, reschedule and
+cancel; confirmed meetings can open Margince's existing preparation brief.
 
-- **"A calendar day must be derived in a named zone, not UTC"** is the general
-  rule, and it is not this page's.
-- **"Which zone, and whose hours"** is this page's, and the answer is *the
-  contact's* — not the workspace's. A repair that converted these reads to the
-  workspace zone would be a correct timezone fix under the wrong owner, and
-  would have to be undone here.
+Provider contracts: [Google event insertion](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert),
+[Google free/busy](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query),
+[Microsoft event resource](https://learn.microsoft.com/en-us/graph/api/resources/event?view=graph-rest-1.0),
+and [Microsoft calendar view](https://learn.microsoft.com/en-us/graph/api/calendar-list-calendarview?view=graph-rest-1.0).
 
-## How the module boundary is crossed
+## Optional reminder
 
-Working hours are a fact about a contact, so `identity` owns the columns.
-Availability is computed in `activities`, which may not import a sibling module.
+The host can enable one email reminder an hour before future meetings. Its time
+is written in the host’s configured timezone and labels that timezone. The
+worker refreshes the provider event before preparing it, so provider moves and
+cancellations update the same meeting first. Margince sends only within fifteen
+minutes of the reminder's due time; a missed window is shown as unavailable.
+The existing email engine checks the sender's live authority, recipient
+visibility and communication permission. Reminder delivery and its durable
+marker commit together; concurrent workers cannot stage it twice. A canceled
+meeting cannot stage a reminder. Mail already queued or delivered cannot be
+recalled by a later meeting change. The host sees pending, queued or unavailable
+on the meeting page; queued means delivery was requested, not that it arrived.
 
-So `activities` takes a resolver — *"given a host, what hours and what zone"* —
-and `compose` injects the identity-backed one. A store with no resolver injected
-answers with the fallback rather than refusing: the scheduling path is reachable
-from the public booking page, and a wiring gap there must not turn into a
-customer-facing error about somebody's settings.
+A used personal proposal remains a recipient capability until its original
+expiry. Reopening it recovers the existing meeting's management link after a
+lost response; it never reserves a second meeting.
 
-## What the screen owes the contact
+Public clients may send a fresh random UUIDv4 `Idempotency-Key` for each request.
+For 24 hours, retrying the same form with that key recovers the same invitation
+and guest management capability. Only the key hash and request digest are stored;
+capability URLs remain in the vault. A changed form cannot reuse the key. Host
+HTTP replay storage likewise excludes proposal URLs and management tokens.
 
-A host who narrows their hours to 09:00–13:00 will receive roughly half the
-bookings they do today, and will not necessarily connect the two.
+## Deployment
 
-**The screen says so at the moment they save.** That sentence is the difference
-between a setting and a trap, and it is part of the feature rather than a polish
-item on top of it.
+The exact-interval migration rebuilds the booking exclusion constraint and takes
+an exclusive activity-table lock. Schedule a maintenance window; the three-second
+lock timeout makes a busy deployment fail rather than wait indefinitely. This is
+not an online, zero-lock migration. Shipped migrations remain unchanged.
 
-## What is deliberately not here
-
-- **Per-day hours**, and several blocks in a day. See above.
-- **Holidays and time off.** A day a contact is not working is a calendar fact,
-  and this setting is not a calendar.
-- **A real calendar connector.** Busy time is read from meetings this product
-  holds; a host booked in an external calendar is free as far as this is
-  concerned. `assumedMeetingDuration` exists because an activity carries only
-  `occurred_at`, and both refine when a connector lands.
+Microsoft calendarView responses are requested in UTC and their returned
+instants are authoritative, including all-day boundaries. A response that ignores
+the timezone request is refused rather than guessed in the host's timezone.
+Provider-account certification should include all-day events in a non-UTC
+calendar and both daylight-saving transitions.

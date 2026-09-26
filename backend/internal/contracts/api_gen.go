@@ -280,6 +280,36 @@ func (e ActivityDirection) Valid() bool {
 	}
 }
 
+// Defines values for ActivityInvitationStatus.
+const (
+	ActivityInvitationStatusCanceled       ActivityInvitationStatus = "canceled"
+	ActivityInvitationStatusCanceling      ActivityInvitationStatus = "canceling"
+	ActivityInvitationStatusConfirmed      ActivityInvitationStatus = "confirmed"
+	ActivityInvitationStatusNeedsAttention ActivityInvitationStatus = "needs_attention"
+	ActivityInvitationStatusPending        ActivityInvitationStatus = "pending"
+	ActivityInvitationStatusRescheduling   ActivityInvitationStatus = "rescheduling"
+)
+
+// Valid indicates whether the value is a known member of the ActivityInvitationStatus enum.
+func (e ActivityInvitationStatus) Valid() bool {
+	switch e {
+	case ActivityInvitationStatusCanceled:
+		return true
+	case ActivityInvitationStatusCanceling:
+		return true
+	case ActivityInvitationStatusConfirmed:
+		return true
+	case ActivityInvitationStatusNeedsAttention:
+		return true
+	case ActivityInvitationStatusPending:
+		return true
+	case ActivityInvitationStatusRescheduling:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityKind.
 const (
 	ActivityKindCall    ActivityKind = "call"
@@ -5914,6 +5944,7 @@ func (e ContactMomentDestinationEntityType) Valid() bool {
 // Defines values for ContactMomentDestinationSurface.
 const (
 	ContactMomentDestinationSurfaceActivityLog  ContactMomentDestinationSurface = "activity_log"
+	ContactMomentDestinationSurfaceBooking      ContactMomentDestinationSurface = "booking"
 	ContactMomentDestinationSurfaceComposer     ContactMomentDestinationSurface = "composer"
 	ContactMomentDestinationSurfaceMeetingBrief ContactMomentDestinationSurface = "meeting_brief"
 	ContactMomentDestinationSurfaceRecord       ContactMomentDestinationSurface = "record"
@@ -5925,6 +5956,8 @@ const (
 func (e ContactMomentDestinationSurface) Valid() bool {
 	switch e {
 	case ContactMomentDestinationSurfaceActivityLog:
+		return true
+	case ContactMomentDestinationSurfaceBooking:
 		return true
 	case ContactMomentDestinationSurfaceComposer:
 		return true
@@ -6621,22 +6654,22 @@ func (e CreateActivityRequestLinksEntityType) Valid() bool {
 
 // Defines values for CreateActivityRequestMeetingStatus.
 const (
-	CreateActivityRequestMeetingStatusBooked   CreateActivityRequestMeetingStatus = "booked"
-	CreateActivityRequestMeetingStatusCanceled CreateActivityRequestMeetingStatus = "canceled"
-	CreateActivityRequestMeetingStatusHeld     CreateActivityRequestMeetingStatus = "held"
-	CreateActivityRequestMeetingStatusNoShow   CreateActivityRequestMeetingStatus = "no_show"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusBooked   CreateActivityRequestMeetingStatus = "booked"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusCanceled CreateActivityRequestMeetingStatus = "canceled"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusHeld     CreateActivityRequestMeetingStatus = "held"
+	CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusNoShow   CreateActivityRequestMeetingStatus = "no_show"
 )
 
 // Valid indicates whether the value is a known member of the CreateActivityRequestMeetingStatus enum.
 func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	switch e {
-	case CreateActivityRequestMeetingStatusBooked:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusBooked:
 		return true
-	case CreateActivityRequestMeetingStatusCanceled:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusCanceled:
 		return true
-	case CreateActivityRequestMeetingStatusHeld:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusHeld:
 		return true
-	case CreateActivityRequestMeetingStatusNoShow:
+	case CreateActivityRequestMeetingStatusCreateActivityRequestMeetingStatusNoShow:
 		return true
 	default:
 		return false
@@ -10111,6 +10144,81 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingInvitationReminderStatus.
+const (
+	MeetingInvitationReminderStatusOff         MeetingInvitationReminderStatus = "off"
+	MeetingInvitationReminderStatusPending     MeetingInvitationReminderStatus = "pending"
+	MeetingInvitationReminderStatusQueued      MeetingInvitationReminderStatus = "queued"
+	MeetingInvitationReminderStatusUnavailable MeetingInvitationReminderStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationReminderStatus enum.
+func (e MeetingInvitationReminderStatus) Valid() bool {
+	switch e {
+	case MeetingInvitationReminderStatusOff:
+		return true
+	case MeetingInvitationReminderStatusPending:
+		return true
+	case MeetingInvitationReminderStatusQueued:
+		return true
+	case MeetingInvitationReminderStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingInvitationStatus.
+const (
+	MeetingInvitationStatusCanceled       MeetingInvitationStatus = "canceled"
+	MeetingInvitationStatusCanceling      MeetingInvitationStatus = "canceling"
+	MeetingInvitationStatusConfirmed      MeetingInvitationStatus = "confirmed"
+	MeetingInvitationStatusNeedsAttention MeetingInvitationStatus = "needs_attention"
+	MeetingInvitationStatusPending        MeetingInvitationStatus = "pending"
+	MeetingInvitationStatusRescheduling   MeetingInvitationStatus = "rescheduling"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationStatus enum.
+func (e MeetingInvitationStatus) Valid() bool {
+	switch e {
+	case MeetingInvitationStatusCanceled:
+		return true
+	case MeetingInvitationStatusCanceling:
+		return true
+	case MeetingInvitationStatusConfirmed:
+		return true
+	case MeetingInvitationStatusNeedsAttention:
+		return true
+	case MeetingInvitationStatusPending:
+		return true
+	case MeetingInvitationStatusRescheduling:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingInvitationChangeAction.
+const (
+	MeetingInvitationChangeActionCancel     MeetingInvitationChangeAction = "cancel"
+	MeetingInvitationChangeActionReschedule MeetingInvitationChangeAction = "reschedule"
+	MeetingInvitationChangeActionRetry      MeetingInvitationChangeAction = "retry"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationChangeAction enum.
+func (e MeetingInvitationChangeAction) Valid() bool {
+	switch e {
+	case MeetingInvitationChangeActionCancel:
+		return true
+	case MeetingInvitationChangeActionReschedule:
+		return true
+	case MeetingInvitationChangeActionRetry:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingPlanReadiness.
 const (
 	MeetingPlanReadinessMeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
@@ -12469,6 +12577,27 @@ func (e ScheduledSendStatus) Valid() bool {
 	case ScheduledSendStatusScheduled:
 		return true
 	case ScheduledSendStatusSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingProfileProvider.
+const (
+	SchedulingProfileProviderEmpty    SchedulingProfileProvider = ""
+	SchedulingProfileProviderGcal     SchedulingProfileProvider = "gcal"
+	SchedulingProfileProviderGraphcal SchedulingProfileProvider = "graphcal"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingProfileProvider enum.
+func (e SchedulingProfileProvider) Valid() bool {
+	switch e {
+	case SchedulingProfileProviderEmpty:
+		return true
+	case SchedulingProfileProviderGcal:
+		return true
+	case SchedulingProfileProviderGraphcal:
 		return true
 	default:
 		return false
@@ -18091,15 +18220,48 @@ func (e ListProjectsParamsPhase) Valid() bool {
 	}
 }
 
+// Defines values for BookPublicMeetingJSONBodyDelivery.
+const (
+	BookPublicMeetingJSONBodyDeliveryCalendar   BookPublicMeetingJSONBodyDelivery = "calendar"
+	BookPublicMeetingJSONBodyDeliveryRecordOnly BookPublicMeetingJSONBodyDelivery = "record_only"
+)
+
+// Valid indicates whether the value is a known member of the BookPublicMeetingJSONBodyDelivery enum.
+func (e BookPublicMeetingJSONBodyDelivery) Valid() bool {
+	switch e {
+	case BookPublicMeetingJSONBodyDeliveryCalendar:
+		return true
+	case BookPublicMeetingJSONBodyDeliveryRecordOnly:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BookPublicMeeting201JSONResponseBodyBooking.
 const (
-	BookPublicMeeting201JSONResponseBodyBookingConfirmed BookPublicMeeting201JSONResponseBodyBooking = "confirmed"
+	BookPublicMeeting201JSONResponseBodyBookingCanceled       BookPublicMeeting201JSONResponseBodyBooking = "canceled"
+	BookPublicMeeting201JSONResponseBodyBookingCanceling      BookPublicMeeting201JSONResponseBodyBooking = "canceling"
+	BookPublicMeeting201JSONResponseBodyBookingConfirmed      BookPublicMeeting201JSONResponseBodyBooking = "confirmed"
+	BookPublicMeeting201JSONResponseBodyBookingNeedsAttention BookPublicMeeting201JSONResponseBodyBooking = "needs_attention"
+	BookPublicMeeting201JSONResponseBodyBookingPending        BookPublicMeeting201JSONResponseBodyBooking = "pending"
+	BookPublicMeeting201JSONResponseBodyBookingRescheduling   BookPublicMeeting201JSONResponseBodyBooking = "rescheduling"
 )
 
 // Valid indicates whether the value is a known member of the BookPublicMeeting201JSONResponseBodyBooking enum.
 func (e BookPublicMeeting201JSONResponseBodyBooking) Valid() bool {
 	switch e {
+	case BookPublicMeeting201JSONResponseBodyBookingCanceled:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingCanceling:
+		return true
 	case BookPublicMeeting201JSONResponseBodyBookingConfirmed:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingNeedsAttention:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingPending:
+		return true
+	case BookPublicMeeting201JSONResponseBodyBookingRescheduling:
 		return true
 	default:
 		return false
@@ -18325,6 +18487,24 @@ func (e ListScheduledSendsParamsStatus) Valid() bool {
 	case ListScheduledSendsParamsStatusScheduled:
 		return true
 	case ListScheduledSendsParamsStatusSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSchedulingCalendarsParamsProvider.
+const (
+	GetSchedulingCalendarsParamsProviderGcal     GetSchedulingCalendarsParamsProvider = "gcal"
+	GetSchedulingCalendarsParamsProviderGraphcal GetSchedulingCalendarsParamsProvider = "graphcal"
+)
+
+// Valid indicates whether the value is a known member of the GetSchedulingCalendarsParamsProvider enum.
+func (e GetSchedulingCalendarsParamsProvider) Valid() bool {
+	switch e {
+	case GetSchedulingCalendarsParamsProviderGcal:
+		return true
+	case GetSchedulingCalendarsParamsProviderGraphcal:
 		return true
 	default:
 		return false
@@ -18847,6 +19027,9 @@ type Activity struct {
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
 	Id         openapi_types.UUID  `json:"id"`
 
+	// InvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+	InvitationStatus *ActivityInvitationStatus `json:"invitation_status,omitempty"`
+
 	// IsDone Task only.
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
@@ -18897,6 +19080,9 @@ type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
 type ActivityDirection string
+
+// ActivityInvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+type ActivityInvitationStatus string
 
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
@@ -26636,14 +26822,14 @@ type ContactMomentDestination struct {
 	// Prefill What the surface opens with — a draft intent, a subject, a task title. Strings only: a prefill is what a human is about to edit, never a structure the client must interpret.
 	Prefill *map[string]string `json:"prefill,omitempty"`
 
-	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
+	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
 	Surface ContactMomentDestinationSurface `json:"surface"`
 }
 
 // ContactMomentDestinationEntityType defines model for ContactMomentDestination.EntityType.
 type ContactMomentDestinationEntityType string
 
-// ContactMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
+// ContactMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
 type ContactMomentDestinationSurface string
 
 // ContactMomentEvidence One thing that actually happened, which the reader can open.
@@ -32384,6 +32570,15 @@ type MeResponse struct {
 // MeResponsePassportScopes defines model for MeResponse.Passport.Scopes.
 type MeResponsePassportScopes string
 
+// MeetingAvailability defines model for MeetingAvailability.
+type MeetingAvailability struct {
+	Slots []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"slots"`
+	Truncated bool `json:"truncated"`
+}
+
 // MeetingBrief The pre-meeting brief for one booked meeting (ADR-0097 D5), assembled fresh on every
 // read from what the CALLER can see.
 //
@@ -32485,6 +32680,48 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingInvitation defines model for MeetingInvitation.
+type MeetingInvitation struct {
+	CalendarUrl     *string                          `json:"calendar_url,omitempty"`
+	End             time.Time                        `json:"end"`
+	Id              openapi_types.UUID               `json:"id"`
+	Location        string                           `json:"location"`
+	ManagementToken *string                          `json:"management_token,omitempty"`
+	ReminderStatus  *MeetingInvitationReminderStatus `json:"reminder_status,omitempty"`
+	Start           time.Time                        `json:"start"`
+	Status          MeetingInvitationStatus          `json:"status"`
+	Subject         string                           `json:"subject"`
+	Version         int64                            `json:"version"`
+}
+
+// MeetingInvitationReminderStatus defines model for MeetingInvitation.ReminderStatus.
+type MeetingInvitationReminderStatus string
+
+// MeetingInvitationStatus defines model for MeetingInvitation.Status.
+type MeetingInvitationStatus string
+
+// MeetingInvitationChange defines model for MeetingInvitationChange.
+type MeetingInvitationChange struct {
+	Action  MeetingInvitationChangeAction `json:"action"`
+	End     *time.Time                    `json:"end,omitempty"`
+	Start   *time.Time                    `json:"start,omitempty"`
+	Version int64                         `json:"version"`
+}
+
+// MeetingInvitationChangeAction defines model for MeetingInvitationChange.Action.
+type MeetingInvitationChangeAction string
+
+// MeetingInvitationRequest defines model for MeetingInvitationRequest.
+type MeetingInvitationRequest struct {
+	AttendeeEmail openapi_types.Email `json:"attendee_email"`
+	ContactId     openapi_types.UUID  `json:"contact_id"`
+	Description   string              `json:"description"`
+	End           time.Time           `json:"end"`
+	Location      string              `json:"location"`
+	Start         time.Time           `json:"start"`
+	Subject       string              `json:"subject"`
+}
 
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
 // KNOWN about it.
@@ -32689,6 +32926,20 @@ type MeetingPlanUnknown struct {
 
 // MeetingPlanUnknownKind Which gap this is. A closed vocabulary so a surface can order and label them, and so a writer cannot invent an eighth.
 type MeetingPlanUnknownKind string
+
+// MeetingProposalRequest defines model for MeetingProposalRequest.
+type MeetingProposalRequest struct {
+	AttendeeEmail   openapi_types.Email `json:"attendee_email"`
+	ContactId       openapi_types.UUID  `json:"contact_id"`
+	Description     string              `json:"description"`
+	DurationMinutes int                 `json:"duration_minutes"`
+	Location        string              `json:"location"`
+	Options         []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"options"`
+	Subject string `json:"subject"`
+}
 
 // MergeTagsRequest defines model for MergeTagsRequest.
 type MergeTagsRequest struct {
@@ -34801,6 +35052,19 @@ type ProviderSpend struct {
 	Months []ProviderMonthlySpend `json:"months"`
 }
 
+// PublicMeetingProposal defines model for PublicMeetingProposal.
+type PublicMeetingProposal struct {
+	Description string             `json:"description"`
+	ExpiresAt   time.Time          `json:"expires_at"`
+	Meeting     *MeetingInvitation `json:"meeting,omitempty"`
+	Options     []struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	} `json:"options"`
+	Profile PublicSchedulingProfile `json:"profile"`
+	Used    bool                    `json:"used"`
+}
+
 // PublicOriginStatus The address this installation puts in outgoing links, and whether it answered when last asked.
 // Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
 // send guards are what actually refuse an unusable one. A probe from inside the deployment says this
@@ -34816,6 +35080,17 @@ type PublicOriginStatus struct {
 
 	// Reachable Null until the first probe answers, so a screen can say "not checked yet" rather than implying a failure.
 	Reachable *bool `json:"reachable,omitempty"`
+}
+
+// PublicSchedulingProfile defines model for PublicSchedulingProfile.
+type PublicSchedulingProfile struct {
+	CompanyName     string  `json:"company_name"`
+	DurationMinutes int     `json:"duration_minutes"`
+	Enabled         bool    `json:"enabled"`
+	HostName        string  `json:"host_name"`
+	Location        string  `json:"location"`
+	LogoUrl         *string `json:"logo_url,omitempty"`
+	Title           string  `json:"title"`
 }
 
 // PutOnboardingStateRequest defines model for PutOnboardingStateRequest.
@@ -36202,6 +36477,32 @@ type ScheduledSendHeldReason string
 // `held` — a gate refused at fire, or the window was missed. It will not send itself;
 // a human reschedules or cancels it.
 type ScheduledSendStatus string
+
+// SchedulingProfile defines model for SchedulingProfile.
+type SchedulingProfile struct {
+	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
+	BufferMinutes     int       `json:"buffer_minutes"`
+	CalendarId        string    `json:"calendar_id"`
+	CompanyName       *string   `json:"company_name,omitempty"`
+	DurationMinutes   int       `json:"duration_minutes"`
+
+	// EmailReminder Send one operational email reminder one hour before future meetings.
+	EmailReminder *bool                     `json:"email_reminder,omitempty"`
+	Enabled       bool                      `json:"enabled"`
+	HorizonDays   int                       `json:"horizon_days"`
+	HostName      *string                   `json:"host_name,omitempty"`
+	Location      string                    `json:"location"`
+	LogoUrl       *string                   `json:"logo_url,omitempty"`
+	NoticeMinutes int                       `json:"notice_minutes"`
+	Provider      SchedulingProfileProvider `json:"provider"`
+	PublicUrl     *string                   `json:"public_url,omitempty"`
+	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
+	Slug          *string                   `json:"slug,omitempty"`
+	Title         string                    `json:"title"`
+}
+
+// SchedulingProfileProvider defines model for SchedulingProfile.Provider.
+type SchedulingProfileProvider string
 
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
@@ -42254,6 +42555,8 @@ type ListAutomationRunsParamsOutcome string
 
 // GetAvailabilityParams defines parameters for GetAvailability.
 type GetAvailabilityParams struct {
+	Reliable *bool `form:"reliable,omitempty" json:"reliable,omitempty"`
+
 	// HostUserId Host to check (defaults to the caller).
 	HostUserId      *openapi_types.UUID `form:"host_user_id,omitempty" json:"host_user_id,omitempty"`
 	From            time.Time           `form:"from" json:"from"`
@@ -45509,9 +45812,13 @@ type BookPublicMeetingJSONBody struct {
 	// (EP07 capture contract, `features/07`; feedback/11 + /14). Names the purpose and the exact
 	// wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
 	Consent CaptureConsent `json:"consent"`
-	End     time.Time      `json:"end"`
-	Start   time.Time      `json:"start"`
-	Subject *string        `json:"subject,omitempty"`
+
+	// Delivery Accepted for compatibility. Public bookings always send a calendar invitation; the host must enable their page.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Delivery *BookPublicMeetingJSONBodyDelivery `json:"delivery,omitempty"`
+	End      time.Time                          `json:"end"`
+	Start    time.Time                          `json:"start"`
+	Subject  *string                            `json:"subject,omitempty"`
 }
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
@@ -45532,6 +45839,9 @@ type BookPublicMeetingParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// BookPublicMeetingJSONBodyDelivery defines parameters for BookPublicMeeting.
+type BookPublicMeetingJSONBodyDelivery string
 
 // BookPublicMeeting201JSONResponseBodyBooking defines parameters for BookPublicMeeting.
 type BookPublicMeeting201JSONResponseBodyBooking string
@@ -45572,6 +45882,12 @@ type SubmitConfirmDetailsJSONBodyCorrectionsField string
 // SubmitConfirmDetailsJSONBodyMarketingChoice defines parameters for SubmitConfirmDetails.
 type SubmitConfirmDetailsJSONBodyMarketingChoice string
 
+// GetPublicMeetingAvailabilityParams defines parameters for GetPublicMeetingAvailability.
+type GetPublicMeetingAvailabilityParams struct {
+	From time.Time `form:"from" json:"from"`
+	To   time.Time `form:"to" json:"to"`
+}
+
 // UpdatePreferencesJSONBody defines parameters for UpdatePreferences.
 type UpdatePreferencesJSONBody struct {
 	Choices []struct {
@@ -45611,6 +45927,22 @@ type OneClickUnsubscribeParams struct {
 
 // OneClickUnsubscribeFormdataBodyListUnsubscribe defines parameters for OneClickUnsubscribe.
 type OneClickUnsubscribeFormdataBodyListUnsubscribe string
+
+// AcceptPublicMeetingProposalJSONBody defines parameters for AcceptPublicMeetingProposal.
+type AcceptPublicMeetingProposalJSONBody struct {
+	Consent struct {
+		PolicyVersion string `json:"policy_version"`
+		Wording       string `json:"wording"`
+	} `json:"consent"`
+	End   time.Time `json:"end"`
+	Start time.Time `json:"start"`
+}
+
+// GetPublicProposalAvailabilityParams defines parameters for GetPublicProposalAvailability.
+type GetPublicProposalAvailabilityParams struct {
+	From time.Time `form:"from" json:"from"`
+	To   time.Time `form:"to" json:"to"`
+}
 
 // ListBuyerRoomThreadsParams defines parameters for ListBuyerRoomThreads.
 type ListBuyerRoomThreadsParams struct {
@@ -45969,6 +46301,67 @@ type RescheduleScheduledSendParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// GetSchedulingCalendarsParams defines parameters for GetSchedulingCalendars.
+type GetSchedulingCalendarsParams struct {
+	Provider GetSchedulingCalendarsParamsProvider `form:"provider" json:"provider"`
+}
+
+// GetSchedulingCalendarsParamsProvider defines parameters for GetSchedulingCalendars.
+type GetSchedulingCalendarsParamsProvider string
+
+// CreateMeetingInvitationParams defines parameters for CreateMeetingInvitation.
+type CreateMeetingInvitationParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
+	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
+	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// GetMeetingAvailabilityParams defines parameters for GetMeetingAvailability.
+type GetMeetingAvailabilityParams struct {
+	From time.Time `form:"from" json:"from"`
+	To   time.Time `form:"to" json:"to"`
+}
+
+// CreateMeetingProposalParams defines parameters for CreateMeetingProposal.
+type CreateMeetingProposalParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // SearchParams defines parameters for Search.
@@ -47486,6 +47879,9 @@ type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
 // SubmitConfirmDetailsJSONRequestBody defines body for SubmitConfirmDetails for application/json ContentType.
 type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
+// ChangePublicMeetingInvitationJSONRequestBody defines body for ChangePublicMeetingInvitation for application/json ContentType.
+type ChangePublicMeetingInvitationJSONRequestBody = MeetingInvitationChange
+
 // UpdatePreferencesJSONRequestBody defines body for UpdatePreferences for application/json ContentType.
 type UpdatePreferencesJSONRequestBody UpdatePreferencesJSONBody
 
@@ -47494,6 +47890,9 @@ type PublicStopContactJSONRequestBody PublicStopContactJSONBody
 
 // OneClickUnsubscribeFormdataRequestBody defines body for OneClickUnsubscribe for application/x-www-form-urlencoded ContentType.
 type OneClickUnsubscribeFormdataRequestBody OneClickUnsubscribeFormdataBody
+
+// AcceptPublicMeetingProposalJSONRequestBody defines body for AcceptPublicMeetingProposal for application/json ContentType.
+type AcceptPublicMeetingProposalJSONRequestBody AcceptPublicMeetingProposalJSONBody
 
 // ExchangeDealRoomCredentialJSONRequestBody defines body for ExchangeDealRoomCredential for application/json ContentType.
 type ExchangeDealRoomCredentialJSONRequestBody = DealRoomCredentialRequest
@@ -47560,6 +47959,18 @@ type SetRoleObjectGrantJSONRequestBody = SetRoleObjectGrantRequest
 
 // RescheduleScheduledSendJSONRequestBody defines body for RescheduleScheduledSend for application/json ContentType.
 type RescheduleScheduledSendJSONRequestBody = RescheduleSendRequest
+
+// CreateMeetingInvitationJSONRequestBody defines body for CreateMeetingInvitation for application/json ContentType.
+type CreateMeetingInvitationJSONRequestBody = MeetingInvitationRequest
+
+// ChangeMeetingInvitationJSONRequestBody defines body for ChangeMeetingInvitation for application/json ContentType.
+type ChangeMeetingInvitationJSONRequestBody = MeetingInvitationChange
+
+// PutSchedulingProfileJSONRequestBody defines body for PutSchedulingProfile for application/json ContentType.
+type PutSchedulingProfileJSONRequestBody = SchedulingProfile
+
+// CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
+type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
 // CreateSignalJSONRequestBody defines body for CreateSignal for application/json ContentType.
 type CreateSignalJSONRequestBody = CreateSignalRequest
@@ -59125,12 +59536,24 @@ type ServerInterface interface {
 	// Free/busy slots for a public booking page (anonymous).
 	// (GET /public/booking/{host_slug}/availability)
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
+	// Read the host-approved booking page identity and meeting details.
+	// (GET /public/booking/{host_slug}/profile)
+	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string)
 	// What the workspace holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
 	// Submit corrections and a marketing answer (anonymous, token-authed).
 	// (POST /public/confirm/{token})
 	SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
+	// Read one invitation using its private management capability.
+	// (GET /public/meeting/{token})
+	GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string)
+	// Change one invitation using its private management capability.
+	// (PATCH /public/meeting/{token})
+	ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string)
+	// Find alternative times for one existing invitation.
+	// (GET /public/meeting/{token}/availability)
+	GetPublicMeetingAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicMeetingAvailabilityParams)
 	// The recipient's per-purpose consent state (anonymous, token-authed).
 	// (GET /public/preferences/{token})
 	GetPreferenceCenter(w http.ResponseWriter, r *http.Request, token string)
@@ -59143,6 +59566,15 @@ type ServerInterface interface {
 	// RFC 8058 one-click unsubscribe (anonymous, token-authed, POST-only).
 	// (POST /public/preferences/{token}/unsubscribe)
 	OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, token string, params OneClickUnsubscribeParams)
+	// Read host-approved personal meeting details without contact data.
+	// (GET /public/proposal/{token})
+	GetPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string)
+	// Choose one time using a personal proposal's bound recipient.
+	// (POST /public/proposal/{token})
+	AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string)
+	// Check current availability for this personal proposal.
+	// (GET /public/proposal/{token}/availability)
+	GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicProposalAvailabilityParams)
 	// The documents as published, grouped.
 	// (GET /public/rooms/documents)
 	ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request)
@@ -59290,6 +59722,30 @@ type ServerInterface interface {
 	// Withdraw a scheduled message before it fires.
 	// (POST /scheduled-sends/{id}/cancel)
 	CancelScheduledSend(w http.ResponseWriter, r *http.Request, id Id)
+	// List the current host's connected calendars for scheduling settings.
+	// (GET /scheduling/calendars)
+	GetSchedulingCalendars(w http.ResponseWriter, r *http.Request, params GetSchedulingCalendarsParams)
+	// Reserve a meeting and request a calendar-native invitation.
+	// (POST /scheduling/invitations)
+	CreateMeetingInvitation(w http.ResponseWriter, r *http.Request, params CreateMeetingInvitationParams)
+	// Read invitation delivery and calendar state.
+	// (GET /scheduling/invitations/{id})
+	GetMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Reschedule, cancel or retry an invitation through its original calendar event.
+	// (PATCH /scheduling/invitations/{id})
+	ChangeMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Find alternative times for one existing invitation.
+	// (GET /scheduling/invitations/{id}/availability)
+	GetMeetingAvailability(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMeetingAvailabilityParams)
+	// Read the caller's reusable booking page and scheduling policy.
+	// (GET /scheduling/profile)
+	GetSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Configure and activate the caller's booking page.
+	// (PUT /scheduling/profile)
+	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Create a personal, expiring invitation without reserving time or sending mail.
+	// (POST /scheduling/proposals)
+	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
@@ -62680,6 +63136,12 @@ func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read the host-approved booking page identity and meeting details.
+// (GET /public/booking/{host_slug}/profile)
+func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the workspace holds about this contact (anonymous, token-authed).
 // (GET /public/confirm/{token})
 func (_ Unimplemented) GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
@@ -62689,6 +63151,24 @@ func (_ Unimplemented) GetConfirmDetails(w http.ResponseWriter, r *http.Request,
 // Submit corrections and a marketing answer (anonymous, token-authed).
 // (POST /public/confirm/{token})
 func (_ Unimplemented) SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read one invitation using its private management capability.
+// (GET /public/meeting/{token})
+func (_ Unimplemented) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change one invitation using its private management capability.
+// (PATCH /public/meeting/{token})
+func (_ Unimplemented) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find alternative times for one existing invitation.
+// (GET /public/meeting/{token}/availability)
+func (_ Unimplemented) GetPublicMeetingAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicMeetingAvailabilityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -62713,6 +63193,24 @@ func (_ Unimplemented) PublicStopContact(w http.ResponseWriter, r *http.Request,
 // RFC 8058 one-click unsubscribe (anonymous, token-authed, POST-only).
 // (POST /public/preferences/{token}/unsubscribe)
 func (_ Unimplemented) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, token string, params OneClickUnsubscribeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read host-approved personal meeting details without contact data.
+// (GET /public/proposal/{token})
+func (_ Unimplemented) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose one time using a personal proposal's bound recipient.
+// (POST /public/proposal/{token})
+func (_ Unimplemented) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Check current availability for this personal proposal.
+// (GET /public/proposal/{token}/availability)
+func (_ Unimplemented) GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicProposalAvailabilityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63007,6 +63505,54 @@ func (_ Unimplemented) RescheduleScheduledSend(w http.ResponseWriter, r *http.Re
 // Withdraw a scheduled message before it fires.
 // (POST /scheduled-sends/{id}/cancel)
 func (_ Unimplemented) CancelScheduledSend(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the current host's connected calendars for scheduling settings.
+// (GET /scheduling/calendars)
+func (_ Unimplemented) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request, params GetSchedulingCalendarsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reserve a meeting and request a calendar-native invitation.
+// (POST /scheduling/invitations)
+func (_ Unimplemented) CreateMeetingInvitation(w http.ResponseWriter, r *http.Request, params CreateMeetingInvitationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read invitation delivery and calendar state.
+// (GET /scheduling/invitations/{id})
+func (_ Unimplemented) GetMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reschedule, cancel or retry an invitation through its original calendar event.
+// (PATCH /scheduling/invitations/{id})
+func (_ Unimplemented) ChangeMeetingInvitation(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find alternative times for one existing invitation.
+// (GET /scheduling/invitations/{id}/availability)
+func (_ Unimplemented) GetMeetingAvailability(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMeetingAvailabilityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the caller's reusable booking page and scheduling policy.
+// (GET /scheduling/profile)
+func (_ Unimplemented) GetSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Configure and activate the caller's booking page.
+// (PUT /scheduling/profile)
+func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a personal, expiring invitation without reserving time or sending mail.
+// (POST /scheduling/proposals)
+func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67442,6 +67988,19 @@ func (siw *ServerInterfaceWrapper) GetAvailability(w http.ResponseWriter, r *htt
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetAvailabilityParams
+
+	// ------------- Optional query parameter "reliable" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reliable", r.URL.Query(), &params.Reliable, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reliable"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reliable", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "host_user_id" -------------
 
@@ -85132,6 +85691,32 @@ func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicSchedulingProfile operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicSchedulingProfile(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetConfirmDetails operation middleware
 func (siw *ServerInterfaceWrapper) GetConfirmDetails(w http.ResponseWriter, r *http.Request) {
 
@@ -85175,6 +85760,113 @@ func (siw *ServerInterfaceWrapper) SubmitConfirmDetails(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SubmitConfirmDetails(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicMeetingInvitation(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ChangePublicMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ChangePublicMeetingInvitation(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicMeetingAvailability operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicMeetingAvailability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicMeetingAvailabilityParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicMeetingAvailability(w, r, token, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -85295,6 +85987,113 @@ func (siw *ServerInterfaceWrapper) OneClickUnsubscribe(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.OneClickUnsubscribe(w, r, token, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicMeetingProposal operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicMeetingProposal(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptPublicMeetingProposal operation middleware
+func (siw *ServerInterfaceWrapper) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptPublicMeetingProposal(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicProposalAvailability operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicProposalAvailabilityParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicProposalAvailability(w, r, token, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -87416,6 +88215,329 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CancelScheduledSend(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSchedulingCalendars operation middleware
+func (siw *ServerInterfaceWrapper) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSchedulingCalendarsParams
+
+	// ------------- Required query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSchedulingCalendars(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) CreateMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateMeetingInvitationParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateMeetingInvitation(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) GetMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMeetingInvitation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ChangeMeetingInvitation operation middleware
+func (siw *ServerInterfaceWrapper) ChangeMeetingInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ChangeMeetingInvitation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMeetingAvailability operation middleware
+func (siw *ServerInterfaceWrapper) GetMeetingAvailability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMeetingAvailabilityParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMeetingAvailability(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSchedulingProfile operation middleware
+func (siw *ServerInterfaceWrapper) GetSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSchedulingProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutSchedulingProfile operation middleware
+func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutSchedulingProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateMeetingProposal operation middleware
+func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateMeetingProposalParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateMeetingProposal(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -93481,10 +94603,22 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/public/booking/{host_slug}/availability", wrapper.GetPublicAvailability)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/booking/{host_slug}/profile", wrapper.GetPublicSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/confirm/{token}", wrapper.GetConfirmDetails)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/confirm/{token}", wrapper.SubmitConfirmDetails)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/meeting/{token}", wrapper.GetPublicMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/public/meeting/{token}", wrapper.ChangePublicMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/meeting/{token}/availability", wrapper.GetPublicMeetingAvailability)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/preferences/{token}", wrapper.GetPreferenceCenter)
@@ -93497,6 +94631,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/preferences/{token}/unsubscribe", wrapper.OneClickUnsubscribe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/proposal/{token}", wrapper.GetPublicMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/proposal/{token}", wrapper.AcceptPublicMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/proposal/{token}/availability", wrapper.GetPublicProposalAvailability)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/rooms/documents", wrapper.ListBuyerRoomDocuments)
@@ -93644,6 +94787,30 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduled-sends/{id}/cancel", wrapper.CancelScheduledSend)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/calendars", wrapper.GetSchedulingCalendars)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/invitations", wrapper.CreateMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/invitations/{id}", wrapper.GetMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/scheduling/invitations/{id}", wrapper.ChangeMeetingInvitation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/invitations/{id}/availability", wrapper.GetMeetingAvailability)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/profile", wrapper.GetSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)

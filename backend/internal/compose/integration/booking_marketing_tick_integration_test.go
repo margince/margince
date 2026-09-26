@@ -48,8 +48,9 @@ func seededMarketingPurposeID(t *testing.T, e *apptest.AppEnv) string {
 }
 
 func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -99,8 +100,9 @@ func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 // follows, and for the same reason: this door is anonymous, so a refusal after
 // the ensure would grow the contact table one rejected request at a time.
 func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	monday := nextMonday()
@@ -181,8 +183,8 @@ func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testi
 	// that creates Rex, or his absence below would prove nothing.
 	control := tick(marketing, "mk-2026-01", "Send me your newsletter.")
 	control["booker"] = AnyMap{"name": "Cora Control", "email": "cora@visitor.example"}
-	control["start"] = monday.Add(9 * time.Hour)
-	control["end"] = monday.Add(570 * time.Minute)
+	control["start"] = monday.Add(6 * time.Hour)
+	control["end"] = monday.Add(390 * time.Minute)
 
 	before := bookingCounts(t, e)
 	if status := publicCall(t, e, "POST", base, control, nil, nil); status != http.StatusCreated {
@@ -225,8 +227,9 @@ func bookingCounts(t *testing.T, e *apptest.AppEnv) counts {
 // operational grant lands and nothing else moves. Without this the suite could
 // not tell "the tick works" from "every booking now mails a link".
 func TestAPublicBookingWithoutAMarketingTickMailsNothing(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -323,8 +326,9 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeI
 // is what the contract already declares for a question this installation could
 // not put.
 func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -369,8 +373,8 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 		t.Fatalf("a tick from a non-primary address → %d, want 201: the link is not minted "+
 			"either way, and refusing to ask need not refuse the meeting", status)
 	}
-	if answer.Booking != "confirmed" || answer.Marketing != "not_asked" {
-		t.Errorf("the response says booking=%q marketing=%q, want confirmed/not_asked — a booker "+
+	if answer.Booking != "pending" || answer.Marketing != "not_asked" {
+		t.Errorf("the response says booking=%q marketing=%q, want pending/not_asked — a booker "+
 			"who ticked the box is owed the fact that no mail is coming",
 			answer.Booking, answer.Marketing)
 	}
@@ -390,7 +394,7 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 	// matters more now that both presses answer 201, because the status alone
 	// no longer tells the two apart. It also proves the comparison is
 	// case-insensitive: an address differing only in case is the same mailbox.
-	if status := publicCall(t, e, "POST", base, tick("VERA@corp.example", 9*time.Hour), nil, &answer); status != http.StatusCreated {
+	if status := publicCall(t, e, "POST", base, tick("VERA@corp.example", 7*time.Hour), nil, &answer); status != http.StatusCreated {
 		t.Fatalf("a tick from the primary address (differing in case) → %d, want 201", status)
 	}
 	// THE TOKEN COUNT BELOW IS THE CONTROL, not the outcome field. Both presses
@@ -428,8 +432,9 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 // simply stops being the place where that is paid for by somebody who came to
 // book a slot. The response says `not_asked`, and the withdrawal stands.
 func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -486,8 +491,8 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 		t.Fatalf("a tick naming a withdrawn subject → %d, want 201: they are asked nothing, and "+
 			"the question they are not asked is not one they wanted", status)
 	}
-	if answer.Booking != "confirmed" || answer.Marketing != "not_asked" {
-		t.Errorf("the response says booking=%q marketing=%q, want confirmed/not_asked",
+	if answer.Booking != "pending" || answer.Marketing != "not_asked" {
+		t.Errorf("the response says booking=%q marketing=%q, want pending/not_asked",
 			answer.Booking, answer.Marketing)
 	}
 	if n := linksFor(withdrawn); n != 0 {
@@ -511,7 +516,7 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 	// like a fix and is a regression. A contact who never answered is still
 	// asked.
 	fresh := newContact("Fiona Fresh", "fiona@corp.example")
-	if status := publicCall(t, e, "POST", base, tickAt(8*time.Hour, "fiona@corp.example"), nil, nil); status != http.StatusCreated {
+	if status := publicCall(t, e, "POST", base, tickAt(6*time.Hour, "fiona@corp.example"), nil, nil); status != http.StatusCreated {
 		t.Fatalf("a tick naming a subject with no decision on file → %d, want 201", status)
 	}
 	if n := linksFor(fresh); n != 1 {

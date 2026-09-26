@@ -97,15 +97,10 @@ import { useSendPermission } from "./usesendpermission";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
-// The composer surface for the three already-routed ops (draftEmail /
-// sendEmail / relinkActivity): a human's edit-then-confirm reply, and a
-// mis-captured activity's relink. Pure frontend — every op is live, audited,
-// and typed on the backend; this file only calls them.
-
+// The composer reviews replies, first messages and relinks before submitting.
 type Activity = components["schemas"]["Activity"];
 type EmailDraft = components["schemas"]["EmailDraft"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
-
 // What a drafting call reported about the text it produced. Held apart from the
 // fields it filled because the disclosure is owed for the call that put model
 // output on this surface, whatever the human then does to the words.
@@ -1350,6 +1345,7 @@ const NO_TRANSPORTS: readonly Transport[] = [];
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement, and the transport dial adds the fourth. The head, the attachment shelf, the drafting call, the form fill, the body edit and both draft controls are extracted (composehead.tsx, composeattachments.tsx); what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.
 export function ComposeModal({
+  initialMessage,
   activityId,
   entityType,
   entityId,
@@ -1370,6 +1366,7 @@ export function ComposeModal({
   // behaviour below is shared rather than forked. A reply keeps threading and
   // inherits its links; an account-started message roots its own thread and
   // files itself under the record it was started from.
+  initialMessage?: Readonly<{ subject: string; body: string }>;
   activityId?: string;
   entityType: RelinkKind;
   entityId: string;
@@ -1456,11 +1453,11 @@ export function ComposeModal({
   // stays open, because a field holding a value may never be hidden.
   const [bcc, setBcc] = useState<string[]>([]);
   const [bccOpen, setBccOpen] = useState(false);
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(initialMessage?.subject ?? "");
   // The two renderings of one message: `body` is what a text client receives and
   // what every gate reads, `html` the markup alternative beside it. Both travel,
   // because the wire is multipart/alternative.
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initialMessage?.body ?? "");
   const [html, setHtml] = useState("");
   // Uploads may finish after switching; their callback retains its target's bank.
   const [filesByTarget, setFilesByTarget] = useState<

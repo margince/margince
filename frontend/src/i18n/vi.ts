@@ -14,6 +14,118 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "scheduling.back": "Quay lại Margince",
+  "scheduling.prepare": "Chuẩn bị cho cuộc họp",
+  "scheduling.timezone": "Múi giờ",
+  "scheduling.copySignature": "Sao chép liên kết chữ ký",
+  "scheduling.replace": "Thay liên kết đặt lịch",
+  "scheduling.replaceHelp":
+    "Liên kết cũ sẽ ngừng nhận lịch hẹn. Hãy cập nhật chữ ký email và mọi nơi đã chia sẻ. Cuộc hẹn hiện có vẫn giữ liên kết thay đổi riêng.",
+  "scheduling.reschedule": "Đổi lịch",
+  "scheduling.rescheduleHelp":
+    "Giờ hẹn hiện tại được giữ đến khi lịch xác nhận thay đổi.",
+  "scheduling.saveTime": "Xác nhận giờ mới",
+  "scheduling.hostRecovery":
+    "Kết nối lại lịch nếu cần, rồi thử lại. Thời gian vẫn được giữ khi việc gửi chưa rõ kết quả.",
+  "scheduling.guestRecovery":
+    "Chủ lịch cần kiểm tra lời mời này. Yêu cầu đặt lịch của bạn đã được lưu.",
+  "scheduling.deliveryUnknown":
+    "Máy chủ chưa trả về lời mời. Hãy hỏi chủ lịch trước khi thử lại.",
+  "scheduling.personalGuest":
+    "Lời mời dành cho khách nhận liên kết. Cuộc hẹn sử dụng địa chỉ email do chủ lịch chọn.",
+  "scheduling.proposalGreeting": "Xin chào,",
+  "scheduling.proposalChoose": "Chọn một giờ tại đây hoặc tìm giờ khác:",
+  "scheduling.proposalReply": "Bạn cũng có thể trả lời với thời gian phù hợp.",
+  "scheduling.proposalHelp":
+    "Các lựa chọn không giữ chỗ trong lịch. Liên kết cá nhân dùng một lần và hết hạn sau bảy ngày hoặc giờ đề xuất cuối cùng.",
+  "scheduling.createPersonalLink": "Tạo liên kết cá nhân",
+  "scheduling.reviewProposal": "Tạo đề xuất",
+  "scheduling.personalLink": "Mở lời mời cá nhân",
+  "scheduling.expires": "Hết hạn {date}",
+  "scheduling.reviewEmail": "Xem lại email",
+  "scheduling.method": "Cách sắp xếp cuộc hẹn",
+  "scheduling.propose": "Đề xuất thời gian",
+  "scheduling.sharePersonal": "Chia sẻ liên kết cá nhân",
+  "scheduling.selectOptions_one": "Chọn hai hoặc ba giờ · Đã chọn {count}",
+  "scheduling.selectOptions_other": "Chọn hai hoặc ba giờ · Đã chọn {count}",
+  "scheduling.blockingCalendars": "Các lịch khác chặn thời gian",
+  "scheduling.blockingHelp":
+    "Lịch tạo cuộc hẹn luôn chặn thời gian. Tên sự kiện riêng tư vẫn nằm trong lịch của bạn.",
+  "scheduling.savedRequest":
+    "Yêu cầu cuộc hẹn của bạn đã được lưu. Mở để kiểm tra lời mời, đổi lịch hoặc hủy.",
+  "scheduling.openMeeting": "Xem cuộc hẹn của bạn",
+  "scheduling.emailReminder": "Nhắc qua email một giờ trước cuộc hẹn",
+  "scheduling.reminderHelp":
+    "Áp dụng cho cuộc hẹn mới. Sử dụng hộp thư đã kết nối và kiểm tra quyền gửi email trước khi gửi.",
+  "scheduling.reminder.pending": "Đã lên lịch email nhắc hẹn.",
+  "scheduling.reminder.queued": "Email nhắc hẹn đang chờ gửi.",
+  "scheduling.reminder.unavailable":
+    "Không thể gửi lời nhắc. Kiểm tra kết nối email và gửi email trực tiếp cho khách mời.",
+  "history.field.reminder_status": "Trạng thái lời nhắc",
+  "scheduling.myLink": "Liên kết đặt lịch của tôi",
+  "scheduling.linkIntro":
+    "Một liên kết cho chữ ký email, tin nhắn và trang web. Khách chọn giờ trong lịch trống của bạn.",
+  "scheduling.copyLink": "Sao chép liên kết",
+  "scheduling.copied": "Đã sao chép",
+  "scheduling.copyFallback": "Chọn và sao chép liên kết bên dưới.",
+  "scheduling.preview": "Xem trước trang công khai",
+  "scheduling.signature": "Đặt lịch họp với tôi",
+  "scheduling.active": "Đang nhận lịch hẹn",
+  "scheduling.paused": "Đã tạm dừng đặt lịch công khai",
+  "scheduling.pause": "Tạm dừng đặt lịch",
+  "scheduling.resume": "Bật đặt lịch",
+  "scheduling.settings": "Cài đặt cuộc họp",
+  "scheduling.save": "Lưu cài đặt",
+  "scheduling.saved": "Đã lưu cài đặt",
+  "scheduling.provider": "Nhà cung cấp lịch",
+  "scheduling.proposalChanged":
+    "Liên kết này giữ nguyên thông tin đã tạo. Bạn có thể tạo liên kết mới cho các thay đổi; liên kết cũ vẫn có hiệu lực đến khi hết hạn.",
+  "scheduling.proposalUpdate": "Tạo đề xuất đã cập nhật",
+  "scheduling.calendar": "Lịch cuộc hẹn",
+  "scheduling.connect": "Kết nối hoặc kết nối lại lịch",
+  "scheduling.connectionHelp":
+    "Cần quyền ghi lịch để gửi lời mời. Kết nối lại lịch chỉ đọc để cấp quyền.",
+  "scheduling.hostName": "Tên công khai của bạn",
+  "scheduling.companyName": "Tên công ty",
+  "scheduling.logo": "URL logo công khai của công ty",
+  "scheduling.subject": "Tiêu đề cuộc họp",
+  "scheduling.location": "Địa điểm hoặc liên kết cuộc họp",
+  "scheduling.duration": "Thời lượng tính bằng phút",
+  "scheduling.notice": "Thời gian báo trước tính bằng phút",
+  "scheduling.buffer": "Thời gian đệm tính bằng phút",
+  "scheduling.horizon": "Khoảng thời gian đặt lịch tính bằng ngày",
+  "scheduling.hours": "Chỉnh sửa giờ nhận lịch",
+  "scheduling.invite": "Gửi lời mời",
+  "scheduling.contact": "Bạn sẽ gặp ai?",
+  "scheduling.guestAgenda": "Bạn muốn trao đổi về điều gì?",
+  "scheduling.agenda": "Lời nhắn cho khách",
+  "scheduling.chooseTime": "Chọn giờ",
+  "scheduling.zone": "Múi giờ",
+  "scheduling.date": "Ngày bắt đầu",
+  "scheduling.next": "Thêm giờ",
+  "scheduling.noTimes":
+    "Không còn giờ trống trong khoảng này. Hãy chọn ngày khác.",
+  "scheduling.review": "Xem lại lời mời",
+  "scheduling.pending": "Đang tạo lời mời…",
+  "scheduling.confirmed": "Đã tạo lời mời trong lịch",
+  "scheduling.needs_attention": "Lời mời cần được kiểm tra",
+  "scheduling.rescheduling": "Đang đổi lịch cuộc họp…",
+  "scheduling.canceling": "Đang hủy cuộc họp…",
+  "scheduling.canceled": "Đã hủy cuộc họp",
+  "scheduling.deliveryHelp":
+    "Xác nhận từ lịch không có nghĩa là khách đã chấp nhận. Phản hồi sẽ đến qua lịch đã kết nối.",
+  "scheduling.openCalendar": "Mở trong lịch",
+  "scheduling.cancel": "Hủy cuộc họp",
+  "scheduling.cancelConfirm": "Hủy cuộc họp này và thông báo cho khách mời?",
+  "scheduling.retry": "Thử lại lời mời",
+  "scheduling.book": "Xác nhận cuộc họp",
+  "scheduling.chooseFirst": "Chọn giờ để tiếp tục",
+  "scheduling.unavailable":
+    "Trang đặt lịch này không khả dụng. Hãy liên hệ chủ lịch.",
+  "scheduling.publicUrlMissing":
+    "Thiết lập địa chỉ công khai cho hệ thống trước khi chia sẻ liên kết đặt lịch.",
+  "scheduling.new": "Sắp xếp cuộc họp",
+
   "aiAdmin.allowance": "Hạn mức AI hàng tháng",
   "aiAdmin.pool":
     "Hạn mức chung của công ty, không phải hạn mức cá nhân hay giới hạn chi tiêu bằng đô la.",
@@ -355,6 +467,8 @@ export const vi = {
   "history.field.emails": "Địa chỉ email",
   "history.field.nudge_dismissal": "Đã bỏ qua nhắc nhở",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
+  "history.field.invitation_status": "Trạng thái lời mời",
+  "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_company_key": "Công ty khớp",
   "history.field.communication_basis": "Căn cứ pháp lý",
@@ -1588,6 +1702,7 @@ export const vi = {
   "approval.kind.send_email": "Gửi một email",
   "approval.kind.communication_review": "Quyết định email bị từ chối",
   "approval.kind.held_draft": "Xem lại email đã soạn",
+  "approval.kind.invite_meeting": "Gửi lời mời lịch",
   "approval.kind.book_meeting": "Đặt một lịch họp",
   "approval.kind.volume_release": "Cho tác nhân tiếp tục",
   "approval.kind.coldstart": "Điền thông tin công ty mới",
@@ -6571,17 +6686,8 @@ export const vi = {
   "client.attribution":
     "Mọi lượt ghi nhận đều được quy trách và kiểm toán được.",
 
-  "book.title": "Đặt lịch họp",
-  "book.min15": "15 phút",
-  "book.min30": "30 phút",
-  "book.min60": "60 phút",
-  "book.attendee": "Email người tham dự",
-  "book.welcomeBack": "Đã nhận ra: {name}",
+  "book.attendee": "Email khách mời",
   "book.subject": "Cuộc họp qua Margince",
-  "book.confirmed": "Đã đặt lịch.",
-  "book.tellThemYourself":
-    "Margince không gửi thư mời — bạn hãy tự báo giờ hẹn cho người tham dự.",
-  "book.failed": "Việc đặt lịch không thành — không có gì được lên lịch.",
   "book.name": "Tên của bạn",
   "book.email": "Email của bạn",
   "book.consentWording":

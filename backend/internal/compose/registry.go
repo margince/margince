@@ -263,6 +263,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		introPathLister(pool),
 		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
 	// The location check (🟢), and the verb the probe card hangs off. It reads
 	// no record and takes no seam, so it registers unconditionally.
 	//

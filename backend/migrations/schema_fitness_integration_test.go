@@ -474,7 +474,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// written. Every later read of the run record (GetTranscriptRead,
 	// LatestTranscriptRead, ReadTranscript) re-probes the same way rather than
 	// trusting the stored pointer.
-	"transcript_read.activity_id": "client-supplied and gated: every path resolves the activity through readActivity's ActivityContentClause walk, so an unseeable transcript is ErrNotFound rather than a readable run record",
+	"meeting_invitation.activity_id": "server-derived: insertInvitation uses the activity just created by LogActivityTx in the same transaction; host reads and changes pass readActivity, while public readers require the hashed guest capability",
+	"meeting_proposal.activity_id":   "server-derived: CreateProposal uses its newly created note in the same transaction; host replay reads pass readActivity and anonymous reads require the expiring recipient capability",
+	"transcript_read.activity_id":    "client-supplied and gated: every path resolves the activity through readActivity's ActivityContentClause walk, so an unseeable transcript is ErrNotFound rather than a readable run record",
 	// The technical lookup's per-lane ledger. The company is client-supplied —
 	// it is the record the reader pressed "Nachschauen" on — and every entry
 	// point puts it through the gate first: RecordTechnicalLane calls
