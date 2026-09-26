@@ -200,8 +200,14 @@ func admitActivityPatch(
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
-	if err := ensureAssigneeCanHoldWork(ctx, tx, in.AssigneeID); err != nil {
-		return crmcontracts.Activity{}, err
+	// Only a CHANGE of assignee is a routing decision. Re-sending the current
+	// one with an edit to the subject or due date must not be refused because
+	// that colleague is still invited.
+	unchanged := in.AssigneeID != nil && current.AssigneeId != nil && ids.UUID(*current.AssigneeId) == in.AssigneeID.UUID
+	if !unchanged {
+		if err := ensureAssigneeCanHoldWork(ctx, tx, in.AssigneeID); err != nil {
+			return crmcontracts.Activity{}, err
+		}
 	}
 	return current, nil
 }
