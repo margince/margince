@@ -19,7 +19,7 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
         reason:
           situation === "covered"
             ? "This request already has a reminder. The reply still needs to be handled."
-            : "Review and take responsibility for the outstanding request: Meeting slots",
+            : "Review and take responsibility for the reply still owed: Meeting slots",
         arguments:
           situation === "covered"
             ? {}

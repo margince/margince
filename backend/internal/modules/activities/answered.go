@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package activities
+
+// Whether an inbound message was answered, and whether a reply is still owed
+// on it. Every surface that shows "needs reply" or a waiting row reads these.
+//
+// Held by: TestOnlyTheAnswerPredicateWalksAThreadForOurReply
+// (backend/gates/answerwalk_test.go)
+
+import (
+	"strings"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+)
+
+// answerArm is one kind of evidence that a message was answered: the rows it
+// reads, and the column that says when the answer happened.
+type answerArm struct {
+	from string
+	at   string
+}
+
+// answerArms are the answers an inbound message can get after it arrived and
+// no later than until:
+//
+//   - our reply on the same thread;
+//   - our mail to the sender's address with the same subject once reply
+//     prefixes are stripped, found through the outbound's counterparty or a
+//     To/Cc recipient row (Bcc is not an answer the sender can see);
+//   - a logged call or a held meeting with the sender's contact.
+//
+// The subject match is read here only. Capture never joins threads on a
+// subject, because two "Re: Invoice" mails from different people are two
+// conversations; here the address keeps them apart.
+func answerArms(inbound, until string) []answerArm {
+	later := func(row string) string {
+		return row + `.archived_at IS NULL
+	    AND ` + row + `.occurred_at <= ` + until + `
+	    AND (` + row + `.occurred_at, ` + row + `.id) > (` + inbound + `.occurred_at, ` + inbound + `.id)`
+	}
+	ourMail := `answer_mail.kind = ` + inbound + `.kind
+	    AND answer_mail.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
+	    AND answer_mail.direction = 'outbound'
+	    AND ` + later("answer_mail") + `
+	    AND ` + normalisedSubject(inbound+".subject") + ` <> ''
+	    AND ` + normalisedSubject("answer_mail.subject") + ` = ` + normalisedSubject(inbound+".subject")
+	asker := `answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
+	touch := `answer_touch.archived_at IS NULL
+	    AND (answer_touch.kind = '` + string(crmcontracts.ActivityKindCall) + `'
+	      OR (answer_touch.kind = '` + string(crmcontracts.ActivityKindMeeting) + `'
+	        AND answer_touch.meeting_status = '` + string(crmcontracts.ActivityMeetingStatusHeld) + `'))
+	    AND ` + later("answer_touch")
+	return []answerArm{
+		{at: "answer_thread.occurred_at", from: `FROM activity answer_thread
+	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
+	    AND answer_thread.kind = ` + inbound + `.kind
+	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
+	    AND answer_thread.direction = 'outbound'
+	    AND ` + later("answer_thread")},
+		{at: "answer_mail.occurred_at", from: `FROM activity_participant answer_asker
+	  JOIN activity answer_mail ON answer_mail.counterparty_email = lower(btrim(answer_asker.address))
+	  WHERE ` + asker + `
+	    AND ` + ourMail},
+		{at: "answer_mail.occurred_at", from: `FROM activity_participant answer_asker
+	  JOIN activity_participant answer_told
+	    ON lower(answer_told.address) = lower(btrim(answer_asker.address))
+	   AND answer_told.role IN ('to', 'cc')
+	  JOIN activity answer_mail ON answer_mail.id = answer_told.activity_id
+	  WHERE ` + asker + `
+	    AND ` + ourMail},
+		{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
+	  JOIN activity_link answer_link ON answer_link.contact_id = answer_asker.contact_id
+	  JOIN activity answer_touch ON answer_touch.id = answer_link.activity_id
+	  WHERE ` + asker + `
+	    AND ` + touch},
+		{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
+	  JOIN activity_participant answer_attendee ON answer_attendee.contact_id = answer_asker.contact_id
+	  JOIN activity answer_touch ON answer_touch.id = answer_attendee.activity_id
+	  WHERE ` + asker + `
+	    AND ` + touch},
+	}
+}
+
+// normalisedSubject is a subject with its reply prefixes and outer spaces
+// removed and inner runs of space folded, lower-cased. A forward prefix stays,
+// so "Fwd: Invoice" never equals "Invoice".
+func normalisedSubject(column string) string {
+	return `lower(btrim(regexp_replace(regexp_replace(coalesce(` + column + `, ''),
+	    '` + mailsubject.ReplyPrefixPattern() + `', '', 'i'), '\s+', ' ', 'g')))`
+}
+
+// answeredSQL is true when the inbound row under the given alias has an
+// answer no later than until. It renders no placeholder of its own.
+func answeredSQL(inbound, until string) string {
+	arms := answerArms(inbound, until)
+	exists := make([]string, 0, len(arms))
+	for _, arm := range arms {
+		exists = append(exists, "EXISTS (SELECT 1 "+arm.from+")")
+	}
+	return "(" + strings.Join(exists, "\n\t OR ") + ")"
+}
+
+// firstAnswerAtSQL is when the inbound row got its first answer, or NULL when
+// it has none. The response time is measured to it.
+func firstAnswerAtSQL(inbound, until string) string {
+	arms := answerArms(inbound, until)
+	firsts := make([]string, 0, len(arms))
+	for _, arm := range arms {
+		firsts = append(firsts, "(SELECT min("+arm.at+") "+arm.from+")")
+	}
+	return "LEAST(" + strings.Join(firsts, ",\n\t ") + ")"
+}
+
+// owedSQL is whether a reply is still owed on the message under alias a, as
+// of asOf. The "needs reply" badge is exactly this; the waiting lane is this
+// plus its queue rules.
+//
+// A request (asked of us, accepted by a human, or an unjudged scheduling or
+// commitment mail) stays owed through replies until it is completed, settled
+// or dismissed: a reply is not proof the request was met. Any other inbound
+// is owed while it is the newest inbound on its thread and unanswered.
+//
+// dismissedStillOwed is a predicate OR-ed in front of the not-sales judgement;
+// the hidden-backlog reading passes TRUE to count what that judgement hides,
+// every other caller passes neverRelaxed.
+func owedSQL(asOf, dismissedStillOwed string) string {
+	return `(` + requestOpenSQL + `
+	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
+	 AND ((` + requestIntentSQL + `)
+	   OR (NOT EXISTS (SELECT 1 FROM activity newer
+	         WHERE newer.thread_key = a.thread_key
+	           AND newer.kind = a.kind
+	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
+	           AND newer.direction = 'inbound'
+	           AND newer.archived_at IS NULL
+	           AND newer.occurred_at <= ` + asOf + `
+	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
+	       AND NOT ` + answeredSQL("a", asOf) + `)))`
+}

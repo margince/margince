@@ -82,7 +82,7 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 			return move(ActionDraftEmail, "This request already has a reminder. The reply still needs to be handled.", map[string]any{argActivityID: request.Id},
 				evidenceOf(request, "Request: "+subjectOf(request)))
 		}
-		reason := "Review and take responsibility for the outstanding request: " + subjectOf(request)
+		reason := "Review and take responsibility for the reply still owed: " + subjectOf(request)
 		if request.EmailSummary == nil || request.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
 			reason = "Review whether this conversation needs a follow-up: " + subjectOf(request)
 		}

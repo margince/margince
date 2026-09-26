@@ -10,7 +10,7 @@ package activities
 // the one the guardrail could not answer while it carried counts alone.
 //
 // Deliberately a second read rather than ids carried on the summary: the
-// summary is read on every worklist load and four id arrays would ride every
+// summary is read on every worklist load and an id array per rule would ride every
 // one of them, where this is asked only when somebody clicks a figure.
 
 import (
@@ -26,10 +26,10 @@ import (
 )
 
 // HiddenRule names one of the queue's hiding rules — the vocabulary a caller
-// asks "what is behind this figure" in, and the same five HiddenBacklog counts.
+// asks "what is behind this figure" in, and the same rules HiddenBacklog counts.
 type HiddenRule string
 
-// The five rules, named as the counts name them. A caller asks for rows behind
+// The rules, named as the counts name them. A caller asks for rows behind
 // the figure it just read, so the words have to be the same words — a sixth
 // spelling here would be a rule nothing measures.
 const (
@@ -38,6 +38,7 @@ const (
 	HiddenRulePastHorizon HiddenRule = "past_horizon"
 	HiddenRuleUnlinked    HiddenRule = "unlinked"
 	HiddenRuleColleagues  HiddenRule = "colleagues"
+	HiddenRuleInformsUs   HiddenRule = "informs_us"
 )
 
 // relaxationFor answers the relaxation one rule name asks for, against this
@@ -61,6 +62,8 @@ func relaxationFor(rule HiddenRule, reader ids.UUID) (waitingRelaxation, bool) {
 		return waitingRelaxation{reader: reader, keepUnlinked: true}, true
 	case HiddenRuleColleagues:
 		return waitingRelaxation{reader: reader, keepColleagues: true}, true
+	case HiddenRuleInformsUs:
+		return waitingRelaxation{reader: reader, keepInformsUs: true}, true
 	default:
 		return waitingRelaxation{}, false
 	}
