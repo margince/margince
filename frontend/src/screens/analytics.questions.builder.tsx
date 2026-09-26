@@ -12,6 +12,7 @@ import { useT } from "../i18n";
 import {
   draftProblem,
   type FilterDraft,
+  inOptionOrder,
   type MeasureDraft,
   nextRowId,
   type QuestionDraft,
@@ -127,7 +128,12 @@ export function QuestionBuilder({
                 values={draft.groupBy}
                 placeholder={t("analytics.q.noGrouping")}
                 disabled={!entity}
-                onChange={(groupBy) => onChange({ ...draft, groupBy })}
+                onChange={(picked) =>
+                  onChange({
+                    ...draft,
+                    groupBy: entity ? inOptionOrder(picked, entity) : [],
+                  })
+                }
               />
             )}
           </Field>
@@ -218,7 +224,9 @@ function MeasureRows({
             >
               <Select
                 className="questions-control"
-                aria-label={t("analytics.q.calculation")}
+                aria-label={t("analytics.q.calculationN", {
+                  n: String(index + 1),
+                })}
                 options={fnsFor(entity).map((fn) => ({
                   value: fn,
                   label: fnLabel(t, fn),
@@ -234,7 +242,9 @@ function MeasureRows({
               {measure.fn !== "count" && (
                 <Select
                   className="questions-control"
-                  aria-label={t("filters.field")}
+                  aria-label={t("analytics.q.measureFieldN", {
+                    n: String(index + 1),
+                  })}
                   options={fieldOptions(t, fieldsForFn(entity, measure.fn))}
                   value={measure.field}
                   placeholder={t("analytics.q.chooseField")}
@@ -372,7 +382,7 @@ function FilterRow({
     >
       <Select
         className="questions-control"
-        aria-label={t("filters.field")}
+        aria-label={t("analytics.q.filterFieldN", { n: String(position) })}
         options={fieldOptions(t, fields)}
         value={filter.field}
         placeholder={t("analytics.q.chooseField")}
@@ -382,7 +392,7 @@ function FilterRow({
       />
       <Select
         className="questions-control"
-        aria-label={t("filters.operator")}
+        aria-label={t("analytics.q.filterOperatorN", { n: String(position) })}
         options={QUESTION_OPS.map((op) => ({
           value: op,
           label: opLabel(t, op),
@@ -404,6 +414,7 @@ function FilterRow({
             op={controlOp}
             value={filter.value}
             onChange={(value) => onChange({ ...filter, value })}
+            label={t("analytics.q.filterValueN", { n: String(position) })}
           />
         </div>
       )}

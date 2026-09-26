@@ -88,19 +88,38 @@ describe("the answer table", () => {
     expect(within(bodyRows()[2]).getByText("Not set")).toBeTruthy();
   });
 
-  it("keeps a withheld group as one row that says so, never as zeros", async () => {
+  it("counts every withheld group in one closing row, never as zeros", async () => {
     stubServer();
     renderAnswer(WITHHELD_ANSWER);
     await screen.findByText("Qualified");
-    const withheld = bodyRows()[2];
-    expect(
-      within(withheld).getByText("Withheld: too few records"),
-    ).toBeTruthy();
-    expect(withheld.textContent).not.toMatch(/0/);
+    const rows = bodyRows();
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain("Qualified");
+    expect(rows[1].textContent).toContain("Proposal");
+    const withheld = rows[2];
+    expect(withheld.textContent).toBe("3 groups withheld");
     expect(screen.getByText("Some groups are withheld")).toBeTruthy();
     expect(
       within(withheld).queryByRole("button", { name: /Explain/ }),
     ).toBeNull();
+  });
+
+  it("says a group value in the words the product already uses", async () => {
+    stubServer();
+    renderAnswer(
+      {
+        ...ANSWER,
+        columns: ["status", "count"],
+        rows: [
+          { status: "won", count: 4, _withheld: false },
+          { status: "open", count: 9, _withheld: false },
+        ],
+      },
+      { ...QUERY, group_by: ["status"], measures: [{ fn: "count" }] },
+    );
+    expect(await screen.findByText("Won")).toBeTruthy();
+    // No screen names an open deal yet, so it keeps its wire word.
+    expect(screen.getByText("open")).toBeTruthy();
   });
 
   it("gives no figure for native amounts summed across currencies", async () => {
@@ -154,6 +173,49 @@ describe("a row's drill-down", () => {
         body: { query: QUERY, group: [null, "USD"] },
       },
     ]);
+  });
+
+  it("names records from the answer itself, reading nothing per row", async () => {
+    const user = userEvent.setup();
+    stubServer();
+    const fetched = vi.mocked(fetch);
+    renderAnswer();
+    await user.click(
+      await screen.findByRole("button", { name: "Explain Qualified, EUR" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Fleet retrofit");
+    const headers = within(dialog)
+      .getAllByRole("columnheader")
+      .map((cell) => cell.textContent);
+    expect(headers[0]).toBe("Record");
+    expect(headers).not.toContain("ID");
+    const recordReads = fetched.mock.calls.filter(([input]) =>
+      /\/(deals|leads|projects)\//.test(
+        String(input instanceof Request ? input.url : input),
+      ),
+    );
+    expect(recordReads).toEqual([]);
+  });
+
+  it("keeps a short id for a record the reader may not name", async () => {
+    const user = userEvent.setup();
+    stubServer({
+      ...EXPLANATION,
+      rows: [
+        EXPLANATION.rows[0],
+        { ...EXPLANATION.rows[1], id: "0199aa11-2222", label: undefined },
+      ],
+    });
+    renderAnswer();
+    await user.click(
+      await screen.findByRole("button", { name: "Explain Qualified, EUR" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("0199aa11…")).toBeTruthy();
+    expect(
+      within(dialog).getByRole("columnheader", { name: "ID" }),
+    ).toBeTruthy();
   });
 
   it("reads a saved run's cell through the run, never the question", async () => {

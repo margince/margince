@@ -23,12 +23,14 @@ import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
 import { QuestionBuilder } from "./analytics.questions.builder";
 import {
   draftFromQuery,
+  inOptionOrder,
   newDraft,
   type QuestionDraft,
   toQuery,
 } from "./analytics.questions.draft";
 import { useValueNamer } from "./analytics.questions.names";
 import {
+  type AnalyticsEntity,
   type AnalyticsQuery,
   analyticsFieldLabel,
   entityLabel,
@@ -147,6 +149,20 @@ function AskQuestion({
     },
   });
   const scope = scopeQuery(selection.scope);
+  // A saved question can carry its grouping in any order; it is asked in the
+  // order the picker shows it.
+  const asAsked = (
+    question: QuestionDraft,
+    entities: readonly AnalyticsEntity[],
+  ) => {
+    const entity = entities.find((e) => e.name === question.entity);
+    return toQuery(
+      entity
+        ? { ...question, groupBy: inOptionOrder(question.groupBy, entity) }
+        : question,
+      scope,
+    );
+  };
   // An answer is shown only under the population it was asked over. Changing
   // the picker afterwards would otherwise put one population's figures under
   // another's name.
@@ -161,8 +177,8 @@ function AskQuestion({
               entities={vocabulary.entities}
               draft={draft}
               onChange={onDraft}
-              onAsk={() => ask.mutate(toQuery(draft, scope))}
-              onSave={() => save.mutate(toQuery(draft, scope))}
+              onAsk={() => ask.mutate(asAsked(draft, vocabulary.entities))}
+              onSave={() => save.mutate(asAsked(draft, vocabulary.entities))}
               asking={ask.isPending}
               saving={save.isPending}
             />
@@ -325,6 +341,7 @@ function QuestionSummary({
   const t = useT();
   const filters = query.filters ?? [];
   const namer = useValueNamer(
+    query.entity,
     filters.map((f) => f.field),
     filters.map((f) => ({ [f.field]: f.value })),
   );

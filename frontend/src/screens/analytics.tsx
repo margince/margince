@@ -42,6 +42,10 @@ import {
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
 import { ENTITY_LABEL_KEY, QuestionsView } from "./analytics.questions";
+import {
+  FORECAST_CATEGORIES,
+  MEETING_STATUSES,
+} from "./analytics.questions.values";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
 import { QueryGate, throwProblem } from "./common";
@@ -264,19 +268,6 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
   "project-commitments": [],
   "projects-gone-quiet": [],
 };
-
-// forecast_category dimension values (report.go's forecastCategoryExpr):
-// the four the deal itself can carry, plus the server-derived "slipped" —
-// a claimed commit/best_case deal whose close date is past, missing, or
-// still provisional (formulas §11). Omitting it here doesn't shrink the
-// total; it moves the deal's amount into no tile at all.
-const FORECAST_CATEGORIES = [
-  { key: "commit", labelKey: "deal.fcCommit" },
-  { key: "best_case", labelKey: "deal.fcBestCase" },
-  { key: "pipeline", labelKey: "deal.fcPipeline" },
-  { key: "omitted", labelKey: "deal.fcOmitted" },
-  { key: "slipped", labelKey: "deal.fcSlipped" },
-] as const;
 
 // One forecast category as one slot of the strip: the raw total is the reading
 // and the probability-weighted total is the basis it was drawn from, which is
@@ -988,17 +979,6 @@ function useDataCoverage() {
 }
 
 type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
-
-// The current standing a meeting can hold, in the order a week reads: what is
-// ahead, what happened, what did not, what was called off. A hand-kept mirror
-// of the server's CHECK vocabulary — a status the server grows is absent here
-// until this list learns it, rather than mislabeled.
-const MEETING_STATUSES = [
-  { key: "booked", labelKey: "analytics.meetingsBooked" },
-  { key: "held", labelKey: "analytics.meetingsHeld" },
-  { key: "no_show", labelKey: "analytics.meetingsNoShow" },
-  { key: "canceled", labelKey: "analytics.meetingsCanceled" },
-] as const;
 
 // The seat's own outcomes: open pipeline and meetings, nothing computed here.
 //

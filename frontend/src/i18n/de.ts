@@ -4010,7 +4010,6 @@ export const de = {
   "analytics.q.ask": "Frage stellen",
   "analytics.q.asking": "Wird abgefragt…",
   "analytics.q.builderTitle": "Frage",
-  "analytics.q.calculation": "Berechnung",
   "analytics.q.chooseField": "Feld wählen",
   "analytics.q.choosePopulation": "Bericht wählen",
   "analytics.q.copyLink": "Link kopieren",
@@ -4061,6 +4060,7 @@ export const de = {
   "analytics.q.readerAccess":
     "Beantwortet mit deinem eigenen Zugriff. Die Zahlen können von dem abweichen, was beim Speichern zu sehen war.",
   "analytics.q.record": "Datensatz",
+  "analytics.q.recordId": "ID",
   "analytics.q.refusal.invalid": "Diese Frage lässt sich so nicht beantworten.",
   "analytics.q.refusal.other": "Diese Frage wurde nicht beantwortet.",
   "analytics.q.refusal.privacy":
@@ -4073,8 +4073,14 @@ export const de = {
   "analytics.q.scopeUnknown": "Für dich nicht verfügbar",
   "analytics.q.withheldBody":
     "Eine Gruppe mit zu wenigen Datensätzen wird verborgen, zusammen mit genug vom Rest, dass sie sich nicht herausrechnen lässt.",
-  "analytics.q.withheldRow": "Verborgen: zu wenige Datensätze",
   "analytics.q.withheldTitle": "Einige Gruppen sind verborgen",
+  "analytics.q.calculationN": "Berechnung, Kennzahl {n}",
+  "analytics.q.measureFieldN": "Feld, Kennzahl {n}",
+  "analytics.q.filterFieldN": "Feld, Filter {n}",
+  "analytics.q.filterOperatorN": "Operator, Filter {n}",
+  "analytics.q.filterValueN": "Wert, Filter {n}",
+  "analytics.q.withheldGroups_one": "1 Gruppe verborgen",
+  "analytics.q.withheldGroups_other": "{count} Gruppen verborgen",
   "analytics.reportProjectsByPhase": "Projekte nach Phase",
   "analytics.reportProjectCommitments": "Projektzusagen",
   "analytics.reportProjectsGoneQuiet": "Verstummte Projekte",

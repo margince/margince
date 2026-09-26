@@ -77,12 +77,12 @@ async function askFixture({
   const second = canvas.getByRole("listitem", { name: "Measure 2" });
   await pickOption(
     user,
-    within(second).getByRole("combobox", { name: "Calculation" }),
+    within(second).getByRole("combobox", { name: "Calculation, measure 2" }),
     "Sum",
   );
   await pickOption(
     user,
-    within(second).getByRole("combobox", { name: "Field" }),
+    within(second).getByRole("combobox", { name: "Field, measure 2" }),
     "Amount",
   );
   await user.click(canvas.getByRole("button", { name: "Ask" }));

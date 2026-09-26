@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The value half of a filter clause: one control per kind of operand, drawn
-// from the field's type and the record type an id field points at. Shared by
-// the Filters builder and the Analytics question builder, so an id is picked
-// from the same list and a company found by the same search on both.
+// A filter clause's operand, one control per kind of value. The Filters and
+// Analytics builders share it, so both pick an id from the same list.
 
 import { X } from "lucide-react";
 import { useId, useState } from "react";
@@ -42,6 +40,7 @@ export function ValueControl({
   op,
   value,
   onChange,
+  label,
 }: Readonly<{
   type: VocabularyField["type"];
   /** What an id field's values point at, when the vocabulary named one. */
@@ -51,8 +50,11 @@ export function ValueControl({
   op: FilterOp;
   value: LeafValue;
   onChange: (next: LeafValue) => void;
+  /** The operand's name, for a host with several clauses in one list. */
+  label?: string;
 }>) {
   const t = useT();
+  const name = label ?? t("filters.value");
   if (op === "exists") {
     // `exists` carries its own boolean, and the two readings ARE the question
     // rather than an operand: "has a value" or "is empty".
@@ -75,6 +77,7 @@ export function ValueControl({
   if (references !== undefined) {
     return (
       <ReferenceValue
+        label={name}
         reference={references}
         type={type}
         many={op === "in"}
@@ -107,11 +110,13 @@ export function ValueControl({
         value={typeof value === "string" ? value : ""}
         onChange={onChange}
         placeholder={t("filters.pickValue")}
-        aria-label={t("filters.value")}
+        aria-label={name}
       />
     );
   }
-  return <ScalarValue type={type} value={value} onChange={onChange} />;
+  return (
+    <ScalarValue type={type} value={value} onChange={onChange} label={name} />
+  );
 }
 
 /**
@@ -128,7 +133,9 @@ function ReferenceValue({
   many,
   value,
   onChange,
+  label,
 }: Readonly<{
+  label: string;
   reference: Reference;
   type: VocabularyField["type"];
   many: boolean;
@@ -138,6 +145,7 @@ function ReferenceValue({
   if (boundedReference(reference)) {
     return (
       <RecordValue
+        label={label}
         reference={reference}
         type={type}
         many={many}
@@ -326,7 +334,9 @@ function RecordValue({
   many,
   value,
   onChange,
+  label,
 }: Readonly<{
+  label: string;
   reference: Reference | undefined;
   type: VocabularyField["type"];
   many: boolean;
@@ -342,7 +352,14 @@ function RecordValue({
   // records — a confident answer to a question that never got one — and would
   // leave them unable to write the clause at all.
   if (failed) {
-    return <ScalarValue type={type} value={value} onChange={onChange} />;
+    return (
+      <ScalarValue
+        type={type}
+        value={value}
+        onChange={onChange}
+        label={label}
+      />
+    );
   }
   // A list names each record the same way a single comparison does, one pick at
   // a time, and shows what it already holds above the picker. The picker is
@@ -372,7 +389,7 @@ function RecordValue({
         placeholder={
           loading ? t("filters.loadingRecords") : t("filters.pickRecord")
         }
-        aria-label={t("filters.value")}
+        aria-label={label}
         aria-describedby={partial ? noteId : undefined}
       />
       {/* A clause written against a list that stopped short of the workspace is
@@ -417,7 +434,9 @@ function ScalarValue({
   type,
   value,
   onChange,
+  label,
 }: Readonly<{
+  label: string;
   type: VocabularyField["type"];
   value: LeafValue;
   onChange: (next: LeafValue) => void;
@@ -429,7 +448,7 @@ function ScalarValue({
       <DateInput
         value={iso as "" | `${number}-${number}-${number}`}
         onChange={(event) => onChange(event.target.value)}
-        aria-label={t("filters.value")}
+        aria-label={label}
       />
     );
   }
@@ -439,7 +458,7 @@ function ScalarValue({
         value={value}
         onChange={onChange}
         labels={{ true: t("filters.yes"), false: t("filters.no") }}
-        label={t("filters.value")}
+        label={label}
       />
     );
   }
@@ -457,7 +476,7 @@ function ScalarValue({
           numeric ? numberOrText(event.target.value) : event.target.value,
         )
       }
-      aria-label={t("filters.value")}
+      aria-label={label}
       inputMode={numeric ? "decimal" : undefined}
     />
   );

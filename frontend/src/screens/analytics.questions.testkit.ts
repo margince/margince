@@ -102,18 +102,24 @@ export const ANSWER: AnalyticsAnswer = {
   schema_version: "v1",
 };
 
-// One group the floor kept back: every column null, the row still there.
+// Groups the floor kept back: every column null, each row still there, and
+// scattered among the served ones the way the engine returns them.
+const WITHHELD_ROW = {
+  stage_id: null,
+  currency: null,
+  count: null,
+  sum_amount_minor: null,
+  _withheld: true,
+};
+
 export const WITHHELD_ANSWER: AnalyticsAnswer = {
   ...ANSWER,
   rows: [
-    ...ANSWER.rows.slice(0, 2),
-    {
-      stage_id: null,
-      currency: null,
-      count: null,
-      sum_amount_minor: null,
-      _withheld: true,
-    },
+    WITHHELD_ROW,
+    ANSWER.rows[0],
+    WITHHELD_ROW,
+    ANSWER.rows[1],
+    WITHHELD_ROW,
   ],
   withheld: true,
   total_safe: false,
@@ -121,20 +127,23 @@ export const WITHHELD_ANSWER: AnalyticsAnswer = {
 
 export const EMPTY_ANSWER: AnalyticsAnswer = { ...ANSWER, rows: [] };
 
+// Each record named by the server under the reader's grants, `label` last.
 export const EXPLANATION = {
-  columns: ["id", "stage_id", "currency", "amount_minor"],
+  columns: ["id", "stage_id", "currency", "amount_minor", "label"],
   rows: [
     {
       id: "d-1",
       stage_id: "s-qual",
       currency: "EUR",
       amount_minor: 4_200_000,
+      label: "Fleet retrofit",
     },
     {
       id: "d-2",
       stage_id: "s-qual",
       currency: "EUR",
       amount_minor: 4_420_000,
+      label: "Line QA rollout",
     },
   ],
   withheld: false,

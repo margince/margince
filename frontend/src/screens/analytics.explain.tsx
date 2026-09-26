@@ -134,7 +134,9 @@ function derivationHeader(
 // withheld per row, and dropping the id then blanks that row's only identifier.
 // Which record a row IS leads, whatever order the plan selected, because the
 // columns past a narrow drawer's edge are the ones a reader never sees.
-export function derivationColumns(derivation: Derivation): string[] {
+export function derivationColumns(
+  derivation: Pick<Derivation, "columns" | "rows">,
+): string[] {
   const rows = derivation.rows ?? [];
   const everyRowNamed =
     derivation.columns.includes("label") &&

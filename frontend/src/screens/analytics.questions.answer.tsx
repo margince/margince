@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
-import type { EntityKind } from "../app/entity";
 import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
@@ -17,8 +16,13 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { derivationColumns } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
-import { type Namer, useValueNamer } from "./analytics.questions.names";
+import {
+  type Namer,
+  shortId,
+  useValueNamer,
+} from "./analytics.questions.names";
 import {
   type AnalyticsAnswer,
   type AnalyticsQuery,
@@ -34,7 +38,6 @@ import {
   refusalOf,
 } from "./analytics.questions.vocab";
 import { ProblemError, throwProblem } from "./common";
-import { EntityRef } from "./entityref";
 
 type Translate = ReturnType<typeof useT>;
 
@@ -42,21 +45,6 @@ type Translate = ReturnType<typeof useT>;
 export type ExplainSource =
   | Readonly<{ kind: "query"; query: AnalyticsQuery }>
   | Readonly<{ kind: "run"; runId: string }>;
-
-// The record a drill-down row IS, per population, so its id opens that record.
-// Activities have no page of their own and keep their id.
-const RECORD_KIND: Readonly<Record<string, EntityKind>> = {
-  "pipeline-current": "deal",
-  "deals-by-stage": "deal",
-  forecast: "deal",
-  "open-deals-per-company": "deal",
-  "win-loss": "deal",
-  "stage-age": "deal",
-  "leads-by-status": "lead",
-  "projects-by-phase": "project",
-  "project-commitments": "project",
-  "projects-gone-quiet": "project",
-};
 
 function measureCell(
   query: AnalyticsQuery,
@@ -108,10 +96,11 @@ type CellFrame = Readonly<{
   namer: Namer;
   source: ExplainSource;
   baseCurrency: string | null;
+  withheldGroups: number;
 }>;
 
-// One cell. The row's first cell also carries the way into its records, and a
-// withheld row says so there, once, with nothing in the cells beside it.
+// One cell. The row's first cell also carries the way into its records; the
+// closing withheld row counts the groups there, with nothing beside it.
 function AnswerCell({
   frame,
   row,
@@ -124,10 +113,15 @@ function AnswerCell({
   first: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
-  const { query, namer, baseCurrency } = frame;
+  const { query, namer, baseCurrency, withheldGroups } = frame;
   if (isWithheldRow(row)) {
-    return first ? t("analytics.q.withheldRow") : null;
+    return first
+      ? plural("analytics.q.withheldGroups", withheldGroups, {
+          count: formatNumber(withheldGroups, locale),
+        })
+      : null;
   }
   const cell = (query.group_by ?? []).includes(column)
     ? namer(column, row[column])
@@ -144,8 +138,9 @@ function AnswerCell({
 
 /**
  * The answer as a table: the group keys, then each measure, one row per
- * group. A withheld group stays a row, saying so, rather than printing zeros
- * or vanishing; the row count is not itself a signal of anything.
+ * group. Withheld groups are counted in ONE closing row rather than printed
+ * as zeros or dropped: each is null in every column, so a row apiece repeats
+ * one sentence, and how many there are is already on the wire.
  */
 export function AnswerTable({
   query,
@@ -161,9 +156,19 @@ export function AnswerTable({
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
-  const namer = useValueNamer(query.group_by ?? [], answer.rows);
-  const frame: CellFrame = { query, namer, source, baseCurrency };
-  const position = new Map(answer.rows.map((row, index) => [row, index]));
+  const namer = useValueNamer(query.entity, query.group_by ?? [], answer.rows);
+  const shown = answer.rows.filter((row) => !isWithheldRow(row));
+  const withheldGroups = answer.rows.length - shown.length;
+  const closing: AnswerRow = { _withheld: true };
+  const rows = withheldGroups > 0 ? [...shown, closing] : shown;
+  const frame: CellFrame = {
+    query,
+    namer,
+    source,
+    baseCurrency,
+    withheldGroups,
+  };
+  const position = new Map(rows.map((row, index) => [row, index]));
   const limit = query.limit ?? QUESTION_LIMIT;
   return (
     <>
@@ -202,7 +207,7 @@ export function AnswerTable({
               />
             ),
           }))}
-          rows={answer.rows}
+          rows={rows}
           rowKey={(row) => `row:${position.get(row)}`}
         />
       )}
@@ -299,7 +304,11 @@ function ExplainRecords({
     queryFn: () => readExplanation(source, group),
   });
   const data = explanation.data;
-  const namer = useValueNamer(data?.columns ?? [], data?.rows ?? []);
+  const namer = useValueNamer(
+    query.entity,
+    data?.columns ?? [],
+    data?.rows ?? [],
+  );
   if (explanation.isError) {
     return (
       <ErrorLine
@@ -312,9 +321,6 @@ function ExplainRecords({
       />
     );
   }
-  const recordKind = Object.hasOwn(RECORD_KIND, query.entity)
-    ? RECORD_KIND[query.entity]
-    : undefined;
   const state = explanationState(data);
   return (
     <>
@@ -334,16 +340,14 @@ function ExplainRecords({
         {data && (
           <DataTable
             label={t("explain.sources")}
-            columns={data.columns.map((column) => ({
+            // The report drawer's column rule: the record's name leads, and
+            // its id goes once every row has a name.
+            columns={derivationColumns(data).map((column) => ({
               key: column,
-              header:
-                column === "id"
-                  ? t("analytics.q.record")
-                  : analyticsFieldLabel(t, column),
+              header: recordHeader(t, column),
               render: (row: AnswerRow) =>
                 recordCell(column, row, {
                   query,
-                  recordKind,
                   namer,
                   baseCurrency,
                   locale,
@@ -366,20 +370,30 @@ function explanationState(
   return data.rows.length === 0 ? "empty" : "ready";
 }
 
+function recordHeader(t: Translate, column: string): string {
+  if (column === "label") return t("analytics.q.record");
+  if (column === "id") return t("analytics.q.recordId");
+  return analyticsFieldLabel(t, column);
+}
+
+// A record is named by the server, under the reader's grants, so the drawer
+// reads nothing per row. One it may not name keeps a short id.
 function recordCell(
   column: string,
   row: AnswerRow,
   frame: Readonly<{
     query: AnalyticsQuery;
-    recordKind: EntityKind | undefined;
     namer: Namer;
     baseCurrency: string | null;
     locale: Locale;
   }>,
 ): ReactNode {
   const value = row[column];
-  if (column === "id" && typeof value === "string" && frame.recordKind) {
-    return <EntityRef kind={frame.recordKind} id={value} newTab />;
+  if (column === "label") {
+    return typeof value === "string" ? value : "";
+  }
+  if (column === "id" && typeof value === "string") {
+    return <span title={value}>{shortId(value)}</span>;
   }
   const currency = moneyCurrency(column, row, frame.query, frame.baseCurrency);
   if (currency !== undefined && typeof value === "number") {

@@ -93,7 +93,7 @@ export const MissingField: Story = {
 };
 
 // A yes-or-no dimension takes a two-way choice, and an id a named pick.
-export const YesOrNoAndPeople: Story = {
+export const YesOrNoAndOwners: Story = {
   render: builderStory({
     entity: "meeting-conversion",
     groupBy: ["host_user_id"],

@@ -68,10 +68,22 @@ export function retarget(
   const fields = filterFields(entity);
   return {
     entity: entity.name,
-    groupBy: draft.groupBy.filter((field) => entity.group_by.includes(field)),
+    groupBy: inOptionOrder(draft.groupBy, entity),
     measures: measures.length > 0 ? measures : newDraft(entity.name).measures,
     filters: draft.filters.filter((filter) => fields.includes(filter.field)),
   };
+}
+
+/**
+ * A grouping in the report's own field order, which is the order the picker
+ * lists it in. The question groups in that order too, so the picker's face,
+ * the request and the answer's columns all read the same way.
+ */
+export function inOptionOrder(
+  groupBy: readonly string[],
+  entity: AnalyticsEntity,
+): string[] {
+  return entity.group_by.filter((field) => groupBy.includes(field));
 }
 
 function valueMissing(value: LeafValue): boolean {

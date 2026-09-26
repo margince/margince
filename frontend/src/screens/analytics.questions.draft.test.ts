@@ -100,7 +100,10 @@ describe("moving a draft onto another report", () => {
     expect(moved.measures).toEqual([{ id: 1, fn: "count", field: "" }]);
   });
 
-  it("keeps everything on the report it came from", () => {
-    expect(retarget(composed, deals)).toEqual(composed);
+  it("keeps everything on the report it came from, grouped in its field order", () => {
+    expect(retarget(composed, deals)).toEqual({
+      ...composed,
+      groupBy: ["currency", "stage_id"],
+    });
   });
 });

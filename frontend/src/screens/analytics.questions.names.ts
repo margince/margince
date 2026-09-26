@@ -4,6 +4,7 @@
 import { useQueries } from "@tanstack/react-query";
 import type { EntityKind } from "../app/entity";
 import { useT } from "../i18n";
+import { valueLabel } from "./analytics.questions.values";
 import { type AnswerRow, fieldReference } from "./analytics.questions.vocab";
 import { ENTITY_NAME_KEY, fetchEntityName } from "./entityref";
 import { useReferenceOptions } from "./filterreference";
@@ -16,7 +17,7 @@ const RECORD_FIELD_KIND: Readonly<Record<string, EntityKind>> = {
   project_id: "project",
 };
 
-const shortId = (id: string) => `${id.slice(0, 8)}…`;
+export const shortId = (id: string) => `${id.slice(0, 8)}…`;
 
 type RecordRef = Readonly<{ kind: EntityKind; id: string }>;
 
@@ -46,9 +47,11 @@ function recordRefs(
  * offers, and the per-record name read `EntityRef` shares for companies and
  * projects. `useEntityName` reads one id per call and a table has any number,
  * so the record names are read here under the SAME key and query, and one
- * request serves this table and every `EntityRef` beside it.
+ * request serves this table and every `EntityRef` beside it. An enumerated
+ * value takes the word the product already uses for it.
  */
 export function useValueNamer(
+  entity: string,
   fields: readonly string[],
   rows: readonly AnswerRow[],
 ) {
@@ -97,7 +100,7 @@ export function useValueNamer(
     }
     const text = String(value);
     if (fieldReference(field) === undefined) {
-      return text;
+      return valueLabel(t, entity, field, text) ?? text;
     }
     return labels.get(text) ?? (pending ? t("common.loading") : shortId(text));
   };

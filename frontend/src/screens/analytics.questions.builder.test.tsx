@@ -90,14 +90,18 @@ describe("the question builder", () => {
     const user = userEvent.setup();
     renderBuilder(newDraft("deals-by-stage"));
     const row = screen.getByRole("listitem", { name: "Measure 1" });
-    expect(within(row).queryByRole("combobox", { name: "Field" })).toBeNull();
+    expect(
+      within(row).queryByRole("combobox", { name: "Field, measure 1" }),
+    ).toBeNull();
 
     await pickOption(
       user,
-      within(row).getByRole("combobox", { name: "Calculation" }),
+      within(row).getByRole("combobox", { name: "Calculation, measure 1" }),
       "Sum",
     );
-    await user.click(within(row).getByRole("combobox", { name: "Field" }));
+    await user.click(
+      within(row).getByRole("combobox", { name: "Field, measure 1" }),
+    );
     const offered = (await screen.findAllByRole("option")).map(
       (option) => option.textContent,
     );
@@ -114,21 +118,23 @@ describe("the question builder", () => {
     const row = screen.getByRole("listitem", { name: "Filter 1" });
     await pickOption(
       user,
-      within(row).getByRole("combobox", { name: "Field" }),
+      within(row).getByRole("combobox", { name: "Field, filter 1" }),
       "Win probability",
     );
     expect(
       within(row)
-        .getByRole("textbox", { name: "Value" })
+        .getByRole("textbox", { name: "Value, filter 1" })
         .getAttribute("inputmode"),
     ).toBe("decimal");
 
     await pickOption(
       user,
-      within(row).getByRole("combobox", { name: "Operator" }),
+      within(row).getByRole("combobox", { name: "Operator, filter 1" }),
       "is empty",
     );
-    expect(within(row).queryByRole("textbox", { name: "Value" })).toBeNull();
+    expect(
+      within(row).queryByRole("textbox", { name: "Value, filter 1" }),
+    ).toBeNull();
   });
 
   it("takes a yes-or-no field as a two-way choice", async () => {
@@ -138,10 +144,12 @@ describe("the question builder", () => {
     const row = screen.getByRole("listitem", { name: "Filter 1" });
     await pickOption(
       user,
-      within(row).getByRole("combobox", { name: "Field" }),
+      within(row).getByRole("combobox", { name: "Field, filter 1" }),
       "Converted",
     );
-    expect(within(row).getByRole("group", { name: "Value" })).toBeTruthy();
+    expect(
+      within(row).getByRole("group", { name: "Value, filter 1" }),
+    ).toBeTruthy();
   });
 
   it("drops a grouping the newly chosen report does not have", async () => {
@@ -158,5 +166,31 @@ describe("the question builder", () => {
     expect(screen.getByRole("combobox", { name: "Group by" }).textContent).toBe(
       "Status",
     );
+  });
+
+  it("groups in the order the picker lists, whatever order the picks came in", async () => {
+    const user = userEvent.setup();
+    const asked = renderBuilder(newDraft("deals-by-stage"));
+    const groupBy = screen.getByRole("combobox", { name: "Group by" });
+    await user.click(groupBy);
+    await user.click(await screen.findByRole("option", { name: "Stage" }));
+    await user.click(screen.getByRole("option", { name: "Currency" }));
+    await user.keyboard("{Escape}");
+    expect(groupBy.textContent).toBe("Currency, Stage");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(asked[0]?.groupBy).toEqual(["currency", "stage_id"]);
+  });
+
+  it("names each row's pickers by the row they sit in", async () => {
+    const user = userEvent.setup();
+    renderBuilder(newDraft("deals-by-stage"));
+    await user.click(screen.getByRole("button", { name: "Add measure" }));
+    expect(
+      screen.getByRole("combobox", { name: "Calculation, measure 2" }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Add filter" }));
+    expect(
+      screen.getByRole("combobox", { name: "Operator, filter 1" }),
+    ).toBeTruthy();
   });
 });
