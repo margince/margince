@@ -72,6 +72,9 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 		writeStoreErr(w, r, err)
 		return
 	}
+	// A caller who NAMES an invited colleague as a new task's assignee is
+	// allowed to; automatic writers never pass through here.
+	in.invitedAssignee = req.AssigneeId != nil
 
 	activity, created, err := h.store.LogActivity(r.Context(), in)
 	if err != nil {
