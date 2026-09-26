@@ -3,30 +3,31 @@
   "provider": "openai_compatible",
   "served_model": "openai/gpt-oss-120b",
   "env_class": "cloud_frontier",
-  "prompt_version": "p367030fa72622e8f26ba723f1edca943",
+  "prompt_version": "p9e44e332e2d4924617d497d2c2761d45",
   "corpus_version": "v1",
-  "verdict": "supported_degraded",
+  "verdict": "certified",
   "runs": 15,
-  "passed": 14,
-  "reliability": 0.9333333333333333,
-  "reported_accepted": 14,
-  "reported_wrong_answer": 1,
+  "passed": 15,
+  "reliability": 1,
+  "reported_accepted": 15,
+  "reported_wrong_answer": 0,
   "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 100,
-  "judge_score_min": 0,
-  "latency_p50": 833,
-  "latency_p95": 12796,
-  "mean_tokens": 984,
-  "mean_tokens_in": 847,
-  "mean_tokens_out": 136,
-  "mean_cached_tokens": 337,
+  "judge_score_min": 95,
+  "latency_p50": 1260,
+  "latency_p95": 4401,
+  "mean_tokens": 992,
+  "mean_tokens_in": 870,
+  "mean_tokens_out": 121,
+  "mean_cached_tokens": 332,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 54,
-  "judge_served_model": "gemini-3.1-flash-lite",
+  "est_cost_microusd": 52,
+  "judge_served_model": "claude-sonnet-4-6",
+  "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
@@ -42,16 +43,26 @@
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-09-25T14:09:20Z",
+  "ran_at": "2026-09-26T13:12:49Z",
   "scenarios": [
     {
       "scenario": "a_one_contact_consultancy_is_still_a_company",
       "site": "triage",
-      "stamp": "99037ca954f1f6f25e0a308d795e2bfca2e58e96cc6ef3851a92216fb2a89c3ccaf60ef02d13bba5f0b4105f5ad69bbfce1ab9a9e6eed919ff8cd0634068dcb9aee70d598d59feb8238d53c33e314459f49bed2f4dd85cafecb1f989633a7d69",
+      "stamp": "99037ca954f1f6f25e0a308d795e2bfca2e58e96cc6ef3851a92216fb2a89c3c72231b0dc8f474ab501569faa4a89251155a8b5026943ebe61bc749d8d5ee0a99e9de831049253e09766c37b9fddb11897068ad6fbf1a0890d5ad08d66cec664",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -60,11 +71,21 @@
     {
       "scenario": "a_mailbox_vendor_is_not_the_senders_employer",
       "site": "triage",
-      "stamp": "391283ba669b161902800353a71f4a116c15ca298f68cbae840d5b3b5cd397efffc2d2e908558dc2bf505163f83e2c8713b2bfe5478a87e062b01c7563455db667633a2ba83ec08fbfba9bde8b00201eda0584486b2996ef60cadf7de018b15a",
+      "stamp": "391283ba669b161902800353a71f4a116c15ca298f68cbae840d5b3b5cd397ef8181853a2fdf71f212fd1df3d561613f3c93a770244c2a728feffaea2fd90fd4a492ee87b1b1ef5a71cc718f1fafb6f182496e2dcad51b2d0cf189601064ab2c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -73,11 +94,21 @@
     {
       "scenario": "a_parked_domain_identifies_nobody",
       "site": "triage",
-      "stamp": "4c740e3e3508d75b0163b3fdd9d2397209c107d02f3658a4c84d3098770902d7e8d167f7b43f5f21492be9d50a0f02048440f6050410b89258028656d0e22f4908d705130983985e582a7014abec253771f50144fe4bd85ae3940bddf99f73ca",
+      "stamp": "4c740e3e3508d75b0163b3fdd9d2397209c107d02f3658a4c84d3098770902d7ee694880c8c782587540a9aeed90895e3ddeb4b318e3fc8383a5cb463077e3620c8814d9f1d5e8308cc8b6ffa75b124727074c9b5f7b1d1ab046abc183c46b6e",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -86,11 +117,21 @@
     {
       "scenario": "a_personal_domain_is_not_a_company",
       "site": "triage",
-      "stamp": "899b89a99c1990b79c9c3725cb3bc0c50f05b9b06251c3d16c2853d2094a332110448489ef70131c03f1b01c9d6568e20684362c9a9da12fe0f90bf0de930f2d4be9b7ca5c0e25c0abe05c93cf41a08e7a3943c2adc4467d4504b2a3df6a9840",
+      "stamp": "899b89a99c1990b79c9c3725cb3bc0c50f05b9b06251c3d16c2853d2094a332118aa9ccad567d8f8438267949d178af2e8bce73983a235fd900e1ec59bfa9b70ba79fa0e3e6158d2ce45315ca7917da24d0c962800d5ba8b5da540ea6cf8b389",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
+      "judge_scores": [
+        95,
+        95,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -99,13 +140,23 @@
     {
       "scenario": "a_bare_sign_in_page_identifies_nobody_and_is_not_a_placeholder",
       "site": "triage",
-      "stamp": "e73e2c1fd56bd0061691e9aa3710104807ce64e09f4deec74332354acdd6f75b6e11fbe4f0d193449592b74309d6c4c95510af32675898603dd8f3811d02f95959f00f3d2203343c49bd7ab0bd10073b0f452b2d5775f73d371e24153270f3e0",
-      "verdict": "supported_degraded",
-      "judge_band": "supported_degraded",
+      "stamp": "e73e2c1fd56bd0061691e9aa3710104807ce64e09f4deec74332354acdd6f75b24ac6430abaec93c346be8ae9072820a6e526fc05121e5552104b3611d82a51aea2444b1f331a40bd052f5826e5d3090722bb8179720bbf106382a64e765483d",
+      "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
-      "passed": 2,
-      "reported_accepted": 2,
-      "reported_wrong_answer": 1,
+      "passed": 3,
+      "judge_scores": [
+        95,
+        97,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0
     }
