@@ -171,6 +171,7 @@ var tableOwners = map[string]string{
 	// second provider's copy of a message resolves to, so it belongs to the
 	// module that owns that row.
 	"activity_identity":        "internal/modules/activities",
+	"activity_mail_reference":  "internal/modules/activities",
 	"activity_sales_state":     "internal/modules/activities",
 	"activity_reader_state":    "internal/modules/activities",
 	"activity_review_template": "internal/modules/activities",

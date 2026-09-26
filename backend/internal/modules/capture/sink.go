@@ -73,7 +73,10 @@ type Sink struct {
 	meetingIdentityKind string
 	meetingIdentityKey  MeetingIdentityKeyer
 	resolveIdentity     IdentityResolver
-	claimIdentity       IdentityClaimer
+	// threadJoin merges the threads one email's reply links reach
+	// (threadjoin.go). Zero threads on the References root alone.
+	threadJoin    ThreadJoiner
+	claimIdentity IdentityClaimer
 	// language is the installation's base language a staged merge's summary is
 	// written in; nil writes English.
 	language baselanguage.Resolver

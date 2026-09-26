@@ -157,6 +157,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 				return datasource.EntityRef{}, false, counterpartyDecision{}, err
 			}
+			if err := s.joinThread(ctx, tx, id, rec); err != nil {
+				return datasource.EntityRef{}, false, counterpartyDecision{}, err
+			}
 			return ref, false, counterpartyDecision{}, nil
 		}
 		same, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
@@ -170,6 +173,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			return datasource.EntityRef{}, false, counterpartyDecision{}, skipInvisibleIncumbent(rec, "activity")
 		}
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
+		if err := s.joinThread(ctx, tx, id, rec); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
@@ -313,6 +319,9 @@ func (s *Sink) finishNewActivity(
 	// from the state the capture actually settled on rather than from the one it
 	// held mid-transaction.
 	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+		return counterpartyDecision{}, err
+	}
+	if err := s.joinThread(ctx, tx, id, rec); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// The trace runs LAST, so it can carry the reason the ladder just settled on:

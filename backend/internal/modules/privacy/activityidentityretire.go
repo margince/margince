@@ -40,6 +40,13 @@ func retireActivityIdentities(ctx context.Context, tx pgx.Tx, activityIDs []ids.
 		DELETE FROM activity_identity WHERE activity_id = ANY($1)`, activityIDs); err != nil {
 		return fmt.Errorf("privacy: retiring the erased messages' external identities: %w", err)
 	}
+	// And the Message-IDs each one said it replied to, for the same reason: a
+	// row that outlives the erasure still says which conversation the erased
+	// message was part of.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM activity_mail_reference WHERE activity_id = ANY($1)`, activityIDs); err != nil {
+		return fmt.Errorf("privacy: retiring the erased messages' reply links: %w", err)
+	}
 	return eraseMeetingProposals(ctx, tx, activityIDs)
 }
 
