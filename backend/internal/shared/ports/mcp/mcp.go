@@ -187,6 +187,20 @@ const (
 // argument and its type first.
 const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with other arguments is refused."
 
+// ConflictingSourcesRule is what a model does when two things it was given
+// disagree. Without it a model smooths: measured on the use-case lane, the
+// strongest model invented a second customer complaint so that a September
+// email and a note saying "October" could both be true, and every citation in
+// that answer was real. The invention sat in the prose between them.
+//
+// Two surfaces state it: the agent runner's frame for this product's own
+// agents, and the MCP server instructions for a client's model, which never
+// reads that frame. One constant, so the two cannot drift apart.
+const ConflictingSourcesRule = "When two sources disagree, say that they disagree and name both; " +
+	"never invent an event that would reconcile them. Where a structured field on a record " +
+	"(a date, an amount, a status) disagrees with prose someone wrote, the field wins: " +
+	"say which one you relied on and why."
+
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the
 // effective tier depends on the call's arguments and MUST carry a
