@@ -92,6 +92,10 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 		w.WriteHeader(http.StatusNotModified)
 		return
 	}
+	// Decided BEFORE the object is opened: a legacy reader that opened the
+	// padded bytes must not see the key turn tight under a concurrent
+	// write-back and then stream what it holds as the trimmed revision.
+	tight := storedTrimmed(key) || h.tightLogos.has(key)
 	rc, object, err := h.blob.Get(r.Context(), key)
 	if err != nil {
 		if errors.Is(err, blobstore.ErrNotFound) {
@@ -106,7 +110,7 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	// Bytes known to be tight go out as stored: no read into memory, no
 	// decode, no pixel scan. That is every mark stored since PutLogo, and a
 	// legacy one once this process has checked it.
-	if storedTrimmed(key) || h.tightLogos.has(key) {
+	if tight {
 		writeLogo(w, r, id, etag, rc, object.Size)
 		return
 	}

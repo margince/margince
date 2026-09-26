@@ -48,8 +48,9 @@ func storedTrimmed(key string) bool { return strings.HasSuffix(key, trimmedLogoS
 
 // tightLogoKeys remembers legacy keys whose bytes this process has seen to be
 // already trimmed, so a legacy mark costs one decode per process rather than
-// one per request. Sound because the only write to a legacy key after it was
-// stored is the trimmed write-back, which leaves it tight.
+// one per request. It relies on the writers minting a fresh key per stored
+// mark (compose/sitelogo.go), so after the first store the one write a legacy
+// key sees is the trimmed write-back, which leaves it tight.
 type tightLogoKeys struct {
 	mu   sync.Mutex
 	keys map[string]struct{}

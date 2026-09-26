@@ -1191,7 +1191,14 @@ export function useCompanyMarks(
       queryFn: async (): Promise<Map<string, CompanyMark>> => {
         const { data, error } = await api.GET("/companies", {
           params: {
-            query: { id: batch, include_anchor: true, limit: batch.length },
+            // Archived as well: archiving a company leaves its deals naming
+            // it, and the single-record read these replaced answered those.
+            query: {
+              id: batch,
+              include_anchor: true,
+              include_archived: true,
+              limit: batch.length,
+            },
           },
         });
         if (error) {

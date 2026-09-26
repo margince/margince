@@ -469,6 +469,16 @@ describe("the board past the picker's first page", () => {
     expect(await screen.findAllByText("Northgate Systems")).toHaveLength(2);
     expect(await screen.findByText("Southbay Freight")).toBeTruthy();
     expect(byIdCalls(fetchMock)).toEqual([["o-north", "o-south"]]);
+    // Archived companies still name the deals that point at them, and the
+    // installation's own company is a company a deal can be on.
+    const read = fetchMock.mock.calls
+      .map((call) => {
+        const first = call[0];
+        return String(first instanceof Request ? first.url : first);
+      })
+      .find((url) => url.includes("id=o-north"));
+    expect(read).toContain("include_archived=true");
+    expect(read).toContain("include_anchor=true");
   });
 });
 
