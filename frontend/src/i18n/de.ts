@@ -77,6 +77,31 @@ export const de = {
     "Dieser Link behält die bereits erstellten Angaben. Für deine Änderungen kannst du einen neuen Link erstellen; der bisherige bleibt bis zu seinem Ablauf gültig.",
   "scheduling.proposalUpdate": "Aktualisierten Vorschlag erstellen",
   "scheduling.calendar": "Kalender für Einladungen",
+  "scheduling.bookContact": "Termin buchen",
+  "scheduling.setupCalendar": "Buchungskalender auswählen",
+  "scheduling.selectCalendarHelp":
+    "Wähle den Kalender für Einladungen. Er gilt auch für deine öffentliche Buchungsseite. Deine Termindetails bleiben während der Einrichtung erhalten.",
+  "scheduling.chooseProvider": "Kalenderanbieter auswählen",
+  "scheduling.useCalendar": "Diesen Kalender verwenden",
+  "scheduling.readOnlyCalendar":
+    "Dein Kalender ist zum Lesen verbunden. Verbinde ihn erneut und erlaube Einladungen, um Termine zu erstellen, zu verschieben und abzusagen.",
+  "scheduling.disconnectedCalendar":
+    "Verbinde diesen Kalender, bevor du Einladungen sendest. Wenn nur dein Postfach verbunden ist, verbinde den Kalender separat.",
+  "scheduling.expiredCalendar":
+    "Deine Kalenderverbindung ist abgelaufen. Verbinde sie erneut, um Einladungen zu senden.",
+  "scheduling.bookRefused": "Du hast keine Berechtigung, Termine zu buchen.",
+  "scheduling.meetingChanged":
+    "Der Termin wurde geändert. Prüfe die aktuellen Details und versuche es erneut.",
+  "scheduling.publicCalendarUnavailable":
+    "Deine Buchungsseite ist aktiv, aber Kalendereinladungen sind nicht verfügbar. Prüfe die Kalenderverbindung unten oder pausiere die Seite.",
+  "scheduling.manageConnection": "Kalenderverbindungen öffnen",
+  "scheduling.calendarConnected":
+    "Verbunden: {account}. Zugriff für Einladungen erteilt.",
+  "scheduling.noWritableCalendar":
+    "Kein bearbeitbarer Kalender verfügbar. Wähle einen anderen Anbieter oder prüfe deine Kalenderberechtigungen.",
+  "scheduling.finishSetup":
+    "Wähle oben deinen Buchungskalender, um freie Zeiten zu sehen.",
+  "scheduling.readOnlyBadge": "Kalender nur lesbar",
   "scheduling.connect": "Kalender verbinden oder erneut verbinden",
   "scheduling.connectionHelp":
     "Zum Senden von Einladungen ist Schreibzugriff nötig. Verbinde einen nur lesbaren Kalender erneut.",
@@ -120,7 +145,7 @@ export const de = {
     "Diese Buchungsseite ist nicht verfügbar. Kontaktiere deinen Gastgeber.",
   "scheduling.publicUrlMissing":
     "Richte eine öffentliche Adresse für diese Installation ein, bevor du Buchungslinks teilst.",
-  "scheduling.new": "Termin vereinbaren",
+  "scheduling.new": "Termin buchen",
 
   "aiAdmin.allowance": "Monatliches KI-Kontingent",
   "aiAdmin.pool":

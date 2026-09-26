@@ -111,6 +111,6 @@
 }
 
 .book-mode {
-  margin-bottom: var(--space-5);
+  margin-block: var(--space-5);
   max-width: 360px;
 }

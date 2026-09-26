@@ -125,3 +125,23 @@ export function errorClassKey(cls: string | null | undefined): MessageKey {
 export function isUnhealthy(status: ConnectorStatus): boolean {
   return status === "error" || status === "reauth_required";
 }
+
+// Mirror of capture.calendarWriteGranted; its Go parity test reads this table.
+const CALENDAR_WRITE_SCOPES: Readonly<Record<string, readonly string[]>> = {
+  gcal: [
+    "https://www.googleapis.com/auth/calendar.events.owned",
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/calendar",
+  ],
+  graphcal: ["Calendars.ReadWrite"],
+};
+
+export function missingCalendarWriteGrant(
+  connection: Pick<CaptureConnection, "provider" | "scopes">,
+): boolean {
+  const grants = CALENDAR_WRITE_SCOPES[connection.provider];
+  return (
+    grants !== undefined &&
+    !grants.some((scope) => connection.scopes.includes(scope))
+  );
+}

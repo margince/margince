@@ -28,6 +28,7 @@ import { useCaptureSettings } from "./capture-settings";
 import { problemCode, problemMessageOf, throwProblem } from "./common";
 import {
   errorClassKey,
+  missingCalendarWriteGrant,
   missingSendGrant,
   statusLabel,
   statusTone,
@@ -302,9 +303,13 @@ function ConnectorFacts({ conn }: Readonly<{ conn: CaptureConnection }>) {
           </ErrorLine>
         </span>
       )}
-      {/* Named here rather than at send time: the composer's 422 arrives
-          after the rep has written the mail, and it can only be cleared
-          from this card. */}
+      {missingCalendarWriteGrant(conn) && (
+        <span className="connector-fact">
+          {t("scheduling.readOnlyCalendar")}
+        </span>
+      )}
+      {/* Show the missing grant before a draft reaches send; only this card
+          can recover the connection. */}
       {missingSendGrant(conn) && (
         <span className="connector-fact">
           {t("connectors.reconnectToSend")}
@@ -347,11 +352,10 @@ function ConnectorRow({
 }>) {
   const t = useT();
   const needsReconnect =
-    conn.status === "reauth_required" || missingSendGrant(conn);
-  // A calendar is not a mailbox, and three of the rows below only make sense
-  // against one. The account label is the member's own email address on both
-  // kinds, so the envelope was the only thing distinguishing them and it was
-  // wrong for half of them.
+    conn.status === "reauth_required" ||
+    missingSendGrant(conn) ||
+    missingCalendarWriteGrant(conn);
+  // Calendar accounts share mailbox labels, but cannot expose mailbox actions.
   const mailbox = isMailbox(conn.provider);
   return (
     <>
@@ -370,6 +374,9 @@ function ConnectorRow({
             <Badge tone={statusTone(conn.status)}>
               {t(statusLabel(conn.status))}
             </Badge>
+            {missingCalendarWriteGrant(conn) && (
+              <Badge tone="warning">{t("scheduling.readOnlyBadge")}</Badge>
+            )}
             {missingSendGrant(conn) && (
               <Badge tone="warning">{t("connectors.cannotSend")}</Badge>
             )}
@@ -636,27 +643,19 @@ function useSetSignatureEnrichment(provider: CaptureConnection["provider"]) {
   });
 }
 
-/**
- * The installation's capture connections, in one spelling.
- *
- * Exported because the card is no longer the only reader: the chrome that
- * reports whether the agent can reach its sources needs the same list, and so
- * do onboarding's connect surfaces. Two queries against one path are two
- * answers that can disagree on screen — and two SHAPES under the one
- * `["connectors"]` cache entry are worse than that, because react-query keeps
- * one entry per key and whichever reader fetched last decides what the others
- * read. So every reader comes through here.
- */
+// Readers share the connector query shape because its cache entry is shared.
 export function useConnectors(
   options?: Readonly<{
     /** False holds the request without leaving the key: a reader that only
      *  wants the answer when it already exists still shares the one entry. */
     enabled?: boolean;
+    refetchOnWindowFocus?: boolean | "always";
   }>,
 ) {
   return useQuery({
     queryKey: ["connectors"],
     enabled: options?.enabled ?? true,
+    refetchOnWindowFocus: options?.refetchOnWindowFocus,
     queryFn: async (): Promise<ConnectorsResult> => {
       const { data, error, response } = await api.GET("/connectors");
       if (response.status === 501 && problemCode(error) === "not_implemented") {
