@@ -91,9 +91,10 @@ single scenario always runs to 9, because 3 out of 3 is not yet enough evidence.
   blocks ✅;
 - not **consistently mediocre**: its quality must be able to reach its bar.
 
-A scenario that is clearly broken — wrong most of the time, or scoring under the
-lower bar even on its best reading — **vetoes** the whole feature. Averaging cannot
-hide it.
+A scenario that is clearly broken — wrong most of the time, or scoring under its
+floor even on its best reading — **vetoes** the whole feature: ❌, whatever its
+siblings score. Averaging cannot hide it. One whose best reading stays under the
+lower bar shows ❌ on its own row and blocks ✅, but the pool may still reach ⚠️.
 
 ## The feature's grade: all scenarios together
 
@@ -109,7 +110,7 @@ hide it.
      └────────────────────┼─────────────────────┘
                           ▼
          ✅ Ready             all three hold
-         ⚠️ Usable with care  ≥ 2/3 right, quality ≥ the lower bar
+         ⚠️ Usable with care  ≥ 2/3 right, quality ≥ the lower bar, no veto
          ❌ Not reliable yet   anything less
          🔒 Not served here    local-only data on a preset with no local model
          ❔ Not measured       nobody has run it on this model yet

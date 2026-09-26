@@ -125,21 +125,23 @@ type ScenarioRuns struct {
 //	                   ∧ no case vetoed
 //	supported_degraded = K ≥ ⌈2N/3⌉
 //	                   ∧ TLower(score − its case's degraded_min, over every graded run) ≥ 0
-//	                   ∧ no case's WilsonUpper(k, n) < 50% ∧ no case's TUpper(scores) < its floor
+//	                   ∧ no case vetoed
 //	otherwise          = not_supported, which includes any case no judge graded
 //
 //	a case declaring judge: none meets every judge condition by construction,
 //	and its runs enter no margin; its pass count is pooled like any other
 //
-//	vetoed             = WilsonUpper(k, n) < 50% ∨ TUpper(its scores) < its degraded_min
+//	vetoed             = WilsonUpper(k, n) < 50% ∨ TUpper(its scores) < its floor
 //	WilsonLower/Upper  = the one-sided 90% Wilson score bounds (z = 1.2816)
 //	TLower/TUpper      = mean ∓ t(0.90, m−1)·max(sd, 5)/√m over m values; the mean itself when m = 1
 //
 // Pooled so that a task of many cases, each right nine times in ten, is graded
 // on its whole evidence instead of failing on whichever case drew the unlucky
 // run. Bounded so that a pool too small to tell good from lucky cannot certify.
-// Vetoed so that one clearly broken case — failing every run, or scored as
-// inventing facts every run — is never averaged away by its healthy siblings.
+// Vetoed so that one clearly broken case — failing every run, or scored under
+// its floor on its best reading — is never averaged away by its healthy siblings.
+// A case whose best reading stays under degraded_min blocks certified only,
+// through the certified_min bound, since degraded_min ≤ certified_min.
 // The judge criterion pools each run's distance from its OWN case's band, since
 // cases in one task are held to different bars. thresholds.go holds every
 // number here; the page test pins this block to it.
@@ -163,8 +165,9 @@ func Verdict(sets ...ScenarioRuns) (verdict string, reliability float64) {
 }
 
 // caseVerdict is one case's standing against the per-case gates Verdict applies
-// to it inside a pool: not_supported when it would veto the task, certified when
-// it clears every gate a certified task holds each case to, degraded otherwise.
+// to it inside a pool: certified when it clears every gate a certified task holds
+// each case to, not_supported when it vetoes the task or its own scores cannot
+// reach degraded_min, which a pool may still average up to degraded.
 //
 // It never re-runs the pooled bounds on the case alone. A task's evidence is
 // its pool, and three passing runs held to a pool's Wilson bound read as weak
