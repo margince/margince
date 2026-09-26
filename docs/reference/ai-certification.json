@@ -2379,11 +2379,11 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "stale",
-          "runs": 15,
-          "passed": 9,
+          "state": "current",
+          "runs": 45,
+          "passed": 30,
           "cases_failing_often": 2,
-          "cases_below_quality_bar": 2
+          "cases_below_quality_bar": 1
         },
         {
           "task": "site_fact_extract",
@@ -3294,13 +3294,13 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 5,
+      "sites_current": 6,
       "sites_partial": 0,
-      "sites_stale": 1,
-      "runs": 66,
-      "passed": 59,
-      "reliability": 0.8939393939393939,
-      "slowest_p95_ms": 4757,
+      "sites_stale": 0,
+      "runs": 96,
+      "passed": 80,
+      "reliability": 0.8333333333333334,
+      "slowest_p95_ms": 4105,
       "bands": {
         "certified": 3,
         "supported_degraded": 2,
@@ -10578,33 +10578,22 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 5,
           "scenarios_total": 5,
-          "runs": 15,
-          "passed": 9,
-          "reliability": 0.6,
-          "latency_p50_ms": 2483,
-          "latency_p95_ms": 4757,
+          "runs": 45,
+          "passed": 30,
+          "reliability": 0.6666666666666666,
+          "latency_p50_ms": 2259,
+          "latency_p95_ms": 3250,
           "reported": {
-            "accepted": 6,
-            "wrong_answer": 6,
+            "accepted": 21,
+            "wrong_answer": 15,
             "invalid": 0,
-            "abstained": 3
+            "abstained": 9
           },
-          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario services_page_profile_fields_grounded since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "services_page_profile_fields_grounded"
-            ],
-            "prompt_changed": [
-              "services_page_profile_fields_grounded"
-            ],
-            "grader_changed": [
-              "services_page_profile_fields_grounded"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
