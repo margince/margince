@@ -112,7 +112,7 @@ func lockProposalsFollowingDeal(
 // proposal whose task lands on this deal. The keys are the Go field names of
 // activities.ActivityLinkInput, which the payload's links carry untagged.
 //
-// Held by: TestATranscriptProposalFollowsTheDealItsTaskLandsOn
+// Held by: TestEveryTranscriptCardOnTheDealFollowsIt
 // (backend/internal/compose/proposalsfollowdeal_integration_test.go), which
 // stages through the real transcript reader.
 func transcriptLinksDeal(dealID ids.UUID) (json.RawMessage, error) {
