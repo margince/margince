@@ -92,7 +92,7 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 		w.WriteHeader(http.StatusNotModified)
 		return
 	}
-	rc, _, err := h.blob.Get(r.Context(), key)
+	rc, object, err := h.blob.Get(r.Context(), key)
 	if err != nil {
 		if errors.Is(err, blobstore.ErrNotFound) {
 			// The row points at bytes the store does not have. To the client
@@ -103,6 +103,20 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 		httperr.Write(w, r, err)
 		return
 	}
+	// Bytes known to be tight go out as stored: no read into memory, no
+	// decode, no pixel scan. That is every mark stored since PutLogo, and a
+	// legacy one once this process has checked it.
+	if storedTrimmed(key) || h.tightLogos.has(key) {
+		writeLogo(w, r, id, etag, rc, object.Size)
+		return
+	}
+	h.streamLegacyLogo(w, r, companyID, id, slot, key, etag, rc)
+}
+
+// streamLegacyLogo serves a mark stored before PutLogo trimmed at write time:
+// such an object may still carry the transparent square canvas older uploads
+// were given, so it is cropped here and the crop written back.
+func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, companyID ids.CompanyID, id crmcontracts.Id, slot LogoSlot, key, etag string, rc io.ReadCloser) {
 	source, readErr := io.ReadAll(rc)
 	closeErr := rc.Close()
 	if closeErr != nil {
@@ -117,25 +131,7 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 		httperr.Write(w, r, err)
 		return
 	}
-	// These bytes were normalized from a third-party website's asset, and three
-	// things keep that from mattering at the response. The media type is fixed
-	// rather than read back from the object's metadata — the contract declares
-	// this endpoint image/png and every stored object is this server's own PNG
-	// re-encode, so nothing a site influenced decides how its bytes are
-	// interpreted. Then the type cannot be sniffed into something active, and
-	// the document that renders can reach nothing.
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	// The URL carries a revision token derived from the stored object key, so a
-	// replacement takes a fresh cache entry. A company list asks for one image
-	// per row, and this short private cache saves the repeated reads of each —
-	// the ETag above extends that saving past the cache's own expiry too.
-	w.Header().Set("Cache-Control", logoCacheControl)
-	w.Header().Set("ETag", etag)
-	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: int64(len(logo))},
-		Body:     io.NopCloser(bytes.NewReader(logo)),
-	}, "company logo "+id.String())
+	writeLogo(w, r, id, etag, io.NopCloser(bytes.NewReader(logo)), int64(len(logo)))
 	// A body this small can sit in net/http's own write buffer until the
 	// handler returns, so without an explicit flush here the reader would
 	// wait on the write-back below before receiving anything they asked for
@@ -143,10 +139,12 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	if fErr := http.NewResponseController(w).Flush(); fErr != nil {
 		slog.WarnContext(r.Context(), "flushing the company logo response", "err", fErr)
 	}
-	// Only when a crop actually happened: TrimTransparentPNG returns src
-	// itself, unchanged, when the canvas was already tight, and writing
-	// identical bytes back would cost a PUT for nothing.
-	//
+	// TrimTransparentPNG returns src itself when the canvas was already tight:
+	// nothing to write back, and nothing to decode on this key again.
+	if bytes.Equal(logo, source) {
+		h.tightLogos.add(key)
+		return
+	}
 	// Backgrounded, not merely context-detached: logoWriteBackTimeout only
 	// bounds a Store whose Put actually watches its context, and the shipped
 	// filesystem and in-memory stores both discard theirs (blobstore.Put's own
@@ -156,15 +154,30 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	// Coalesced by key: a burst of readers landing on the same untrimmed
 	// object right after an upload or a migration would otherwise each start
 	// their own write-back of the identical bytes to the identical key. Only
-	// the first claims it; the rest find it already in flight and skip —
-	// once that one write-back finishes, every later read finds the object
-	// already trimmed and TrimTransparentPNG returns src unchanged, so the
-	// map never needs more than one entry per key at a time.
-	if !bytes.Equal(logo, source) {
-		if _, running := h.logoWritesInFlight.LoadOrStore(key, struct{}{}); !running {
-			go h.writeBackTrimmedLogo(context.WithoutCancel(r.Context()), companyID, slot, key, logo)
-		}
+	// the first claims it; the rest find it already in flight and skip.
+	if _, running := h.logoWritesInFlight.LoadOrStore(key, struct{}{}); !running {
+		go h.writeBackTrimmedLogo(context.WithoutCancel(r.Context()), companyID, slot, key, logo)
 	}
+}
+
+// writeLogo sends one mark's bytes under the headers every logo response
+// carries, whichever path produced them.
+func writeLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, etag string, body io.ReadCloser, size int64) {
+	// These bytes were normalized from a third-party website's asset, and three
+	// things keep that from mattering at the response. The media type is fixed
+	// rather than read back from the object's metadata — the contract declares
+	// this endpoint image/png and every stored object is this server's own PNG
+	// re-encode, so nothing a site influenced decides how its bytes are
+	// interpreted. Then the type cannot be sniffed into something active, and
+	// the document that renders can reach nothing.
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	w.Header().Set("Cache-Control", logoCacheControl)
+	w.Header().Set("ETag", etag)
+	httperr.StreamObject(w, r, httperr.StreamedObject{
+		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: size},
+		Body:     body,
+	}, "company logo "+id.String())
 }
 
 // writeBackTrimmedLogo persists a freshly trimmed image over the object a
@@ -209,6 +222,7 @@ func (h Handlers) writeBackTrimmedLogo(ctx context.Context, companyID ids.Compan
 		return
 	}
 	if after == key {
+		h.tightLogos.add(key)
 		return
 	}
 	if err := h.blob.Delete(writeCtx, key); err != nil {
