@@ -168,6 +168,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
 | `analyticsscope_test.go` | H2 | Every path that renders a report spec's population applies that spec's row narrowings. |
+| `answerwalk_test.go` | H2 | Only the answer predicate walks a thread for our reply. |
 | `approvalselfonlyreaders_test.go` | H2 | Every approvals reader that filters rows by the decision grants also applies the self-only narrowing. |
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has ONE spelling, wherever it is asked. |
