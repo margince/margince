@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { Heading } from "./heading";
+import { holdExits } from "./presence-testing";
 
 // A confirmation raised over a drawer stays painted while its exit plays. The
 // keyboard is the drawer's from the moment the reader dismisses it, not from
@@ -15,13 +16,8 @@ afterEach(cleanup);
 
 // An exit that never ends, so every assertion below runs mid-exit.
 beforeEach(() => {
-  vi.spyOn(HTMLElement.prototype, "getAnimations").mockReturnValue([
-    {
-      finished: new Promise<void>(() => undefined),
-      effect: { getComputedTiming: () => ({ iterations: 1 }) },
-    } as unknown as Animation,
-  ]);
-  return () => vi.restoreAllMocks();
+  const exits = holdExits();
+  return () => exits.mockRestore();
 });
 
 function DrawerWithConfirm({ onClose }: Readonly<{ onClose: () => void }>) {
