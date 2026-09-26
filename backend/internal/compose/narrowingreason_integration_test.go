@@ -49,6 +49,33 @@ func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
 	}
 }
 
+// The reply is asked the question the verdict asks before it narrows: an
+// answer on a held thread may not publish its counterparty.
+func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "buyer@heldreply.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-reply-held"))
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+	seedThreadHold(t, e, "thr-reply-held", "held")
+
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-held", email, "thr-reply-held")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// Capture privacy is the importing seat's: a reply a colleague's mailbox
+// caught is not authority to publish the contact this seat is keeping.
+func TestAReplyInAnotherSeatsMailboxDoesNotPublish(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "buyer@twoseats.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-two-seats"))
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+
+	captureInboundThroughRealSink(t, e, e.Rep2, "reply-two-seats", email, "thr-two-seats")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
 // The honest hard case: the hold is lifted before the reply arrives. Asking
 // the thread again at reply time would find nothing and publish; the recorded
 // reason is what still refuses.
@@ -106,6 +133,28 @@ func TestAReplyDoesNotPublishAContactAHumanMadePrivate(t *testing.T) {
 	replyOnFreshThread(t, e, email, "thr-human-reply")
 
 	requireStillNarrowed(t, e, email, contacts.NarrowedHumanDecided)
+}
+
+// The sink usually mints the record before any verdict arrives, so the
+// decision's reason has to land on a row that already exists.
+func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
+	e := integration.Setup(t)
+	const email = "notary@ownaffairs.example"
+	seedAttestedOutbound(t, e, "sink-first-out", email, "thr-sink-first")
+	captureInboundThroughRealSink(t, e, e.Rep1, "sink-first-in", email, "thr-sink-first")
+	if reason := narrowingReasonOf(t, e, email); reason != nil {
+		t.Fatalf("the sink recorded %q on a sender nothing has judged yet, want no reason", *reason)
+	}
+	dispositionID, queued := openDisposition(t, e, email)
+	if !queued {
+		t.Fatal("no verdict was opened for the sender the sink minted")
+	}
+	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}})
+	requireNarrowed(t, e, email, contacts.NarrowedAdvisor)
+
+	replyOnFreshThread(t, e, email, "thr-sink-first-reply")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedAdvisor)
 }
 
 // A row narrowed before the reason existed records none. Absent is not
