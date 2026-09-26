@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -26,9 +27,11 @@ import (
 // point is to stay short of all of them.
 const SubjectMaxRunes = 70
 
-// replyPrefixes are the ways a client marks a subject as a reply, in the
-// languages this product writes.
-var replyPrefixes = []string{"re:", "aw:", "fwd:", "wg:", "antw:"}
+// replyPrefixes are every prefix that claims an earlier message: a forward
+// claims one as much as a reply does.
+func replyPrefixes() []string {
+	return append(mailsubject.ReplyPrefixes(), mailsubject.ForwardPrefixes()...)
+}
 
 // Subject reads a draft's subject line against the correspondence it belongs to.
 //
@@ -50,7 +53,7 @@ func Subject(subject string, lang textlang.Lang, band convstate.Band, threaded b
 		}}
 	}
 
-	for _, prefix := range replyPrefixes {
+	for _, prefix := range replyPrefixes() {
 		if !strings.HasPrefix(lowered, prefix) {
 			continue
 		}
