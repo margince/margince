@@ -14,29 +14,35 @@ import (
 	"time"
 )
 
-// A CLI that runs past its deadline is killed with everything it started: a
-// child left holding the pipes would keep the call waiting out cliWaitDelay.
+// A CLI whose call is abandoned is killed with everything it started: a child
+// left holding the pipes would keep the call waiting out cliWaitDelay.
 func TestALateCLIJudgeIsKilledWithItsChildren(t *testing.T) {
 	withCredential(t)
 	started := filepath.Join(t.TempDir(), "child-started")
 	stubClaude(t, "sleep 30 &\n: > '"+started+"'\nwait")
-	// Long enough for a freshly written script to start on a slow host; the
-	// assertion below is about what happens after the deadline, not before it.
-	const deadline = 2 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), deadline)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	begun := time.Now()
+	// Cancel only once the child exists, so a slow host starting the script
+	// cannot turn this into a test of nothing.
+	var cancelled time.Time
+	go func() {
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			if _, err := os.Stat(started); err == nil {
+				cancelled = time.Now()
+				cancel()
+				return
+			}
+		}
+	}()
 	_, err := claudeCLIJudge{model: "sonnet"}.Complete(ctx, judgeRequest())
-	elapsed := time.Since(begun)
-	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("err = %v, want the deadline", err)
-	}
-	if _, statErr := os.Stat(started); statErr != nil {
-		t.Fatalf("the stub never started its child before the deadline, so this proved nothing: %v", statErr)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want the cancellation", err)
 	}
 	// A surviving child holds the call for the whole cliWaitDelay past the
-	// deadline; a killed group releases it at once.
-	if elapsed >= deadline+cliWaitDelay/2 {
-		t.Errorf("the call took %s: the CLI's child outlived the kill and held its pipes", elapsed)
+	// cancel; a killed group releases it at once.
+	if held := time.Since(cancelled); held >= cliWaitDelay/2 {
+		t.Errorf("the call was held %s after the cancel: the CLI's child outlived the kill and held its pipes", held)
 	}
 }

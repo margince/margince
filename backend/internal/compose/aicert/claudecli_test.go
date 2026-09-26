@@ -352,3 +352,89 @@ func TestARecordNamesTheJudgesTransport(t *testing.T) {
 		t.Errorf("a record with no judge transport names one, so every committed record would change: %s", raw)
 	}
 }
+
+// The judge completes text and nothing else, and says so for each lane it lacks
+// rather than answering as if it had one.
+func TestTheCLIJudgeDeclaresATextOnlyClient(t *testing.T) {
+	judge := claudeCLIJudge{model: "sonnet"}
+	if caps := judge.Caps(); caps.Streaming || caps.EmbedDims != 0 || len(caps.AttachmentMIMEs) != 0 {
+		t.Errorf("caps = %+v, want a text-only client", caps)
+	}
+	if stream, err := judge.Stream(context.Background(), judgeRequest()); stream != nil || err == nil {
+		t.Errorf("Stream = (%v, %v), want a refusal", stream, err)
+	}
+	if _, err := judge.Embed(context.Background(), model.EmbedRequest{}); !errors.Is(err, model.ErrEmbeddingsUnsupported) {
+		t.Errorf("Embed err = %v, want ErrEmbeddingsUnsupported", err)
+	}
+}
+
+// A request the CLI cannot carry is refused before the CLI runs, and names why.
+func TestTheCLIJudgeRefusesARequestItCannotCarry(t *testing.T) {
+	withTools := judgeRequest()
+	withTools.Tools = []model.ToolDef{{Name: "search"}}
+	withAttachment := judgeRequest()
+	withAttachment.Attachments = []model.Attachment{{MIME: "application/pdf", Bytes: []byte("%PDF")}}
+	noMessage := judgeRequest()
+	noMessage.Messages = nil
+	strippingFails := judgeRequest()
+	strippingFails.SecretStripper = failingStripper{}
+	strippingBreaksJSON := judgeRequest()
+	strippingBreaksJSON.SecretStripper = truncatingStripper{}
+	for name, tc := range map[string]struct {
+		req       model.Request
+		want      string
+		wantCause error
+	}{
+		"tools":                 {withTools, "carries text only", model.ErrRequestRejected},
+		"attachments":           {withAttachment, "carries text only", model.ErrRequestRejected},
+		"no message":            {noMessage, "with no message", nil},
+		"stripper fails":        {strippingFails, "secret stripper", errStripperDown},
+		"stripped wire unreads": {strippingBreaksJSON, "no longer parses", nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			withCredential(t)
+			record := stubClaude(t, printing(cliSuccess, "0"))
+			_, err := claudeCLIJudge{model: "sonnet"}.Complete(context.Background(), tc.req)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want it to say %q", err, tc.want)
+			}
+			if tc.wantCause != nil && !errors.Is(err, tc.wantCause) {
+				t.Errorf("err = %v, want it to wrap %v", err, tc.wantCause)
+			}
+			if _, statErr := os.Stat(filepath.Join(record, "args")); !os.IsNotExist(statErr) {
+				t.Error("the CLI was run for a request it cannot carry")
+			}
+		})
+	}
+}
+
+// With nowhere to make its empty working directory, the judge fails in words
+// instead of running the CLI from the operator's own directory.
+func TestTheCLIJudgeNeedsItsEmptyWorkingDirectory(t *testing.T) {
+	withCredential(t)
+	record := stubClaude(t, printing(cliSuccess, "0"))
+	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "absent"))
+	_, err := claudeCLIJudge{model: "sonnet"}.Complete(context.Background(), judgeRequest())
+	if err == nil || !strings.Contains(err.Error(), "empty working directory") {
+		t.Fatalf("err = %v, want it to name the working directory it could not make", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(record, "args")); !os.IsNotExist(statErr) {
+		t.Error("the CLI was run without its isolated working directory")
+	}
+}
+
+var errStripperDown = errors.New("the stripper is down")
+
+type failingStripper struct{}
+
+func (failingStripper) Strip(context.Context, []byte) ([]byte, model.StripReport, error) {
+	return nil, model.StripReport{}, errStripperDown
+}
+
+// truncatingStripper answers bytes that are no longer JSON, the one way a
+// stripper can hand back a wire the judge cannot read.
+type truncatingStripper struct{}
+
+func (truncatingStripper) Strip(_ context.Context, payload []byte) ([]byte, model.StripReport, error) {
+	return payload[:len(payload)/2], model.StripReport{Findings: 1}, nil
+}

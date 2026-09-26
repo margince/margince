@@ -504,3 +504,25 @@ func TestTheCertificationGradesWhichPassageSettledTheCriterion(t *testing.T) {
 		t.Errorf("the verdict does not name the useless citation: %s", got.Detail)
 	}
 }
+
+// A settled_by phrase nobody in the conversation said can never be quoted, so
+// the scenario pinning it would grade every reply wrong; it is refused while it
+// is still a corpus error rather than a paid run of zeros.
+func TestAScenarioCannotPinAPassageNobodySaid(t *testing.T) {
+	fixture := stageEvidenceFixture{
+		Criteria: []stageEvidenceCriterion{{Key: "economic_buyer", Label: "The economic buyer is identified"}},
+		Spans: []stageEvidenceSpan{{
+			SourceID: evidenceSpans[0].SourceID,
+			Lines:    []string{"Ines: that would be Martin,", "our COO."},
+		}},
+	}
+	said := []stageEvidenceExpectation{{CriterionKey: "economic_buyer", Met: true, SettledBy: "Martin, our COO."}}
+	if err := refuseUnreachableCriteria(said, fixture); err != nil {
+		t.Fatalf("a phrase said across two lines was refused: %v", err)
+	}
+	unsaid := []stageEvidenceExpectation{{CriterionKey: "economic_buyer", Met: true, SettledBy: "Karl"}}
+	err := refuseUnreachableCriteria(unsaid, fixture)
+	if err == nil || !strings.Contains(err.Error(), `settled_by "Karl"`) {
+		t.Fatalf("err = %v, want the unsaid settled_by named", err)
+	}
+}

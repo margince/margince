@@ -307,3 +307,38 @@ func TestARoutedRunRefusesADecisionLaneItsProfileForbids(t *testing.T) {
 		t.Fatalf("the same run without a lane was refused: %v", err)
 	}
 }
+
+// The decision leg repeats each scenario as often as the LLM record ran it, so a
+// scenario that record never ran has no count to match and voids the leg rather
+// than being asked zero times and certified on nothing.
+func TestTheDecisionLegRefusesAScenarioTheLLMRecordNeverRan(t *testing.T) {
+	task := ai.TaskSiteTriage
+	decider := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.99, "jev")}}
+	leg := decisionLeg{
+		task: task, scenarios: []Scenario{decidingScenario("basic", task)}, census: decidingCensus(t, task, defaultWidgetForm()),
+		candidate: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, lane: jevLane,
+		profile: ai.ProfileCloudFrontier, llm: Record{Scenarios: []ScenarioRecord{{Scenario: "another", Runs: 3, Passed: 3}}},
+		hooks: &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(decider)}},
+	}
+	records, err := leg.certify(wsContext(t), quietLogger())
+	if err == nil || !strings.Contains(err.Error(), "no runs of scenario basic") {
+		t.Fatalf("certify = (%d records, %v), want a refusal naming the unmatched scenario", len(records), err)
+	}
+	if decider.called() != 0 {
+		t.Errorf("the lane was asked %d times for a scenario with no LLM runs to match", decider.called())
+	}
+}
+
+// A fallen-back run is credited with the LLM record's rate on that scenario,
+// and a scenario the record did not run — or ran zero times — earns nothing.
+func TestAFallbackIsCreditedOnlyWithAMeasuredLLMRate(t *testing.T) {
+	llm := Record{Scenarios: []ScenarioRecord{
+		{Scenario: "measured", Runs: 4, Passed: 3},
+		{Scenario: "empty", Runs: 0, Passed: 0},
+	}}
+	for scenario, want := range map[string]float64{"measured": 0.75, "empty": 0, "unrun": 0} {
+		if got := llmPassRate(llm, scenario); got != want {
+			t.Errorf("llmPassRate(%s) = %v, want %v", scenario, got, want)
+		}
+	}
+}
