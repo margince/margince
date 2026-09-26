@@ -100,6 +100,14 @@ func (s *Sink) joinThread(
 	if err != nil || len(neighbours) == 0 {
 		return err
 	}
+	return s.mergeLinkedThreads(ctx, tx, seat, id, neighbours, created)
+}
+
+// mergeLinkedThreads merges the thread keys a held email's reply links reach,
+// under the rules joinThread states.
+func (s *Sink) mergeLinkedThreads(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
+) error {
 	// One lock for every merge in the workspace, taken BEFORE the keys are
 	// read, so a concurrent merge cannot retire a key between this read and
 	// the rewrite. Merges are rare — most captures find one key and stop here

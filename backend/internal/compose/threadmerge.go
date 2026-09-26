@@ -30,7 +30,7 @@ import (
 // threadMergedTables names every table mergeThreadsTx rewrites, for the
 // schema check above to compare against.
 var threadMergedTables = []string{
-	"activity",
+	"activity", //nolint:goconst // a table name here, not the record type recordTypeActivity names
 	"activity_sales_state",
 	"capture_thread_verdict",
 	"comms_outbound",

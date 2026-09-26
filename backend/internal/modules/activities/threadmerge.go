@@ -16,6 +16,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -146,16 +147,24 @@ func MoveMessageToThreadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, to
 	if to == "" {
 		return nil
 	}
-	// A compare-and-set on the key the row still has: a live row not yet in
-	// `to` moves, and anything else — archived since the join read it, or
-	// already moved by the merge that ran first — is left alone. Neither case
-	// is an error; the row is where the join wanted it or out of every path.
-	tag, err := tx.Exec(ctx, `
-		UPDATE activity SET thread_key = $2
-		 WHERE id = $1 AND archived_at IS NULL AND thread_key IS DISTINCT FROM $2`, id, to)
+	// The row is locked and read first: archived since the join read it, or
+	// already moved by the merge that ran first, it is left alone. Neither is
+	// an error — the row is where the join wanted it, or out of every path.
+	var current *string
+	err := tx.QueryRow(ctx, `
+		SELECT thread_key FROM activity WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, id).Scan(&current)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
 	if err != nil {
+		return fmt.Errorf("activities: locking a message to move it into a thread: %w", err)
+	}
+	if current != nil && *current == to {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity SET thread_key = $2 WHERE id = $1 AND archived_at IS NULL`, id, to); err != nil {
 		return fmt.Errorf("activities: moving a message into the thread it joins: %w", err)
 	}
-	_ = tag.RowsAffected()
 	return nil
 }
