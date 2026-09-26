@@ -24,8 +24,13 @@ package privacy
 // half-applied. Every query filters the hold column — and for
 // activities, the holds of every linked record plus the statutory floor.
 var retentionSelectors = map[string]string{
+	// An ARCHIVE policy passes over leads already archived, or it would pick the
+	// same batch every night and never reach the rest. An ANONYMIZE policy does
+	// not: an archived lead still holds the person's details, so a policy
+	// switched from archive to anonymize must reach every lead the archive
+	// already took. $3 is the policy's action (dueRecords).
 	"lead/unconverted": `SELECT id FROM lead
-		WHERE status IN ('new','contacted','engaged') AND archived_at IS NULL AND NOT legal_hold
+		WHERE status IN ('new','contacted','engaged') AND (archived_at IS NULL OR $3 = 'anonymize') AND NOT legal_hold
 		  AND full_name IS DISTINCT FROM 'Anonymized Lead'
 		  AND created_at < now() - make_interval(days => $1)
 		  AND entered_at < now() - make_interval(days => $1) LIMIT $2`,

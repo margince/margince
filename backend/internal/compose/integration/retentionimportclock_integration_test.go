@@ -143,3 +143,42 @@ func TestTheDefaultPolicyArchivesAnUnconvertedLeadAndKeepsIt(t *testing.T) {
 		t.Fatalf("the archived lead lost its identity (name %q, email %v); the default archives, it does not anonymize", name, email)
 	}
 }
+
+// An installation that switches its unconverted-lead policy from archive to
+// anonymize reaches the leads the archive already took: an archived lead still
+// holds the person's details, and a selector that skipped archived rows would
+// keep them forever.
+func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
+	e := Setup(t)
+	lead := ids.NewV7()
+	ctx := context.Background()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM retention_policy`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO retention_policy (object_type, category, retain_days, action)
+			VALUES ('lead', 'unconverted', 365, 'anonymize')`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO lead (id, full_name, email, status, source, captured_by, created_at, entered_at, archived_at)
+			VALUES ($1, 'Archived Cold Lead', 'archived@old.example', 'new', 'manual', 'human:x',
+			        now() - interval '400 days', now() - interval '400 days', now() - interval '30 days')`, lead)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	runRetentionPass(t, e)
+
+	var name string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT full_name FROM lead WHERE id = $1`, lead).Scan(&name)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if name != "Anonymized Lead" {
+		t.Fatalf("an archived over-age lead kept its name %q under an anonymize policy", name)
+	}
+}

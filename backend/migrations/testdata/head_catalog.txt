@@ -2631,7 +2631,6 @@ public.contact.address_region text gen=- def=-
 public.contact.archived_at timestamp with time zone gen=- def=-
 public.contact.captured_by text NOT NULL gen=- def=-
 public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
-public.contact.contact_keeps_entered_at CREATE TRIGGER contact_keeps_entered_at BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION keep_entered_at()
 public.contact.contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES contact(id) ON DELETE SET NULL (merged_into_id)
 public.contact.contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
@@ -3041,7 +3040,6 @@ public.deal.deal_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z
 public.deal.deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000)))
 public.deal.deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))
 public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
-public.deal.deal_keeps_entered_at CREATE TRIGGER deal_keeps_entered_at BEFORE UPDATE ON public.deal FOR EACH ROW EXECUTE FUNCTION keep_entered_at()
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
 public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL)))
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
@@ -4281,12 +4279,6 @@ public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_sub
 public.ix_contact_confirm_submission_open CREATE INDEX ix_contact_confirm_submission_open ON public.contact_confirm_submission USING btree (submitted_at) WHERE (resolved_at IS NULL)
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
-public.keep_entered_at() secdef=false cfg=- acl=- 
-BEGIN
-    NEW.entered_at := OLD.entered_at;
-    RETURN NEW;
-END
-
 public.knowledge_chunk acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.knowledge_chunk.archived_at timestamp with time zone gen=- def=-
 public.knowledge_chunk.chunk_hash text NOT NULL gen=- def=-
@@ -4423,7 +4415,6 @@ public.lead.id uuid NOT NULL gen=- def=uuidv7()
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))
 public.lead.lead_first_response_follows_creation CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at)))
-public.lead.lead_keeps_entered_at CREATE TRIGGER lead_keeps_entered_at BEFORE UPDATE ON public.lead FOR EACH ROW EXECUTE FUNCTION keep_entered_at()
 public.lead.lead_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES lead(id) ON DELETE SET NULL (merged_into_id)
 public.lead.lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))
 public.lead.lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
