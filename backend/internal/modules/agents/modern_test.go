@@ -509,6 +509,7 @@ func TestTheInstructionsTellAClientsModelToNameADisagreement(t *testing.T) {
 			t.Errorf("a surface %s does not carry the conflicting-sources rule:\n%s", name, surface.instructions())
 		}
 	}
+	rule := mcp.ConflictingSourcesRule
 	for _, want := range []string{
 		// Naming both is the move; choosing silently is the failure that hides it.
 		"say that they disagree and name both",
@@ -517,8 +518,8 @@ func TestTheInstructionsTellAClientsModelToNameADisagreement(t *testing.T) {
 		// Which side wins, or a model told to flag a conflict still guesses.
 		"the field wins",
 	} {
-		if !strings.Contains(mcp.ConflictingSourcesRule, want) {
-			t.Errorf("the conflicting-sources rule no longer says %q:\n%s", want, mcp.ConflictingSourcesRule)
+		if !strings.Contains(rule, want) {
+			t.Errorf("the conflicting-sources rule no longer says %q:\n%s", want, rule)
 		}
 	}
 }
