@@ -22451,8 +22451,8 @@ export interface components {
              * @description Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
              *     `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
              *     treating a reply to someone who wrote to us as a consent violation is a frame that is
-             *     legally wrong. `marketing` needs express consent with double-opt-in proof or the
-             *     §7(3) existing-customer flag. `phone_outreach` is specced and dormant.
+             *     legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
+             *     existing-customer exception is not offered. `phone_outreach` is specced and dormant.
              * @enum {string}
              */
             purpose_class: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";

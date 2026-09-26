@@ -4,10 +4,17 @@
 package compose
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log/slog"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // noticeStep is the one name the accept path must call, directly, before the
@@ -122,4 +129,37 @@ func isCallOf(expr ast.Expr, name string) bool {
 	}
 	ident, ok := call.Fun.(*ast.Ident)
 	return ok && ident.Name == name
+}
+
+// The accept step's own refusal is the backstop behind the precheck, so no path
+// through approvals reaches it while the precheck stands. Called directly: it
+// must refuse before touching the approval or the capture sink, both nil here.
+func TestTheSiteLeadAcceptStepRefusesBeforeItRedeemsOrCaptures(t *testing.T) {
+	effect := siteLeadAcceptEffect(nil, nil)
+	err := effect(context.Background(), ids.New[ids.ApprovalKind](), []byte(`{}`), "hash")
+	if !errors.Is(err, errSiteLeadCaptureClosed) || !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("accepting a site lead while the lane is shut = %v, want the closed-lane conflict", err)
+	}
+	if siteLeadPrecheck()(context.Background(), nil, nil) == nil {
+		t.Fatal("the precheck let a site lead through while the lane is shut")
+	}
+}
+
+// A read that found nobody has nothing to refuse: it is not reported as a
+// refusal, and it logs nothing about one.
+func TestSiteLeadsRefusedSaysNothingWhenTheReadFoundNobody(t *testing.T) {
+	var logged bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&logged, nil))
+	if siteLeadsRefused(context.Background(), log, "read-1", 0) {
+		t.Error("a read that found nobody was reported as refusing somebody")
+	}
+	if logged.Len() != 0 {
+		t.Errorf("a read that found nobody logged a refusal: %s", logged.String())
+	}
+	if !siteLeadsRefused(context.Background(), log, "read-2", 2) {
+		t.Error("two published names were not refused while the lane is shut")
+	}
+	if !bytes.Contains(logged.Bytes(), []byte(dropNoArticle14Notice)) {
+		t.Errorf("the refusal did not log its reason: %s", logged.String())
+	}
 }
