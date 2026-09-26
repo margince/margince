@@ -60,3 +60,24 @@ func TestProjectCreateInputCarriesAnOrdinarySourceSystem(t *testing.T) {
 		t.Errorf("SourceSystem = %v, want it carried to the store", in.SourceSystem)
 	}
 }
+
+// The importer door: a declared importer (the handler decides) may stamp the
+// mirror: namespace; an engine identity stays refused, and the client door is
+// unchanged.
+func TestProjectImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
+	body := func(system string) crmcontracts.CreateProjectRequest {
+		return crmcontracts.CreateProjectRequest{
+			Name: "Imported", CompanyId: openapi_types.UUID(ids.NewV7()), Source: "ui", SourceSystem: &system,
+		}
+	}
+	in, err := projectCreateInputFromImporter(body("mirror:hubspot"))
+	if err != nil || in.SourceSystem == nil || *in.SourceSystem != "mirror:hubspot" {
+		t.Errorf("importer door = %v / %v, want the namespace carried", in.SourceSystem, err)
+	}
+	if _, err := projectCreateInputFromImporter(body(provenance.NoActivityReminderSource)); err == nil {
+		t.Error("the importer door admitted an engine identity")
+	}
+	if _, err := projectCreateInput(body("mirror:hubspot")); err == nil {
+		t.Error("the client door admitted the importer namespace")
+	}
+}

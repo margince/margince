@@ -13966,7 +13966,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List the share links you issued that still serve.
+         * @description The caller's own open shares — not revoked and not yet expired — newest first.
+         *     Another seat's links are never listed, and `DELETE /forecast/shares/{id}` answers
+         *     404 for them.
+         *
+         *     The token is never returned again. It was shown once, when the link was issued,
+         *     and the table holds only its digest.
+         */
+        get: operations["listForecastShares"];
         put?: never;
         /**
          * Issue a link that shows a forecast reading to a colleague.
@@ -14008,8 +14017,9 @@ export interface paths {
         post?: never;
         /**
          * Close a share link before it expires.
-         * @description Idempotent: revoking a revoked share is the outcome the caller asked for, and
-         *     answers 204 either way.
+         * @description Close answers for any share the calling seat issued, open or not: closing one that
+         *     has expired or is already closed changes nothing and answers 204. Any other id is a
+         *     404 — there is no share of yours by that id, whether or not somebody else issued one.
          *
          *     Revocation and expiry are both real and neither replaces the other. An expiry alone
          *     means a link sent to the wrong address stays open until it lapses; a revocation
@@ -19817,7 +19827,7 @@ export interface components {
             emails?: components["schemas"]["ContactEmailInput"][];
             phones?: components["schemas"]["ContactPhoneInput"][];
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -20152,7 +20162,7 @@ export interface components {
             parent_company_id?: string | null;
             domains?: components["schemas"]["CompanyDomainInput"][];
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -23858,7 +23868,7 @@ export interface components {
              */
             expected_close_date?: string | null;
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -24575,7 +24585,7 @@ export interface components {
             /** Format: date */
             target_end_date?: string | null;
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -28869,6 +28879,30 @@ export interface components {
              * @description When it stops serving. Capped server-side; an expiry beyond the ceiling is refused rather than shortened. Omitted takes the ceiling.
              */
             expires_at?: string;
+        };
+        /** @description A share link as it stands. Carries no token: that is shown once, when the link is issued, and the table holds only its digest. */
+        ForecastShare: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "live" | "snapshot";
+            target: string;
+            /** @enum {string} */
+            scope_kind: "workspace" | "team" | "owner";
+            /**
+             * Format: uuid
+             * @description Whose forecast, for a team or owner scope. Absent for the workspace.
+             */
+            scope_id?: string;
+            /**
+             * Format: uuid
+             * @description The frozen state a snapshot share serves. Absent on a live share.
+             */
+            snapshot_id?: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            created_at: string;
         };
         /** @description A share as issued, carrying its token for the only time. */
         IssuedForecastShare: {
@@ -58509,6 +58543,30 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listForecastShares: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open shares, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ForecastShare"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createForecastShare: {

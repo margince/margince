@@ -8893,6 +8893,45 @@ func (e ForecastReadingsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastShareKind.
+const (
+	ForecastShareKindLive     ForecastShareKind = "live"
+	ForecastShareKindSnapshot ForecastShareKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the ForecastShareKind enum.
+func (e ForecastShareKind) Valid() bool {
+	switch e {
+	case ForecastShareKindLive:
+		return true
+	case ForecastShareKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastShareScopeKind.
+const (
+	ForecastShareScopeKindOwner     ForecastShareScopeKind = "owner"
+	ForecastShareScopeKindTeam      ForecastShareScopeKind = "team"
+	ForecastShareScopeKindWorkspace ForecastShareScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ForecastShareScopeKind enum.
+func (e ForecastShareScopeKind) Valid() bool {
+	switch e {
+	case ForecastShareScopeKindOwner:
+		return true
+	case ForecastShareScopeKindTeam:
+		return true
+	case ForecastShareScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastSufficiencyAbsent.
 const (
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
@@ -27353,7 +27392,7 @@ type CreateCompanyRequest struct {
 	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
 	Source          string                        `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -27396,7 +27435,7 @@ type CreateContactRequest struct {
 	Social    *map[string]interface{} `json:"social,omitempty"`
 	Source    string                  `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	Title                *string                `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -27495,7 +27534,7 @@ type CreateDealRequest struct {
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 	Source    string              `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	StageId              openapi_types.UUID     `json:"stage_id"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -27806,7 +27845,7 @@ type CreateProjectRequest struct {
 	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 	Source      string              `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
@@ -30082,6 +30121,28 @@ type ForecastReadings struct {
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
+
+// ForecastShare A share link as it stands. Carries no token: that is shown once, when the link is issued, and the table holds only its digest.
+type ForecastShare struct {
+	CreatedAt time.Time          `json:"created_at"`
+	ExpiresAt time.Time          `json:"expires_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Kind      ForecastShareKind  `json:"kind"`
+
+	// ScopeId Whose forecast, for a team or owner scope. Absent for the workspace.
+	ScopeId   *openapi_types.UUID    `json:"scope_id,omitempty"`
+	ScopeKind ForecastShareScopeKind `json:"scope_kind"`
+
+	// SnapshotId The frozen state a snapshot share serves. Absent on a live share.
+	SnapshotId *openapi_types.UUID `json:"snapshot_id,omitempty"`
+	Target     string              `json:"target"`
+}
+
+// ForecastShareKind defines model for ForecastShare.Kind.
+type ForecastShareKind string
+
+// ForecastShareScopeKind defines model for ForecastShare.ScopeKind.
+type ForecastShareScopeKind string
 
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
@@ -58602,6 +58663,9 @@ type ServerInterface interface {
 	// The rows behind a shared reading, as CSV.
 	// (GET /forecast/shared/{token}/export.csv)
 	ExportForecastShare(w http.ResponseWriter, r *http.Request, token string)
+	// List the share links you issued that still serve.
+	// (GET /forecast/shares)
+	ListForecastShares(w http.ResponseWriter, r *http.Request)
 	// Issue a link that shows a forecast reading to a colleague.
 	// (POST /forecast/shares)
 	CreateForecastShare(w http.ResponseWriter, r *http.Request)
@@ -61704,6 +61768,12 @@ func (_ Unimplemented) OpenForecastShare(w http.ResponseWriter, r *http.Request,
 // The rows behind a shared reading, as CSV.
 // (GET /forecast/shared/{token}/export.csv)
 func (_ Unimplemented) ExportForecastShare(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the share links you issued that still serve.
+// (GET /forecast/shares)
+func (_ Unimplemented) ListForecastShares(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78883,6 +78953,26 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListForecastShares operation middleware
+func (siw *ServerInterfaceWrapper) ListForecastShares(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListForecastShares(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateForecastShare operation middleware
 func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
 
@@ -92914,6 +93004,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/shared/{token}/export.csv", wrapper.ExportForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/shares", wrapper.ListForecastShares)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/shares", wrapper.CreateForecastShare)

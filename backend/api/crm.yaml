@@ -20255,6 +20255,36 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/shares:
+    get:
+      tags: [Reports]
+      operationId: listForecastShares
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: List the share links you issued that still serve.
+      description: |
+        The caller's own open shares — not revoked and not yet expired — newest first.
+        Another seat's links are never listed, and `DELETE /forecast/shares/{id}` answers
+        404 for them.
+
+        The token is never returned again. It was shown once, when the link was issued,
+        and the table holds only its digest.
+      # Human-only, as issuing and closing are: the list is what a contact
+      # chose to show somebody, and it is theirs to review.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The caller's open shares, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ForecastShare' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Reports]
       operationId: createForecastShare
@@ -20312,8 +20342,9 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Close a share link before it expires.
       description: |
-        Idempotent: revoking a revoked share is the outcome the caller asked for, and
-        answers 204 either way.
+        Close answers for any share the calling seat issued, open or not: closing one that
+        has expired or is already closed changes nothing and answers 204. Any other id is a
+        404 — there is no share of yours by that id, whether or not somebody else issued one.
 
         Revocation and expiry are both real and neither replaces the other. An expiry alone
         means a link sent to the wrong address stays open until it lapses; a revocation
@@ -28150,7 +28181,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -28612,7 +28643,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -33353,7 +33384,7 @@ components:
         owner_id: { type: [string, 'null'], format: uuid }
         expected_close_date: { type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).' }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -34150,7 +34181,7 @@ components:
         started_at: { type: [string, 'null'], format: date }
         target_end_date: { type: [string, 'null'], format: date }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -39167,6 +39198,28 @@ components:
           description: >-
             When it stops serving. Capped server-side; an expiry beyond the ceiling is
             refused rather than shortened. Omitted takes the ceiling.
+      additionalProperties: false
+    ForecastShare:
+      type: object
+      description: >-
+        A share link as it stands. Carries no token: that is shown once, when the link is
+        issued, and the table holds only its digest.
+      required: [id, kind, target, scope_kind, expires_at, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [live, snapshot] }
+        target: { type: string }
+        scope_kind: { type: string, enum: [workspace, team, owner] }
+        scope_id:
+          type: string
+          format: uuid
+          description: Whose forecast, for a team or owner scope. Absent for the workspace.
+        snapshot_id:
+          type: string
+          format: uuid
+          description: The frozen state a snapshot share serves. Absent on a live share.
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
       additionalProperties: false
     IssuedForecastShare:
       type: object

@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { meFixture } from "../src/app/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
@@ -2100,6 +2101,33 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     );
   });
 
+  // The forecast's Shared links drawer with rows in it, and the confirmation a
+  // row's Close link stacks over it: the closed page sweeps only the trigger.
+  // The mock's admin holds no forecast grant, so this reader is given one.
+  test("no AA violations with the shared links drawer open", async ({
+    page,
+  }) => {
+    await openSharedLinks(page);
+    const drawer = page.getByRole("dialog", {
+      name: de["analytics.share.listTitle"],
+    });
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "analytics/forecast — shared links open");
+
+    // By the keyboard: a pointer left over the pressed row would start its
+    // hover transition back as the confirmation covers it, mid-sweep.
+    await drawer
+      .getByRole("button", { name: de["analytics.share.revoke"] })
+      .first()
+      .focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("dialog", { name: de["analytics.share.closeTitle"] }),
+    ).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "analytics/forecast — close link asked");
+  });
+
   // A list header FOLDS its verbs into one overflow menu below 1100px
   // (design-system/listsurface.tsx), which is a different arrangement rather
   // than the same one narrower: the buttons are inside a disclosure, so the
@@ -2936,4 +2964,82 @@ test.describe("stage automation, in German", () => {
     // And nothing about a stop, because there is none.
     await expect(page.getByText("Von Margince ausgesetzt")).toBeHidden();
   });
+});
+
+const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
+  id: `share-${index}`,
+  kind: index === 1 ? "snapshot" : "live",
+  target: "forecast",
+  scope_kind: "workspace",
+  created_at: `2026-03-0${index + 1}T09:00:00Z`,
+  expires_at: `2026-04-0${index + 1}T09:00:00Z`,
+}));
+
+// The analytics forecast for a reader who may share it, with the drawer open
+// from its trigger by the KEYBOARD, so every caller starts from the same place.
+async function openSharedLinks(page: Page) {
+  await page.route(/\/v1\/me$/, (route) =>
+    route.fulfill({ json: meFixture({ allow: { forecast: ["create"] } }) }),
+  );
+  await page.route(/\/v1\/forecast\/shares$/, (route) =>
+    route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
+  );
+  await page.goto("/#/analytics/forecast");
+  await page.waitForLoadState("networkidle");
+  await expectShellRendered(page);
+  const trigger = page.getByRole("button", {
+    name: de["analytics.share.listOpen"],
+  });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page
+      .getByRole("dialog", { name: de["analytics.share.listTitle"] })
+      .getByRole("button", { name: de["analytics.share.revoke"] }),
+  ).toHaveCount(SHARED_LINK_ROWS.length);
+  return trigger;
+}
+
+test("the shared links drawer is worked by the keyboard alone", async ({
+  page,
+}) => {
+  const trigger = await openSharedLinks(page);
+  const drawer = page.getByRole("dialog", {
+    name: de["analytics.share.listTitle"],
+  });
+  const closeLinks = drawer.getByRole("button", {
+    name: de["analytics.share.revoke"],
+  });
+
+  // Focus moved in: onto the drawer itself, which opened while its list was
+  // still loading, and from there Tab reaches the first link's Close link.
+  const focusInDrawer = () =>
+    page.evaluate(
+      () => document.activeElement?.closest('[role="dialog"]') !== null,
+    );
+  expect(await focusInDrawer()).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(closeLinks.first()).toBeFocused();
+  // Tab walks the other rows and the way out, then comes back round inside.
+  for (let press = 0; press < SHARED_LINK_ROWS.length; press += 1) {
+    await page.keyboard.press("Tab");
+    expect(await focusInDrawer()).toBe(true);
+  }
+  await page.keyboard.press("Tab");
+  await expect(closeLinks.first()).toBeFocused();
+
+  // Close link opens its confirmation, and Escape there leaves the drawer.
+  await page.keyboard.press("Enter");
+  const confirm = page.getByRole("dialog", {
+    name: de["analytics.share.closeTitle"],
+  });
+  await expect(confirm).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(confirm).toBeHidden();
+  await expect(closeLinks.first()).toBeFocused();
+
+  // Escape on the drawer closes it and hands focus back to its trigger.
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
 });

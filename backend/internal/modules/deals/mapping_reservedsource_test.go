@@ -83,3 +83,26 @@ func TestDealCreateInputAcceptsAnOrdinarySource(t *testing.T) {
 		t.Errorf("Source = %q, want it carried through", in.Source)
 	}
 }
+
+// The importer door: a declared importer (the handler decides) may stamp the
+// mirror: namespace; an engine identity stays refused, and the client door is
+// unchanged.
+func TestDealImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
+	body := func(system string) crmcontracts.CreateDealRequest {
+		return crmcontracts.CreateDealRequest{
+			Name: "Imported", Source: "webform", SourceSystem: &system,
+			PipelineId: openapi_types.UUID(ids.NewV7()),
+			StageId:    openapi_types.UUID(ids.NewV7()),
+		}
+	}
+	in, err := dealCreateInputFromImporter(body("mirror:hubspot"))
+	if err != nil || in.SourceSystem == nil || *in.SourceSystem != "mirror:hubspot" {
+		t.Errorf("importer door = %v / %v, want the namespace carried", in.SourceSystem, err)
+	}
+	if _, err := dealCreateInputFromImporter(body(provenance.CheckInCadenceSource)); err == nil {
+		t.Error("the importer door admitted an engine identity")
+	}
+	if _, err := dealCreateInput(body("mirror:hubspot")); err == nil {
+		t.Error("the client door admitted the importer namespace")
+	}
+}

@@ -164,9 +164,10 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	// transaction. Both entry points reach this body — CreateLead and
 	// CreateLeadTx, the latter being what CSV and mirror imports call — so
 	// this is the one place that sees every created lead. Omitting the owner
-	// stays the unassigned queue's own case and asks nothing.
+	// stays the unassigned queue's own case and asks nothing. An invited
+	// colleague may be named, as on every other record's create.
 	if in.OwnerID != nil {
-		if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
+		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
 			return crmcontracts.Lead{}, false, err
 		}
 	}
