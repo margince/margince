@@ -80,7 +80,7 @@ export const de = {
   "scheduling.bookContact": "Termin buchen",
   "scheduling.setupCalendar": "Buchungskalender auswählen",
   "scheduling.selectCalendarHelp":
-    "Wähle den Kalender für Einladungen. Er gilt auch für deine öffentliche Buchungsseite. Deine Termindetails bleiben während der Einrichtung erhalten.",
+    "Wähle den Kalender für Einladungen und öffentliche Buchungen; Termindetails bleiben hier.",
   "scheduling.chooseProvider": "Kalenderanbieter auswählen",
   "scheduling.useCalendar": "Diesen Kalender verwenden",
   "scheduling.readOnlyCalendar":
@@ -89,7 +89,8 @@ export const de = {
     "Verbinde diesen Kalender, bevor du Einladungen sendest. Wenn nur dein Postfach verbunden ist, verbinde den Kalender separat.",
   "scheduling.expiredCalendar":
     "Deine Kalenderverbindung ist abgelaufen. Verbinde sie erneut, um Einladungen zu senden.",
-  "scheduling.bookRefused": "Du hast keine Berechtigung, Termine zu buchen.",
+  "scheduling.bookRefused":
+    "Die Administration muss die Terminbuchung erlauben.",
   "scheduling.meetingChanged":
     "Der Termin wurde geändert. Prüfe die aktuellen Details und versuche es erneut.",
   "scheduling.publicCalendarUnavailable":

@@ -85,7 +85,7 @@ export const vi = {
   "scheduling.bookContact": "Đặt cuộc họp",
   "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
   "scheduling.selectCalendarHelp":
-    "Chọn lịch để tạo lời mời. Lịch này cũng áp dụng cho trang đặt lịch công khai. Thông tin cuộc họp được giữ lại trong khi thiết lập.",
+    "Chọn lịch cho lời mời và đặt lịch công khai; thông tin cuộc họp vẫn được giữ.",
   "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
   "scheduling.useCalendar": "Sử dụng lịch này",
   "scheduling.readOnlyCalendar":
@@ -94,7 +94,7 @@ export const vi = {
     "Kết nối lịch này trước khi gửi lời mời. Nếu chỉ kết nối hộp thư, hãy kết nối lịch riêng.",
   "scheduling.expiredCalendar":
     "Kết nối lịch đã hết hạn. Kết nối lại để gửi lời mời.",
-  "scheduling.bookRefused": "Bạn không có quyền đặt cuộc họp.",
+  "scheduling.bookRefused": "Quản trị viên cần cấp quyền đặt cuộc họp.",
   "scheduling.meetingChanged":
     "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
   "scheduling.publicCalendarUnavailable":

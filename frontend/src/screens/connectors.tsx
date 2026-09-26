@@ -653,9 +653,9 @@ export function useConnectors(
   }>,
 ) {
   return useQuery({
+    ...options,
     queryKey: ["connectors"],
     enabled: options?.enabled ?? true,
-    refetchOnWindowFocus: options?.refetchOnWindowFocus,
     queryFn: async (): Promise<ConnectorsResult> => {
       const { data, error, response } = await api.GET("/connectors");
       if (response.status === 501 && problemCode(error) === "not_implemented") {

@@ -77,7 +77,7 @@ export const en = {
   "scheduling.bookContact": "Book a meeting",
   "scheduling.setupCalendar": "Choose your booking calendar",
   "scheduling.selectCalendarHelp":
-    "Choose where invitations should appear. This calendar also serves your public booking page. Your meeting details stay here during setup.",
+    "Choose a calendar for invitations and public bookings; meeting details stay here.",
   "scheduling.chooseProvider": "Choose a calendar provider",
   "scheduling.useCalendar": "Use this calendar",
   "scheduling.readOnlyCalendar":
@@ -86,7 +86,8 @@ export const en = {
     "Connect this calendar before sending invitations. If you connected only your mailbox, connect the calendar separately.",
   "scheduling.expiredCalendar":
     "Your calendar connection has expired. Reconnect it to send invitations.",
-  "scheduling.bookRefused": "You do not have permission to book meetings.",
+  "scheduling.bookRefused":
+    "An administrator must grant permission to book meetings.",
   "scheduling.meetingChanged":
     "The meeting changed. Review the updated details and try again.",
   "scheduling.publicCalendarUnavailable":
