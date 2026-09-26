@@ -95,7 +95,11 @@ func TestClearingTheSlotNamesTheAcceptedOfferAndAnEmptySlotStaysQuiet(t *testing
 	if err := e.store.ReplaceSiteReadOffer(ctx, readID, legalNameSiteReadOffer(), nil); err != nil {
 		t.Fatalf("record the offer: %v", err)
 	}
-	accepted := legalNameSiteReadOffer()
+	// The yes accepts the offer as the slot holds it, stamp included.
+	accepted, err := e.store.StandingSiteReadOffer(ctx, readID)
+	if err != nil || accepted == nil {
+		t.Fatalf("the standing offer = (%+v, %v), want the recorded one", accepted, err)
+	}
 	if err := e.store.ReplaceSiteReadOffer(ctx, readID, nil, accepted); err != nil {
 		t.Fatalf("clear the accepted offer: %v", err)
 	}
