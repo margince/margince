@@ -116,6 +116,12 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 		return crmcontracts.Deal{}, err
 	}
+	// Locked before `current` is read: the patch and the owner hand-over are
+	// built from it, and a concurrent reassignment committing in between would
+	// hand the cards on from an owner the deal no longer has.
+	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	// current reads WITH active columns so the patch's audit before-image
 	// carries the honest pre-update cf values.
 	current, err := readDeal(ctx, tx, id, storekit.LiveOnly, active)

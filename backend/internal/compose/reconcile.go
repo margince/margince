@@ -123,8 +123,13 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 			return err
 		}
 		// A draft composed for someone who no longer owns the deal is text in
-		// their name, so the new owner gets the task proposal instead.
-		if draft != nil && draft.owner == owner {
+		// their name. It is dropped and nothing is staged, so the deal stays
+		// eligible and the next sweep drafts for the new owner; a task staged
+		// here would hold that draft back until the task was decided.
+		if draft != nil {
+			if draft.owner != owner {
+				return nil
+			}
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
 				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
 		}

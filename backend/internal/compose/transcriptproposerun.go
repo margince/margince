@@ -318,6 +318,10 @@ func (p *TranscriptProposer) stage(
 	ctx context.Context, tx pgx.Tx, steps []proposedStep,
 	reading activities.TranscriptReading, activityID ids.ActivityID,
 ) ([]ids.UUID, error) {
+	ctx, err := transcriptSeat(ctx, tx, reading.Links)
+	if err != nil {
+		return nil, err
+	}
 	bundleID := ids.NewV7()
 	staged := make([]ids.UUID, 0, len(steps))
 	for _, step := range steps {

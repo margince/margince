@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,11 +27,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // reassign moves the deal's owner through the ordinary update path, as the
@@ -261,68 +264,103 @@ func TestADraftForThePreviousOwnerIsWithdrawnAndRedraftedForTheNewOne(t *testing
 	wantSeat(t, "the redrafted reply", e.seatOf(t, fresh), &e.Rep2)
 }
 
-// readTranscriptFor drives one whole reading the way the worker does, as the
-// member who asked for it, and returns the pending card it staged.
-func (e *reconcileEnv) readTranscriptFor(t *testing.T, requester ids.UUID, activity ids.ActivityID) ids.ApprovalID {
+// readTranscriptFor drives one whole reading the way the worker does, asked
+// for by one member, and returns the pending card it staged on the meeting.
+func (e *reconcileEnv) readTranscriptFor(
+	t *testing.T, requester ids.UUID, activity ids.ActivityID, brain completer,
+) ids.ApprovalID {
 	t.Helper()
-	asker := e.As(requester, []ids.UUID{e.Team1}, transcriptPerms)
-	started, _, err := e.Activities.StartTranscriptReadQueued(asker, activity, "human:"+requester.String(), nil)
+	requestedBy := "human:" + requester.String()
+	started, _, err := e.Activities.StartTranscriptReadQueued(e.Admin(), activity, requestedBy, nil)
 	if err != nil {
 		t.Fatalf("starting the reading: %v", err)
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	proposer := NewTranscriptProposer(e.Pool, cannedBrain{reply: groundedReply(t, 3, 0.95)}, e.svc, time.Now, quiet)
-	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS),
-		"human:"+requester.String(), started.ID)
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), requestedBy, started.ID)
 	if err := proposer.Read(worker, e.Activities, started.ID, activity); err != nil {
 		t.Fatalf("reading the transcript: %v", err)
 	}
 	var id ids.ApprovalID
 	if err := e.owner.QueryRow(context.Background(), `
-		SELECT id FROM approval
-		 WHERE kind = $1 AND target_entity_id = $2 AND on_behalf_of = $3 AND status = 'pending'`,
-		TranscriptProposalKind, activity.UUID, requester).Scan(&id); err != nil {
-		t.Fatalf("no transcript card staged for %s: %v", requester, err)
+		SELECT id FROM approval WHERE kind = $1 AND target_entity_id = $2 AND status = 'pending'`,
+		TranscriptProposalKind, activity.UUID).Scan(&id); err != nil {
+		t.Fatalf("no transcript card staged on the meeting: %v", err)
 	}
 	return id
 }
 
-// logTranscript files a meeting transcript, linked to the deal when one is given.
-func (e *reconcileEnv) logTranscript(t *testing.T, subject string, deal *ids.UUID) ids.ActivityID {
+// logTranscript files a meeting transcript linked to the given deals.
+func (e *reconcileEnv) logTranscript(t *testing.T, subject string, dealIDs ...ids.UUID) ids.ActivityID {
 	t.Helper()
 	body, source := transcriptBody, "transcript"
 	in := activities.LogActivityInput{Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &source, Source: "ui"}
-	if deal != nil {
-		in.Links = []activities.ActivityLinkInput{{EntityType: "deal", EntityID: *deal}}
+	for _, deal := range dealIDs {
+		in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "deal", EntityID: deal})
 	}
-	logged, _, err := e.Activities.LogActivity(e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms), in)
+	logged, _, err := e.Activities.LogActivity(e.Admin(), in)
 	if err != nil {
 		t.Fatalf("logging the transcript: %v", err)
 	}
 	return ids.From[ids.ActivityKind](ids.UUID(logged.Id))
 }
 
-// A transcript card staged for the owner moves when its task would land on the
-// deal. One a colleague asked for stays theirs, and one about another deal is
-// not touched.
-func TestATranscriptProposalFollowsTheDealItsTaskLandsOn(t *testing.T) {
+// oneShotBrain answers like cannedBrain and runs during() on its first call —
+// the moment the reading is out with the model and holds no lock.
+type oneShotBrain struct {
+	cannedBrain
+	once   *sync.Once
+	during func()
+}
+
+func (b oneShotBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	b.once.Do(b.during)
+	return b.cannedBrain.Complete(ctx, req)
+}
+
+// A transcript card is staged for the owner of the deal it lands on, whoever
+// asked for the reading, and every card on the deal follows it — including one
+// a colleague asked for. A card about another meeting is not touched.
+func TestEveryTranscriptCardOnTheDealFollowsIt(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting on this deal", e.pipeline, e.open, &e.Rep1)
-	onDeal := e.logTranscript(t, "Rollout call", &deal)
-	elsewhere := e.logTranscript(t, "Unrelated call", nil)
+	partner := e.SeedDeal(t, "The other side's deal", e.pipeline, e.open, &e.Rep3)
+	brain := cannedBrain{reply: groundedReply(t, 3, 0.95)}
 
-	owners := e.readTranscriptFor(t, e.Rep1, onDeal)
-	colleagues := e.readTranscriptFor(t, e.Rep2, onDeal)
-	unrelated := e.readTranscriptFor(t, e.Rep1, elsewhere)
+	owners := e.readTranscriptFor(t, e.Rep2, e.logTranscript(t, "Rollout call", deal), brain)
+	// Two owners, so the reading stays with the colleague who asked for it:
+	// the shape of a card on the deal that names a seat other than its owner.
+	colleagues := e.readTranscriptFor(t, e.Rep2, e.logTranscript(t, "Joint call", deal, partner), brain)
+	unrelated := e.readTranscriptFor(t, e.Rep1, e.logTranscript(t, "Unrelated call"), brain)
+	wantSeat(t, "the card a colleague asked for on the owner's deal", e.seatOf(t, owners), &e.Rep1)
+	wantSeat(t, "the card on two owners' deals", e.seatOf(t, colleagues), &e.Rep2)
 
 	e.reassign(t, deal, e.AdminUser)
 
 	wantSeat(t, "the owner's transcript card", e.seatOf(t, owners), &e.AdminUser)
-	wantSeat(t, "the colleague's transcript card", e.seatOf(t, colleagues), &e.Rep2)
+	wantSeat(t, "the colleague's transcript card", e.seatOf(t, colleagues), &e.AdminUser)
 	wantSeat(t, "the card about another meeting", e.seatOf(t, unrelated), &e.Rep1)
 	if got := e.seatMoves(t, owners, e.AdminUser); got != 1 {
 		t.Errorf("%d audit rows record the transcript card moving, want 1", got)
 	}
+}
+
+// The transcript staging race: the deal changes hands while the reading is out
+// with the model. The hand-over finds nothing to move, so the reader itself has
+// to stage for the owner the deal has when it stages.
+func TestATranscriptReadWhileTheDealChangesHandsIsFiledForTheNewOwner(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Handed over mid-reading", e.pipeline, e.open, &e.Rep1)
+	meeting := e.logTranscript(t, "Rollout call", deal)
+	brain := oneShotBrain{
+		cannedBrain: cannedBrain{reply: groundedReply(t, 3, 0.95)},
+		once:        &sync.Once{},
+		during:      func() { e.reassign(t, deal, e.Rep2) },
+	}
+
+	card := e.readTranscriptFor(t, e.Rep1, meeting, brain)
+
+	wantSeat(t, "the card staged after the handover", e.seatOf(t, card), &e.Rep2)
 }
 
 // Every writer of deal.owner_id hands the pending card on. The list is the
@@ -423,21 +461,8 @@ func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.
 		defer close(sweepDone)
 		swept <- e.reconcile()
 	}()
-	testdb.WaitForContention(t, sweepDone,
-		"the sweep finished while the reassignment was still uncommitted — it read the owner without waiting for it, which is the race this test exists to catch",
-		fmt.Sprintf("no backend waited on a row lock within %s — the sweep never reached the deal, so this run proved nothing", testdb.ProbeBudget),
-		func(ctx context.Context) (bool, error) {
-			// A row lock waits on the holder's transaction id, which pg_locks
-			// files under no database — so the waiter is scoped through its
-			// backend instead, or a neighbouring package's wait would count.
-			var waiting bool
-			err := e.owner.QueryRow(ctx, `
-				SELECT EXISTS (SELECT 1 FROM pg_locks l
-				  JOIN pg_stat_activity a ON a.pid = l.pid
-				 WHERE NOT l.granted AND l.locktype IN ('tuple', 'transactionid')
-				   AND a.datname = current_database())`).Scan(&waiting)
-			return waiting, err
-		})
+	e.waitForRowLockWaiter(t, sweepDone,
+		"the sweep finished while the reassignment was still uncommitted — it read the owner without waiting for it, which is the race this test exists to catch")
 	close(release)
 	if err := <-reassigned; err != nil {
 		t.Fatalf("the reassignment: %v", err)
@@ -448,4 +473,126 @@ func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.
 
 	id, _ := e.followUpApproval(t, deal)
 	wantSeat(t, "the card the sweep staged across the reassignment", e.seatOf(t, id), &e.Rep2)
+}
+
+// Two reassignments without If-Match, the second arriving while the first is
+// uncommitted. The second must hand the cards on from the owner the first
+// left, not from the one both of them read before either committed.
+func TestConcurrentReassignmentsHandTheCardOnFromTheOwnerEachFinds(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Reassigned twice at once", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	id, _ := e.followUpApproval(t, deal)
+
+	admin := e.Admin()
+	active, err := e.Deals.ActiveDealColumns(admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	held, release := make(chan struct{}), make(chan struct{})
+	first := make(chan error, 1)
+	go func() {
+		next := ids.From[ids.UserKind](e.Rep2)
+		first <- e.DB().Tx(admin, func(tx pgx.Tx) error {
+			defer close(held)
+			if _, err := e.Deals.UpdateDealTx(admin, tx, ids.From[ids.DealKind](deal),
+				deals.UpdateDealInput{OwnerID: &next}, active); err != nil {
+				return err
+			}
+			held <- struct{}{}
+			<-release
+			return nil
+		})
+	}()
+	<-held
+
+	second := make(chan error, 1)
+	secondDone := make(chan struct{})
+	go func() {
+		defer close(secondDone)
+		last := ids.From[ids.UserKind](e.AdminUser)
+		_, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{OwnerID: &last})
+		second <- err
+	}()
+	e.waitForRowLockWaiter(t, secondDone,
+		"the second reassignment finished while the first was uncommitted — it never waited on the deal")
+	close(release)
+	if err := <-first; err != nil {
+		t.Fatalf("the first reassignment: %v", err)
+	}
+	if err := <-second; err != nil {
+		t.Fatalf("the second reassignment: %v", err)
+	}
+	wantSeat(t, "the card after both reassignments", e.seatOf(t, id), &e.AdminUser)
+}
+
+// waitForRowLockWaiter returns once a backend in this database waits on a row
+// lock. A row lock waits on the holder's transaction id, which pg_locks files
+// under no database, so the waiter is scoped through its backend instead.
+func (e *reconcileEnv) waitForRowLockWaiter(t *testing.T, done <-chan struct{}, finishedEarly string) {
+	t.Helper()
+	testdb.WaitForContention(t, done, finishedEarly,
+		fmt.Sprintf("no backend waited on a row lock within %s — the racer never reached the deal, so this run proved nothing", testdb.ProbeBudget),
+		func(ctx context.Context) (bool, error) {
+			var waiting bool
+			err := e.owner.QueryRow(ctx, `
+				SELECT EXISTS (SELECT 1 FROM pg_locks l
+				  JOIN pg_stat_activity a ON a.pid = l.pid
+				 WHERE NOT l.granted AND l.locktype IN ('tuple', 'transactionid')
+				   AND a.datname = current_database())`).Scan(&waiting)
+			return waiting, err
+		})
+}
+
+// reassigningDrafter drafts through the real adapter, after handing the deal
+// to someone else — the window between composing a draft and staging it.
+type reassigningDrafter struct {
+	followUpReplySeam
+	during func()
+}
+
+func (d reassigningDrafter) DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (string, string, error) {
+	d.during()
+	return d.followUpReplySeam.DraftEmail(ctx, anchor, intent)
+}
+
+// A draft composed for the owner the deal has just left is dropped, and
+// nothing takes its place: a task staged instead would keep the next sweep from
+// drafting for the new owner until somebody decided it.
+func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testing.T) {
+	e := setupReconcile(t)
+	e.grantOwner(t, e.Rep2, reconcileOwnerPolicy)
+	deal := e.SeedDeal(t, "Handed over mid-draft", e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, deal, "Kickoff")
+	stager := followUpStager{
+		svc: e.svc,
+		draft: reassigningDrafter{
+			followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{}),
+			during:            func() { e.reassign(t, deal, e.Rep2) },
+		},
+		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
+		pool:  e.Pool,
+	}
+	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:overnight")
+	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err != nil {
+		t.Fatal(err)
+	}
+	var pending int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM approval WHERE target_entity_id = $1 AND status = 'pending'`, deal).Scan(&pending); err != nil {
+		t.Fatal(err)
+	}
+	if pending != 0 {
+		t.Fatalf("%d cards staged across the handover, want 0 — the stale draft must be dropped and nothing staged in its place", pending)
+	}
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	fresh, _ := e.heldDraftFor(t, deal)
+	wantSeat(t, "the draft the next sweep composed", e.seatOf(t, fresh), &e.Rep2)
 }

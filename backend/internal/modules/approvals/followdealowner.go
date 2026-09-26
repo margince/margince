@@ -35,8 +35,9 @@ const ownerMovedAway = "the deal changed owner; a message drafted for the previo
 // Per kind:
 //   - deal_follow_up: every pending card on the deal moves. Its text is the
 //     product describing the deal, so it reads the same for any owner.
-//   - transcript_proposal: a card staged for the previous owner moves when its
-//     task would land on the deal. One a colleague asked for stays theirs.
+//   - transcript_proposal: every card whose task would land on the deal
+//     moves, including one a colleague asked for — the next step is the
+//     deal's, and so is the owner who acts on it.
 //   - held_draft: a reply drafted for the previous owner is withdrawn. It was
 //     composed under their authority, to be sent from their mailbox, so it is
 //     not handed on; the next sweep drafts one for the new owner.
@@ -89,7 +90,7 @@ func lockProposalsFollowingDeal(
 		     (kind = $%[4]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
 		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
 		  OR (kind = $%[5]d AND proposed_change->'links' @> $%[6]d
-		        AND on_behalf_of IS NOT DISTINCT FROM $%[2]d AND on_behalf_of IS DISTINCT FROM $%[3]d)
+		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
 		  OR (kind = $%[7]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
 		        AND on_behalf_of IS NOT NULL AND on_behalf_of IS NOT DISTINCT FROM $%[2]d)
 		   )
