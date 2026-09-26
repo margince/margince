@@ -31,8 +31,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // carryEnv is one installation with the merge wired exactly as compose wires
@@ -127,6 +130,71 @@ func confirmLaneStore(t *testing.T, e *integration.Env) *consent.Store {
 		WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter), &sealingVault{}, "https://crm.example.test")
 }
 
+// purpose creates a consent purpose through the real writer, or reads the one
+// already seeded under that key.
+func (c *carryEnv) purpose(t *testing.T, key string, doubleOptIn bool) ids.PurposeID {
+	t.Helper()
+	var id ids.PurposeID
+	err := c.e.Pool.QueryRow(context.Background(), `SELECT id FROM consent_purpose WHERE key = $1`, key).Scan(&id)
+	if err == nil {
+		return id
+	}
+	created, err := c.consent.CreatePurpose(c.admin, key, key, doubleOptIn)
+	if err != nil {
+		t.Fatalf("creating purpose %s: %v", key, err)
+	}
+	return created.ID
+}
+
+// grantNewsletter gives a contact a live grant on a single-opt-in newsletter
+// and proves the gate lets it send, so a later refusal means something.
+func (c *carryEnv) grantNewsletter(t *testing.T, contact ids.ContactID) string {
+	t.Helper()
+	const key = "carry_newsletter"
+	source, wording := "manual", "Our newsletter, once a month."
+	if _, err := c.consent.Record(c.admin, consent.RecordInput{
+		ContactID: contact, PurposeID: c.purpose(t, key, false), NewState: "granted",
+		Source: &source, PolicyText: &wording,
+	}); err != nil {
+		t.Fatalf("granting the newsletter: %v", err)
+	}
+	if err := c.sendAllowed(key, c.primaryAddress(t, contact)); err != nil {
+		t.Fatalf("the newsletter is refused before anything was pressed (%v), so a later refusal proves nothing", err)
+	}
+	return key
+}
+
+func (c *carryEnv) primaryAddress(t *testing.T, contact ids.ContactID) string {
+	t.Helper()
+	var address string
+	if err := c.e.Pool.QueryRow(context.Background(), `
+		SELECT email FROM contact_email WHERE contact_id = $1 AND archived_at IS NULL AND is_primary`,
+		contact).Scan(&address); err != nil {
+		t.Fatalf("reading %s's address: %v", contact, err)
+	}
+	return address
+}
+
+// sendAllowed asks the gate every mail surface asks before a send.
+func (c *carryEnv) sendAllowed(purposeKey, address string) error {
+	return consent.NewGate(c.consent).RequireGrantedForEmails(c.admin, []string{address}, purposeKey)
+}
+
+// pressUnsubscribe presses a link the way a mailbox provider does, through the
+// public handler and the principal the public middleware binds.
+func (c *carryEnv) pressUnsubscribe(t *testing.T, token string) {
+	t.Helper()
+	if err := c.pressStatus(token); err != nil {
+		t.Fatalf("the press was refused: %v", err)
+	}
+}
+
+func (c *carryEnv) publicCtx() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), c.e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:public_preferences"})
+}
+
 func (c *carryEnv) count(t *testing.T, sql string, args ...any) int {
 	t.Helper()
 	var n int
@@ -136,25 +204,19 @@ func (c *carryEnv) count(t *testing.T, sql string, args ...any) int {
 	return n
 }
 
-// An old unsubscribe link acts on the survivor, for the address it was mailed to.
+// An old unsubscribe link, pressed after the merge, stops mail to the survivor.
 func TestAMergedContactsUnsubscribeLinkWithdrawsTheSurvivor(t *testing.T) {
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Unsub Retired", "unsub@carry.test")
 	survivor := c.contactAt(t, "Unsub Survivor", "unsub-survivor@carry.test")
+	newsletter := c.grantNewsletter(t, survivor)
 	token := c.withdrawalLink(t, consent.WithdrawalMintInput{Address: "unsub@carry.test", ContactID: retired})
 
 	c.merge(t, retired, survivor)
+	c.pressUnsubscribe(t, token)
 
-	ref, err := c.consent.ResolveWithdrawalToken(context.Background(), token)
-	if err != nil {
-		t.Fatalf("the link stopped resolving after the merge: %v", err)
-	}
-	if ref.ContactID != survivor {
-		t.Fatalf("the link withdraws %s, want the survivor %s — the survivor would keep receiving mail",
-			ref.ContactID, survivor)
-	}
-	if ref.Address != "unsub@carry.test" {
-		t.Errorf("the link now speaks for %q, want the address it was mailed to", ref.Address)
+	if err := c.sendAllowed(newsletter, "unsub-survivor@carry.test"); !errors.Is(err, apperrors.ErrConsentNotGranted) {
+		t.Fatalf("a newsletter to the survivor answers %v after their old link was pressed, want it refused", err)
 	}
 }
 
@@ -230,12 +292,13 @@ func TestALinkToAnAddressLeftBehindOpensTheSurvivorsPageForThatAddress(t *testin
 	}
 }
 
-// A confirm link resolves only for a live subject, so one left on the retired
-// record was dead. Carried, it resolves and names the survivor.
-func TestAMergedContactsConfirmLinkResolvesOnTheSurvivor(t *testing.T) {
+// A confirm link answers only for a live subject, so one left on the retired
+// record was dead. Carried, the answer lands on the survivor.
+func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
 	c := setupCarry(t)
 	integration.ApplyRiverSchema(t)
 	lane := confirmLaneStore(t, c.e)
+	marketing := c.purpose(t, consent.PurposeMarketingEmail, true)
 	retired := c.contactAt(t, "Confirm Retired", "confirm@carry.test")
 	survivor := c.contactAt(t, "Confirm Survivor", "confirm-survivor@carry.test")
 	issued, err := lane.IssueConfirmToken(c.admin, retired)
@@ -245,28 +308,24 @@ func TestAMergedContactsConfirmLinkResolvesOnTheSurvivor(t *testing.T) {
 
 	c.merge(t, retired, survivor)
 
-	ref, err := lane.ResolveConfirmToken(c.admin, issued.Token, consent.FetchByAHuman)
-	if err != nil {
-		t.Fatalf("the confirm link is dead after the merge: %v", err)
+	if _, err := lane.SubmitConfirmation(c.admin, issued.Token, consent.ConfirmSubmission{
+		MarketingChoice: "withdrawn", MarketingWording: "No news, thank you.",
+	}); err != nil {
+		t.Fatalf("answering through the carried link: %v", err)
 	}
-	if ref.ContactID != survivor {
-		t.Fatalf("the confirm link acts on %s, want the survivor %s", ref.ContactID, survivor)
+	if n := c.count(t, `SELECT count(*) FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2 AND state = 'withdrawn'`,
+		survivor, marketing); n != 1 {
+		t.Fatalf("the survivor holds %d withdrawn marketing row(s) after answering through the carried link, want 1", n)
 	}
 }
 
-// Both halves' lawful bases and qualifying events are the survivor's now. The
-// one event both halves recorded for the same message stays once.
-func TestAMergeCarriesBasesAndQualifyingEventsWithoutDoublingOne(t *testing.T) {
+// Both halves' qualifying events are the survivor's now. The one event both
+// halves recorded for the same booking stays once. The lawful-basis carry is
+// held through a real send in integration/mergecarriesbasis_integration_test.go.
+func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Basis Retired", "basis@carry.test")
 	survivor := c.contactAt(t, "Basis Survivor", "basis-survivor@carry.test")
-	// recordBasis is reached only through a fully authorized send; this is the
-	// row it writes for a subject-initiated reply.
-	if _, err := c.e.Pool.Exec(context.Background(), `
-		INSERT INTO communication_basis (contact_id, kind, captured_by)
-		VALUES ($1, 'subject_initiated_correspondence', 'human:test')`, retired); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := c.consent.RecordQualifyingEvent(c.admin, retired, consent.RecordQualifyingEventInput{
 		Kind: "in_person", Note: "met at the trade fair", OccurredAt: time.Now().Add(-time.Hour),
 	}); err != nil {
@@ -284,9 +343,6 @@ func TestAMergeCarriesBasesAndQualifyingEventsWithoutDoublingOne(t *testing.T) {
 
 	c.merge(t, retired, survivor)
 
-	if n := c.count(t, `SELECT count(*) FROM communication_basis WHERE contact_id = $1`, survivor); n != 1 {
-		t.Errorf("the survivor holds %d lawful basis row(s), want the retired record's 1", n)
-	}
 	if n := c.count(t, `SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1 AND kind = 'in_person'`, survivor); n != 1 {
 		t.Errorf("the survivor holds %d hand-recorded event(s), want the retired record's 1", n)
 	}
@@ -374,5 +430,63 @@ func TestAnUnwiredMergeRefusesOnlyWhenALinkWouldBeStranded(t *testing.T) {
 	}
 	if n := c.count(t, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, holder); n != 1 {
 		t.Error("the refused merge retired the source anyway")
+	}
+}
+
+// Upgraded installations hold preference links that never recorded their
+// address. Both halves holding one is a collision on the NULL slot the unique
+// index counts; the retired half's link is marked and still opens the
+// survivor's own page.
+func TestALegacyAddresslessLinkCollidesOnTheNullSlot(t *testing.T) {
+	c := setupCarry(t)
+	retired := c.contactAt(t, "Legacy Retired", "legacy@carry.test")
+	survivor := c.contactAt(t, "Legacy Survivor", "legacy-survivor@carry.test")
+	// The shape a link minted before links recorded their address has. No
+	// writer mints one any more.
+	retiredToken, survivorToken := "pref_legacy_retired_"+retired.String(), "pref_legacy_survivor_"+survivor.String()
+	for who, token := range map[ids.ContactID]string{retired: retiredToken, survivor: survivorToken} {
+		if _, err := c.e.Pool.Exec(context.Background(), `
+			INSERT INTO preference_token (contact_id, token, expires_at) VALUES ($1, $2, now() + interval '30 days')`,
+			who, token); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	c.merge(t, retired, survivor)
+
+	carried, err := c.consent.ResolvePreferenceToken(context.Background(), retiredToken)
+	if err != nil {
+		t.Fatalf("the retired half's legacy link stopped resolving: %v", err)
+	}
+	if carried.ContactID != survivor || carried.EmailID != nil {
+		t.Errorf("the legacy link opens (%s, %v), want the survivor with no recorded address", carried.ContactID, carried.EmailID)
+	}
+	if n := c.count(t, `SELECT count(*) FROM preference_token WHERE contact_id = $1 AND revoked_at IS NULL`, survivor); n != 1 {
+		t.Errorf("the survivor holds %d live link(s), want only their own", n)
+	}
+	if _, err := c.consent.ResolvePreferenceToken(context.Background(), survivorToken); err != nil {
+		t.Errorf("the survivor's own legacy link stopped resolving: %v", err)
+	}
+}
+
+// What a merge carried onto the survivor is the survivor's, so erasing them
+// erases it too.
+func TestErasingTheSurvivorErasesWhatTheMergeCarried(t *testing.T) {
+	c := setupCarry(t)
+	retired := c.contactAt(t, "Erase Retired", "erase@carry.test")
+	survivor := c.contactAt(t, "Erase Survivor", "erase-survivor@carry.test")
+	c.withdrawalLink(t, consent.WithdrawalMintInput{Address: "erase@carry.test", ContactID: retired})
+	c.preferenceLink(t, "erase@carry.test")
+	c.merge(t, retired, survivor)
+
+	if err := privacy.NewEraser(c.e.DB()).EraseContact(c.admin, survivor.UUID, "subject request"); err != nil {
+		t.Fatalf("erasing the survivor: %v", err)
+	}
+
+	for _, table := range []string{"withdrawal_credential", "preference_token"} {
+		// table is one of two literals above.
+		if n := c.count(t, `SELECT count(*) FROM `+table+` WHERE contact_id IN ($1, $2)`, retired, survivor); n != 0 {
+			t.Errorf("%d %s row(s) outlived the survivor's erasure", n, table)
+		}
 	}
 }

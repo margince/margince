@@ -36,10 +36,7 @@ func (c *carryEnv) asker() context.Context {
 // contact, optionally through another contact.
 func (c *carryEnv) ask(t *testing.T, contact ids.ContactID, colleague ids.UUID, through *ids.ContactID) ids.UUID {
 	t.Helper()
-	req := introductions.NewRequest{
-		ContactID: contact.UUID, IntroducerUser: colleague, RouteType: "direct",
-		InternalReason: "they run procurement", DueAt: time.Now().Add(72 * time.Hour),
-	}
+	req := introductionsRequest(contact, colleague)
 	if through != nil {
 		via := through.UUID
 		req.RouteType, req.ThroughContactID = "through_contact", &via
@@ -49,6 +46,14 @@ func (c *carryEnv) ask(t *testing.T, contact ids.ContactID, colleague ids.UUID, 
 		t.Fatalf("asking for the introduction: %v", err)
 	}
 	return id
+}
+
+// introductionsRequest is a direct ask of colleague about contact.
+func introductionsRequest(contact ids.ContactID, colleague ids.UUID) introductions.NewRequest {
+	return introductions.NewRequest{
+		ContactID: contact.UUID, IntroducerUser: colleague, RouteType: "direct",
+		InternalReason: "they run procurement", DueAt: time.Now().Add(72 * time.Hour),
+	}
 }
 
 func (c *carryEnv) askStatus(t *testing.T, id ids.UUID) (status string, contact ids.UUID, through *ids.UUID) {
@@ -116,24 +121,63 @@ func TestAnAskTheSurvivorAlreadyHasOpenIsClosed(t *testing.T) {
 	}
 }
 
-// Two of the retired contact's own asks that were distinct routes — about it
-// through the survivor, and about the survivor through it — are the same
-// route once both columns point at the survivor. The older stands.
-func TestTwoAsksThatCollideOnlyOnceBothColumnsMapKeepTheOlder(t *testing.T) {
+// An ask about the retired contact routed through the survivor, or the other
+// way round, becomes an ask about the survivor routed through the survivor. That
+// is no way in, so it closes the way a requester closes one.
+func TestAnAskTheMergeRoutesThroughItsOwnContactIsClosed(t *testing.T) {
 	c := setupCarry(t)
-	retired := c.contactAt(t, "Arm Retired", "arm@carry.test")
-	survivor := c.contactAt(t, "Arm Survivor", "arm-survivor@carry.test")
-	older := c.ask(t, retired, c.e.Rep2, &survivor)
-	newer := c.ask(t, survivor, c.e.Rep2, &retired)
+	retired := c.contactAt(t, "Self Retired", "self@carry.test")
+	survivor := c.contactAt(t, "Self Survivor", "self-survivor@carry.test")
+	aboutRetired := c.ask(t, retired, c.e.Rep2, &survivor)
+	throughRetired := c.ask(t, survivor, c.e.Rep1, &retired)
 
 	c.merge(t, retired, survivor)
 
-	if status, _, _ := c.askStatus(t, older); status != "requested" {
-		t.Errorf("the older ask is %s, want it to stand", status)
+	for _, id := range []ids.UUID{aboutRetired, throughRetired} {
+		status, contact, through := c.askStatus(t, id)
+		if status != "cancelled" || contact != survivor.UUID || through == nil || *through != survivor.UUID {
+			t.Errorf("ask %s is %s about %s through %v, want cancelled and re-homed onto the survivor", id, status, contact, through)
+		}
+		if n := c.closedEventsAbout(t, id, survivor.UUID); n != 1 {
+			t.Errorf("%d intro_request.closed event(s) about the survivor for ask %s, want 1", n, id)
+		}
 	}
-	if status, _, _ := c.askStatus(t, newer); status != "cancelled" {
-		t.Errorf("the newer ask is %s, want cancelled as the duplicate", status)
+}
+
+// Two asks about a third contact, one routed through each half, are one route
+// after the merge. The retired half's closes, and its event names the contact
+// the ask is ABOUT, not the survivor it was routed through.
+func TestAThroughOnlyCollisionClosesAboutTheContactTheAskIsAbout(t *testing.T) {
+	c := setupCarry(t)
+	retired := c.contactAt(t, "Via Retired", "via@carry.test")
+	survivor := c.contactAt(t, "Via Survivor", "via-survivor@carry.test")
+	target := c.contactAt(t, "Via Target", "via-target@carry.test")
+	kept := c.ask(t, target, c.e.Rep1, &survivor)
+	closed := c.ask(t, target, c.e.Rep1, &retired)
+
+	c.merge(t, retired, survivor)
+
+	if status, _, _ := c.askStatus(t, kept); status != "requested" {
+		t.Errorf("the survivor-side ask is %s, want it to stand", status)
 	}
+	if status, _, _ := c.askStatus(t, closed); status != "cancelled" {
+		t.Errorf("the retired-side ask is %s, want cancelled as the duplicate", status)
+	}
+	if n := c.closedEventsAbout(t, closed, target.UUID); n != 1 {
+		t.Errorf("%d intro_request.closed event(s) name the target, want 1 — the event named the wrong contact", n)
+	}
+}
+
+// closedEventsAbout counts intro_request.closed envelopes for one ask whose
+// entity and payload both name about.
+func (c *carryEnv) closedEventsAbout(t *testing.T, ask, about ids.UUID) int {
+	t.Helper()
+	return c.count(t, `
+		SELECT count(*) FROM event_outbox
+		 WHERE envelope->>'type' = 'intro_request.closed'
+		   AND envelope->'payload'->>'intro_request_id' = $1
+		   AND envelope->'payload'->>'contact_id' = $2
+		   AND envelope->'entity'->>'id' = $2`, ask.String(), about.String())
 }
 
 func TestAnUnwiredMergeRefusesWhenAnAskWouldBeStranded(t *testing.T) {
