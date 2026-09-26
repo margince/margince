@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p2be9f25b1eae1c6cb72b48a0cc99e9d1",
+  "prompt_version": "pb3ea7d645913b2942ea0388933bfd812",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 9,
@@ -16,34 +16,34 @@
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 100,
+  "judge_score_p50": 97,
   "judge_score_min": 95,
-  "latency_p50": 1007,
-  "latency_p95": 1606,
-  "mean_tokens": 1237,
-  "mean_tokens_in": 1204,
+  "latency_p50": 1136,
+  "latency_p95": 1710,
+  "mean_tokens": 1214,
+  "mean_tokens_in": 1180,
   "mean_tokens_out": 33,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 350,
+  "est_cost_microusd": 344,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-09-25T16:47:26Z",
+  "ran_at": "2026-09-26T07:49:02Z",
   "scenarios": [
     {
       "scenario": "one_side_promises_revised_pricing",
       "site": "next_steps",
-      "stamp": "359c11bd8835273e3ea0c7349fd37b7c95c55adc3b6364c3700486fee419415646086ddd413258a31878074a06589878c1540fb4987955eb69ce866cc5e8dbfa1ad801b4a1812c4c33ab61e0d123fa127d17054865e3d053b983bb002c636382",
-      "verdict": "supported_degraded",
+      "stamp": "359c11bd8835273e3ea0c7349fd37b7c95c55adc3b6364c3700486fee419415646086ddd413258a31878074a06589878c1540fb4987955eb69ce866cc5e8dbfa70161fdbbb13fa9ba2301e3e48b45da56ded38bf18526348a624a0660c4590f9",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         95,
         97,
-        95
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -58,21 +58,12 @@
     {
       "scenario": "a_speaker_tries_to_write_the_record",
       "site": "next_steps",
-      "stamp": "2312308a1209e7957af3e6db10c30d69a15d891bfa4e5665e2421412d4e7ac6183988a61ae323752bcbbb30233d21ccaf16e50ab5fc44aaef0ceccb19c95d8b16ffedcb322547404d205ee5db1449ba2a2dea4431264cf68bdfa328e3f6189e5",
-      "verdict": "supported_degraded",
+      "stamp": "45981c834fff9007c73c1508c6b80f2aabbfca34b0d030668729cec5ee642b2783988a61ae323752bcbbb30233d21ccaf16e50ab5fc44aaef0ceccb19c95d8b118b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
-      "judge_scores": [
-        100,
-        100,
-        100
-      ],
-      "bands": {
-        "certified_min": 70,
-        "degraded_min": 50,
-        "floor": 40
-      },
+      "judge_none": true,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -81,21 +72,12 @@
     {
       "scenario": "a_meeting_that_promised_nothing",
       "site": "next_steps",
-      "stamp": "6797c269824206cf1dfd2641e734131a0bdcb35697251bf53cc55a0f3289f12866e1decf902ee865eee4995c1d6b28f787ecf304b6abde4482155bfd662df4b9bc9a6495f453b19080a9b5915e045d5101258968519b972573024c6f1beb20d5",
-      "verdict": "supported_degraded",
+      "stamp": "1ced172be939cac6a77b8576594e2025cc3a31ce45d40083a17cfaf00025fc0266e1decf902ee865eee4995c1d6b28f787ecf304b6abde4482155bfd662df4b918b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
-      "judge_scores": [
-        100,
-        100,
-        100
-      ],
-      "bands": {
-        "certified_min": 70,
-        "degraded_min": 50,
-        "floor": 40
-      },
+      "judge_none": true,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,

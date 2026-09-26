@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.5-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p00260ca85ec701aaf13067ac85c4e78f",
+  "prompt_version": "p1b54beb308ad32650e4b9505f857a35c",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 12,
@@ -18,32 +18,32 @@
   "context_scopes": null,
   "judge_score_p50": 95,
   "judge_score_min": 92,
-  "latency_p50": 5159,
-  "latency_p95": 9683,
-  "mean_tokens": 2008,
-  "mean_tokens_in": 1133,
-  "mean_tokens_out": 874,
+  "latency_p50": 5279,
+  "latency_p95": 7438,
+  "mean_tokens": 2112,
+  "mean_tokens_in": 1127,
+  "mean_tokens_out": 985,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 9565,
+  "est_cost_microusd": 10555,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-09-25T16:06:38Z",
+  "ran_at": "2026-09-26T07:16:46Z",
   "scenarios": [
     {
       "scenario": "order_form_states_all_four",
       "site": "fields",
-      "stamp": "c5a57abc49ba64ab1753bba71cc9dc31644a23f3d3ec487abcef5e6f64c50d591adfff8ab15be7399cc4db70775ec36589a894e7f25828498e98a4f48a6c022dbd2a3eff909b7739dc2cf48ca746acdebb0aef4924afc7751189167dd34061ca",
-      "verdict": "supported_degraded",
+      "stamp": "c5a57abc49ba64ab1753bba71cc9dc31644a23f3d3ec487abcef5e6f64c50d591adfff8ab15be7399cc4db70775ec36589a894e7f25828498e98a4f48a6c022d26c36d7ede6440f078cb4e3cb69c8f03467bbd95716f443586ad767caccc64f7",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        96,
         95,
-        95
+        93,
+        93
       ],
       "bands": {
         "certified_min": 70,
@@ -58,15 +58,15 @@
     {
       "scenario": "quote_states_money_but_no_close_date",
       "site": "fields",
-      "stamp": "b7e1752bdaacc6087163a282d31b53724e46c82d8b4b43dc13b680a69fae9526b0a12e2d5cfcbf01c227099b5b76c44889a71f0ee1c075a220d25484c1801a2badb414fef7f3d40e813282204a054fbe4ff5da0780ad2a539b8d16b120c12870",
-      "verdict": "supported_degraded",
+      "stamp": "b7e1752bdaacc6087163a282d31b53724e46c82d8b4b43dc13b680a69fae9526b0a12e2d5cfcbf01c227099b5b76c44889a71f0ee1c075a220d25484c1801a2b6218567a07253c0bf390957d5438afafc58db5b4219639c46fbda4e99e43c4b7",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
         95,
-        95
+        95,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -81,15 +81,15 @@
     {
       "scenario": "pdf_agreement_read_as_a_document_part",
       "site": "fields",
-      "stamp": "2235448e50a88cbb05cc5953357232438885b516f3f095b0b89a3a583355d6979c6bf69f8af7c4703818afc0f142f95c68945d001097dacffeb8d7177719810058730fa5b99d9bbfa109186efbcedcb23dbf41ac9569fc63d882e7e9ac7ca67b",
-      "verdict": "supported_degraded",
+      "stamp": "2235448e50a88cbb05cc5953357232438885b516f3f095b0b89a3a583355d6979c6bf69f8af7c4703818afc0f142f95c68945d001097dacffeb8d7177719810024b9b99f6a7830231bf07549a17878e51b4899315433cd8ec0a11ad3c9721aa8",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        92,
         93,
-        95,
-        92
+        93
       ],
       "bands": {
         "certified_min": 70,
@@ -104,8 +104,8 @@
     {
       "scenario": "attached_document_states_none_of_them",
       "site": "fields",
-      "stamp": "42723fae2c26fefa60fd0a23219cdec94106d8c6b5ae59ea7ed4c363623b328a32abff83fd3b510f2ed599f90abb11363d870836b39482a5c172249b5d1940107494ba3e730e63ea796c034e778eff10f390e3119ce4b9597a87b3b172039cec",
-      "verdict": "supported_degraded",
+      "stamp": "42723fae2c26fefa60fd0a23219cdec94106d8c6b5ae59ea7ed4c363623b328a32abff83fd3b510f2ed599f90abb11363d870836b39482a5c172249b5d194010454b0a3032af8536a58d5034c1012b5cdbbe3fdf2b2bd1bda5d2fe9518812f96",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
