@@ -58,9 +58,9 @@ func judgedAgainst(t *testing.T, bands Bands, fake *ai.FakeClient, extra ...ai.L
 }
 
 // A run is graded once and asked again only where a reading could decide its
-// case: within 10 of a bar a second opinion, two more than 5 apart a third. It
-// scores at the median of what parsed, the mean of two; a reply that never
-// parsed is no opinion and is replaced within the same three.
+// case: within 10 of a bar or under the floor a second opinion, two more than 5
+// apart a third. It scores at the median of what parsed, the mean of two; a
+// reply that never parsed is no opinion and is replaced within the same three.
 func TestARunIsReaskedOnlyWhereOneReadingCouldDecideIt(t *testing.T) {
 	scored := func(score int, servedBy string) ai.FakeStep {
 		return ai.FakeStep{Text: scoreJSON(score), ServedModel: servedBy}
@@ -82,9 +82,13 @@ func TestARunIsReaskedOnlyWhereOneReadingCouldDecideIt(t *testing.T) {
 			replies:   []ai.FakeStep{scored(81, "judge-a"), scored(10, "judge-b")},
 			wantCalls: 1, wantScore: 81, wantScores: []int{81}, wantServedBy: "judge-a",
 		},
-		"a low score far from every bar is taken on one reading too": {
-			replies:   []ai.FakeStep{scored(29, "judge-a"), scored(90, "judge-b")},
-			wantCalls: 1, wantScore: 29, wantScores: []int{29}, wantServedBy: "judge-a",
+		"a score far under the floor is asked again, since one run under it decides the case": {
+			replies:   []ai.FakeStep{scored(29, "judge-a"), scored(27, "judge-b"), scored(90, "judge-c")},
+			wantCalls: 2, wantScore: 28, wantScores: []int{29, 27}, wantServedBy: "judge-b",
+		},
+		"a zero is not taken on one reading": {
+			replies:   []ai.FakeStep{scored(0, "judge-a"), scored(80, "judge-b"), scored(75, "judge-c")},
+			wantCalls: 3, wantScore: 75, wantScores: []int{0, 80, 75}, wantServedBy: "judge-c",
 		},
 		"a score 10 from a bar is asked again, and two that agree are averaged": {
 			replies:   []ai.FakeStep{scored(80, "judge-a"), scored(75, "judge-b"), scored(10, "judge-c")},

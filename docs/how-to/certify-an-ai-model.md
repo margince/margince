@@ -316,14 +316,14 @@ every whole run before the cut. One run owns a directory at a time — parallel
 
 A run **HardPasses** when the site's own validator accepted the reply, it is the
 answer the scenario expects, and it stayed inside its caps. The judge scores it
-0–100 once, again within 10 of any band, and a third time when two differ by more
+0–100 once, again within 10 of any band or anywhere under its `floor`, and a third time when two differ by more
 than 5 (re-asking only low scores biased it upward); the run takes their median. [The exact rule](../reference/ai-certification.md#how-the-scoring-works)
 pools the task's scenarios: `certified` needs 90% passing with a one-sided 90%
 Wilson bound of 80%, half of each scenario's runs, every run at or above its
 `floor`, each scenario's t upper bound at its `certified_min`, and the runs'
 margins over it averaging ≥ 0 at a t lower bound; `supported_degraded` two
 thirds, and the margin over `degraded_min`. A **veto** keeps a broken scenario
-from being averaged away; one no judge scored is `not_supported`. A borderline
+from being averaged away; one no judge scored is `not_supported` unless it declares `judge: none`, when its check alone grades it. A borderline
 scenario runs 3 more times, up to 9 (a lone one always does), and a resume
 replays the same extensions and the same opinions: at most 9 candidate and 27
 judge calls a scenario, a settled one 3 and about 4. Every number is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (edit, bump `gradingRule`, regenerate).

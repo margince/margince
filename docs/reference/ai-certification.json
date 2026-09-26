@@ -6501,19 +6501,19 @@
         {
           "name": "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
           "expects": "accepted",
-          "graded_by": "mechanical",
+          "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_02.yaml"
         },
         {
           "name": "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
           "expects": "accepted",
-          "graded_by": "mechanical",
+          "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml"
         },
         {
           "name": "corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "expects": "accepted",
-          "graded_by": "mechanical",
+          "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml"
         }
       ],
@@ -6579,13 +6579,8 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
-            "case_changed": [
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
-              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
-            ],
             "grader_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -6616,13 +6611,8 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
-            "case_changed": [
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
-              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
-            ],
             "prompt_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -6699,13 +6689,8 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
-            "case_changed": [
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
-              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
-            ],
             "prompt_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -6743,13 +6728,8 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
-            "case_changed": [
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
-              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
-            ],
             "prompt_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
@@ -6787,13 +6767,8 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): corpus_ask_answers_only_from_the_passage_that_says_it, corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present, corpus_ask_returns_nothing_when_the_only_passage_does_not_answer, corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question, corpus_ask_returns_nothing_when_the_passages_do_not_answer",
           "stale_cause": {
-            "case_changed": [
-              "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
-              "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-              "corpus_ask_returns_nothing_when_the_passages_do_not_answer"
-            ],
             "prompt_changed": [
               "corpus_ask_answers_only_from_the_passage_that_says_it",
               "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",

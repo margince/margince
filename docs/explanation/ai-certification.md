@@ -47,7 +47,7 @@ web page — plus the answer we expect. It lives in
    pass or fail. Strict, and no AI involved.
 4. **② Is it good?** A second model, the judge, scores the answer 0–100 against
    the scenario's rubric. It is asked **once**. A score within 10 points of one of
-   the scenario's bars is asked for a **second** time, and two readings more than 5
+   the scenario's bars, or under its lowest, is asked for a **second** time, and two readings more than 5
    apart for a **third**; the middle one counts (the average, of two). So one odd
    reading cannot swing a close call, and a clear one is not paid for three times.
    It sees the product's rules, so it

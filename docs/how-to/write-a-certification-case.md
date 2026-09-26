@@ -204,9 +204,10 @@ would certify a window no run is handed. The expectation is the step the turn
 should take, and `Prepare` refuses one naming a tool this agent is not offered.
 Reference: `certcase_agentloop.go`.
 
-The judge is shown that one step, so an `agent_loop` rubric must say it grades
-the turn's `FIRST step only` — the phrase `corpusagentloop_test.go` requires —
-or the judge marks a right first call down for the steps it never saw.
+Every shipped `agent_loop` case is judge-less: its check reads the one step
+whole. A case that does carry a rubric must say it grades the turn's
+`FIRST step only` — the phrase `corpusagentloop_test.go` requires — or the judge
+marks a right first call down for the steps it never saw.
 
 ## The scenario file
 
@@ -227,7 +228,7 @@ expect:
   answer: [meeting]                # in the SITE's vocabulary — read its Prepare
   rubric: >
     What the grader is told to score, and why it matters to the product.
-  bands: {certified_min: 70, degraded_min: 50, floor: 40}   # required
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}   # required unless judge: none
   caps: {max_tokens: 400, p95_latency_ms: 6000}             # optional ceilings
 ```
 
@@ -251,6 +252,13 @@ The rules that decide whether a scenario is worth having:
 - **`expect.outcome` need not be `accepted`.** A run passes when the site's
   validator reports the outcome the scenario named — which is what lets a
   scenario whose right answer is *silence* exist at all.
+- **`judge: none` is for a check that sees everything a judge would.** Such a
+  case carries no `rubric` and no `bands`, and says in `judge_none_reason` why
+  the check alone is enough. `corpusjudgeless_test.go` requires a proof for it:
+  the answer it calls correct must reach its outcome, and the wrong answer its
+  rubric caught must reach a planted failure — the named trap, not a malformed
+  reply. Anything the reader is shown that the check never reads, such as a
+  free-text summary, keeps the judge.
 - **A rubric may only ask for what the site's reply envelope can carry.** A
   rubric scoring a field the schema does not declare measures nothing: the model
   cannot produce it however well it answers, so the clause can only mark a

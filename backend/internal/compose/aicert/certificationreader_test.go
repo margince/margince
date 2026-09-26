@@ -507,7 +507,7 @@ func writeAICertThresholds(page *strings.Builder, bars []aiCertQualityBar) {
 		aicert.VetoPassPercent, aiCertReady, aiCertCare, aiCertReady)
 	fmt.Fprintf(page, "| Tries per test case | %d at first (`RUNS=` changes it for one run); a borderline case gets %d more at a time, up to %d |\n",
 		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns)
-	fmt.Fprintf(page, "| Quality opinions per try | 1; a 2nd when it is within %d points of a bar, a 3rd when the two are more than %d apart; the middle one counts |\n",
+	fmt.Fprintf(page, "| Quality opinions per try | 1; a 2nd when it is within %d points of a bar or under the lowest, a 3rd when the two are more than %d apart; the middle one counts |\n",
 		aicert.ReaskBandMargin, aicert.ReaskDisagreement)
 	fmt.Fprintf(page, "| How sure every bound is | one-sided 90%% (z = %v for a pass rate, Student's t for an average score, whose spread is taken as at least %d points) |\n",
 		aicert.ConfidenceZ, aicert.JudgeScoreSDFloor)

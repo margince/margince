@@ -26,7 +26,8 @@ expect:
       cache_write_per_mtok: '0'
   judge: none
   judge_none_reason: >
-    Every value the sheet stores is compared exactly, and the cited passage must
-    print it. The gate drops an uncited, untracked or low-confidence row before
-    the sheet sees it, so nothing else the rubric asked reaches an
-    administrator.
+    Every row the gate lets through is staged for approval, and every one is
+    checked: a model the scenario names must carry exactly its four prices,
+    printed by the passage it cites, and a model it does not name fails. The
+    gate drops an uncited, untracked or low-confidence row before the sheet sees
+    it, so nothing else the rubric asked reaches an administrator.

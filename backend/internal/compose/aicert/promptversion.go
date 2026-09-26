@@ -122,11 +122,10 @@ func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.R
 		if err != nil {
 			return nil, err
 		}
-		graderRequest, err := graderRequestDigest(asGraded(sc, census), request)
+		grader, err := graderStamp(sc, census, request)
 		if err != nil {
 			return nil, err
 		}
-		grader := gradedBy(gradingRule, graderRequest)
 		sum := sha256.Sum256(encoded)
 		// All three parts are fixed-width hex, so concatenating them is unambiguous.
 		stamp := hex.EncodeToString(sum[:]) + candidate + grader
@@ -237,9 +236,23 @@ func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, e
 	return canonicalRequestDigest(compose.JudgeRequest(in))
 }
 
+// graderStamp is a scenario's grader third. A case its check grades alone is
+// never sent to the judge, so only the rule reaches it: a judge prompt edit
+// leaves its record current.
+func graderStamp(sc Scenario, census *aitasks.Registry, candidateRequest model.Request) (string, error) {
+	if !sc.Expect.Judged() {
+		return gradedBy(gradingRule, ""), nil
+	}
+	graderRequest, err := graderRequestDigest(asGraded(sc, census), candidateRequest)
+	if err != nil {
+		return "", err
+	}
+	return gradedBy(gradingRule, graderRequest), nil
+}
+
 // gradingRule versions the scoring rule and the judge-opinion policy, so every
 // record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
-const gradingRule = "grading-rule-9"
+const gradingRule = "grading-rule-10"
 
 // gradedBy is the stamp's grader third: the grader's request digest under the
 // rule that turns its opinions into a verdict, which no request carries.

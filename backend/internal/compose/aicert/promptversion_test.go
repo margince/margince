@@ -598,3 +598,29 @@ func TestAScenarioStampCoversTheGradingRule(t *testing.T) {
 		t.Fatal("the grader third is the bare request digest — a change of grading rule would leave every record current")
 	}
 }
+
+// A case its check grades alone is never sent to the judge, so what the judge
+// would have been shown must not reach its stamp: a judge prompt edit, or a
+// product rule only the judge reads, would otherwise re-stale a record no judge
+// scored. The product rules stand in here, since they reach the grader's half.
+func TestAJudgelessStampIgnoresWhatOnlyTheJudgeReads(t *testing.T) {
+	graderThird := func(sc Scenario, system string) string {
+		t.Helper()
+		stamps, err := ScenarioStamps(context.Background(), []Scenario{sc}, promptCensus(t, system, 1024))
+		if err != nil {
+			t.Fatalf("ScenarioStamps: %v", err)
+		}
+		return stamps[sc.Name][len(stamps[sc.Name])-sha256.Size*2:]
+	}
+	judged := testScenarioOnSite("one", promptVariant, wideBands)
+	judgeless := judged
+	judgeless.Expect.Judge, judgeless.Expect.Bands = judgeNone, Bands{}
+	one, two := "Describe the subject in one sentence.", "Describe the subject in two sentences."
+
+	if graderThird(judged, one) == graderThird(judged, two) {
+		t.Error("a judged case's grader half ignored the product rules its judge is shown")
+	}
+	if graderThird(judgeless, one) != graderThird(judgeless, two) {
+		t.Error("a judge-less case's grader half moved with what only a judge reads")
+	}
+}

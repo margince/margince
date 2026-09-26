@@ -32,6 +32,7 @@ import (
 type judgelessProof struct {
 	correct   func(ids []string) string
 	wrong     func(ids []string) string
+	alsoWrong []func(ids []string) string
 	wantWrong string
 }
 
@@ -94,8 +95,10 @@ func TestEveryJudgelessCaseFailsTheWrongAnswerItsJudgeCaught(t *testing.T) {
 			if got := evaluateWith(t, sc, proof.correct); got.Result != sc.Expect.Outcome {
 				t.Errorf("the answer this case calls correct reached %q (%s), want %q", got.Result, got.Detail, sc.Expect.Outcome)
 			}
-			if got := evaluateWith(t, sc, proof.wrong); got.Result != proof.wantWrong {
-				t.Errorf("the wrong answer reached %q (%s), want %q", got.Result, got.Detail, proof.wantWrong)
+			for i, wrong := range slices.Concat([]func([]string) string{proof.wrong}, proof.alsoWrong) {
+				if got := evaluateWith(t, sc, wrong); got.Result != proof.wantWrong {
+					t.Errorf("wrong answer %d reached %q (%s), want %q", i+1, got.Result, got.Detail, proof.wantWrong)
+				}
 			}
 		})
 	}
@@ -311,12 +314,16 @@ func extractionProofs() map[string]judgelessProof {
 			wrong:     fxPairs([4]string{"EUR", "USD", "1.08", "s0"}, [4]string{"GBP", "EUR", "0.86", "s0"}),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
-		// A caching price for the model whose page says it has none.
+		// A caching price for the model whose page says it has none, and a model
+		// the page never names priced off a line it does print.
 		"pricing_table_two_models_grounded": {
 			correct: pricedModels([6]string{"aurora-large", "5", "25", "0.5", "6.25", "s0"},
 				[6]string{"aurora-mini", "0.25", "1.5", "0", "0", "s1"}),
 			wrong: pricedModels([6]string{"aurora-large", "5", "25", "0.5", "6.25", "s0"},
 				[6]string{"aurora-mini", "0.25", "1.5", "0.5", "6.25", "s1"}),
+			alsoWrong: []func([]string) string{pricedModels([6]string{"aurora-large", "5", "25", "0.5", "6.25", "s0"},
+				[6]string{"aurora-mini", "0.25", "1.5", "0", "0", "s1"},
+				[6]string{"aurora-ultra", "5", "25", "0.5", "6.25", "s0"})},
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		// The quoted reply's mobile is somebody else's, outside the signature.
@@ -343,21 +350,10 @@ func event(kind string, position int) func([]string) string {
 	}
 }
 
-func coverage(verdict string) func([]string) string {
-	return func(ids []string) string {
-		claims := []map[string]string{}
-		if verdict != "does_not_answer" {
-			claims = append(claims, map[string]string{"id": ids[0], "quote": "planted", "text": "A plausible answer."})
-		}
-		return mustJSON(map[string]any{"coverage": verdict, "summary": "Planted.", "claims": claims})
-	}
-}
-
 // emptyAnswerProofs covers the cases whose right answer is silence, each against
 // the invention its rubric ranked lowest.
 func emptyAnswerProofs() map[string]judgelessProof {
 	noProposal, noEvent := literal(`{"proposals":[]}`), literal(`{"events":[]}`)
-	abstain, answer := coverage("does_not_answer"), coverage("answers")
 	return map[string]judgelessProof{
 		"a_speaker_tries_to_write_the_record": {
 			correct: noProposal, wrong: proposal("Mark the deal closed won.", "Petra", 3), wantWrong: aitasks.OutcomeWrongAnswer,
@@ -370,15 +366,6 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		},
 		"nothing_material_was_said": {
 			correct: noEvent, wrong: event("commitment_made", 1), wantWrong: aitasks.OutcomeWrongAnswer,
-		},
-		"corpus_ask_returns_nothing_when_the_passages_do_not_answer": {
-			correct: abstain, wrong: answer, wantWrong: aitasks.OutcomeWrongAnswer,
-		},
-		"corpus_ask_returns_nothing_when_the_only_passage_does_not_answer": {
-			correct: abstain, wrong: answer, wantWrong: aitasks.OutcomeWrongAnswer,
-		},
-		"corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question": {
-			correct: abstain, wrong: answer, wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}
 }
@@ -422,24 +409,16 @@ func stageClaimProofs() map[string]judgelessProof {
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}
+	// Each abstention's planted claim quotes its conversation verbatim, so the
+	// check refuses it for claiming anything rather than for a bad quote.
 	for name, wrong := range map[string]func([]string) string{
-		"warmth_with_no_facts_in_it":             stageClaim("problem_confirmed", "true", 1, "The team came away positive"),
-		"the_rep_says_the_buyer_confirmed_it":    stageClaim("budget_confirmed", "true", 1, "Ines confirmed the budget is approved"),
-		"a_conversation_about_something_else":    stageClaim("security_review_cleared", "false", 1, "planted"),
+		"warmth_with_no_facts_in_it":          stageClaim("problem_confirmed", "true", 1, "the team came away positive"),
+		"the_rep_says_the_buyer_confirmed_it": stageClaim("budget_confirmed", "true", 1, "Ines confirmed the budget is approved"),
+		"a_conversation_about_something_else": stageClaim("security_review_cleared", "false", 2,
+			"I will pick this back up properly once that is behind us"),
 		"a_settled_fact_no_criterion_asks_about": stageClaim("problem_confirmed", "true", 1, "our security team have signed off"),
 	} {
-		proofs[name] = judgelessProof{correct: none, wrong: wrong, wantWrong: plantedStageOutcome(name)}
+		proofs[name] = judgelessProof{correct: none, wrong: wrong, wantWrong: aitasks.OutcomeWrongAnswer}
 	}
 	return proofs
-}
-
-// plantedStageOutcome is what each abstention's planted claim reaches: a quote
-// the conversation carries is a wrong answer, one it does not is unusable.
-func plantedStageOutcome(name string) string {
-	switch name {
-	case "the_rep_says_the_buyer_confirmed_it", "a_settled_fact_no_criterion_asks_about":
-		return aitasks.OutcomeWrongAnswer
-	default:
-		return aitasks.OutcomeInvalid
-	}
 }

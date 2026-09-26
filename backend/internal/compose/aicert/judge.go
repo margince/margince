@@ -141,10 +141,11 @@ type judgement struct {
 // otherwise-healthy certification run: a reply that will not parse is an
 // absent opinion, not an error and not a zero.
 //
-// A run is re-asked where one reading could decide its case, never only where
-// it scored low: re-asking only below the bar lifted a low outlier and never
-// lowered a high one. wantsAnotherOpinion states the rule; the run scores at the
-// median of the opinions that parsed, the mean of two when only two were asked.
+// A run is re-asked where one reading could decide its case: near a bar, or
+// anywhere under the floor, since one run under it bars certification. Near is
+// both sides of a bar, so a high outlier is re-asked as a low one is.
+// wantsAnotherOpinion states the rule; the run scores at the median of the
+// opinions that parsed, the mean of two when only two were asked.
 //
 // The served model is read back from rec's own terminal trace (never
 // resp.ServedModel directly) so it carries the same resolved identity the
@@ -191,7 +192,7 @@ func wantsAnotherOpinion(given []int, bands Bands) bool {
 	case 0:
 		return true
 	case 1:
-		return nearABand(given[0], bands)
+		return given[0] < bands.Floor+reaskBandMargin || nearABand(given[0], bands)
 	case 2:
 		return absDiff(given[0], given[1]) > reaskDisagreement
 	default:

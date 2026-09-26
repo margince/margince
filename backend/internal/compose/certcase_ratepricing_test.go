@@ -52,13 +52,14 @@ func pricingExpectation(t *testing.T, models map[string]ratePricedModel) json.Ra
 	return raw
 }
 
-// largeExpected is the flagship model as the page grounds it: one entry, because
-// the expectation is a subset claim and a scenario pins the prices it cares about.
-func largeExpected(t *testing.T) json.RawMessage {
+// pageExpected is both models as the page grounds them: the expectation is an
+// inventory, so a scenario names every model its page prices.
+func pageExpected(t *testing.T) json.RawMessage {
 	t.Helper()
-	return pricingExpectation(t, map[string]ratePricedModel{"aurora-large": {
-		InputUsd: "5", OutputUsd: "25", CacheReadUsd: "0.5", CacheWriteUsd: "6.25",
-	}})
+	return pricingExpectation(t, map[string]ratePricedModel{
+		"aurora-large": {InputUsd: "5", OutputUsd: "25", CacheReadUsd: "0.5", CacheWriteUsd: "6.25"},
+		"aurora-mini":  {InputUsd: "0.25", OutputUsd: "1.5", CacheReadUsd: "0", CacheWriteUsd: "0"},
+	})
 }
 
 // pricingRow is one row of a model's reply, built as text rather than marshalled
@@ -77,8 +78,7 @@ func pricingReply(rows ...string) string {
 // largeRow is the flagship row exactly as the page grounds it.
 func largeRow() string { return pricingRow("aurora-large", "5", "25", "0.5", "6.25", "s0", "0.95") }
 
-// miniRow is the second model, which no expectation below names — a real page
-// prices more models than a scenario cares to pin.
+// miniRow is the second model exactly as the page grounds it.
 func miniRow() string { return pricingRow("aurora-mini", "0.25", "1.5", "0", "0", "s1", "0.9") }
 
 // pricingCompleterStub answers with one canned reply. What the case ASKED is
@@ -127,7 +127,7 @@ func TestRatePricingCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			// The sheet stores µUSD, so the comparison is the product's own: a
 			// scenario neither fails on a trailing zero nor passes on a rounding.
 			name:       "the same price written to two decimals",
-			reply:      pricingReply(pricingRow("aurora-large", "5.00", "25.000", "0.50", "6.2500", "s0", "0.9")),
+			reply:      pricingReply(pricingRow("aurora-large", "5.00", "25.000", "0.50", "6.2500", "s0", "0.9"), miniRow()),
 			wantResult: aitasks.OutcomeAccepted,
 		},
 		{
@@ -157,6 +157,15 @@ func TestRatePricingCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			wantDetail: `"aurora-large" is priced in 4`,
 		},
 		{
+			// Every surviving row is staged for approval, so a model the page
+			// never names is an invented price even when it cites a real line.
+			name: "a model the page does not price, cited at a real passage",
+			reply: pricingReply(largeRow(), miniRow(),
+				pricingRow("aurora-ultra", "5", "25", "0.5", "6.25", "s0", "0.95")),
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: `"aurora-ultra" is priced, and the scenario expects no such model`,
+		},
+		{
 			name:       "the expected model is never priced",
 			reply:      pricingReply(miniRow()),
 			wantResult: aitasks.OutcomeWrongAnswer,
@@ -181,7 +190,7 @@ func TestRatePricingCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome, _ := runPricingCase(t, largeExpected(t), tc.reply)
+			outcome, _ := runPricingCase(t, pageExpected(t), tc.reply)
 			if outcome.Result != tc.wantResult {
 				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
 			}
@@ -196,9 +205,9 @@ func TestRatePricingCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 // grounded the expected prices while inventing a model out of nothing is not the
 // clean run it would otherwise look like.
 func TestRatePricingCaseReportsARefusedRowBesideAnAcceptedAnswer(t *testing.T) {
-	reply := pricingReply(largeRow(), pricingRow("invented", "9", "9", "0", "0", "", "0.9"))
+	reply := pricingReply(largeRow(), miniRow(), pricingRow("invented", "9", "9", "0", "0", "", "0.9"))
 
-	outcome, _ := runPricingCase(t, largeExpected(t), reply)
+	outcome, _ := runPricingCase(t, pageExpected(t), reply)
 
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Fatalf("Result = %q (%s), want accepted", outcome.Result, outcome.Detail)
@@ -252,8 +261,8 @@ func TestRatePricingCaseRunsWhatProductionRuns(t *testing.T) {
 		},
 		{
 			name:     "one grounded, one cited nothing",
-			reply:    pricingReply(largeRow(), pricingRow("invented", "9", "9", "0", "0", "", "0.9")),
-			wantKept: []string{"aurora-large"}, wantResult: aitasks.OutcomeAccepted,
+			reply:    pricingReply(largeRow(), miniRow(), pricingRow("invented", "9", "9", "0", "0", "", "0.9")),
+			wantKept: []string{"aurora-large", "aurora-mini"}, wantResult: aitasks.OutcomeAccepted,
 		},
 		{
 			name:     "nothing the crawl can stage",
@@ -277,7 +286,7 @@ func TestRatePricingCaseRunsWhatProductionRuns(t *testing.T) {
 				t.Fatalf("the crawl refused the reply outright: %v", err)
 			}
 
-			outcome, trace := runPricingCase(t, largeExpected(t), tc.reply)
+			outcome, trace := runPricingCase(t, pageExpected(t), tc.reply)
 
 			if len(kept) != len(tc.wantKept) {
 				t.Fatalf("the crawl kept %d rows, want %d", len(kept), len(tc.wantKept))
@@ -414,9 +423,9 @@ func TestRatePricingCaseRefusesAnUnreachableExpectation(t *testing.T) {
 // The reply below files itself under a vendor the fixture does not crawl, and the
 // case must still accept it — the sheet never stores that name.
 func TestRatePricingCaseIgnoresTheProviderAPageClaims(t *testing.T) {
-	reply := pricingReply(strings.Replace(largeRow(), `"provider":"Aurora AI"`, `"provider":"evil-corp"`, 1))
+	reply := pricingReply(strings.Replace(largeRow(), `"provider":"Aurora AI"`, `"provider":"evil-corp"`, 1), miniRow())
 
-	outcome, _ := runPricingCase(t, largeExpected(t), reply)
+	outcome, _ := runPricingCase(t, pageExpected(t), reply)
 
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Errorf("Result = %q (%s), want accepted — the provider a page claims is not the sheet's",
@@ -450,7 +459,7 @@ func TestRatePricingCaseRefusesAFixtureTheCrawlCouldNotRun(t *testing.T) {
 			if err != nil {
 				t.Fatalf("encoding the fixture: %v", err)
 			}
-			_, err = ratePricingCases{}.Prepare(raw, largeExpected(t))
+			_, err = ratePricingCases{}.Prepare(raw, pageExpected(t))
 			if err == nil {
 				t.Fatal("a fixture the crawl could not run prepared")
 			}
