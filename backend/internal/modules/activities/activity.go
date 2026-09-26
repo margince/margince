@@ -277,8 +277,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	// in nobody's list for however long it took to notice.
 	//
 	// Checked against the resolved assignee rather than the input, so the
-	// self-assignment above is covered by the same question.
-	if err := ensureAssigneeCanHoldWork(ctx, tx, assignee); err != nil {
+	// self-assignment above is covered by the same question. An invited
+	// colleague may be given a NEW task (ensureNewTaskAssignee).
+	if err := ensureNewTaskAssignee(ctx, tx, assignee); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,5 +98,47 @@ func TestATaskStillReachesAContact(t *testing.T) {
 	}
 	if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != e.Rep1 {
 		t.Errorf("assignee = %v, want the contact it was written for", task.AssigneeId)
+	}
+}
+
+// An invited colleague may be given a NEW task: they are a real colleague who
+// has not signed in yet, and the task waits in their Worklist until they do.
+// Moving an EXISTING task onto them is routing and still asks for an active
+// seat, and a suspended seat is refused on both doors as before.
+func TestANewTaskMayGoToAnInvitedColleague(t *testing.T) {
+	e := Setup(t)
+	e.WsExec(t, `UPDATE app_user SET status = 'invited' WHERE id = $1`, e.Rep3)
+	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
+	invited := ids.From[ids.UserKind](e.Rep3)
+	subject := "Imported follow-up"
+	due := time.Now().Add(24 * time.Hour)
+
+	task, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &invited, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating a task for an invited colleague: %v", err)
+	}
+	if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != e.Rep3 {
+		t.Errorf("assignee = %v, want the invited colleague", task.AssigneeId)
+	}
+
+	mine := ids.From[ids.UserKind](e.Rep1)
+	other, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &mine, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(other.Id)),
+		activities.UpdateActivityInput{AssigneeID: &invited}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("moving a task onto an invited colleague got %v, want not found", err)
+	}
+
+	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep3)
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &invited, Source: "manual",
+	}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("creating a task for a suspended seat got %v, want not found", err)
 	}
 }
