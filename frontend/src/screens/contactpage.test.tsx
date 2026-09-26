@@ -66,9 +66,8 @@ const quietMoment: Contact360["moment"] = {
 };
 
 // A guard that permits correspondence, so the rail's permissions panel says the
-// ordinary thing while these suites exercise the header. The hero Email verb
-// does NOT read it: whether a message may go depends on what the message is,
-// which this page cannot answer, and the engine answers it in the composer.
+// ordinary thing. The hero Email verb does NOT read it: whether a message may
+// go depends on the message, which only the engine in the composer can answer.
 const mailAllowed: ContactConsentGuardEntry = {
   purpose_key: "business_correspondence",
   purpose_class: "business_correspondence",

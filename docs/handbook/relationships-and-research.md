@@ -184,13 +184,15 @@ To have Margince read a customer company's website, open the company's page and 
 If you see "Website research is not configured on this server.", your installation has no crawler.
 Also called: enrich a company, company lookup, scrape a website, read a company.
 
-### What does Read a company in the command palette do?
-The **Read a company** action in the command palette opens the setup step that reads **your own company's** website, "Which website should Margince read?", to fill in your company profile; it does not research a customer.
-1. Press ⌘K (Mac) or Ctrl+K and choose **Read a company**.
-2. Enter your company's website and press **Read website**, or **Enter manually**.
-3. Check the values in **Review company details** and confirm.
+### How do I have Margince read my own company's website?
+To have Margince read **your own company's** website, an administrator opens **Settings → Company profile** and presses **Refresh from website**; it does not research a customer.
+1. Open **Company profile**: from Settings, or press ⌘K (Mac) or Ctrl+K and type "website".
+2. Under **Source**, check **Public company website**; if it is empty, press **Edit**, add it and press **Save company context**.
+3. Press **Refresh from website**.
+4. In **Website comparison**, select the changes to keep and press **Apply selected changes**; nothing reaches the profile before that.
+During first-run setup an administrator is asked "Which website should Margince read?" and can press **Read website** or **Enter manually**.
 To research a customer or prospect, use **Start company research** on that company's page instead.
-Also called: set up my company profile, company onboarding.
+Also called: set up my company profile, company onboarding, refresh my company profile, update company details from the website.
 
 ## Researching a company
 

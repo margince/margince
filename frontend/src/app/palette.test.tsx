@@ -584,17 +584,41 @@ describe("useBuiltinCommands", () => {
     });
   });
 
-  // A read ends in saving the company, which only an admin may do, so no other
-  // seat is offered one. "Company profile" landing is the sign /me has.
-  it.each([
-    [["admin"], true],
-    [["rep"], false],
-  ])("offers %j reading a company: %s", async (roles, offered) => {
+  // Reading the company's own website is Company profile's job, so no seat is
+  // offered a separate action for it.
+  it.each([["admin"], ["rep"]])(
+    "offers %s no separate read-a-company action",
+    async (role) => {
+      const user = userEvent.setup();
+      renderProbeWithCompany({ companyContext: true, roles: [role] });
+      await user.type(screen.getByRole("searchbox"), "company");
+      await screen.findByText("Company profile");
+      expect(screen.queryByText("Read a company")).toBeNull();
+    },
+  );
+
+  it("reaches Company profile by its refresh button's words for an admin", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: true, roles });
-    await user.type(screen.getByRole("searchbox"), "company");
+    renderProbeWithCompany({ companyContext: true, roles: ["admin"] });
+    await user.type(screen.getByRole("searchbox"), "website");
+    await waitFor(() => {
+      expect(destinationRows()[0].textContent).toContain("Company profile");
+    });
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/settings/company");
+  });
+
+  // Any other seat's Company profile draws no website card, so "website"
+  // leads it nowhere, though the page itself is still theirs to find.
+  it("does not send a rep to Company profile for the website", async () => {
+    const user = userEvent.setup();
+    renderProbeWithCompany({ companyContext: true, roles: ["rep"] });
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "company");
     await screen.findByText("Company profile");
-    expect(screen.queryByText("Read a company") !== null).toBe(offered);
+    await user.clear(box);
+    await user.type(box, "website");
+    expect(screen.queryByText("Company profile")).toBeNull();
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader
