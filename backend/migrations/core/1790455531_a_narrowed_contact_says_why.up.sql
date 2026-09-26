@@ -8,20 +8,25 @@
 -- narrowed the row, because re-deriving it later reads present state and gets a
 -- lifted hold wrong.
 --
--- NULL on an owner-scoped row means no decision is on record: a contact capture
--- minted while its sender was unjudged, or one narrowed before this column
--- existed. A reply lifts neither.
+-- awaiting_verdict is the capture sink's own mint: nothing has judged the
+-- sender yet, and a verdict is what ends it. NULL on an owner-scoped row is a
+-- row narrowed before this column existed, for a reason nobody recorded, and no
+-- automatic widening ends it.
+--
+-- Both constraints are added NOT VALID; the next migration validates them
+-- under the lighter lock.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE contact
     ADD COLUMN IF NOT EXISTS narrowing_reason text,
     ADD CONSTRAINT contact_narrowing_reason_check CHECK (narrowing_reason IN (
-        'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided')),
+        'awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'))
+        NOT VALID,
     -- A reason describes a row that is narrowed. Every widening clears it, and a
     -- widening that forgets to fails here rather than leaving a stale reason for
     -- the next narrowing to be read by.
     ADD CONSTRAINT contact_narrowing_reason_only_when_owner CHECK (
-        narrowing_reason IS NULL OR visibility = 'owner');
+        narrowing_reason IS NULL OR visibility = 'owner') NOT VALID;
 
 COMMENT ON COLUMN contact.narrowing_reason IS
-    'Why an owner-scoped contact is its owner''s alone. An inbound reply widens only outbound_no_answer; NULL is no recorded decision and widens on no reply.';
+    'Why an owner-scoped contact is its owner''s alone. A verdict widens awaiting_verdict and outbound_no_answer, a reply only outbound_no_answer; NULL is an unrecorded legacy narrowing and widens on neither.';

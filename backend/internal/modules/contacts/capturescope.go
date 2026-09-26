@@ -41,10 +41,9 @@ import (
 // different decision, taken where a verdict has judged the whole
 // correspondence private — see RetractCaptureOnlyContactTx.
 //
-// A judgment ends an unrecorded narrowing, which is what a capture-minted
-// contact awaiting its verdict carries, and outbound_no_answer. It does not end
-// a hold, an advisor verdict or a human's choice: a later judgment about the
-// address is not an answer to any of those.
+// A judgment ends awaiting_verdict and outbound_no_answer. It does not end a
+// hold, an advisor verdict, a human's choice or a legacy row with no recorded
+// reason: a later judgment about the address answers none of those.
 //
 // The guard is on the ROW's visibility rather than on what the caller believes:
 // the UPDATE matches nothing when the row is already workspace, so a second
@@ -55,7 +54,7 @@ func promoteIfWorkspaceScoped(ctx context.Context, tx pgx.Tx, id ids.ContactID, 
 		// message from the sink — which is the caller that runs on every one.
 		return nil
 	}
-	_, err := widenTx(ctx, tx, id, widening{liftsUnrecorded: true})
+	_, err := widenTx(ctx, tx, id, widening{lifts: []NarrowingReason{NarrowedAwaitingVerdict, NarrowedOutboundNoAnswer}})
 	return err
 }
 
@@ -73,18 +72,17 @@ func (s *Store) PromoteOnReplyTx(ctx context.Context, tx pgx.Tx, id ids.ContactI
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	return widenTx(ctx, tx, id, widening{owner: &owner})
+	return widenTx(ctx, tx, id, widening{lifts: []NarrowingReason{NarrowedOutboundNoAnswer}, owner: &owner})
 }
 
 // fieldVisibility names the column in an audit image, so the word a reader
 // greps for is the word the table uses.
 const fieldVisibility = "visibility"
 
-// widening says which narrowings one widening may end. outbound_no_answer is
-// always among them; nothing else with a recorded reason ever is.
+// widening says which narrowings one widening may end.
 type widening struct {
-	// liftsUnrecorded also ends a row that records no reason.
-	liftsUnrecorded bool
+	// lifts names the reasons it ends. A NULL reason is never among them.
+	lifts []NarrowingReason
 	// liftsAny ends every narrowing. Only the owner's own publish sets it: the
 	// reasons protect the owner's choice from machines, not from the owner.
 	liftsAny bool
@@ -101,13 +99,16 @@ type widening struct {
 // The pins are the concurrency guard, read through RowsAffected: a second pass
 // over the same contact matches nothing and writes nothing again.
 func widenTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, w widening) (bool, error) {
+	lifts := make([]string, 0, len(w.lifts))
+	for _, reason := range w.lifts {
+		lifts = append(lifts, string(reason))
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE contact SET visibility = $2, narrowing_reason = NULL
 		 WHERE id = $1 AND visibility = $3 AND archived_at IS NULL
-		   AND (narrowing_reason = $4 OR ($5 AND narrowing_reason IS NULL) OR $7)
+		   AND (narrowing_reason = ANY($4::text[]) OR $5)
 		   AND ($6::uuid IS NULL OR owner_id = $6)`,
-		id, visibilityWorkspace, visibilityOwner, NarrowedOutboundNoAnswer, w.liftsUnrecorded, w.owner,
-		w.liftsAny)
+		id, visibilityWorkspace, visibilityOwner, lifts, w.liftsAny, w.owner)
 	if err != nil {
 		return false, fmt.Errorf("contacts: moving a contact to the workspace: %w", err)
 	}

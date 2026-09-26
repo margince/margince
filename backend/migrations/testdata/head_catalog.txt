@@ -2637,7 +2637,7 @@ public.contact.archived_at timestamp with time zone gen=- def=-
 public.contact.captured_by text NOT NULL gen=- def=-
 public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
 public.contact.contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES contact(id) ON DELETE SET NULL (merged_into_id)
-public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text])))
+public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text])))
 public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner'::text)))
 public.contact.contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))

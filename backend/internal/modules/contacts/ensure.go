@@ -99,8 +99,10 @@ type EnsureCounterpartyInput struct {
 	// behaviour that existed before this field. The wrong direction to fail in
 	// is silently narrowing a record somebody expected to see.
 	OwnerScoped bool
-	// NarrowedBecause is the decision behind an owner-scoped ensure, empty on
-	// the sink's, which has decided nothing yet. Ignored unless OwnerScoped.
+	// NarrowedBecause is why an owner-scoped ensure keeps the record the
+	// owner's: awaiting_verdict from the sink, a decision from the verdict path.
+	// Ignored unless OwnerScoped. The sink's value lands only on a row it
+	// creates, never over an incumbent's reason.
 	NarrowedBecause NarrowingReason
 }
 
@@ -242,7 +244,7 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		if err := promoteIfWorkspaceScoped(ctx, tx, match.ContactID, in.OwnerScoped); err != nil {
 			return err
 		}
-		if in.OwnerScoped && in.NarrowedBecause != "" {
+		if in.OwnerScoped && in.NarrowedBecause != "" && in.NarrowedBecause != NarrowedAwaitingVerdict {
 			// The sink usually minted this row before the decision arrived, so
 			// the decision's reason lands on the incumbent here.
 			if err := recordNarrowingTx(ctx, tx, match.ContactID, in.NarrowedBecause); err != nil {

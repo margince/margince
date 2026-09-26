@@ -32,6 +32,9 @@ import (
 type NarrowingReason string
 
 const (
+	// NarrowedAwaitingVerdict: capture minted the contact before anything judged
+	// its sender. A verdict ends it; a reply does not.
+	NarrowedAwaitingVerdict NarrowingReason = "awaiting_verdict"
 	// NarrowedOutboundNoAnswer: the owner wrote to the address and it has never
 	// answered. The only reason a reply ends.
 	NarrowedOutboundNoAnswer NarrowingReason = "outbound_no_answer"
@@ -43,10 +46,12 @@ const (
 	NarrowedHumanDecided NarrowingReason = "human_decided"
 )
 
-// NarrowingReasons lists every value the column accepts.
+// NarrowingReasons lists every value the column accepts. NULL is not among
+// them: it is a row narrowed before reasons were recorded, and no automatic
+// widening ends it.
 func NarrowingReasons() []NarrowingReason {
 	return []NarrowingReason{
-		NarrowedOutboundNoAnswer, NarrowedConfidentialityHold, NarrowedAdvisor, NarrowedHumanDecided,
+		NarrowedAwaitingVerdict, NarrowedOutboundNoAnswer, NarrowedConfidentialityHold, NarrowedAdvisor, NarrowedHumanDecided,
 	}
 }
 
@@ -56,9 +61,10 @@ const fieldNarrowingReason = "narrowing_reason"
 // recordNarrowingTx writes why an EXISTING owner-scoped contact stays its
 // owner's, when a decision reaches a row an earlier ensure already minted.
 //
-// It only ever replaces nothing or outbound_no_answer. Every other reason is
-// one a reply may not end, so overwriting one would let a later machine
-// decision undo a hold, an advisor verdict or a human's choice.
+// It only ever replaces awaiting_verdict or outbound_no_answer, the two reasons
+// a later event may end anyway. A hold, an advisor verdict or a human's choice
+// is never overwritten, and neither is NULL: a legacy row's reason is unknown,
+// and guessing it could make the row publishable.
 func recordNarrowingTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, reason NarrowingReason) error {
 	var before *NarrowingReason
 	err := tx.QueryRow(ctx, `
@@ -73,7 +79,8 @@ func recordNarrowingTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, reason 
 	if err != nil {
 		return fmt.Errorf("contacts: reading why a contact stays its owner's: %w", err)
 	}
-	if before != nil && (*before == reason || *before != NarrowedOutboundNoAnswer) {
+	if before == nil || *before == reason ||
+		(*before != NarrowedAwaitingVerdict && *before != NarrowedOutboundNoAnswer) {
 		return nil
 	}
 	if _, err := tx.Exec(ctx,

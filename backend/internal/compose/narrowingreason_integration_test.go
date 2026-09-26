@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -25,10 +26,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "buyer@coldlead.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-cold"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
@@ -52,7 +54,7 @@ func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
 // The reply is asked the question the verdict asks before it narrows: an
 // answer on a held thread may not publish its counterparty.
 func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "buyer@heldreply.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-reply-held"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
@@ -66,7 +68,7 @@ func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
 // Capture privacy is the importing seat's: a reply a colleague's mailbox
 // caught is not authority to publish the contact this seat is keeping.
 func TestAReplyInAnotherSeatsMailboxDoesNotPublish(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "buyer@twoseats.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-two-seats"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
@@ -80,7 +82,7 @@ func TestAReplyInAnotherSeatsMailboxDoesNotPublish(t *testing.T) {
 // the thread again at reply time would find nothing and publish; the recorded
 // reason is what still refuses.
 func TestAReplyDoesNotPublishAContactAHoldNarrowedEvenOnceTheHoldIsLifted(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "counsel@heldmatter.example"
 	activity := seedThreadedMail(t, e, email, "The matter", "inbound", "thr-hold")
 	seedThreadHold(t, e, "thr-hold", "held")
@@ -96,7 +98,7 @@ func TestAReplyDoesNotPublishAContactAHoldNarrowedEvenOnceTheHoldIsLifted(t *tes
 // Mail we sent on a held thread is both outbound-unanswered and held. The hold
 // is what gets recorded, or the reply would publish what the hold keeps quiet.
 func TestOutboundMailOnAHeldThreadRecordsTheHold(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "partner@heldoutbound.example"
 	activity := seedThreadedMail(t, e, email, "Terms", "outbound", "thr-held-out")
 	seedThreadHold(t, e, "thr-held-out", "held")
@@ -106,7 +108,7 @@ func TestOutboundMailOnAHeldThreadRecordsTheHold(t *testing.T) {
 }
 
 func TestAReplyDoesNotPublishAnAdvisor(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "taxadvisor@ownbooks.example"
 	judge(t, e, email, capture.KindAdvisor, seedThreadedMail(t, e, email, "Your return", "inbound", "thr-adv"))
 	requireNarrowed(t, e, email, contacts.NarrowedAdvisor)
@@ -117,7 +119,7 @@ func TestAReplyDoesNotPublishAnAdvisor(t *testing.T) {
 }
 
 func TestAReplyDoesNotPublishAContactAHumanMadePrivate(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "friend@ownchoice.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Hello", "inbound", "thr-human"))
 	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
@@ -138,12 +140,12 @@ func TestAReplyDoesNotPublishAContactAHumanMadePrivate(t *testing.T) {
 // The sink usually mints the record before any verdict arrives, so the
 // decision's reason has to land on a row that already exists.
 func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "notary@ownaffairs.example"
 	seedAttestedOutbound(t, e, "sink-first-out", email, "thr-sink-first")
 	captureInboundThroughRealSink(t, e, e.Rep1, "sink-first-in", email, "thr-sink-first")
-	if reason := narrowingReasonOf(t, e, email); reason != nil {
-		t.Fatalf("the sink recorded %q on a sender nothing has judged yet, want no reason", *reason)
+	if reason := narrowingReasonOf(t, e, email); reason == nil || *reason != string(contacts.NarrowedAwaitingVerdict) {
+		t.Fatalf("the sink recorded %v on a sender nothing has judged yet, want awaiting_verdict", reason)
 	}
 	dispositionID, queued := openDisposition(t, e, email)
 	if !queued {
@@ -160,7 +162,7 @@ func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
 // A row narrowed before the reason existed records none. Absent is not
 // outbound_no_answer, so it refuses rather than guessing.
 func TestAReplyDoesNotPublishAContactThatRecordsNoReason(t *testing.T) {
-	e := integration.Setup(t)
+	e := setupWithOwnMailbox(t)
 	const email = "prospect@beforethecolumn.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-legacy"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
@@ -170,6 +172,112 @@ func TestAReplyDoesNotPublishAContactThatRecordsNoReason(t *testing.T) {
 
 	if visibility, _ := contactVisibility(t, e, email); visibility != "owner" {
 		t.Errorf("a reply published a contact that records no reason: visibility %q", visibility)
+	}
+}
+
+// A reply only a colleague's mailbox caught is no answer to this owner, and it
+// stays none when the owner's own next message arrives.
+func TestAColleaguesReplyDoesNotPublishOnTheOwnersNextMessage(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@colleaguesreply.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col"))
+	captureInboundThroughRealSink(t, e, e.Rep2, "reply-col", email, "thr-col")
+
+	captureInboundThroughRealSink(t, e, e.Rep1, "later-col", email, "thr-col-later")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// A reply on a held thread stays no evidence when a later message from the
+// same address lands on a thread nothing holds.
+func TestAHeldReplyDoesNotPublishOnALaterUnheldMessage(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@heldthenopen.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-held-first"))
+	seedThreadHold(t, e, "thr-held-first", "held")
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-held-first", email, "thr-held-first")
+
+	captureInboundThroughRealSink(t, e, e.Rep1, "later-open", email, "thr-open-later")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// The live hook is not the only chance. A reply whose promotion failed is
+// published by the verdict worker's pass.
+func TestTheVerdictPassPublishesWhatTheLiveHookFailedToPublish(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@lostpromotion.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-lost"))
+	// The owner's grant without contact update: the capture lands and the
+	// live promotion is refused by its own object gate.
+	ctx := mailboxOwnerCtx(e, e.Rep1)
+	actor, _ := principal.Actor(ctx)
+	actor.Permissions.Objects = map[string]principal.ObjectGrant{
+		"activity": {Create: true, Read: true},
+		"contact":  {Create: true, Read: true},
+		"company":  {Create: true, Read: true, Update: true},
+	}
+	captureInboundThroughRealSinkAs(principal.WithActor(ctx, actor), t, e, "reply-lost", email, "thr-lost")
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+
+	publishAnswered(t, e)
+
+	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
+		t.Errorf("the verdict pass left an answered contact %q, want workspace", visibility)
+	}
+}
+
+// Upgrade state: a row narrowed before reasons existed. A later verdict judging
+// the sender a contact must not publish it, since its reason may be a hold.
+func TestALegacyNarrowingIsNotPublishedByALaterVerdict(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "counsel@legacyhold.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-legacy-v"))
+	e.WsExec(t, `UPDATE contact SET narrowing_reason = NULL WHERE id = $1`, contactIDFor(t, e, email))
+	// The same inbound verdict publishes an ordinary contact; see
+	// TestAReplyDoesNotPublishAContactAHumanMadePrivate's first step.
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Re: matter", "inbound", "thr-legacy-v2"))
+
+	if visibility, _ := contactVisibility(t, e, email); visibility != "owner" {
+		t.Errorf("a later verdict published a legacy narrowed contact: visibility %q", visibility)
+	}
+}
+
+// Upgrade state again: a later narrowing decision does not guess a legacy
+// row's reason, so it cannot turn one into something a reply may publish.
+func TestALegacyNarrowingKeepsItsUnknownReason(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "counsel@legacyreason.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-legacy-r"))
+	e.WsExec(t, `UPDATE contact SET narrowing_reason = NULL WHERE id = $1`, contactIDFor(t, e, email))
+
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Again", "outbound", "thr-legacy-r2"))
+
+	if reason := narrowingReasonOf(t, e, email); reason != nil {
+		t.Errorf("a later verdict wrote %q over a legacy row's unknown reason", *reason)
+	}
+}
+
+// setupWithOwnMailbox connects Rep1's mailbox under the shared posture. Its
+// address is what makes a captured reply an import into Rep1's own mailbox,
+// which is the evidence a reply publishes on; the shared posture opens no
+// thread question that would read as a hold.
+func setupWithOwnMailbox(t *testing.T) *integration.Env {
+	t.Helper()
+	e := integration.Setup(t)
+	e.WsExec(t, `
+		INSERT INTO capture_connection
+		       (user_id, provider, status, credential_ref, mail_posture, account_label)
+		VALUES ($1, 'gmail', 'connected', 'vault:test', 'shared', 'a@authz.test')`, e.Rep1)
+	return e
+}
+
+// publishAnswered runs the verdict worker's reconciling pass.
+func publishAnswered(t *testing.T, e *integration.Env) {
+	t.Helper()
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	if err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
+		t.Fatalf("publishing answered contacts: %v", err)
 	}
 }
 
@@ -198,8 +306,11 @@ func requireNarrowed(t *testing.T, e *integration.Env, email string, want contac
 	}
 }
 
+// requireStillNarrowed runs the reconciling pass first, so a refusal holds on
+// both paths that publish on an answer.
 func requireStillNarrowed(t *testing.T, e *integration.Env, email string, want contacts.NarrowingReason) {
 	t.Helper()
+	publishAnswered(t, e)
 	if visibility, _ := contactVisibility(t, e, email); visibility != "owner" {
 		t.Errorf("a reply published a contact narrowed as %q: visibility %q", want, visibility)
 	}

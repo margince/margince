@@ -87,7 +87,8 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.
-		OwnerScoped: true,
+		OwnerScoped:     true,
+		NarrowedBecause: contacts.NarrowedAwaitingVerdict,
 	})
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13: the erased address stays dead — a deliberate no-op, not a
@@ -121,27 +122,11 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 // keeping it the owner's was that the address had not answered yet.
 //
 // Its own transaction, after the ensure committed, and logged rather than
-// returned: the message is already captured, and every later message from an
-// address that has answered carries Replied again, so the next one retries a
-// promotion this one lost.
-//
-// The reply's own thread is asked first, the question the verdict asks before
-// it narrows: an answer on a held thread may not publish its counterparty.
+// returned: the message is already captured, and the verdict worker's
+// PublishAnsweredContactsWorkspace makes any promotion this one loses.
 func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRequest, contactID ids.ContactID) {
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		held, err := capture.ThreadHoldsItsCounterparty(ctx, tx, in.ActivityID)
-		if err != nil {
-			return err
-		}
-		if held {
-			return nil
-		}
-		moved, err := p.store.PromoteOnReplyTx(ctx, tx, contactID, in.OwnerID)
-		if err != nil || !moved {
-			return err
-		}
-		// The mail-side readers ask the ledger, not the contact.
-		return capture.ClearWithheldFromWorkspaceTx(ctx, tx, in.Email)
+		return publishAnsweredTx(ctx, tx, p.store, contactID, in.OwnerID, in.Email)
 	})
 	if err != nil {
 		p.log.ErrorContext(ctx, "capture: publishing a contact on their reply failed",
