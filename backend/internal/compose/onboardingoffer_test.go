@@ -265,3 +265,33 @@ func TestAnOnboardingActMayNotOffer(t *testing.T) {
 		t.Fatal("an act's offer was accepted")
 	}
 }
+
+// A bare yes is decided by whether the previous reply offered anything, so
+// both conversations state it in every request, null included: an omitted
+// field is one the model never saw, and a yes to a plain question then reads
+// as accepting the value the question named.
+func TestEveryCompanyConversationStatesWhetherAnOfferStands(t *testing.T) {
+	offer := &companyReadOffer{Field: "display_name", Value: "Acme", SourceIDs: []string{"S1"}}
+	build := map[string]func(*companyReadOffer) (model.Request, error){
+		"dossier conversation": func(standing *companyReadOffer) (model.Request, error) {
+			return companyReadAnswerRequest("Yes.", nil, nil, standing)
+		},
+		"setup conversation": func(standing *companyReadOffer) (model.Request, error) {
+			return onboardingCompanyAnswerRequest("Yes.", nil, onboardingConversationContext{PreviousOffer: standing}, "en", nil)
+		},
+	}
+	for site, request := range build {
+		for standing, want := range map[*companyReadOffer]string{
+			nil:   `"your_previous_offer":null`,
+			offer: `"your_previous_offer":{"field":"display_name","value":"Acme"`,
+		} {
+			req, err := request(standing)
+			if err != nil {
+				t.Fatalf("%s: building the request: %v", site, err)
+			}
+			if !strings.Contains(req.Messages[0].Content, want) {
+				t.Errorf("%s: the application state does not carry %s:\n%s", site, want, req.Messages[0].Content)
+			}
+		}
+	}
+}

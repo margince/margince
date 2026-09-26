@@ -54,7 +54,7 @@ type onboardingConversationContext struct {
 	CurrentDraft      identity.OnboardingCompanyDraft `json:"current_company_draft"`
 	NextRequired      string                          `json:"next_required_field,omitempty"`
 	RemainingRequired []string                        `json:"remaining_required_fields"`
-	PreviousOffer     *companyReadOffer               `json:"your_previous_offer,omitempty"`
+	PreviousOffer     *companyReadOffer               `json:"your_previous_offer"`
 }
 
 type onboardingResearchState struct {

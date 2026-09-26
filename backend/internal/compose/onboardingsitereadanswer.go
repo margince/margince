@@ -41,7 +41,7 @@ func companyReadAnswerRequest(message string, history []model.Message, evidence 
 	fence := promptfence.New()
 	contextJSON, err := json.Marshal(struct {
 		Dossier       []companyReadEvidence `json:"dossier_evidence"`
-		PreviousOffer *companyReadOffer     `json:"your_previous_offer,omitempty"`
+		PreviousOffer *companyReadOffer     `json:"your_previous_offer"`
 	}{Dossier: evidence, PreviousOffer: offer})
 	if err != nil {
 		return model.Request{}, err

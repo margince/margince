@@ -88,7 +88,7 @@ func TestABareYesAcceptsTheOfferTheServerRecorded(t *testing.T) {
 	if len(reply.ProposedChanges) != 1 || reply.ProposedChanges[0].Value != "Acme" {
 		t.Fatalf("the yes proposed %+v, want exactly the offered display name", reply.ProposedChanges)
 	}
-	if !strings.Contains(brain.request.Messages[0].Content, `"your_previous_offer"`) {
+	if !strings.Contains(brain.request.Messages[0].Content, `"your_previous_offer":{`) {
 		t.Fatalf("the model was not shown the offer it made: %s", brain.request.Messages[0].Content)
 	}
 	if n := env.WsCount(t, `SELECT count(*) FROM site_read WHERE id = $1 AND conversation_offer IS NULL`, read.ID); n != 1 {

@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 45,
+    "sites_best_current": 40,
     "sites_best_partial": 0,
-    "sites_best_stale": 2,
+    "sites_best_stale": 7,
     "sites_absent": 0,
     "scenarios": 156,
     "records": 173,
@@ -664,7 +664,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 75,
           "passed": 63,
           "cases_failing_often": 1,
@@ -760,7 +760,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 8,
           "cases_failing_often": 0,
@@ -936,7 +936,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 81,
           "passed": 77,
           "cases_failing_often": 0,
@@ -3034,9 +3034,9 @@
         "env": "cloud_frontier"
       },
       "sites": 41,
-      "sites_current": 38,
+      "sites_current": 33,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 8,
       "runs": 615,
       "passed": 595,
       "reliability": 0.967479674796748,
@@ -5613,17 +5613,8 @@
       "key": "cold_start/acts",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "supported_degraded",
-        "reliability": 0.8888888888888888,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_factual_question_about_connecting_is_answered",
@@ -5663,9 +5654,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 36,
           "passed": 32,
@@ -5678,7 +5669,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
+            "grader_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ]
+          }
         },
         {
           "binding": {
@@ -5879,17 +5886,8 @@
       "key": "cold_start/company_message",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "supported_degraded",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "bare_answer_corrects_the_field_the_wizard_asked_for",
@@ -5905,9 +5903,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 6,
           "passed": 6,
@@ -5920,7 +5918,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          }
         },
         {
           "binding": {
@@ -6263,17 +6269,8 @@
       "key": "cold_start/sitereadmessage",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "not_supported",
-        "reliability": 0.7037037037037037,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
@@ -6307,9 +6304,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 27,
           "passed": 19,
@@ -6322,7 +6319,21 @@
             "invalid": 8,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change, an_administrator_agreeing_with_a_plain_question_changes_nothing, an_administrator_answering_an_offer_with_another_value_corrects_it, dossier_correction_the_administrator_asked_for",
+          "stale_cause": {
+            "prompt_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+              "an_administrator_agreeing_with_a_plain_question_changes_nothing",
+              "an_administrator_answering_an_offer_with_another_value_corrects_it",
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          }
         },
         {
           "binding": {
@@ -9013,17 +9024,8 @@
         "positioning",
         "proof"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "supported_degraded",
-        "reliability": 0.6666666666666666,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "growth_fit_calls_a_company_outside_our_market_weak",
@@ -9045,9 +9047,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 8,
@@ -9060,7 +9062,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -12488,17 +12500,8 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "dossier_describes_the_company_not_the_relationship",
@@ -12514,9 +12517,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 9,
           "passed": 9,
@@ -12529,7 +12532,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
+            "grader_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ]
+          }
         },
         {
           "binding": {
