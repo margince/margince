@@ -297,12 +297,12 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 			Code:   BlockUnconfirmedDOI,
 		}, nil
 	}
-	allowed, err := existingCustomerAllows(ctx, tx, contactID, marketing.Exception)
-	if err != nil {
-		return Verdict{}, err
-	}
-	if allowed {
-		return Verdict{State: VerdictAllowed, Reason: "existing customer under the jurisdiction's own exception, with the sale and the opt-out notice on file"}, nil
+	// The existing-customer exception a jurisdiction may grant (UWG §7(3)) is
+	// not offered: nothing here can answer its similarity condition, since no
+	// send names the goods it advertises. It refuses whatever the pack declares,
+	// and says so rather than reading as a plain absence of consent.
+	if marketing.Exception != nil {
+		return Verdict{State: VerdictUnknown, Reason: "no consent recorded, and the existing-customer exception is not offered"}, nil
 	}
 	return Verdict{State: VerdictUnknown, Reason: "no consent recorded"}, nil
 }
