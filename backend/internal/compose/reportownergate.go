@@ -88,7 +88,10 @@ func requireMeasurableOwnerValue(ctx context.Context, tx pgx.Tx, key string, val
 	}
 	owner, err := ids.Parse(text)
 	if err != nil {
-		return fmt.Errorf("report filter %s names no seat: %w", key, apperrors.ErrInvalidArgument)
+		// A value that is no id names no seat, so it discloses nobody. The query
+		// refuses it as the caller's mistyped value (422 value_wrong_type), the
+		// answer every other typed column gives.
+		return nil //nolint:nilerr // the bound query answers the malformed value
 	}
 	return requireMeasurableOwner(ctx, tx, owner)
 }
