@@ -35,7 +35,7 @@ func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearab
 		"expected_close_date": {Column: "expected_close_date", Current: current.ExpectedCloseDate},
 		"forecast_category":   {Column: "forecast_category", Current: current.ForecastCategory},
 		"wait_until":          {Column: "wait_until", Current: current.WaitUntil},
-		"owner_id":            {Column: "owner_id", Current: current.OwnerId},
+		"owner_id":            {Column: ownerColumn, Current: current.OwnerId},
 		"company_id":          {Column: "company_id", Current: current.CompanyId},
 		"project_id":          {Column: "project_id", Current: current.ProjectId},
 		"description":         {Column: "description", Current: current.Description},

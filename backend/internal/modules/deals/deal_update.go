@@ -149,9 +149,27 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	if err := recordDealUpdate(ctx, tx, id, current, in, p); err != nil {
 		return crmcontracts.Deal{}, err
 	}
+	if err := s.followPatchedOwner(ctx, tx, id, current, in, p); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("read updated deal: %w", err)
 	}
 	return out, nil
+}
+
+// followPatchedOwner hands the pending proposals on when this update set or
+// cleared the owner.
+func (s *Store) followPatchedOwner(ctx context.Context, tx pgx.Tx, id ids.DealID,
+	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
+) error {
+	if _, touched := p.After()[ownerColumn]; !touched {
+		return nil
+	}
+	var to *ids.UUID
+	if in.OwnerID != nil {
+		to = &in.OwnerID.UUID
+	}
+	return s.followOwnerChange(ctx, tx, id.UUID, current.OwnerId, to)
 }
