@@ -11,6 +11,7 @@ package compose
 // between would let a plan compile against a field the run no longer admits.
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -114,9 +115,14 @@ func (h analyticsQueryHandlers) GetReportRun(
 		httperr.Write(w, r, err)
 		return
 	}
+	asked, err := wireFromQuery(run.Query)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportRun{
 		Id:    openapi_types.UUID(run.ID),
-		Query: wireFromQuery(run.Query),
+		Query: asked,
 		Answer: crmcontracts.AnalyticsAnswer{
 			Columns: run.Answer.Columns, Rows: run.Answer.Rows,
 			Withheld: run.Answer.Withheld, TotalSafe: run.Answer.TotalSafe,
@@ -274,8 +280,22 @@ func documentFromWire(in crmcontracts.ReportDocument) reportdoc.Document {
 // The inverse of queryFromWire, and it exists because a saved run answers with
 // the question it saved: a reader who wants to re-ask it, or ask a neighbouring
 // one, needs it in the vocabulary they would have typed.
-func wireFromQuery(in analyticsquery.Query) crmcontracts.AnalyticsQuery {
+func wireFromQuery(in analyticsquery.Query) (crmcontracts.AnalyticsQuery, error) {
 	out := crmcontracts.AnalyticsQuery{Entity: in.Entity}
+	// The scope ASKED for, which is what the run stored: a re-ask from this
+	// echo resolves it against the re-asker's own lens, as the read did.
+	if in.ScopeKind != "" {
+		kind := in.ScopeKind
+		out.ScopeKind = &kind
+	}
+	if in.ScopeID != "" {
+		id, err := ids.Parse(in.ScopeID)
+		if err != nil {
+			return crmcontracts.AnalyticsQuery{}, fmt.Errorf("compose: a saved run's scope id is not a uuid: %w", err)
+		}
+		scope := openapi_types.UUID(id)
+		out.ScopeId = &scope
+	}
 	if len(in.GroupBy) > 0 {
 		groupBy := in.GroupBy
 		out.GroupBy = &groupBy
@@ -308,7 +328,7 @@ func wireFromQuery(in analyticsquery.Query) crmcontracts.AnalyticsQuery {
 	// Save is NOT carried back. It is an instruction about this call, not a
 	// property of the question — echoing it would describe a saved run as one
 	// that asks to be saved again.
-	return out
+	return out, nil
 }
 
 // ExplainAnalyticsCell implements POST /analytics/explain.

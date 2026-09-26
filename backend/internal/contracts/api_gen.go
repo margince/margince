@@ -1006,6 +1006,27 @@ func (e AnalyticsMeasureFn) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsRefusalDetailsKind.
+const (
+	AnalyticsRefusalDetailsKindInvalid     AnalyticsRefusalDetailsKind = "invalid"
+	AnalyticsRefusalDetailsKindPrivacy     AnalyticsRefusalDetailsKind = "privacy"
+	AnalyticsRefusalDetailsKindUnsupported AnalyticsRefusalDetailsKind = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsRefusalDetailsKind enum.
+func (e AnalyticsRefusalDetailsKind) Valid() bool {
+	switch e {
+	case AnalyticsRefusalDetailsKindInvalid:
+		return true
+	case AnalyticsRefusalDetailsKindPrivacy:
+		return true
+	case AnalyticsRefusalDetailsKindUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsScopeKind.
 const (
 	AnalyticsScopeKindManagedTeams AnalyticsScopeKind = "managed_teams"
@@ -19976,11 +19997,40 @@ type AnalyticsQuery struct {
 	ScopeKind *string `json:"scope_kind,omitempty"`
 }
 
+// AnalyticsRefusal A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type AnalyticsRefusal struct {
+	Code   string  `json:"code"`
+	Detail *string `json:"detail,omitempty"`
+
+	// Details Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose.
+	Details  *AnalyticsRefusalDetails `json:"details,omitempty"`
+	Instance *string                  `json:"instance,omitempty"`
+	Status   int                      `json:"status"`
+	Title    *string                  `json:"title,omitempty"`
+	Type     *string                  `json:"type,omitempty"`
+}
+
+// AnalyticsRefusalDetails Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose.
+type AnalyticsRefusalDetails struct {
+	// Kind `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+	Kind AnalyticsRefusalDetailsKind `json:"kind"`
+
+	// Message What is wrong, in the asker's terms.
+	Message string `json:"message"`
+
+	// Suggest The smallest change that would have worked.
+	Suggest string `json:"suggest"`
+}
+
+// AnalyticsRefusalDetailsKind `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+type AnalyticsRefusalDetailsKind string
+
 // AnalyticsSchema The populations and fields one caller may ask about.
 type AnalyticsSchema struct {
 	Entities []AnalyticsEntity `json:"entities"`
 
-	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
+	// Version Changes when this caller's vocabulary changes. Echoed on every answer as `schema_version`.
 	Version string `json:"version"`
 }
 

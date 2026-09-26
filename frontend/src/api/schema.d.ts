@@ -14137,8 +14137,10 @@ export interface paths {
          *     refusal that says "you may not read that" tells them the column exists.
          *
          *     `version` changes when the vocabulary does, including when one seat's grants change.
-         *     A query planned against an older version is refused rather than run, because a plan
-         *     naming a field that has since moved would render SQL against a column that is gone.
+         *     Every answer echoes the version it was asked in as `schema_version`, so a caller can
+         *     tell whether two answers were asked in the same vocabulary. A query carries no version
+         *     and is judged by the vocabulary current when it runs: a field that has since gone is
+         *     refused by name, like any other field the caller cannot name.
          */
         get: operations["getAnalyticsSchema"];
         put?: never;
@@ -28951,7 +28953,7 @@ export interface components {
         };
         /** @description The populations and fields one caller may ask about. */
         AnalyticsSchema: {
-            /** @description Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run. */
+            /** @description Changes when this caller's vocabulary changes. Echoed on every answer as `schema_version`. */
             version: string;
             entities: components["schemas"]["AnalyticsEntity"][];
         };
@@ -29035,6 +29037,36 @@ export interface components {
              * @description Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
              */
             run_id?: string;
+        };
+        /**
+         * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
+         *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+         */
+        AnalyticsRefusal: {
+            /**
+             * Format: uri
+             * @default about:blank
+             */
+            type: string;
+            title?: string;
+            status: number;
+            code: string;
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            details?: components["schemas"]["AnalyticsRefusalDetails"];
+        };
+        /** @description Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose. */
+        AnalyticsRefusalDetails: {
+            /**
+             * @description `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+             * @enum {string}
+             */
+            kind: "invalid" | "unsupported" | "privacy";
+            /** @description What is wrong, in the asker's terms. */
+            message: string;
+            /** @description The smallest change that would have worked. */
+            suggest: string;
         };
         /** @description A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor. */
         ReportRun: {
@@ -58500,7 +58532,7 @@ export interface operations {
                     "application/json": components["schemas"]["IssuedForecastShare"];
                 };
             };
-            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            /** @description The share cannot be issued as asked: an expiry in the past or past the ceiling, a kind that is neither live nor snapshot, a snapshot naming no state or one taken over a different population, or a scope whose id disagrees with its kind. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -58656,13 +58688,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsAnswer"];
                 };
             };
-            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            /** @description The question is unanswerable as written: a population or field this caller cannot name, a measure that means nothing over that column, an aggregate or comparison the engine does not have, or a filter separating out too few records to answer about. `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58688,6 +58720,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            /** @description The saved question, re-asked for this caller, is refused — the same refusal they would get asking it directly, such as a field outside their own vocabulary. `details` carries the refusal's kind and what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58720,13 +58761,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsExplanation"];
                 };
             };
-            /** @description The cell names a different number of group keys than the saved question grouped by. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. */
+            /** @description The cell names a different number of group keys than the saved question grouped by, or the saved question, re-asked for this caller, is refused. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58757,13 +58798,13 @@ export interface operations {
                     "application/json": components["schemas"]["RenderedReport"];
                 };
             };
-            /** @description The document is not in the block grammar — an unknown block, a literal number, a figure block naming no cell, or an untyped callout. The message names the block by index. */
+            /** @description The document is not in the block grammar — an unknown block, a literal number, a figure block naming no cell, or an untyped callout — and the message names the block by index. Or a cited run's question, re-asked for this reader, is refused, and `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58794,13 +58835,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsExplanation"];
                 };
             };
-            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            /** @description The question is unanswerable as written: a population or field this caller cannot name, a measure that means nothing over that column, an aggregate or comparison the engine does not have, or a filter separating out too few records to answer about. `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
