@@ -138,7 +138,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "d0aaf5a292e7b7684bf4e12f12d3c980f1d3529613145e3524041075b1057ed1"
+const TaskContractHash = "fe618989bc97ba0bcb01faef7d6e9b651b4cf5135d434ad2679ad54c5b4e3058"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

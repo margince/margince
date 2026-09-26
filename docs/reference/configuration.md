@@ -1495,8 +1495,10 @@ cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: l
   at all. Naming `low` on a Flash-Lite therefore *raises* its thinking.
 - **It outranks a site's floor.** A site in `backend/api/ai-tasks.yaml` may
   declare `thinking:` (cold_start's two company conversations declare `low`).
-  That is a floor — at least this much, never less than the model's default —
-  and it applies only where the binding names no level of its own.
+  That is a floor — at least this much, never less than the adapter would send
+  without it — and it applies only where the binding names no level of its own.
+  On a structured request the adapter already sends `low`, under a Gemini 3
+  Flash or Pro model's own default, and a `low` floor does not undo that.
 - **A request's own level wins over both** (`ProviderOptions["gemini"].thinking_level`).
   Strongest first: the request's own level, the binding's, the site floor, the
   adapter's default. What every provider is sent for a floor, including the

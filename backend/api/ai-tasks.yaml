@@ -49,8 +49,11 @@
 #                     a site that names every registered tool.
 #   thinking          on a site in mapping form: the least that site's
 #                     requests think — minimal | low | medium | high. A FLOOR:
-#                     it raises a model that thinks less by default and never
-#                     lowers one that thinks more. Per SITE, never per tier:
+#                     it raises what a request would otherwise be sent and
+#                     never lowers it; a structured Gemini request is already
+#                     sent low, under the model's own default, and a low floor
+#                     leaves it there. Not sent where the adapter cannot map
+#                     it (docs/reference/ai-thinking.md). Per SITE, never per tier:
 #                     one model can answer one prompt better for thinking and
 #                     another worse. It reaches only a request that names its
 #                     site (Request.Site). Precedence: a request's own
