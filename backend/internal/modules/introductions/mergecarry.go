@@ -13,10 +13,10 @@ package introductions
 //
 // intro_request_open_route allows one open ask per (contact, colleague,
 // route). Two asks that were distinct before the merge can be the same ask
-// after it — including two of the retired contact's own, once both of their
-// columns point at the survivor. The older ask stands, the survivor's own
-// before either; the rest are closed as cancelled, the way a requester closes
-// one.
+// after it. The older ask stands, the survivor's own before either; the rest
+// are closed as cancelled, the way a requester closes one. So is an open ask
+// the merge turned into a route through the very contact it is about, which no
+// longer describes a way in.
 
 import (
 	"context"
@@ -32,17 +32,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// mergedDuplicateReason is what a closed duplicate says about itself.
-const mergedDuplicateReason = "the contact was merged into a record that already had this ask open"
+// What an ask the merge closed says about itself.
+const (
+	mergedDuplicateReason = "the contact was merged into a record that already had this ask open"
+	mergedSelfRouteReason = "the contact was merged into the one this route ran through"
+)
 
 // CarryIntrosTx implements contacts.IntroCarrier.
 //
-// contact:update, the grant a contact merge runs under: this rewrites which
-// contact an ask is about, and must not be a way for a caller with no contacts
-// grant to re-home somebody else's asks.
+// contact:update and write authority over both contacts, which is what a
+// contact merge asks: this rewrites which contact an ask is about, and must
+// not let an in-process caller re-home asks between contacts it may not change.
 func (s *Store) CarryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return err
+	}
+	for _, named := range []ids.ContactID{from, to} {
+		if err := auth.EnsureWritable(ctx, tx, "contact", named.UUID); err != nil {
+			return err
+		}
 	}
 	if err := s.closeMergedDuplicates(ctx, tx, from, to); err != nil {
 		return err
@@ -94,13 +102,23 @@ const (
 )
 
 // closeMergedDuplicates cancels every open ask naming the retired contact that
-// would share an open route with an earlier one once both columns are mapped.
-// It runs before the re-home, so the re-home never meets the unique index.
+// would share an open route with an earlier one once both columns are mapped,
+// or that would run through the contact it is about. It runs before the
+// re-home, so the re-home never meets the unique index.
+//
+// Every ask naming either contact is locked first, in id order, so an ask
+// completed while the merge waited is read in its new state and is no longer
+// a candidate; the update is guarded on the status and version it decided on.
 func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
-	open := openStatuses()
+	if _, err := tx.Exec(ctx, `
+		SELECT id FROM intro_request
+		 WHERE contact_id IN ($1, $2) OR through_contact_id IN ($1, $2)
+		 ORDER BY id FOR UPDATE`, from, to); err != nil {
+		return fmt.Errorf("introductions: locking the asks the merge will re-home: %w", err)
+	}
 	rows, err := tx.Query(ctx, `
 		WITH mapped AS (
-			SELECT id, status, requested_at, introducer_user_id AS colleague,
+			SELECT id, status, version, requested_at, introducer_user_id AS colleague,
 			       CASE WHEN contact_id = $1 THEN $2 ELSE contact_id END AS about,
 			       CASE WHEN through_contact_id = $1 THEN $2 ELSE through_contact_id END AS via
 			  FROM intro_request
@@ -108,8 +126,9 @@ func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to i
 			   AND status = ANY($3) AND archived_at IS NULL
 		),
 		losers AS (
-			SELECT m.id, m.status FROM mapped m
-			 WHERE EXISTS (
+			SELECT m.id, m.status, m.version, m.about, m.about = m.via AS self_route FROM mapped m
+			 WHERE m.about = m.via
+			    OR EXISTS (
 			         SELECT 1 FROM intro_request k
 			          WHERE k.contact_id = m.about AND k.introducer_user_id = m.colleague
 			            AND k.through_contact_id IS NOT DISTINCT FROM m.via
@@ -118,50 +137,54 @@ func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to i
 			    OR EXISTS (
 			         SELECT 1 FROM mapped o
 			          WHERE o.about = m.about AND o.colleague = m.colleague
-			            AND o.via IS NOT DISTINCT FROM m.via
+			            AND o.via IS NOT DISTINCT FROM m.via AND o.about <> o.via
 			            AND (o.requested_at, o.id) < (m.requested_at, m.id))
 		)
 		UPDATE intro_request r
-		   SET status = 'cancelled', decision_reason = $4, closed_at = $5,
-		       version = r.version + 1, updated_at = now()
+		   SET status = 'cancelled', closed_at = $6, version = r.version + 1, updated_at = now(),
+		       decision_reason = CASE WHEN losers.self_route THEN $5 ELSE $4 END
 		  FROM losers
-		 WHERE r.id = losers.id
-		RETURNING r.id, losers.status`,
-		from, to, open, mergedDuplicateReason, s.now().UTC())
+		 WHERE r.id = losers.id AND r.status = losers.status AND r.version = losers.version
+		RETURNING r.id, losers.status, losers.about`,
+		from, to, openStatuses(), mergedDuplicateReason, mergedSelfRouteReason, s.now().UTC())
 	if err != nil {
 		return fmt.Errorf("introductions: closing asks the merge made duplicates: %w", err)
 	}
 	type closedAsk struct {
-		id     ids.UUID
-		before Status
+		id, about ids.UUID
+		before    Status
 	}
 	closed, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (closedAsk, error) {
 		var c closedAsk
-		err := row.Scan(&c.id, &c.before)
+		err := row.Scan(&c.id, &c.before, &c.about)
 		return c, err
 	})
 	if err != nil {
 		return fmt.Errorf("introductions: closing asks the merge made duplicates: %w", err)
 	}
 	for _, c := range closed {
-		// The write shape a cancellation lands: the status before and after,
-		// and the closed event. The event names the survivor, the only contact
-		// a consumer can still resolve.
-		auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", c.id,
-			map[string]any{auditedField: string(c.before)},
-			map[string]any{auditedField: string(StatusCancelled)})
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, to.UUID, crmcontracts.PublicEventIntroRequestClosed{
-			IntroRequestId: openapi_types.UUID(c.id),
-			ContactId:      openapi_types.UUID(to.UUID),
-			Reason:         crmcontracts.IntroRequestClosedCancelled,
-		}); err != nil {
+		if err := auditMergeClosedAsk(ctx, tx, c.id, c.about, c.before); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// auditMergeClosedAsk lands the write shape a cancellation lands: the status
+// before and after, and the closed event about the contact the ask is about
+// once re-homed — the one a consumer can still resolve.
+func auditMergeClosedAsk(ctx context.Context, tx pgx.Tx, id, about ids.UUID, before Status) error {
+	auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
+		map[string]any{auditedField: string(before)},
+		map[string]any{auditedField: string(StatusCancelled)})
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, about, crmcontracts.PublicEventIntroRequestClosed{
+		IntroRequestId: openapi_types.UUID(id),
+		ContactId:      openapi_types.UUID(about),
+		Reason:         crmcontracts.IntroRequestClosedCancelled,
+	})
 }
 
 // openStatuses is Open() as a list the database can compare against, derived

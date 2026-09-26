@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -72,8 +73,16 @@ func TestACarryKeepsANarrowAndABroadStopOfOneKindBothOnTheSurvivor(t *testing.T)
 		t.Fatalf("seeding the two stops: %v", err)
 	}
 
-	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		return e.store.CarryStopsTx(e.ctx, tx,
+	// A lead merge runs under lead:update, which is what the carry asks for.
+	merger := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"lead": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if err := e.store.db.Tx(merger, func(tx pgx.Tx) error {
+		return e.store.CarryStopsTx(merger, tx,
 			commsauthz.LeadStopSubject(from), commsauthz.LeadStopSubject(to))
 	}); err != nil {
 		t.Fatalf("carrying: %v", err)

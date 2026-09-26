@@ -19,7 +19,6 @@ package consent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -60,24 +59,19 @@ func (c satelliteCarry) total() int {
 
 // CarrySatellitesTx implements contacts.ConsentSatelliteCarrier.
 //
-// Gated for the reason CarryStopsTx is, by the same three grants: it is
-// exported and rewrites whose links these are.
+// Gated by admitACarry for the reason CarryStopsTx is: it is exported and
+// rewrites whose links these are.
 func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
-	if err := admitAMergingCaller(ctx); err != nil {
+	if err := admitACarry(ctx, tx, from, to); err != nil {
 		return err
-	}
-	if from.IsZero() || to.IsZero() {
-		return errors.New("consent: a carry names both the retiring record and its survivor")
 	}
 	carry := satelliteCarry{moved: map[string][]ids.UUID{}, dropped: map[string][]ids.UUID{}}
 	if err := carrySubjectArmRows(ctx, tx, from, to, carry); err != nil {
 		return err
 	}
 	// The remaining tables name contacts only, so a lead has none to carry.
+	// admitACarry refuses contact to lead, so a contact source has a contact survivor.
 	if !from.ContactID.IsZero() {
-		if to.ContactID.IsZero() {
-			return errors.New("consent: a contact's links cannot be carried onto a lead")
-		}
 		if err := carryContactOnlyRows(ctx, tx, from.ContactID, to.ContactID, carry); err != nil {
 			return err
 		}
