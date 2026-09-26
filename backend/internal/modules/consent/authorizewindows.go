@@ -84,11 +84,9 @@ func (s *Store) packRulesFor(ctx context.Context, tx pgx.Tx) (packRules, error) 
 	if rules.DealFollowUpWindow > 0 && rules.DealFollowUpWindow < out.dealFollow {
 		out.dealFollow = rules.DealFollowUpWindow
 	}
-	// THE EXCEPTION IS THE PACK'S TO GRANT, and a jurisdiction that declares
-	// none grants none. Germany's §7(3) used to be read straight out of a flag
-	// table with no reference to where the installation is, so a Vietnamese
-	// installation — whose pack declares no exceptions at all — took marketing
-	// authority from a German sale.
+	// THE EXCEPTION IS THE PACK'S TO DECLARE, and a jurisdiction that declares
+	// none grants none. A declared one still grants nothing today: the verdict
+	// refuses it and names it in the reason.
 	for i, e := range rules.MarketingExceptions {
 		if e.Kind == messaging.ExistingCustomer {
 			out.marketingException = &rules.MarketingExceptions[i]

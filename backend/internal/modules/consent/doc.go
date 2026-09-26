@@ -9,7 +9,7 @@
 // profiling use; unknown and withdrawn both block.
 //
 // Tables owned: consent_purpose, contact_consent, consent_event,
-// consent_doi_token, consent_qualifying_event, consent_existing_customer_flag,
+// consent_doi_token, consent_qualifying_event,
 // preference_token (the buyer-facing preference center's token→tenant
 // resolver, B-E11.32), withdrawal_credential (the withdrawal-only link that
 // outlives it: it can stop mail and can neither read a consent state nor

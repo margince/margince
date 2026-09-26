@@ -5,83 +5,48 @@
 
 package consent
 
-// The exception against a real flag row: who grants it, and the one condition
-// this tree cannot answer.
+// The existing-customer exception (UWG §7(3)) is not offered: a pack may grant
+// it, and the verdict still refuses, saying why.
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
-// allows runs the evaluator inside a transaction, the way the verdict does.
-func (e *resolveEnv) allows(t *testing.T, exception *messaging.MarketingException) bool {
+func (e *resolveEnv) marketingVerdict(t *testing.T, marketing MarketingContext) Verdict {
 	t.Helper()
-	var out bool
+	purpose := PurposeRow{ID: ids.NewV7().String(), Key: "newsletter", Label: "Newsletter", Class: ClassMarketing}
+	var out Verdict
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = existingCustomerAllows(e.ctx, tx, e.contact.String(), exception)
+		out, err = VerdictForContact(e.ctx, tx, e.contact.String(), purpose, time.Now().Add(-defaultReplyWindow), marketing)
 		return err
 	}); err != nil {
-		t.Fatalf("asking the exception: %v", err)
+		t.Fatalf("reading the verdict: %v", err)
 	}
 	return out
 }
 
-// flag records a sale. contact_id is the primary key, so this is the row.
-func (e *resolveEnv) flag(t *testing.T, saleRef, goods string) {
-	t.Helper()
-	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO consent_existing_customer_flag
-		    (contact_id, sale_reference, collected_at, similar_goods_note, optout_notice_given)
-		VALUES ($1, $2, now(), $3, true)`, e.contact, saleRef, goods); err != nil {
-		t.Fatalf("recording the sale: %v", err)
-	}
-}
-
-// A GERMAN SALE AUTHORIZES NOTHING WHERE NO PACK GRANTS THE EXCEPTION.
-//
-// The flag read used to be a bare EXISTS with no reference to where the
-// installation is, so a Vietnamese installation — whose pack declares no
-// MarketingExceptions at all — took marketing authority from a German sale.
-// extensions/vn/vn.go asserts this cannot happen; until now nothing held it.
-func TestNoPackNoException(t *testing.T) {
+func TestAGrantedExistingCustomerExceptionStillRefusesAndSaysWhy(t *testing.T) {
 	e := setupResolve(t)
-	e.flag(t, "INV-2026-114", "espresso machines")
-
-	if e.allows(t, nil) {
-		t.Fatal("a jurisdiction that grants no exception granted one: evidence of a German sale " +
-			"authorized marketing where §7(3) does not apply")
-	}
-}
-
-// AN EXCEPTION REQUIRING SIMILARITY IS REFUSED, because nothing on a send names
-// the goods it advertises and the transmit phase carries no marketing purpose
-// at all. Approximating it with the purpose key would be satisfiable by an
-// operator typing that key into similar_goods_note.
-func TestSimilarityCannotBeAnsweredSoTheExceptionRefuses(t *testing.T) {
-	e := setupResolve(t)
-	e.flag(t, "INV-2026-114", "espresso machines")
-
-	if e.allows(t, &messaging.MarketingException{
-		Kind: messaging.ExistingCustomer, RequiresSimilarity: true,
-	}) {
-		t.Fatal("allowed on a similarity condition this tree cannot evaluate: one purchase " +
-			"would become a permanent mailing list")
-	}
-}
-
-// AND A PACK THAT DOES NOT REQUIRE SIMILARITY STILL GETS ITS EXCEPTION, so the
-// refusal above is about the condition and not about the exception itself.
-func TestAnExceptionWithoutSimilarityStillApplies(t *testing.T) {
-	e := setupResolve(t)
-	e.flag(t, "INV-2026-114", "espresso machines")
-
-	if !e.allows(t, &messaging.MarketingException{
+	granted := e.marketingVerdict(t, MarketingContext{Exception: &messaging.MarketingException{
 		Kind: messaging.ExistingCustomer, RequiresSaleEvidence: true,
-	}) {
-		t.Fatal("a recorded sale did not satisfy an exception asking only for one")
+	}})
+	if granted.State != VerdictUnknown {
+		t.Fatalf("verdict with the exception granted = %s, want unknown: the exception is not offered", granted.State)
+	}
+	if !strings.Contains(granted.Reason, "existing-customer exception is not offered") {
+		t.Fatalf("reason = %q, want it to say the exception is not offered", granted.Reason)
+	}
+
+	none := e.marketingVerdict(t, MarketingContext{})
+	if none.State != VerdictUnknown || none.Reason != "no consent recorded" {
+		t.Fatalf("verdict with no exception = %+v, want unknown with the plain reason", none)
 	}
 }
