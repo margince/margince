@@ -110,6 +110,7 @@ func TestTheCLIJudgeReportsTheModelThatAnswered(t *testing.T) {
 func TestTheCLIJudgeRunsIsolatedFromTheOperatorsSetup(t *testing.T) {
 	withCredential(t)
 	t.Setenv("ANTHROPIC_API_KEY", "a-second-credential")
+	t.Setenv("ANTHROPIC_BASE_URL", "https://gateway.test")
 	t.Setenv("AICERT_OPERATOR_ONLY", "leaks")
 	proxies := map[string]string{
 		"HTTPS_PROXY": "http://proxy.test:3128", "https_proxy": "http://proxy.test:3129",
@@ -133,11 +134,12 @@ func TestTheCLIJudgeRunsIsolatedFromTheOperatorsSetup(t *testing.T) {
 		!strings.Contains(env, "aicert-claude-judge-") {
 		t.Errorf("pwd = %q, env = %q: want the CLI in, and homed at, its own temp dir", pwd, env)
 	}
-	if strings.Contains(env, "AICERT_OPERATOR_ONLY") || strings.Contains(env, "CLAUDE_CODE_OAUTH_TOKEN") {
-		t.Errorf("env = %q: only the ranked-first credential may reach the CLI", env)
+	if strings.Contains(env, "AICERT_OPERATOR_ONLY") || strings.Contains(env, "ANTHROPIC_API_KEY") ||
+		strings.Contains(env, "ANTHROPIC_BASE_URL") {
+		t.Errorf("env = %q: only the preferred credential, and no gateway, may reach the CLI", env)
 	}
-	if !strings.Contains(env, "ANTHROPIC_API_KEY=a-second-credential") {
-		t.Errorf("env = %q: the credential the CLI ranks first was not passed", env)
+	if !strings.Contains(env, "CLAUDE_CODE_OAUTH_TOKEN=stub-subscription-token") {
+		t.Errorf("env = %q: the subscription token was not preferred over the Console key", env)
 	}
 }
 

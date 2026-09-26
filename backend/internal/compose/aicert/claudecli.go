@@ -42,9 +42,11 @@ const (
 )
 
 // claudeCLICredentials are the variables the CLI authenticates with, in the
-// order the CLI itself ranks them. scripts/lib-llm-credential.sh asks the same
-// question for the shell lanes; neither can call the other, so both keep it.
-var claudeCLICredentials = []string{"ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"}
+// order this lane prefers them: the subscription token first, so a Console key
+// also in .env.local is never billed for a judge the subscription covers. The
+// CLI's own ranking (scripts/lib-llm-credential.sh) differs, and does not
+// apply here: cliEnv hands the CLI the chosen credential alone.
+var claudeCLICredentials = []string{"CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"}
 
 // judgeTransport is the LocalOption that serves a claude_cli judge binding, and
 // nothing for every other binding: the provider judge path is the default and
@@ -186,9 +188,11 @@ func cliPrerequisites() (binary, credential string, err error) {
 }
 
 // cliPassthrough is what the CLI inherits beyond HOME, PATH and its credential:
-// where to write temporary files, and how this host reaches the network.
+// where to write temporary files, and how this host reaches the network. Not
+// ANTHROPIC_BASE_URL: an operator's gateway would receive the subscription
+// token, and grade on a model this lane did not name.
 var cliPassthrough = []string{
-	"TMPDIR", "ANTHROPIC_BASE_URL",
+	"TMPDIR",
 	"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy",
 }
 
