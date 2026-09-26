@@ -53,10 +53,13 @@ func answerArms(inbound, until string) []answerArm {
 	      OR (answer_touch.kind = '` + string(crmcontracts.ActivityKindMeeting) + `'
 	        AND answer_touch.meeting_status = '` + string(crmcontracts.ActivityMeetingStatusHeld) + `'))
 	    AND ` + later("answer_touch")
+	// The kind list in the thread walks restates what the equality already
+	// implies, so the planner can prove idx_activity_thread_reply_seek applies.
 	return []answerArm{
 		{at: "answer_thread.occurred_at", from: `FROM activity answer_thread
 	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
 	    AND answer_thread.kind = ` + inbound + `.kind
+	    AND answer_thread.kind IN ('email', 'message')
 	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_thread.direction = 'outbound'
 	    AND ` + later("answer_thread")},
@@ -64,11 +67,14 @@ func answerArms(inbound, until string) []answerArm {
 	  JOIN activity answer_mail ON answer_mail.counterparty_email = lower(btrim(answer_asker.address))
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
+		// OFFSET 0 keeps the planner walking from the sender's address to the
+		// mail it was named on. Flattened, it scanned every later outbound and
+		// ran the subject expression on each.
 		{at: "answer_mail.occurred_at", from: `FROM activity_participant answer_asker
-	  JOIN activity_participant answer_told
-	    ON lower(answer_told.address) = lower(btrim(answer_asker.address))
-	   AND answer_told.role IN ('to', 'cc')
-	  JOIN activity answer_mail ON answer_mail.id = answer_told.activity_id
+	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity_participant answer_told
+	     JOIN activity answer_mail ON answer_mail.id = answer_told.activity_id
+	     WHERE lower(answer_told.address) = lower(btrim(answer_asker.address))
+	       AND answer_told.role IN ('to', 'cc') OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
 		{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
@@ -130,6 +136,8 @@ func firstAnswerAtSQL(inbound, until string) string {
 // mail as a request. dismissedStillOwed and informsStillOwed are predicates
 // OR-ed in front of them; the hidden-backlog reading passes TRUE to count
 // what one hides, every other caller passes neverRelaxed.
+//
+// The newer-inbound walk names its kinds for the index, as answerArms does.
 func owedSQL(asOf, dismissedStillOwed, informsStillOwed string) string {
 	return `(` + requestOpenSQL + `
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
@@ -140,6 +148,7 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed string) string {
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer
 	         WHERE newer.thread_key = a.thread_key
 	           AND newer.kind = a.kind
+	           AND newer.kind IN ('email', 'message')
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
 	           AND newer.archived_at IS NULL
