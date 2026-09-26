@@ -115,18 +115,56 @@ const preferenceTokenMaxAgeDays = 180
 func (s *Store) ResolvePreferenceToken(ctx context.Context, token string) (PreferenceRef, error) {
 	var ref PreferenceRef
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `
-			SELECT contact_id, contact_email_id FROM preference_token
-			 WHERE token = $1 AND revoked_at IS NULL AND expires_at > now()`,
-			token).Scan(&ref.ContactID, &ref.EmailID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		var err error
+		ref, err = resolvePreferenceTokenTx(ctx, tx, token)
 		return err
 	})
 	if err != nil {
 		return PreferenceRef{}, err
 	}
+	return ref, nil
+}
+
+// resolvePreferenceTokenTx honours a live link and one a merge marked
+// merged_into_survivor (satellitecarry.go). The second opens the survivor's
+// centre at the survivor's live row for the address the link was mailed to —
+// the same page the survivor's own link opens — or at their primary address
+// when they hold that address nowhere live.
+func resolvePreferenceTokenTx(ctx context.Context, tx pgx.Tx, token string) (PreferenceRef, error) {
+	var (
+		ref     PreferenceRef
+		merged  bool
+		address *string
+	)
+	err := tx.QueryRow(ctx, `
+		SELECT pt.contact_id, pt.contact_email_id, pt.revoked_at IS NOT NULL, pe.email
+		  FROM preference_token pt
+		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
+		 WHERE pt.token = $1 AND pt.expires_at > now()
+		   AND (pt.revoked_at IS NULL OR pt.revoked_reason = $2)`,
+		token, PreferenceRevokedMergedIntoSurvivor).Scan(&ref.ContactID, &ref.EmailID, &merged, &address)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PreferenceRef{}, apperrors.ErrNotFound
+	}
+	if err != nil || !merged {
+		return ref, err
+	}
+	ref.EmailID = nil
+	if address == nil {
+		return ref, nil
+	}
+	var survivorRow ids.UUID
+	err = tx.QueryRow(ctx, `
+		SELECT id FROM contact_email
+		 WHERE contact_id = $1 AND lower(email) = lower($2) AND archived_at IS NULL
+		 LIMIT 1`, ref.ContactID, *address).Scan(&survivorRow)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ref, nil
+	}
+	if err != nil {
+		return PreferenceRef{}, err
+	}
+	ref.EmailID = &survivorRow
 	return ref, nil
 }
 

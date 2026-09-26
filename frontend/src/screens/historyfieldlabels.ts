@@ -135,6 +135,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["scope", "history.field.scope"],
   ["stopped", "history.field.stopped"],
   ["stops_carried", "history.field.stops_carried"],
+  ["consent_records_carried", "history.field.consent_records_carried"],
   ["submission_decision", "history.field.submission_decision"],
   ["submission_id", "history.field.submission_id"],
   ["suppression_kind", "history.field.suppression_kind"],

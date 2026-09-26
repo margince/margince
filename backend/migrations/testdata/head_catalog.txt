@@ -4995,7 +4995,7 @@ public.preference_token.preference_token_contact_email_id_fkey FOREIGN KEY (cont
 public.preference_token.preference_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.preference_token.preference_token_pkey PRIMARY KEY (id)
 public.preference_token.preference_token_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))
-public.preference_token.preference_token_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['rotated'::text, 'expired'::text, 'erasure'::text, 'compromise'::text, 'merged_predecessor'::text])))
+public.preference_token.preference_token_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['rotated'::text, 'expired'::text, 'erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'merged_into_survivor'::text])))
 public.preference_token.preference_token_token_key UNIQUE (token)
 public.preference_token.revoked_at timestamp with time zone gen=- def=-
 public.preference_token.revoked_reason text gen=- def=-
