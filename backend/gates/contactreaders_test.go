@@ -177,7 +177,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/contactvisibility.go:patchNarrowingByHand":  "the prior narrowing reason, read only to write its audit before-image. Its one caller is UpdateContact, which asks auth.Require(ctx, \"contact\", update) and auth.EnsureWritable on the row first",
+	"internal/modules/contacts/contactvisibility.go:patchNarrowingByHand":  "the prior narrowing reason, read only to write its audit before-image. Reached from UpdateContact through guardVisibilityWrite; UpdateContact asks auth.Require(ctx, \"contact\", update) and auth.EnsureWritable on the row first",
 	"internal/modules/contacts/narrowing.go:recordNarrowingTx":             "the prior narrowing reason of the row an ensure just resolved, read to decide whether a decision may overwrite it and never returned. Its one caller is ensureContact, which asks auth.Require(ctx, \"contact\", create) first",
 	"internal/compose/contact360/commercial.go:committeeFor":               "the buying committee on a contact page: names, roles and photos of the other seats on the deal. commercialSection asks requireRead(ctx, \"contact\") — the package-local wrapper over auth.Require — before reaching it",
 	"internal/compose/introseams.go:accountContacts":                       "the contacts offered as an introduction route. Its caller asks the contact object gate before composing the seam",

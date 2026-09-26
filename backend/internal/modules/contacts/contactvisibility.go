@@ -161,6 +161,21 @@ func (s *Store) carryHistoryIfPublished(
 	return err
 }
 
+// guardVisibilityWrite is what a visibility write adds to a contact patch: the
+// staleness refusal, then the narrowing reason the write implies.
+func guardVisibilityWrite(
+	ctx context.Context, tx pgx.Tx, p *storekit.Patch, id ids.ContactID,
+	current crmcontracts.Contact, visibility *string,
+) error {
+	if visibility == nil {
+		return nil
+	}
+	if err := refuseStaleVisibility(ctx, tx, id, current); err != nil {
+		return err
+	}
+	return patchNarrowingByHand(ctx, tx, p, id, *visibility)
+}
+
 // patchNarrowingByHand records a human's visibility write as the reason too.
 //
 // Making a contact private is a decision no reply may undo, so it is written as
@@ -168,18 +183,15 @@ func (s *Store) carryHistoryIfPublished(
 // has now said so themselves. Publishing clears it, since a workspace row has
 // nothing narrowed to explain.
 func patchNarrowingByHand(
-	ctx context.Context, tx pgx.Tx, p *storekit.Patch, id ids.ContactID, visibility *string,
+	ctx context.Context, tx pgx.Tx, p *storekit.Patch, id ids.ContactID, visibility string,
 ) error {
-	if visibility == nil {
-		return nil
-	}
 	var before *NarrowingReason
 	if err := tx.QueryRow(ctx,
 		`SELECT narrowing_reason FROM contact WHERE id = $1`, id).Scan(&before); err != nil {
 		return fmt.Errorf("contacts: reading why a contact is private: %w", err)
 	}
 	var after *NarrowingReason
-	if *visibility == visibilityOwner {
+	if visibility == visibilityOwner {
 		decided := NarrowedHumanDecided
 		after = &decided
 	}

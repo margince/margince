@@ -325,9 +325,6 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 			return err
 		}
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
-		if err := patchNarrowingByHand(ctx, tx, p, id, in.Visibility); err != nil {
-			return err
-		}
 		if in.Social != nil || in.Emails != nil || in.Phones != nil {
 			// The relation replacement rides the contact row's version
 			// bump (updated_at below), so If-Match still guards it and
@@ -345,10 +342,8 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 			return nil
 		}
 
-		if in.Visibility != nil {
-			if err := refuseStaleVisibility(ctx, tx, id, current); err != nil {
-				return err
-			}
+		if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
+			return err
 		}
 		if err := p.ApplyGuarded(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
 			if constraint, ok := storekit.CheckViolation(err); ok && constraint == "contact_owner_private_names_its_owner" {
