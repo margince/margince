@@ -66,7 +66,6 @@ var clearedOnlyByTheEraser = gatekit.Waive(map[string]string{
 	"approval":                    "an anonymized subject's staged approvals naming them survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"attachment":                  "an anonymized subject's attachment rows, including files they sent survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"capture_trace":               "an anonymized subject's capture traces, which record what was seen and when survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
-	"comms_outbound":              "an anonymized subject's outbound message rows, which carry what was sent to them survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"deal_room_engagement":        "an anonymized subject's deal-room engagement records survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"deal_room_participant":       "an anonymized subject's deal-room participant seats survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",
 	"deal_room_session":           "an anonymized subject's deal-room sessions survives the action. Recorded as the state this gate froze, not as a decision that it is right — the ruling is #2205.",

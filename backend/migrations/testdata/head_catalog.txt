@@ -7,12 +7,17 @@ public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) =
 public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider)
 public.activity.activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text]))))
 public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL)))
+public.activity.activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
 public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text]))))
 public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_last_activity()
 public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text)))
-public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval)) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot))
+public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + ((
+CASE
+    WHEN booking_interval_exact THEN duration_seconds
+    ELSE 3600
+END)::double precision * '00:00:01'::interval)), '[)'::text) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'::text)))
 public.activity.activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text]))))
 public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL)))
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
@@ -43,6 +48,7 @@ public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
 public.activity.audience_reason text gen=- def=-
 public.activity.body text gen=- def=-
+public.activity.booking_interval_exact boolean NOT NULL gen=- def=false
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
 public.activity.capture_label text gen=- def=-
 public.activity.capture_label_declined_at timestamp with time zone gen=- def=-
@@ -229,7 +235,11 @@ public.activity_meeting_history_by_activity CREATE INDEX activity_meeting_histor
 public.activity_meeting_history_by_status_time CREATE INDEX activity_meeting_history_by_status_time ON public.activity_meeting_history USING btree (status, effective_at)
 public.activity_meeting_history_pkey CREATE UNIQUE INDEX activity_meeting_history_pkey ON public.activity_meeting_history USING btree (id)
 public.activity_meeting_history_source_once CREATE UNIQUE INDEX activity_meeting_history_source_once ON public.activity_meeting_history USING btree (source_system, source_id, status) WHERE (source_system IS NOT NULL)
-public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON public.activity USING gist (host_user_id, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + '01:00:00'::interval))) WHERE ((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot)
+public.activity_meeting_no_overlap CREATE INDEX activity_meeting_no_overlap ON public.activity USING gist (host_user_id, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + ((
+CASE
+    WHEN booking_interval_exact THEN duration_seconds
+    ELSE 3600
+END)::double precision * '00:00:01'::interval)), '[)'::text)) WHERE ((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'::text))
 public.activity_meeting_rsvp_backfill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_rsvp_backfill.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_rsvp_backfill.activity_meeting_rsvp_backfill_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -1244,6 +1254,7 @@ public.booking_page.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.booking_page.host_user_id uuid NOT NULL gen=- def=-
 public.booking_page.id uuid NOT NULL gen=- def=uuidv7()
 public.booking_page.revoked_at timestamp with time zone gen=- def=-
+public.booking_page.scheduling_policy jsonb gen=- def=-
 public.booking_page.slug text NOT NULL gen=- def=-
 public.booking_page_pkey CREATE UNIQUE INDEX booking_page_pkey ON public.booking_page USING btree (id)
 public.booking_page_slug_key CREATE UNIQUE INDEX booking_page_slug_key ON public.booking_page USING btree (slug)
@@ -4601,6 +4612,55 @@ public.maskable_field.field text NOT NULL gen=- def=-
 public.maskable_field.maskable_field_pkey PRIMARY KEY (object, field)
 public.maskable_field.object text NOT NULL gen=- def=-
 public.maskable_field_pkey CREATE UNIQUE INDEX maskable_field_pkey ON public.maskable_field USING btree (object, field)
+public.meeting_invitation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.meeting_invitation.activity_id uuid NOT NULL gen=- def=-
+public.meeting_invitation.appointment jsonb NOT NULL gen=- def=-
+public.meeting_invitation.attempts integer NOT NULL gen=- def=0
+public.meeting_invitation.calendar_id text NOT NULL gen=- def=-
+public.meeting_invitation.cleanup_complete boolean NOT NULL gen=- def=false
+public.meeting_invitation.command text NOT NULL gen=- def='create'::text
+public.meeting_invitation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.meeting_invitation.host_user_id uuid NOT NULL gen=- def=-
+public.meeting_invitation.lease_until timestamp with time zone gen=- def=-
+public.meeting_invitation.management_hash text NOT NULL gen=- def=-
+public.meeting_invitation.management_ref text NOT NULL gen=- def=-
+public.meeting_invitation.meeting_invitation_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.meeting_invitation.meeting_invitation_command_check CHECK ((command = ANY (ARRAY['create'::text, 'update'::text, 'cancel'::text])))
+public.meeting_invitation.meeting_invitation_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
+public.meeting_invitation.meeting_invitation_management_hash_key UNIQUE (management_hash)
+public.meeting_invitation.meeting_invitation_pkey PRIMARY KEY (activity_id)
+public.meeting_invitation.meeting_invitation_provider_check CHECK ((provider = ANY (ARRAY['gcal'::text, 'graphcal'::text])))
+public.meeting_invitation.meeting_invitation_reminder_status_check CHECK ((reminder_status = ANY (ARRAY['off'::text, 'pending'::text, 'queued'::text, 'unavailable'::text])))
+public.meeting_invitation.meeting_invitation_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'rescheduling'::text, 'canceling'::text, 'needs_attention'::text, 'canceled'::text, 'erased'::text])))
+public.meeting_invitation.next_attempt_at timestamp with time zone NOT NULL gen=- def=now()
+public.meeting_invitation.provider text NOT NULL gen=- def=-
+public.meeting_invitation.public_intent jsonb gen=- def=-
+public.meeting_invitation.receipt jsonb gen=- def=-
+public.meeting_invitation.reminder_status text NOT NULL gen=- def='off'::text
+public.meeting_invitation.status text NOT NULL gen=- def=-
+public.meeting_invitation.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.meeting_invitation.version bigint NOT NULL gen=- def=1
+public.meeting_invitation_due CREATE INDEX meeting_invitation_due ON public.meeting_invitation USING btree (next_attempt_at) WHERE (status = ANY (ARRAY['pending'::text, 'rescheduling'::text, 'canceling'::text]))
+public.meeting_invitation_management_hash_key CREATE UNIQUE INDEX meeting_invitation_management_hash_key ON public.meeting_invitation USING btree (management_hash)
+public.meeting_invitation_pkey CREATE UNIQUE INDEX meeting_invitation_pkey ON public.meeting_invitation USING btree (activity_id)
+public.meeting_invitation_public_intent CREATE UNIQUE INDEX meeting_invitation_public_intent ON public.meeting_invitation USING btree (((public_intent ->> 'key_hash'::text))) WHERE (public_intent IS NOT NULL)
+public.meeting_proposal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.meeting_proposal.activity_id uuid NOT NULL gen=- def=-
+public.meeting_proposal.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.meeting_proposal.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.meeting_proposal.host_user_id uuid NOT NULL gen=- def=-
+public.meeting_proposal.invitation_id uuid gen=- def=-
+public.meeting_proposal.link_ref text NOT NULL gen=- def=-
+public.meeting_proposal.meeting_proposal_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.meeting_proposal.meeting_proposal_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
+public.meeting_proposal.meeting_proposal_invitation_id_fkey FOREIGN KEY (invitation_id) REFERENCES meeting_invitation(activity_id) ON DELETE SET NULL
+public.meeting_proposal.meeting_proposal_pkey PRIMARY KEY (activity_id)
+public.meeting_proposal.meeting_proposal_token_hash_key UNIQUE (token_hash)
+public.meeting_proposal.request jsonb NOT NULL gen=- def=-
+public.meeting_proposal.token_hash text NOT NULL gen=- def=-
+public.meeting_proposal.used_at timestamp with time zone gen=- def=-
+public.meeting_proposal_pkey CREATE UNIQUE INDEX meeting_proposal_pkey ON public.meeting_proposal USING btree (activity_id)
+public.meeting_proposal_token_hash_key CREATE UNIQUE INDEX meeting_proposal_token_hash_key ON public.meeting_proposal USING btree (token_hash)
 public.move_last_activity(tbl regclass, rid uuid) secdef=false cfg=- acl=- 
 DECLARE
   v timestamptz;

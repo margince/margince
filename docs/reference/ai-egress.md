@@ -117,6 +117,7 @@ a processing record can be written from the rows marked yes.
 | Receives | Personal data | What it can see | How to prevent it |
 |---|---|---|---|
 | Brave Search API | yes | a contact's name and employer, as a search query | MARGINCE_BRAVE_API_KEY unset (the default) leaves web search disabled |
+| Google Calendar or Microsoft Graph | yes | attendee addresses, meeting title, description, time, location and a guest management link; calendar queries identify the host and requested time window | the host connects a calendar and authorizes scheduling; disconnecting its credential prevents further calls |
 | Google's OAuth token endpoint | yes | the signing-in user's authorization code | the Google sign-in method |
 | Nominatim / OpenStreetMap | yes | a postal address, which on a contact record is somebody's | the geocoding provider setting |
 | a model vendor's public catalogue | no | — | asked once per installation during setup |

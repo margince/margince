@@ -150,11 +150,9 @@ type JobRunnerConfig struct {
 	// AgentScheduler carries the Surface-B dispatcher's cadence and the runner
 	// one workspace's pass ticks (jobs_agentscheduler.go).
 	AgentScheduler AgentSchedulerConfig
-	// GmailRegistry is the connector registry every capture pass resolves a
-	// connection and its credentials through. Nil is a deployment with no
-	// Google OAuth app configured: the sync dispatcher, the per-connection
-	// sync, the backfill pager and the morning digest all register nothing,
-	// because not one of them can reach a mailbox without it.
+	// GmailRegistry is the shared capture registry, including Google and Microsoft
+	// calendars. Nil disables capture and calendar-delivery jobs; the historical
+	// field name does not limit the registered providers.
 	GmailRegistry *capture.Registry
 	// GmailWatch carries the push-watch maintenance pass's cadence and the
 	// Pub/Sub topic a watch is registered against. An empty Topic is a
@@ -409,6 +407,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addAuthzDisagreementWorker(reg, pool, log)
 
 	periodic := slices.Concat(
+		addMeetingDeliveryJob(reg, pool, cfg),
 		// The passes that register themselves: each helper wires its own
 		// workers and hands back the schedules that go with them, so this
 		// wiring stays one line as those surfaces grow.

@@ -191,7 +191,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "book.tellThemYourself",
     "captureSettings.signatureEnrich.help",
     "compose.audienceParticipantsHint",
     "compose.audienceSelected",
@@ -348,8 +347,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "book.attendee",
-    "book.tellThemYourself",
     "buyer.contact",
     "buyer.contactEyebrow",
     "buyer.deadAskContact",

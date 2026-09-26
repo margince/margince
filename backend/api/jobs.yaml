@@ -1680,3 +1680,16 @@ kinds:
     opts_owner: args
     cadence: {operator: WebhookRetry.Interval, schedule_when_positive: WebhookRetry.Interval}
     registration: {when: [WebhookRetry.Deliverer], absent: registers_nothing}
+
+  meeting_delivery:
+    role: worker
+    registration: {when: [GmailRegistry], absent: registers_nothing}
+    go_type: MeetingDeliveryArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 15s
+    reason: >-
+      Calendar commands survive request disconnects and worker restarts. A bounded
+      pass retries stable provider identities while reservations remain held.

@@ -2079,12 +2079,28 @@ func (stubs) GetPublicAvailability(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "GetPublicAvailability")
 }
 
+func (stubs) GetPublicSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "GetPublicSchedulingProfile")
+}
+
 func (stubs) GetConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
 	httperr.NotImplemented(w, r, "GetConfirmDetails")
 }
 
 func (stubs) SubmitConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
 	httperr.NotImplemented(w, r, "SubmitConfirmDetails")
+}
+
+func (stubs) GetPublicMeetingInvitation(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "GetPublicMeetingInvitation")
+}
+
+func (stubs) ChangePublicMeetingInvitation(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "ChangePublicMeetingInvitation")
+}
+
+func (stubs) GetPublicMeetingAvailability(w nethttp.ResponseWriter, r *nethttp.Request, token string, params crmcontracts.GetPublicMeetingAvailabilityParams) {
+	httperr.NotImplemented(w, r, "GetPublicMeetingAvailability")
 }
 
 func (stubs) GetPreferenceCenter(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
@@ -2101,6 +2117,18 @@ func (stubs) PublicStopContact(w nethttp.ResponseWriter, r *nethttp.Request, tok
 
 func (stubs) OneClickUnsubscribe(w nethttp.ResponseWriter, r *nethttp.Request, token string, params crmcontracts.OneClickUnsubscribeParams) {
 	httperr.NotImplemented(w, r, "OneClickUnsubscribe")
+}
+
+func (stubs) GetPublicMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "GetPublicMeetingProposal")
+}
+
+func (stubs) AcceptPublicMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "AcceptPublicMeetingProposal")
+}
+
+func (stubs) GetPublicProposalAvailability(w nethttp.ResponseWriter, r *nethttp.Request, token string, params crmcontracts.GetPublicProposalAvailabilityParams) {
+	httperr.NotImplemented(w, r, "GetPublicProposalAvailability")
 }
 
 func (stubs) ListBuyerRoomDocuments(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -2297,6 +2325,38 @@ func (stubs) RescheduleScheduledSend(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) CancelScheduledSend(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "CancelScheduledSend")
+}
+
+func (stubs) GetSchedulingCalendars(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSchedulingCalendarsParams) {
+	httperr.NotImplemented(w, r, "GetSchedulingCalendars")
+}
+
+func (stubs) CreateMeetingInvitation(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateMeetingInvitationParams) {
+	httperr.NotImplemented(w, r, "CreateMeetingInvitation")
+}
+
+func (stubs) GetMeetingInvitation(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetMeetingInvitation")
+}
+
+func (stubs) ChangeMeetingInvitation(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ChangeMeetingInvitation")
+}
+
+func (stubs) GetMeetingAvailability(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.GetMeetingAvailabilityParams) {
+	httperr.NotImplemented(w, r, "GetMeetingAvailability")
+}
+
+func (stubs) GetSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetSchedulingProfile")
+}
+
+func (stubs) PutSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PutSchedulingProfile")
+}
+
+func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateMeetingProposalParams) {
+	httperr.NotImplemented(w, r, "CreateMeetingProposal")
 }
 
 func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SearchParams) {

@@ -229,6 +229,7 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 			Subject:         rec.Activity.Subject,
 			Body:            rec.Activity.Body,
 			OccurredAt:      rec.Activity.OccurredAt,
+			DurationSeconds: rec.Activity.DurationSeconds,
 			Direction:       rec.Activity.Direction,
 		},
 		Source:       r.sourceSystem(rec.System),

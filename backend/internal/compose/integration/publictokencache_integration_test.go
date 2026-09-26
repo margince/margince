@@ -41,6 +41,13 @@ package integration
 //   COVERS: GET /public/confirm/{token}
 //   COVERS: POST /public/confirm/{token}
 
+//   COVERS: GET /public/meeting/{token}
+//   COVERS: PATCH /public/meeting/{token}
+//   COVERS: GET /public/meeting/{token}/availability
+//   COVERS: GET /public/proposal/{token}
+//   COVERS: POST /public/proposal/{token}
+//   COVERS: GET /public/proposal/{token}/availability
+
 import (
 	"context"
 	"net/http"
@@ -341,4 +348,18 @@ func freshExpiredConfirmToken(t *testing.T, c *consentEnv) string {
 		t.Fatalf("ageing the confirm link past its TTL: %v", err)
 	}
 	return token
+}
+
+func TestMeetingCapabilityRefusalsAreUncacheable(t *testing.T) {
+	c := setupConsent(t)
+	driven := assertNoStore(t, c.AppEnv, []tokenCase{
+		{"unknown management token", "GET", "/v1/public/meeting/unknown", nil},
+		{"unknown management mutation", "PATCH", "/v1/public/meeting/unknown", AnyMap{"action": "cancel", "version": 1}},
+		{"unknown meeting availability", "GET", "/v1/public/meeting/unknown/availability", nil},
+		{"unknown proposal token", "GET", "/v1/public/proposal/unknown", nil},
+		{"unknown proposal acceptance", "POST", "/v1/public/proposal/unknown", AnyMap{}},
+		{"unknown proposal availability", "GET", "/v1/public/proposal/unknown/availability", nil},
+	})
+	assertClaimed(t, driven, "/public/meeting/")
+	assertClaimed(t, driven, "/public/proposal/")
 }

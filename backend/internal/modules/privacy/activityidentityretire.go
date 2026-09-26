@@ -40,5 +40,28 @@ func retireActivityIdentities(ctx context.Context, tx pgx.Tx, activityIDs []ids.
 		DELETE FROM activity_identity WHERE activity_id = ANY($1)`, activityIDs); err != nil {
 		return fmt.Errorf("privacy: retiring the erased messages' external identities: %w", err)
 	}
+	return eraseMeetingProposals(ctx, tx, activityIDs)
+}
+
+func eraseMeetingProposals(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	args := []any{activityIDs}
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`DELETE FROM meeting_proposal WHERE activity_id=ANY($%d)`, len(args)), args...); err != nil {
+		return err
+	}
 	return nil
+}
+
+func eraseContactMeetingCapabilities(ctx context.Context, tx pgx.Tx, contact ids.UUID, payloads PayloadPurger) error {
+	rows, err := tx.Query(ctx, `SELECT activity_id FROM activity_link WHERE contact_id=@contact`, pgx.NamedArgs{contactObject: contact})
+	if err != nil {
+		return err
+	}
+	activityIDs, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return err
+	}
+	if err := erasePayloads(ctx, tx, activityIDs, payloads); err != nil {
+		return err
+	}
+	return eraseMeetingProposals(ctx, tx, activityIDs)
 }

@@ -50,6 +50,7 @@ func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 		`strings\.EqualFold|slices\.Contains|map\[string\]|==\s*\w+\b`)
 
 	var found []string
+	oauthScopeComparison := false
 	for _, e := range entries {
 		name := e.Name()
 		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
@@ -65,9 +66,17 @@ func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 			at := bytes.Index(body, decl)
 			window := body[at:min(at+600, len(body))]
 			if compares.Match(window) {
+				if name == "registry_calendar.go" && bytes.HasPrefix(decl, []byte("func calendarWriteGranted(")) {
+					// Provider scopes are OAuth grants, not sender addresses.
+					oauthScopeComparison = true
+					continue
+				}
 				found = append(found, name)
 			}
 		}
+	}
+	if !oauthScopeComparison {
+		t.Fatal("the ratified calendar OAuth scope comparison was not found")
 	}
 	if len(found) == 0 {
 		// Under-recognition is the one way this gate must not fail: a scan that

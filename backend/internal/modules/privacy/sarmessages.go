@@ -10,7 +10,11 @@ package privacy
 // to check when it is not interleaved with the identity and provenance
 // sections.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/ids"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // sarMessagingSections gather both directions of the messaging boundary: what
 // capture decided about mail arriving from the subject, and what this
@@ -227,7 +231,7 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 			[]any{contactID.UUID, leads, addressPatterns(emails)},
 		},
 	}
-	return append(sections, sarDraftSection(pkg, contactID, emails, leads))
+	return append(append(sections, sarMeetingSections(pkg, contactID)...), sarDraftSection(pkg, contactID, emails, leads))
 }
 
 // sarDraftSection exports the drafts subjectDraftMatch names — the same rows
@@ -246,5 +250,13 @@ func sarDraftSection(pkg *SARPackage, contactID ids.ContactID, emails []string, 
 		   FROM mail_draft d
 		   WHERE ` + subjectDraftMatch,
 		[]any{contactID.UUID, leads, loweredAddresses(emails)},
+	}
+}
+
+func sarMeetingSections(pkg *SARPackage, contact ids.ContactID) []sarSection {
+	args := []any{contact.UUID}
+	return []sarSection{
+		{&pkg.MeetingProposals, fmt.Sprintf(`SELECT DISTINCT p.request,p.expires_at,p.used_at,p.created_at FROM meeting_proposal p JOIN activity_link l ON l.activity_id=p.activity_id WHERE l.contact_id=$%d`, len(args)), args},
+		{&pkg.MeetingInvitations, fmt.Sprintf(`SELECT DISTINCT i.appointment-'PassportID'-'RequestID'-'EventID'-'CalendarID' AS appointment,i.status,i.command,i.created_at,i.updated_at FROM meeting_invitation i JOIN activity_link l ON l.activity_id=i.activity_id WHERE l.contact_id=$%d`, len(args)), args},
 	}
 }

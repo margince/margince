@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// This file is the Google Calendar provider I/O: the read-only Calendar v3
+// This file is the Google Calendar provider I/O: the Calendar v3 capture
 // REST calls the connector needs. The authorized-GET transport and the OAuth2
 // handshake are the SHARED Google plumbing (capture/googleconn) — this file
 // owns only the Calendar-specific endpoints (primary-calendar owner, the
@@ -36,8 +36,7 @@ const (
 	googleTokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101 false positive: Google's public OAuth token *endpoint URL*, not a credential
 )
 
-// calendarReadonlyScope is the single Google scope the read-only calendar
-// connector requests (event read; no write).
+// calendarReadonlyScope covers capture and occupancy reads.
 const calendarReadonlyScope = "https://www.googleapis.com/auth/calendar.readonly"
 
 // initialBackfillDays bounds the first sync's window so a long calendar history
@@ -81,7 +80,7 @@ type OAuthConfig struct {
 }
 
 // NewOAuth builds the calendar OAuth client on the shared oauthflow handshake.
-// It is a SEPARATE Google authorization from Gmail's (calendar.readonly only),
+// It is a separate Google authorization from Gmail's,
 // and deliberately omits include_granted_scopes: incremental authorization
 // would let a calendar consent granted after a Gmail one silently accrue the
 // mail-read scope into this credential, breaking the per-connector scope
@@ -100,7 +99,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Provider:     connectorName,
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		Scopes:       []string{calendarReadonlyScope},
+		Scopes:       []string{calendarReadonlyScope, "https://www.googleapis.com/auth/calendar.events.owned"},
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
 		// Google needs offline access + a forced consent prompt to return a
@@ -164,24 +163,24 @@ func (a *httpAPI) PrimaryOwner(ctx context.Context, accessToken string) (string,
 func (a *httpAPI) ListInitial(ctx context.Context, accessToken string) ([][]byte, string, error) {
 	timeMin := a.now().UTC().AddDate(0, 0, -initialBackfillDays).Format(time.RFC3339)
 	q := url.Values{
-		"singleEvents": {qTrue}, // expand recurrences → each instance is its own keyable event
+		calendarSingleEvents: {qTrue}, // expand recurrences → each instance is its own keyable event
 		// showDeleted stays true across the whole sync lifecycle: Google rejects
 		// showDeleted=false alongside a syncToken, so the initial full sync must
 		// use the SAME parameter set the incremental sync will. Cancelled events
 		// are dropped by the mapper, not the query.
-		"showDeleted": {qTrue},
-		"maxResults":  {strconv.Itoa(pageSize)},
-		"timeMin":     {timeMin},
+		"showDeleted":      {qTrue},
+		calendarMaxResults: {strconv.Itoa(pageSize)},
+		"timeMin":          {timeMin},
 	}
 	return a.listPages(ctx, accessToken, q)
 }
 
 func (a *httpAPI) ListIncremental(ctx context.Context, accessToken, syncToken string) ([][]byte, string, error) {
 	q := url.Values{
-		"singleEvents": {qTrue}, // must match the initial sync's expansion
-		"showDeleted":  {qTrue}, // deletions arrive as status=cancelled — the mapper drops them
-		"maxResults":   {strconv.Itoa(pageSize)},
-		"syncToken":    {syncToken},
+		calendarSingleEvents: {qTrue}, // must match the initial sync's expansion
+		"showDeleted":        {qTrue}, // deletions arrive as status=cancelled — the mapper drops them
+		calendarMaxResults:   {strconv.Itoa(pageSize)},
+		"syncToken":          {syncToken},
 	}
 	return a.listPages(ctx, accessToken, q)
 }

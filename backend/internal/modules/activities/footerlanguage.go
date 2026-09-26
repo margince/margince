@@ -83,7 +83,7 @@ func (e *PublicOriginUnusableError) Error() string {
 
 // MessageFault names the condition and who must act on it.
 func (e *PublicOriginUnusableError) MessageFault() (string, string) {
-	return "public_origin_unusable", "This message carries an unsubscribe link, and " + e.Reason +
+	return "public_origin_unusable", "This action includes a private link, and " + e.Reason +
 		" — an administrator must set the installation's public address before it can be sent."
 }
 

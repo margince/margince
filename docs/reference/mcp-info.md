@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 76 |
+| Tools | 77 |
 | Resources | 12 |
-| Tool catalog | 219.8 KB |
+| Tool catalog | 221.9 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57413 |
+| Approx. wire tokens | 57948 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 57.5 KB | 26% | Yes, every step |
-| Input schemas | 46.7 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
-| **Description + input schema** | **104.2 KB** | **47%** | **the recurring cost** |
+| Output schemas | 100.7 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 57.6 KB | 25% | Yes, every step |
+| Input schemas | 47.3 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.2 KB | 7% | Partly |
+| **Description + input schema** | **104.9 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -60,7 +60,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (76)
+### Tools (77)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -70,9 +70,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
-| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
+| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.7 KB |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
@@ -99,6 +99,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
+| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.5 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
@@ -1370,7 +1371,7 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
 
 **Book a meeting**
 
-Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, and by default it is taken when this call answers — where an installation has raised this verb to confirm first, the answer is a staged approval instead. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope "send".)
+Record a meeting against linked CRM records without sending an invitation. Reserves the recorded interval locally. It does not create a calendar event or notify attendees. Needs at least one record link. Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past meeting. Keep the recorded activity id. Do not describe a record-only booking as an invitation sent. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -1774,7 +1775,7 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
 
 **Check calendar availability**
 
-Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. `calendar_backing` says what the window rests on: with no calendar connected the slots are only what meetings recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, because another colleague's connector state is theirs. Unless it says `calendar`, a free window is no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope "read".)
+Find candidate times for a host without booking or sending anything. Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability. Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -1796,6 +1797,11 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
       "description": "Defaults to the acting principal's user",
       "format": "uuid",
       "type": "string"
+    },
+    "reliable": {
+      "default": false,
+      "description": "Require live calendar occupancy and booking policy; fails if unavailable",
+      "type": "boolean"
     },
     "to": {
       "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -6087,6 +6093,192 @@ Find a warm route into a company: who we already know there, and which colleague
         "candidates_truncated",
         "company_id",
         "routes"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### invite_meeting
+
+**Send a calendar invitation**
+
+Create a real calendar invitation for one contact and notify their chosen address. Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification. Use book_meeting only to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times. Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation. (Governance: a human approves every call before it runs; requires passport scope "send".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "attendee_email": {
+      "type": "string"
+    },
+    "contact_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "end": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "start": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "attendee_email",
+    "contact_id",
+    "description",
+    "end",
+    "location",
+    "start",
+    "subject"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "calendar_url": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "management_token": {
+          "type": "string"
+        },
+        "reminder_status": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "end",
+        "id",
+        "location",
+        "start",
+        "status",
+        "subject",
+        "version"
       ],
       "type": "object"
     },

@@ -222,7 +222,7 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 	// booking and marketing outcomes are two such facts, and the booker needs
 	// the second, because a ticked box whose question could not be asked leaves
 	// them waiting for a mail that is not coming.
-	allowed := map[string]bool{"start": true, "end": true, "booking": true, "marketing": true}
+	allowed := map[string]bool{"start": true, "end": true, "booking": true, "marketing": true, "invitation": true}
 	for key := range confirmation {
 		if !allowed[key] {
 			t.Fatalf("confirmation discloses %q, which is not the slot or the outcome of this "+
@@ -316,42 +316,45 @@ func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base 
 	}
 }
 
-// assertIdempotencyKeyNotClaimed checks the anonymous edge does NOT run
-// transport idempotency: every visitor shares one system principal, so a
-// per-principal claim scope would replay one visitor's confirmation to
-// another (see idempotentOperations' exemption). A keyed retry therefore
-// re-executes and the slot's natural key refuses it — a duplicate meeting
-// never lands, but neither does a stranger's recorded response.
-func assertIdempotencyKeyNotClaimed(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent AnyMap) {
+func assertPublicBookingRecovery(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent AnyMap) {
 	t.Helper()
-	replayKey := map[string]string{"Idempotency-Key": "public-replay-1"}
-	third := AnyMap{
-		"start": monday.Add(5 * time.Hour), "end": monday.Add(5*time.Hour + 30*time.Minute),
-		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
-		"consent": consent,
+	headers := map[string]string{"Idempotency-Key": "fa87b092-7bc7-497a-907f-8623f797cfac"}
+	body := AnyMap{
+		"start": monday.Add(5 * time.Hour), "end": monday.Add(330 * time.Minute),
+		"booker": AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"}, "consent": consent,
 	}
-	if status := publicCall(t, e, "POST", base, third, replayKey, nil); status != http.StatusCreated {
-		t.Fatalf("keyed booking → %d", status)
+	var first, retry struct {
+		Invitation struct {
+			ID    string `json:"id"`
+			Token string `json:"management_token"`
+		} `json:"invitation"`
 	}
-	var problem struct {
-		Code string `json:"code"`
+	if status := publicCall(t, e, "POST", base, body, headers, &first); status != http.StatusCreated {
+		t.Fatalf("keyed booking: %d", status)
 	}
-	if status := publicCall(t, e, "POST", base, third, replayKey, &problem); status != http.StatusConflict || problem.Code != "slot_taken" {
-		t.Fatalf("keyed retry → %d %q, want 409 slot_taken (the header is ignored on the anonymous edge; the slot guard refuses the duplicate)", status, problem.Code)
+	if status := publicCall(t, e, "POST", base, body, headers, &retry); status != http.StatusCreated {
+		t.Fatalf("booking recovery: %d", status)
+	}
+	if first.Invitation.ID == "" || first.Invitation.Token == "" || first != retry {
+		t.Fatal("retry must recover the same invitation and management capability")
+	}
+	body["subject"] = "Different request"
+	if status := publicCall(t, e, "POST", base, body, headers, nil); status != http.StatusConflict {
+		t.Fatalf("changed request reuses capability: %d", status)
 	}
 	var meetings int
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM activity WHERE kind = 'meeting'`).Scan(&meetings); err != nil {
+	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM activity WHERE kind = 'meeting'`).Scan(&meetings); err != nil {
 		t.Fatal(err)
 	}
 	if meetings != 4 {
-		t.Fatalf("%d meetings landed, want 4 (the retry applied nothing)", meetings)
+		t.Fatalf("%d meetings, want 4 without a duplicate", meetings)
 	}
 }
 
 func TestPublicBookingEndToEnd(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	slug := bookingSlug(t, e)
 	monday := nextMonday()
 	purposeID := seededTransactionalPurposeID(t, e)
@@ -375,14 +378,15 @@ func TestPublicBookingEndToEnd(t *testing.T) {
 		t.Fatalf("double-book → %d %q, want 409 slot_taken", status, problem.Code)
 	}
 
-	assertIdempotencyKeyNotClaimed(t, e, base, monday, consent)
+	assertPublicBookingRecovery(t, e, base, monday, consent)
 }
 
 // The anonymous surface is throttled per slug: a flood of booking posts
 // meets 429 long before it meets the calendar.
 func TestPublicBookingRateLimited(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	slug := bookingSlug(t, e)
 
 	last := 0
@@ -410,8 +414,9 @@ func TestPublicBookingRateLimited(t *testing.T) {
 // would answer 201 too, having written a stranger a grant under a marketing
 // lane they never saw.
 func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	monday := nextMonday()
 

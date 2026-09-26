@@ -34,7 +34,7 @@ import (
 // so the chi RoutePattern the map is keyed by is bound).
 func keyedTemplateRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
 	r := chi.NewRouter()
-	r.With(idempotency(e.Pool, nil)).Post("/v1/offer-templates", handler)
+	r.With(idempotency(e.Pool, nil, nil)).Post("/v1/offer-templates", handler)
 	return r
 }
 
@@ -110,7 +110,7 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 // replayScope probes, wired per-route so the chi RoutePattern binds.
 func keyedContactRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
 	r := chi.NewRouter()
-	r.With(idempotency(e.Pool, nil)).Patch("/v1/contacts/{id}", handler)
+	r.With(idempotency(e.Pool, nil, nil)).Patch("/v1/contacts/{id}", handler)
 	return r
 }
 

@@ -79,6 +79,7 @@ var graphScopes = []string{"offline_access", "User.Read", "Mail.Read", graph.Sen
 // workspace's own, edited in the settings surface and read per transaction, so
 // a correction takes effect on the next message instead of the next restart.
 type CaptureConfig struct {
+	bookingVault       keyvault.Vault
 	TransactionalExtra []string // capture.transactional_extra (CAP-PARAM-6 infra eSLDs)
 	TransactionalNever []string // capture.transactional_never (CAP-PARAM-6 allowlist)
 	// TracePayloads is capture.trace_payloads, already resolved against its
@@ -178,6 +179,7 @@ func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureCo
 // that takes it that way — asking which transports this binary compiled in is a
 // question about the binary, not about any database.
 func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureConfig) *capture.Registry {
+	cfg.bookingVault = vault
 	db := InstallationDB(pool)
 	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault).
 		// How far back this installation lets a mailbox import reach. Zero
@@ -259,7 +261,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	// store). Asking which transports a binary compiled in must not hand
 	// anything the power to destroy mail.
 	var purgeRemoved capture.MessagePurger
-	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger()); purger != nil {
+	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger(), cfg.bookingVault); purger != nil {
 		purgeRemoved = purger.PurgeRemoved
 	}
 	return capture.NewSink(InstallationDB(pool)).
@@ -315,6 +317,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// provider stops listing an event once it is off, so the pull that
 		// carries the cancellation is the only one that will ever mention it.
 		WithMeetingCloser(activities.CancelCapturedMeetingTx).
+		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every
 		// seam above travels this way.

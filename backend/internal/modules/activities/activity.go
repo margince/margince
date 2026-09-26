@@ -266,6 +266,9 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
+	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -326,10 +329,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
-		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, source_system, source_id, source, captured_by,
+		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
 		                       source_activity_id, raw, duration_seconds)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
 		         NULLIF($19, ''), $20, $21, $22, $23, $24)`,
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.

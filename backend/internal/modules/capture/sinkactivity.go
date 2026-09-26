@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -39,6 +40,15 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// separately files one message under three different times, and the reply
 	// event then claims to describe an activity it disagrees with. fields is a
 	// value copy, so settling it here settles it for every one of them.
+	if fields.Kind == meetingKind && s.resolveInvitation != nil {
+		id, found, err := s.resolveInvitation(ctx, tx, rec.NaturalKey, rec.Raw)
+		if err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
+		if found {
+			return datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}, false, counterpartyDecision{}, nil
+		}
+	}
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
 	// Whose credential carried this record, asked ONCE and carried to both the
 	// birth decision and this seat's import row — the two readers of it, and the
@@ -337,8 +347,6 @@ func (s *Sink) upsertActivity(
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return ids.ActivityID{}, false, err
 	}
-	occurredAt := fields.OccurredAt
-	audience, audienceReason := birth.bornAudience()
 	// Attested outbound is the ONLY write that turns "does this workspace
 	// correspond with them" from no to yes, and a verdict acts on that answer
 	// inside its own transaction — so the two serialize here rather than racing.
@@ -352,52 +360,8 @@ func (s *Sink) upsertActivity(
 		}
 	}
 	var id ids.ActivityID
-	err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part, host_user_id, language, raw_capture_id)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, ''), $7, $8, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, NULLIF($16, ''), $17, $18, NULLIF($19, ''), $20)
-		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
-		DO NOTHING
-		RETURNING id`,
-		// NULLIF on channel_provider, not the empty string: the column FKs into
-		// channel_provider, and '' names no provider — so a non-channel record
-		// has to store NULL or the insert fails the foreign key.
-		fields.Kind, fields.ChannelProvider, fields.Subject, fields.Body, occurredAt, fields.Direction,
-		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), rec.ThreadKey,
-		// Normalized lowercased at the write (a connector need not lowercase the
-		// header case), matching the contact_email normalization, so the T1
-		// correspondence lookup's index-backed equality matches regardless of
-		// the sender's casing without a runtime case fold.
-		correspondence.Fold(rec.Counterparty.Email),
-		// The provider's filing AND the message's authorship, never the
-		// From-derived direction alone: this column is the T1
-		// correspondence-positive gate's only evidence, and a forged
-		// From:owner must not register as the owner's correspondence.
-		rec.Counterparty.SentByOwner(),
-		// This message's own RFC 2369 List-Unsubscribe header — the corroboration
-		// a noise REDACTION needs before it destroys content. Stamped per
-		// message, so a newsletter blast is destroyable while a personal mail
-		// from the same address is only ever hidden.
-		rec.Counterparty.ListUnsubscribe,
-		audience, audienceReason,
-		// What the parser read, stored as read. A record that carried no
-		// calendar part stores false rather than NULL: NULL is reserved for the
-		// rows captured before this column existed, so the two stay tellable
-		// apart.
-		fields.HasCalendarPart,
-		// Whose calendar a MEETING came off, so the brief lanes can say whose
-		// meeting a row is instead of offering every seat's to everybody.
-		meetingHostUserID(ctx, fields.Kind),
-		// What language the message is written in, read from its own text at
-		// the moment it arrives. Body before subject: a reply's subject line is
-		// often still in the sender's language while the message under it is
-		// not. Unknown stores NULL, which is what every row carried before this
-		// and what the search index already treats as "no stemming".
-		string(textlang.DetectFirst(fields.Body, fields.Subject)),
-		// The original this message was read from, so a retention purge can
-		// destroy it by the link rather than by a key join that holds for one
-		// lane. NULL where no original was stored, which is every record that
-		// arrived without one.
-		nullableID(rec.StoredOriginal)).Scan(&id)
+	query, args := capturedActivityInsert(ctx, rec, fields, birth)
+	err := tx.QueryRow(ctx, query, args...).Scan(&id)
 	if err == nil {
 		// Field-level provenance (B-E02.12) for the content fields this
 		// capture set — same source/author the row itself carries.
@@ -470,4 +434,21 @@ func defaultOccurredAt(occurredAt time.Time) time.Time {
 		return time.Now().UTC()
 	}
 	return occurredAt
+}
+
+func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision) (string, []any) {
+	occurredAt := fields.OccurredAt
+	audience, audienceReason := birth.bornAudience()
+	args := []any{
+		fields.Kind, nullableString(fields.ChannelProvider), nullableString(fields.Subject), nullableString(fields.Body), occurredAt, nullableString(fields.Direction),
+		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
+		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds,
+	}
+	placeholders := make([]string, len(args))
+	for i := range args {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds)
+ VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
+	return query, args
 }

@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -47,6 +48,8 @@ import (
 // site — the previous shape let a transport be composed with a bare store and
 // look identical to a configured one.
 type SendPath struct {
+	Calendar     activities.SchedulingCalendar
+	MeetingVault keyvault.Vault
 	// PublicBaseURL is configured at boot, never derived from a request. Empty
 	// means a marketing send refuses (the store's fail-loud branch) rather
 	// than emitting a forgeable link.
@@ -128,6 +131,8 @@ func (p SendPath) withPoolDefaults(pool *pgxpool.Pool) SendPath {
 // recorder is DERIVED from the pool rather than configured, so this side of
 // the reconciliation must be able to build one.
 func (s *Server) applySendPath(pool *pgxpool.Pool) {
+	s.send.Calendar = newSchedulingCalendar(pool, s.connectorHandlers.registry)
+	s.send.MeetingVault = s.vault
 	send := s.send.withPoolDefaults(pool)
 	// The directed send is wired HERE for this file's whole reason: it needs
 	// both the send path and the delivery machinery, and a deployment that had
@@ -140,6 +145,8 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	}
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
+		WithSchedulingCalendar(send.Calendar).
+		WithMeetingVault(send.MeetingVault).
 		WithRuntimeEnvironment(send.Environment).
 		// Wired on BOTH transports, which is what this file is for: without
 		// it here, a short message sent over HTTP got an English footer while
@@ -305,7 +312,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 			// every message silently owes nothing — the failure this seam
 			// exists to end, arriving through the wiring instead.
 			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
-		WithPublicBaseURL(send.PublicBaseURL).
+		WithPublicBaseURL(send.PublicBaseURL).WithSchedulingCalendar(send.Calendar).WithMeetingVault(send.MeetingVault).
 		WithRuntimeEnvironment(send.Environment).
 		WithSendAuthority(send.SendAuthority).
 		WithChannelReachability(send.ChannelRecipients).

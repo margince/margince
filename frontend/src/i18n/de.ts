@@ -5,6 +5,123 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
+  "scheduling.back": "Zurück zu Margince",
+  "scheduling.prepare": "Auf diesen Termin vorbereiten",
+  "scheduling.timezone": "Zeitzone",
+  "scheduling.copySignature": "Signaturlink kopieren",
+  "scheduling.replace": "Buchungslink ersetzen",
+  "scheduling.replaceHelp":
+    "Der alte Link nimmt keine Buchungen mehr an. Aktualisiere deine E-Mail-Signatur und alle anderen Stellen. Bestehende Termine behalten ihre privaten Änderungslinks.",
+  "scheduling.reschedule": "Termin verschieben",
+  "scheduling.rescheduleHelp":
+    "Dein bisheriger Termin bleibt reserviert, bis der Kalender die Änderung bestätigt.",
+  "scheduling.saveTime": "Neue Zeit bestätigen",
+  "scheduling.hostRecovery":
+    "Verbinde deinen Kalender bei Bedarf erneut und versuche es nochmals. Solange die Zustellung unklar ist, bleibt die Zeit reserviert.",
+  "scheduling.guestRecovery":
+    "Der Gastgeber muss diese Einladung prüfen. Deine Buchungsanfrage ist gespeichert.",
+  "scheduling.deliveryUnknown":
+    "Der Server hat keine Einladung bestätigt. Frage beim Gastgeber nach, bevor du es erneut versuchst.",
+  "scheduling.personalGuest":
+    "Diese Einladung ist für den Empfänger dieses Links bestimmt. Der Termin verwendet die vom Gastgeber gewählte E-Mail-Adresse.",
+  "scheduling.proposalGreeting": "Hallo,",
+  "scheduling.proposalChoose":
+    "Wähle hier eine Zeit oder finde einen anderen Termin:",
+  "scheduling.proposalReply":
+    "Du kannst auch mit einer passenden Zeit antworten.",
+  "scheduling.proposalHelp":
+    "Diese Vorschläge reservieren deinen Kalender nicht. Der persönliche Link gilt für eine Buchung und verfällt nach sieben Tagen oder dem letzten Vorschlag.",
+  "scheduling.createPersonalLink": "Persönlichen Link erstellen",
+  "scheduling.reviewProposal": "Vorschlag erstellen",
+  "scheduling.personalLink": "Persönliche Einladung öffnen",
+  "scheduling.expires": "Gültig bis {date}",
+  "scheduling.reviewEmail": "E-Mail prüfen",
+  "scheduling.method": "Wie möchtest du den Termin vereinbaren?",
+  "scheduling.propose": "Zeiten vorschlagen",
+  "scheduling.sharePersonal": "Persönlichen Link teilen",
+  "scheduling.selectOptions_one":
+    "Wähle zwei oder drei Zeiten · {count} gewählt",
+  "scheduling.selectOptions_other":
+    "Wähle zwei oder drei Zeiten · {count} gewählt",
+  "scheduling.blockingCalendars": "Weitere Kalender, die Zeit blockieren",
+  "scheduling.blockingHelp":
+    "Der Terminkalender blockiert immer Zeit. Private Ereignisnamen bleiben in deinem Kalender.",
+  "scheduling.savedRequest":
+    "Deine Terminanfrage ist gespeichert. Öffne sie, um die Einladung zu prüfen, den Termin zu verschieben oder abzusagen.",
+  "scheduling.openMeeting": "Termin ansehen",
+  "scheduling.emailReminder": "E-Mail-Erinnerung eine Stunde vorher",
+  "scheduling.reminderHelp":
+    "Gilt für neue Termine. Verwendet dein verbundenes Postfach und prüft vor dem Versand die E-Mail-Berechtigungen.",
+  "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
+  "scheduling.reminder.queued": "E-Mail-Erinnerung zum Versand vorgemerkt.",
+  "scheduling.reminder.unavailable":
+    "Die Erinnerung konnte nicht versendet werden. Prüfe deine E-Mail-Verbindung und schreibe dem Gast direkt.",
+  "history.field.reminder_status": "Erinnerungsstatus",
+  "scheduling.myLink": "Mein Buchungslink",
+  "scheduling.linkIntro":
+    "Ein Link für deine E-Mail-Signatur, Nachrichten und Website. Gäste wählen einen Termin innerhalb deiner Verfügbarkeit.",
+  "scheduling.copyLink": "Link kopieren",
+  "scheduling.copied": "Kopiert",
+  "scheduling.copyFallback": "Markiere und kopiere den Link unten.",
+  "scheduling.preview": "Öffentliche Seite ansehen",
+  "scheduling.signature": "Buche einen Termin mit mir",
+  "scheduling.active": "Buchungen aktiv",
+  "scheduling.paused": "Öffentliche Buchungen pausiert",
+  "scheduling.pause": "Buchungen pausieren",
+  "scheduling.resume": "Buchungen aktivieren",
+  "scheduling.settings": "Termineinstellungen",
+  "scheduling.save": "Einstellungen speichern",
+  "scheduling.saved": "Einstellungen gespeichert",
+  "scheduling.provider": "Kalenderanbieter",
+  "scheduling.proposalChanged":
+    "Dieser Link behält die bereits erstellten Angaben. Für deine Änderungen kannst du einen neuen Link erstellen; der bisherige bleibt bis zu seinem Ablauf gültig.",
+  "scheduling.proposalUpdate": "Aktualisierten Vorschlag erstellen",
+  "scheduling.calendar": "Kalender für Einladungen",
+  "scheduling.connect": "Kalender verbinden oder erneut verbinden",
+  "scheduling.connectionHelp":
+    "Zum Senden von Einladungen ist Schreibzugriff nötig. Verbinde einen nur lesbaren Kalender erneut.",
+  "scheduling.hostName": "Dein öffentlicher Name",
+  "scheduling.companyName": "Firmenname",
+  "scheduling.logo": "Öffentliche URL des Firmenlogos",
+  "scheduling.subject": "Termintitel",
+  "scheduling.location": "Ort oder Besprechungslink",
+  "scheduling.duration": "Dauer in Minuten",
+  "scheduling.notice": "Vorlauf in Minuten",
+  "scheduling.buffer": "Puffer in Minuten",
+  "scheduling.horizon": "Buchungszeitraum in Tagen",
+  "scheduling.hours": "Buchbare Zeiten bearbeiten",
+  "scheduling.invite": "Einladung senden",
+  "scheduling.contact": "Wen möchtest du treffen?",
+  "scheduling.guestAgenda": "Was möchtest du besprechen?",
+  "scheduling.agenda": "Nachricht an deinen Gast",
+  "scheduling.chooseTime": "Zeit auswählen",
+  "scheduling.zone": "Zeitzone",
+  "scheduling.date": "Startdatum",
+  "scheduling.next": "Weitere Zeiten",
+  "scheduling.noTimes":
+    "In diesem Zeitraum sind keine Termine frei. Wähle ein anderes Datum.",
+  "scheduling.review": "Einladung prüfen",
+  "scheduling.pending": "Deine Einladung wird erstellt…",
+  "scheduling.confirmed": "Kalendereinladung erstellt",
+  "scheduling.needs_attention": "Einladung braucht Aufmerksamkeit",
+  "scheduling.rescheduling": "Dein Termin wird verschoben…",
+  "scheduling.canceling": "Dein Termin wird abgesagt…",
+  "scheduling.canceled": "Termin abgesagt",
+  "scheduling.deliveryHelp":
+    "Die Kalenderbestätigung bedeutet nicht, dass dein Gast zugesagt hat. Die Antwort kommt über deinen verbundenen Kalender.",
+  "scheduling.openCalendar": "Im Kalender öffnen",
+  "scheduling.cancel": "Termin absagen",
+  "scheduling.cancelConfirm":
+    "Diesen Termin absagen und den Gast benachrichtigen?",
+  "scheduling.retry": "Einladung erneut versuchen",
+  "scheduling.book": "Termin bestätigen",
+  "scheduling.chooseFirst": "Wähle eine Zeit, um fortzufahren",
+  "scheduling.unavailable":
+    "Diese Buchungsseite ist nicht verfügbar. Kontaktiere deinen Gastgeber.",
+  "scheduling.publicUrlMissing":
+    "Richte eine öffentliche Adresse für diese Installation ein, bevor du Buchungslinks teilst.",
+  "scheduling.new": "Termin vereinbaren",
+
   "aiAdmin.allowance": "Monatliches KI-Kontingent",
   "aiAdmin.pool":
     "Gemeinsamer Pool des Unternehmens. Kein individuelles Kontingent und keine Ausgabengrenze in Dollar.",
@@ -352,6 +469,8 @@ export const de = {
   "history.field.emails": "E-Mail-Adressen",
   "history.field.nudge_dismissal": "Hinweis ausgeblendet",
   "history.field.phones": "Telefonnummern",
+  "history.field.invitation_status": "Einladungsstatus",
+  "history.field.proposal_status": "Status des Terminvorschlags",
   "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
   "history.field.communication_basis": "Rechtsgrundlage",
@@ -1586,6 +1705,7 @@ export const de = {
   "approval.kind.send_email": "E-Mail senden",
   "approval.kind.communication_review": "Abgelehnte E-Mail prüfen",
   "approval.kind.held_draft": "Entworfene E-Mail prüfen",
+  "approval.kind.invite_meeting": "Kalendereinladung senden",
   "approval.kind.book_meeting": "Termin buchen",
   "approval.kind.volume_release": "Agent weiterarbeiten lassen",
   "approval.kind.coldstart": "Neues Unternehmen ergänzen",
@@ -6612,17 +6732,8 @@ export const de = {
   "client.isolation": "Nur mit deinem Unternehmen verbunden",
   "client.attribution": "Jede Erfassung ist zugeordnet und prüfbar.",
 
-  "book.title": "Termin buchen",
-  "book.min15": "15 min",
-  "book.min30": "30 min",
-  "book.min60": "60 min",
   "book.attendee": "E-Mail des Gasts",
-  "book.welcomeBack": "Erkannt: {name}",
   "book.subject": "Termin über Margince",
-  "book.confirmed": "Termin gebucht",
-  "book.tellThemYourself":
-    "Margince versendet keine Einladung. Teile der eingeladenen Person den Termin direkt mit.",
-  "book.failed": "Buchung fehlgeschlagen. Es wurde nichts eingetragen.",
   "book.name": "Name",
   "book.email": "E-Mail-Adresse",
   "book.consentWording":

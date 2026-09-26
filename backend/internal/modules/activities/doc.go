@@ -12,7 +12,8 @@
 // activity_retention_evidence, transcript_read, attachment_extraction,
 // deal_document_hide, activity_sales_state, activity_reader_state,
 // worklist_pin, activity_review_template, activity_review_response,
-// activity_request_settlement, activity_identity, mail_draft.
+// activity_request_settlement, activity_identity, mail_draft,
+// booking_page, meeting_invitation, meeting_proposal.
 //
 // mail_draft is the composer's own state — a message the rep has started and
 // not sent — and it is here because sending it is: the transaction that sends

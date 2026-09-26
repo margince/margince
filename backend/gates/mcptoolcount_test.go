@@ -68,7 +68,9 @@ const clientToolCeiling = 100
 //
 // It comes DOWN when the verb reconciliation lands, and a ceiling that did not
 // follow it down would quietly re-bank the room it freed.
-const publishedToolCeiling = 76
+// Calendar sending is separately approved from recording a meeting; this costs
+// one additional tool, leaving 23 of the client’s 100 slots for other servers.
+const publishedToolCeiling = 77
 
 type mcpInfoFile struct {
 	Totals struct {

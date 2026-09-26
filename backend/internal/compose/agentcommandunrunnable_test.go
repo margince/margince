@@ -214,6 +214,13 @@ var unrunnableCalls = map[string]unrunnableCall{
 			return routedFixture(http.MethodPost, "/v1/leads/"+id+"/promote", id, `{"trigger":"a hunch"}`)
 		},
 	},
+	"createMeetingInvitation": {
+		refusal: refusedArgument("end", "an invitation cannot end before it starts"),
+		build: func() (*http.Request, []byte) {
+			body := []byte(`{"contact_id":"019ff000-0000-7000-8000-000000000021","attendee_email":"buyer@example.test","subject":"Discovery","description":"","location":"","start":"2026-10-05T10:00:00Z","end":"2026-10-05T09:00:00Z"}`)
+			return httptest.NewRequest(http.MethodPost, "/v1/scheduling/invitations", bytes.NewReader(body)), body
+		},
+	},
 	"bookMeeting": {
 		refusal: refusedArgument("end",
 			"the meeting ends before it starts, which the store refuses after the approval is spent"),

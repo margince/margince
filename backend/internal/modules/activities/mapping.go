@@ -394,7 +394,7 @@ func importedProvenanceFrom(req crmcontracts.CreateActivityRequest, in *LogActiv
 		// The contract promises field_not_valid_for_kind for this, and only the
 		// two kinds that occupy a span of time have a duration to state.
 		if in.Kind != KindMeeting && in.Kind != string(crmcontracts.ActivityKindCall) {
-			return &KindFieldError{Field: "duration_seconds", Only: "a meeting or call"}
+			return &KindFieldError{Field: fieldDurationSeconds, Only: "a meeting or call"}
 		}
 		in.DurationSeconds = req.DurationSeconds
 	}

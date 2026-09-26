@@ -162,9 +162,12 @@ var catalog = map[string]struct {
 	"lead_source.changed":            {leadStreamEntity, 1},
 	"lead_disqualify_reason.changed": {leadStreamEntity, 1},
 
-	"activity.captured": {activityStreamEntity, 1},
-	"activity.updated":  {activityStreamEntity, 1},
-	"activity.archived": {activityStreamEntity, 1},
+	"booking_page.updated":       {identityStreamEntity, 1},
+	"meeting_proposal.updated":   {activityStreamEntity, 1},
+	"meeting_invitation.updated": {activityStreamEntity, 1},
+	"activity.captured":          {activityStreamEntity, 1},
+	"activity.updated":           {activityStreamEntity, 1},
+	"activity.archived":          {activityStreamEntity, 1},
 	// Somebody decided what to do about a waiting message and the Worklist
 	// stopped offering it. `disposition_recorded` rather than `disposition_set`
 	// because the catalog's verbs are past tense, and a compound one puts the

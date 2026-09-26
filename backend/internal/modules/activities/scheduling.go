@@ -153,7 +153,7 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	hostPos := arg(host)
-	fromPos := arg(from.Add(-assumedMeetingDuration))
+	fromPos := arg(from)
 	toPos := arg(to)
 	scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
@@ -166,10 +166,12 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 	var busy []slot
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
-			SELECT a.occurred_at FROM activity a
+			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
 			WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 			  AND a.host_user_id = $%d
-			  AND a.occurred_at BETWEEN $%d AND $%d
+			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%d
+			  AND a.occurred_at < $%d
+			  AND a.meeting_status IS DISTINCT FROM 'canceled'
 			  AND %s
 			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, scope), args...)
 		if err != nil {
@@ -178,10 +180,11 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 		defer rows.Close()
 		for rows.Next() {
 			var start time.Time
-			if err := rows.Scan(&start); err != nil {
+			var seconds int
+			if err := rows.Scan(&start, &seconds); err != nil {
 				return err
 			}
-			busy = append(busy, slot{Start: start, End: start.Add(assumedMeetingDuration)})
+			busy = append(busy, slot{Start: start, End: start.Add(time.Duration(seconds) * time.Second)})
 		}
 		return rows.Err()
 	})
@@ -297,28 +300,11 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	if !in.End.After(in.Start) {
 		return crmcontracts.Activity{}, errBookingEndNotAfterStart
 	}
+	if in.End.Sub(in.Start) > 7*24*time.Hour {
+		return crmcontracts.Activity{}, errAvailabilityDurationOutOfRange
+	}
 	if len(in.Links) == 0 {
 		return crmcontracts.Activity{}, errBookingLinksEmpty
-	}
-	// The conflict probe reads only the calendar the caller may write
-	// (their own, or any as admin — gated above) and gives the polite
-	// answer; the GUARANTEE is the activity_meeting_no_overlap exclusion
-	// constraint (0032) — two racing bookings cannot both commit, the
-	// loser's 23P01 maps to the same slot_taken below.
-	var taken bool
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT EXISTS (
-			  SELECT 1 FROM activity
-			  WHERE kind = 'meeting' AND archived_at IS NULL AND host_user_id = $1
-			    AND occurred_at < $3 AND occurred_at + $4::interval > $2)`,
-			in.Host, in.Start, in.End, assumedMeetingDuration.String()).Scan(&taken)
-	})
-	if err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if taken {
-		return crmcontracts.Activity{}, &SlotTakenError{Start: in.Start}
 	}
 
 	subject := in.Subject
@@ -330,39 +316,40 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 		source = sourceManual
 	}
 	occurred := in.Start
+	durationSeconds := int(in.End.Sub(in.Start) / time.Second)
 	// Booking a meeting is what `booked` MEANS, and this is the door most
 	// meetings arrive through. Leaving the status NULL here left it saying
 	// nothing about what had just happened, so "how many did we book this
 	// week" answered zero while the calendar filled up.
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
-	activity, _, err := s.LogActivity(ctx, LogActivityInput{
-		Kind:          "meeting",
-		Subject:       &subject,
-		OccurredAt:    &occurred,
-		HostUserID:    &in.Host,
-		MeetingStatus: &booked,
-		// This door takes the slot, which is what the overlap guard refuses a
-		// second of. Both booking doors arrive here; nothing else sets it.
-		ClaimsHostSlot: true,
-		Links:          in.Links,
-		Source:         source,
+	var activity crmcontracts.Activity
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", in.Host.String()); err != nil {
+			return err
+		}
+		if err := reserveInvitation(ctx, tx, in.Host, in.Start, in.End, 0, ids.Nil); err != nil {
+			return err
+		}
+		var err error
+		activity, _, err = s.LogActivityTx(ctx, tx, LogActivityInput{
+			Kind:          KindMeeting,
+			Subject:       &subject,
+			OccurredAt:    &occurred,
+			HostUserID:    &in.Host,
+			MeetingStatus: &booked,
+			// This door takes the slot, which is what the overlap guard refuses a
+			// second of. Both booking doors arrive here; nothing else sets it.
+			ClaimsHostSlot:  true,
+			DurationSeconds: &durationSeconds,
+			Links:           in.Links,
+			Source:          source,
+		})
+		return err
 	})
 	if _, excluded := storekit.ExclusionViolation(err); excluded {
 		return crmcontracts.Activity{}, &SlotTakenError{Start: in.Start}
 	}
-	// NO INVITE IS SENT, and in.AttendeeEmails is not carried anywhere — not
-	// onto the activity, not into a queue, not to a transport. This build has
-	// none: the calendar integrations are capture-only, and platform/mailer is
-	// the password-reset seam.
-	//
-	// The comment that stood here said delivery "rides the deployment's
-	// calendar/mail seam", which read as configuration and was not: no
-	// deployment of this build can make it send. The screen and the contract
-	// both said an invite was on its way, so a rep watched a client never hear
-	// about a meeting with nothing anywhere reporting it.
-	//
-	// Both now say who has to tell the attendee. Wiring a real transport is a
-	// feature and needs one to exist first.
+	// Legacy bookings record the meeting; only the invitation engine sends it.
 	return activity, err
 }
 
@@ -371,6 +358,13 @@ type SlotTakenError struct{ Start time.Time }
 
 func (e *SlotTakenError) Error() string {
 	return fmt.Sprintf("the host is already booked around %s", e.Start.Format(time.RFC3339))
+}
+
+func (e *SlotTakenError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault gives both transports the actionable conflict code.
+func (e *SlotTakenError) MessageFault() (code, message string) {
+	return "slot_taken", "This time is no longer available. Choose another time."
 }
 
 func (h Handlers) GetAvailability(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAvailabilityParams) {
@@ -387,7 +381,11 @@ func (h Handlers) GetAvailability(w http.ResponseWriter, r *http.Request, params
 	if params.DurationMinutes != nil {
 		duration = time.Duration(*params.DurationMinutes) * time.Minute
 	}
-	slots, truncated, err := h.store.Availability(r.Context(), host, params.From, params.To, duration)
+	availability := h.store.Availability
+	if params.Reliable != nil && *params.Reliable {
+		availability = h.store.ReliableAvailability
+	}
+	slots, truncated, err := availability(r.Context(), host, params.From, params.To, duration)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -461,7 +459,7 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 func consentSubjectLink(w http.ResponseWriter, r *http.Request, links []ActivityLinkInput) (ids.UUID, bool) {
 	var contacts []ids.UUID
 	for _, l := range links {
-		if l.EntityType == "contact" {
+		if l.EntityType == linkEntityContact {
 			contacts = append(contacts, l.EntityID)
 		}
 	}

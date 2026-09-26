@@ -168,3 +168,9 @@ func decodeJSONObject(raw []byte) (*map[string]interface{}, error) {
 	}
 	return &m, nil
 }
+
+// WithPayloadVault lets destructive actions retire sealed booking capabilities.
+func (s Handlers) WithPayloadVault(payloads PayloadPurger) Handlers {
+	s.eraser = s.eraser.WithPayloadVault(payloads)
+	return s
+}

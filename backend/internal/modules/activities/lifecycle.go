@@ -26,15 +26,17 @@ import (
 )
 
 type UpdateActivityInput struct {
+	calendarSettlement bool
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail      storekit.AuditTrail
-	Subject    *string
-	Body       *string
-	OccurredAt *time.Time
-	DueAt      *time.Time
-	RemindAt   *time.Time
-	AssigneeID *ids.UserID
-	IsDone     *bool
+	Trail           storekit.AuditTrail
+	Subject         *string
+	Body            *string
+	OccurredAt      *time.Time
+	DurationSeconds *int
+	DueAt           *time.Time
+	RemindAt        *time.Time
+	AssigneeID      *ids.UserID
+	IsDone          *bool
 	// MeetingStatus is how the meeting went, and it is meaningful only on a
 	// meeting. The pairing is refused in the mapping against the kind the ROW
 	// carries — a patch cannot change a kind, so the stored one is the only
@@ -96,6 +98,7 @@ func updateActivityInTx(
 		  assignee_id = coalesce($%[7]d, assignee_id),
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
+ duration_seconds = coalesce($%[10]d, duration_seconds),
 		  -- The language was READ from the text, so an edit to the text retires
 		  -- it. Cleared rather than recomputed: detection lives in Go, and a
 		  -- label that outlived the words it described would send a reply in
@@ -110,7 +113,7 @@ func updateActivityInTx(
 		    ELSE done_at END
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
-		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus)),
+		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds)),
 		args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -199,6 +202,16 @@ func admitActivityPatch(
 	// field and try again against a row that will refuse them either way.
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, &MeetingStatusKindError{Kind: string(current.Kind)}
+	}
+	if !held && !in.calendarSettlement && changesInvitation(*in) {
+		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
+			return crmcontracts.Activity{}, err
+		}
+	}
+	if !held {
+		if err := validateActivityDuration(in.DurationSeconds); err != nil {
+			return crmcontracts.Activity{}, err
+		}
 	}
 	// Only a CHANGE of assignee is a routing decision. Re-sending the current
 	// one with an edit to the subject or due date must not be refused because
@@ -289,6 +302,9 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 			return err
 		}
 		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+			return err
+		}
+		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
 			return err
 		}
 		p := storekit.NewPatch()

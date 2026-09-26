@@ -16,6 +16,10 @@ const version = "1.0"
 // and the policy matched against it back out of step. That is the defect this
 // package exists to remove, and a const cannot reach it.
 const (
+	// CalendarProduct identifies authenticated scheduling requests.
+	CalendarProduct = "margince-calendar"
+	CalendarHeader  = CalendarProduct + "/" + version
+
 	// SiteReadProduct is the crawler's token. It appears in site operators'
 	// robots.txt files, so changing it silently stops their rules applying to
 	// us — a Disallow written for the name we advertise is no longer matched.

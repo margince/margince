@@ -1,25 +1,116 @@
-/* The booking page's spacing: the controls row, the lines between it and the slots, and the lines inside a result card. */
-
-.book-controls {
+.book-page {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding: var(--space-6);
+}
+.book-heading {
   display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  margin-bottom: var(--space-3);
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
-
-.book-public-controls {
+.book-heading p {
+  max-width: 620px;
+  margin-top: var(--space-2);
+}
+.book-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--gapCards);
+  align-items: start;
+}
+.book-form {
+  display: grid;
+  gap: var(--space-4);
+}
+.book-actions {
+  display: flex;
   flex-wrap: wrap;
+  gap: var(--gapActions);
+  margin-block: var(--space-4);
+  align-items: center;
+}
+.book-policy-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.book-link {
+  margin-block: var(--space-5);
+}
+.book-guest-page {
+  min-height: 100vh;
+  background: var(--bgPage);
+  padding: var(--space-6);
+}
+.book-guest-column {
+  max-width: 1040px;
+  margin-inline: auto;
+  display: grid;
+  gap: var(--space-5);
+}
+.book-brand {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+.book-brand .company-logo {
+  width: 180px;
+  height: 64px;
 }
 
-.book-welcome,
-.book-consent {
-  margin-bottom: var(--space-3);
+.book-guest-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: var(--space-8);
+}
+.book-host {
+  border-right: 1px solid var(--borderSubtle);
+  padding-right: var(--space-6);
+}
+.book-host p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block: var(--space-4);
+}
+.book-host svg {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
+  flex-shrink: 0;
+}
+.book-powered {
+  display: flex;
+  justify-self: end;
+  align-items: center;
+  gap: var(--space-2);
+}
+.book-powered-mark img {
+  width: 84px;
+  height: auto;
+}
+@media (max-width: 760px) {
+  .book-page,
+  .book-guest-page {
+    padding: var(--space-3);
+  }
+  .book-profile-grid,
+  .book-guest-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .book-heading {
+    flex-direction: column;
+  }
+  .book-host {
+    border-right: none;
+    border-bottom: 1px solid var(--borderSubtle);
+    padding-right: 0;
+    padding-bottom: var(--space-4);
+  }
 }
 
-.book-card-line {
-  margin-top: var(--space-1);
-}
-
-.book-failure {
-  margin-top: var(--space-3);
+.book-mode {
+  margin-bottom: var(--space-5);
+  max-width: 360px;
 }

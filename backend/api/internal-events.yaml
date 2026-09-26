@@ -15,6 +15,31 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventBookingPageUpdated:
+      type: object
+      x-event-type: booking_page.updated
+      x-entity-type: booking_page
+      description: A host changed the policy or public availability of their booking page.
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+    InternalEventMeetingProposalUpdated:
+      type: object
+      x-event-type: meeting_proposal.updated
+      x-entity-type: activity
+      description: A personal scheduling proposal changed state.
+      required: [status]
+      properties:
+        status: { type: string }
+    InternalEventMeetingInvitationUpdated:
+      type: object
+      x-event-type: meeting_invitation.updated
+      x-entity-type: activity
+      description: The durable calendar operation changed state; consumers reread permissioned details.
+      required: [status, version]
+      properties:
+        status: { type: string }
+        version: { type: integer, format: int64 }
     InternalEventAiBudgetUpdated:
       type: object
       x-event-type: ai_budget.updated
