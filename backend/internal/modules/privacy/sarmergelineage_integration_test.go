@@ -59,8 +59,8 @@ func TestTheExportFollowsAPredecessorIdentity(t *testing.T) {
 		predecessor); err != nil {
 		t.Fatalf("seeding the predecessor's objection: %v", err)
 	}
-	// And the ground a message to them stood on, which stays where it was
-	// written: nothing copies a basis forward.
+	// And the ground a message to them stood on, still keyed to the
+	// predecessor. The export owes it whatever left it there.
 	if _, err := e.owner.Exec(e.ctx, `
 		INSERT INTO communication_basis (contact_id, kind, valid_from, captured_by)
 		VALUES ($1, 'subject_initiated_correspondence', now() - interval '30 days', 'human:x')`,
