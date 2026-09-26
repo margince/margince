@@ -16,7 +16,6 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -135,36 +134,6 @@ func ThreadMergeTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_sales_state WHERE thread_key = $1`, from); err != nil {
 		return fmt.Errorf("activities: retiring the merged thread's judgements: %w", err)
-	}
-	return nil
-}
-
-// MoveMessageToThreadTx files one message under thread `to`, leaving the rest
-// of its old thread where it was — for a message whose own header named a
-// conversation other messages already carry, which capture will not merge
-// whole on that header's word (capture/threadjoin.go).
-func MoveMessageToThreadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, to string) error {
-	if to == "" {
-		return nil
-	}
-	// The row is locked and read first: archived since the join read it, or
-	// already moved by the merge that ran first, it is left alone. Neither is
-	// an error — the row is where the join wanted it, or out of every path.
-	var current *string
-	err := tx.QueryRow(ctx, `
-		SELECT thread_key FROM activity WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, id).Scan(&current)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("activities: locking a message to move it into a thread: %w", err)
-	}
-	if current != nil && *current == to {
-		return nil
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE activity SET thread_key = $2 WHERE id = $1 AND archived_at IS NULL`, id, to); err != nil {
-		return fmt.Errorf("activities: moving a message into the thread it joins: %w", err)
 	}
 	return nil
 }

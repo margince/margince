@@ -78,6 +78,5 @@ func threadJoiner() capture.ThreadJoiner {
 		Neighbours:       activities.MailNeighboursTx,
 		Earliest:         activities.EarliestThreadKeyTx,
 		Merge:            mergeThreadsTx,
-		Move:             activities.MoveMessageToThreadTx,
 	}
 }

@@ -42,13 +42,10 @@ type ThreadJoiner struct {
 	Earliest func(ctx context.Context, tx pgx.Tx, keys []string) (string, error)
 	// Merge moves thread `from` into thread `to` everywhere a row carries one.
 	Merge func(ctx context.Context, tx pgx.Tx, from, to string) error
-	// Move files one message under a thread, leaving the rest of its old
-	// thread where it was.
-	Move func(ctx context.Context, tx pgx.Tx, id ids.ActivityID, to string) error
 }
 
 func (j ThreadJoiner) complete() bool {
-	return j.RecordReferences != nil && j.Neighbours != nil && j.Earliest != nil && j.Merge != nil && j.Move != nil
+	return j.RecordReferences != nil && j.Neighbours != nil && j.Earliest != nil && j.Merge != nil
 }
 
 // WithThreadJoin returns a copy that joins the threads each captured email
@@ -75,8 +72,8 @@ func (s *Sink) WithThreadJoin(j ThreadJoiner) *Sink {
 //     real reply in this mailbox looks like.
 //   - A row this capture just minted got its key from its own header. That key
 //     is merged as a thread only when no other message carries it yet;
-//     otherwise the new row alone moves to the joined thread, and the
-//     conversation its header named is left where it was.
+//     otherwise the row stays under it, as every row did before thread
+//     joining, and the conversation its header named is left where it was.
 //   - Only the keys of held neighbours, and a key the row already had before
 //     this capture, are merged whole.
 func (s *Sink) joinThread(
@@ -108,27 +105,21 @@ func (s *Sink) joinThread(
 func (s *Sink) mergeLinkedThreads(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
 ) error {
-	// One lock for every merge in the workspace, taken BEFORE the keys are
-	// read, so a concurrent merge cannot retire a key between this read and
-	// the rewrite. Merges are rare — most captures find one key and stop here
-	// — so serializing them costs nothing measurable.
+	// Read once without the lock: nearly every capture finds one key and
+	// stops, and a replay that already holds its own row lock must not then
+	// wait on the merge lock for nothing.
+	keys, err := s.keysToMerge(ctx, tx, seat, id, neighbours, created)
+	if err != nil || len(keys) < 2 {
+		return err
+	}
+	// One lock for every merge in the workspace, and the keys read again under
+	// it, so a concurrent merge cannot retire a key between the read and the
+	// rewrite.
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`); err != nil {
 		return fmt.Errorf("capture: locking the thread merge: %w", err)
 	}
-	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours)
-	if err != nil {
+	if keys, err = s.keysToMerge(ctx, tx, seat, id, neighbours, created); err != nil || len(keys) < 2 {
 		return err
-	}
-	own, sole, err := ownThreadKeyTx(ctx, tx, id)
-	if err != nil {
-		return err
-	}
-	if own != "" && (!created || sole) && !slices.Contains(keys, own) {
-		keys = append(keys, own)
-		slices.Sort(keys)
-	}
-	if len(keys) == 0 {
-		return nil
 	}
 	into, err := s.threadJoin.Earliest(ctx, tx, keys)
 	if err != nil {
@@ -142,12 +133,28 @@ func (s *Sink) mergeLinkedThreads(
 			return err
 		}
 	}
-	// A new row whose header named a conversation other messages already
-	// carry joins alone.
-	if own != into && !slices.Contains(keys, own) {
-		return s.threadJoin.Move(ctx, tx, id, into)
-	}
 	return nil
+}
+
+// keysToMerge answers the thread keys this email joins, sorted: those of the
+// neighbours the seat holds, and the email's own key when the rules in
+// joinThread let it count.
+func (s *Sink) keysToMerge(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
+) ([]string, error) {
+	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours)
+	if err != nil {
+		return nil, err
+	}
+	own, sole, err := ownThreadKeyTx(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if own != "" && (!created || sole) && !slices.Contains(keys, own) {
+		keys = append(keys, own)
+		slices.Sort(keys)
+	}
+	return keys, nil
 }
 
 // seatHoldsTx answers whether this seat's own mailbox delivered the message —

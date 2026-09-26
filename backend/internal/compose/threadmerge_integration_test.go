@@ -198,10 +198,11 @@ func TestAReferenceToAMessageTheSeatDoesNotHoldMergesNothing(t *testing.T) {
 }
 
 // A header that names another seat's thread root beside a message this seat
-// really holds moves only the new mail. The other seat's conversation is not
-// merged on that header's word, and neither is this seat's own thread pulled
-// into it.
-func TestAHeaderNamingAForeignRootBesideAnOwnedMessageMovesOnlyItself(t *testing.T) {
+// really holds merges neither conversation: the other seat's thread is not
+// merged on that header's word, and this seat's own thread is not pulled into
+// it. The new mail stays under the root its header gave it, as it did before
+// thread joining.
+func TestAHeaderNamingAForeignRootBesideAnOwnedMessageMergesNothing(t *testing.T) {
 	e := integration.Setup(t)
 	// Rep2's conversation, rooted on its own opener.
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "victim-root@counterparty.example",
@@ -221,9 +222,6 @@ func TestAHeaderNamingAForeignRootBesideAnOwnedMessageMovesOnlyItself(t *testing
 	}
 	if got := threadKeyOfMessage(t, e, "owned@counterparty.example"); got != "owned@counterparty.example" {
 		t.Errorf("this seat's own thread was pulled into %q", got)
-	}
-	if got := threadKeyOfMessage(t, e, "crafted@counterparty.example"); got != "owned@counterparty.example" {
-		t.Errorf("the crafted mail is under %q, want the thread of the message it answers", got)
 	}
 }
 
