@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,8 +70,11 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		// A merge carries the retiring subject's stops, or it refuses. consent
 		// owns communication_suppression; contacts owns the merge; neither
-		// imports the other, so the edge is injected here.
-		WithStopCarrier(consent.NewStore(InstallationDB(pool)))
+		// imports the other, so the edge is injected here. The consent links
+		// and the introduction asks ride the same way.
+		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
+		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
+			introductions.NewStore(InstallationDB(pool), time.Now))
 }
 
 // newFinanceHandlers builds the invoicing transport over the two edges it

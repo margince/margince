@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -61,7 +62,8 @@ func NewProviderFor(db *database.DB) *Provider {
 		// a subject who holds a stop.
 		contacts: contacts.NewProvider(db).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
-			WithStopCarrier(consent.NewStore(db)),
+			WithStopCarrier(consent.NewStore(db)).
+			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)),
 		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:   projects.ProviderOver(ProjectsStoreOver(db)),
 		activities: activities.NewProvider(InstallationDB(pool)),

@@ -47,7 +47,7 @@ func (s *Store) MergeLead(ctx context.Context, sourceID, targetID ids.LeadID) (c
 	var out crmcontracts.Lead
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = mergeLeadTx(ctx, tx, sourceID, targetID, active, by, s.stopCarrier)
+		out, err = s.mergeLeadTx(ctx, tx, sourceID, targetID, active, by)
 		return err
 	})
 	return out, err
@@ -57,7 +57,13 @@ func (s *Store) MergeLead(ctx context.Context, sourceID, targetID ids.LeadID) (c
 // fills the survivor's gaps, retires the loser and lands the write shape —
 // all inside the caller's transaction, under the pair lock that keeps the
 // survivor live until commit.
-func mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID, active []fieldcatalog.Column, by string, stops StopCarrier) (crmcontracts.Lead, error) {
+func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID, active []fieldcatalog.Column, by string) (crmcontracts.Lead, error) {
+	// BEFORE LockPair, the order mergeContactTx gives the reason for.
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
+		commsauthz.LeadStopSubject(sourceID),
+		commsauthz.LeadStopSubject(targetID)); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, entityLead, sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Lead{}, err
@@ -72,14 +78,17 @@ func mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID, 
 	if err := carryLeadConsentToLead(ctx, tx, sourceID, targetID, by); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	// The STOPS, which are consent's table and not a relink — see stopcarry.go.
-	// Passed in rather than read off a store because both callers of this
-	// function are free functions; an unwired carrier refuses the merge rather
-	// than dropping the stop quietly.
-	if err := carryStopsOrRefuse(ctx, tx, stops,
+	// The STOPS and the consent links, which are consent's tables and not a
+	// relink — see stopcarry.go and satellitecarry.go.
+	if err := s.carryStopsTx(ctx, tx,
 		commsauthz.LeadStopSubject(sourceID),
 		commsauthz.LeadStopSubject(targetID)); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("carry the merged-away lead's stops: %w", err)
+	}
+	if err := s.carryConsentSatellitesTx(ctx, tx,
+		commsauthz.LeadStopSubject(sourceID),
+		commsauthz.LeadStopSubject(targetID)); err != nil {
+		return crmcontracts.Lead{}, fmt.Errorf("carry the merged-away lead's consent links: %w", err)
 	}
 	if err := carryLeadMembershipsToLead(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Lead{}, err

@@ -147,6 +147,14 @@ func (h Handlers) WithStopCarrier(carrier StopCarrier) Handlers {
 	return h
 }
 
+// WithSatelliteCarriers wires the seams that carry a retiring subject's
+// consent links and introduction asks onto the survivor — see
+// satellitecarry.go.
+func (h Handlers) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) Handlers {
+	h.store = h.store.WithSatelliteCarriers(consent, intros)
+	return h
+}
+
 // duplicateID renders a duplicate error's existing-row pointer for the
 // wire. The dedupe pre-checks leave ExistingID zero when the row is not
 // visible to the caller (or a race hid it); the response then omits

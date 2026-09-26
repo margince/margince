@@ -113,25 +113,8 @@ func (e *StopCarrierNotWiredError) FieldFault() (field, code, message string) {
 // seam existed. A stop and no seam is the one case that must not proceed, and
 // it is the case an operator can act on — the message names the record.
 func (s *Store) carryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
-	return carryStopsOrRefuse(ctx, tx, s.stopCarrier, from, to)
-}
-
-// lockStopsOrSkip takes consent's lock before the merge locks any contact row.
-// An unwired carrier has no lock to take, and the refusal for that case is
-// carryStopsOrRefuse's to make once the merge knows what it would lose.
-func lockStopsOrSkip(ctx context.Context, tx pgx.Tx, carrier StopCarrier, subjects ...commsauthz.StopSubject) error {
-	if carrier == nil {
-		return nil
-	}
-	return carrier.LockStopsTx(ctx, tx, subjects...)
-}
-
-// carryStopsOrRefuse is the rule itself, taking the carrier as an argument so
-// the lead merge — a free function with no store in hand — cannot grow a
-// second, laxer spelling of it.
-func carryStopsOrRefuse(ctx context.Context, tx pgx.Tx, carrier StopCarrier, from, to commsauthz.StopSubject) error {
-	if carrier != nil {
-		return carrier.CarryStopsTx(ctx, tx, from, to)
+	if s.stopCarrier != nil {
+		return s.stopCarrier.CarryStopsTx(ctx, tx, from, to)
 	}
 	held, err := holdsALiveStop(ctx, tx, from)
 	if err != nil {
@@ -141,6 +124,16 @@ func carryStopsOrRefuse(ctx context.Context, tx pgx.Tx, carrier StopCarrier, fro
 		return &StopCarrierNotWiredError{}
 	}
 	return nil
+}
+
+// lockStopsOrSkip takes consent's lock before the merge locks any contact row.
+// An unwired carrier has no lock to take, and the refusal for that case is
+// carryStopsTx's to make once the merge knows what it would lose.
+func lockStopsOrSkip(ctx context.Context, tx pgx.Tx, carrier StopCarrier, subjects ...commsauthz.StopSubject) error {
+	if carrier == nil {
+		return nil
+	}
+	return carrier.LockStopsTx(ctx, tx, subjects...)
 }
 
 // holdsALiveStop asks the one question that decides whether an unwired merge
