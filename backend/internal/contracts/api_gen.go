@@ -32323,6 +32323,13 @@ type LoginRequest struct {
 type MagicActor struct {
 	Id string `json:"id"`
 
+	// Label What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Label *MagicSentence `json:"label,omitempty"`
+
 	// OnBehalfOf The seat whose authority the action was taken under, where it bound one.
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
@@ -32346,6 +32353,9 @@ type MagicEntityRef struct {
 //
 // EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
 // with no author a reader can name is the spookiness this surface exists to remove.
+// `actor.label` is that name as a reader reads it ("Mail filing", "Retention"), and
+// `reason` says why the machinery did it ("the sender's address belongs to this
+// contact"). Both are keys with values, for the reason `summary` is.
 type MagicLine struct {
 	// Actor Who acted, and on whose behalf.
 	//
@@ -32364,6 +32374,9 @@ type MagicLine struct {
 	// Consequence What this means for the reader, where the action has one to state. A key, not a sentence: the product ships three languages.
 	Consequence *string `json:"consequence,omitempty"`
 
+	// Count How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them.
+	Count *int `json:"count,omitempty"`
+
 	// Entity The record this line is about, where it names one.
 	Entity *MagicEntityRef `json:"entity,omitempty"`
 
@@ -32375,6 +32388,13 @@ type MagicLine struct {
 
 	// OccurredAt When the thing happened. On a `watching` line it is when the condition was OBSERVED instead, uniformly: a source that is off rather than failing has no beginning to report, and dating the observation as the outage would tell a reader a long-dead mailbox broke just now. Where a condition does have a start, it travels as the `failing_since` value on the summary.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// Reason What happened, as a key and the values to fill it with.
+	//
+	// Typed rather than composed on the server for the reason every other sentence in
+	// this contract is: the product ships three languages, and a sentence assembled here
+	// reaches a German reader in English.
+	Reason *MagicSentence `json:"reason,omitempty"`
 
 	// Summary What happened, as a key and the values to fill it with.
 	//

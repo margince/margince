@@ -208,6 +208,70 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeTruthy();
   });
 
+  it("says what a job did, why, who it was, and how many records it touched", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            summary: { key: "magic.action.mail_filed" },
+            reason: { key: "magic.why.mail_filed" },
+            actor: {
+              type: "system",
+              id: "link-reconcile",
+              label: { key: "magic.by.mail_filing" },
+            },
+            entity: {
+              type: "contact",
+              id: "00000000-0000-7000-8000-0000000000cc",
+              label: "Anna Keller",
+            },
+            count: 1200,
+          }),
+        ],
+        totals: { done: 1, needs_you: 0, could_not_complete: 0, watching: 0 },
+      }),
+    );
+    renderMagic();
+    expect(
+      await screen.findByText("Filed captured email under this contact"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("The sender's address belongs to this contact."),
+    ).toBeTruthy();
+    expect(screen.getByText("Mail filing")).toBeTruthy();
+    expect(screen.getByText("Anna Keller and 1,199 more")).toBeTruthy();
+  });
+
+  it("counts a retention action without naming any record it touched", async () => {
+    stub(
+      receipt({
+        done: [
+          line({
+            summary: { key: "magic.action.retention_lead_anonymize" },
+            reason: { key: "magic.why.retention", values: { days: "365" } },
+            actor: {
+              type: "system",
+              id: "system",
+              label: { key: "magic.by.retention" },
+            },
+            entity: undefined,
+            count: 1200,
+            undo: undefined,
+          }),
+        ],
+        totals: { done: 1, needs_you: 0, could_not_complete: 0, watching: 0 },
+      }),
+    );
+    renderMagic();
+    expect(
+      await screen.findByText(
+        "Anonymized unconverted leads past their retention period",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Retention rule: after 365 days.")).toBeTruthy();
+    expect(screen.getByText("1,200 records")).toBeTruthy();
+  });
+
   it("points an undoable change at the record whose history owns the way back", async () => {
     stub(
       receipt({

@@ -117,13 +117,23 @@ func (s *Service) Read(
 		if err != nil {
 			return err
 		}
-		receipt.Done = linesOf(entries, limit)
+		lines, housekeeping := linesOf(entries, limit)
 		// Asked after the lines are drawn and inside the page's own
 		// transaction: the judge reads the record each line names, and a
 		// second connection inside this one can deadlock against a lock it
 		// holds.
-		if err := s.judgeUndoOn(ctx, tx, receipt.Done); err != nil {
+		if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
 			return err
+		}
+		// Retention, as counts beside the records' own lines; it names no
+		// record, so it has nothing for the undo judge to read.
+		retention, err := retentionSince(ctx, tx, from)
+		if err != nil {
+			return err
+		}
+		receipt.Done = mergeNewestFirst(retention, lines, limit)
+		if housekeeping > 0 {
+			notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnadmittedAction)] += housekeeping
 		}
 		receipt.NotShown = notShownOf(notShown)
 		return nil

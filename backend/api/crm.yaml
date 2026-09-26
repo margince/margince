@@ -48726,6 +48726,9 @@ components:
 
         EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
         with no author a reader can name is the spookiness this surface exists to remove.
+        `actor.label` is that name as a reader reads it ("Mail filing", "Retention"), and
+        `reason` says why the machinery did it ("the sender's address belongs to this
+        contact"). Both are keys with values, for the reason `summary` is.
       required: [id, occurred_at, summary, actor, lane]
       properties:
         id: { type: string, format: uuid, description: "The underlying row's id — an audit entry, an approval." }
@@ -48774,6 +48777,16 @@ components:
           $ref: '#/components/schemas/MagicUndo'
         actor:
           $ref: '#/components/schemas/MagicActor'
+        reason:
+          $ref: '#/components/schemas/MagicSentence'
+        count:
+          type: integer
+          minimum: 1
+          description: >-
+            How many records this line stands for. One background job that did the same
+            thing to many records is ONE line with a count, not one line per record: a
+            receipt of 1,200 identical rows says nothing a reader can use. Absent means one;
+            `entity` then names the most recent of them.
 
     MagicSentence:
       type: object
@@ -48827,6 +48840,8 @@ components:
           type: string
           format: uuid
           description: The seat whose authority the action was taken under, where it bound one.
+        label:
+          $ref: '#/components/schemas/MagicSentence'
 
     AppliedUndo:
       type: object
