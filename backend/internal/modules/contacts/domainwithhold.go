@@ -98,16 +98,10 @@ func withholdForStaleEvidence(
 	return true, nil
 }
 
-// withholdForNearDuplicate leaves a company verdict unanswered when the name
-// this domain resolved to is close to a company already here without being the
-// same name.
-//
-// Creating anyway is what put one company in a workspace twice: two domains of
-// one business derive the same label, and the second domain minted a second
-// record. Merging on a near-match is the other wrong answer — "Baqend GmbH" and
-// "Baqend Inc" score alike and are two different legal entities — so the
-// question goes to somebody who can tell, and the evidence names the rival so
-// they can answer without going looking for it.
+// withholdForNearDuplicate leaves a company verdict unanswered when more than
+// one company already carries the name this domain resolved to. Picking one of
+// them by rank would be picking by uuid, so the question goes to somebody who
+// can tell, and the evidence names a rival so they need not go looking.
 //
 // The row stays PENDING for the reason stale evidence does: settling it would
 // stop every later message re-asking. The contacts keep their mail and gain no
@@ -115,8 +109,8 @@ func withholdForStaleEvidence(
 func withholdForNearDuplicate(
 	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, rival CompanyCandidateScore,
 ) error {
-	evidence := fmt.Sprintf("%s resolved to %q, close to %q already here. "+
-		"Same company: add the domain to it. Different company: create this one.",
+	evidence := fmt.Sprintf("%s resolved to %q, the name of more than one company already here (%q among them). "+
+		"Same company as one of them: add the domain to it. Different company: create this one.",
 		in.Domain, rival.CandidateValue, rival.IncumbentValue)
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
