@@ -202,7 +202,7 @@ func assertAICertCoverageMatchesTheLibrary(t *testing.T, doc aiCertDoc, rows []a
 	rendered := map[string]string{}
 	for _, site := range doc.Sites {
 		for _, rec := range site.Records {
-			rendered[site.Key+" "+rec.Binding.label()] = coverageCell(rec)
+			rendered[site.Key+" "+rec.siteLabel()] = coverageCell(rec)
 		}
 	}
 	for _, row := range rows {

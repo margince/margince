@@ -294,9 +294,15 @@ func (r ReadinessRow) Binding() string {
 	if !r.Certified {
 		return ""
 	}
-	label := r.Record.Provider + " · " + r.Record.ServedModel + " · " + r.Record.EnvClass
-	if level := r.Record.ThinkingLevelAt(r.Site.Variant); level != "" {
-		label += " · thinking " + level
+	return BindingLabel(r.Record.Provider, r.Record.ServedModel, r.Record.EnvClass, r.Record.ThinkingLevelAt(r.Site.Variant))
+}
+
+// BindingLabel is a binding as every surface spells it — the report, the
+// certification page and a preset's rung — so a row and its record match by it.
+func BindingLabel(provider, model, env, thinking string) string {
+	label := provider + " · " + model + " · " + env
+	if thinking != "" {
+		label += " · thinking " + thinking
 	}
 	return label
 }

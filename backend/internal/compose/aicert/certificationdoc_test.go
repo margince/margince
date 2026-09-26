@@ -20,6 +20,7 @@ package aicert_test
 // without reading.
 
 import (
+	"cmp"
 	"encoding/json"
 	"math"
 	"path/filepath"
@@ -75,11 +76,7 @@ type aiCertBindingRef struct {
 // label is the binding as the page spells it, and the key a preset's rung is
 // matched to a record on, so the two agree on the thinking level or not at all.
 func (b aiCertBindingRef) label() string {
-	label := b.Provider + " · " + b.Model + " · " + b.Env
-	if b.ThinkingLevel != "" {
-		label += " · thinking " + b.ThinkingLevel
-	}
-	return label
+	return aicert.BindingLabel(b.Provider, b.Model, b.Env, b.ThinkingLevel)
 }
 
 // aiCertBinding is one binding folded over every site it measured.
@@ -169,6 +166,12 @@ type aiCertRecord struct {
 	// SiteThinking is the level this site ran at where the contract moved it
 	// off the binding's own, which Binding alone does not say.
 	SiteThinking string `json:"site_thinking,omitempty"`
+}
+
+// siteLabel is the binding as this site ran on it: a site the contract moved
+// off the binding's thinking level is labelled with its own, as the report is.
+func (r aiCertRecord) siteLabel() string {
+	return aicert.BindingLabel(r.Binding.Provider, r.Binding.Model, r.Binding.Env, cmp.Or(r.SiteThinking, r.Binding.ThinkingLevel))
 }
 
 type aiCertOutcomes struct {
