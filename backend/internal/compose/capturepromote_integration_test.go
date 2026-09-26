@@ -73,13 +73,13 @@ func captureInboundThroughRealSink(
 	t *testing.T, e *integration.Env, owner ids.UUID, sourceID, counterparty, threadKey string,
 ) {
 	t.Helper()
-	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, owner), t, e, sourceID, counterparty, threadKey)
+	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, owner), t, e, "a@authz.test", sourceID, counterparty, threadKey)
 }
 
 // captureInboundThroughRealSinkAs is the same capture under a principal the
-// caller built, for a test that needs the mailbox owner's grant narrowed.
+// caller built, delivered to the seat address given.
 func captureInboundThroughRealSinkAs(
-	ctx context.Context, t *testing.T, e *integration.Env, sourceID, counterparty, threadKey string,
+	ctx context.Context, t *testing.T, e *integration.Env, seatAddress, sourceID, counterparty, threadKey string,
 ) {
 	t.Helper()
 	// Domain is populated the way mailmap populates it — the address's own
@@ -102,7 +102,7 @@ func captureInboundThroughRealSinkAs(
 		// One of the SEAT's own addresses on the message, which is the evidence
 		// the import row is written on: without it the sink stores the activity
 		// but records no per-seat contribution, and nothing opens a question.
-		Addresses: []string{counterparty, "a@authz.test"},
+		Addresses: []string{counterparty, seatAddress},
 		Source:    "gmail:" + sourceID, CapturedBy: "connector:gmail",
 	})
 	if err != nil {

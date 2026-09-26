@@ -65,15 +65,20 @@ func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
 	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 }
 
-// Capture privacy is the importing seat's: a reply a colleague's mailbox
-// caught is not authority to publish the contact this seat is keeping.
+// Capture privacy is the importing seat's: a colleague's own answered mail is
+// not authority to publish the contact this seat is keeping.
 func TestAReplyInAnotherSeatsMailboxDoesNotPublish(t *testing.T) {
 	e := setupWithOwnMailbox(t)
+	e.WsExec(t, `
+		INSERT INTO capture_connection
+		       (user_id, provider, status, credential_ref, mail_posture, account_label)
+		VALUES ($1, 'gmail', 'connected', 'vault:test', 'shared', 'b@authz.test')`, e.Rep2)
 	const email = "buyer@twoseats.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-two-seats"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
-	captureInboundThroughRealSink(t, e, e.Rep2, "reply-two-seats", email, "thr-two-seats")
+	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
+		"reply-two-seats", email, "thr-two-seats")
 
 	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 }
@@ -217,7 +222,7 @@ func TestTheVerdictPassPublishesWhatTheLiveHookFailedToPublish(t *testing.T) {
 		"contact":  {Create: true, Read: true},
 		"company":  {Create: true, Read: true, Update: true},
 	}
-	captureInboundThroughRealSinkAs(principal.WithActor(ctx, actor), t, e, "reply-lost", email, "thr-lost")
+	captureInboundThroughRealSinkAs(principal.WithActor(ctx, actor), t, e, "a@authz.test", "reply-lost", email, "thr-lost")
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
 	publishAnswered(t, e)
