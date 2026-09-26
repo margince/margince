@@ -83,14 +83,18 @@ func recordWires(t *testing.T, e *integration.Env) []recordWire {
 	d := deals.NewHandlers(e.DB(), DealsInstallation())
 	p := projects.HandlersOver(ProjectsStore(e.Pool))
 	return []recordWire{
-		{"contact", "/v1/contacts", encode(json.Marshal(crmcontracts.CreateContactRequest{FullName: "Imported Contact", SourceSystem: &system})),
+		{
+			"contact", "/v1/contacts", encode(json.Marshal(crmcontracts.CreateContactRequest{FullName: "Imported Contact", SourceSystem: &system})),
 			func(w http.ResponseWriter, r *http.Request) {
 				c.CreateContact(w, r, crmcontracts.CreateContactParams{})
-			}},
-		{"company", "/v1/companies", encode(json.Marshal(crmcontracts.CreateCompanyRequest{DisplayName: "Imported Company", SourceSystem: &system})),
+			},
+		},
+		{
+			"company", "/v1/companies", encode(json.Marshal(crmcontracts.CreateCompanyRequest{DisplayName: "Imported Company", SourceSystem: &system})),
 			func(w http.ResponseWriter, r *http.Request) {
 				c.CreateCompany(w, r, crmcontracts.CreateCompanyParams{})
-			}},
+			},
+		},
 		{"deal", "/v1/deals", encode(json.Marshal(crmcontracts.CreateDealRequest{
 			Name: "Imported Deal", PipelineId: pipeline.Id, StageId: (*pipeline.Stages)[0].Id, SourceSystem: &system,
 		})), func(w http.ResponseWriter, r *http.Request) { d.CreateDeal(w, r, crmcontracts.CreateDealParams{}) }},

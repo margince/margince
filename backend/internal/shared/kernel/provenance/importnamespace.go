@@ -161,7 +161,7 @@ func RefuseWire(source string, sourceSystem *string) error {
 // `source` is nobody's to forge. Whether the caller IS a declared importer is
 // decided at the HTTP handler (auth.DeclaredImporter) and nowhere else.
 func RefuseWireAdmitting(source string, sourceSystem *string, importer bool) error {
-	if sourceSystem != nil && !(importer && ImporterNamespace(*sourceSystem)) {
+	if sourceSystem != nil && (!importer || !ImporterNamespace(*sourceSystem)) {
 		if err := Refuse("source_system", *sourceSystem); err != nil {
 			return err
 		}

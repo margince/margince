@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -50,24 +51,27 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 // other rows. Reading it here would let a single write share on one lead widen
 // the assigner's whole destination pool.
 func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int) string {
-	return assigneeEligibleSQL(p, alias, arg, `%[1]s.status = 'active'`)
-}
-
-// newOwnerStatus is the status half for a NEW record's named owner. An invited
-// colleague is a real colleague who has not signed in yet, and naming them as
-// the owner of a record created on their behalf (an import, most of all) is
-// the same act the assignments module already allows for responsibilities.
-// Routing — round robin, SLA reassignment, task fan-out — keeps asking
-// AssigneeEligibleSQL, so nothing is handed automatically to a seat nobody
-// answers.
-const newOwnerStatus = `%[1]s.status IN ('active', 'invited')`
-
-func assigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int, status string) string {
 	return fmt.Sprintf(
-		status+` AND %[1]s.archived_at IS NULL
+		`%[1]s.status = 'active' AND %[1]s.archived_at IS NULL
 		   AND NOT %[1]s.is_agent AND %[1]s.seat_type <> 'read'
 		   AND %[2]s`,
 		alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
+}
+
+// newRecordOwnerSQL is AssigneeEligibleSQL for a NEW record's named owner,
+// where an invited colleague is also eligible. An invited colleague is a real
+// colleague who has not signed in yet, and naming them as the owner of a record
+// created on their behalf (an import, most of all) is the act the assignments
+// module already allows for responsibilities. Routing (round robin, SLA
+// reassignment, task fan-out) keeps asking AssigneeEligibleSQL, so nothing is
+// handed automatically to a seat nobody answers.
+//
+// Derived from AssigneeEligibleSQL rather than spelled again, so every other
+// clause stays the one rule; TestANewRecordMayNameAnInvitedOwner holds the
+// swap.
+func newRecordOwnerSQL(p principal.Principal, alias string, arg func(any) int) string {
+	return strings.Replace(AssigneeEligibleSQL(p, alias, arg),
+		alias+".status = 'active'", alias+".status IN ('active', 'invited')", 1)
 }
 
 // EnsureAssignee answers whether the caller may hand work to dest.
@@ -87,9 +91,7 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 // EnsureNewRecordOwner is EnsureAssignee for the owner named on a record's
 // create, where an invited colleague is also eligible (newOwnerStatus).
 func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
-	return ensureAssigneeWith(ctx, tx, dest, func(p principal.Principal, alias string, arg func(any) int) string {
-		return assigneeEligibleSQL(p, alias, arg, newOwnerStatus)
-	})
+	return ensureAssigneeWith(ctx, tx, dest, newRecordOwnerSQL)
 }
 
 func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
