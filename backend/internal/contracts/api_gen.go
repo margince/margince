@@ -27341,7 +27341,7 @@ type CreateCompanyRequest struct {
 	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
 	Source          string                        `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -27384,7 +27384,7 @@ type CreateContactRequest struct {
 	Social    *map[string]interface{} `json:"social,omitempty"`
 	Source    string                  `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	Title                *string                `json:"title,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -27483,7 +27483,7 @@ type CreateDealRequest struct {
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 	Source    string              `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	StageId              openapi_types.UUID     `json:"stage_id"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -27794,7 +27794,7 @@ type CreateProjectRequest struct {
 	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 	Source      string              `json:"source"`
 
-	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.
+	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`

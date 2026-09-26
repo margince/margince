@@ -53,10 +53,21 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 }
 
 func contactCreateInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
+	return contactCreateInputAdmitting(req, false)
+}
+
+// contactCreateInputFromImporter is contactCreateInput for a declared importer
+// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
+// namespace. provider.go keeps the closed door.
+func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
+	return contactCreateInputAdmitting(req, true)
+}
+
+func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer bool) (CreateContactInput, error) {
 	if req.FullName == "" {
 		return CreateContactInput{}, &RequiredFieldError{Field: "full_name"}
 	}
-	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
+	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateContactInput{}, err
 	}
 	in := CreateContactInput{
@@ -194,10 +205,19 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 }
 
 func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
+	return companyCreateInputAdmitting(req, false)
+}
+
+// companyCreateInputFromImporter: see contactCreateInputFromImporter.
+func companyCreateInputFromImporter(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
+	return companyCreateInputAdmitting(req, true)
+}
+
+func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer bool) (CreateCompanyInput, error) {
 	if req.DisplayName == "" {
 		return CreateCompanyInput{}, &RequiredFieldError{Field: "display_name"}
 	}
-	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
+	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateCompanyInput{}, err
 	}
 	in := CreateCompanyInput{

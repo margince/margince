@@ -194,3 +194,28 @@ func TestReservedErrorStatesItselfAsCallerFixable(t *testing.T) {
 		t.Errorf("message %q must say what is wrong and which namespace to avoid", message)
 	}
 }
+
+// The record wires' importer door: the prefix alone passes, and only when the
+// handler said the caller is a declared importer. The three internal
+// identities and a forged `source` stay refused either way.
+func TestRefuseWireAdmittingOpensThePrefixOnlyForTheImporter(t *testing.T) {
+	namespaced := provenance.ReservedSourceSystemPrefix + "hubspot"
+	if err := provenance.RefuseWireAdmitting("", &namespaced, true); err != nil {
+		t.Errorf("the importer was refused its own namespace: %v", err)
+	}
+	if err := provenance.RefuseWireAdmitting("", &namespaced, false); err == nil {
+		t.Error("the closed door admitted the namespace")
+	}
+	for _, engine := range []string{
+		provenance.EmailRequestSource, provenance.NoActivityReminderSource, provenance.CheckInCadenceSource,
+	} {
+		planted := engine
+		if err := provenance.RefuseWireAdmitting("", &planted, true); err == nil {
+			t.Errorf("%q passed the importer door; it is the automation engine's", engine)
+		}
+	}
+	var refused *provenance.ReservedError
+	if err := provenance.RefuseWireAdmitting(namespaced, &namespaced, true); !errors.As(err, &refused) || refused.Field != "source" {
+		t.Errorf("a forged source through the importer door = %v, want it refused on source", err)
+	}
+}

@@ -50,8 +50,21 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 // other rows. Reading it here would let a single write share on one lead widen
 // the assigner's whole destination pool.
 func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int) string {
+	return assigneeEligibleSQL(p, alias, arg, `%[1]s.status = 'active'`)
+}
+
+// newOwnerStatus is the status half for a NEW record's named owner. An invited
+// colleague is a real colleague who has not signed in yet, and naming them as
+// the owner of a record created on their behalf (an import, most of all) is
+// the same act the assignments module already allows for responsibilities.
+// Routing — round robin, SLA reassignment, task fan-out — keeps asking
+// AssigneeEligibleSQL, so nothing is handed automatically to a seat nobody
+// answers.
+const newOwnerStatus = `%[1]s.status IN ('active', 'invited')`
+
+func assigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int, status string) string {
 	return fmt.Sprintf(
-		`%[1]s.status = 'active' AND %[1]s.archived_at IS NULL
+		status+` AND %[1]s.archived_at IS NULL
 		   AND NOT %[1]s.is_agent AND %[1]s.seat_type <> 'read'
 		   AND %[2]s`,
 		alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
@@ -68,6 +81,20 @@ func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int)
 // An unbounded seat still passes through the eligibility half: admin may assign
 // to anyone, and "anyone" has never included a suspended seat or an agent.
 func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	return ensureAssigneeWith(ctx, tx, dest, AssigneeEligibleSQL)
+}
+
+// EnsureNewRecordOwner is EnsureAssignee for the owner named on a record's
+// create, where an invited colleague is also eligible (newOwnerStatus).
+func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	return ensureAssigneeWith(ctx, tx, dest, func(p principal.Principal, alias string, arg func(any) int) string {
+		return assigneeEligibleSQL(p, alias, arg, newOwnerStatus)
+	})
+}
+
+func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
+	eligible func(principal.Principal, string, func(any) int) string,
+) error {
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return err
@@ -81,7 +108,7 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 		`SELECT EXISTS (SELECT 1 FROM (
 		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = $%d) u WHERE %s)`,
-		destPos, AssigneeEligibleSQL(p, "u", arg)), args...).Scan(&permitted); err != nil {
+		destPos, eligible(p, "u", arg)), args...).Scan(&permitted); err != nil {
 		return err
 	}
 	return refuseIneligibleAssignee(permitted)

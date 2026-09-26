@@ -152,7 +152,16 @@ func DisplayVia(sourceSystem *string) *string {
 // namespace is actually keyed on; a caller sending both reserved values hears
 // about that one.
 func RefuseWire(source string, sourceSystem *string) error {
-	if sourceSystem != nil {
+	return RefuseWireAdmitting(source, sourceSystem, false)
+}
+
+// RefuseWireAdmitting is RefuseWire with the declared importer's door: when
+// importer is true, a source_system inside the mirror: namespace passes. The
+// three exact internal identities stay refused for the importer too, and
+// `source` is nobody's to forge. Whether the caller IS a declared importer is
+// decided at the HTTP handler (auth.DeclaredImporter) and nowhere else.
+func RefuseWireAdmitting(source string, sourceSystem *string, importer bool) error {
+	if sourceSystem != nil && !(importer && ImporterNamespace(*sourceSystem)) {
 		if err := Refuse("source_system", *sourceSystem); err != nil {
 			return err
 		}

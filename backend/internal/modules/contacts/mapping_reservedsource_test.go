@@ -188,3 +188,33 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 		t.Errorf("the client door admitted the importer namespace: %v", err)
 	}
 }
+
+// The contact and company importer doors hold the same boundary as the lead
+// door: the namespace passes, an engine identity does not, and the client door
+// is unchanged.
+func TestTheRecordImporterDoorsAdmitTheirNamespaceAndNothingElse(t *testing.T) {
+	namespaced := "mirror:hubspot"
+	contactIn, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{FullName: "Imported", SourceSystem: &namespaced})
+	if err != nil || contactIn.SourceSystem == nil || *contactIn.SourceSystem != namespaced {
+		t.Errorf("contact importer door = %v / %v, want the namespace carried", contactIn.SourceSystem, err)
+	}
+	companyIn, err := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{DisplayName: "Imported", SourceSystem: &namespaced})
+	if err != nil || companyIn.SourceSystem == nil || *companyIn.SourceSystem != namespaced {
+		t.Errorf("company importer door = %v / %v, want the namespace carried", companyIn.SourceSystem, err)
+	}
+
+	planted := provenance.EmailRequestSource
+	if _, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{FullName: "Planted", SourceSystem: &planted}); err == nil {
+		t.Error("the contact importer door admitted an engine identity")
+	}
+	if _, err := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{DisplayName: "Planted", SourceSystem: &planted}); err == nil {
+		t.Error("the company importer door admitted an engine identity")
+	}
+
+	if _, err := contactCreateInput(crmcontracts.CreateContactRequest{FullName: "Planted", SourceSystem: &namespaced}); err == nil {
+		t.Error("the contact client door admitted the importer namespace")
+	}
+	if _, err := companyCreateInput(crmcontracts.CreateCompanyRequest{DisplayName: "Planted", SourceSystem: &namespaced}); err == nil {
+		t.Error("the company client door admitted the importer namespace")
+	}
+}
