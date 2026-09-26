@@ -33,7 +33,7 @@ export function MeetingSlots({
             selectedMany?.includes(slot.start) === true
           }
           disabled={disabled}
-          onClick={() => onSelect(slot)}
+          onClick={() => onSelect({ start: slot.start, end: slot.end })}
         >
           {slot.label}
         </Button>

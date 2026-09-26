@@ -13,7 +13,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -44,27 +43,21 @@ type approvalListBody struct {
 	} `json:"data"`
 }
 
-// siteReadPayload is what each kind of a site read's proposal carries. The
-// payloads are real ones: this suite decides through the composed application,
-// so every approved member runs its registered accept effect, and a placeholder
-// body would report effect_failed for reasons that have nothing to do with
-// bundling.
-func siteReadPayload(kind, companyID, readID, contact string) string {
-	if kind == "deepread" {
-		return `{"company_id":"` + companyID + `","source_url":"https://acme.example",` +
-			`"site_read_id":"` + readID + `","fields":[{"field":"industry","value":"Industrial valves",` +
-			`"evidence_snippet":"Acme makes industrial valves.","source_url":"https://acme.example","confidence":0.9}],"facts":[]}`
-	}
-	return `{"company_id":"` + companyID + `","site_read_id":"` + readID + `","natural_key":"` + contact +
-		`","name":"` + contact + `","role":"CTO","published_email":"` + contact + `@acme.example",` +
-		`"evidence_snippet":"` + contact + `, CTO","source_url":"https://acme.example/team"}`
+// deepReadPayload is what a site read's company proposal carries. It is a real
+// one: this suite decides through the composed application, so every approved
+// member runs its registered accept effect, and a placeholder body would report
+// effect_failed for reasons that have nothing to do with bundling.
+func deepReadPayload(companyID, readID string) string {
+	return `{"company_id":"` + companyID + `","source_url":"https://acme.example",` +
+		`"site_read_id":"` + readID + `","fields":[{"field":"industry","value":"Industrial valves",` +
+		`"evidence_snippet":"Acme makes industrial valves.","source_url":"https://acme.example","confidence":0.9}],"facts":[]}`
 }
 
 // stageBundleRows puts one act's proposals in the inbox through the owner
 // connection. The staging PATH is exercised where it lives; this suite needs
 // only the rows an act leaves behind, and writing them directly keeps the
 // arrange step from depending on a crawler.
-func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, kinds ...string) ids.UUID {
+func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, members int) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	bundle, readID := ids.NewV7(), ids.NewV7()
@@ -77,8 +70,8 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, kinds ..
 	// suite asserts against a bundle its caller never proposed. Same defect as
 	// demoteToRep's, same fix — #1180, #1074.
 	adminID := sessionUserID(t, e)
-	for i, kind := range kinds {
-		payload := siteReadPayload(kind, companyID, readID.String(), fmt.Sprintf("contact%d", i))
+	for i := range members {
+		kind, payload := "deepread", deepReadPayload(companyID, readID.String())
 		if _, err := e.Owner.Exec(ctx, `
 			INSERT INTO approval (kind, proposed_by, on_behalf_of, target_entity_type,
 			                      target_entity_id, summary, proposed_change, diff_hash, expires_at, bundle_id)
@@ -108,7 +101,7 @@ func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
-	bundle := stageBundleRows(t, e, company.ID, "deepread", "site_lead", "site_lead")
+	bundle := stageBundleRows(t, e, company.ID, 3)
 
 	var listed approvalListBody
 	if status := e.Call(t, "GET", "/v1/approvals?bundle_id="+bundle.String(), nil, nil, &listed); status != http.StatusOK {
@@ -188,7 +181,7 @@ func TestABundleDecisionRefusesAReadOnlyPassport(t *testing.T) {
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
-	bundle := stageBundleRows(t, e, company.ID, "site_lead")
+	bundle := stageBundleRows(t, e, company.ID, 1)
 	reader := apptest.PassportBearer(t, e, "bundle reader", "read")
 
 	status := e.Call(t, "POST", "/v1/approval-bundles/"+bundle.String()+"/approve", nil, reader, nil)

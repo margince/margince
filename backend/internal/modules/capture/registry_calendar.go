@@ -56,14 +56,20 @@ func (r *Registry) CalendarFor(ctx context.Context, host ids.UserID, provider st
 	return scheduler, credential, nil
 }
 
+var calendarWriteScopes = map[string][]string{
+	"gcal": {
+		"https://www.googleapis.com/auth/calendar.events.owned",
+		"https://www.googleapis.com/auth/calendar.events",
+		"https://www.googleapis.com/auth/calendar",
+	},
+	"graphcal": {"Calendars.ReadWrite"},
+}
+
 func calendarWriteGranted(provider string, scopes []string) bool {
-	switch provider {
-	case "gcal":
-		return slices.Contains(scopes, "https://www.googleapis.com/auth/calendar.events.owned") ||
-			slices.Contains(scopes, "https://www.googleapis.com/auth/calendar.events") || slices.Contains(scopes, "https://www.googleapis.com/auth/calendar")
-	case "graphcal":
-		return slices.Contains(scopes, "Calendars.ReadWrite")
-	default:
-		return false
+	for _, grant := range calendarWriteScopes[provider] {
+		if slices.Contains(scopes, grant) {
+			return true
+		}
 	}
+	return false
 }

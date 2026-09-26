@@ -179,6 +179,7 @@ func ageOutAndSweep(t *testing.T, e *integration.Env, activity ids.UUID) {
 		t.Fatalf("ageing the message out: %v", err)
 	}
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	integration.SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}

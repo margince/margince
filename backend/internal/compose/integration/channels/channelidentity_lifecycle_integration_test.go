@@ -152,6 +152,7 @@ func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testin
 	e.WsExec(t, `UPDATE contact SET created_at = now() - interval '800 days' WHERE id = $1`, contact)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	integration.SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}

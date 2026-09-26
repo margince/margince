@@ -66,6 +66,11 @@ func (w *siteDeepReadWorker) stageSiteLeadsInTx(ctx context.Context, tx pgx.Tx, 
 	if len(found) == 0 {
 		return nil, nil
 	}
+	// Refused before anything is staged: a proposal nobody may accept would
+	// only park a stranger's details in the inbox for no purpose.
+	if siteLeadsRefused(ctx, w.log, readID.String(), len(found)) {
+		return nil, nil
+	}
 	if claim.CompanyID == nil {
 		return nil, fmt.Errorf("compose: site read %s claims no account to file its leads under", readID)
 	}

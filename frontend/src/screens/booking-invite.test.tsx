@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -6,7 +7,12 @@ import { afterEach, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
-import { bookingContact, bookingProfile, bookingSlots } from "./book.testkit";
+import {
+  bookingConnection,
+  bookingContact,
+  bookingProfile,
+  bookingSlots,
+} from "./book.testkit";
 import { BookingInviteScreen } from "./booking-invite";
 
 function mount(configured = true) {
@@ -25,7 +31,18 @@ function mount(configured = true) {
           url: "https://crm.example.test/#/book/proposal-private",
           expires_at: "2026-10-06T09:00:00Z",
         };
-      } else if (path.includes("/contacts/"))
+      } else if (path.endsWith("/connectors"))
+        body = {
+          data: [
+            {
+              ...bookingConnection,
+              scopes: configured
+                ? bookingConnection.scopes
+                : ["https://www.googleapis.com/auth/calendar.readonly"],
+            },
+          ],
+        };
+      else if (path.includes("/contacts/"))
         body = {
           ...bookingContact,
           primary_email: null,
@@ -101,10 +118,12 @@ it("prefills a singleton contact email and saved meeting details, then binds the
 it("explains calendar setup without requesting unavailable times", async () => {
   const { paths } = mount(false);
   expect(
-    await screen.findByRole("button", {
-      name: "Connect or reconnect calendar",
+    await screen.findByRole("link", {
+      name: "Open calendar connections",
     }),
   ).toBeTruthy();
-  expect(screen.getByText(/Calendar write access is required/)).toBeTruthy();
+  expect(
+    screen.getByText(/Your calendar is connected for reading events/),
+  ).toBeTruthy();
   expect(paths.some((path) => path.endsWith("/availability"))).toBe(false);
 });

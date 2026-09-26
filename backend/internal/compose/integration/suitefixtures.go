@@ -176,3 +176,32 @@ func SeedRetentionPolicies(t *testing.T, e *Env) {
 		t.Fatal(err)
 	}
 }
+
+// SettleIntoInstall makes every seeded record look as if it had been in this
+// installation since its own date: entered_at goes back to created_at (a
+// deal's to its close as well), and an activity's created_at to occurred_at.
+//
+// Retention asks both ages (privacy/retentionselectors.go), so a fixture that
+// plants a record "400 days old" by its created_at alone now plants one that
+// arrived today, and the pass rightly leaves it alone. Call this after seeding
+// and before the pass in a test about what retention does to an old record.
+func SettleIntoInstall(t *testing.T, e *Env) {
+	t.Helper()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		for _, stmt := range []string{
+			`UPDATE lead SET entered_at = created_at WHERE created_at < entered_at`,
+			`UPDATE contact SET entered_at = created_at WHERE created_at < entered_at`,
+			`UPDATE deal SET entered_at = least(created_at, coalesce(closed_at, created_at))
+			  WHERE least(created_at, coalesce(closed_at, created_at)) < entered_at`,
+			`UPDATE activity SET created_at = occurred_at WHERE occurred_at < created_at`,
+		} {
+			if _, err := tx.Exec(context.Background(), stmt); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("settling the seeded records into the installation: %v", err)
+	}
+}

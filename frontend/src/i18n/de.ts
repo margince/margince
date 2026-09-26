@@ -77,6 +77,32 @@ export const de = {
     "Dieser Link behält die bereits erstellten Angaben. Für deine Änderungen kannst du einen neuen Link erstellen; der bisherige bleibt bis zu seinem Ablauf gültig.",
   "scheduling.proposalUpdate": "Aktualisierten Vorschlag erstellen",
   "scheduling.calendar": "Kalender für Einladungen",
+  "scheduling.bookContact": "Termin buchen",
+  "scheduling.setupCalendar": "Buchungskalender auswählen",
+  "scheduling.selectCalendarHelp":
+    "Wähle den Kalender für Einladungen und öffentliche Buchungen; Termindetails bleiben hier.",
+  "scheduling.chooseProvider": "Kalenderanbieter auswählen",
+  "scheduling.useCalendar": "Diesen Kalender verwenden",
+  "scheduling.readOnlyCalendar":
+    "Dein Kalender ist zum Lesen verbunden. Verbinde ihn erneut und erlaube Einladungen, um Termine zu erstellen, zu verschieben und abzusagen.",
+  "scheduling.disconnectedCalendar":
+    "Verbinde diesen Kalender, bevor du Einladungen sendest. Wenn nur dein Postfach verbunden ist, verbinde den Kalender separat.",
+  "scheduling.expiredCalendar":
+    "Deine Kalenderverbindung ist abgelaufen. Verbinde sie erneut, um Einladungen zu senden.",
+  "scheduling.bookRefused":
+    "Die Administration muss die Terminbuchung erlauben.",
+  "scheduling.meetingChanged":
+    "Der Termin wurde geändert. Prüfe die aktuellen Details und versuche es erneut.",
+  "scheduling.publicCalendarUnavailable":
+    "Deine Buchungsseite ist aktiv, aber Kalendereinladungen sind nicht verfügbar. Prüfe die Kalenderverbindung unten oder pausiere die Seite.",
+  "scheduling.manageConnection": "Kalenderverbindungen öffnen",
+  "scheduling.calendarConnected":
+    "Verbunden: {account}. Zugriff für Einladungen erteilt.",
+  "scheduling.noWritableCalendar":
+    "Kein bearbeitbarer Kalender verfügbar. Wähle einen anderen Anbieter oder prüfe deine Kalenderberechtigungen.",
+  "scheduling.finishSetup":
+    "Wähle oben deinen Buchungskalender, um freie Zeiten zu sehen.",
+  "scheduling.readOnlyBadge": "Kalender nur lesbar",
   "scheduling.connect": "Kalender verbinden oder erneut verbinden",
   "scheduling.connectionHelp":
     "Zum Senden von Einladungen ist Schreibzugriff nötig. Verbinde einen nur lesbaren Kalender erneut.",
@@ -120,7 +146,7 @@ export const de = {
     "Diese Buchungsseite ist nicht verfügbar. Kontaktiere deinen Gastgeber.",
   "scheduling.publicUrlMissing":
     "Richte eine öffentliche Adresse für diese Installation ein, bevor du Buchungslinks teilst.",
-  "scheduling.new": "Termin vereinbaren",
+  "scheduling.new": "Termin buchen",
 
   "aiAdmin.allowance": "Monatliches KI-Kontingent",
   "aiAdmin.pool":
@@ -3354,7 +3380,7 @@ export const de = {
   "deepread.title": "Dieses Unternehmen recherchieren",
   "deepread.titleRead": "Website-Recherche",
   "deepread.sub":
-    "Durchsucht die Website des Unternehmens nach Domain, Branche, Größe, Standorten und wahrscheinlichen Entscheidungstragenden und schlägt dann einen ersten Schritt vor. Die Befunde bleiben vorgemerkt, bis du sie annimmst.",
+    "Durchsucht die Website des Unternehmens nach Domain, Branche, Größe und Standorten und schlägt dann einen ersten Schritt vor. Die Befunde bleiben vorgemerkt, bis du sie annimmst. Niemand, der auf der Website genannt wird, wird übernommen.",
   "deepread.cta": "Unternehmensrecherche starten",
   "deepread.ctaAgain": "Website erneut lesen",
   "deepread.starting": "Wird gestartet…",
@@ -10502,6 +10528,48 @@ export const de = {
   "magic.laneCount_other": "{count} Zeilen",
   "magic.col.what": "Was passiert ist",
   "magic.col.about": "Betrifft",
+  "magic.col.by": "Von",
+  "magic.aboutMany_one": "{label} und {others} weiterer",
+  "magic.aboutMany_other": "{label} und {others} weitere",
+  "magic.aboutCount_one": "{count} Datensatz",
+  "magic.aboutCount_other": "{count} Datensätze",
+  "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
+  "magic.action.company_profile_read":
+    "Technisches Profil des Unternehmens gelesen",
+  "magic.action.fields_changed": "{fields} geändert",
+  "magic.action.retention_lead_anonymize":
+    "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist anonymisiert",
+  "magic.action.retention_lead_archive":
+    "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.action.retention_contact_anonymize":
+    "Kontakte ohne Einwilligung und ohne Deal nach Ablauf der Aufbewahrungsfrist anonymisiert",
+  "magic.action.retention_contact_erase":
+    "Kontakte nach Ablauf der Aufbewahrungsfrist gelöscht",
+  "magic.action.retention_activity_archive":
+    "E-Mails, Termine und Notizen nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.action.retention_activity_erase":
+    "Transkriptinhalte nach Ablauf der Aufbewahrungsfrist gelöscht",
+  "magic.action.retention_deal_archive":
+    "Abgeschlossene Deals nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
+  "magic.why.public_records":
+    "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
+  "magic.why.site_read": "Gelesen auf {site}.",
+  "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
+  "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",
+  "magic.by.retention": "Aufbewahrung",
+  "magic.by.mail_filing": "E-Mail-Zuordnung",
+  "magic.by.company_lookup": "Firmenabfrage",
+  "magic.by.website_reader": "Website-Leser",
+  "magic.by.signature_reader": "Signatur-Leser",
+  "magic.by.overnight_agent": "Nacht-Agent",
+  "magic.by.mail_reader": "E-Mail-Leser",
+  "magic.by.auto_apply": "Automatische Übernahme",
+  "magic.by.automation": "Automatisierung",
+  "magic.by.lead_routing": "Lead-Verteilung",
+  "magic.by.mailbox": "Postfach-Synchronisierung",
+  "magic.by.agent": "Ein Agent",
+  "magic.by.system": "Margince",
   "magic.col.when": "Wann",
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.col.wayBack": "Weg zurück",

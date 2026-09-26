@@ -105,6 +105,9 @@ type Store struct {
 	// reviewLookup answers which review stands over a held message, so a row
 	// can offer a route to the work that would unstop it.
 	reviewLookup ReviewLookup
+	// ownerMailbox lets the quiet-record scan ask whether an owner's mail is
+	// visible; nil scans without asking (WithOwnerMailbox).
+	ownerMailbox *OwnerMailbox
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time

@@ -55,7 +55,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealroominvitelink_test.go` | H3 | The address a buyer invitation MAILS is an address this app serves. |
 | `decisionpreset_test.go` | H3 | The routing form's one-click OpenRouter decision binding and the commented `decisions:` blocks the presets carry are two spellings of one binding: an operator who presses the button and one who uncomments the block must end up with the same endpoint and model. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
-| `deexceptionmirror_test.go` | H3 | The engine's test fixture for the German exception is the pack's declaration, or the tests prove nothing about what ships. |
 | `disclosureseam_test.go` | H1 | The two halves of the disclosure seam describe the same thing. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
@@ -218,6 +217,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |
 | `emptylistwire_test.go` | H2 | Every list envelope carries its rows in a field the writer can find. |
+| `enteredatwriters_test.go` | H2 | Nothing writes when a record entered the installation. |
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |
 | `erasurecascadereach_test.go` | H2 | Every file the Art. 17 cascade executes SQL from is one the PII censuses read. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |

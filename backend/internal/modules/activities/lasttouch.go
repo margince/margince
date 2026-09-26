@@ -42,6 +42,23 @@ type LastTouchCandidate struct {
 	LastTouch  time.Time
 }
 
+// genuineEngagement is what counts as a real touch for the quiet reminders:
+// live, an engagement rather than a notice, visible to the workspace, and not
+// the engine's own output. The scan reads it to find a silence and the
+// resolver (CompleteQuietRemindersReachedBy) to find its end, so a touch that
+// would not have moved the anchor does not close the reminder either.
+//
+// The three positions bind systemSource, systemCapturedBy and
+// systemCapturedByPattern; source alone is a client's to spell, so it is
+// excluded only together with captured_by.
+func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
+	return storekit.SQLf(`%[1]s.archived_at IS NULL`+
+		auth.OriginIsEngagement(alias)+auth.AudienceWorkspaceOnly(alias)+`
+				  AND NOT (%[1]s.source = $%[2]d
+				           AND (%[1]s.captured_by = $%[3]d OR %[1]s.captured_by LIKE $%[4]d))`,
+		alias, sourcePos, capturedByPos, patternPos)
+}
+
 // lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most
 // recent genuine engagement, narrowed to the ones carrying live work. It is a
 // function rather than a constant because two of its fragments are built —
@@ -53,19 +70,17 @@ type LastTouchCandidate struct {
 // the namespaced form: captured_by carries the principal's ID and every job
 // binds its own ("system:time-scan"), so matching the bare "system" alone
 // missed the engine's own writes and let a reminder reset the clock it
-// reads. $2 the cutoff, $3 the cap.
-func lastTouchCandidateQuery() string {
+// reads. $2 the cutoff, $3 the cap, $6 the asking handler; providersPos is
+// where the mail providers are bound when the store asks about the owner's
+// mailbox.
+func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 	return storekit.SQLf(`
 			WITH genuine AS (
 				SELECT a.id, a.occurred_at
 				FROM activity a
-				WHERE a.archived_at IS NULL
-				  `+auth.OriginIsEngagement("a")+`
-				  `+auth.AudienceWorkspaceOnly("a")+`
-				  AND NOT (a.source = $1
-				           AND (a.captured_by = $4 OR a.captured_by LIKE $5))
+				WHERE `+genuineEngagement("a", 1, 4, 5)+`
 			), live_accounts AS (
-				SELECT o.id
+				SELECT o.id, o.owner_id
 				FROM company o
 				JOIN deal d ON d.company_id = o.id
 				           AND d.status = 'open' AND d.archived_at IS NULL
@@ -93,20 +108,22 @@ func lastTouchCandidateQuery() string {
 				SELECT la.id
 				FROM live_accounts la
 				JOIN accounts a ON a.entity_id = la.id
-				WHERE a.last_touch < $2
+				WHERE a.last_touch < $2%[6]s
 			)
 			SELECT q.entity_type, q.entity_id, q.last_touch
 			FROM quiet q
 			WHERE q.last_touch < $2
 			  AND (%[4]s)
-			  AND NOT EXISTS (%[5]s)
+			  AND NOT EXISTS (%[5]s)%[7]s
 			ORDER BY q.last_touch, q.entity_id
 			LIMIT $3`,
 		linkIDCoalesceQualified("al"),
 		datasource.RecordCompany,
 		CompanyReachSet(),
 		lastTouchEligibility(),
-		openReminderHoldsEntity())
+		openReminderHoldsEntity(),
+		mailbox.ownerMailboxUnseen("la.owner_id", providersPos),
+		mailbox.ownerMailboxUnseen(quietRecordOwner(), providersPos))
 }
 
 // lastTouchEligibility is the per-type live-work test, and the collapse that
@@ -297,6 +314,10 @@ func openReminderHoldsEntity() string {
 // Every other entity type activity_link can carry (project today) is
 // outside this trigger's vocabulary and never becomes a candidate.
 //
+// On a store wired WithOwnerMailbox, an owned record is drawn only while its
+// owner's mail is visible (quietmailbox.go), in the SQL for the same batch
+// reason as eligibility.
+//
 // The cutoff does double duty: the entity row's own created_at must also
 // precede it, so a record created yesterday cannot be "stale" merely
 // because activities backfilled onto it are older than N days. One
@@ -318,8 +339,13 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// vocabulary (linktarget.go), the same source the coalesce
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
-		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), systemSource, cutoff, limit,
-			systemCapturedBy, systemCapturedByPattern, reminder)
+		args := []any{systemSource, cutoff, limit, systemCapturedBy, systemCapturedByPattern, reminder}
+		providersPos := 0
+		if s.ownerMailbox != nil {
+			args = append(args, s.ownerMailbox.Providers)
+			providersPos = len(args)
+		}
+		rows, err := tx.Query(ctx, lastTouchCandidateQuery(s.ownerMailbox, providersPos), args...)
 		if err != nil {
 			return err
 		}

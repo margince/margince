@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,6 +9,7 @@ import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { BookingScreen, PUBLIC_BOOKING_CONSENT } from "./book";
 import {
+  bookingConnection,
   bookingInvitation,
   bookingProfile,
   bookingSlots,
@@ -42,13 +44,15 @@ function serve(fail = false) {
                 management_token: "private-link",
               },
             }
-        : path.endsWith("/calendars")
-          ? []
-          : path.endsWith("/availability")
-            ? { slots: bookingSlots, truncated: false }
-            : path.includes("/meeting/")
-              ? bookingInvitation
-              : bookingProfile;
+        : path.endsWith("/connectors")
+          ? { data: [bookingConnection] }
+          : path.endsWith("/calendars")
+            ? []
+            : path.endsWith("/availability")
+              ? { slots: bookingSlots, truncated: false }
+              : path.includes("/meeting/")
+                ? bookingInvitation
+                : bookingProfile;
       return new Response(JSON.stringify(reply), {
         status: post ? (fail ? 409 : 201) : 200,
         headers: { "content-type": "application/json" },

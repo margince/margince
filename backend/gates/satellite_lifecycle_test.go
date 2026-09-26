@@ -147,12 +147,16 @@ var (
 	// existing table — contact_consent gains lead_id that way (0056), so a
 	// derivation that read only CREATE TABLE would be reading a stale schema.
 	alterColumn = regexp.MustCompile(`(?i)^\s*ALTER TABLE ([a-z_]+)\s+(ADD|DROP) COLUMN (?:IF (?:NOT )?EXISTS )?([a-z_]+)`)
+	// dropTable matches a later migration removing a table outright, so a
+	// dropped table stops being a satellite that owes a lifecycle path.
+	dropTable = regexp.MustCompile(`(?i)^\s*DROP TABLE (?:IF EXISTS )?([a-z_]+)`)
 )
 
 // contactSatellites derives the governed satellites from the migration sources:
 // table name → its column set. A contact_*-named CREATE TABLE with a contact_id
-// column qualifies; ADD/DROP COLUMN in a later migration is folded in, in file
-// order, so the column set is the one the migrated schema actually has.
+// column qualifies; ADD/DROP COLUMN and DROP TABLE in a later migration are
+// folded in, in file order, so the column set is the one the migrated schema
+// actually has.
 func contactSatellites(t *testing.T) map[string]map[string]bool {
 	t.Helper()
 	columns := map[string]map[string]bool{}
@@ -192,6 +196,10 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 				if m := columnLine.FindStringSubmatch(line); m != nil {
 					columns[current][m[1]] = true
 				}
+				continue
+			}
+			if m := dropTable.FindStringSubmatch(line); m != nil {
+				delete(columns, m[1])
 				continue
 			}
 			m := alterColumn.FindStringSubmatch(line)
@@ -238,14 +246,13 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 // to see them at all — before that, every one of these was invisible to it —
 // and it only shrinks. A table leaves when its owner carries it.
 var notYetCarried = gatekit.Waive(map[string]string{
-	"communication_basis":            "#5771 — the module that owns it has no carry port yet",
-	"confirm_token":                  "#5771 — the module that owns it has no carry port yet",
-	"consent_doi_token":              "#5771 — the module that owns it has no carry port yet",
-	"consent_existing_customer_flag": "#5771 — the module that owns it has no carry port yet",
-	"consent_qualifying_event":       "#5771 — the module that owns it has no carry port yet",
-	"preference_token":               "#5771 — the module that owns it has no carry port yet",
-	"withdrawal_credential":          "#5771 — the module that owns it has no carry port yet",
-	"intro_request":                  "#5771 — the module that owns it has no carry port yet",
+	"communication_basis":      "#5771 — the module that owns it has no carry port yet",
+	"confirm_token":            "#5771 — the module that owns it has no carry port yet",
+	"consent_doi_token":        "#5771 — the module that owns it has no carry port yet",
+	"consent_qualifying_event": "#5771 — the module that owns it has no carry port yet",
+	"preference_token":         "#5771 — the module that owns it has no carry port yet",
+	"withdrawal_credential":    "#5771 — the module that owns it has no carry port yet",
+	"intro_request":            "#5771 — the module that owns it has no carry port yet",
 })
 
 func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {

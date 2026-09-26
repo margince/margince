@@ -224,18 +224,17 @@ var tableOwners = map[string]string{
 	// What made business correspondence lawful, and the §7(3) flag: both are
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
-	"contact_acquisition_evidence":   "internal/modules/contacts",
-	"privacy_notice_case":            "internal/modules/consent",
-	"consent_text_version":           "internal/modules/consent",
-	"communication_decision":         "internal/modules/consent",
-	"communication_basis":            "internal/modules/consent",
-	"communication_review":           "internal/modules/consent",
-	"communication_instruction":      "internal/modules/consent",
-	"communication_suppression":      "internal/modules/consent",
-	"consent_qualifying_event":       "internal/modules/consent",
-	"consent_existing_customer_flag": "internal/modules/consent",
-	"data_subject_request":           "internal/modules/consent",
-	"preference_token":               "internal/modules/consent",
+	"contact_acquisition_evidence": "internal/modules/contacts",
+	"privacy_notice_case":          "internal/modules/consent",
+	"consent_text_version":         "internal/modules/consent",
+	"communication_decision":       "internal/modules/consent",
+	"communication_basis":          "internal/modules/consent",
+	"communication_review":         "internal/modules/consent",
+	"communication_instruction":    "internal/modules/consent",
+	"communication_suppression":    "internal/modules/consent",
+	"consent_qualifying_event":     "internal/modules/consent",
+	"data_subject_request":         "internal/modules/consent",
+	"preference_token":             "internal/modules/consent",
 	// The emailed link that shows a contact their own record and carries their
 	// marketing answer back, and what comes back through it. Consent's, because
 	// what the token authorises is a consent decision and the address it was

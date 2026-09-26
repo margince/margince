@@ -82,6 +82,30 @@ export const vi = {
     "Liên kết này giữ nguyên thông tin đã tạo. Bạn có thể tạo liên kết mới cho các thay đổi; liên kết cũ vẫn có hiệu lực đến khi hết hạn.",
   "scheduling.proposalUpdate": "Tạo đề xuất đã cập nhật",
   "scheduling.calendar": "Lịch cuộc hẹn",
+  "scheduling.bookContact": "Đặt cuộc họp",
+  "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
+  "scheduling.selectCalendarHelp":
+    "Chọn lịch cho lời mời và đặt lịch công khai; thông tin cuộc họp vẫn được giữ.",
+  "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
+  "scheduling.useCalendar": "Sử dụng lịch này",
+  "scheduling.readOnlyCalendar":
+    "Lịch đã kết nối để đọc sự kiện. Kết nối lại và cấp quyền gửi lời mời để tạo, đổi lịch và hủy cuộc họp.",
+  "scheduling.disconnectedCalendar":
+    "Kết nối lịch này trước khi gửi lời mời. Nếu chỉ kết nối hộp thư, hãy kết nối lịch riêng.",
+  "scheduling.expiredCalendar":
+    "Kết nối lịch đã hết hạn. Kết nối lại để gửi lời mời.",
+  "scheduling.bookRefused": "Quản trị viên cần cấp quyền đặt cuộc họp.",
+  "scheduling.meetingChanged":
+    "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
+  "scheduling.publicCalendarUnavailable":
+    "Trang đặt lịch đang hoạt động nhưng chưa thể gửi lời mời lịch. Kiểm tra kết nối lịch bên dưới hoặc tạm dừng trang.",
+  "scheduling.manageConnection": "Mở kết nối lịch",
+  "scheduling.calendarConnected":
+    "Đã kết nối: {account}. Đã cấp quyền gửi lời mời.",
+  "scheduling.noWritableCalendar":
+    "Không có lịch có thể chỉnh sửa. Chọn nhà cung cấp khác hoặc kiểm tra quyền truy cập lịch.",
+  "scheduling.finishSetup": "Chọn lịch đặt cuộc họp ở trên để xem giờ trống.",
+  "scheduling.readOnlyBadge": "Lịch chỉ đọc",
   "scheduling.connect": "Kết nối hoặc kết nối lại lịch",
   "scheduling.connectionHelp":
     "Cần quyền ghi lịch để gửi lời mời. Kết nối lại lịch chỉ đọc để cấp quyền.",
@@ -124,7 +148,7 @@ export const vi = {
     "Trang đặt lịch này không khả dụng. Hãy liên hệ chủ lịch.",
   "scheduling.publicUrlMissing":
     "Thiết lập địa chỉ công khai cho hệ thống trước khi chia sẻ liên kết đặt lịch.",
-  "scheduling.new": "Sắp xếp cuộc họp",
+  "scheduling.new": "Đặt cuộc họp",
 
   "aiAdmin.allowance": "Hạn mức AI hàng tháng",
   "aiAdmin.pool":
@@ -3330,7 +3354,7 @@ export const vi = {
   "deepread.title": "Margince có thể điền giúp",
   "deepread.titleRead": "Nghiên cứu website",
   "deepread.sub":
-    "Margince đọc website của công ty để tìm tên miền, ngành, quy mô, địa điểm và những người có thể ra quyết định, rồi đề xuất bước đầu tiên. Kết quả được xếp chờ bạn duyệt — không có gì được ghi cho đến khi bạn chấp nhận.",
+    "Margince đọc website của công ty để tìm tên miền, ngành, quy mô và địa điểm, rồi đề xuất bước đầu tiên. Kết quả được xếp chờ bạn duyệt — không có gì được ghi cho đến khi bạn chấp nhận. Những người được nêu tên trên website sẽ không được thêm vào.",
   "deepread.cta": "Bắt đầu nghiên cứu công ty",
   "deepread.ctaAgain": "Đọc lại website",
   "deepread.starting": "Đang bắt đầu…",
@@ -10402,6 +10426,46 @@ export const vi = {
   "magic.laneCount_other": "{count} dòng",
   "magic.col.what": "Chuyện gì đã xảy ra",
   "magic.col.about": "Liên quan đến",
+  "magic.col.by": "Bởi",
+  "magic.aboutMany_one": "{label} và {others} bản ghi khác",
+  "magic.aboutMany_other": "{label} và {others} bản ghi khác",
+  "magic.aboutCount_one": "{count} bản ghi",
+  "magic.aboutCount_other": "{count} bản ghi",
+  "magic.action.mail_filed": "Đã xếp email thu thập vào liên hệ này",
+  "magic.action.company_profile_read": "Đã đọc hồ sơ kỹ thuật của công ty",
+  "magic.action.fields_changed": "Đã thay đổi {fields}",
+  "magic.action.retention_lead_anonymize":
+    "Đã ẩn danh khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
+  "magic.action.retention_lead_archive":
+    "Đã lưu trữ khách hàng tiềm năng chưa chuyển đổi đã quá hạn lưu trữ",
+  "magic.action.retention_contact_anonymize":
+    "Đã ẩn danh liên hệ không có đồng ý hoặc giao dịch đã quá hạn lưu trữ",
+  "magic.action.retention_contact_erase": "Đã xóa liên hệ đã quá hạn lưu trữ",
+  "magic.action.retention_activity_archive":
+    "Đã lưu trữ email, cuộc họp và ghi chú đã quá hạn lưu trữ",
+  "magic.action.retention_activity_erase":
+    "Đã xóa nội dung bản chép lời đã quá hạn lưu trữ",
+  "magic.action.retention_deal_archive":
+    "Đã lưu trữ giao dịch đã đóng đã quá hạn lưu trữ",
+  "magic.why.mail_filed": "Địa chỉ bên gửi thuộc về liên hệ này.",
+  "magic.why.public_records":
+    "Từ trang web công khai và bản ghi DNS của công ty.",
+  "magic.why.site_read": "Đọc trên {site}.",
+  "magic.why.signature": "Lấy từ chữ ký email.",
+  "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
+  "magic.by.retention": "Lưu trữ dữ liệu",
+  "magic.by.mail_filing": "Xếp email",
+  "magic.by.company_lookup": "Tra cứu công ty",
+  "magic.by.website_reader": "Trình đọc website",
+  "magic.by.signature_reader": "Trình đọc chữ ký",
+  "magic.by.overnight_agent": "Tác tử ban đêm",
+  "magic.by.mail_reader": "Trình đọc email",
+  "magic.by.auto_apply": "Tự động áp dụng",
+  "magic.by.automation": "Tự động hóa",
+  "magic.by.lead_routing": "Phân phối khách hàng tiềm năng",
+  "magic.by.mailbox": "Đồng bộ hộp thư",
+  "magic.by.agent": "Một tác tử",
+  "magic.by.system": "Hệ thống Margince",
   "magic.col.when": "Khi nào",
   "magic.failingSince": "Lỗi từ {when}",
   "magic.col.wayBack": "Cách hoàn tác",

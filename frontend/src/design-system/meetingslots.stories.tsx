@@ -27,3 +27,7 @@ export const Available: Story = {
   },
 };
 export const Empty: Story = { args: { ...Available.args, slots: [] } };
+export const AvailableDark: Story = {
+  ...Available,
+  globals: { theme: "dark" },
+};

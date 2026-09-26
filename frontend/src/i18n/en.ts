@@ -74,6 +74,32 @@ export const en = {
     "This link keeps the details you already created. You can create a new link for your changes; the previous link remains valid until it expires.",
   "scheduling.proposalUpdate": "Create updated proposal",
   "scheduling.calendar": "Event calendar",
+  "scheduling.bookContact": "Book a meeting",
+  "scheduling.setupCalendar": "Choose your booking calendar",
+  "scheduling.selectCalendarHelp":
+    "Choose a calendar for invitations and public bookings; meeting details stay here.",
+  "scheduling.chooseProvider": "Choose a calendar provider",
+  "scheduling.useCalendar": "Use this calendar",
+  "scheduling.readOnlyCalendar":
+    "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
+  "scheduling.disconnectedCalendar":
+    "Connect this calendar before sending invitations. If you connected only your mailbox, connect the calendar separately.",
+  "scheduling.expiredCalendar":
+    "Your calendar connection has expired. Reconnect it to send invitations.",
+  "scheduling.bookRefused":
+    "An administrator must grant permission to book meetings.",
+  "scheduling.meetingChanged":
+    "The meeting changed. Review the updated details and try again.",
+  "scheduling.publicCalendarUnavailable":
+    "Your booking page is active, but calendar invitations are unavailable. Check the calendar connection below or pause the page.",
+  "scheduling.manageConnection": "Open calendar connections",
+  "scheduling.calendarConnected":
+    "Connected: {account}. Invitation access granted.",
+  "scheduling.noWritableCalendar":
+    "No editable calendar is available. Choose another provider or check your calendar permissions.",
+  "scheduling.finishSetup":
+    "Choose your booking calendar above to see available times.",
+  "scheduling.readOnlyBadge": "Read-only calendar",
   "scheduling.connect": "Connect or reconnect calendar",
   "scheduling.connectionHelp":
     "Calendar write access is required to send invitations. Reconnect an existing read-only calendar to grant access.",
@@ -115,7 +141,7 @@ export const en = {
     "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
     "Set a public address for this installation before sharing external booking links.",
-  "scheduling.new": "Arrange a meeting",
+  "scheduling.new": "Book a meeting",
 
   "aiAdmin.allowance": "Monthly AI allowance",
   "aiAdmin.pool":
@@ -3469,7 +3495,7 @@ export const en = {
   // what it now holds rather than pitching a capability already used.
   "deepread.titleRead": "Website research",
   "deepread.sub":
-    "Reads the company’s website for domain, industry, size, locations and likely decision-makers, then suggests a first step. Findings stay staged until you accept.",
+    "Reads the company’s website for domain, industry, size and locations, then suggests a first step. Findings stay staged until you accept. Nobody named on the site is added.",
   "deepread.cta": "Start company research",
   "deepread.ctaAgain": "Read website again",
   "deepread.starting": "Starting…",
@@ -10689,6 +10715,47 @@ export const en = {
   "magic.laneCount_other": "{count} lines",
   "magic.col.what": "What happened",
   "magic.col.about": "About",
+  "magic.col.by": "By",
+  "magic.aboutMany_one": "{label} and {others} more",
+  "magic.aboutMany_other": "{label} and {others} more",
+  "magic.aboutCount_one": "{count} record",
+  "magic.aboutCount_other": "{count} records",
+  "magic.action.mail_filed": "Filed captured email under this contact",
+  "magic.action.company_profile_read": "Read the company’s technical profile",
+  "magic.action.fields_changed": "Changed {fields}",
+  "magic.action.retention_lead_anonymize":
+    "Anonymized unconverted leads past their retention period",
+  "magic.action.retention_lead_archive":
+    "Archived unconverted leads past their retention period",
+  "magic.action.retention_contact_anonymize":
+    "Anonymized contacts without consent or a deal past their retention period",
+  "magic.action.retention_contact_erase":
+    "Erased contacts past their retention period",
+  "magic.action.retention_activity_archive":
+    "Archived emails, meetings and notes past their retention period",
+  "magic.action.retention_activity_erase":
+    "Erased transcript content past its retention period",
+  "magic.action.retention_deal_archive":
+    "Archived closed deals past their retention period",
+  "magic.why.mail_filed": "The sender’s address belongs to this contact.",
+  "magic.why.public_records":
+    "From the company’s public website and DNS records.",
+  "magic.why.site_read": "Read on {site}.",
+  "magic.why.signature": "Taken from an email signature.",
+  "magic.why.retention": "Retention rule: after {days} days.",
+  "magic.by.retention": "Retention",
+  "magic.by.mail_filing": "Mail filing",
+  "magic.by.company_lookup": "Company lookup",
+  "magic.by.website_reader": "Website reader",
+  "magic.by.signature_reader": "Signature reader",
+  "magic.by.overnight_agent": "Overnight agent",
+  "magic.by.mail_reader": "Mail reader",
+  "magic.by.auto_apply": "Auto-apply",
+  "magic.by.automation": "Automation",
+  "magic.by.lead_routing": "Lead routing",
+  "magic.by.mailbox": "Mailbox sync",
+  "magic.by.agent": "An agent",
+  "magic.by.system": "Margince",
   "magic.col.when": "When",
   "magic.failingSince": "Failing since {when}",
   "magic.col.wayBack": "Way back",

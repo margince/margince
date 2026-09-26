@@ -12,7 +12,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { BookingBack, BookingFooter } from "./booking-common";
 import { BookingReschedule } from "./booking-reschedule";
-import { QueryGate, throwProblem } from "./common";
+import { problemCodeOf, QueryGate, throwProblem } from "./common";
 import { ContactMeetingBrief } from "./meetingbrief/drawer";
 
 type Invitation = components["schemas"]["MeetingInvitation"];
@@ -77,6 +77,12 @@ export function BookingMeetingScreen({
       setReschedule(false);
     },
   });
+  const changeError =
+    problemCodeOf(change.error) === "conflict" ? (
+      <ErrorLine>{t("scheduling.meetingChanged")}</ErrorLine>
+    ) : (
+      <ErrorLine error={change.error} />
+    );
   const labels: Record<Invitation["status"], string> = {
     pending: t("scheduling.pending"),
     confirmed: t("scheduling.confirmed"),
@@ -180,27 +186,27 @@ export function BookingMeetingScreen({
                     )}
                   </>
                 )}
-                {(meeting.status === "confirmed" ||
-                  meeting.status === "needs_attention") && (
-                  <ConfirmModal
-                    open={cancelOpen}
-                    onClose={() => setCancelOpen(false)}
-                    title={t("scheduling.cancel")}
-                    confirmLabel={t("scheduling.cancel")}
-                    confirmVariant="danger"
-                    pending={change.isPending}
-                    onConfirm={() =>
-                      change.mutate({
-                        id,
-                        token,
-                        body: { action: "cancel", version: meeting.version },
-                      })
-                    }
-                  >
-                    <p>{t("scheduling.cancelConfirm")}</p>
-                    <ErrorLine error={change.error} />
-                  </ConfirmModal>
-                )}
+                {meeting.status !== "canceled" &&
+                  meeting.status !== "canceling" && (
+                    <ConfirmModal
+                      open={cancelOpen}
+                      onClose={() => setCancelOpen(false)}
+                      title={t("scheduling.cancel")}
+                      confirmLabel={t("scheduling.cancel")}
+                      confirmVariant="danger"
+                      pending={change.isPending}
+                      onConfirm={() =>
+                        change.mutate({
+                          id,
+                          token,
+                          body: { action: "cancel", version: meeting.version },
+                        })
+                      }
+                    >
+                      <p>{t("scheduling.cancelConfirm")}</p>
+                      {changeError}
+                    </ConfirmModal>
+                  )}
                 {meeting.status === "needs_attention" && (
                   <p>
                     {t(
@@ -210,7 +216,7 @@ export function BookingMeetingScreen({
                     )}
                   </p>
                 )}
-                <ErrorLine error={change.error} />
+                {changeError}
               </PanelBody>
             </Panel>
           )}

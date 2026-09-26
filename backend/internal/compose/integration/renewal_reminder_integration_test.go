@@ -284,6 +284,7 @@ func TestRenewalReminderMisconfiguredInstanceDoesNotAbortTheWorkspacePass(t *tes
 	backdateCreatedAt(t, owner, "deal", dealID, firstTouch)
 
 	seedNoActivityReminder(t, owner, e.WS)
+	connectCaughtUpMailbox(t, e, e.AdminUser)
 	// A renewal_reminder instance naming a column that is not (and never
 	// was) an active date-typed custom field on contact — the same shape of
 	// failure a retired field leaves behind, since both reach

@@ -32,3 +32,11 @@ export const bookingContact = {
   full_name: "Nina Weber",
   primary_email: "nina@brandt.example",
 };
+
+export const bookingConnection = {
+  id: "calendar-1",
+  provider: "gcal",
+  status: "connected",
+  account_label: "ada@example.test",
+  scopes: ["https://www.googleapis.com/auth/calendar.events.owned"],
+};

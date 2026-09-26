@@ -59,6 +59,7 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/quietmailbox.go:quietRecordOwner":            "the owner arm of the cold-queue selector: the deal's owner_id — a USER id, not deal content — decides whether that seat's mailbox is visible enough to call the deal quiet. Nothing of the deal is selected; its only effect is to WITHHOLD a queue entry, never to surface one",
 	"internal/compose/company360/contacts.go:contactDealRoles":                "the roster's deal-role column: `r.contact_id, r.deal_id, r.role` off the relationship table, with the deal joined only for its row scope so a seat on a deal the caller may not open is absent. The projection is the EDGE, and the deal id it carries is one the row scope already admitted",
 	"internal/compose/company360/roleproposalwrite.go:ownWords":               "the quoted sentence a role proposal rests on — who said it and what they said — with the deal joined to bound which conversations count. The projection is an activity's subject and body under the activity grants; no deal column is selected",
 	"internal/compose/contact360/nextmeeting.go:nextMeetingSection":           "the contact's next meeting: `a.id, a.occurred_at, a.subject`, with the deal joined only to reach the meetings that hang off one. Activity columns under the activity grant, and removing the join would widen the meetings considered",

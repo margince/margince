@@ -116,10 +116,12 @@ api refuses to boot on that gate without it. Remove the `mcp` block to keep the
 connector off; the code default is off, so an absent block exposes nothing.
 
 **Decide the retention posture before first boot if the installation must keep
-everything.** By default the shipped storage-limitation ladder runs: an
-unconverted lead is anonymized after a year, a meeting transcript and an AI
-payload are erased after a year, which is the storage-limitation obligation of
-Art. 5(1)(e) and only that one — see the [compliance
+everything.** By default the shipped storage-limitation ladder runs: a meeting
+transcript and an AI payload are erased after a year, which is the
+storage-limitation obligation of Art. 5(1)(e) and only that one, and an
+unconverted lead is archived after a year (taken off every list, kept
+restorable; author `anonymize` for that policy where the lead's identity must
+not be kept) — see the [compliance
 handbook](handbook/compliance.md) for what an installation reading employee
 mailboxes still owes, none of which this product checks. An
 installation under a contractual or statutory keep-everything obligation sets

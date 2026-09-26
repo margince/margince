@@ -2522,21 +2522,6 @@ public.consent_event.policy_version text gen=- def=-
 public.consent_event.purpose_id uuid NOT NULL gen=- def=-
 public.consent_event.source text NOT NULL gen=- def=-
 public.consent_event_pkey CREATE UNIQUE INDEX consent_event_pkey ON public.consent_event USING btree (id)
-public.consent_existing_customer_flag acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.consent_existing_customer_flag.collected_at timestamp with time zone NOT NULL gen=- def=-
-public.consent_existing_customer_flag.consent_existing_customer_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.consent_existing_customer_flag.consent_existing_customer_flag_pkey PRIMARY KEY (contact_id)
-public.consent_existing_customer_flag.consent_existing_customer_notice CHECK (optout_notice_given)
-public.consent_existing_customer_flag.consent_existing_customer_setter_fkey FOREIGN KEY (set_by_user_id) REFERENCES app_user(id) ON DELETE SET NULL
-public.consent_existing_customer_flag.contact_id uuid NOT NULL gen=- def=-
-public.consent_existing_customer_flag.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.consent_existing_customer_flag.optout_notice_given boolean NOT NULL gen=- def=-
-public.consent_existing_customer_flag.revoked_at timestamp with time zone gen=- def=-
-public.consent_existing_customer_flag.revoked_reason text gen=- def=-
-public.consent_existing_customer_flag.sale_reference text NOT NULL gen=- def=-
-public.consent_existing_customer_flag.set_by_user_id uuid gen=- def=-
-public.consent_existing_customer_flag.similar_goods_note text NOT NULL gen=- def=-
-public.consent_existing_customer_flag_pkey CREATE UNIQUE INDEX consent_existing_customer_flag_pkey ON public.consent_existing_customer_flag USING btree (contact_id)
 public.consent_purpose acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_purpose.archived_at timestamp with time zone gen=- def=-
 public.consent_purpose.class text NOT NULL gen=- def='marketing'::text
@@ -2640,6 +2625,7 @@ public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id I
 public.contact.contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.contact.converted_from_lead_id uuid gen=- def=-
 public.contact.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.first_name text gen=- def=-
 public.contact.full_name text NOT NULL gen=- def=-
 public.contact.id uuid NOT NULL gen=- def=uuidv7()
@@ -3060,6 +3046,7 @@ public.deal.deal_won_without_contract_detail CHECK (((won_without_contract_reaso
 public.deal.deal_won_without_contract_only_when_won CHECK (((won_without_contract_reason IS NULL) OR (status = 'won'::text)))
 public.deal.deal_won_without_contract_reason CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported'::text, 'purchase_order'::text, 'verbal'::text, 'renewal_by_email'::text, 'other'::text]))))
 public.deal.description text gen=- def=-
+public.deal.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.expected_arr_minor bigint gen=- def=-
 public.deal.expected_close_date date gen=- def=-
 public.deal.forecast_category text gen=- def=-
@@ -4406,6 +4393,7 @@ public.lead.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.disqualify_note text gen=- def=-
 public.lead.disqualify_reason_id uuid gen=- def=-
 public.lead.email text gen=- def=-
+public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.id uuid NOT NULL gen=- def=uuidv7()

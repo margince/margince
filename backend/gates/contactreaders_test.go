@@ -65,6 +65,7 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/quietmailbox.go:quietRecordOwner":                    "the owner arm of the cold-queue selector: the contact's owner_id — a USER id, not contact content — decides whether that seat's mailbox is visible enough to call the contact quiet. Nothing of the contact is selected; its only effect is to WITHHOLD a queue entry, never to surface one",
 	"internal/compose/capturehealthread.go:captureMailboxHealth":                      "the capture health strip: how many contacts are waiting on a mailbox that has stopped delivering. Counts over the caller's own connector, never a contact column",
 	"internal/compose/contact360/nextmeeting.go:nextMeetingSection":                   "the contact's next meeting — `a.id, a.occurred_at, a.subject` — with the contact joined only to reach the meetings that hang off one. Activity columns under the activity grant; removing the join would widen the meetings considered",
 	"internal/compose/contactautoenrich.go:searchTerms":                               "the terms an auto-enrichment lookup is built from, so a provider is asked about the right subject. They are consumed by the provider call inside the enrichment; what comes back is written under the enrichment's own gate",

@@ -13,8 +13,10 @@ import { Select } from "../design-system/select";
 import { formatDateTime, formatNumber } from "../format/format";
 import { dayInZone, startOfDayInZone, viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack, BookingZone, useBookingIntent } from "./booking-common";
 import { BookingProposal } from "./booking-proposal";
+import { BookingSetup } from "./booking-setup";
 import { QueryGate, throwProblem } from "./common";
 
 type Request = components["schemas"]["MeetingInvitationRequest"];
@@ -62,7 +64,11 @@ export function BookingInviteScreen({
   const location = editedLocation ?? profile.data?.location ?? "";
   const duration = editedDuration ?? profile.data?.duration_minutes ?? 30;
   const attendee = email ?? bookingRecipient(contact.data);
-  const configured = !!profile.data?.provider;
+  const { ready, connections } = useBookingCalendar(
+    profile.data?.provider ?? "",
+    false,
+  );
+  const configured = ready;
   const slots = useQuery({
     queryKey: ["reliable-availability", from, duration],
     enabled: configured,
@@ -104,6 +110,13 @@ export function BookingInviteScreen({
           {t("scheduling.myLink")}
         </Button>
       </header>
+      <InviteSetup
+        profile={profile.data}
+        pending={profile.isPending}
+        connectionsPending={connections.isPending}
+        error={profile.error}
+        configured={configured}
+      />
       <div className="book-mode">
         <Select
           aria-label={t("scheduling.method")}
@@ -202,6 +215,7 @@ export function BookingInviteScreen({
                 <Button
                   variant="primary"
                   disabled={
+                    !configured ||
                     !selectedContactId ||
                     !attendee ||
                     !subject ||
@@ -224,6 +238,7 @@ export function BookingInviteScreen({
                 </Button>
               ) : (
                 <BookingProposal
+                  available={configured}
                   personalOnly={mode === "link"}
                   zone={zone}
                   request={{
@@ -270,13 +285,7 @@ export function BookingInviteScreen({
                 )}
                 <BookingZone value={zone} onChange={setZone} />
                 {!configured ? (
-                  <div className="book-form">
-                    <p>{t("scheduling.connectionHelp")}</p>
-                    <Button onClick={() => navigate({ screen: "book" })}>
-                      {t("scheduling.connect")}
-                    </Button>
-                    <ErrorLine error={profile.error} />
-                  </div>
+                  <p>{t("scheduling.finishSetup")}</p>
                 ) : (
                   <QueryGate pendingLabel={t("common.loading")} query={slots}>
                     {(value) => (
@@ -352,4 +361,29 @@ function toggleProposalOption(
 function bookingModeLabel(mode: string) {
   if (mode === "propose") return "scheduling.propose";
   return mode === "link" ? "scheduling.sharePersonal" : "scheduling.invite";
+}
+
+function InviteSetup({
+  profile,
+  pending,
+  error,
+  configured,
+  connectionsPending,
+}: Readonly<{
+  profile?: components["schemas"]["SchedulingProfile"];
+  pending: boolean;
+  error: unknown;
+  configured: boolean;
+  connectionsPending: boolean;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {(pending || connectionsPending) && <p>{t("common.loading")}</p>}
+      <ErrorLine error={error} />
+      {profile && !pending && !connectionsPending && !configured && (
+        <BookingSetup key={profile.provider} profile={profile} />
+      )}
+    </>
+  );
 }

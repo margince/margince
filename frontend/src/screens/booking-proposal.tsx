@@ -16,7 +16,13 @@ export function BookingProposal({
   request,
   zone,
   personalOnly,
-}: Readonly<{ request: Proposal; zone: string; personalOnly: boolean }>) {
+  available = true,
+}: Readonly<{
+  request: Proposal;
+  zone: string;
+  personalOnly: boolean;
+  available?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const intent = useBookingIntent();
@@ -50,6 +56,7 @@ export function BookingProposal({
         <Button
           variant="primary"
           disabled={
+            !available ||
             !request.contact_id ||
             !request.attendee_email ||
             !request.subject ||

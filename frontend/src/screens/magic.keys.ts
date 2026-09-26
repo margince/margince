@@ -38,6 +38,42 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.capture_connection_error",
   "magic.action.capture_sync_failing",
   "magic.action.capture_backfill_failed",
+  "magic.action.mail_filed",
+  "magic.action.company_profile_read",
+  "magic.action.fields_changed",
+  "magic.action.retention_lead_anonymize",
+  "magic.action.retention_lead_archive",
+  "magic.action.retention_contact_anonymize",
+  "magic.action.retention_contact_erase",
+  "magic.action.retention_activity_archive",
+  "magic.action.retention_activity_erase",
+  "magic.action.retention_deal_archive",
+] as const satisfies readonly MessageKey[];
+
+/** Every reason `/magic` can give for a line: why the machinery did it. */
+export const MAGIC_WHY_KEYS = [
+  "magic.why.mail_filed",
+  "magic.why.public_records",
+  "magic.why.site_read",
+  "magic.why.signature",
+  "magic.why.retention",
+] as const satisfies readonly MessageKey[];
+
+/** Every name `/magic` can give the job that acted. */
+export const MAGIC_BY_KEYS = [
+  "magic.by.retention",
+  "magic.by.mail_filing",
+  "magic.by.company_lookup",
+  "magic.by.website_reader",
+  "magic.by.signature_reader",
+  "magic.by.overnight_agent",
+  "magic.by.mail_reader",
+  "magic.by.auto_apply",
+  "magic.by.automation",
+  "magic.by.lead_routing",
+  "magic.by.mailbox",
+  "magic.by.agent",
+  "magic.by.system",
 ] as const satisfies readonly MessageKey[];
 
 /** Every consequence `/magic` can send for a line. */
@@ -67,10 +103,22 @@ function registry(
 
 const SENTENCES = registry(MAGIC_SENTENCE_KEYS);
 const CONSEQUENCES = registry(MAGIC_CONSEQUENCE_KEYS);
+const WHYS = registry(MAGIC_WHY_KEYS);
+const BYS = registry(MAGIC_BY_KEYS);
 
 /** The sentence key this build carries, or null for one it predates. */
 export function magicSentenceKey(key: string): MessageKey | null {
   return SENTENCES.get(key) ?? null;
+}
+
+/** The reason key this build carries, or null for one it predates. */
+export function magicWhyKey(key: string): MessageKey | null {
+  return WHYS.get(key) ?? null;
+}
+
+/** The actor-name key this build carries, or null for one it predates. */
+export function magicByKey(key: string): MessageKey | null {
+  return BYS.get(key) ?? null;
 }
 
 /** The consequence key this build carries, or null for one it predates. */

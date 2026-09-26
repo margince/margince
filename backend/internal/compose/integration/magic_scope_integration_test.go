@@ -272,8 +272,9 @@ func TestAnUnerasedRecordsMachineActionStillReports(t *testing.T) {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1, now() - interval '10 minutes')`, contact)
+			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
+			VALUES ('agent', 'agent:enrich', 'update', 'contact', $1, '{"title": null}', '{"title": "CTO"}',
+			        now() - interval '10 minutes')`, contact)
 		return err
 	})
 	if err != nil {

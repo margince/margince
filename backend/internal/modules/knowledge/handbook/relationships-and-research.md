@@ -239,7 +239,13 @@ rather than 60.
 ### Nothing is written until you accept
 
 Every company-research finding arrives as a **staged proposal** in your approval
-inbox — one for the company's facts, and one per contact found on a team page.
+inbox, one for the company's facts.
+
+Nobody named on the company's website is added. Somebody found that way may
+only become a record once Margince can tell them it collected their details
+and record that it did (the notice GDPR Article 14 requires). Until that exists,
+a read proposes no one, and a proposal of that kind left from an earlier read
+cannot be accepted. You can still decline it to clear it.
 
 **Every field carries the verbatim passage it was read from, or it is left out.**
 There is no guessing: a value the page does not clearly state is omitted rather

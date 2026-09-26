@@ -78,7 +78,10 @@ them says what it costs: "Customers have fewer times to choose from."
 ### How do I share a booking link?
 Open the account menu → **My booking link**. Connect or reconnect Google Calendar
 or Outlook Calendar with permission to create invitations. Set your public name,
-meeting details and availability limits, save them, then choose **Resume bookings**.
+meeting details and availability limits, save them, then choose **Enable bookings**.
+A calendar marked **Read-only calendar** is connected for reading events but
+cannot send invitations. In Settings → Connections, choose **Reconnect** and
+allow invitation access. Choose the event calendar when returning to booking.
 Copy the link to share it anywhere, or choose **Copy signature link** to paste a
 clickable booking link into your email signature. Guests choose a time and enter
 their own details; you do not need to select a contact first.
@@ -88,7 +91,7 @@ bookings without changing the URL. **Replace booking link** invalidates the old
 URL, so update any signatures or pages where you shared it.
 
 ### How do I arrange a meeting with a contact?
-Choose **Book a meeting** on the contact. Propose two or three times and review
+Open the contact’s **Meetings** tab and choose **Book a meeting**. Propose two or three times and review
 the email before sending, share a personal booking link, or send an invitation
 for a time already agreed. Personal links expire and can book one meeting.
 

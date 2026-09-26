@@ -17378,9 +17378,9 @@ export interface components {
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
              *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
-             *     old to mint one from today's site; `near_duplicate` means the name it resolved to is
-             *     close to a company already here, and which of them this domain belongs to is a
-             *     human's call rather than the machine's.
+             *     old to mint one from today's site; `near_duplicate` means more than one company
+             *     here already carries the name it resolved to, and which of them this domain belongs
+             *     to is a human's call rather than the machine's.
              * @enum {string}
              */
             source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate";
@@ -22461,8 +22461,8 @@ export interface components {
              * @description Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
              *     `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
              *     treating a reply to someone who wrote to us as a consent violation is a frame that is
-             *     legally wrong. `marketing` needs express consent with double-opt-in proof or the
-             *     §7(3) existing-customer flag. `phone_outreach` is specced and dormant.
+             *     legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
+             *     existing-customer exception is not offered. `phone_outreach` is specced and dormant.
              * @enum {string}
              */
             purpose_class: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
@@ -31800,10 +31800,12 @@ export interface components {
              *     (the status says which). `expired` — it lapsed undecided and is no longer
              *     approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
              *     audited, but the follow-on change did not land; the member reads approved and
-             *     unredeemed, and the server log carries the cause.
+             *     unredeemed, and the server log carries the cause. `refused` — its kind refused
+             *     approving it before anything was decided (the same check a single approval runs),
+             *     so it is still pending and can be declined or decided later.
              * @enum {string}
              */
-            outcome: "decided" | "already_decided" | "expired" | "effect_failed";
+            outcome: "decided" | "already_decided" | "expired" | "effect_failed" | "refused";
         };
         /**
          * Format: int64
@@ -36974,6 +36976,9 @@ export interface components {
          *
          *     EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
          *     with no author a reader can name is the spookiness this surface exists to remove.
+         *     `actor.label` is that name as a reader reads it ("Mail filing", "Retention"), and
+         *     `reason` says why the machinery did it ("the sender's address belongs to this
+         *     contact"). Both are keys with values, for the reason `summary` is.
          */
         MagicLine: {
             /**
@@ -37005,6 +37010,9 @@ export interface components {
             consequence?: string;
             undo?: components["schemas"]["MagicUndo"];
             actor: components["schemas"]["MagicActor"];
+            reason?: components["schemas"]["MagicSentence"];
+            /** @description How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them. */
+            count?: number;
         };
         /**
          * @description What happened, as a key and the values to fill it with.
@@ -37047,6 +37055,7 @@ export interface components {
              * @description The seat whose authority the action was taken under, where it bound one.
              */
             on_behalf_of?: string;
+            label?: components["schemas"]["MagicSentence"];
         };
         /** @description What a receipt needs to offer a way back from a change nobody was asked about. */
         AppliedUndo: {

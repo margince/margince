@@ -42,7 +42,7 @@ func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
 		"activity/transcript/erase", "activity//archive",
 		"ai_call_payload/content/erase",
 		"contact/no_consent_no_deal/anonymize",
-		"deal/lost/archive", "lead/unconverted/anonymize",
+		"deal/lost/archive", "lead/unconverted/archive",
 		// The provider original, aged on its own clock. Seeded because a scope
 		// shipping with no row reads on the settings page exactly like one whose
 		// number an admin chose, and nothing visits it — which is how this table
