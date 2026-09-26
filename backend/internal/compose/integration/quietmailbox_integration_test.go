@@ -91,7 +91,7 @@ func TestAQuietDealIsDrawnOnlyWhileItsOwnersMailIsVisible(t *testing.T) {
 			// The reminder says which silence it is about, so its owner can
 			// judge it against their own sent mail.
 			want := "Check in — no activity since " + quietSince.Format(time.DateOnly)
-			if got := reminderSubjectOn(t, e, deal); got != want {
+			if got := reminderSubjectOn(t, deal); got != want {
 				t.Errorf("reminder subject = %q, want %q", got, want)
 			}
 		})
@@ -153,7 +153,7 @@ func TestAnAccountHeldBackForItsOwnersMailboxDoesNotAbsorbItsDeal(t *testing.T) 
 }
 
 // reminderSubjectOn reads the subject of the one task on the deal's timeline.
-func reminderSubjectOn(t *testing.T, e *Env, deal ids.UUID) string {
+func reminderSubjectOn(t *testing.T, deal ids.UUID) string {
 	t.Helper()
 	var subject string
 	if err := OwnerConn(t).QueryRow(context.Background(), `
