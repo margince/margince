@@ -8,7 +8,9 @@ fixture:
     - url: https://kestrelfold.test/services
       kind: services
       text: |
-        Kestrel Fold Services We provide inventory-forecasting software for grocery retailers, part of the retail-tech industry serving mid-market chains. Our value proposition: cut overstock write-offs within 90 days without any new point-of-sale hardware or integration work.
+        Services
+
+        Kestrel Fold provides inventory-forecasting software for grocery retailers, part of the retail-tech industry serving mid-market chains. Our value proposition: cut overstock write-offs within 90 days without any new point-of-sale hardware or integration work.
 
         Every deployment reaches its buying decision through the COO and the head of supply chain, who jointly sign off on the rollout.
 expect:
