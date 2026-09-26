@@ -32,17 +32,17 @@ import (
 type NarrowingReason string
 
 const (
-	// NarrowedAwaitingVerdict: capture minted the contact before anything judged
+	// NarrowedAwaitingVerdict means capture minted the contact before anything judged
 	// its sender. A verdict ends it; a reply does not.
 	NarrowedAwaitingVerdict NarrowingReason = "awaiting_verdict"
-	// NarrowedOutboundNoAnswer: the owner wrote to the address and it has never
+	// NarrowedOutboundNoAnswer means the owner wrote to the address and it has never
 	// answered. The only reason a reply ends.
 	NarrowedOutboundNoAnswer NarrowingReason = "outbound_no_answer"
-	// NarrowedConfidentialityHold: the correspondence it came from is held.
+	// NarrowedConfidentialityHold means the correspondence it came from is held.
 	NarrowedConfidentialityHold NarrowingReason = "confidentiality_hold"
-	// NarrowedAdvisor: a verdict judged the sender the owner's own advisor.
+	// NarrowedAdvisor means a verdict judged the sender the owner's own advisor.
 	NarrowedAdvisor NarrowingReason = "advisor"
-	// NarrowedHumanDecided: a human made the contact private.
+	// NarrowedHumanDecided means a human made the contact private.
 	NarrowedHumanDecided NarrowingReason = "human_decided"
 )
 
