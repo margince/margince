@@ -187,11 +187,12 @@ Also called: enrich a company, company lookup, scrape a website, read a company.
 ### How do I have Margince read my own company's website?
 To have Margince read **your own company's** website, an administrator opens **Settings → Company profile** and presses **Refresh from website**; it does not research a customer.
 1. Open **Company profile**: from Settings, or press ⌘K (Mac) or Ctrl+K and type "website".
-2. Under **Source**, check **Public company website**; if it is empty, press **Edit** and add it.
+2. Under **Source**, check **Public company website**; if it is empty, press **Edit**, add it and press **Save company context**.
 3. Press **Refresh from website**.
 4. In **Website comparison**, select the changes to keep and press **Apply selected changes**; nothing reaches the profile before that.
+During first-run setup an administrator is asked "Which website should Margince read?" and can press **Read website** or **Enter manually**.
 To research a customer or prospect, use **Start company research** on that company's page instead.
-Also called: read a company, refresh my company profile, update company details from the website.
+Also called: set up my company profile, company onboarding, refresh my company profile, update company details from the website.
 
 ## Researching a company
 

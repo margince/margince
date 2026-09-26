@@ -584,20 +584,20 @@ describe("useBuiltinCommands", () => {
     });
   });
 
-  // Reading the company's own website is Company profile's job, so the words a
-  // reader types for it land there and no seat has a second door to it.
+  // Reading the company's own website is Company profile's job, so no seat is
+  // offered a separate action for it.
   it.each([["admin"], ["rep"]])(
     "offers %s no separate read-a-company action",
     async (role) => {
       const user = userEvent.setup();
       renderProbeWithCompany({ companyContext: true, roles: [role] });
-      await user.type(screen.getByRole("searchbox"), "read a company");
+      await user.type(screen.getByRole("searchbox"), "company");
       await screen.findByText("Company profile");
       expect(screen.queryByText("Read a company")).toBeNull();
     },
   );
 
-  it("reaches Company profile by the website it reads", async () => {
+  it("reaches Company profile by its refresh button's words for an admin", async () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ companyContext: true, roles: ["admin"] });
     await user.type(screen.getByRole("searchbox"), "website");
@@ -606,6 +606,19 @@ describe("useBuiltinCommands", () => {
     });
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/settings/company");
+  });
+
+  // Any other seat's Company profile draws no website card, so "website"
+  // leads it nowhere, though the page itself is still theirs to find.
+  it("does not send a rep to Company profile for the website", async () => {
+    const user = userEvent.setup();
+    renderProbeWithCompany({ companyContext: true, roles: ["rep"] });
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "company");
+    await screen.findByText("Company profile");
+    await user.clear(box);
+    await user.type(box, "website");
+    expect(screen.queryByText("Company profile")).toBeNull();
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader
