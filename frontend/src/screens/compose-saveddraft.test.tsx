@@ -154,7 +154,9 @@ describe("a saved draft", () => {
 
     expect(await screen.findByText("Saved draft restored")).toBeTruthy();
     expect(screen.getByDisplayValue("Pricing for 40 seats")).toBeTruthy();
-    expect(messageText("Body")).toBe("Half written before lunch");
+    await waitFor(() =>
+      expect(messageText("Body")).toBe("Half written before lunch"),
+    );
     expect(screen.getByText("buyer@acme.test")).toBeTruthy();
     const read = calls(sent, "GET /mail-drafts")[0];
     expect(new URLSearchParams(read?.query).get("anchor_type")).toBe("contact");
@@ -268,7 +270,9 @@ describe("a saved draft", () => {
     expect(
       screen.getByRole("button", { name: "Delete saved draft" }),
     ).toBeTruthy();
-    expect(messageText("Body")).toBe("Half written before lunch");
+    await waitFor(() =>
+      expect(messageText("Body")).toBe("Half written before lunch"),
+    );
     // The save's toast stands down, so the delete's confirmation is not
     // queued behind a Delete that has already been offered here.
     expect(screen.queryByText("Draft saved")).toBeNull();
@@ -322,7 +326,7 @@ describe("a saved draft", () => {
 
     expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
     expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(1);
-    expect(messageText("Body")).toBe("");
+    await waitFor(() => expect(messageText("Body")).toBe(""));
   });
 
   it("is deleted from the restored notice, and the fields empty", async () => {
@@ -378,7 +382,9 @@ describe("a saved draft", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Load saved version" }),
     );
-    expect(messageText("Body")).toBe("Written in the other tab");
+    await waitFor(() =>
+      expect(messageText("Body")).toBe("Written in the other tab"),
+    );
   });
 
   it("keeps the composer open over a failed save once, and a second close discards", async () => {
@@ -406,7 +412,7 @@ describe("a saved draft", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1);
-    expect(messageText("Body")).toBe("");
+    await waitFor(() => expect(messageText("Body")).toBe(""));
   });
 
   it("holds the send while a first save is still out", async () => {
