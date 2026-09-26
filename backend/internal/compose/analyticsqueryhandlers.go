@@ -11,6 +11,7 @@ package compose
 // between would let a plan compile against a field the run no longer admits.
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -18,6 +19,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -31,10 +33,15 @@ type analyticsQueryHandlers struct {
 	// floor is the installation's group floor, injected so a test can move it
 	// without editing a setting.
 	floor analyticsquery.Floor
+	// names labels an explanation's records under the reader's grants — the
+	// seam the report drawer names its rows through (derivationlabels.go).
+	names attention.Names
 }
 
-func newAnalyticsQueryHandlers(db *database.DB, floor analyticsquery.Floor) analyticsQueryHandlers {
-	return analyticsQueryHandlers{db: db, floor: floor}
+func newAnalyticsQueryHandlers(
+	db *database.DB, floor analyticsquery.Floor, names attention.Names,
+) analyticsQueryHandlers {
+	return analyticsQueryHandlers{db: db, floor: floor, names: names}
 }
 
 // GetAnalyticsSchema implements GET /analytics/schema.
@@ -195,10 +202,7 @@ func (h analyticsQueryHandlers) ExplainReportRunCell(
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsExplanation{
-		Columns: out.Columns, Rows: out.Rows,
-		Withheld: out.Withheld, Truncated: out.Truncated,
-	})
+	httperr.WriteJSON(w, http.StatusOK, h.labelledExplanation(ctx, out))
 }
 
 // RenderAnalyticsReport implements POST /analytics/reports/render.
@@ -352,8 +356,25 @@ func (h analyticsQueryHandlers) ExplainAnalyticsCell(w http.ResponseWriter, r *h
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AnalyticsExplanation{
-		Columns: out.Columns, Rows: out.Rows,
+	httperr.WriteJSON(w, http.StatusOK, h.labelledExplanation(ctx, out))
+}
+
+// labelledExplanation names the records AFTER the explanation's transaction has
+// closed: each store's label read takes a connection of its own, and naming
+// inside the transaction would hold two per request (derivation.go does the
+// same). A row the reader may not name keeps its id and carries no label.
+func (h analyticsQueryHandlers) labelledExplanation(
+	ctx context.Context, out AnalyticsExplanation,
+) crmcontracts.AnalyticsExplanation {
+	// Empty, never null: a withheld cell has no rows, and null would read to a
+	// client as "unknown" rather than "nothing to open".
+	columns := append([]string{}, out.Columns...)
+	rows := append([]map[string]any{}, out.Rows...)
+	if labelDerivationRows(ctx, h.names, string(out.Entity), rows) {
+		columns = append(columns, derivationLabelColumn)
+	}
+	return crmcontracts.AnalyticsExplanation{
+		Columns: columns, Rows: rows,
 		Withheld: out.Withheld, Truncated: out.Truncated,
-	})
+	}
 }

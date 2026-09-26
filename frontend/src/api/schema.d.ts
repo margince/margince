@@ -29151,8 +29151,9 @@ export interface components {
             group?: unknown[];
         };
         AnalyticsExplanation: {
+            /** @description The keys a row may carry, in order: `id`, the dimensions, the measured fields, and `label` last when at least one row was named. */
             columns: string[];
-            /** @description The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. */
+            /** @description The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. `label` is the record's display name, read under this caller's own grants; it is ABSENT on a row the caller may not name, which keeps its id and nothing more. */
             rows: {
                 [key: string]: unknown;
             }[];

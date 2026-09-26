@@ -19922,9 +19922,10 @@ type AnalyticsExplainRequest struct {
 
 // AnalyticsExplanation defines model for AnalyticsExplanation.
 type AnalyticsExplanation struct {
+	// Columns The keys a row may carry, in order: `id`, the dimensions, the measured fields, and `label` last when at least one row was named.
 	Columns []string `json:"columns"`
 
-	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over.
+	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. `label` is the record's display name, read under this caller's own grants; it is ABSENT on a row the caller may not name, which keeps its id and nothing more.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// Truncated The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why.

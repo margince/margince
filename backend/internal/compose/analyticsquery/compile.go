@@ -137,10 +137,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	}
 	where = append(where, scoped...)
 
-	sql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selects, ", "), entity.From)
-	if len(where) > 0 {
-		sql += " WHERE " + strings.Join(where, " AND ")
-	}
+	sql := fmt.Sprintf("SELECT %s FROM %s%s", strings.Join(selects, ", "), entity.From, whereSQL(where))
 	if groupCount > 0 {
 		sql += " GROUP BY " + groupPositions(groupCount)
 	}
@@ -317,6 +314,16 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 		out = append(out, fmt.Sprintf("%s %s", field.Expr, fmt.Sprintf(form, arg(f.Value))))
 	}
 	return out, nil
+}
+
+// whereSQL renders the conditions, or nothing: a population with no base
+// predicate, no filter and no narrowing is every row, and `WHERE` alone is not
+// a statement.
+func whereSQL(where []string) string {
+	if len(where) == 0 {
+		return ""
+	}
+	return " WHERE " + strings.Join(where, " AND ")
 }
 
 // groupPositions renders GROUP BY and ORDER BY as ordinals.

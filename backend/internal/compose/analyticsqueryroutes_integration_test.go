@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -21,10 +22,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func (e *forecastEnv) analyticsRoutes() analyticsQueryHandlers {
-	return newAnalyticsQueryHandlers(InstallationDB(e.Pool), analyticsquery.DefaultFloor)
+	return newAnalyticsQueryHandlers(InstallationDB(e.Pool), analyticsquery.DefaultFloor,
+		newAttentionNames(InstallationDB(e.Pool)))
 }
 
 func analyticsRequest(ctx context.Context, method, path, body string) *http.Request {
@@ -129,4 +132,124 @@ func TestASavedRunEchoesTheScopeItWasAskedWith(t *testing.T) {
 	routes.ExplainReportRunCell(cell, analyticsRequest(ctx, http.MethodPost, "/analytics/runs/x/cells/explain",
 		`{"group":["x"]}`), *answer.RunId)
 	assertRefusal(t, cell, crmcontracts.AnalyticsRefusalDetailsKindInvalid)
+}
+
+// leadReaderCtx may read leads across the workspace, which is what labelling
+// them and measuring them both ask for.
+func (e *forecastEnv) leadReaderCtx() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:lead-reader", UserID: e.Rep1,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"lead": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+func explainBody(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts.AnalyticsExplanation {
+	t.Helper()
+	var out crmcontracts.AnalyticsExplanation
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &out) != nil {
+		t.Fatalf("explaining answered %d %s", rec.Code, rec.Body.String())
+	}
+	return out
+}
+
+// An explanation names each record through the drawer's own seam. An archived
+// lead is counted by leads-by-status and has no name the seam will give, so it
+// keeps its id and carries no label.
+func TestAnExplanationNamesTheRecordsTheReaderCanName(t *testing.T) {
+	e := setupForecast(t)
+	named := map[string]string{}
+	for i := 0; i < 5; i++ {
+		name := fmt.Sprintf("Live Lead %d", i)
+		named[e.seedID(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
+			VALUES ($1, $2, 'new', 'inbound', 'human:x', $3)`, name, e.Rep1).String()] = name
+	}
+	archived := e.seedID(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, archived_at)
+		VALUES ($1, 'Archived Lead', 'disqualified', 'inbound', 'human:x', $2, now())`, e.Rep1).String()
+
+	rec := httptest.NewRecorder()
+	e.analyticsRoutes().ExplainAnalyticsCell(rec, analyticsRequest(e.leadReaderCtx(), http.MethodPost,
+		"/analytics/explain", `{"query":{"entity":"leads-by-status","measures":[{"fn":"count"}]}}`))
+	out := explainBody(t, rec)
+
+	if out.Columns[len(out.Columns)-1] != derivationLabelColumn {
+		t.Errorf("columns %v do not announce the label", out.Columns)
+	}
+	seen := 0
+	for _, row := range out.Rows {
+		id, _ := row["id"].(string)
+		switch {
+		case id == archived:
+			seen++
+			if label, has := row[derivationLabelColumn]; has {
+				t.Errorf("the archived lead carries label %v; the seam names no archived record", label)
+			}
+		case named[id] != "":
+			seen++
+			if row[derivationLabelColumn] != named[id] {
+				t.Errorf("lead %s is labelled %v, want %q", id, row[derivationLabelColumn], named[id])
+			}
+		}
+	}
+	if seen != len(named)+1 {
+		t.Fatalf("the explanation carried %d of the %d seeded leads", seen, len(named)+1)
+	}
+}
+
+// A withheld cell opens to nothing, and says so with an empty list, not null.
+func TestAWithheldCellExplainsToAnEmptyListOverTheWire(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount, nil)
+	}
+	for i := 0; i < 2; i++ {
+		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount, nil)
+	}
+	rec := httptest.NewRecorder()
+	e.analyticsRoutes().ExplainAnalyticsCell(rec, analyticsRequest(e.reportReaderCtx(), http.MethodPost,
+		"/analytics/explain", `{"query":{"entity":"open-deals-per-company","group_by":["owner_id"],
+			"measures":[{"fn":"count"}]},"group":["`+e.Rep3.String()+`"]}`))
+	if !strings.Contains(rec.Body.String(), `"rows":[]`) {
+		t.Errorf("a withheld cell answered %s, want an empty rows list", rec.Body.String())
+	}
+	if out := explainBody(t, rec); !out.Withheld || len(out.Rows) != 0 {
+		t.Errorf("a two-deal cell answered withheld=%v with %d rows", out.Withheld, len(out.Rows))
+	}
+}
+
+// A saved run's cell is named through the same seam as a question's.
+func TestACitedCellNamesItsRecords(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for i := 0; i < 6; i++ {
+		e.seedOpenDeal(t, "Cited Deal", 20, &e.Rep1, &amount, nil)
+	}
+	routes := e.analyticsRoutes()
+	ctx := e.wideLensCtx(e.Rep3)
+	saved := httptest.NewRecorder()
+	routes.RunAnalyticsQuery(saved, analyticsRequest(ctx, http.MethodPost, "/analytics/query",
+		`{"entity":"open-deals-per-company","scope_kind":"workspace","measures":[{"fn":"count"}],"save":true}`))
+	var answer crmcontracts.AnalyticsAnswer
+	if err := json.Unmarshal(saved.Body.Bytes(), &answer); err != nil || answer.RunId == nil {
+		t.Fatalf("saving the question answered %d %s", saved.Code, saved.Body.String())
+	}
+
+	cell := httptest.NewRecorder()
+	routes.ExplainReportRunCell(cell, analyticsRequest(ctx, http.MethodPost, "/analytics/runs/x/cells/explain", `{}`),
+		*answer.RunId)
+	out := explainBody(t, cell)
+	if len(out.Rows) != 6 {
+		t.Fatalf("the cell opened to %d records, want the 6 seeded", len(out.Rows))
+	}
+	for _, row := range out.Rows {
+		if row[derivationLabelColumn] != "Cited Deal" {
+			t.Errorf("record %v is labelled %v, want its name", row["id"], row[derivationLabelColumn])
+		}
+	}
 }

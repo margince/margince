@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // AnalyticsExplanation is one cell's records.
@@ -34,6 +35,8 @@ type AnalyticsExplanation struct {
 	// Truncated says the cell covers more records than were returned. A reader
 	// who sums the rows and finds less than the cell needs to know why.
 	Truncated bool
+	// Entity is the record type each row's id names, for the labeller.
+	Entity datasource.EntityType
 }
 
 // ExplainAnalyticsCell resolves one cell to its records.
@@ -93,6 +96,7 @@ func ExplainAnalyticsCell(
 	return AnalyticsExplanation{
 		Columns: plan.Columns, Rows: rows,
 		Truncated: len(rows) == analyticsquery.ExplainRowLimit,
+		Entity:    spec.entity,
 	}, nil
 }
 
