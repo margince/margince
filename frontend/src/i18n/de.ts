@@ -3354,7 +3354,7 @@ export const de = {
   "deepread.title": "Dieses Unternehmen recherchieren",
   "deepread.titleRead": "Website-Recherche",
   "deepread.sub":
-    "Durchsucht die Website des Unternehmens nach Domain, Branche, Größe, Standorten und wahrscheinlichen Entscheidungstragenden und schlägt dann einen ersten Schritt vor. Die Befunde bleiben vorgemerkt, bis du sie annimmst.",
+    "Durchsucht die Website des Unternehmens nach Domain, Branche, Größe und Standorten und schlägt dann einen ersten Schritt vor. Die Befunde bleiben vorgemerkt, bis du sie annimmst. Niemand, der auf der Website genannt wird, wird übernommen.",
   "deepread.cta": "Unternehmensrecherche starten",
   "deepread.ctaAgain": "Website erneut lesen",
   "deepread.starting": "Wird gestartet…",
