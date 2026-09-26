@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // RecordMailReferencesTx stores the Message-IDs one email says it answers.
@@ -61,9 +62,13 @@ func MailNeighboursTx(
 		   AND a.thread_key IS NOT NULL
 		   AND (a.id IN (SELECT activity_id FROM activity_identity
 		                  WHERE identity_kind = $4 AND identity_key = ANY($3::text[]))
+		        -- A message sent from here is filed under its minted Message-ID
+		        -- as its natural key and claims no identity row, so a reply to
+		        -- it is found by that key.
+		        OR (a.source_system = $5 AND a.source_id = ANY($3::text[]))
 		        OR ($2 <> '' AND a.id IN (SELECT activity_id FROM activity_mail_reference
 		                                   WHERE referenced_id = $2)))`,
-		self, messageID, referenced, IdentityKindMail)
+		self, messageID, referenced, IdentityKindMail, connector.EmailSourceSystem)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the messages a reply links: %w", err)
 	}
@@ -130,5 +135,27 @@ func ThreadMergeTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 		DELETE FROM activity_sales_state WHERE thread_key = $1`, from); err != nil {
 		return fmt.Errorf("activities: retiring the merged thread's judgements: %w", err)
 	}
+	return nil
+}
+
+// MoveMessageToThreadTx files one message under thread `to`, leaving the rest
+// of its old thread where it was — for a message whose own header named a
+// conversation other messages already carry, which capture will not merge
+// whole on that header's word (capture/threadjoin.go).
+func MoveMessageToThreadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, to string) error {
+	if to == "" {
+		return nil
+	}
+	// A compare-and-set on the key the row still has: a live row not yet in
+	// `to` moves, and anything else — archived since the join read it, or
+	// already moved by the merge that ran first — is left alone. Neither case
+	// is an error; the row is where the join wanted it or out of every path.
+	tag, err := tx.Exec(ctx, `
+		UPDATE activity SET thread_key = $2
+		 WHERE id = $1 AND archived_at IS NULL AND thread_key IS DISTINCT FROM $2`, id, to)
+	if err != nil {
+		return fmt.Errorf("activities: moving a message into the thread it joins: %w", err)
+	}
+	_ = tag.RowsAffected()
 	return nil
 }

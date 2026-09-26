@@ -197,6 +197,36 @@ func TestAReferenceToAMessageTheSeatDoesNotHoldMergesNothing(t *testing.T) {
 	}
 }
 
+// A header that names another seat's thread root beside a message this seat
+// really holds moves only the new mail. The other seat's conversation is not
+// merged on that header's word, and neither is this seat's own thread pulled
+// into it.
+func TestAHeaderNamingAForeignRootBesideAnOwnedMessageMovesOnlyItself(t *testing.T) {
+	e := integration.Setup(t)
+	// Rep2's conversation, rooted on its own opener.
+	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "victim-root@counterparty.example",
+		"Mon, 01 Jun 2026 08:00:00 +0000", ""))
+	addr := seatAddress(t, e, e.Rep1)
+	// Rep1's own thread, which is younger than Rep2's.
+	captureThreadMail(t, e, e.Rep1, threadMail(addr, "owned@counterparty.example",
+		"Tue, 02 Jun 2026 08:00:00 +0000", ""))
+	// The crafted mail: its References root is Rep2's opener, its parent is
+	// Rep1's message.
+	captureThreadMail(t, e, e.Rep1, threadMail(addr, "crafted@counterparty.example",
+		"Wed, 03 Jun 2026 08:00:00 +0000", "owned@counterparty.example",
+		"victim-root@counterparty.example", "owned@counterparty.example"))
+
+	if got := threadKeyOfMessage(t, e, "victim-root@counterparty.example"); got != "victim-root@counterparty.example" {
+		t.Errorf("the other seat's opener moved to thread %q", got)
+	}
+	if got := threadKeyOfMessage(t, e, "owned@counterparty.example"); got != "owned@counterparty.example" {
+		t.Errorf("this seat's own thread was pulled into %q", got)
+	}
+	if got := threadKeyOfMessage(t, e, "crafted@counterparty.example"); got != "owned@counterparty.example" {
+		t.Errorf("the crafted mail is under %q, want the thread of the message it answers", got)
+	}
+}
+
 // An imported conversation and the mailbox that later takes its messages over
 // end up as one thread: the import's key meets the mailbox's through the reply
 // the mailbox holds.

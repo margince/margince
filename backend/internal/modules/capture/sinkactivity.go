@@ -157,7 +157,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 				return datasource.EntityRef{}, false, counterpartyDecision{}, err
 			}
-			if err := s.joinThread(ctx, tx, id, rec); err != nil {
+			if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
 				return datasource.EntityRef{}, false, counterpartyDecision{}, err
 			}
 			return ref, false, counterpartyDecision{}, nil
@@ -175,7 +175,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
-		if err := s.joinThread(ctx, tx, id, rec); err != nil {
+		if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
@@ -321,7 +321,7 @@ func (s *Sink) finishNewActivity(
 	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 		return counterpartyDecision{}, err
 	}
-	if err := s.joinThread(ctx, tx, id, rec); err != nil {
+	if err := s.joinThread(ctx, tx, id, rec, true); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// The trace runs LAST, so it can carry the reason the ladder just settled on:
