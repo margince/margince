@@ -10689,6 +10689,47 @@ export const en = {
   "magic.laneCount_other": "{count} lines",
   "magic.col.what": "What happened",
   "magic.col.about": "About",
+  "magic.col.by": "By",
+  "magic.aboutMany_one": "{label} and {others} more",
+  "magic.aboutMany_other": "{label} and {others} more",
+  "magic.aboutCount_one": "{count} record",
+  "magic.aboutCount_other": "{count} records",
+  "magic.action.mail_filed": "Filed captured email under this contact",
+  "magic.action.company_profile_read": "Read the company’s technical profile",
+  "magic.action.fields_changed": "Changed {fields}",
+  "magic.action.retention_lead_anonymize":
+    "Anonymized unconverted leads past their retention period",
+  "magic.action.retention_lead_archive":
+    "Archived unconverted leads past their retention period",
+  "magic.action.retention_contact_anonymize":
+    "Anonymized contacts without consent or a deal past their retention period",
+  "magic.action.retention_contact_erase":
+    "Erased contacts past their retention period",
+  "magic.action.retention_activity_archive":
+    "Archived emails, meetings and notes past their retention period",
+  "magic.action.retention_activity_erase":
+    "Erased transcript content past its retention period",
+  "magic.action.retention_deal_archive":
+    "Archived closed deals past their retention period",
+  "magic.why.mail_filed": "The sender’s address belongs to this contact.",
+  "magic.why.public_records":
+    "From the company’s public website and DNS records.",
+  "magic.why.site_read": "Read on {site}.",
+  "magic.why.signature": "Taken from an email signature.",
+  "magic.why.retention": "Retention rule: after {days} days.",
+  "magic.by.retention": "Retention",
+  "magic.by.mail_filing": "Mail filing",
+  "magic.by.company_lookup": "Company lookup",
+  "magic.by.website_reader": "Website reader",
+  "magic.by.signature_reader": "Signature reader",
+  "magic.by.overnight_agent": "Overnight agent",
+  "magic.by.mail_reader": "Mail reader",
+  "magic.by.auto_apply": "Auto-apply",
+  "magic.by.automation": "Automation",
+  "magic.by.lead_routing": "Lead routing",
+  "magic.by.mailbox": "Mailbox sync",
+  "magic.by.agent": "An agent",
+  "magic.by.system": "Margince",
   "magic.col.when": "When",
   "magic.failingSince": "Failing since {when}",
   "magic.col.wayBack": "Way back",

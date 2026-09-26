@@ -33,9 +33,11 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  magicByKey,
   magicConsequenceKey,
   magicSentenceKey,
   magicUndoReasonKey,
+  magicWhyKey,
 } from "./magic.keys";
 import {
   type MagicLane,
@@ -248,6 +250,11 @@ function MagicLaneSection({
                 render: (row: MagicLine) => <LineSubject line={row} />,
               },
               {
+                key: "by",
+                header: t("magic.col.by"),
+                render: (row: MagicLine) => <LineBy line={row} />,
+              },
+              {
                 key: "when",
                 header: t("magic.col.when"),
                 render: (row: MagicLine) => <LineWhen line={row} zone={zone} />,
@@ -278,12 +285,28 @@ function LineSentence({ line }: Readonly<{ line: MagicLine }>) {
   const consequence = line.consequence
     ? magicConsequenceKey(line.consequence)
     : null;
+  // WHY the machinery did it, under what it did. A reason key this build
+  // predates draws nothing, for the reason an unknown sentence does.
+  const why = line.reason ? magicWhyKey(line.reason.key) : null;
   return (
     <>
       {sentence && <span>{t(sentence, line.summary.values)}</span>}
+      {why && line.reason && (
+        <p className="t-caption">{t(why, line.reason.values)}</p>
+      )}
       {consequence && <p className="t-caption">{t(consequence)}</p>}
     </>
   );
+}
+
+/**
+ * Who acted: the job as a reader would call it ("Mail filing", "Retention"),
+ * never the ledger's internal actor id.
+ */
+function LineBy({ line }: Readonly<{ line: MagicLine }>) {
+  const t = useT();
+  const key = line.actor.label ? magicByKey(line.actor.label.key) : null;
+  return key ? t(key, line.actor.label?.values) : null;
 }
 
 /**
@@ -315,7 +338,22 @@ function LineWhen({ line, zone }: Readonly<{ line: MagicLine; zone: string }>) {
 
 function LineSubject({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const label = subjectLabel(line);
+  const count = line.count ?? 1;
+  // ONE line for a job that touched many records: the most recent one by
+  // name, and how many more.
+  if (count > 1 || (!line.entity && line.count !== undefined)) {
+    return label && count > 1
+      ? plural("magic.aboutMany", count - 1, {
+          label,
+          others: formatNumber(count - 1, locale),
+        })
+      : plural("magic.aboutCount", count, {
+          count: formatNumber(count, locale),
+        });
+  }
   if (!label) {
     return t("magic.noRecord");
   }

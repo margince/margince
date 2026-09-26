@@ -10502,6 +10502,48 @@ export const de = {
   "magic.laneCount_other": "{count} Zeilen",
   "magic.col.what": "Was passiert ist",
   "magic.col.about": "Betrifft",
+  "magic.col.by": "Von",
+  "magic.aboutMany_one": "{label} und {others} weiterer",
+  "magic.aboutMany_other": "{label} und {others} weitere",
+  "magic.aboutCount_one": "{count} Datensatz",
+  "magic.aboutCount_other": "{count} Datensätze",
+  "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
+  "magic.action.company_profile_read":
+    "Technisches Profil des Unternehmens gelesen",
+  "magic.action.fields_changed": "{fields} geändert",
+  "magic.action.retention_lead_anonymize":
+    "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist anonymisiert",
+  "magic.action.retention_lead_archive":
+    "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.action.retention_contact_anonymize":
+    "Kontakte ohne Einwilligung und ohne Deal nach Ablauf der Aufbewahrungsfrist anonymisiert",
+  "magic.action.retention_contact_erase":
+    "Kontakte nach Ablauf der Aufbewahrungsfrist gelöscht",
+  "magic.action.retention_activity_archive":
+    "E-Mails, Termine und Notizen nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.action.retention_activity_erase":
+    "Transkriptinhalte nach Ablauf der Aufbewahrungsfrist gelöscht",
+  "magic.action.retention_deal_archive":
+    "Abgeschlossene Deals nach Ablauf der Aufbewahrungsfrist archiviert",
+  "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
+  "magic.why.public_records":
+    "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
+  "magic.why.site_read": "Gelesen auf {site}.",
+  "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
+  "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",
+  "magic.by.retention": "Aufbewahrung",
+  "magic.by.mail_filing": "E-Mail-Zuordnung",
+  "magic.by.company_lookup": "Firmenabfrage",
+  "magic.by.website_reader": "Website-Leser",
+  "magic.by.signature_reader": "Signatur-Leser",
+  "magic.by.overnight_agent": "Nacht-Agent",
+  "magic.by.mail_reader": "E-Mail-Leser",
+  "magic.by.auto_apply": "Automatische Übernahme",
+  "magic.by.automation": "Automatisierung",
+  "magic.by.lead_routing": "Lead-Verteilung",
+  "magic.by.mailbox": "Postfach-Synchronisierung",
+  "magic.by.agent": "Ein Agent",
+  "magic.by.system": "Margince",
   "magic.col.when": "Wann",
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.col.wayBack": "Weg zurück",

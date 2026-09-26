@@ -36966,6 +36966,9 @@ export interface components {
          *
          *     EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
          *     with no author a reader can name is the spookiness this surface exists to remove.
+         *     `actor.label` is that name as a reader reads it ("Mail filing", "Retention"), and
+         *     `reason` says why the machinery did it ("the sender's address belongs to this
+         *     contact"). Both are keys with values, for the reason `summary` is.
          */
         MagicLine: {
             /**
@@ -36997,6 +37000,9 @@ export interface components {
             consequence?: string;
             undo?: components["schemas"]["MagicUndo"];
             actor: components["schemas"]["MagicActor"];
+            reason?: components["schemas"]["MagicSentence"];
+            /** @description How many records this line stands for. One background job that did the same thing to many records is ONE line with a count, not one line per record: a receipt of 1,200 identical rows says nothing a reader can use. Absent means one; `entity` then names the most recent of them. */
+            count?: number;
         };
         /**
          * @description What happened, as a key and the values to fill it with.
@@ -37039,6 +37045,7 @@ export interface components {
              * @description The seat whose authority the action was taken under, where it bound one.
              */
             on_behalf_of?: string;
+            label?: components["schemas"]["MagicSentence"];
         };
         /** @description What a receipt needs to offer a way back from a change nobody was asked about. */
         AppliedUndo: {

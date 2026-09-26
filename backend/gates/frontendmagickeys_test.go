@@ -49,13 +49,14 @@ const (
 	magicKeyFloor = 20
 )
 
-// magicKeyPrefixes are the two families the receipt sends. A key outside them
+// magicKeyPrefixes are the families the receipt sends: what happened, what it
+// means, why the machinery did it, and who it was. A key outside them
 // is ordinary screen copy, which the orphan gate in i18n.test.ts already holds.
-var magicKeyPrefixes = []string{"magic.action.", "magic.consequence."}
+var magicKeyPrefixes = []string{"magic.action.", "magic.consequence.", "magic.why.", "magic.by."}
 
 // magicKeyLiteral matches a quoted key in TypeScript. Both families in one
 // pattern, so a family added on one side cannot be read as absent on the other.
-var magicKeyLiteral = regexp.MustCompile(`["'` + "`" + `](magic\.(?:action|consequence)\.[A-Za-z0-9_]+)["'` + "`" + `]`)
+var magicKeyLiteral = regexp.MustCompile(`["'` + "`" + `](magic\.(?:action|consequence|why|by)\.[A-Za-z0-9_]+)["'` + "`" + `]`)
 
 // TestEverySentenceTheReceiptEmitsHasAWord holds the three sides together.
 func TestEverySentenceTheReceiptEmitsHasAWord(t *testing.T) {
