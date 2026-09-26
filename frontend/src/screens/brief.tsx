@@ -210,7 +210,11 @@ function PersonalMorning({
       {day && (
         <div className="brief-overview">
           <BriefReadingsStrip day={day} />
-          <BriefCoverage day={day} onRetry={() => void query.refetch()} />
+          <BriefCoverage
+            day={day}
+            run={brief.data}
+            onRetry={() => void query.refetch()}
+          />
           <p className="t-caption brief-freshness">
             {t("brief.updatedAt", {
               when: formatDateTime(day.as_of, locale, viewerZone()),

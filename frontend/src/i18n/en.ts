@@ -3051,6 +3051,12 @@ export const en = {
   "brief.sentence.one": "First: {lead}",
   "brief.sentence.many": "First: {lead}. Then {rest}.",
   "brief.sentence.rest": "{count} more",
+  // What the ORDER could not weigh, as against what scored low. A fragment
+  // like the source lines it sits with, and it names no cause: the run says
+  // which factor it lost, never why.
+  "brief.order.withheld": "Not accounted for in this order: {factors}",
+  "brief.factor.warmth": "relationship warmth",
+  "brief.factor.unknown": "a factor this version cannot name",
 
   // The weekly Brief's opening sentence, composed from the counts the week was
   // frozen with. Result first, then what carried — the outcome before the debt.
