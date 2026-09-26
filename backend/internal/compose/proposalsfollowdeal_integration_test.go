@@ -476,8 +476,9 @@ func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.
 }
 
 // Two reassignments without If-Match, the second arriving while the first is
-// uncommitted. The second must hand the cards on from the owner the first
-// left, not from the one both of them read before either committed.
+// uncommitted. The second must read the owner the first left — it is what the
+// hand-over moves cards from and what its audit row says the deal was taken
+// from — not the one both of them saw before either committed.
 func TestConcurrentReassignmentsHandTheCardOnFromTheOwnerEachFinds(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reassigned twice at once", e.pipeline, e.open, &e.Rep1)
@@ -527,6 +528,16 @@ func TestConcurrentReassignmentsHandTheCardOnFromTheOwnerEachFinds(t *testing.T)
 		t.Fatalf("the second reassignment: %v", err)
 	}
 	wantSeat(t, "the card after both reassignments", e.seatOf(t, id), &e.AdminUser)
+	var from string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT before->>'owner_id' FROM audit_log
+		 WHERE entity_type = 'deal' AND entity_id = $1 AND after->>'owner_id' = $2`,
+		deal, e.AdminUser.String()).Scan(&from); err != nil {
+		t.Fatalf("reading the second reassignment's audit row: %v", err)
+	}
+	if from != e.Rep2.String() {
+		t.Errorf("the second reassignment took the deal from %s, want %s — the owner the first one left", from, e.Rep2)
+	}
 }
 
 // waitForRowLockWaiter returns once a backend in this database waits on a row
