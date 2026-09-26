@@ -24,8 +24,8 @@ import (
 	"time"
 )
 
-// openRouterModelsTimeout bounds the model-list read, which a chat call waits
-// on the first time it meets a model; the call proceeds without a floor past it.
+// openRouterModelsTimeout bounds the model-list read, which the client's first
+// floored calls wait on; they proceed without a floor past it.
 const openRouterModelsTimeout = 10 * time.Second
 
 // openRouterReasoning is one model's `reasoning` object in GET /api/v1/models.
@@ -39,13 +39,18 @@ type openRouterReasoning struct {
 	DefaultEnabled *bool `json:"default_enabled"`
 }
 
-// openRouterReasoningFacts is the metadata cache a binding on baseURL maps its
-// floors through, nil for a binding that is not the broker.
-func openRouterReasoningFacts(baseURL string) *perModelFacts[openRouterReasoning] {
+// openRouterCatalog is every listed reasoning model's `reasoning` object, by id.
+type openRouterCatalog map[string]openRouterReasoning
+
+// openRouterReasoningFacts is the catalog cache a binding on baseURL maps its
+// floors through, nil for a binding that is not the broker. It is the binding's
+// own authenticated list rather than ModelCatalogue's public one, because a
+// binding may name its own broker host.
+func openRouterReasoningFacts(baseURL string) *catalogFact[openRouterCatalog] {
 	if !IsOpenRouterHost(baseURL) {
 		return nil
 	}
-	return &perModelFacts[openRouterReasoning]{}
+	return &catalogFact[openRouterCatalog]{now: time.Now}
 }
 
 // openRouterReasoningFor is the `reasoning` block floor sends to a model
@@ -75,25 +80,26 @@ func (c *openAICompatClient) reasoningFloor(ctx context.Context, modelID, floor 
 	if c.reasoning == nil || floor == "" {
 		return nil
 	}
-	meta, err := c.reasoning.lookup(ctx, modelID, c.fetchReasoning)
+	catalog, err := c.reasoning.get(ctx, c.fetchReasoning)
 	if err != nil {
 		slog.WarnContext(ctx, "the broker's model list could not be read; this call is sent without its thinking floor",
 			"model", modelID, "floor", floor, "error", err)
 		return nil
 	}
+	meta := catalog[modelID]
 	return openRouterReasoningFor(meta, floor)
 }
 
-// fetchReasoning reads modelID's reasoning object from the broker's model
-// list; unlisted when the model is absent or lists none.
-func (c *openAICompatClient) fetchReasoning(ctx context.Context, modelID string) (openRouterReasoning, error) {
+// fetchReasoning reads the broker's model list into the reasoning object of
+// every model that lists one; a model absent from it is unlisted.
+func (c *openAICompatClient) fetchReasoning(ctx context.Context) (openRouterCatalog, error) {
 	ctx, cancel := context.WithTimeout(ctx, openRouterModelsTimeout)
 	defer cancel()
 	raw, err := getListBody(ctx, c.http, "openai-compat", c.baseURL+"/v1/models", func(r *http.Request) {
 		r.Header.Set("Authorization", "Bearer "+c.apiKey)
 	})
 	if err != nil {
-		return openRouterReasoning{}, err
+		return nil, err
 	}
 	var list struct {
 		Data []struct {
@@ -102,14 +108,15 @@ func (c *openAICompatClient) fetchReasoning(ctx context.Context, modelID string)
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &list); err != nil {
-		return openRouterReasoning{}, fmt.Errorf("ai: openai-compat: decode model list: %w", err)
+		return nil, fmt.Errorf("ai: openai-compat: decode model list: %w", err)
 	}
+	catalog := make(openRouterCatalog, len(list.Data))
 	for _, listed := range list.Data {
-		if listed.ID == modelID && listed.Reasoning != nil {
+		if listed.Reasoning != nil {
 			found := *listed.Reasoning
 			found.listed = true
-			return found, nil
+			catalog[listed.ID] = found
 		}
 	}
-	return openRouterReasoning{}, nil
+	return catalog, nil
 }

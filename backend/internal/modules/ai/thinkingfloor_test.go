@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -113,15 +114,54 @@ func TestABrokerFloorRaisesOnlyAModelThatThinksLess(t *testing.T) {
 	}
 }
 
-// The model list is read once per model, not once per call.
-func TestABrokerModelListIsReadOncePerModel(t *testing.T) {
+// The model list is the whole catalog, read once per client: a second model
+// asked of the same binding is answered from it.
+func TestABrokerModelListIsReadOncePerClient(t *testing.T) {
 	stub := &brokerStub{}
 	client := newBrokerClient(t, stub, "google/gemma-4-31b-it", nil)
 	for range 3 {
 		askWithFloor(t, client, "low")
 	}
+	if _, err := client.Complete(context.Background(), model.Request{
+		Model: "mistralai/mistral-small-2603", ThinkingFloor: "low",
+		Messages: []model.Message{{Role: "user", Content: "hi"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if stub.modelsCalls != 1 {
-		t.Fatalf("model list read %d times over three calls, want 1", stub.modelsCalls)
+		t.Fatalf("model list read %d times over four calls on two models, want 1", stub.modelsCalls)
+	}
+	if got := string(stub.chats[3]["reasoning"]); got != `{"effort":"high"}` {
+		t.Fatalf("the second model's reasoning = %s, want its own mapped floor", got)
+	}
+}
+
+// A failed model list is remembered for a while, so a broker that is down is
+// asked once per window rather than once per call.
+func TestABrokerModelListFailureIsNotReadAgainOnEveryCall(t *testing.T) {
+	stub := &brokerStub{modelsStatus: http.StatusBadGateway}
+	client := newBrokerClient(t, stub, "google/gemma-4-31b-it", nil)
+	compat, ok := client.(*openAICompatClient)
+	if !ok {
+		t.Fatalf("the broker binding is a %T, not the openai-compatible client", client)
+	}
+	now := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
+	compat.reasoning.now = func() time.Time { return now }
+
+	for range 3 {
+		askWithFloor(t, client, "low")
+	}
+	if stub.modelsCalls != 1 {
+		t.Fatalf("a failing model list was read %d times over three calls, want 1", stub.modelsCalls)
+	}
+	now = now.Add(catalogRetryAfter)
+	stub.modelsStatus = 0
+	askWithFloor(t, client, "low")
+	if stub.modelsCalls != 2 {
+		t.Fatalf("model list read %d times once the failure had stood its window, want 2", stub.modelsCalls)
+	}
+	if got := string(stub.chats[3]["reasoning"]); got != `{"enabled":true}` {
+		t.Fatalf("reasoning = %s after the list recovered, want the mapped floor", got)
 	}
 }
 

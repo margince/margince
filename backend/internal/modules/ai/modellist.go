@@ -81,16 +81,20 @@ func getListBody(
 		return nil, fmt.Errorf("ai: %s: listing models: http %d", vendor, resp.StatusCode)
 	}
 	// Bounded, so a vendor cannot stream an unbounded body into memory on a read
-	// nobody is metering.
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, listBodyLimit))
+	// nobody is metering, and refused past the bound rather than cut: a cut list
+	// decodes as a shorter one only by luck.
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, listBodyLimit+1))
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: reading model list: %w", vendor, err)
+	}
+	if len(raw) > listBodyLimit {
+		return nil, fmt.Errorf("ai: %s: the model list is larger than %d MiB and was not read", vendor, listBodyLimit>>20)
 	}
 	return raw, nil
 }
 
-// listBodyLimit bounds one vendor's list response. A broker's full catalog with
-// per-model metadata is comfortably under a megabyte; four is headroom, not an
+// listBodyLimit bounds one vendor's list response. OpenRouter's full catalog
+// with per-model metadata is under a megabyte; four is headroom, not an
 // invitation.
 const listBodyLimit = 4 << 20
 

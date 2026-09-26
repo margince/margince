@@ -46,7 +46,7 @@ type openAICompatClient struct {
 	routing *OpenRouterRouting
 	// reasoning is the broker's per-model reasoning metadata, which maps a
 	// request's thinking floor (openrouterreasoning.go); nil off the broker.
-	reasoning *perModelFacts[openRouterReasoning]
+	reasoning *catalogFact[openRouterCatalog]
 }
 
 // openAICompatSchemaName labels the structured-output schema; OpenAI's

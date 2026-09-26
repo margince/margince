@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 // perModelFacts remembers what a server said about each model, so the question
@@ -41,4 +42,66 @@ func (p *perModelFacts[V]) lookup(ctx context.Context, model string, ask func(co
 	}
 	p.byModel[model] = fact
 	return fact, nil
+}
+
+// catalogRetryAfter is how long a failed catalog read stands before the next
+// call asks again: a broker that is down costs one wait per window, never one
+// per call.
+const catalogRetryAfter = time.Minute
+
+// catalogFact is what a server said about every model at once — a broker's
+// catalog — asked once per client however many first calls arrive together.
+// A success lasts the client's lifetime, as perModelFacts' answers do. The zero
+// value is not ready: now must be set.
+type catalogFact[V any] struct {
+	now func() time.Time
+
+	mu    sync.Mutex
+	asked *catalogAsk[V]
+}
+
+// catalogAsk is one read of the catalog; done closes when it settles.
+type catalogAsk[V any] struct {
+	done    chan struct{}
+	value   V
+	err     error
+	settled time.Time
+}
+
+// get answers the catalog, joining a read already in flight. The read runs
+// detached from ctx, bounded by ask's own timeout, so one caller giving up
+// neither fails the others waiting on it nor poisons the remembered answer.
+func (f *catalogFact[V]) get(ctx context.Context, ask func(context.Context) (V, error)) (V, error) {
+	f.mu.Lock()
+	current := f.asked
+	if current == nil || f.stale(current) {
+		current = &catalogAsk[V]{done: make(chan struct{})}
+		f.asked = current
+		go current.run(context.WithoutCancel(ctx), ask, f.now)
+	}
+	f.mu.Unlock()
+	select {
+	case <-current.done:
+		return current.value, current.err
+	case <-ctx.Done():
+		var none V
+		return none, ctx.Err()
+	}
+}
+
+// stale says a settled read failed long enough ago to be asked again; a read
+// in flight is never stale, so it is joined rather than repeated.
+func (f *catalogFact[V]) stale(asked *catalogAsk[V]) bool {
+	select {
+	case <-asked.done:
+		return asked.err != nil && f.now().Sub(asked.settled) >= catalogRetryAfter
+	default:
+		return false
+	}
+}
+
+func (a *catalogAsk[V]) run(ctx context.Context, ask func(context.Context) (V, error), now func() time.Time) {
+	defer close(a.done)
+	a.value, a.err = ask(ctx)
+	a.settled = now()
 }
