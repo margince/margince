@@ -65,9 +65,10 @@ const quietMoment: Contact360["moment"] = {
   },
 };
 
-// A guard that permits mail, so the header's own Email verb is pressable: the
-// hero button is disabled until some purpose says yes, and the empty-composer
-// case can only be read through a button a reader can press.
+// A guard that permits correspondence, so the rail's permissions panel says the
+// ordinary thing while these suites exercise the header. The hero Email verb
+// does NOT read it: whether a message may go depends on what the message is,
+// which this page cannot answer, and the engine answers it in the composer.
 const mailAllowed: ContactConsentGuardEntry = {
   purpose_key: "business_correspondence",
   purpose_class: "business_correspondence",

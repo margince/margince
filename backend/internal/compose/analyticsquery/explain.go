@@ -125,8 +125,8 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 	// Ordered by id and bounded. Deterministic because a reader who pages
 	// through an explanation twice must see the same records in the same
 	// order, and an order over a measure re-sorts the moment a record changes.
-	sql := fmt.Sprintf("SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %s",
+	sql := fmt.Sprintf("SELECT %s FROM %s%s ORDER BY t.id LIMIT %s",
 		strings.Join(selects, ", "), entity.From,
-		strings.Join(where, " AND "), bind(ExplainRowLimit))
+		whereSQL(where), bind(ExplainRowLimit))
 	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
 }

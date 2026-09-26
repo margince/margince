@@ -46,6 +46,11 @@ func activityCapturedPayload(kind, channelProvider string) crmcontracts.PublicEv
 type LogActivityInput struct {
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
+	// invitedAssignee admits an invited colleague as the task's assignee. Only
+	// the HTTP create handler sets it, for an assignee the caller NAMED; every
+	// automatic writer (deal check-up, lead SLA, email requests) leaves it
+	// false and keeps handing work to active seats only.
+	invitedAssignee bool
 	Kind            string
 	// ChannelProvider names the messaging transport that carried this activity —
 	// a channel_provider row — and is empty for anything that did not travel on
@@ -277,8 +282,14 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	// in nobody's list for however long it took to notice.
 	//
 	// Checked against the resolved assignee rather than the input, so the
-	// self-assignment above is covered by the same question.
-	if err := ensureAssigneeCanHoldWork(ctx, tx, assignee); err != nil {
+	// self-assignment above is covered by the same question. An invited
+	// colleague may be given a NEW task when the caller named them over HTTP
+	// (invitedAssignee); automatic writers keep the active-only check.
+	checkAssignee := ensureAssigneeCanHoldWork
+	if in.invitedAssignee {
+		checkAssignee = ensureNewTaskAssignee
+	}
+	if err := checkAssignee(ctx, tx, assignee); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 

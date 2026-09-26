@@ -1006,6 +1006,27 @@ func (e AnalyticsMeasureFn) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsRefusalDetailsKind.
+const (
+	AnalyticsRefusalDetailsKindInvalid     AnalyticsRefusalDetailsKind = "invalid"
+	AnalyticsRefusalDetailsKindPrivacy     AnalyticsRefusalDetailsKind = "privacy"
+	AnalyticsRefusalDetailsKindUnsupported AnalyticsRefusalDetailsKind = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsRefusalDetailsKind enum.
+func (e AnalyticsRefusalDetailsKind) Valid() bool {
+	switch e {
+	case AnalyticsRefusalDetailsKindInvalid:
+		return true
+	case AnalyticsRefusalDetailsKindPrivacy:
+		return true
+	case AnalyticsRefusalDetailsKindUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsScopeKind.
 const (
 	AnalyticsScopeKindManagedTeams AnalyticsScopeKind = "managed_teams"
@@ -19871,6 +19892,9 @@ type AnalyticsAnswer struct {
 	// Columns What each value in a row means, in order.
 	Columns []string `json:"columns"`
 
+	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
+
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
 
@@ -19940,9 +19964,13 @@ type AnalyticsExplainRequest struct {
 
 // AnalyticsExplanation defines model for AnalyticsExplanation.
 type AnalyticsExplanation struct {
+	// Columns The keys a row may carry, in order: `id`, the dimensions, the measured fields, and `label` last when at least one row was named.
 	Columns []string `json:"columns"`
 
-	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over.
+	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
+
+	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. `label` is the record's display name, read under this caller's own grants; it is ABSENT on a row the caller may not name, which keeps its id and nothing more.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// Truncated The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why.
@@ -19963,6 +19991,9 @@ type AnalyticsFilter struct {
 
 // AnalyticsFilterOp defines model for AnalyticsFilter.Op.
 type AnalyticsFilterOp string
+
+// AnalyticsIdLabels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+type AnalyticsIdLabels map[string]map[string]string
 
 // AnalyticsMeasure defines model for AnalyticsMeasure.
 type AnalyticsMeasure struct {
@@ -20015,11 +20046,40 @@ type AnalyticsQuery struct {
 	ScopeKind *string `json:"scope_kind,omitempty"`
 }
 
+// AnalyticsRefusal A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type AnalyticsRefusal struct {
+	Code   string  `json:"code"`
+	Detail *string `json:"detail,omitempty"`
+
+	// Details Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose.
+	Details  *AnalyticsRefusalDetails `json:"details,omitempty"`
+	Instance *string                  `json:"instance,omitempty"`
+	Status   int                      `json:"status"`
+	Title    *string                  `json:"title,omitempty"`
+	Type     *string                  `json:"type,omitempty"`
+}
+
+// AnalyticsRefusalDetails Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose.
+type AnalyticsRefusalDetails struct {
+	// Kind `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+	Kind AnalyticsRefusalDetailsKind `json:"kind"`
+
+	// Message What is wrong, in the asker's terms.
+	Message string `json:"message"`
+
+	// Suggest The smallest change that would have worked.
+	Suggest string `json:"suggest"`
+}
+
+// AnalyticsRefusalDetailsKind `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+type AnalyticsRefusalDetailsKind string
+
 // AnalyticsSchema The populations and fields one caller may ask about.
 type AnalyticsSchema struct {
 	Entities []AnalyticsEntity `json:"entities"`
 
-	// Version Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run.
+	// Version Changes when this caller's vocabulary changes. Echoed on every answer as `schema_version`.
 	Version string `json:"version"`
 }
 
@@ -35637,7 +35697,7 @@ type ReportRun struct {
 	AskedBy openapi_types.UUID `json:"asked_by"`
 	Id      openapi_types.UUID `json:"id"`
 
-	// Query The question as it was saved, unchanged.
+	// Query The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none.
 	Query AnalyticsQuery `json:"query"`
 
 	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing.

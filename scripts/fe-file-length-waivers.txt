@@ -43,7 +43,7 @@
 1638 frontend/src/design-system/listtable.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1903 frontend/src/screens/contactpage.stories.tsx
-1684 frontend/src/screens/analytics.tsx
+1664 frontend/src/screens/analytics.tsx
 1631 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
@@ -56,7 +56,7 @@
 2273 frontend/src/screens/settings.tsx
 2728 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
-3331 frontend/src/screens/deals.tsx
+3311 frontend/src/screens/deals.tsx
 505 frontend/src/screens/recordchronology.tsx
 512 frontend/src/design-system/relationshipmap.tsx
 512 frontend/src/screens/documentextraction.tsx
@@ -101,7 +101,6 @@
 810 frontend/src/screens/voice-dna.tsx
 834 frontend/src/screens/record360/spine.tsx
 547 frontend/src/screens/relationships.tsx
-839 frontend/src/screens/filterbuilder.tsx
 856 frontend/src/screens/onboarding-gate.tsx
 855 frontend/src/screens/worklist.copy.ts
 849 frontend/src/screens/common.tsx
