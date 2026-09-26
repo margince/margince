@@ -1,11 +1,14 @@
 import type { components } from "../api/schema";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
+import { navigate } from "../app/router";
 import { Button, type ButtonVariant } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { dateTileParts } from "../format/datetile";
 import { formatTimeOfDay } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { useMe } from "./common";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -186,6 +189,9 @@ export function ContactMeetingsTab({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const canBook = useCanWrite("activity", "create");
+  const me = useMe();
+  const grantKnown = me.data?.authorization !== undefined;
   // The booked meeting is drawn above, from the server's own next-meeting
   // read. It is also an activity, so an unfiltered list draws it a second time
   // under "already held" — which was merely untidy while the rows were inert
@@ -217,6 +223,23 @@ export function ContactMeetingsTab({
     view?.moment?.rule === "meeting_prep" ? view.moment : undefined;
   return (
     <div className="record-stack">
+      <div className="pe-meeting-actions">
+        <Button
+          variant="primary"
+          disabled={loading || !view || !grantKnown}
+          reason={
+            view && grantKnown && !canBook
+              ? t("scheduling.bookRefused")
+              : undefined
+          }
+          onClick={() => {
+            if (view)
+              navigate({ screen: "book", id: `contact-${view.contact.id}` });
+          }}
+        >
+          {t("scheduling.bookContact")}
+        </Button>
+      </div>
       <section>
         <Heading size="large" className="t-h3">
           {t("contact.meetings.upcoming")}

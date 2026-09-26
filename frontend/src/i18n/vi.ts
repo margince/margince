@@ -82,6 +82,30 @@ export const vi = {
     "Liên kết này giữ nguyên thông tin đã tạo. Bạn có thể tạo liên kết mới cho các thay đổi; liên kết cũ vẫn có hiệu lực đến khi hết hạn.",
   "scheduling.proposalUpdate": "Tạo đề xuất đã cập nhật",
   "scheduling.calendar": "Lịch cuộc hẹn",
+  "scheduling.bookContact": "Đặt cuộc họp",
+  "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
+  "scheduling.selectCalendarHelp":
+    "Chọn lịch cho lời mời và đặt lịch công khai; thông tin cuộc họp vẫn được giữ.",
+  "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
+  "scheduling.useCalendar": "Sử dụng lịch này",
+  "scheduling.readOnlyCalendar":
+    "Lịch đã kết nối để đọc sự kiện. Kết nối lại và cấp quyền gửi lời mời để tạo, đổi lịch và hủy cuộc họp.",
+  "scheduling.disconnectedCalendar":
+    "Kết nối lịch này trước khi gửi lời mời. Nếu chỉ kết nối hộp thư, hãy kết nối lịch riêng.",
+  "scheduling.expiredCalendar":
+    "Kết nối lịch đã hết hạn. Kết nối lại để gửi lời mời.",
+  "scheduling.bookRefused": "Quản trị viên cần cấp quyền đặt cuộc họp.",
+  "scheduling.meetingChanged":
+    "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
+  "scheduling.publicCalendarUnavailable":
+    "Trang đặt lịch đang hoạt động nhưng chưa thể gửi lời mời lịch. Kiểm tra kết nối lịch bên dưới hoặc tạm dừng trang.",
+  "scheduling.manageConnection": "Mở kết nối lịch",
+  "scheduling.calendarConnected":
+    "Đã kết nối: {account}. Đã cấp quyền gửi lời mời.",
+  "scheduling.noWritableCalendar":
+    "Không có lịch có thể chỉnh sửa. Chọn nhà cung cấp khác hoặc kiểm tra quyền truy cập lịch.",
+  "scheduling.finishSetup": "Chọn lịch đặt cuộc họp ở trên để xem giờ trống.",
+  "scheduling.readOnlyBadge": "Lịch chỉ đọc",
   "scheduling.connect": "Kết nối hoặc kết nối lại lịch",
   "scheduling.connectionHelp":
     "Cần quyền ghi lịch để gửi lời mời. Kết nối lại lịch chỉ đọc để cấp quyền.",
@@ -124,7 +148,7 @@ export const vi = {
     "Trang đặt lịch này không khả dụng. Hãy liên hệ chủ lịch.",
   "scheduling.publicUrlMissing":
     "Thiết lập địa chỉ công khai cho hệ thống trước khi chia sẻ liên kết đặt lịch.",
-  "scheduling.new": "Sắp xếp cuộc họp",
+  "scheduling.new": "Đặt cuộc họp",
 
   "aiAdmin.allowance": "Hạn mức AI hàng tháng",
   "aiAdmin.pool":

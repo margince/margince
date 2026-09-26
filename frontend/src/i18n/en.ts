@@ -74,6 +74,32 @@ export const en = {
     "This link keeps the details you already created. You can create a new link for your changes; the previous link remains valid until it expires.",
   "scheduling.proposalUpdate": "Create updated proposal",
   "scheduling.calendar": "Event calendar",
+  "scheduling.bookContact": "Book a meeting",
+  "scheduling.setupCalendar": "Choose your booking calendar",
+  "scheduling.selectCalendarHelp":
+    "Choose a calendar for invitations and public bookings; meeting details stay here.",
+  "scheduling.chooseProvider": "Choose a calendar provider",
+  "scheduling.useCalendar": "Use this calendar",
+  "scheduling.readOnlyCalendar":
+    "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
+  "scheduling.disconnectedCalendar":
+    "Connect this calendar before sending invitations. If you connected only your mailbox, connect the calendar separately.",
+  "scheduling.expiredCalendar":
+    "Your calendar connection has expired. Reconnect it to send invitations.",
+  "scheduling.bookRefused":
+    "An administrator must grant permission to book meetings.",
+  "scheduling.meetingChanged":
+    "The meeting changed. Review the updated details and try again.",
+  "scheduling.publicCalendarUnavailable":
+    "Your booking page is active, but calendar invitations are unavailable. Check the calendar connection below or pause the page.",
+  "scheduling.manageConnection": "Open calendar connections",
+  "scheduling.calendarConnected":
+    "Connected: {account}. Invitation access granted.",
+  "scheduling.noWritableCalendar":
+    "No editable calendar is available. Choose another provider or check your calendar permissions.",
+  "scheduling.finishSetup":
+    "Choose your booking calendar above to see available times.",
+  "scheduling.readOnlyBadge": "Read-only calendar",
   "scheduling.connect": "Connect or reconnect calendar",
   "scheduling.connectionHelp":
     "Calendar write access is required to send invitations. Reconnect an existing read-only calendar to grant access.",
@@ -115,7 +141,7 @@ export const en = {
     "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
     "Set a public address for this installation before sharing external booking links.",
-  "scheduling.new": "Arrange a meeting",
+  "scheduling.new": "Book a meeting",
 
   "aiAdmin.allowance": "Monthly AI allowance",
   "aiAdmin.pool":

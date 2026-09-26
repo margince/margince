@@ -18,6 +18,7 @@ import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
+import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingCalendars } from "./booking-calendars";
 import { BookingBack } from "./booking-common";
 import { QueryGate, throwProblem } from "./common";
@@ -62,6 +63,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const client = useQueryClient();
   const [form, setForm] = useState(profile);
+  const calendar = useBookingCalendar(profile.provider, false);
   const [replace, setReplace] = useState(false);
   const signature = useMemo(() => {
     const anchor = document.createElement("a");
@@ -101,6 +103,11 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
           <Badge tone={profile.enabled ? "success" : "default"}>
             {t(profile.enabled ? "scheduling.active" : "scheduling.paused")}
           </Badge>
+          {profile.enabled &&
+            !calendar.connections.isPending &&
+            !calendar.ready && (
+              <ErrorLine>{t("scheduling.publicCalendarUnavailable")}</ErrorLine>
+            )}
           <div className="book-link">
             <TextInput
               aria-label={t("scheduling.myLink")}
@@ -188,7 +195,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
                   {...control}
                   value={form.provider}
                   options={[
-                    { value: "", label: t("scheduling.connect") },
+                    { value: "", label: t("scheduling.chooseProvider") },
                     { value: "gcal", label: "Google Calendar" },
                     { value: "graphcal", label: "Microsoft Outlook" },
                   ]}
@@ -208,14 +215,6 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
                 />
               )}
             </Field>
-            <p className="t-caption">{t("scheduling.connectionHelp")}</p>
-            <Button
-              onClick={() =>
-                navigate({ screen: "settings", id: "connections" })
-              }
-            >
-              {t("scheduling.connect")}
-            </Button>
             <BookingCalendars
               provider={form.provider}
               calendar={form.calendar_id}

@@ -978,3 +978,10 @@ describe("the Telegram connector panel", () => {
     expect(screen.queryByTestId("public-origin")).toBeNull();
   });
 });
+
+it("offers reconnect for a healthy read-only calendar", async () => {
+  stubApi([gcalConnected]);
+  render(<ConnectorsCard />);
+  expect(await screen.findByText("Read-only calendar")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Reconnect" })).toBeEnabled();
+});

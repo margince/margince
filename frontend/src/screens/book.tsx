@@ -10,7 +10,7 @@ export function BookingScreen({ hostSlug }: Readonly<{ hostSlug?: string }>) {
   if (!hostSlug) return <BookingProfileScreen />;
   if (hostSlug === "contact") return <BookingInviteScreen />;
   if (hostSlug.startsWith("contact-"))
-    return <BookingInviteScreen contactId={hostSlug.slice(8)} />;
+    return <BookingInviteScreen key={hostSlug} contactId={hostSlug.slice(8)} />;
   if (hostSlug.startsWith("meeting-"))
     return <BookingMeetingScreen id={hostSlug.slice(8)} />;
   if (hostSlug.startsWith("proposal-"))
