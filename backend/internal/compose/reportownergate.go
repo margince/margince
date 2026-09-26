@@ -43,6 +43,9 @@ func ownerGated(spec reportSpec) bool {
 // namesOwner answers whether a vocabulary name reads the column the
 // population narrows on. Recognised by expression rather than by name, so a
 // dimension called something else over the same column is still an owner.
+//
+// Held by: TestEveryInstallWideOwnerNameGoesThroughTheOwnerGate, which fails
+// when an install-wide spec reads an owner some other way.
 func namesOwner(spec reportSpec, field string) bool {
 	return spec.dimensions[field] == colOwnerID || spec.filters[field] == colOwnerID
 }
