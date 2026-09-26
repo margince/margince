@@ -284,8 +284,14 @@ func TestOnlyALeadStillInPlayIsACandidate(t *testing.T) {
 }
 
 // runEligibilityScan drives one full time-scan pass at the pinned instant.
+//
+// A fixture seeded without an owner belongs to the harness admin (the stores
+// default the owner to the actor), so the admin's mailbox is connected and
+// caught up here: the owner's-mailbox check (quietmailbox_integration_test.go)
+// must not decide a test about something else.
 func runEligibilityScan(t *testing.T, e *Env) {
 	t.Helper()
+	connectCaughtUpMailbox(t, e, e.AdminUser)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	scanner := compose.NewTimeScannerWithClock(e.DB(), func() time.Time { return eligibilityScanNow }, quiet)
 	if err := scanner.ScanWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {

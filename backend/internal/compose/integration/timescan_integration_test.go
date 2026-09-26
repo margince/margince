@@ -74,6 +74,9 @@ func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t 
 	// standing up a real RBAC fixture — that gate is proven separately
 	// (automation/gate_integration_test.go).
 	seedNoActivityReminder(t, owner, e.WS)
+	// SeedDeal made the harness admin the owner; the scan draws an owned
+	// record only while its owner's mail is visible.
+	connectCaughtUpMailbox(t, e, e.AdminUser)
 
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	scanner := compose.NewTimeScannerWithClock(e.DB(), now, quiet)
