@@ -27,7 +27,7 @@ import (
 // point is to stay short of all of them.
 const SubjectMaxRunes = 70
 
-// replyPrefixes are every prefix that claims an earlier message: a forward
+// replyPrefixes lists the prefixes that claim an earlier message: a forward
 // claims one as much as a reply does.
 func replyPrefixes() []string {
 	return append(mailsubject.ReplyPrefixes(), mailsubject.ForwardPrefixes()...)

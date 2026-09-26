@@ -128,7 +128,8 @@ func TestTheCandidateCarriesWhoTheMessageWasAddressedTo(t *testing.T) {
 	}
 }
 
-// A judged message leaves the backlog and carries its verdict into the queue.
+// A message judged to ask nothing leaves the backlog and the queue, and the
+// hidden reading lists it under informs_us with its verdict.
 func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
@@ -144,13 +145,22 @@ func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
 	if unjudged(t, e)[activity] {
 		t.Error("a judged message is still in the backlog")
 	}
-	row, ok := present(t, storeKnowing(e), e, activity)
-	if !ok {
-		t.Fatal("the message left the QUEUE — a verdict may only demote")
+	if _, ok := present(t, storeKnowing(e), e, activity); ok {
+		t.Fatal("a message judged to ask nothing is still in the queue")
 	}
-	if row.OwedVerdict != OwedVerdictInformsUs {
-		t.Errorf("the queue read verdict %q, wanted %q", row.OwedVerdict, OwedVerdictInformsUs)
+	hidden, err := storeKnowing(e).HiddenWaitingRows(e.as(), time.Now(), HiddenRuleInformsUs)
+	if err != nil {
+		t.Fatalf("reading what informs_us holds back: %v", err)
 	}
+	for _, row := range hidden {
+		if row.ActivityID == activity {
+			if row.OwedVerdict != OwedVerdictInformsUs {
+				t.Errorf("the hidden row read verdict %q, wanted %q", row.OwedVerdict, OwedVerdictInformsUs)
+			}
+			return
+		}
+	}
+	t.Fatal("the message left the queue and is not listed under informs_us, so nothing shows it was hidden")
 }
 
 // The first verdict stands. Two model calls on one message are two opinions,

@@ -18,8 +18,7 @@ package activities
 import "fmt"
 
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
-// sales link, colleagues, machine senders, the informs_us verdict and the
-// reader's set-asides. Requests survive replies, age and closed deals until
+// sales link, colleagues and the reader's set-asides. Requests survive replies, age and closed deals until
 // explicit resolution. All eligibility predicates precede the cap. Every rule
 // that hides a row owed a reply has a figure in hiddenbacklog.go.
 var waitingRepliesSQL = `
@@ -237,33 +236,14 @@ var waitingRepliesSQL = `
 	   -- way the seam's own set does — mail from a departmental host is still
 	   -- from a colleague.
 	   AND (%[14]s OR NOT %[15]s)
-	   -- The obvious machines, excluded BEFORE the cap. Filtering them after
-	   -- LIMIT lets two hundred notification threads fill the scan and push a
-	   -- real customer past it, and the page then says nobody is waiting —
-	   -- which is the one answer this source must never get wrong.
-	   --
-	   -- Deliberately coarse: it removes what nothing could mistake for a
-	   -- contact, and the caller's own rule (capture's address list, which
-	   -- knows the operator's allowlist) still runs over what survives.
-	   AND ((` + outstandingRequestSQL + `) OR NOT EXISTS (
-	         SELECT 1 FROM activity_participant machine
-	          WHERE machine.activity_id = a.id
-	            AND machine.role = 'from'
-	            AND (machine.address ILIKE '%%noreply%%'
-	              OR machine.address ILIKE '%%no-reply%%'
-	              OR machine.address ILIKE '%%do-not-reply%%'
-	              OR machine.address ILIKE '%%donotreply%%'
-	              OR machine.address ILIKE '%%notification%%'
-	              OR machine.address ILIKE '%%mailer-daemon%%')))
-	   -- Owed a reply at all. The not-sales judgement lives inside it, keyed on
-	   -- the THREAD so the next issue of a newsletter somebody recognised does
-	   -- not arrive as fresh work; %[12]s relaxes it for the hidden figure.
-	   AND ` + owedSQL("$%[1]d", "%[12]s") + `
-	   -- Judged by the classifier to ask nothing of us. Hidden, with its own
-	   -- figure, unless a human accepted it as a request: that decision
-	   -- outranks the model's. Unjudged mail stays.
-	   AND (%[18]s OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
-	     OR ` + acceptedRequestSQL + `)
+	   -- Owed a reply at all, before the cap like every rule above. The
+	   -- obvious machine senders go here: two hundred notification threads
+	   -- must not fill the scan and push a real customer past it. The
+	   -- not-sales judgement is keyed on the THREAD, so the next issue of a
+	   -- newsletter somebody recognised does not arrive as fresh work. Slots 12
+	   -- and 18 relax the not-sales and informs_us judgements for their hidden
+	   -- figures.
+	   AND ` + owedSQL("$%[1]d", "%[12]s", "%[18]s") + `
 	   -- Set aside by THIS reader, and only this reader.
 	   --
 	   -- Judged against the row's CURRENT state rather than against what it was

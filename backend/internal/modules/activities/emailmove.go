@@ -32,7 +32,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
 	wanted := fmt.Sprintf("$%d", len(args))
 	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
- coalesce(`+owedSQL("now()", neverRelaxed)+`, false), `+openRequestReminderSQL+`
+ coalesce(`+owedSQL("now()", neverRelaxed, neverRelaxed)+`, false), `+openRequestReminderSQL+`
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
  WHERE a.id = ANY(`+wanted+`) AND a.restricted_at IS NULL`, args...)
 	if err != nil {

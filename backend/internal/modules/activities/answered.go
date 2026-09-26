@@ -33,7 +33,7 @@ type answerArm struct {
 //   - a logged call or a held meeting with the sender's contact.
 //
 // The subject match is read here only. Capture never joins threads on a
-// subject, because two "Re: Invoice" mails from different people are two
+// subject, because two "Re: Invoice" mails from two senders are two
 // conversations; here the address keeps them apart.
 func answerArms(inbound, until string) []answerArm {
 	later := func(row string) string {
@@ -121,14 +121,21 @@ func firstAnswerAtSQL(inbound, until string) string {
 // A request (asked of us, accepted by a human, or an unjudged scheduling or
 // commitment mail) stays owed through replies until it is completed, settled
 // or dismissed: a reply is not proof the request was met. Any other inbound
-// is owed while it is the newest inbound on its thread and unanswered.
+// is owed while it is the newest inbound on its thread and unanswered. Mail
+// from an address no human reads is owed only as a confirmed request.
 //
-// dismissedStillOwed is a predicate OR-ed in front of the not-sales judgement;
-// the hidden-backlog reading passes TRUE to count what that judgement hides,
-// every other caller passes neverRelaxed.
-func owedSQL(asOf, dismissedStillOwed string) string {
+// Two judgements end the obligation and are each counted in
+// /worklist/hidden: a human's not-sales call on the thread, and the
+// classifier's informs_us verdict, which yields to a human accepting the
+// mail as a request. dismissedStillOwed and informsStillOwed are predicates
+// OR-ed in front of them; the hidden-backlog reading passes TRUE to count
+// what one hides, every other caller passes neverRelaxed.
+func owedSQL(asOf, dismissedStillOwed, informsStillOwed string) string {
 	return `(` + requestOpenSQL + `
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
+	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
+	   OR ` + acceptedRequestSQL + `)
+	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
 	 AND ((` + requestIntentSQL + `)
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer
 	         WHERE newer.thread_key = a.thread_key
@@ -140,3 +147,13 @@ func owedSQL(asOf, dismissedStillOwed string) string {
 	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
 	       AND NOT ` + answeredSQL("a", asOf) + `)))`
 }
+
+// machineSenderSQL is true when the message came from an address no human
+// reads. Deliberately coarse: it removes what nothing could mistake for a
+// contact, and the waiting seam's fuller address rule still runs over what
+// the lane returns.
+const machineSenderSQL = `EXISTS (
+	 SELECT 1 FROM activity_participant machine
+	  WHERE machine.activity_id = a.id
+	    AND machine.role = 'from'
+	    AND machine.address ~* '(noreply|no-reply|do-not-reply|donotreply|notification|mailer-daemon)')`

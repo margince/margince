@@ -53,12 +53,15 @@ const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
  AND reminder.source_activity_id = a.id AND NOT reminder.is_done
  AND reminder.archived_at IS NULL)`
 
-const outstandingRequestSQL = requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `)`
+// confirmedRequestSQL is a request the classifier or a human confirmed.
+const confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
+
+const outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it. This also lets the classifier reconcile
 // older imported requests instead of aging them out before it reads them.
-const requestIntentSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
+const requestIntentSQL = confirmedRequestSQL + `
  OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting'))`
 
 const requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`

@@ -106,7 +106,7 @@ type HiddenBacklog struct {
 	// correspondence workspace-wide, and this is the number that would show it.
 	Colleagues int
 	// InformsUs is mail the classifier judged to ask nothing of us: a report, a
-	// receipt, a notification. A model's opinion rather than a person's, so it
+	// receipt, a notification. A model's opinion rather than a human's, so it
 	// is counted where a wrong verdict would show. A request a human accepted
 	// is never hidden by it.
 	InformsUs int

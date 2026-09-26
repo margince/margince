@@ -27,10 +27,10 @@ package activities
 // classifier touch" has to remain answerable from audit_log like every other
 // derived write in this tree.
 //
-// What it may NOT do is hide anything. The verdict moves a row's band inside the
-// queue and never removes one — the same floor capture_label sits under. If a
-// verdict is ever allowed to suppress, it needs its own figure in
-// /worklist/hidden first, like every other rule that hides.
+// An informs_us verdict ends the obligation and takes the row off the queue,
+// and /worklist/hidden counts and lists every row it takes, like every other
+// rule that hides. It never outranks a human: a request somebody accepted
+// stays owed whatever the verdict says.
 //
 // A VERDICT NAMES THE RULES IT WAS JUDGED UNDER, and may be re-judged when those
 // move. It was written once and never revisited, which is right while the rules
