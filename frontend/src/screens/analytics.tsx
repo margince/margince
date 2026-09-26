@@ -1625,11 +1625,14 @@ function SectionBody({
   switch (section) {
     case "questions":
       return selection && context ? (
-        <QuestionsView {...{ context, selection, onSelectScope }} />
+        <QuestionsView
+          context={context}
+          selection={selection}
+          onSelectScope={onSelectScope}
+        />
       ) : null;
     case "coverage":
-      // Like the other context-bearing sections: nothing renders before the
-      // frame arrives, so the view never has to guess a zone.
+      // Nothing renders before the frame arrives, so no zone is guessed.
       return context ? (
         <DataCoverageView locale={locale} timezone={context.timezone} />
       ) : null;

@@ -182,9 +182,16 @@ function AskQuestion({
   const current = asked && queryScopeKey(asked) === queryScopeKey(scope);
   // Changed since it was asked: the figures stay, under the question that
   // produced them, and say they are not the question now on screen.
+  // One test for "is this still the question on screen", shared by the stale
+  // answer and a refused save, so the two cannot disagree about an edit.
+  const onScreen = (
+    sent: AnalyticsQuery | undefined,
+    entities: readonly AnalyticsEntity[],
+  ) =>
+    sent !== undefined &&
+    JSON.stringify(asAsked(draft, entities)) === JSON.stringify(sent);
   const stale = (entities: readonly AnalyticsEntity[]) =>
-    asked !== undefined &&
-    JSON.stringify(asAsked(draft, entities)) !== JSON.stringify(asked);
+    asked !== undefined && !onScreen(asked, entities);
   return (
     <QueryGate query={schema} pendingLabel={t("analytics.q.loadingSchema")}>
       {(vocabulary) =>
@@ -212,7 +219,11 @@ function AskQuestion({
               asking={ask.isPending}
               saving={save.isPending}
             />
-            {save.isError && <QuestionFailure error={save.error} />}
+            {/* A refused save speaks for the question it refused; once the
+                draft moves on, the refusal is about a question no longer here. */}
+            {save.isError && onScreen(save.variables, vocabulary.entities) && (
+              <QuestionFailure error={save.error} />
+            )}
             {asked && current && (
               <Panel title={t("analytics.q.answerTitle")}>
                 <PanelBody>

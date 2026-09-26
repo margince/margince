@@ -1,17 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A filter clause's operand, one control per kind of value. The Filters and
-// Analytics builders share it, so both pick an id from the same list.
+// A filter operand's control, shared by the Filters and Analytics builders.
 
-import { X } from "lucide-react";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { SegmentedControl } from "../design-system/atoms";
 import { DateInput } from "../design-system/dateinput";
-import {
-  type SearchResult,
-  useDebouncedSearch,
-} from "../design-system/debouncedsearch";
 import { Select } from "../design-system/select";
 import { TokenInput } from "../design-system/tokeninput";
 import { useT } from "../i18n";
@@ -21,9 +15,13 @@ import type { VocabularyField } from "./filterdata";
 import {
   boundedReference,
   type Reference,
-  searchCompanies,
   useReferenceOptions,
 } from "./filterreference";
+import {
+  ChosenRecords,
+  chosenIDs,
+  SearchedRecordValue,
+} from "./filtervalue.records";
 import type { FilterOp, LeafValue } from "./segmentpredicate";
 
 /**
@@ -50,7 +48,6 @@ export function ValueControl({
   op: FilterOp;
   value: LeafValue;
   onChange: (next: LeafValue) => void;
-  /** The operand's name, for a host with several clauses in one list. */
   label?: string;
 }>) {
   const t = useT();
@@ -77,7 +74,7 @@ export function ValueControl({
   if (references !== undefined) {
     return (
       <ReferenceValue
-        label={name}
+        label={label}
         reference={references}
         type={type}
         many={op === "in"}
@@ -91,7 +88,7 @@ export function ValueControl({
       <TokenInput
         values={Array.isArray(value) ? value.map(String) : []}
         onChange={(next) => onChange(next)}
-        aria-label={t("filters.values")}
+        aria-label={label ?? t("filters.values")}
         placeholder={t("filters.addValue")}
       />
     );
@@ -135,7 +132,7 @@ function ReferenceValue({
   onChange,
   label,
 }: Readonly<{
-  label: string;
+  label?: string;
   reference: Reference;
   type: VocabularyField["type"];
   many: boolean;
@@ -154,165 +151,13 @@ function ReferenceValue({
       />
     );
   }
-  return <SearchedRecordValue many={many} value={value} onChange={onChange} />;
-}
-
-/**
- * The ids a list clause already names, and a way to drop one.
- *
- * Shown as the labels they were picked under where this session knows them. A
- * clause restored from a saved view carries ids and no names, so the id shows —
- * a reader can still see which records the clause holds and remove one, where
- * hiding them would leave a list they cannot inspect.
- */
-function ChosenRecords({
-  ids,
-  labels,
-  onRemove,
-}: Readonly<{
-  ids: readonly string[];
-  labels: ReadonlyMap<string, string>;
-  onRemove: (id: string) => void;
-}>) {
-  const t = useT();
-  if (ids.length === 0) {
-    return null;
-  }
   return (
-    <ul className="filter-chosen">
-      {ids.map((id) => (
-        <li key={id}>
-          <span>{labels.get(id) ?? id}</span>
-          <button
-            type="button"
-            className="btn-link"
-            aria-label={t("filters.removeRecord", {
-              record: labels.get(id) ?? id,
-            })}
-            onClick={() => onRemove(id)}
-          >
-            <X aria-hidden="true" />
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** The ids a value holds, whichever shape the operator gave it. */
-function chosenIDs(value: LeafValue): readonly string[] {
-  if (Array.isArray(value)) {
-    return value.map(String).filter((id) => id !== "");
-  }
-  return typeof value === "string" && value !== "" ? [value] : [];
-}
-
-/**
- * The one reference too large to list: a company, found by typing part of
- * its name.
- *
- * A box was the previous answer and it was the wrong one for the reason this
- * whole surface exists: a uuid typed wrong compiles, matches nothing, and reads
- * as "no companies match" rather than as a mistake. Nobody types a uuid
- * correctly from memory anyway, so the box was asking for a paste from another
- * screen.
- *
- * The typed words are NEVER the value. The input searches and the value is only
- * ever an id the reader picked out of an answer, which is what makes it
- * impossible to compose a clause the engine would refuse.
- *
- * Once chosen, the name stands in place of the search box with a way back to it:
- * a picker that kept showing its search box would leave the reader unsure
- * whether their choice took.
- */
-function SearchedRecordValue({
-  many,
-  value,
-  onChange,
-}: Readonly<{
-  many: boolean;
-  value: LeafValue;
-  onChange: (next: LeafValue) => void;
-}>) {
-  const t = useT();
-  const [query, setQuery] = useState("");
-  // Names for the ids chosen in THIS session. A clause restored from a saved
-  // view carries ids and nothing else, so this stays empty for them and the id
-  // shows instead — see ChosenRecords.
-  const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
-  const { results, pending, failed } = useDebouncedSearch(
-    searchCompanies,
-    query,
-  );
-  const ids = chosenIDs(value);
-
-  function remember(option: SearchResult) {
-    setNames((was) => new Map(was).set(option.value, option.label));
-  }
-  function pick(option: SearchResult) {
-    remember(option);
-    setQuery("");
-    onChange(many ? [...ids, option.value] : option.value);
-  }
-  function drop(id: string) {
-    onChange(many ? ids.filter((held) => held !== id) : "");
-  }
-
-  // A single comparison names one record, so once it is named the search box
-  // has nothing left to do and the name stands in its place. A list keeps the
-  // box open beneath what it already holds, because the next pick is the point.
-  const closed = !many && ids.length > 0;
-
-  return (
-    <div className="filter-value">
-      <ChosenRecords ids={ids} labels={names} onRemove={drop} />
-      {closed ? (
-        <button
-          type="button"
-          className="btn-link"
-          onClick={() => {
-            setQuery("");
-            onChange("");
-          }}
-        >
-          {t("filters.changeRecord")}
-        </button>
-      ) : (
-        <>
-          <label>
-            <span className="sr-only">{t("filters.searchRecords")}</span>
-            <input
-              className="input"
-              value={query}
-              placeholder={t("filters.searchRecords")}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          {/* Each state says which one it is. An empty list with no line above
-              it is the failure this control exists to avoid: it reads as a
-              confident "this workspace has none" for a question that never got
-              an answer. */}
-          {!query && <p>{t("filters.typeToSearch")}</p>}
-          {query && pending && <p>{t("filters.searching")}</p>}
-          {query && failed && (
-            <p className="error">{t("filters.searchFailed")}</p>
-          )}
-          {query && !pending && !failed && results.length === 0 && (
-            <p>{t("filters.noRecordMatches")}</p>
-          )}
-          {results.map((option) => (
-            <button
-              type="button"
-              key={option.value}
-              className="btn-link"
-              onClick={() => pick(option)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </>
-      )}
-    </div>
+    <SearchedRecordValue
+      many={many}
+      value={value}
+      onChange={onChange}
+      label={label}
+    />
   );
 }
 
@@ -336,7 +181,7 @@ function RecordValue({
   onChange,
   label,
 }: Readonly<{
-  label: string;
+  label?: string;
   reference: Reference | undefined;
   type: VocabularyField["type"];
   many: boolean;
@@ -345,6 +190,7 @@ function RecordValue({
 }>) {
   const t = useT();
   const noteId = useId();
+  const name = label ?? t("filters.value");
   const { options, loading, failed, partial } = useReferenceOptions(reference);
   const ids = chosenIDs(value);
   // A read that failed falls back to the plain box rather than to an empty
@@ -353,12 +199,7 @@ function RecordValue({
   // leave them unable to write the clause at all.
   if (failed) {
     return (
-      <ScalarValue
-        type={type}
-        value={value}
-        onChange={onChange}
-        label={label}
-      />
+      <ScalarValue type={type} value={value} onChange={onChange} label={name} />
     );
   }
   // A list names each record the same way a single comparison does, one pick at
@@ -389,7 +230,7 @@ function RecordValue({
         placeholder={
           loading ? t("filters.loadingRecords") : t("filters.pickRecord")
         }
-        aria-label={label}
+        aria-label={name}
         aria-describedby={partial ? noteId : undefined}
       />
       {/* A clause written against a list that stopped short of the workspace is

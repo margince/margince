@@ -194,4 +194,23 @@ describe("the question builder", () => {
       screen.getByRole("combobox", { name: "Operator, filter 1" }),
     ).toBeTruthy();
   });
+
+  it("names each company search by its filter, so two read apart", async () => {
+    const user = userEvent.setup();
+    renderBuilder(newDraft("deals-by-stage"));
+    for (const n of [1, 2]) {
+      await user.click(screen.getByRole("button", { name: "Add filter" }));
+      await pickOption(
+        user,
+        screen.getByRole("combobox", { name: `Field, filter ${n}` }),
+        "Partner company",
+      );
+    }
+    expect(
+      screen.getByRole("textbox", { name: "Value, filter 1" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("textbox", { name: "Value, filter 2" }),
+    ).toBeTruthy();
+  });
 });

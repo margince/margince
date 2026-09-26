@@ -294,3 +294,32 @@ describe("a saved question the reader cannot ask as saved", () => {
     expect(chosen).toEqual([CONTEXT.default_scope]);
   });
 });
+
+describe("a refused save", () => {
+  it("speaks only while the question it refused is still on screen", async () => {
+    const user = userEvent.setup();
+    stubServer({
+      "POST /analytics/query": () =>
+        jsonResponse(
+          {
+            status: 400,
+            code: "invalid_argument",
+            detail: "privacy: too few records — group by stage",
+            details: {
+              kind: "privacy",
+              message: "too few records",
+              suggest: "group by stage",
+            },
+          },
+          400,
+        ),
+    });
+    renderView();
+    await chooseDeals(user);
+    await user.click(screen.getByRole("button", { name: "Save question" }));
+    expect(await screen.findByText("group by stage")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Add measure" }));
+    expect(screen.queryByText("group by stage")).toBeNull();
+  });
+});
