@@ -56,6 +56,9 @@ type Service struct {
 	// module identity never imports. Nil ⟹ nothing caps seats, which is what
 	// a role that resolved no license posture means.
 	seatCeiling SeatCeiling
+	// installationDescribed answers whether the anchor company exists, injected
+	// because contacts owns it (installationdescribed.go). Nil refuses every seat.
+	installationDescribed InstallationDescribed
 }
 
 func NewService(pool *pgxpool.Pool) *Service {

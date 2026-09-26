@@ -425,20 +425,7 @@ func TestAnExpiryBeyondTheCeilingIsRefusedRatherThanShortened(t *testing.T) {
 
 func TestAShareStopsServingWhenItsIssuerLoses(t *testing.T) {
 	e := setupForecast(t)
-	issuer := ids.NewV7()
-	e.seedSeatHolding(t, issuer, "issuer@forecast.test", "share_issuer_two")
-	ctx := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + issuer.String(), UserID: issuer,
-		Permissions: principal.Permissions{
-			Objects: map[string]principal.ObjectGrant{
-				"forecast": {Read: true, Create: true}, "deal": {Read: true},
-				"installation_settings": {Read: true},
-			},
-			RowScope: principal.RowScopeAll,
-		},
-	})
+	issuer, ctx := e.seededIssuer(t, "issuer@forecast.test")
 	_, token := e.issue(ctx, t, NewShare{
 		Kind: shareKindLive, Target: "forecast",
 		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
@@ -531,30 +518,7 @@ func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 
 func TestASeatThatCanIssueAShareCanCloseIt(t *testing.T) {
 	e := setupForecast(t)
-	// The role a real installation seeds, read from the policy defaults rather
-	// than invented here. The first version of this file built a principal with
-	// Delete: true and passed — against an authority no seat in the product
-	// holds, because the forecast object is seeded create+read and nothing
-	// grants delete. Revoke was gated on that verb, so every share was
-	// permanent and no test noticed.
-	seat := ids.NewV7()
-	e.seedSeatHolding(t, seat, "issuer-real@forecast.test", "share_issuer_real")
-	ctx := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
-		Permissions: principal.Permissions{
-			Objects: map[string]principal.ObjectGrant{
-				// EXACTLY the seeded forecast posture: create and read, no
-				// delete. Spelled out so a reader can see that the absence is
-				// the point of the test.
-				"forecast":              {Create: true, Read: true},
-				"deal":                  {Read: true},
-				"installation_settings": {Read: true},
-			},
-			RowScope: principal.RowScopeAll,
-		},
-	})
+	_, ctx := e.seededIssuer(t, "issuer-real@forecast.test")
 
 	share, token := e.issue(ctx, t, NewShare{
 		Kind: shareKindLive, Target: "forecast",
@@ -575,6 +539,123 @@ func TestASeatThatCanIssueAShareCanCloseIt(t *testing.T) {
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a revoked share answered %v; it must stop serving", err)
+	}
+}
+
+// seededIssuer plants a real seat and acts as it with EXACTLY the seeded
+// forecast posture: create and read, and no delete, because no role holds one.
+func (e *forecastEnv) seededIssuer(t *testing.T, email string) (ids.UUID, context.Context) {
+	t.Helper()
+	seat := ids.NewV7()
+	e.seedSeatHolding(t, seat, email, "share_issuer_seeded")
+	ctx := principal.WithCorrelationID(
+		principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	return seat, principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"forecast":              {Create: true, Read: true},
+				"deal":                  {Read: true},
+				"installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+func (e *forecastEnv) listIssued(ctx context.Context, now func() time.Time) ([]Share, error) {
+	var out []Share
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var listErr error
+			out, listErr = e.shareStore(now).ListIssued(ctx, tx)
+			return listErr
+		})
+	return out, err
+}
+
+func (e *forecastEnv) revoke(ctx context.Context, id ids.UUID) error {
+	return forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return e.shareStore(time.Now).Revoke(ctx, tx, id)
+		})
+}
+
+func TestTheShareListIsTheCallersOwnOpenLinksNewestFirst(t *testing.T) {
+	e := setupForecast(t)
+	_, mine := e.seededIssuer(t, "lister@forecast.test")
+	_, theirs := e.seededIssuer(t, "colleague@forecast.test")
+	workspace := NewShare{
+		Kind: shareKindLive, Target: "forecast",
+		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+	}
+
+	older, _ := e.issue(mine, t, workspace)
+	newer, _ := e.issue(mine, t, workspace)
+	revoked, _ := e.issue(mine, t, workspace)
+	if err := e.revoke(mine, revoked.ID); err != nil {
+		t.Fatalf("revoking: %v", err)
+	}
+	lapsing := workspace
+	lapsing.ExpiresAt = time.Now().Add(time.Hour)
+	lapsed, _ := e.issue(mine, t, lapsing)
+	colleagues, _ := e.issue(theirs, t, workspace)
+
+	// Two hours on: the hour-long link has lapsed and the ceiling-dated ones have not.
+	got, err := e.listIssued(mine, func() time.Time { return time.Now().Add(2 * time.Hour) })
+	if err != nil {
+		t.Fatalf("listing: %v", err)
+	}
+	if len(got) != 2 || got[0].ID != newer.ID || got[1].ID != older.ID {
+		t.Fatalf("listed %v, want exactly [%s %s] — the caller's open links, newest first, "+
+			"without the revoked %s, the lapsed %s or the colleague's %s",
+			shareIDs(got), newer.ID, older.ID, revoked.ID, lapsed.ID, colleagues.ID)
+	}
+}
+
+func shareIDs(shares []Share) []ids.UUID {
+	out := make([]ids.UUID, 0, len(shares))
+	for _, share := range shares {
+		out = append(out, share.ID)
+	}
+	return out
+}
+
+func TestOnlyTheSeatThatIssuedAShareCanCloseIt(t *testing.T) {
+	e := setupForecast(t)
+	_, issuer := e.seededIssuer(t, "owner@forecast.test")
+	_, colleague := e.seededIssuer(t, "colleague@forecast.test")
+	share, token := e.issue(issuer, t, NewShare{
+		Kind: shareKindLive, Target: "forecast",
+		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+	})
+
+	// The same answer as an id that names nothing, so a refusal says nothing
+	// about whether the link exists.
+	if err := e.revoke(colleague, share.ID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a colleague closing somebody else's link answered %v, want not-found", err)
+	}
+	if err := e.revoke(colleague, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("closing an id that names nothing answered %v, want not-found", err)
+	}
+
+	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(issuer,
+		func(ctx context.Context, tx pgx.Tx) error {
+			_, err := e.shareStore(time.Now).Resolve(ctx, tx, token)
+			return err
+		})
+	if err != nil {
+		t.Fatalf("the link stopped serving after a colleague's refused close: %v", err)
+	}
+}
+
+func TestASeatThatCannotIssueSharesCannotListThem(t *testing.T) {
+	e := setupForecast(t)
+	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
+
+	_, err := e.listIssued(reader, time.Now)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a forecast reader without create listed shares (%v), want a refusal", err)
 	}
 }
 

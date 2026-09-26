@@ -82,7 +82,7 @@ func setupIdentityDB(t *testing.T) (*pgx.Conn, *pgxpool.Pool) {
 	// of its own, so it runs last and sees a package that has genuinely stopped.
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	// Every test in this package bootstraps its own installation into ONE shared
 	// connection, so the separation between them has to be real: reset before
 	// seeding, as compose/integration's harness does. Once per TEST, not per call
@@ -163,6 +163,9 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	// Bound to the workspace just created: this suite seeds one per env, so
 	// there is no installation singleton to resolve.
 	svc := NewServiceFor(database.BindTo(pool, wsID))
+	// Described, as onboarding leaves it. Contacts owns the anchor and identity
+	// may not import it; the compose suite asks the real owner.
+	svc.installationDescribed = func(context.Context) (bool, error) { return true, nil }
 	// Login resolves the admin's full Identity (roles, permissions) the
 	// way the HTTP surface would.
 	admin, _, err := svc.Login(principal.WithWorkspaceID(ctx, wsID.UUID), adminEmail, bootstrapPassword, noDevice)

@@ -1907,12 +1907,12 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "stale",
           "runs": 15,
-          "passed": 15,
+          "passed": 14,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "cases_below_quality_bar": 1
         },
         {
           "task": "stage_evidence_extract",
@@ -2012,8 +2012,8 @@
         }
       ],
       "bands": {
-        "certified": 7,
-        "supported_degraded": 2,
+        "certified": 6,
+        "supported_degraded": 3,
         "not_supported": 12
       },
       "untested": 6,
@@ -3318,12 +3318,12 @@
       "sites_partial": 0,
       "sites_stale": 39,
       "runs": 384,
-      "passed": 311,
-      "reliability": 0.8098958333333334,
+      "passed": 310,
+      "reliability": 0.8072916666666666,
       "slowest_p95_ms": 140306,
       "bands": {
-        "certified": 14,
-        "supported_degraded": 6,
+        "certified": 13,
+        "supported_degraded": 7,
         "not_supported": 19
       }
     },
@@ -11709,17 +11709,17 @@
             "env": "cloud_frontier"
           },
           "state": "stale",
-          "band": "certified",
+          "band": "supported_degraded",
           "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
-          "passed": 15,
-          "reliability": 1,
-          "latency_p50_ms": 533,
-          "latency_p95_ms": 1227,
+          "passed": 14,
+          "reliability": 0.9333333333333333,
+          "latency_p50_ms": 833,
+          "latency_p95_ms": 12796,
           "reported": {
-            "accepted": 15,
-            "wrong_answer": 0,
+            "accepted": 14,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -14829,7 +14829,7 @@
       "task": "site_triage",
       "site": "triage",
       "binding": {
-        "provider": "openrouter_decision",
+        "provider": "jev_compatible",
         "model": "typesafe/jev-1.13",
         "env": "cloud_frontier"
       },

@@ -220,11 +220,12 @@ export function useCanUpsert(object: RbacObject): boolean {
  *
  * Reading a role key is the re-derivation everything above exists to avoid, so
  * this is the deliberate exception and its scope is fixed: identity
- * administration, role grants, the extension inventory, the audit read, and the
- * non-production reset. Those routes gate on the role SERVER-SIDE and no RBAC
- * object describes them — a `role` object would encode a constant, and an admin
- * who revoked their own grant on it could never restore it — so the role is
- * their honest predicate rather than a stand-in for one.
+ * administration, role grants, the extension inventory, the audit read, the
+ * installation's own company profile, and the non-production reset. Those
+ * routes gate on the role SERVER-SIDE and no RBAC object describes them — a
+ * `role` object would encode a constant, and an admin who revoked their own
+ * grant on it could never restore it — so the role is their honest predicate
+ * rather than a stand-in for one.
  *
  * One more surface holds it for the opposite reason: the agent's cost figure
  * on the rail. The server serves it on `automation:update`, a grant wider than

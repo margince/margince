@@ -22,7 +22,7 @@ import (
 
 // jevLane is the lane the leg certifies in these tests. Its provider and
 // model name every record; the scripted decider stands in for its client.
-var jevLane = ai.DecisionsConfig{Provider: "openrouter_decision", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api"}
+var jevLane = ai.DecisionsConfig{Provider: "jev_compatible", Model: "typesafe/jev-1.13", BaseURL: "https://openrouter.ai/api/alpha/decisions"}
 
 // scriptedDecider answers each call with the next scripted answer, the last
 // one repeating, and counts the calls it was sent.
@@ -169,7 +169,16 @@ func TestTheLLMRecordIsUnchangedWhenThePresetBindsNoDecisions(t *testing.T) {
 	if len(without.decisions) != 0 {
 		t.Errorf("no lane is bound and %d decision records were written", len(without.decisions))
 	}
+	// What is compared is the record's MEANING, not how long the two runs took.
+	// RanAt and the latency percentiles are measured rather than derived: they
+	// differ between any two runs of the same work, and on a loaded runner they
+	// differ by enough to fail this. Left in, the assertion read "binding a
+	// decisions lane moved the LLM record" — a serious claim about verdicts —
+	// when all that had moved was a p95 from 6ms to 7ms, buried in a
+	// hundred-field dump. Token counts stay: the fake provider makes them exact.
 	without.llm.RanAt, with.llm.RanAt = "", ""
+	without.llm.LatencyP50, with.llm.LatencyP50 = 0, 0
+	without.llm.LatencyP95, with.llm.LatencyP95 = 0, 0
 	if !reflect.DeepEqual(without.llm, with.llm) {
 		t.Errorf("binding a decisions lane moved the LLM record:\nwithout %+v\nwith    %+v", without.llm, with.llm)
 	}
@@ -267,7 +276,7 @@ func TestTheDecisionPreflightFailsOnAFailedProbeAndSkipsLocalOnlyTasks(t *testin
 
 	failing := &scriptedDecider{replies: []decision.Response{{}}, errs: []error{errors.New("the endpoint is down")}}
 	err := preflightDecisions(wsContext(t), cfg, scenarios, &certifyHooks{decisionOpts: []ai.LocalOption{ai.WithFakeDecider(failing)}}, quietLogger())
-	if err == nil || !strings.Contains(err.Error(), "decisions lane openrouter_decision:typesafe/jev-1.13") {
+	if err == nil || !strings.Contains(err.Error(), "decisions lane jev_compatible:typesafe/jev-1.13") {
 		t.Fatalf("a failed probe: want the run refused naming the lane, got %v", err)
 	}
 	if failing.called() != 1 {

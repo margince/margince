@@ -284,17 +284,12 @@ func (e *ConfidentialityVerdictEngine) apply(
 		if err := e.retractPrivateContactsTx(ctx, tx, row, kind); err != nil {
 			return err
 		}
-		if err := recomputeJudgedMessageTx(ctx, tx, row); err != nil {
-			return err
-		}
-		// Each stamped sibling re-derived over every seat's contribution, so a
-		// colleague's mailbox still holding this message keeps holding it.
-		for _, id := range outcome.Stamped {
-			if err := activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](id)); err != nil {
-				return err
-			}
-		}
-		return nil
+		// The judged message and each stamped sibling, re-derived over every
+		// seat's contribution so a colleague's mailbox still holding one keeps
+		// holding it — as ONE set, because the anchor is an activity row like
+		// the rest and taking it first was a lock order nothing else agreed to.
+		return activities.RecomputeAudiencesTx(ctx, tx,
+			append(judgedMessageIDs(row), asActivityIDs(outcome.Stamped)...))
 	})
 	if err != nil {
 		// The thread key is workspace-internal and already in this workspace's
@@ -356,19 +351,26 @@ func threadAddressesTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread
 	return seen, nil
 }
 
-// recomputeJudgedMessageTx re-derives the audience of the message this verdict
-// was about, so the answer reaches the row it concerns.
+// judgedMessageIDs is the message this verdict was about, as a set of none or
+// one, so it can join the siblings in a single ordered recompute.
 //
-// One message, matching the stamp above. The thread's other messages were never
-// read by the classifier and keep whatever their own contributors ask for.
-func recomputeJudgedMessageTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread) error {
+// None when the message was erased while the question stood: there is nothing
+// to recompute, and the verdict is still worth recording for the threads that
+// inherit from it.
+func judgedMessageIDs(row capture.PendingThread) []ids.ActivityID {
 	if row.ActivityID == ids.Nil {
-		// The message was erased while the question stood. There is nothing to
-		// recompute, and the verdict is still worth recording for the threads
-		// that inherit from it.
 		return nil
 	}
-	return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](row.ActivityID))
+	return []ids.ActivityID{ids.From[ids.ActivityKind](row.ActivityID)}
+}
+
+// asActivityIDs types a stamped set for the recompute.
+func asActivityIDs(raw []ids.UUID) []ids.ActivityID {
+	out := make([]ids.ActivityID, 0, len(raw))
+	for _, id := range raw {
+		out = append(out, ids.From[ids.ActivityKind](id))
+	}
+	return out
 }
 
 // RetireExhausted ends the threads that spent every attempt without an answer.
@@ -446,10 +448,9 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 		if err != nil {
 			return err
 		}
-		for _, id := range outcome.Stamped {
-			if err := activities.RecomputeAudienceTx(wsCtx, tx, ids.From[ids.ActivityKind](id)); err != nil {
-				return err
-			}
+		if err := activities.RecomputeAudiencesTx(
+			wsCtx, tx, asActivityIDs(outcome.Stamped)); err != nil {
+			return err
 		}
 		done = len(outcome.Stamped) > 0 || outcome.Reopened != ids.Nil
 		return nil

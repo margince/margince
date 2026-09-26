@@ -160,7 +160,7 @@ func TestABookedRoomIsNotAGuest(t *testing.T) {
 	if !skip || reason != "no party outside the owner's domain" {
 		t.Fatalf("got (%q, skip=%v), want the room ignored and the meeting dropped as internal", reason, skip)
 	}
-	for _, p := range m.Participants() {
+	for _, p := range m.Participants().Participants {
 		if p.Email == "boardroom@myco.com" {
 			t.Error("a booked room reached the participant rows")
 		}
@@ -194,7 +194,7 @@ func TestParticipantsOfReadsAStoredEvent(t *testing.T) {
 		t.Fatalf("ParticipantsOf: %v", err)
 	}
 	roles := map[string]string{}
-	for _, p := range parts {
+	for _, p := range parts.Participants {
 		roles[p.Email] = p.Role
 	}
 	if roles["host@acme.com"] != connector.ParticipantRoleOrganizer {

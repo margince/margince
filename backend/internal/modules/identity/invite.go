@@ -47,6 +47,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 	if err != nil {
 		return ids.UserID{}, "", err
 	}
+	if err := s.refuseUntilDescribed(ctx); err != nil {
+		return ids.UserID{}, "", err
+	}
 	teams, err := validTeamIDs(in.TeamIDs)
 	if err != nil {
 		return ids.UserID{}, "", err

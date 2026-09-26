@@ -681,20 +681,20 @@
       ],
       "properties": {
         "provider": {
-          "description": "openrouter_decision (OpenRouter's decisions endpoint, reached with the openai_compatible key; base_url must be an OpenRouter host) | laya (a same-host decision encoder; keyless, sovereign-eligible, defaults to http://127.0.0.1:8765).",
+          "description": "jev (TypeSafe's own API; key TYPESAFE_API_KEY, required; base_url optional, default https://api.typesafe.ai/v1/systemone) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; key JEV_COMPATIBLE_API_KEY, sent when set and never required; base_url required).",
           "enum": [
-            "openrouter_decision",
-            "laya"
+            "jev",
+            "jev_compatible"
           ]
         },
         "model": {
           "type": "string",
           "minLength": 1,
-          "description": "The decision model id, e.g. typesafe/jev-1.13, or a Laya checkpoint name."
+          "description": "The decision model id, e.g. jev-1.13.0 on jev, or typesafe/jev-1.13 on OpenRouter."
         },
         "base_url": {
           "type": "string",
-          "description": "Endpoint root. REQUIRED for openrouter_decision (e.g. https://openrouter.ai/api). Empty ⇒ provider default."
+          "description": "The FULL decision endpoint URL, posted to as written: nothing is appended. REQUIRED for jev_compatible (e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone). Empty on jev ⇒ TypeSafe's own endpoint."
         }
       },
       "allOf": [
@@ -702,7 +702,7 @@
           "if": {
             "properties": {
               "provider": {
-                "const": "openrouter_decision"
+                "const": "jev_compatible"
               }
             }
           },

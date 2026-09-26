@@ -1343,6 +1343,11 @@ construction, naming what is missing.
 | `openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | **required** | BYOK cloud, generic OpenAI wire (OpenAI, Mistral, DeepSeek, Groq, Together, OpenRouter, …) |
 | `openai` | `OPENAI_API_KEY` | optional (default `api.openai.com`) | BYOK cloud, native Responses API |
 | `gemini` | `GEMINI_API_KEY` | optional (default `generativelanguage.googleapis.com/v1beta`) | BYOK cloud, native `generateContent` |
+| `jev` | `TYPESAFE_API_KEY` | optional (default `https://api.typesafe.ai/v1/systemone`, the FULL endpoint) | decisions lane only; TypeSafe's own API |
+| `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**optional**: sent when held, never demanded) | **required**, the FULL endpoint | decisions lane only; any server on the Jev wire — OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a self-hosted server (`http://127.0.0.1:8767/v1/systemone`, usually keyless) |
+
+A decision provider's `base_url` is the whole endpoint URL and is posted to as
+written; nothing is appended.
 
 `base_url` for the OpenAI-wire providers (`openai_compatible`, `openai`, and
 `vllm`) is the vendor **host root with no version segment** — the adapter
@@ -1518,9 +1523,10 @@ Two egress rules bind **every** profile, checked when the binding is written and
 again on the socket the call actually opens (so a name that resolves — or
 rebinds — to a refused address is stopped at connect time):
 
-- `ollama`, `vllm` and `openai_compatible` may reach loopback, a private range,
-  or a public host — the local model, the GPU box, the self-hosted gateway.
-- `anthropic`, `openai` and `gemini` may reach a **public host over https only**.
+- `ollama`, `vllm`, `openai_compatible` and `jev_compatible` may reach
+  loopback, a private range, or a public host — the local model, the GPU box,
+  the self-hosted gateway.
+- `anthropic`, `openai`, `gemini` and `jev` may reach a **public host over https only**.
   Their `base_url` overrides a vendor's own API host, and the call carries this
   installation's model key in a header (`x-api-key`, `x-goog-api-key`) that Go
   does not strip across hosts. To reach a gateway on your own network, or one

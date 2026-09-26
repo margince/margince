@@ -51,6 +51,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealmoveargument_test.go` | H2 | One rule, read on both sides of a compose seam. |
 | `dealmovemirror_test.go` | H2 | One rule, spelled on both sides of a module boundary, held equal in both directions. |
 | `dealroominvitelink_test.go` | H3 | The address a buyer invitation MAILS is an address this app serves. |
+| `decisionpreset_test.go` | H3 | The routing form's one-click OpenRouter decision binding and the commented `decisions:` blocks the presets carry are two spellings of one binding: an operator who presses the button and one who uncomments the block must end up with the same endpoint and model. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `deexceptionmirror_test.go` | H3 | The engine's test fixture for the German exception is the pack's declaration, or the tests prove nothing about what ships. |
 | `disclosureseam_test.go` | H1 | The two halves of the disclosure seam describe the same thing. |
@@ -383,6 +384,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aiprovenancenotice_test.go` | H1 | The AI provenance notice has ONE spelling, and it is draftfloor.AIProvenanceNotice. |
 | `approvalsameagent_test.go` | H2 | "Is this the agent that staged the proposal" has ONE spelling, and it is not passport equality. |
 | `arch_test.go` | H2 | Structural fitness functions (architecture/03 §1): these tests make the boundary rules mechanical, and they derive the package list from the tree instead of maintaining it by hand — a new package is enrolled the moment it exists (fitness function over point fix). |
+| `audiencelockorder_test.go` | H2 | Several activity audiences are recomputed in ONE agreed order, or two transactions deadlock. |
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `automationtarget_test.go` | H2 | An automation action targets the record its trigger fired on. |
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
@@ -417,6 +419,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault ONCE. |
 | `lanepoolbudget_test.go` | H2 | Every pool the integration lane opens is inside the lane's budget. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
+| `meetingstatusnull_test.go` | H2 | A meeting with no recorded status is one nothing has said is off. |
 | `mergegateclockbounds_test.go` | H2 | No test in the merge gate decides anything by reading a stopwatch. |
 | `metriclabelescaping_test.go` | H2 | A label VALUE in the hand-rolled exposition is escaped by httpserver.Label, never by %q. |
 | `migrationvalidatesplit_test.go` | H2 | A constraint is validated in a migration of its OWN, or the two-step buys nothing. |

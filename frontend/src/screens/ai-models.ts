@@ -348,3 +348,20 @@ export function offeredModels(
     .sort((a, b) => stable(a.value, b.value));
   return [...fromVendor, ...fromSheet];
 }
+
+// A vendor whose key is optional calls without one, so an absent key there is
+// no warning to draw.
+export function unkeyedProviders(
+  providers:
+    | readonly { provider: string; configured: boolean; optional: boolean }[]
+    | undefined,
+): ReadonlySet<string> | null {
+  if (!providers) {
+    return null;
+  }
+  return new Set(
+    providers
+      .filter((p) => !p.configured && !p.optional)
+      .map((p) => p.provider),
+  );
+}

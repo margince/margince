@@ -101,6 +101,39 @@ func TestServedUniformlyRefusesARunTwoModelsAnswered(t *testing.T) {
 	}
 }
 
+// A reply that only echoes the configured model carries no identity, so it
+// cannot contradict a provider that reported the dated snapshot it served; a
+// change of configured model mid-run still refuses, since that is a fallback.
+func TestServedUniformlyComparesOnlyWhatTheProviderReported(t *testing.T) {
+	reported := ai.Call{
+		Provider: "jev_compatible", ModelID: "typesafe/jev-1.13",
+		ServedModel: "typesafe/jev-1.13-20260917", ServedIdentitySource: "response",
+	}
+	echoed := ai.Call{
+		Provider: "jev_compatible", ModelID: "typesafe/jev-1.13",
+		ServedModel: "typesafe/jev-1.13", ServedIdentitySource: "echo",
+	}
+	pooled, err := poolRunCalls([]ai.Call{echoed, reported, echoed})
+	if err != nil {
+		t.Fatalf("poolRunCalls: %v", err)
+	}
+	if err := pooled.servedUniformly(); err != nil {
+		t.Fatalf("an echo refused a run the provider reported one model for: %v", err)
+	}
+	if pooled.ServedModel != reported.ServedModel {
+		t.Fatalf("served model = %q, want the reported %q", pooled.ServedModel, reported.ServedModel)
+	}
+	fellBack := echoed
+	fellBack.ModelID, fellBack.ServedModel = "other-model", "other-model"
+	pooled, err = poolRunCalls([]ai.Call{echoed, fellBack})
+	if err != nil {
+		t.Fatalf("poolRunCalls: %v", err)
+	}
+	if err := pooled.servedUniformly(); err == nil {
+		t.Fatal("a run whose configured model changed mid-run was certified as one model")
+	}
+}
+
 // A scored run that made no model call is a harness fault. Folded to zeroes it
 // would enter the record as a free, instant, healthy run.
 func TestPoolRunCallsRefusesARunWithNoCall(t *testing.T) {

@@ -23,7 +23,7 @@ func TestAnAttendeeKeepsTheNameTheInviteGave(t *testing.T) {
 		t.Fatalf("ParticipantsOf: %v", err)
 	}
 	names := map[string]string{}
-	for _, p := range parties {
+	for _, p := range parties.Participants {
 		names[p.Email] = p.DisplayName
 	}
 	if got := names["chris@erlerventures.org"]; got != "Chris Erler" {

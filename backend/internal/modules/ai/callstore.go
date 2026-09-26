@@ -134,7 +134,10 @@ type Call struct {
 	SchemaDowngrade string
 	Degraded        bool
 	ErrorSentinel   string
-	AgentRunID      *ids.UUID
+	// DecisionAnswer is what a decision attempt was answered, stood or not;
+	// nil on every other kind and on a decision attempt that got no answer.
+	DecisionAnswer *DecisionAnswer
+	AgentRunID     *ids.UUID
 	// ConfigHash points at the ai_call_config row describing the task
 	// contract, routing config, and prompt version that produced this
 	// attempt. Nil when the serving Router never installed a config
@@ -146,6 +149,12 @@ type Call struct {
 	// terminal attempt of a logical call ever carries one — the router
 	// strips it from any row a later attempt supersedes before flushing.
 	Payload *Payload
+}
+
+// ReportsItsServedModel reports whether the provider named the model that
+// served this call, rather than the trace echoing or assuming the configured one.
+func (c Call) ReportsItsServedModel() bool {
+	return c.ServedIdentitySource == servedIdentitySourceResponse
 }
 
 // Payload is the Layer-3 opt-in content: the post-SecretStripper request
@@ -300,6 +309,13 @@ func aiCallBindings(c Call) []boundColumn {
 		id := c.Subject.Ref.ID
 		subjectType, subjectID = &kind, &id
 	}
+	// Both answer columns or neither, as the schema's shape check holds them.
+	var decisionChoice *string
+	var decisionConfidence *float64
+	if c.DecisionAnswer != nil {
+		choice, confidence := c.DecisionAnswer.Choice, c.DecisionAnswer.Confidence
+		decisionChoice, decisionConfidence = &choice, &confidence
+	}
 	return []boundColumn{
 		{"correlation_id", c.CorrelationID},
 		{"task", string(c.Task)},
@@ -337,6 +353,8 @@ func aiCallBindings(c Call) []boundColumn {
 		{"secret_kinds", secretKinds},
 		{"subject_type", subjectType},
 		{"subject_id", subjectID},
+		{"decision_choice", decisionChoice},
+		{"decision_confidence", decisionConfidence},
 	}
 }
 
@@ -390,6 +408,20 @@ func (m *CallMeter) EnsureConfig(ctx context.Context, snap ConfigSnapshot) error
 // it to its own sentinel so the trace does not mislabel a successful call.
 var errMeteringFailed = errors.New("ai: metering failed")
 
+// The sentinels of an attempt a model answered. The health read keys on them to
+// tell a tier that responds from one that does not, so they are spelled once.
+// Held by: TestTheAnsweredErrorsClassifyToExactlyTheAnsweredSentinels (backend/internal/modules/ai/callstore_test.go)
+const (
+	sentinelMeteringFailed  = "metering_failed"
+	sentinelOutputWithheld  = "output_withheld"
+	sentinelRequestRejected = "request_rejected"
+)
+
+// answeredSentinels are the sentinels the health read does not count as a
+// failure: metering_failed is an answer whose usage write failed, and the other
+// two are outcomes — the model was reached and decided.
+var answeredSentinels = []string{sentinelMeteringFailed, sentinelOutputWithheld, sentinelRequestRejected}
+
 // classifyError maps a completion terminal error to a short, stable code
 // for ai_call.error_sentinel. It never stores raw error text — that could
 // leak provider internals into the trace store; the code is enough to
@@ -401,7 +433,7 @@ func classifyError(err error) string {
 	case errors.Is(err, ErrBudgetDeferred):
 		return "budget_deferred"
 	case errors.Is(err, errMeteringFailed):
-		return "metering_failed"
+		return sentinelMeteringFailed
 	case errors.Is(err, errBudgetUnavailable):
 		return "budget_unavailable"
 	case errors.Is(err, errRequestFailed):
@@ -424,9 +456,9 @@ func classifyError(err error) string {
 	// Outcomes, not failures: a model was reached and decided. Filed under
 	// provider_error they would read as an outage on every error-rate panel.
 	case errors.Is(err, model.ErrOutputWithheld):
-		return "output_withheld"
+		return sentinelOutputWithheld
 	case errors.Is(err, model.ErrRequestRejected):
-		return "request_rejected"
+		return sentinelRequestRejected
 	default:
 		return "provider_error"
 	}

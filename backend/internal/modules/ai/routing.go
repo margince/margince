@@ -271,8 +271,8 @@ func (cfg RoutingConfig) bindingDigest() string {
 }
 
 // localProviders can serve the sovereign zero-egress profile.
-// It is a set of CHAT providers: the decisions lane asks its descriptor's
-// local flag directly, since a decision adapter is never a tier's answer.
+// It is a set of CHAT providers: the decisions lane asks DecisionsConfig.isLocal,
+// since a decision adapter is never a tier's answer.
 var localProviders = projectProviders(
 	func(providerDescriptor) bool { return true },
 	func(d providerDescriptor) bool { return d.local && speaksChat(d) },

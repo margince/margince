@@ -5,6 +5,6 @@
 package ai
 
 var decisionCertified = map[DecisionCertKey]DecisionCert{
-	// records/site_triage/decision_triage_openrouter_decision_typesafe_jev-1.13_cloud_frontier.json
-	{Task: "site_triage", Site: "triage", Provider: "openrouter_decision", Model: "typesafe/jev-1.13"}: {PromptVersion: "pcb8f06d8051b9da26e24b30ce2407cc7", CorpusVersion: "v1"},
+	// records/site_triage/decision_triage_jev_compatible_typesafe_jev-1.13_cloud_frontier.json
+	{Task: "site_triage", Site: "triage", Provider: "jev_compatible", Model: "typesafe/jev-1.13"}: {PromptVersion: "pcb8f06d8051b9da26e24b30ce2407cc7", CorpusVersion: "v1"},
 }

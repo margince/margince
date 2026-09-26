@@ -13,8 +13,8 @@ own key.
 ## 1. Point a run at a config with a `decisions:` lane
 
 A decision leg runs only under `ROUTING=`, and only when that config binds the
-lane. No shipped preset binds one, so copy a preset into the gitignored `.tmp/`
-and add the block under `seeds.ai_routing`, beside `tiers:`:
+lane. No shipped preset binds one — `openrouter_cloud.yaml` carries the block
+commented out — so copy a preset into the gitignored `.tmp/` and uncomment it:
 
 ```bash
 mkdir -p .tmp && cp config/presets/openrouter_cloud.yaml .tmp/openrouter_cloud_decisions.yaml
@@ -22,18 +22,24 @@ mkdir -p .tmp && cp config/presets/openrouter_cloud.yaml .tmp/openrouter_cloud_d
 
 ```yaml
     decisions:
-      provider: openrouter_decision
+      provider: jev_compatible
       model: typesafe/jev-1.13
-      base_url: https://openrouter.ai/api
+      base_url: https://openrouter.ai/api/alpha/decisions
 ```
 
-Then run it like any deployment certification. `openrouter_cloud` binds the
-default judge, so name another one:
+`jev_compatible` sends `JEV_COMPATIBLE_API_KEY`, so export your OpenRouter key
+under that name too. Then run it like any deployment certification.
+`openrouter_cloud` binds the default judge, so name another one:
 
 ```bash
-make e2e-ai ROUTING=.tmp/openrouter_cloud_decisions.yaml TASK=site_triage \
+JEV_COMPATIBLE_API_KEY="$OPENAI_COMPATIBLE_API_KEY" \
+  make e2e-ai ROUTING=.tmp/openrouter_cloud_decisions.yaml TASK=site_triage \
   JUDGE=gemini:gemini-3.1-flash-lite
 ```
+
+A record is keyed on the provider word and the configured model, so a lane on
+TypeSafe's own API (`provider: jev`, `model: jev-1.13.0`, key
+`TYPESAFE_API_KEY`) needs a record of its own.
 
 The lane is checked against the file's profile before any paid call, with the
 rule a live config meets. The LLM leg runs exactly as it would without the lane
@@ -41,9 +47,10 @@ and writes its usual record. Then every scenario whose site has a decision form
 is asked of the lane `RUNS` times, with no judge: the answer is a closed label,
 and the site's own gate plus the scenario's expected label grade it.
 
-A `local_only` task (the two capture verdicts) is never asked by a cloud lane.
-Certify those sites with a local `laya` lane instead; against Jev, every run
-falls back and the record reads `not_supported`.
+A `local_only` task (the two capture verdicts) is never asked by a lane that is
+not local. Certify those sites with a `jev_compatible` lane on a self-hosted
+server at a loopback or private-range address; against OpenRouter or `jev`,
+every run falls back and the record reads `not_supported`.
 
 ## 2. Read the decision record
 

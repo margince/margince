@@ -82,10 +82,18 @@ func captureMeeting(t *testing.T, e *integration.Env, owner ids.UUID) ids.UUID {
 // the way capture.Registry builds it: the acting connector is the calendar, and
 // UserID is the seat whose calendar it is.
 func calendarOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
+	return connectorOwnerCtx(e, owner, calendarSystem)
+}
+
+// connectorOwnerCtx is the same principal for a NAMED connector. The Sink
+// refuses a record whose captured_by does not match the acting connector, so a
+// fixture for the other calendar provider needs its own actor rather than a
+// second spelling of this one.
+func connectorOwnerCtx(e *integration.Env, owner ids.UUID, connectorName string) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalConnector, ID: "connector:" + calendarSystem,
+		Type: principal.PrincipalConnector, ID: "connector:" + connectorName,
 		UserID: owner, OnBehalfOf: owner,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{

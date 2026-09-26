@@ -125,12 +125,21 @@ func NarrowHistoryTx(
 // import row of it and may emit an event, and there is no set-based spelling of
 // that which keeps the lock order the rest of the tree follows.
 func recomputeEach(
-	ctx context.Context, tx pgx.Tx, ids []ids.ActivityID, recompute AudienceRecomputer,
+	ctx context.Context, tx pgx.Tx, activityIDs []ids.ActivityID, recompute AudienceRecomputer,
 ) error {
 	if recompute == nil {
 		return nil
 	}
-	for _, id := range ids {
+	// IN ORDER, because the recompute takes `FOR UPDATE` on each activity and
+	// this module is not the only writer that locks several of them at once.
+	// Two callers looping in whatever order their own query returned can each
+	// hold the other's next row, and Postgres ends that by aborting one.
+	//
+	// activities.RecomputeAudiencesTx sorts the same way for the callers that
+	// can reach it. This module cannot — a module never imports a sibling, and
+	// the recompute arrives here as an injected function — so the order is
+	// taken from ids.Ascending, which is the one spelling both share.
+	for _, id := range ids.Ascending(activityIDs) {
 		if err := recompute(ctx, tx, id); err != nil {
 			return err
 		}

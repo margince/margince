@@ -4004,6 +4004,20 @@ export const vi = {
   "analytics.share.closedTitle": "Đã đóng liên kết",
   "analytics.share.closedBody":
     "Liên kết không còn mở được. Ai truy cập sẽ bị từ chối.",
+  "analytics.share.listOpen": "Liên kết đã chia sẻ",
+  "analytics.share.listTitle": "Liên kết bạn đã chia sẻ",
+  "analytics.share.listIntro":
+    "Các liên kết bạn đã tạo và vẫn mở được. Đóng một liên kết sẽ dừng nó ngay lập tức.",
+  "analytics.share.listEmpty":
+    "Bạn không có liên kết nào đang mở. Chia sẻ chế độ xem để tạo một liên kết.",
+  "analytics.share.listCreated": "Tạo ngày {date}",
+  "analytics.share.listExpires": "Hết hạn ngày {date}",
+  "analytics.share.populationCompany": "Toàn tổ chức",
+  "analytics.share.populationTeam": "Nhóm",
+  "analytics.share.populationOwner": "Đồng nghiệp",
+  "analytics.share.closeTitle": "Đóng liên kết này?",
+  "analytics.share.closeBody":
+    "Liên kết ngừng mở ngay lập tức với bất kỳ ai có nó. Liên kết đã đóng không thể mở lại.",
   "analytics.frame": "Tính đến {asOf} · {zone}",
   "review.title": "Cần kiểm tra gì trước khi chốt cam kết?",
   "review.ready": "Sẵn sàng",
@@ -5340,7 +5354,8 @@ export const vi = {
   "aiHealth.colLast": "Trả lời gần nhất",
   "aiHealth.answering": "Đang trả lời",
   "aiHealth.notAnswering": "Không trả lời",
-  "aiHealth.callCounts": "{calls} lượt gọi, {failures} thất bại",
+  "aiHealth.callCounts_one": "{count} lượt gọi, {failures} thất bại",
+  "aiHealth.callCounts_other": "{count} lượt gọi, {failures} thất bại",
   "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Đang giữ lại khỏi nhóm",
   "heldThreads.sub":
@@ -5615,6 +5630,8 @@ export const vi = {
   "connectors.telegramConnectCta": "Kết nối một bot Telegram",
   "connectors.telegramRosterLabel": "Bot đang chuyển tin nhắn",
   "connectors.telegramEmpty": "Chưa có bot nào được kết nối.",
+  "connectors.telegramReadOnly":
+    "Chỉ quản trị viên hoặc vận hành mới kết nối hoặc thay đổi được bot.",
   "connectors.telegramEditToken": "Thay token",
   "connectors.telegramDisconnectTitle": "Ngắt kết nối bot này?",
   "connectors.telegramDisconnectBody":
@@ -7836,6 +7853,7 @@ export const vi = {
     "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
   "aicalls.reason.decision_local_only":
     "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
+  "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
   "aicalls.loadMore": "Tải thêm",
@@ -8044,6 +8062,9 @@ export const vi = {
     "Câu hỏi có kiểu, hỏi trước các tầng khi đã chứng nhận",
   "aiRouting.decisions.add": "Thêm mô hình quyết định",
   "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
+  "aiRouting.decisions.preset.openrouter": "Dùng OpenRouter",
+  "aiRouting.decisions.preset.openrouterKey":
+    "Điền sẵn endpoint và mô hình của OpenRouter. JEV_COMPATIBLE_API_KEY nhận khóa OpenRouter của bạn.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
   "aiRouting.lanes.title": "Các làn định tuyến",
@@ -8064,6 +8085,7 @@ export const vi = {
   "aiProviderKeys.saveFailed": "Không thể cập nhật nhà cung cấp này",
   "aiProviderKeys.configured": "Đã cấu hình",
   "aiProviderKeys.absent": "Chưa đặt",
+  "aiProviderKeys.optional": "Không bắt buộc",
   "aiProviderKeys.configuredHint":
     "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
   "aiProviderKeys.absentHint":
@@ -8105,11 +8127,13 @@ export const vi = {
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
-  "aiRouting.baseUrl.help.openrouterDecision":
-    "Gốc host của OpenRouter, ví dụ https://openrouter.ai/api. Bộ chuyển thêm /alpha/decisions. Bắt buộc vì bộ chuyển này không có host mặc định.",
-  "aiRouting.baseUrl.help.laya":
-    "Gốc máy chủ Laya, không kèm đường dẫn. Bộ chuyển thêm /v1/systemone. Để trống để dùng mặc định http://127.0.0.1:8765.",
-  "aiRouting.baseUrl.placeholder.laya": "http://127.0.0.1:8765",
+  "aiRouting.baseUrl.help.jev":
+    "URL endpoint đầy đủ, dùng đúng như đã nhập. Để trống để dùng API của chính TypeSafe, https://api.typesafe.ai/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.jevCompatible":
+    "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc: OpenRouter là https://openrouter.ai/api/alpha/decisions, còn máy chủ tự vận hành có dạng http://127.0.0.1:8767/v1/systemone.",
+  "aiRouting.baseUrl.placeholder.jevCompatible":
+    "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
     "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
   "aiRouting.models.noEndpoint":

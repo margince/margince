@@ -19,10 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// maxDecisionStateBytes bounds the state a decision request carries. Laya
-// refuses a state over 50,000 characters, and a byte count at or under this
-// is under that in any encoding; a larger state goes to the ladder, whose
-// prompt the site already bounds for itself.
+// maxDecisionStateBytes bounds the state a decision request carries. A
+// self-hosted Jev-wire server (Laya) refuses a state over 50,000 characters,
+// and a byte count at or under this is under that in any encoding; a larger
+// state goes to the ladder, whose prompt the site already bounds for itself.
 const maxDecisionStateBytes = 48_000
 
 // DecisionProbe is the decision half of Decide alone, as the certification
@@ -190,7 +190,7 @@ func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *bindin
 // preview's: keep local-only data local, then the certification row.
 func (r *Router) decisionRefusal(b *binding, task Task, site string) string {
 	m := b.decisions.meta
-	if decisionSkipFor(&DecisionsConfig{Provider: m.provider, Model: m.model}, task) == DecisionSkipLocalOnly {
+	if decisionSkipFor(&DecisionsConfig{Provider: m.provider, Model: m.model, BaseURL: m.baseURL}, task) == DecisionSkipLocalOnly {
 		return attemptReasonDecisionLocalOnly
 	}
 	if !r.decisionCertified(DecisionCertKey{Task: task, Site: site, Provider: m.provider, Model: m.model}) {
@@ -216,6 +216,12 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 	if callErr == nil {
 		meterErr = r.meterDecision(ctx, task, resp)
 	}
+	var answer decision.Answer
+	var verdict DecisionVerdict
+	if callErr == nil {
+		answer, verdict = readDecision(dreq, resp, gate)
+		trace.DecisionAnswer = answerTrace(answer)
+	}
 	// Before finalize, which buffers the row, as on a completion attempt.
 	trace.SecretsRemoved, trace.SecretKinds = strips.report()
 	r.finalizeDecisionAttempt(ctx, lc, &trace, dreq, resp, errors.Join(callErr, meterErr), start)
@@ -228,7 +234,6 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 		try.reason = attemptReasonDecisionError
 		return try, nil
 	}
-	answer, verdict := readDecision(dreq, resp, gate)
 	try.answer = answer
 	switch verdict {
 	case DecisionAccepted:

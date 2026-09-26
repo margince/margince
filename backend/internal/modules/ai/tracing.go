@@ -37,6 +37,11 @@ const (
 	servedIdentitySourceConfigured = "configured"
 )
 
+// servedIdentityPerReply is a registry value, never a stored label: the
+// adapter's server may name its own snapshot or may hand the requested model
+// back, so servedIdentity grades each reply as one of the two above.
+const servedIdentityPerReply = "per_reply"
+
 // servedSource maps a provider to its served-identity source.
 var servedSource = projectProviders(
 	func(d providerDescriptor) string { return d.servedSource }, everyProvider,
@@ -47,12 +52,20 @@ var servedSource = projectProviders(
 // report (the provider named none, or the call never reached a provider at
 // all — a total ladder failure) falls back to the tier's configured binding,
 // honestly labeled servedIdentitySourceConfigured rather than passed off as
-// confirmed.
+// confirmed. On a per-reply wire a name other than the one requested cannot
+// be a reflection of the request, so it is the server's own report.
 func servedIdentity(provider, configuredModel, respServedModel string) (servedModel, source string) {
 	if respServedModel == "" {
 		return configuredModel, servedIdentitySourceConfigured
 	}
-	return respServedModel, servedSource[provider]
+	source = servedSource[provider]
+	if source == servedIdentityPerReply {
+		source = servedIdentitySourceEcho
+		if respServedModel != configuredModel {
+			source = servedIdentitySourceResponse
+		}
+	}
+	return respServedModel, source
 }
 
 // newAttemptTrace opens the ai_call row for one completion attempt with
@@ -158,10 +171,16 @@ var ErrAllTiersFailed = errors.New("ai: every bound tier failed")
 // non-terminal Call to lc as the walk moves past it — the last rung's own
 // outcome (success or the aggregate "every bound tier failed" error) is
 // what serveAttempt's own deferred trace records, so it is never
-// double-counted here. On success the served response is metered (failing
+// double-counted here.
+//
+// trace is that terminal Call, and each failed rung's row is cloned from it.
+// Its reason — the walk's own — is the first rung's: once a rung fails and the
+// walk moves on, every rung above ran because the one below it failed, so the
+// walk rewrites trace's reason to provider_error for them and for the terminal
+// row. On success the served response is metered (failing
 // loudly — unmetered spend would quietly hollow out the budget guardrail)
 // and cached before it is returned to serveAttempt for tracing.
-func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall, base Call, task Task, ladder []Tier, req model.Request, key string, wsID ids.WorkspaceID, start time.Time) (resp model.Response, tier Tier, served bool, err error) {
+func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall, trace *Call, task Task, ladder []Tier, req model.Request, key string, wsID ids.WorkspaceID, start time.Time) (resp model.Response, tier Tier, served bool, err error) {
 	var boundRungs []Tier
 	for _, t := range ladder {
 		if _, ok := b.clients[t]; ok {
@@ -193,7 +212,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// provider and model: only then is the identical request re-sent to
 			// the API that refused it. Any other rung may accept it.
 			if errors.Is(callErr, ErrProviderQuota) || rejectedAgainAbove(b, callErr, boundRungs[i:]) {
-				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
+				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
 				// tier failed" off a walk that stopped at the first one.
@@ -206,7 +225,8 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 				return model.Response{}, t, false, meterErr
 			}
 			if i < len(boundRungs)-1 {
-				lc.append(r.traceForFailedRung(b, base, t, callErr, start))
+				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
+				trace.AttemptReason = attemptReasonProviderError
 			}
 			continue
 		}
@@ -286,8 +306,9 @@ func (r *Router) meterWithheld(ctx context.Context, task Task, tier Tier, callEr
 
 // traceForFailedRung builds the non-terminal Call for a ladder rung the
 // walk moved past — cloning base's request-level fields (task,
-// correlation, fingerprint, cache-off) and filling in this rung's own
-// tier, provider/model, latency-so-far, and provider_error sentinel.
+// correlation, fingerprint, cache-off, and the reason this rung ran) and
+// filling in this rung's own tier, provider/model, latency-so-far, and error
+// sentinel.
 func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error, start time.Time) Call {
 	c := base
 	c.Tier = t
@@ -297,7 +318,6 @@ func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error
 	c.ErrorSentinel = classifyError(callErr)
 	c.ServedModel, c.ServedIdentitySource = servedIdentity(c.Provider, c.ModelID, "")
 	c.LatencyMS = r.now().Sub(start).Milliseconds()
-	c.AttemptReason = attemptReasonProviderError
 	// A rung that fell back is stored too, so it needs the terminal for the
 	// same reason the finalized attempt does — and it is the row most likely
 	// to carry one, since an abnormal finish is exactly what sends the walk

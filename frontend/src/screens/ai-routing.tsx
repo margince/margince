@@ -16,7 +16,11 @@ import {
   AiFeatureTable,
   useAiStatus,
 } from "./ai-admin";
-import { type ModelCatalogue, useAiModelCatalogue } from "./ai-models";
+import {
+  type ModelCatalogue,
+  unkeyedProviders,
+  useAiModelCatalogue,
+} from "./ai-models";
 import { useProviderKeys } from "./ai-provider-keys";
 import { EmbeddingWidthField } from "./ai-routing-fields";
 import { DecisionLaneRow, LaneRow, withDecisions } from "./ai-routing-lane";
@@ -589,15 +593,6 @@ function firstBinding(id: keyof typeof SETUP_PROVIDERS): Routing {
       ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
     },
   } as Routing;
-}
-
-function unkeyedProviders(
-  providers: readonly { provider: string; configured: boolean }[] | undefined,
-): ReadonlySet<string> | null {
-  if (!providers) {
-    return null;
-  }
-  return new Set(providers.filter((p) => !p.configured).map((p) => p.provider));
 }
 
 // The day the price sheet was last written, which is the day its model list was

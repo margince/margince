@@ -49,6 +49,7 @@ func (h Handlers) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
 			Provider:   s.Provider,
 			Configured: s.Configured,
 			EnvVar:     s.EnvVar,
+			Optional:   s.Optional,
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

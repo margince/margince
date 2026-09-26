@@ -609,20 +609,20 @@ describe("AskMarginceModal", () => {
       screen.queryByText("Captured messages are kept for 400 days."),
     ).toBeNull();
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "Ask" }));
-    // Longer than the default second, and measured rather than guessed: this is
-    // the only assertion in the file that waits on a press, a fetch and a render
-    // together, and under coverage instrumentation that chain runs past 1000ms.
-    // It is waiting for something that does arrive — the same assertion passes
-    // uninstrumented every time — so the budget is the thing that was wrong.
+    // Waits for the PRESS to be available, not for a clock.
+    //
+    // Ask is disabled until a set is chosen, and the set list is its own fetch.
+    // The box filling is not that fetch — the carried question arrives as a
+    // prop — so waiting on the box alone let the click land on a disabled
+    // button perhaps one run in three: nothing was asked, nothing rendered, and
+    // the assertion below sat out its whole budget. Raising that budget could
+    // never have helped, and the runs say so plainly: when this passes it takes
+    // about twenty milliseconds, not the thousand the old comment measured.
+    const ask = screen.getByRole("button", { name: "Ask" });
+    await waitFor(() => expect(ask).toBeEnabled());
+    await userEvent.setup().click(ask);
     expect(
-      await screen.findByText(
-        "Captured messages are kept for 400 days.",
-        undefined,
-        {
-          timeout: 5000,
-        },
-      ),
+      await screen.findByText("Captured messages are kept for 400 days."),
     ).toBeTruthy();
     expect(backend.asked).toHaveLength(1);
   });

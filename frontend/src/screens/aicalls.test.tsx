@@ -80,9 +80,11 @@ const DECIDED_THEN_FELL_BACK = {
       is_terminal: false,
       kind: "decision",
       tier: "decide",
-      provider: "openrouter_decision",
+      provider: "jev_compatible",
       model_id: "jev-classify",
       attempt_reason: "",
+      decision_choice: "company",
+      decision_confidence: 0.62,
       tokens_in: 40,
       tokens_out: 0,
       latency_ms: 600,
@@ -108,7 +110,7 @@ const DECIDED = {
     ...summary,
     kind: "decision",
     tier: "decide",
-    provider: "openrouter_decision",
+    provider: "jev_compatible",
     calls_attempted: 1,
     decision_attempted: true,
   },
@@ -365,7 +367,7 @@ it("marks a decision call, and names the tier it ran on", async () => {
   mount(true, true, OPERATOR, DECIDED);
 
   expect(
-    await screen.findByText("Decision model · openrouter_decision/served"),
+    await screen.findByText("Decision model · jev_compatible/served"),
   ).toBeTruthy();
   // The badge on the row is the kind, in words; the tier column above is the
   // same fact spelled as the lane, and both say it rather than "decide".
@@ -412,5 +414,57 @@ it("says why the ladder answered after the decision model, and where it went", a
   // asked: the terminal row's binding is the rung that answered after it.
   const first = screen.getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
-  expect(first?.textContent).toContain("openrouter_decision/jev-classify");
+  expect(first?.textContent).toContain("jev_compatible/jev-classify");
+});
+
+// The answer that did not stand is the one a floor is tuned from, so the
+// decision attempt says what it answered even when the ladder answered after.
+it("says what the decision model answered, and at what confidence", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  const first = (await screen.findByText("#1")).closest("li");
+  expect(first?.textContent).toContain("answered company at 0.62");
+  const second = screen.getByText("#2").closest("li");
+  expect(second?.textContent).not.toContain("answered");
+});
+
+// The ladder rung a decision model fell back to is the SECOND model asked, not
+// a second try of the first, so the retry count on the row is the ladder's own:
+// the attempts beyond the decision one.
+it("does not count the fall back from a decision model as a retry", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Decision model");
+  expect(task.textContent).not.toContain("Retry");
+});
+
+it("counts the ladder's own retries after a decision model fell back", async () => {
+  mount(true, true, OPERATOR, {
+    ...DECIDED_THEN_FELL_BACK,
+    call: { ...DECIDED_THEN_FELL_BACK.call, calls_attempted: 3 },
+  });
+
+  const task = await screen.findByText("capture_classify", {
+    selector: "td",
+  });
+  expect(task.textContent).toContain("Retry ×2");
+});
+
+// An ordinary first attempt and a decision that stood have no reason to run,
+// so the line names its binding and its latency and nothing in between.
+it("leaves the reason out of an attempt that had none", async () => {
+  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /show attempts/i }),
+  );
+
+  const first = (await screen.findByText("#1")).closest("li");
+  expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
+  expect(first?.textContent).not.toContain("—");
 });

@@ -183,7 +183,7 @@ func (s *RoutingStore) ListAvailableModels(
 // price sheet's rows are its suggestions.
 func listRefusal(profile Profile, provider string) ModelAvailability {
 	d, _ := providerByName(provider)
-	if profile == ProfileSovereign && !d.local {
+	if profile == ProfileSovereign && !d.local && !d.localByEndpoint {
 		return AvailabilityProfileForbids
 	}
 	if d.caps.has(capDecision) {

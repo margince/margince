@@ -234,6 +234,12 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// an operator relying on this cost should reconfirm against the
 		// live sheet the same way the gpt-5-mini row above asks for.
 		embedOn(day, providerGemini, "gemini-embedding-001", 150_000),
+		// TypeSafe's own API serves the model the broker resells as
+		// typesafe/jev-1.13, seeded at the broker's rate (below) as the owner
+		// set it 2026-09-25. jev-latest names whichever release is current, so
+		// it carries the same row until a release is priced apart.
+		decideOn(day, providerJev, "jev-1.13.0", 42_000),
+		decideOn(day, providerJev, "jev-latest", 42_000),
 	}
 }
 
@@ -295,8 +301,10 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// Read 2026-09-25 from the decisions endpoint's own usage.cost: one call
 		// of 425 input tokens cost $0.00001785, which is $0.042 per million
 		// input tokens exactly. Keyed on the configured id, which is what a
-		// decision row names; the endpoint serves a dated snapshot of it.
-		decideOn(day, providerOpenRouterDecision, "typesafe/jev-1.13", 42_000),
+		// decision row names; the endpoint serves a dated snapshot of it. A
+		// self-hosted jev_compatible model is seeded no rate: the operator sets
+		// one, or it shows unpriced.
+		decideOn(day, providerJevCompatible, "typesafe/jev-1.13", 42_000),
 	}
 }
 
@@ -316,10 +324,6 @@ func localZeroRates(day time.Time) []ModelRate {
 		// tier's default, gemma3, which is not an embedding model), so it
 		// needs its own explicit zero row.
 		embedOn(day, providerOllama, "bge-m3", 0),
-		// Laya's published checkpoints, served on the operator's own host.
-		decideOn(day, providerLaya, "typed-decisions", 0),
-		decideOn(day, providerLaya, "multilingual", 0),
-		decideOn(day, providerLaya, "english", 0),
 		// The offline fake provider carries no model id of its own — a
 		// binding that omits `model:` (the common case: `{provider: fake}`)
 		// resolves to model_id "" (routeMeta.model = cfg.Model, unmodified).

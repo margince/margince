@@ -251,9 +251,6 @@ var retired = gatekit.Waive(map[string]string{
 	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +
 		"contact\" is not what they say — and the bank exists to prove the handbook answers them anyway",
 
-	"scripts/fe-file-length-waivers.txt": "its note explains which two words got wider, which it " +
-		"cannot do without saying them",
-
 	"backend/internal/compose/auditlegacytype.go": "the word audit rows written before the " +
 		"rename still carry. `trg_audit_no_mutate` refuses an UPDATE on audit_log, so those rows " +
 		"keep it forever and the two reads that filter the trail by record type have to match it " +

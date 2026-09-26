@@ -101,7 +101,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a user with this email already exists in this company; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
-		httperr.Write(w, r, unknownRoleRefusal(err))
+		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
 		return
 	}
 	h.sendInvite(r, email.String(), rawToken)
@@ -283,6 +283,14 @@ func unknownRoleRefusal(err error) error {
 			"define and use one of those")
 }
 
+// companyNotDescribedRefusal words the one refusal invite and former share
+// alike: the next step is the same whichever seat was being added.
+func companyNotDescribedRefusal(err error) error {
+	return conflictIf(err, errCompanyNotDescribed, "company_not_described",
+		"this installation has not described its own company yet; an administrator "+
+			"saves the company profile first, then adds colleagues")
+}
+
 // refuseAs is conflictIf's general form: two refusals on this surface share a
 // STATUS but not a meaning — an unknown member and an unknown role are both
 // 404 — so the status stays the caller's to state.
@@ -420,7 +428,7 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a seat with this email already exists; a former member is recorded once, "+
 				"and somebody who came back is reactivated from the roster rather than added again")
-		httperr.Write(w, r, unknownRoleRefusal(err))
+		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
 		return
 	}
 	h.writeUserByID(w, r, userID, http.StatusCreated)

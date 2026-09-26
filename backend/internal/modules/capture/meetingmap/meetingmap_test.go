@@ -64,7 +64,7 @@ func TestABookedRoomIsNeitherAPartyNorAParticipant(t *testing.T) {
 	if reason, skip := m.SkipReason(); !skip || reason != "no party outside the owner's domain" {
 		t.Fatalf("got (%q, skip=%v), want the room ignored and the meeting dropped as internal", reason, skip)
 	}
-	for _, p := range m.Participants() {
+	for _, p := range m.Participants().Participants {
 		if strings.HasPrefix(p.Email, "boardroom@") {
 			t.Error("a booked room reached the participant rows")
 		}
@@ -155,7 +155,7 @@ func TestTheOwnerIsNotAParticipantAndOrganizerOutranksAttending(t *testing.T) {
 	}, owner)
 
 	roles := map[string]string{}
-	for _, p := range m.Participants() {
+	for _, p := range m.Participants().Participants {
 		roles[p.Email] = p.Role
 	}
 	if _, ok := roles[owner]; ok {

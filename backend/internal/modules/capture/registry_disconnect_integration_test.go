@@ -81,7 +81,7 @@ func setupCaptureDB(t *testing.T) (*pgx.Conn, *pgxpool.Pool) {
 	// of its own, so it runs last and sees a package that has genuinely stopped.
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	// Every test in this package seeds its own workspace through ONE shared
 	// connection, so the separation between them has to be real: reset before
 	// seeding, as compose/integration's harness does. Once per TEST, not per call

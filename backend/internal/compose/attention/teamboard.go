@@ -18,7 +18,9 @@ package attention
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -107,98 +109,128 @@ type teamCounts struct {
 // "you may not see this" is indistinguishable from one that means "they are
 // clear" — which is the reading that would tell a lead their team is fine.
 func (s *Service) teamLoad(ctx context.Context, roster []TeamMember, asOf time.Time) (teamCounts, error) {
+	// A source the composition never bound would otherwise leave its column at
+	// zero, and every count here is required by the contract — there is no way
+	// to draw absence, so a zero reads as "they are clear". That is the one
+	// answer this surface must not get wrong, and it is the reasoning the
+	// failing-source paths already follow.
+	if unbound := s.UnboundBoardSources(); len(unbound) > 0 {
+		return teamCounts{}, fmt.Errorf(
+			"team board assembled without its %s reader(s) — every column is required, so an "+
+				"unbound one would report a clean team", strings.Join(unbound, ", "))
+	}
 	load := teamCounts{counts: map[ids.UUID]crmcontracts.TeamBoardCounts{}}
-	if s.waiting != nil {
-		// The SAME read the ranked queue takes, bucketed by owner. A count from
-		// a second query would drift from the page it summarises the first time
-		// either changed — a manager reads eleven, the rep opens their day and
-		// sees nine, and nothing says which is right.
-		waiting, cut, err := s.waiting.Unanswered(ctx, asOf)
-		if err != nil {
+	for _, add := range []func(context.Context, *teamCounts, []TeamMember, time.Time) error{
+		s.addWaiting, s.addOverdue, s.addAtRisk, s.addPromisesDue,
+	} {
+		if err := add(ctx, &load, roster, asOf); err != nil {
 			return teamCounts{}, err
 		}
-		for _, customer := range waiting {
-			if customer.AsksNothing || customer.ActionUnconfirmed {
-				continue
-			}
-			row := load.counts[customer.OwnerID]
-			row.Waiting++
-			load.counts[customer.OwnerID] = row
-		}
-		// The lane's OWN answer, as the at-risk source's is, and for the same
-		// reason: this lane filters after it scans. The seam drops machine
-		// senders and folds duplicate threads out of what SQL returned, so a
-		// hundred and eighty rows can be the survivors of a full two hundred —
-		// and a hundred and eighty is what a smaller, complete installation
-		// returns too. Comparing the count against the bound therefore read a
-		// truncated scan as a total.
-		load.truncated = load.truncated || cut
-	}
-	if s.overdueLoad != nil {
-		overdue, err := s.overdueLoad.OverduePerAssignee(ctx, asOf)
-		if err != nil {
-			return teamCounts{}, err
-		}
-		for owner, count := range overdue {
-			row := load.counts[owner]
-			row.Overdue = count
-			load.counts[owner] = row
-		}
-	}
-	if s.atRisk != nil {
-		risky, cut, err := s.atRisk.Quiet(ctx)
-		if err != nil {
-			return teamCounts{}, err
-		}
-		for _, deal := range risky {
-			owner := ids.UUID{}
-			if deal.OwnerID != nil {
-				owner = *deal.OwnerID
-			}
-			row := load.counts[owner]
-			row.AtRisk++
-			load.counts[owner] = row
-		}
-		// The lane's OWN answer, not a count of its rows.
-		//
-		// This source filters after it scans — two bounded sweeps of the deal
-		// list, then a union keeping only what is quiet or overdue — so a lane
-		// returning ten may have read fifty and stopped with more behind it.
-		// Comparing len(risky) against the scan bound therefore fails in the one
-		// direction that must not fail: a truncated scan whose survivors are few
-		// looks exactly like a complete one, and the board would call a floor a
-		// total. The bound belongs to the reader that applied it.
-		load.truncated = load.truncated || cut
-	}
-	if err := s.addPromisesDue(ctx, &load, roster, asOf); err != nil {
-		return teamCounts{}, err
 	}
 	return load, nil
 }
 
-// addPromisesDue folds each teammate's due commitments into the tally.
+// UnboundBoardSources names every counting reader the board is missing, by the
+// column a reader would have read rather than as a nil somewhere in the
+// assembly.
 //
-// Its own function because it needs the ROSTER, which the sources above do not:
-// they answer for everybody at once, and this one asks per owner because who
-// owns a promise lives inside the store's query rather than on the claim.
+// Exported because the COMPOSITION is what must not drop one, and a wiring
+// defect found by the first lead to open the board is found too late. The seam's
+// own test asserts this is empty for the service the route serves.
+func (s *Service) UnboundBoardSources() []string {
+	var unbound []string
+	if s.waiting == nil {
+		unbound = append(unbound, "waiting")
+	}
+	if s.overdueLoad == nil {
+		unbound = append(unbound, "overdue")
+	}
+	if s.atRisk == nil {
+		unbound = append(unbound, "at_risk")
+	}
+	if s.promiseLoad == nil {
+		unbound = append(unbound, "promises_due")
+	}
+	return unbound
+}
+
+// addWaiting takes the SAME read the ranked queue takes, bucketed by owner. A
+// count from a second query would drift from the page it summarises the first
+// time either changed — a manager reads eleven, the rep opens their day and
+// sees nine, and nothing says which is right.
+func (s *Service) addWaiting(
+	ctx context.Context, load *teamCounts, _ []TeamMember, asOf time.Time,
+) error {
+	waiting, cut, err := s.waiting.Unanswered(ctx, asOf)
+	if err != nil {
+		return err
+	}
+	for _, customer := range waiting {
+		if customer.AsksNothing || customer.ActionUnconfirmed {
+			continue
+		}
+		row := load.counts[customer.OwnerID]
+		row.Waiting++
+		load.counts[customer.OwnerID] = row
+	}
+	// The lane's OWN answer, as the at-risk source's is, and for the same
+	// reason: this lane filters after it scans. The seam drops machine senders
+	// and folds duplicate threads out of what SQL returned, so a hundred and
+	// eighty rows can be the survivors of a full two hundred — and a hundred
+	// and eighty is what a smaller, complete installation returns too.
+	// Comparing the count against the bound therefore read a truncated scan as
+	// a total.
+	load.truncated = load.truncated || cut
+	return nil
+}
+
+func (s *Service) addOverdue(
+	ctx context.Context, load *teamCounts, _ []TeamMember, asOf time.Time,
+) error {
+	overdue, err := s.overdueLoad.OverduePerAssignee(ctx, asOf)
+	if err != nil {
+		return err
+	}
+	for owner, count := range overdue {
+		row := load.counts[owner]
+		row.Overdue = count
+		load.counts[owner] = row
+	}
+	return nil
+}
+
+func (s *Service) addAtRisk(
+	ctx context.Context, load *teamCounts, _ []TeamMember, _ time.Time,
+) error {
+	risky, cut, err := s.atRisk.Quiet(ctx)
+	if err != nil {
+		return err
+	}
+	for _, deal := range risky {
+		owner := ids.UUID{}
+		if deal.OwnerID != nil {
+			owner = *deal.OwnerID
+		}
+		row := load.counts[owner]
+		row.AtRisk++
+		load.counts[owner] = row
+	}
+	// The lane's OWN answer, not a count of its rows.
+	//
+	// This source filters after it scans — two bounded sweeps of the deal list,
+	// then a union keeping only what is quiet or overdue — so a lane returning
+	// ten may have read fifty and stopped with more behind it. Comparing
+	// len(risky) against the scan bound therefore fails in the one direction
+	// that must not fail: a truncated scan whose survivors are few looks
+	// exactly like a complete one, and the board would call a floor a total.
+	// The bound belongs to the reader that applied it.
+	load.truncated = load.truncated || cut
+	return nil
+}
+
 func (s *Service) addPromisesDue(
 	ctx context.Context, load *teamCounts, roster []TeamMember, asOf time.Time,
 ) error {
-	if s.promiseLoad == nil {
-		// Unbound leaves the column at zero, which is what every required count
-		// on this board already does — `waiting` and `overdue` are nil-guarded
-		// the same way. Production binds all three, so an unbound source is a
-		// test that does not exercise the column rather than a deployment.
-		//
-		// The risk this shares with its two siblings is real and named here
-		// rather than fixed only for the newest: a source dropped from the
-		// composition would report a clean team instead of failing. Making that
-		// a hard error is one change across all three, with its own gate, and
-		// not something to do for one column while the other two keep the old
-		// behaviour — two rules on one board is worse than one wrong one.
-		// Tracked as its own change rather than left as a comment: issue 4444.
-		return nil
-	}
 	owners := make([]ids.UUID, 0, len(roster))
 	for _, member := range roster {
 		owners = append(owners, member.UserID)

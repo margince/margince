@@ -36,20 +36,28 @@ const PROVIDERS = [
 // can serve it and none is offered. The same `[…] as const` mirror as
 // PROVIDERS, held against the server's decision registry by
 // backend/gates/frontendproviders_test.go.
-export const DECISION_PROVIDERS = ["openrouter_decision", "laya"] as const;
+export const DECISION_PROVIDERS = ["jev", "jev_compatible"] as const;
+
+// The one-click binding the decision row offers on jev_compatible: OpenRouter's
+// decisions endpoint and the model certified there. Written once, here; the
+// commented `decisions:` blocks in config/presets must name the same endpoint
+// and model, which backend/gates/decisionpreset_test.go holds.
+export const OPENROUTER_DECISION_PRESET = {
+  provider: "jev_compatible",
+  base_url: "https://openrouter.ai/api/alpha/decisions",
+  model: "typesafe/jev-1.13",
+} as const;
 
 // The adapters whose host this form asks for, and what each does with it.
 //
-// Two have no host of their own, so the endpoint is the binding rather than a
-// tweak to it: every OpenAI-wire vendor is reached through openai_compatible,
-// and openrouter_decision promises OpenRouter's decisions endpoint, which the
-// server holds to an OpenRouter host it has to be told. laya has a default,
-// but it is loopback, which is right only where the decision server runs
-// beside the API — so its host is offered, blank meaning that default.
+// openai_compatible has no host of its own, so the endpoint is the binding
+// rather than a tweak to it, and neither has jev_compatible, which is any
+// server on the Jev wire. jev has TypeSafe's own endpoint as its default, so
+// its host is offered with blank meaning that default.
 //
-// The help differs because the path each appends differs: a sentence written
-// for one told the others the wrong thing. The paths are the server's
-// provider registry's (providerregistry.go), spelled here as copy.
+// The help differs because what each does with the value differs: the chat
+// broker gets /v1 appended, while a decision endpoint is the full URL, used as
+// written. A sentence written for one told the others the wrong thing.
 type HostField = Readonly<{
   help: MessageKey;
   placeholder: MessageKey;
@@ -63,17 +71,17 @@ const HOST_FIELDS: ReadonlyMap<string, HostField> = new Map([
     },
   ],
   [
-    "openrouter_decision",
+    "jev",
     {
-      help: "aiRouting.baseUrl.help.openrouterDecision",
-      placeholder: "aiRouting.baseUrl.placeholder",
+      help: "aiRouting.baseUrl.help.jev",
+      placeholder: "aiRouting.baseUrl.placeholder.jev",
     },
   ],
   [
-    "laya",
+    "jev_compatible",
     {
-      help: "aiRouting.baseUrl.help.laya",
-      placeholder: "aiRouting.baseUrl.placeholder.laya",
+      help: "aiRouting.baseUrl.help.jevCompatible",
+      placeholder: "aiRouting.baseUrl.placeholder.jevCompatible",
     },
   ],
 ]);

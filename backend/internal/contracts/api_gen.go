@@ -8920,6 +8920,45 @@ func (e ForecastReadingsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastShareKind.
+const (
+	ForecastShareKindLive     ForecastShareKind = "live"
+	ForecastShareKindSnapshot ForecastShareKind = "snapshot"
+)
+
+// Valid indicates whether the value is a known member of the ForecastShareKind enum.
+func (e ForecastShareKind) Valid() bool {
+	switch e {
+	case ForecastShareKindLive:
+		return true
+	case ForecastShareKindSnapshot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastShareScopeKind.
+const (
+	ForecastShareScopeKindOwner     ForecastShareScopeKind = "owner"
+	ForecastShareScopeKindTeam      ForecastShareScopeKind = "team"
+	ForecastShareScopeKindWorkspace ForecastShareScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ForecastShareScopeKind enum.
+func (e ForecastShareScopeKind) Valid() bool {
+	switch e {
+	case ForecastShareScopeKindOwner:
+		return true
+	case ForecastShareScopeKindTeam:
+		return true
+	case ForecastShareScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastSufficiencyAbsent.
 const (
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
@@ -19329,6 +19368,9 @@ type AiCall struct {
 	Kind      string `json:"kind"`
 	LatencyMs int    `json:"latency_ms"`
 
+	// LogicalCallId Shared by every attempt of this call: the id that groups them in the trace.
+	LogicalCallId openapi_types.UUID `json:"logical_call_id"`
+
 	// ModelId The configured binding.
 	ModelId    string    `json:"model_id"`
 	OccurredAt time.Time `json:"occurred_at"`
@@ -19363,7 +19405,15 @@ type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
 	// AttemptReason Why this attempt ran — one of provider_error, schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
-	AttemptReason string  `json:"attempt_reason"`
+	AttemptReason string `json:"attempt_reason"`
+
+	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
+	DecisionChoice *string `json:"decision_choice,omitempty"`
+
+	// DecisionConfidence The confidence the decision model gave decision_choice, as it sent it; present exactly when decision_choice is.
+	DecisionConfidence *float64 `json:"decision_confidence,omitempty"`
+
+	// ErrorSentinel This attempt's failure code, as on the call; null when it answered.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 	IsTerminal    bool    `json:"is_terminal"`
 
@@ -19375,6 +19425,12 @@ type AiCallAttempt struct {
 	ModelId    *string   `json:"model_id,omitempty"`
 	OccurredAt time.Time `json:"occurred_at"`
 	Provider   *string   `json:"provider,omitempty"`
+
+	// ServedModel What the provider reported serving this attempt; absent when it reported nothing.
+	ServedModel *string `json:"served_model,omitempty"`
+
+	// ServedProvider The upstream a broker routed this attempt to; absent on a direct vendor or when the broker named none.
+	ServedProvider *string `json:"served_provider,omitempty"`
 
 	// Tier The tier this attempt ran on; decide for the decision lane.
 	Tier      *string `json:"tier,omitempty"`
@@ -19468,13 +19524,13 @@ type AiDecisionSummary struct {
 // one. It serves a task only when certified for that site and when its endpoint
 // reaches no further than the task's own bindings.
 type AiDecisionsBinding struct {
-	// BaseUrl Endpoint root; openrouter_decision requires an OpenRouter host.
+	// BaseUrl The FULL decision endpoint URL, posted to as written. Optional for jev (default https://api.typesafe.ai/v1/systemone); required for jev_compatible, e.g. https://openrouter.ai/api/alpha/decisions or http://127.0.0.1:8767/v1/systemone.
 	BaseUrl *string `json:"base_url,omitempty"`
 
-	// Model The decision model id: a Jev slug, or a Laya checkpoint.
+	// Model The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.
 	Model string `json:"model"`
 
-	// Provider openrouter_decision | laya.
+	// Provider jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required).
 	Provider string `json:"provider"`
 }
 
@@ -19660,13 +19716,16 @@ type AiProviderKeyList struct {
 	Providers []AiProviderKeyStatus `json:"providers"`
 }
 
-// AiProviderKeyStatus What may be known about one vendor's credential. Deliberately three facts and no fourth: the key itself has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless.
+// AiProviderKeyStatus What may be known about one vendor's credential. Facts about the vendor and whether a key is held, and nothing about the key: it has no read path, and neither does anything derived from it — a length, a prefix or a masked tail would each narrow a brute force while feeling harmless.
 type AiProviderKeyStatus struct {
 	// Configured Whether a credential is held. A screen reads this to offer "add" or "rotate"; it says nothing about whether the key still works, which only the vendor can answer.
 	Configured bool `json:"configured"`
 
 	// EnvVar The variable the same key may arrive in. Named so an operator can see which export seeded a vendor; the names follow each vendor's own convention, which is why they carry no MARGINCE_ prefix.
 	EnvVar string `json:"env_var"`
+
+	// Optional Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix.
+	Optional bool `json:"optional"`
 
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
@@ -19755,13 +19814,16 @@ type AiRunSummaryCurrency string
 
 // AiRungHealth One model tier and what it has been doing.
 type AiRungHealth struct {
-	// Calls Attempts in the window — terminal ones for a chat tier, every one for `decide`.
+	// Calls Attempts this tier made in the window, each counted once — including one that failed
+	// and handed the call to the next tier, and each same-tier retry. Cache hits are not
+	// counted.
 	Calls int `json:"calls"`
 
-	// Failures How many of them carried an error.
+	// Failures How many of those attempts failed, whether or not a later attempt answered the caller. An answer whose usage write failed (`metering_failed`) and the two outcomes `output_withheld` and `request_rejected` are not failures, since the model was reached.
 	Failures int `json:"failures"`
 
-	// Healthy The tier answered at least once in the window without every attempt failing. Decided
+	// Healthy The tier's latest attempt in the window answered. The latest, not a ratio: a tier
+	// that answered fifty minutes ago and has failed every attempt since is down now. Decided
 	// here rather than left to each client: two clients deciding what an all-failed rung
 	// means would be two answers, and one surface would call an outage while the other did
 	// not.
@@ -30084,6 +30146,28 @@ type ForecastReadings struct {
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
+
+// ForecastShare A share link as it stands. Carries no token: that is shown once, when the link is issued, and the table holds only its digest.
+type ForecastShare struct {
+	CreatedAt time.Time          `json:"created_at"`
+	ExpiresAt time.Time          `json:"expires_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Kind      ForecastShareKind  `json:"kind"`
+
+	// ScopeId Whose forecast, for a team or owner scope. Absent for the workspace.
+	ScopeId   *openapi_types.UUID    `json:"scope_id,omitempty"`
+	ScopeKind ForecastShareScopeKind `json:"scope_kind"`
+
+	// SnapshotId The frozen state a snapshot share serves. Absent on a live share.
+	SnapshotId *openapi_types.UUID `json:"snapshot_id,omitempty"`
+	Target     string              `json:"target"`
+}
+
+// ForecastShareKind defines model for ForecastShare.Kind.
+type ForecastShareKind string
+
+// ForecastShareScopeKind defines model for ForecastShare.ScopeKind.
+type ForecastShareScopeKind string
 
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
@@ -58604,6 +58688,9 @@ type ServerInterface interface {
 	// The rows behind a shared reading, as CSV.
 	// (GET /forecast/shared/{token}/export.csv)
 	ExportForecastShare(w http.ResponseWriter, r *http.Request, token string)
+	// List the share links you issued that still serve.
+	// (GET /forecast/shares)
+	ListForecastShares(w http.ResponseWriter, r *http.Request)
 	// Issue a link that shows a forecast reading to a colleague.
 	// (POST /forecast/shares)
 	CreateForecastShare(w http.ResponseWriter, r *http.Request)
@@ -61706,6 +61793,12 @@ func (_ Unimplemented) OpenForecastShare(w http.ResponseWriter, r *http.Request,
 // The rows behind a shared reading, as CSV.
 // (GET /forecast/shared/{token}/export.csv)
 func (_ Unimplemented) ExportForecastShare(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the share links you issued that still serve.
+// (GET /forecast/shares)
+func (_ Unimplemented) ListForecastShares(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78885,6 +78978,26 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListForecastShares operation middleware
+func (siw *ServerInterfaceWrapper) ListForecastShares(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListForecastShares(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateForecastShare operation middleware
 func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
 
@@ -92916,6 +93029,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/shared/{token}/export.csv", wrapper.ExportForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/shares", wrapper.ListForecastShares)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/shares", wrapper.CreateForecastShare)

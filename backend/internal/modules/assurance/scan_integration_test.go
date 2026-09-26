@@ -72,7 +72,7 @@ func setupScan(t *testing.T) *scanEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	e.store = NewStore(database.BindTo(pool, e.wsTyped))
 	return e

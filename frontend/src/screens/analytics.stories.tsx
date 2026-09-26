@@ -151,7 +151,7 @@ const derivation = {
 };
 
 const routes: RouteMap = {
-  "GET /me": meRoute({}),
+  "GET /me": meRoute({ forecast: ["create"] }),
   "GET /analytics/context": () =>
     jsonResponse({
       default_scope: { kind: "workspace", label: "Whole company" },

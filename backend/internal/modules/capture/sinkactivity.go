@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -23,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -339,6 +339,18 @@ func (s *Sink) upsertActivity(
 	}
 	occurredAt := fields.OccurredAt
 	audience, audienceReason := birth.bornAudience()
+	// Attested outbound is the ONLY write that turns "does this workspace
+	// correspond with them" from no to yes, and a verdict acts on that answer
+	// inside its own transaction — so the two serialize here rather than racing.
+	// Taken only for the attested row: inbound mail cannot change the answer,
+	// and locking every capture insert on its sender would serialize a busy
+	// address against itself for nothing.
+	if rec.Counterparty.SentByOwner() {
+		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
+			correspondence.LockIdentity(rec.Counterparty.Email)); err != nil {
+			return ids.ActivityID{}, false, err
+		}
+	}
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO activity (kind, channel_provider, subject, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested, bulk_mail_attested, audience, audience_reason, has_calendar_part, host_user_id, language, raw_capture_id)
@@ -355,7 +367,7 @@ func (s *Sink) upsertActivity(
 		// header case), matching the contact_email normalization, so the T1
 		// correspondence lookup's index-backed equality matches regardless of
 		// the sender's casing without a runtime case fold.
-		strings.ToLower(strings.TrimSpace(rec.Counterparty.Email)),
+		correspondence.Fold(rec.Counterparty.Email),
 		// The provider's filing AND the message's authorship, never the
 		// From-derived direction alone: this column is the T1
 		// correspondence-positive gate's only evidence, and a forged

@@ -40,7 +40,7 @@ is waiting to be re-checked.
 | [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 10 | 2 | 13 | 2 | 10 of 27 features ready (re-check pending), 2 not served (local-only data) |
 | [`gemini_cloud`](#gemini_cloud) | global cloud | 18 | 5 | 4 | 0 | 18 of 27 features ready (re-check pending), 2 not served (local-only data) |
 | [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 6 | 1 | 5 | 17 | 6 of 29 features ready (re-check pending) |
-| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 7 | 2 | 12 | 6 | 7 of 27 features ready (re-check pending), 2 not served (local-only data) |
+| [`openrouter_cloud`](#openrouter_cloud) | global cloud | 6 | 3 | 12 | 6 | 6 of 27 features ready (re-check pending), 2 not served (local-only data) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 10 | 1 | 14 | 2 | 10 of 27 features ready (re-check pending), 2 not served (local-only data) |
 | [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 6 | 2 | 20 | 1 | 6 of 29 features ready (re-check pending) |
 
@@ -317,7 +317,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `openrouter_cloud`
 
-Your data goes to: global cloud. 7 of 27 features ready (re-check pending), 2 not served (local-only data). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
+Your data goes to: global cloud. 6 of 27 features ready (re-check pending), 2 not served (local-only data). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -347,7 +347,7 @@ Your data goes to: global cloud. 7 of 27 features ready (re-check pending), 2 no
 | Voice DNA build <sub>`voice_build`</sub> | ❌ Not reliable yet | Right in 6 of 12 tries; 2 test cases wrong too often · re-check pending |
 | Website deep read <sub>`site_extract`</sub> | ❔ Not measured | Not measured yet |
 | Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready | Right every time (9 of 9) · re-check pending |
-| Website triage <sub>`site_triage`</sub> | ✅ Ready | Right every time (15 of 15) · re-check pending |
+| Website triage <sub>`site_triage`</sub> | ⚠️ Usable with care | Right in 14 of 15 tries; answer quality below the bar in one test case · re-check pending |
 | Weekly review narrative <sub>`weekly_review`</sub> | ❌ Not reliable yet | Right in 9 of 12 tries; one test case wrong too often · re-check pending |
 | What last week taught <sub>`weekly_learnings`</sub> | ❌ Not reliable yet | Right in 4 of 9 tries; 2 test cases wrong too often · re-check pending |
 
@@ -392,7 +392,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `signal_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 | `site_extract` | `premium` | `mistralai/mistral-medium-3-5` | ❔ Not measured | not measured |
 | `site_fact_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
-| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | re-check pending |
+| `site_triage` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
 | `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 | `summarize` | `cheap_cloud` | `openai/gpt-oss-120b` | ❌ Not reliable yet | re-check pending |
 | `transcript_propose` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
@@ -843,7 +843,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 6 | 0 | 0 | 6 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 1 | 0 | 0 | 1 | 15 | 15 | 1.00 | 10068ms | 1 | 0 | 0 |
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 0 | 0 | 6 | 48 | 42 | 0.88 | 3826ms | 5 | 0 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 39 | 0 | 0 | 39 | 384 | 311 | 0.81 | 140306ms | 14 | 6 | 19 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 39 | 0 | 0 | 39 | 384 | 310 | 0.81 | 140306ms | 13 | 7 | 19 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 | `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 46 | 0 | 0 | 46 | 444 | 329 | 0.74 | 105742ms | 11 | 7 | 28 |
 
@@ -1161,7 +1161,7 @@ record is certified and not stale (*Serves*); `make gen` writes those rows into
 
 | Site | Binding | State | Verdict | Serves | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |
 |---|---|---|---|---|---:|---:|---:|---:|---|---:|
-| `site_triage/triage` | `openrouter_decision · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 15 | 0 | 0.00 | - | 1.00 |
+| `site_triage/triage` | `jev_compatible · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 15 | 0 | 0.00 | - | 1.00 |
 
 </details>
 
@@ -2170,7 +2170,7 @@ Records (6):
 | `ollama · gemma4:12b · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 12 | 0.80 | 15277ms | 16379ms | 12 | 3 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1614ms | 4068ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 1066ms | 1980ms | 15 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `certified` | 15 | 15 | 1.00 | 533ms | 1227ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 15 | 14 | 0.93 | 833ms | 12796ms | 14 | 1 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `not_supported` | 15 | 13 | 0.87 | 6242ms | 10552ms | 13 | 2 | 0 | 0 |
 
 </details>

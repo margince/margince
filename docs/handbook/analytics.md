@@ -38,7 +38,11 @@ To share a forecast view in Margince, open **Analytics** → **Forecast**, press
 The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows. Only the Forecast section has **Share view**; other sections have no share or export button. Opening a link does not yet show the shared view (see "Sharing a view" below). Also called: send a report, share dashboard, report link.
 
 ### How do I close a shared forecast link?
-To close a forecast link in Margince before its 30 days run out, press **Close link** in the **Your link** dialog that showed it, right after **Create link**. The dialog then says **Link closed**, and anyone who opens the link is refused. Once that dialog is closed the link cannot be closed from the app: no screen lists the links you have issued, so it runs until it expires. Also called: revoke a share, cancel a report link, stop sharing.
+To close a forecast link in Margince before its 30 days run out, open **Analytics** → **Forecast** and press **Shared links** beside **Share view**.
+1. **Your shared links** lists every link you issued that still opens: **Live view** or **Snapshot**, the population it shows, and when it was created and when it expires.
+2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
+
+The row leaves the list and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
 Margince does not compute a win rate and has no export button on the Analytics screen. **Won and lost** under **Performance** gives won and lost counts and value, so you can compare them yourself. To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
@@ -351,7 +355,17 @@ themselves, and the numbers are computed under *their* grants. Two colleagues
 opening one link can correctly see different figures.
 
 The link is shown once — "The link is shown only once. Copy it now; it cannot be
-retrieved later." — and stops working after 30 days. Every refusal is the same **not found**, whether the
+retrieved later." — and stops working after 30 days.
+
+**Shared links**, beside **Share view**, opens **Your shared links**: every link
+you issued that still opens, with its kind, the population it shows, and when it
+was created and when it expires. **Close link** on a row ends that link at any time,
+after **Close this link?** asks. Only you can see and close your own links. The
+list never shows a link's address, so a lost link cannot be copied from it. A
+link also stops when it expires or when you lose forecast access, and a seat
+without the permission to share sees neither button.
+
+Every refusal is the same **not found**, whether the
 token is unknown, expired, revoked, or issued by somebody who has since left:
 distinguishing them would tell anyone working through guessed tokens which
 guesses were closer.
@@ -361,7 +375,7 @@ An agent can neither mint one nor open one.
 **Honest state of this feature today.** The link mints, but the rest is not
 wired up: opening one lands on the ordinary Analytics screen under your own
 population rather than the shared view, the **Snapshot** option cannot yet
-succeed, a link can be closed early only with **Close link** in the dialog that
-issued it — and the CSV export behind it is
-unreachable. Treat Share view as unfinished rather than as a way to get
-figures to somebody outside your own seat.
+succeed, and the CSV export behind it is unreachable. Closing works: every open
+link you issued is listed under **Shared links**, where **Close link** ends it.
+Treat Share view as unfinished rather than as a way to get figures to somebody
+outside your own seat.

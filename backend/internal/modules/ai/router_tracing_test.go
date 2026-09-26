@@ -255,6 +255,27 @@ func TestServedIdentityStamping(t *testing.T) {
 	}
 }
 
+// A server on the jev_compatible wire may name its own dated snapshot or may
+// hand the requested model back, so each reply is graded by what it says: a
+// name other than the one asked for cannot be a reflection of the request.
+func TestAPerReplyWireIsAReportOnlyWhenItNamesAnotherModel(t *testing.T) {
+	cases := []struct {
+		name, served, wantModel, wantSource string
+	}{
+		{"a dated snapshot is the server's own report", "typesafe/jev-1.13-20260917", "typesafe/jev-1.13-20260917", servedIdentitySourceResponse},
+		{"the requested model handed back is an echo", "typesafe/jev-1.13", "typesafe/jev-1.13", servedIdentitySourceEcho},
+		{"no name at all falls back to the binding", "", "typesafe/jev-1.13", servedIdentitySourceConfigured},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotModel, gotSource := servedIdentity(providerJevCompatible, "typesafe/jev-1.13", tc.served)
+			if gotModel != tc.wantModel || gotSource != tc.wantSource {
+				t.Errorf("servedIdentity = (%q, %q), want (%q, %q)", gotModel, gotSource, tc.wantModel, tc.wantSource)
+			}
+		})
+	}
+}
+
 // servedSource must carry exactly one entry per provider, the decision
 // adapters included: a provider missing from the map silently stamps
 // ServedIdentitySource="" instead of a real trust label, and a stray key can

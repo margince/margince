@@ -121,3 +121,5 @@ seeds:
       dimensions: 1024
       routing:
         only: [mistral/eu]
+    # No `decisions:` lane: eu_hosted refuses an OpenRouter or TypeSafe decision
+    # endpoint, since neither can be pinned to an EU host.

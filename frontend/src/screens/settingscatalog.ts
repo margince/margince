@@ -283,15 +283,8 @@ export const SETTINGS_PAGES = [
     requires: always,
     // Acting, not consulting: the mailbox, sender and LinkedIn controls are the
     // reader's own and need no grant, and the mail-sharing row states a value
-    // and offers no control at all.
-    //
-    // The Telegram panel is the exception and it is NOT gated — connectors.tsx
-    // asks no capability question, so its Connect, Edit and Disconnect are
-    // offered to every reader and refused by the server (`channel_connection`
-    // is admin/ops to mutate). That is a pre-existing gap in that card rather
-    // than something this field can fix: `changes` decides which pages reach
-    // the rail, and it cannot withhold one control on a page whose other nine
-    // surfaces are genuinely the reader's.
+    // and offers no control at all. The Telegram panel gates its own verbs on
+    // `channel_connection`, so this field need not withhold the page for it.
     changes: always,
   },
   // MIXED for the same reason as `connections`, one page along:
