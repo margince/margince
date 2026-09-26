@@ -39513,7 +39513,18 @@ components:
           description: >-
             Where this answer was saved, present only when the query asked for it. A report
             block cites this id plus a cell's coordinates instead of carrying the number.
+        labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
       additionalProperties: false
+    AnalyticsIdLabels:
+      type: object
+      description: >-
+        Display names for the ids in the grouped columns that name a company or a project,
+        keyed by column and then id, read under this caller's own grants. An id this caller
+        may not name is absent, and so is a column with nothing named; the id still stands
+        on the row. A withheld row carries no id, so nothing here names it.
+      additionalProperties:
+        type: object
+        additionalProperties: { type: string }
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the
@@ -39561,7 +39572,10 @@ components:
         id: { type: string, format: uuid }
         query:
           allOf: [{ $ref: '#/components/schemas/AnalyticsQuery' }]
-          description: The question as it was saved, unchanged.
+          description: >-
+            The question as it was saved, with one addition: `limit` is always present and
+            is the bound this read applied, including the default when the asker named
+            none.
         answer:
           allOf: [{ $ref: '#/components/schemas/AnalyticsAnswer' }]
           description: >-
@@ -39762,6 +39776,7 @@ components:
           description: >-
             The cell covers more records than were returned. A reader who adds up the rows
             and finds less than the cell needs to know why.
+        labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
       additionalProperties: false
     WeeklyPlan:
       type: object

@@ -56,7 +56,13 @@ var tsLiteralString = regexp.MustCompile(`["']([^"'\n]+)["']`)
 
 // analyticsServer holds the server side of each mirror, derived once.
 type analyticsServer struct {
-	fields, entities, native []string
+	fields, entities, native, numberDims, booleanDims []string
+}
+
+// analyticsPlant is one drift planted in the real sources, and the mirror that
+// must see it.
+type analyticsPlant struct {
+	shape, catalog, vocab, drifts string
 }
 
 // analyticsMirror is one set as the server has it and as the browser spells it.
@@ -84,30 +90,26 @@ func TestTheQuestionBuilderGateSeesEveryDriftShape(t *testing.T) {
 	server := deriveAnalyticsServer(t)
 	catalog, vocab := readSource(t, analyticsCatalog), readSource(t, analyticsVocabMirror)
 	entities := literalSpan(t, vocab, "ENTITY_LABEL_KEY", '{', '}')
-	native := literalSpan(t, vocab, "NATIVE_CURRENCY_MEASURES", '[', ']')
 	firstField := analyticsFieldLabel.FindStringIndex(catalog)
 	firstEntity := tsLiteralKey.FindStringSubmatchIndex(vocab[entities[0]:entities[1]])
-	firstNative := tsLiteralString.FindStringIndex(vocab[native[0]:native[1]])
-	if firstField == nil || firstEntity == nil || firstNative == nil {
+	if firstField == nil || firstEntity == nil {
 		t.Fatal("a mirror has no entry to remove, so the removal plants below prove nothing")
 	}
 	opens := strings.Index(catalog, "{") + 1
 	retiredField := catalog[:opens] + "\n  \"analytics.field.retired_field\": \"x\"," + catalog[opens:]
 	unlabelledEntity := cut(vocab, entities[0]+firstEntity[2], entities[0]+firstEntity[3])
 	retiredEntity := vocab[:entities[0]+1] + `"retired-population": "x",` + vocab[entities[0]+1:]
-	retiredNative := vocab[:native[0]+1] + `"retired_measure", ` + vocab[native[0]+1:]
-	missingNative := cut(vocab, native[0]+firstNative[0], native[0]+firstNative[1])
 
-	for _, plant := range []struct {
-		shape, catalog, vocab, drifts string
-	}{
+	plants := []analyticsPlant{
 		{"a label removed", cut(catalog, firstField[0], firstField[1]), vocab, "field"},
 		{"a label for a retired field", retiredField, vocab, "field"},
 		{"a population without its label", catalog, unlabelledEntity, "population"},
 		{"a label for a retired population", catalog, retiredEntity, "population"},
-		{"a native measure the server lacks", catalog, retiredNative, "native"},
-		{"a native measure the browser lacks", catalog, missingNative, "native"},
-	} {
+	}
+	plants = append(plants, listPlants(t, catalog, vocab, "NATIVE_CURRENCY_MEASURES", "native")...)
+	plants = append(plants, listPlants(t, catalog, vocab, "NUMBER_DIMENSIONS", "number")...)
+	plants = append(plants, listPlants(t, catalog, vocab, "BOOLEAN_DIMENSIONS", "boolean")...)
+	for _, plant := range plants {
 		seen := false
 		for _, m := range analyticsMirrors(t, server, plant.catalog, plant.vocab) {
 			missing, extra := mirrorDrift(m.server, m.browser)
@@ -116,6 +118,21 @@ func TestTheQuestionBuilderGateSeesEveryDriftShape(t *testing.T) {
 		if !seen {
 			t.Errorf("planted %s and the %s mirror still agrees", plant.shape, plant.drifts)
 		}
+	}
+}
+
+// listPlants adds an entry the server lacks to one string-list mirror, and
+// removes its first entry, each in a copy of the source.
+func listPlants(t *testing.T, catalog, vocab, name, drifts string) []analyticsPlant {
+	t.Helper()
+	span := literalSpan(t, vocab, name, '[', ']')
+	first := tsLiteralString.FindStringIndex(vocab[span[0]:span[1]])
+	if first == nil {
+		t.Fatalf("%s has no entry to remove, so its removal plant proves nothing", name)
+	}
+	return []analyticsPlant{
+		{name + " naming a retired field", catalog, vocab[:span[0]+1] + `"retired_field", ` + vocab[span[0]+1:], drifts},
+		{name + " missing an entry", catalog, cut(vocab, span[0]+first[0], span[0]+first[1]), drifts},
 	}
 }
 
@@ -146,16 +163,36 @@ func deriveAnalyticsServer(t *testing.T) analyticsServer {
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:gate"})
 	schema := compose.AnalyticsSchemaFor(ctx)
 	fields := map[string]bool{}
+	shapes := map[analyticsquery.ColumnShape]map[string]bool{
+		analyticsquery.ShapeNumber: {}, analyticsquery.ShapeBoolean: {},
+	}
+	dimensionShape := map[string]analyticsquery.ColumnShape{}
 	for _, entity := range schema.Entities {
-		for name := range entity.Fields {
+		for name, field := range entity.Fields {
 			fields[name] = true
+			if field.Kind != analyticsquery.KindDimension {
+				continue
+			}
+			// The browser keys a dimension's shape by NAME, so one name must hold
+			// one shape in every population that offers it.
+			if seen, twice := dimensionShape[name]; twice && seen != field.Shape {
+				t.Fatalf("dimension %s holds %q in one population and %q in another — "+
+					"the browser cannot tell which", name, seen, field.Shape)
+			}
+			dimensionShape[name] = field.Shape
+			if named, held := shapes[field.Shape]; held {
+				named[name] = true
+			}
 		}
 	}
 	server := analyticsServer{
 		fields: slices.Sorted(maps.Keys(fields)), entities: schema.EntityNames(),
-		native: nativeMoneyMeasures(t),
+		native:      nativeMoneyMeasures(t),
+		numberDims:  slices.Sorted(maps.Keys(shapes[analyticsquery.ShapeNumber])),
+		booleanDims: slices.Sorted(maps.Keys(shapes[analyticsquery.ShapeBoolean])),
 	}
-	if len(server.fields) == 0 || len(server.entities) == 0 || len(server.native) == 0 {
+	if len(server.fields) == 0 || len(server.entities) == 0 || len(server.native) == 0 ||
+		len(server.numberDims) == 0 || len(server.booleanDims) == 0 {
 		t.Fatalf("a server set derived empty (%+v) — this gate would hold the browser to nothing", server)
 	}
 	return server
@@ -217,7 +254,10 @@ func nativeMoneyArg(t *testing.T, source string, arg ast.Expr, consts map[string
 func analyticsMirrors(t *testing.T, server analyticsServer, catalog, vocab string) []analyticsMirror {
 	t.Helper()
 	entities := literalSpan(t, vocab, "ENTITY_LABEL_KEY", '{', '}')
-	native := literalSpan(t, vocab, "NATIVE_CURRENCY_MEASURES", '[', ']')
+	list := func(name string) []string {
+		span := literalSpan(t, vocab, name, '[', ']')
+		return literalMatches(tsLiteralString, vocab[span[0]:span[1]])
+	}
 	return []analyticsMirror{
 		{
 			"field labels (analytics.field.*)", server.fields, submatches(analyticsFieldLabel, catalog),
@@ -230,17 +270,27 @@ func analyticsMirrors(t *testing.T, server analyticsServer, catalog, vocab strin
 		},
 		{
 			"native currency measures (NATIVE_CURRENCY_MEASURES)", server.native,
-			literalMatches(tsLiteralString, vocab[native[0]:native[1]]),
+			list("NATIVE_CURRENCY_MEASURES"),
 			"a per-currency amount is shown in the base currency, or a base amount in a row's own",
+		},
+		{
+			"number dimensions (NUMBER_DIMENSIONS)", server.numberDims, list("NUMBER_DIMENSIONS"),
+			"a filter sends a number as quoted text and is refused, or text as a number",
+		},
+		{
+			"boolean dimensions (BOOLEAN_DIMENSIONS)", server.booleanDims, list("BOOLEAN_DIMENSIONS"),
+			"a filter sends a yes-or-no as quoted text and is refused, or text as a boolean",
 		},
 	}
 }
 
 // literalSpan finds the literal a TypeScript declaration assigns, from its
-// opening bracket to the first closing one: both mirrors hold only strings.
+// opening bracket to the first closing one: every mirror holds only strings.
+// A Set's literal is the array it is built from.
 func literalSpan(t *testing.T, source, name string, opens, closes byte) [2]int {
 	t.Helper()
-	declared := regexp.MustCompile(`\b` + name + `\b[^=\n]*=\s*` + regexp.QuoteMeta(string(opens)))
+	declared := regexp.MustCompile(`\b` + name + `\b[^=\n]*=\s*(?:new Set(?:<[^>]*>)?\(\s*)?` +
+		regexp.QuoteMeta(string(opens)))
 	at := declared.FindStringIndex(source)
 	if at == nil {
 		t.Fatalf("%s declares no %s literal — this gate is reading a shape that is gone", analyticsVocabMirror, name)

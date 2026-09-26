@@ -35,8 +35,10 @@ type AnalyticsExplanation struct {
 	// Truncated says the cell covers more records than were returned. A reader
 	// who sums the rows and finds less than the cell needs to know why.
 	Truncated bool
-	// Entity is the record type each row's id names, for the labeller.
-	Entity datasource.EntityType
+	// Entity is the record type each row's id names, and Question the question
+	// explained, whose group columns may name other records: both for labelling.
+	Entity   datasource.EntityType
+	Question analyticsquery.Query
 }
 
 // ExplainAnalyticsCell resolves one cell to its records.
@@ -97,6 +99,7 @@ func ExplainAnalyticsCell(
 		Columns: plan.Columns, Rows: rows,
 		Truncated: len(rows) == analyticsquery.ExplainRowLimit,
 		Entity:    spec.entity,
+		Question:  in.Query,
 	}, nil
 }
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -250,6 +251,121 @@ func TestACitedCellNamesItsRecords(t *testing.T) {
 	for _, row := range out.Rows {
 		if row[derivationLabelColumn] != "Cited Deal" {
 			t.Errorf("record %v is labelled %v, want its name", row["id"], row[derivationLabelColumn])
+		}
+	}
+}
+
+// companyReaderCtx is a real seat that may read deals and the companies they
+// belong to, and measure the whole workspace.
+func (e *forecastEnv) companyReaderCtx(user ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:company-reader", UserID: user,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"deal": {Read: true}, "company": {Read: true}, "forecast": {Read: true},
+				"installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// seedCompanyDeals plants a company and that many open deals at it.
+func (e *forecastEnv) seedCompanyDeals(t *testing.T, name string, deals int) ids.UUID {
+	t.Helper()
+	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, $2, 'manual', 'human:x')`, name)
+	for i := 0; i < deals; i++ {
+		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, owner_id, amount_minor,
+		                               currency, expected_close_date, source, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, 100000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,
+			name+" deal", e.pipeline, e.stages[20], company, e.Rep1)
+	}
+	return company
+}
+
+// An answer grouped by company names each served company, and names nothing a
+// withheld row stood for: that row carries no id to name.
+func TestAnAnswerNamesTheCompaniesItGroupsBy(t *testing.T) {
+	e := setupForecast(t)
+	names := map[string]string{}
+	for _, c := range []struct {
+		name  string
+		deals int
+	}{{"Contoso", 6}, {"Fabrikam", 7}, {"Tailspin", 1}} {
+		names[e.seedCompanyDeals(t, c.name, c.deals).String()] = c.name
+	}
+	rec := httptest.NewRecorder()
+	e.analyticsRoutes().RunAnalyticsQuery(rec, analyticsRequest(e.companyReaderCtx(e.Rep3), http.MethodPost,
+		"/analytics/query", `{"entity":"open-deals-per-company","group_by":["company_id"],"measures":[{"fn":"count"}]}`))
+	var answer crmcontracts.AnalyticsAnswer
+	if err := json.Unmarshal(rec.Body.Bytes(), &answer); err != nil || rec.Code != http.StatusOK {
+		t.Fatalf("asking answered %d %s", rec.Code, rec.Body.String())
+	}
+	if !answer.Withheld || answer.Labels == nil {
+		t.Fatalf("want a withheld one-deal group beside named ones, got withheld=%v labels=%v",
+			answer.Withheld, answer.Labels)
+	}
+	labels := (*answer.Labels)["company_id"]
+	served := 0
+	for _, row := range answer.Rows {
+		id, _ := row["company_id"].(string)
+		if row[withheldColumn] == true {
+			if id != "" {
+				t.Errorf("a withheld row still carries company %s", id)
+			}
+			continue
+		}
+		served++
+		if labels[id] != names[id] {
+			t.Errorf("company %s is named %q, want %q", id, labels[id], names[id])
+		}
+	}
+	if served == 0 || len(labels) != served {
+		t.Errorf("%d groups served and %d named — %v", served, len(labels), labels)
+	}
+}
+
+// A saved run opened by a reader who may not read companies answers and opens
+// its cells, naming the deals and none of the companies.
+func TestANarrowerReaderOfARunIsNotHandedTheCompanyNames(t *testing.T) {
+	e := setupForecast(t)
+	company := e.seedCompanyDeals(t, "Contoso", 6).String()
+	routes := e.analyticsRoutes()
+	saved := httptest.NewRecorder()
+	routes.RunAnalyticsQuery(saved, analyticsRequest(e.companyReaderCtx(e.Rep3), http.MethodPost, "/analytics/query",
+		`{"entity":"open-deals-per-company","scope_kind":"workspace","group_by":["company_id"],
+			"measures":[{"fn":"count"}],"save":true}`))
+	var asked crmcontracts.AnalyticsAnswer
+	if err := json.Unmarshal(saved.Body.Bytes(), &asked); err != nil || asked.RunId == nil || asked.Labels == nil {
+		t.Fatalf("the saving reader's answer was %d %s", saved.Code, saved.Body.String())
+	}
+
+	narrow := e.wideLensCtx(e.Rep1)
+	read := httptest.NewRecorder()
+	routes.GetReportRun(read, analyticsRequest(narrow, http.MethodGet, "/analytics/runs/x", ""), *asked.RunId)
+	var run crmcontracts.ReportRun
+	if err := json.Unmarshal(read.Body.Bytes(), &run); err != nil || read.Code != http.StatusOK {
+		t.Fatalf("the narrower reader's read answered %d %s", read.Code, read.Body.String())
+	}
+	if run.Answer.Labels != nil {
+		t.Errorf("a reader without the company grant was handed company names: %v", *run.Answer.Labels)
+	}
+
+	cell := httptest.NewRecorder()
+	routes.ExplainReportRunCell(cell, analyticsRequest(narrow, http.MethodPost, "/analytics/runs/x/cells/explain",
+		`{"group":["`+company+`"]}`), *asked.RunId)
+	out := explainBody(t, cell)
+	if out.Labels != nil {
+		t.Errorf("the cell handed a reader without the company grant company names: %v", *out.Labels)
+	}
+	if len(out.Rows) != 6 {
+		t.Fatalf("the cell opened to %d records, want 6", len(out.Rows))
+	}
+	for _, row := range out.Rows {
+		if row[derivationLabelColumn] != "Contoso deal" {
+			t.Errorf("deal %v is labelled %v, want its name", row["id"], row[derivationLabelColumn])
 		}
 	}
 }

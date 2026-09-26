@@ -29071,6 +29071,13 @@ export interface components {
              * @description Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
              */
             run_id?: string;
+            labels?: components["schemas"]["AnalyticsIdLabels"];
+        };
+        /** @description Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it. */
+        AnalyticsIdLabels: {
+            [key: string]: {
+                [key: string]: string;
+            };
         };
         /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -29106,7 +29113,7 @@ export interface components {
         ReportRun: {
             /** Format: uuid */
             id: string;
-            /** @description The question as it was saved, unchanged. */
+            /** @description The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none. */
             query: components["schemas"]["AnalyticsQuery"];
             /** @description The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them. */
             answer: components["schemas"]["AnalyticsAnswer"];
@@ -29195,6 +29202,7 @@ export interface components {
             withheld: boolean;
             /** @description The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why. */
             truncated: boolean;
+            labels?: components["schemas"]["AnalyticsIdLabels"];
         };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen

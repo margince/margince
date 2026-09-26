@@ -147,7 +147,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	if groupCount > 0 {
 		sql += " ORDER BY " + groupPositions(groupCount)
 	}
-	sql += fmt.Sprintf(" LIMIT %s", bind(boundedLimit(q.Limit)))
+	sql += fmt.Sprintf(" LIMIT %s", bind(AppliedLimit(q.Limit)))
 
 	plan := Plan{
 		SQL: sql, Args: args, Columns: columns,
@@ -339,7 +339,9 @@ func groupPositions(n int) string {
 	return strings.Join(parts, ", ")
 }
 
-func boundedLimit(want int) int {
+// AppliedLimit is the bound the engine puts on a question asking for want
+// groups — what a reader is told when an answer stops short.
+func AppliedLimit(want int) int {
 	if want <= 0 {
 		return defaultLimit
 	}

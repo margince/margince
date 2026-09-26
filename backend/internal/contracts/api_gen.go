@@ -19892,6 +19892,9 @@ type AnalyticsAnswer struct {
 	// Columns What each value in a row means, in order.
 	Columns []string `json:"columns"`
 
+	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
+
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
 
@@ -19964,6 +19967,9 @@ type AnalyticsExplanation struct {
 	// Columns The keys a row may carry, in order: `id`, the dimensions, the measured fields, and `label` last when at least one row was named.
 	Columns []string `json:"columns"`
 
+	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
+
 	// Rows The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. `label` is the record's display name, read under this caller's own grants; it is ABSENT on a row the caller may not name, which keeps its id and nothing more.
 	Rows []map[string]interface{} `json:"rows"`
 
@@ -19985,6 +19991,9 @@ type AnalyticsFilter struct {
 
 // AnalyticsFilterOp defines model for AnalyticsFilter.Op.
 type AnalyticsFilterOp string
+
+// AnalyticsIdLabels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
+type AnalyticsIdLabels map[string]map[string]string
 
 // AnalyticsMeasure defines model for AnalyticsMeasure.
 type AnalyticsMeasure struct {
@@ -35688,7 +35697,7 @@ type ReportRun struct {
 	AskedBy openapi_types.UUID `json:"asked_by"`
 	Id      openapi_types.UUID `json:"id"`
 
-	// Query The question as it was saved, unchanged.
+	// Query The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none.
 	Query AnalyticsQuery `json:"query"`
 
 	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing.

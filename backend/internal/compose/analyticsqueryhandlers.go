@@ -94,11 +94,7 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.AnalyticsAnswer{
-		Columns: answer.Columns, Rows: answer.Rows,
-		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion: answer.SchemaVersion,
-	}
+	out := h.labelledAnswer(ctx, q, answer)
 	if runID != nil {
 		saved := openapi_types.UUID(*runID)
 		out.RunId = &saved
@@ -128,13 +124,9 @@ func (h analyticsQueryHandlers) GetReportRun(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportRun{
-		Id:    openapi_types.UUID(run.ID),
-		Query: asked,
-		Answer: crmcontracts.AnalyticsAnswer{
-			Columns: run.Answer.Columns, Rows: run.Answer.Rows,
-			Withheld: run.Answer.Withheld, TotalSafe: run.Answer.TotalSafe,
-			SchemaVersion: run.Answer.SchemaVersion,
-		},
+		Id:          openapi_types.UUID(run.ID),
+		Query:       asked,
+		Answer:      h.labelledAnswer(ctx, run.Query, run.Answer),
 		AskedBy:     openapi_types.UUID(run.AskedBy.UUID),
 		StoredFloor: int(run.Floor),
 	})
@@ -304,10 +296,10 @@ func wireFromQuery(in analyticsquery.Query) (crmcontracts.AnalyticsQuery, error)
 		groupBy := in.GroupBy
 		out.GroupBy = &groupBy
 	}
-	if in.Limit != 0 {
-		limit := in.Limit
-		out.Limit = &limit
-	}
+	// The bound the re-ask runs under, stated even when the asker named none,
+	// so a reader told "only the first N" is told the N that applied.
+	limit := analyticsquery.AppliedLimit(in.Limit)
+	out.Limit = &limit
 	for _, m := range in.Measures {
 		measure := crmcontracts.AnalyticsMeasure{Fn: crmcontracts.AnalyticsMeasureFn(m.Fn)}
 		if m.Field != "" {
@@ -376,5 +368,28 @@ func (h analyticsQueryHandlers) labelledExplanation(
 	return crmcontracts.AnalyticsExplanation{
 		Columns: columns, Rows: rows,
 		Withheld: out.Withheld, Truncated: out.Truncated,
+		Labels: idLabelsWire(analyticsIDLabels(ctx, h.names, out.Question, rows)),
 	}
+}
+
+// labelledAnswer is an answer on the wire, its grouped ids named after the
+// transaction has closed, for the reason labelledExplanation gives.
+func (h analyticsQueryHandlers) labelledAnswer(
+	ctx context.Context, q analyticsquery.Query, answer AnalyticsAnswer,
+) crmcontracts.AnalyticsAnswer {
+	return crmcontracts.AnalyticsAnswer{
+		Columns: answer.Columns, Rows: answer.Rows,
+		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
+		SchemaVersion: answer.SchemaVersion,
+		Labels:        idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows)),
+	}
+}
+
+// idLabelsWire omits the map when nothing was named, rather than sending {}.
+func idLabelsWire(labels map[string]map[string]string) *crmcontracts.AnalyticsIdLabels {
+	if len(labels) == 0 {
+		return nil
+	}
+	wire := crmcontracts.AnalyticsIdLabels(labels)
+	return &wire
 }
