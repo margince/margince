@@ -1483,6 +1483,10 @@ func (stubs) ExportForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, t
 	httperr.NotImplemented(w, r, "ExportForecastShare")
 }
 
+func (stubs) ListForecastShares(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListForecastShares")
+}
+
 func (stubs) CreateForecastShare(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "CreateForecastShare")
 }

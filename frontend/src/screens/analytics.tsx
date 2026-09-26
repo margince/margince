@@ -42,7 +42,7 @@ import {
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { ShareViewButton } from "./analytics.share";
+import { ForecastShareActions } from "./analytics.share";
 import { QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
@@ -1615,7 +1615,7 @@ export function AnalyticsScreen() {
         />
       ) : null}
       {section === "forecast" && selection ? (
-        <ShareViewButton target="forecast" scope={selection.scope} />
+        <ForecastShareActions target="forecast" scope={selection.scope} />
       ) : null}
     </div>
   );
