@@ -146,7 +146,7 @@ func TestTheDefaultPolicyArchivesAnUnconvertedLeadAndKeepsIt(t *testing.T) {
 
 // An installation that switches its unconverted-lead policy from archive to
 // anonymize reaches the leads the archive already took: an archived lead still
-// holds the person's details, and a selector that skipped archived rows would
+// holds the lead's name and address, and a selector that skipped archived rows would
 // keep them forever.
 func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
 	e := Setup(t)

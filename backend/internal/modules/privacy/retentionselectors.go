@@ -26,7 +26,7 @@ package privacy
 var retentionSelectors = map[string]string{
 	// An ARCHIVE policy passes over leads already archived, or it would pick the
 	// same batch every night and never reach the rest. An ANONYMIZE policy does
-	// not: an archived lead still holds the person's details, so a policy
+	// not: an archived lead still holds its name and address, so a policy
 	// switched from archive to anonymize must reach every lead the archive
 	// already took. $3 is the policy's action (dueRecords).
 	"lead/unconverted": `SELECT id FROM lead

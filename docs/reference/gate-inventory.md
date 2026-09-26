@@ -218,6 +218,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |
 | `emptylistwire_test.go` | H2 | Every list envelope carries its rows in a field the writer can find. |
+| `enteredatwriters_test.go` | H2 | Nothing writes when a record entered the installation. |
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |
 | `erasurecascadereach_test.go` | H2 | Every file the Art. 17 cascade executes SQL from is one the PII censuses read. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
