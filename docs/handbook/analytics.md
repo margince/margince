@@ -89,8 +89,14 @@ what.
 Archived teams are never offered.
 
 **One honest limit.** The picker governs the Forecast section. The report cards
-in the other sections read under your own default population rather than the one
-selected above them, so changing the picker does not move their figures.
+in the other sections do not follow it, so changing the picker does not move
+their figures. **Won and lost**, **Time in stage** and the delivery reports
+count every record you may see. The other cards read under your own default
+population.
+
+A report that counts every record still checks a named owner. Filtering one to
+somebody you may not measure is refused. Breaking one down by owner counts only
+the owners you may measure, and the answer says so.
 
 ## Under every report
 

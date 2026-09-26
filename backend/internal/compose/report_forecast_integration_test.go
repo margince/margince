@@ -180,6 +180,7 @@ type reportResultWire struct {
 	Rows                 []map[string]any `json:"rows"`
 	TotalRows            int              `json:"total_rows"`
 	ExcludedByPermission *int             `json:"excluded_by_permission"`
+	PopulationNarrowed   *string          `json:"population_narrowed"`
 	DerivationURL        string           `json:"derivation_url"`
 }
 
@@ -193,6 +194,7 @@ type derivationWire struct {
 	ExcludedByPermission *int             `json:"excluded_by_permission"`
 	AsOf                 *time.Time       `json:"as_of"`
 	AsOfPinned           *bool            `json:"as_of_pinned"`
+	PopulationNarrowed   *string          `json:"population_narrowed"`
 }
 
 //craft:ignore naked-any decodeWire is the one JSON unmarshal seam; the wire structs above give it shape
