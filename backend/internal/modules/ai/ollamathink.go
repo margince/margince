@@ -34,7 +34,8 @@ package ai
 //
 // A request that names its own value through
 // Request.ProviderOptions["ollama"].think skips all of that — the same seam the
-// gemini and openai adapters read, and like theirs it is set by no caller today.
+// gemini and openai adapters read. No caller sets it today, and a site's
+// contract level is not sent here (sitethinking.go says why).
 
 import (
 	"bytes"

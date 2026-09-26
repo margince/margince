@@ -604,13 +604,21 @@ func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {
 	page.WriteString("| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |\n")
 	page.WriteString("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, rec := range records {
-		fmt.Fprintf(page, "| `%s` | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
-			rec.Binding.label(), rec.State, coverageCell(rec), rec.Band,
+		fmt.Fprintf(page, "| `%s`%s | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
+			rec.Binding.label(), siteThinkingCell(rec), rec.State, coverageCell(rec), rec.Band,
 			rec.Runs, rec.Passed, reliabilityCell(rec.Reliability),
 			latencyCell(rec.LatencyP50MS), latencyCell(rec.LatencyP95MS),
 			rec.Reported.Accepted, rec.Reported.WrongAnswer, rec.Reported.Invalid, rec.Reported.Abstained)
 	}
 	page.WriteString("\n")
+}
+
+// siteThinkingCell names the level a site ran at when it is not the binding's.
+func siteThinkingCell(rec aiCertRecord) string {
+	if rec.SiteThinking == "" {
+		return ""
+	}
+	return " (this site: thinking " + rec.SiteThinking + ")"
 }
 
 // coverageCell is the scenario count behind a state: a `partial` is only

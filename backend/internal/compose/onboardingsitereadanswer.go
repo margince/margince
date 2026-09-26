@@ -55,7 +55,7 @@ func companyReadAnswerRequest(message string, history []model.Message, evidence 
 			fence.Rule("dossier evidence and application state"),
 		Messages:  alternatingTurns(messages),
 		MaxTokens: ai.ReasoningOutputMaxTokens, ResponseSchema: companyReadMessageSchema,
-		SecretStripper: ai.NewSecretStripper(),
+		SecretStripper: ai.NewSecretStripper(), Site: "sitereadmessage",
 	}, nil
 }
 

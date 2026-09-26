@@ -166,6 +166,9 @@ type aiCertRecord struct {
 	// "which records went stale because the PRODUCT changed" is asking about
 	// prompt_changed, and the prose answer cannot be queried.
 	StaleCause *staleCause `json:"stale_cause,omitempty"`
+	// SiteThinking is the level this site ran at where the contract moved it
+	// off the binding's own, which Binding alone does not say.
+	SiteThinking string `json:"site_thinking,omitempty"`
 }
 
 type aiCertOutcomes struct {
@@ -270,8 +273,9 @@ func buildAICertRecord(row aicert.ReadinessRow, siteScenarios int) aiCertRecord 
 			Accepted: row.Tally.ReportedAccepted, WrongAnswer: row.Tally.ReportedWrongAnswer,
 			Invalid: row.Tally.ReportedInvalid, Abstained: row.Tally.ReportedAbstained,
 		},
-		StaleReason: row.Standing.Reason(),
-		StaleCause:  staleCauseOf(row.Standing),
+		StaleReason:  row.Standing.Reason(),
+		StaleCause:   staleCauseOf(row.Standing),
+		SiteThinking: row.Record.SiteThinking[row.Site.Variant],
 	}
 	if row.Standing.Total > 0 {
 		measured := row.Standing.Measured

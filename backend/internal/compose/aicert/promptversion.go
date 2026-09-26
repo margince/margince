@@ -192,7 +192,31 @@ func firstBuiltRequest(ctx context.Context, sc Scenario, census *aitasks.Registr
 		}
 		return model.Request{}, fmt.Errorf("aicert: stamp: scenario %q: the case completed without building a request, so nothing it sends can be stamped", sc.Name)
 	}
+	if err := refuseMisnamedSite(sc, completer.first); err != nil {
+		return model.Request{}, err
+	}
 	return completer.first, nil
+}
+
+// refuseMisnamedSite holds a site's request to the site it is built for. A
+// request naming another site is routed under that site's contract, and a
+// site declaring a thinking level whose request names no site never gets it —
+// the level stays in the contract while every call runs without it.
+func refuseMisnamedSite(sc Scenario, req model.Request) error {
+	level := ""
+	for _, declared := range ai.SitesFor(ai.Task(sc.Task)) {
+		if declared.Name == sc.Site {
+			level = declared.Thinking
+		}
+	}
+	switch {
+	case req.Site != "" && req.Site != sc.Site:
+		return fmt.Errorf("aicert: stamp: scenario %q: site %s/%s builds a request naming site %q", sc.Name, sc.Task, sc.Site, req.Site)
+	case level != "" && req.Site == "":
+		return fmt.Errorf("aicert: stamp: scenario %q: site %s/%s declares thinking %s and builds a request naming no site, so the level never reaches the router; set model.Request.Site",
+			sc.Name, sc.Task, sc.Site, level)
+	}
+	return nil
 }
 
 // stampCandidateOutput holds the place the candidate's answer takes in the

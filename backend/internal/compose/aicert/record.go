@@ -142,7 +142,13 @@ type Record struct {
 	// it names none. It changes how the model answers, so a record carrying one
 	// speaks only for a preset whose rung sets the same level.
 	ThinkingLevel string `json:"thinking_level,omitempty"`
-	RanAt         string `json:"ran_at"`
+	// SiteThinking is each site that ran at a level other than ThinkingLevel,
+	// because api/ai-tasks.yaml declares one for it (ai.SiteThinkingLevels).
+	// Absent means every site ran at ThinkingLevel — including on a record
+	// written before sites could declare one, which is why it is recorded
+	// rather than recomputed.
+	SiteThinking map[string]string `json:"site_thinking,omitempty"`
+	RanAt        string            `json:"ran_at"`
 	// Decision is what the decision lane did across a decision record's runs.
 	Decision *DecisionStats `json:"decision,omitempty"`
 	// Scenarios is every scenario this record pooled, with its own verdict and
@@ -438,4 +444,12 @@ func LoadRecords(dir string) ([]Record, error) {
 		return a.Site < b.Site
 	})
 	return records, nil
+}
+
+// ThinkingLevelAt is the level site's requests ran at on this record's run.
+func (r Record) ThinkingLevelAt(site string) string {
+	if level, declared := r.SiteThinking[site]; declared {
+		return level
+	}
+	return r.ThinkingLevel
 }

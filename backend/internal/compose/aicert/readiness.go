@@ -295,8 +295,8 @@ func (r ReadinessRow) Binding() string {
 		return ""
 	}
 	label := r.Record.Provider + " · " + r.Record.ServedModel + " · " + r.Record.EnvClass
-	if r.Record.ThinkingLevel != "" {
-		label += " · thinking " + r.Record.ThinkingLevel
+	if level := r.Record.ThinkingLevelAt(r.Site.Variant); level != "" {
+		label += " · thinking " + level
 	}
 	return label
 }

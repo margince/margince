@@ -20,7 +20,7 @@ const (
 	TaskCaptureCounterpartyVerdict Task = "capture_counterparty_verdict"
 	// TaskCertJudge is the aicert quality judge — pinned to its own router in the cert lane, never the candidate's binding
 	TaskCertJudge Task = "cert_judge"
-	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074.
+	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074. The two company conversations think at low: they share one prompt whose gate decides whether a yes authorizes a change, and gemini-3.1-flash-lite at its own default proposed a change after a plain question in five of six runs and in no run at low, for about 0.3s more at p50. acts and field_extract measured clean without it, so they keep the binding's level.
 	TaskColdStart Task = "cold_start"
 	// TaskCorpusAsk is corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung.
 	TaskCorpusAsk Task = "corpus_ask"
@@ -138,7 +138,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "9f2d22df73bed850af561b252d646ae245c48b083ae7fe0d57ee94b4bbecbd1e"
+const TaskContractHash = "6c6ddf36e55028a79dadb5793cc1bea9999359ad7f69f79d188727b437838053"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -321,10 +321,13 @@ func Status(t Task) string { return taskStatus[t] }
 // Site is one named model-invocation site of a task. A task is NOT one
 // prompt: rate_extract has two, cold_start four. Kind says how the site
 // invokes the model, because an agent loop is a cumulative tool-fed
-// window and must not be described as a request factory.
+// window and must not be described as a request factory. Thinking is the
+// level the router asks the site's requests to think at, empty for the
+// binding's own (sitethinking.go says who may override it).
 type Site struct {
-	Name string
-	Kind string
+	Name     string
+	Kind     string
+	Thinking string
 }
 
 const (
@@ -357,8 +360,8 @@ var taskSites = map[Task][]Site{
 		{Name: "judge", Kind: "one_shot"},
 	},
 	TaskColdStart: {
-		{Name: "company_message", Kind: "multi_turn"},
-		{Name: "sitereadmessage", Kind: "multi_turn"},
+		{Name: "company_message", Kind: "multi_turn", Thinking: "low"},
+		{Name: "sitereadmessage", Kind: "multi_turn", Thinking: "low"},
 		{Name: "acts", Kind: "multi_turn"},
 		{Name: "field_extract", Kind: "one_shot"},
 	},

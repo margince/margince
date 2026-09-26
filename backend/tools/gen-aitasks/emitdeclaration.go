@@ -33,32 +33,7 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 	b.WriteString("// Status returns the declared status, or \"\" for a task this table does\n")
 	b.WriteString("// not carry.\nfunc Status(t Task) string { return taskStatus[t] }\n\n")
 
-	b.WriteString("// Site is one named model-invocation site of a task. A task is NOT one\n")
-	b.WriteString("// prompt: rate_extract has two, cold_start four. Kind says how the site\n")
-	b.WriteString("// invokes the model, because an agent loop is a cumulative tool-fed\n")
-	b.WriteString("// window and must not be described as a request factory.\n")
-	b.WriteString("type Site struct {\n\tName string\n\tKind string\n}\n\n")
-	b.WriteString(goConstBlockStart)
-	fmt.Fprintf(b, "\tSiteKindOneShot   = %q\n", kindOneShot)
-	fmt.Fprintf(b, "\tSiteKindMultiTurn = %q\n", kindMultiTurn)
-	fmt.Fprintf(b, "\tSiteKindAgentLoop = %q\n", kindAgentLoop)
-	b.WriteString(")\n\n")
-	b.WriteString("var taskSites = map[Task][]Site{\n")
-	for _, name := range taskNames {
-		sites := c.Tasks[name].Sites
-		if len(sites) == 0 {
-			continue
-		}
-		fmt.Fprintf(b, "\t%s: {\n", taskConst(name))
-		for _, s := range sites {
-			fmt.Fprintf(b, "\t\t{Name: %q, Kind: %q},\n", s.Name, s.Kind)
-		}
-		b.WriteString("\t},\n")
-	}
-	b.WriteString("}\n\n")
-	b.WriteString("// SitesFor returns the task's declared sites in contract order. A\n")
-	b.WriteString("// planned task returns none.\n")
-	b.WriteString("func SitesFor(t Task) []Site { return taskSites[t] }\n\n")
+	writeSiteTable(b, c, taskNames)
 
 	writeAgentTable(b, c, taskNames)
 
@@ -240,4 +215,40 @@ func writeAgentTable(b *strings.Builder, c contract, taskNames []string) {
 	b.WriteString("// AgentsFor returns the task's agent_loop sites in sorted name order. A\n")
 	b.WriteString("// task that schedules none returns none.\n")
 	b.WriteString("func AgentsFor(t Task) []Agent { return taskAgents[t] }\n\n")
+}
+
+// writeSiteTable emits each task's invocation sites in contract order.
+func writeSiteTable(b *strings.Builder, c contract, taskNames []string) {
+	b.WriteString("// Site is one named model-invocation site of a task. A task is NOT one\n")
+	b.WriteString("// prompt: rate_extract has two, cold_start four. Kind says how the site\n")
+	b.WriteString("// invokes the model, because an agent loop is a cumulative tool-fed\n")
+	b.WriteString("// window and must not be described as a request factory. Thinking is the\n")
+	b.WriteString("// level the router asks the site's requests to think at, empty for the\n")
+	b.WriteString("// binding's own (sitethinking.go says who may override it).\n")
+	b.WriteString("type Site struct {\n\tName     string\n\tKind     string\n\tThinking string\n}\n\n")
+	b.WriteString(goConstBlockStart)
+	fmt.Fprintf(b, "\tSiteKindOneShot   = %q\n", kindOneShot)
+	fmt.Fprintf(b, "\tSiteKindMultiTurn = %q\n", kindMultiTurn)
+	fmt.Fprintf(b, "\tSiteKindAgentLoop = %q\n", kindAgentLoop)
+	b.WriteString(")\n\n")
+	b.WriteString("var taskSites = map[Task][]Site{\n")
+	for _, name := range taskNames {
+		sites := c.Tasks[name].Sites
+		if len(sites) == 0 {
+			continue
+		}
+		fmt.Fprintf(b, "\t%s: {\n", taskConst(name))
+		for _, s := range sites {
+			if s.Thinking != "" {
+				fmt.Fprintf(b, "\t\t{Name: %q, Kind: %q, Thinking: %q},\n", s.Name, s.Kind, s.Thinking)
+				continue
+			}
+			fmt.Fprintf(b, "\t\t{Name: %q, Kind: %q},\n", s.Name, s.Kind)
+		}
+		b.WriteString("\t},\n")
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// SitesFor returns the task's declared sites in contract order. A\n")
+	b.WriteString("// planned task returns none.\n")
+	b.WriteString("func SitesFor(t Task) []Site { return taskSites[t] }\n\n")
 }

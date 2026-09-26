@@ -19,6 +19,7 @@ package aicert_test
 // and a ladder rewritten in tasks_gen.go re-attributes every row.
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -86,6 +87,9 @@ type aiCertPresetTask struct {
 	Passed               int `json:"passed"`
 	CasesFailingOften    int `json:"cases_failing_often"`
 	CasesBelowQualityBar int `json:"cases_below_quality_bar"`
+	// siteThinking is the measuring record's per-site levels, which a rung
+	// must serve too before the record grades it.
+	siteThinking map[string]string
 }
 
 // loadAICertPresets reads every preset in the directory through the same
@@ -191,7 +195,13 @@ func presetTaskRow(task string, preset aiCertPreset,
 		row.Model = aiCertBindingRef{
 			Provider: rung.Provider, Model: rung.Model, Env: preset.Profile, ThinkingLevel: rung.ThinkingLevel,
 		}
-		if seen, ok := measured[task+"\x00"+row.Model.label()]; ok {
+		// A record grades the rung only where every site ran at the level this
+		// rung serves it: the contract's site levels move with the build, and
+		// a record from before one was declared measured a different call.
+		serves := ai.SiteThinkingLevels(ai.ProviderConfig{
+			Provider: rung.Provider, Model: rung.Model, ThinkingLevel: rung.ThinkingLevel,
+		}, ai.Task(task))
+		if seen, ok := measured[task+"\x00"+row.Model.label()]; ok && maps.Equal(seen.siteThinking, serves) {
 			row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
 			row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
 		}
@@ -248,7 +258,7 @@ func aiCertTaskVerdicts(doc aiCertDoc, records []aicert.Record) map[string]aiCer
 			failing, belowQuality := aiCertCasesHoldingDown(rec)
 			verdicts[key] = aiCertPresetTask{
 				Band: rec.Verdict, State: siteRec.State, Runs: rec.Runs, Passed: rec.Passed,
-				CasesFailingOften: failing, CasesBelowQualityBar: belowQuality,
+				CasesFailingOften: failing, CasesBelowQualityBar: belowQuality, siteThinking: rec.SiteThinking,
 			}
 		}
 	}
@@ -382,6 +392,45 @@ func TestAPresetIsCreditedOnlyByARecordAtItsOwnThinkingLevel(t *testing.T) {
 			if got.Band != tc.wantBand {
 				t.Errorf("preset at %q reads band %q from a record at %q, want %q",
 					tc.presetLevel, got.Band, tc.recordLevel, tc.wantBand)
+			}
+		})
+	}
+}
+
+// A site the contract tells to think runs at that level on a rung that sends
+// it, so a preset is graded by the record whose sites ran at the levels the
+// preset would serve them at — and not by one run before the level existed.
+func TestAPresetIsCreditedOnlyByARecordAtTheLevelsItServesEachSite(t *testing.T) {
+	const flashLite = "gemini-3.1-flash-lite"
+	served := ai.SiteThinkingLevels(ai.ProviderConfig{Provider: "gemini", Model: flashLite}, ai.TaskColdStart)
+	if len(served) == 0 {
+		t.Fatal("no cold_start site declares a level, so this test grades nothing")
+	}
+	cases := []struct {
+		name         string
+		siteThinking map[string]string
+		wantBand     string
+	}{
+		{"a record at the sites' levels grades the preset", served, aicert.VerdictCertified},
+		{"a record from before the sites declared one does not", nil, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := aicert.Record{
+				Task: string(ai.TaskColdStart), Provider: "gemini", ServedModel: flashLite,
+				EnvClass: string(ai.ProfileCloudFrontier), SiteThinking: tc.siteThinking,
+				Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3,
+			}
+			doc := aiCertDoc{Sites: []aiCertSite{{
+				Task:    rec.Task,
+				Records: []aiCertRecord{{Binding: bindingRefOf(rec), State: aicert.StatusCurrent}},
+			}}}
+			preset := aiCertPreset{File: "gemini.yaml", Profile: rec.EnvClass, Tiers: []aiCertPresetTier{{
+				Tier: string(ai.TierCheapCloud), Provider: "gemini", Model: flashLite,
+			}}}
+			got := attributeAICertPresets([]aiCertPreset{preset}, doc, []aicert.Record{rec})[0].Tasks[0]
+			if got.Band != tc.wantBand {
+				t.Errorf("preset reads band %q from a record with site levels %v, want %q", got.Band, tc.siteThinking, tc.wantBand)
 			}
 		})
 	}

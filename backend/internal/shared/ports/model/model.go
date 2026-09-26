@@ -195,6 +195,10 @@ type Request struct {
 	// stale-context cache hits impossible and the call trace inspectable.
 	ContextScopes      []string
 	ContextFingerprint string
+	// Site names the task's contract site this request is built for, empty for
+	// none. Routing metadata like the two above: the router reads the site's
+	// declared thinking level from it, and refuses a site the task never declares.
+	Site string
 	// ContextBytes and ContextTokensEstimate describe only the final delimited
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int

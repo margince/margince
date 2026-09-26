@@ -73,11 +73,14 @@ func main() {
 // siteDef is one entry of a task's sites[]: the named model-invocation site
 // the build registers. Written either as a bare name (kind defaults to
 // one_shot) or as a mapping when the kind differs. Tools is what an
-// agent_loop site attaches, and is refused on any other kind.
+// agent_loop site attaches, and is refused on any other kind. Thinking is the
+// level the router asks this site's requests to think at; its vocabulary is
+// the ai package's, and that package's tests hold it there.
 type siteDef struct {
-	Name  string   `yaml:"name"`
-	Kind  string   `yaml:"kind"`
-	Tools []string `yaml:"tools"`
+	Name     string   `yaml:"name"`
+	Kind     string   `yaml:"kind"`
+	Tools    []string `yaml:"tools"`
+	Thinking string   `yaml:"thinking"`
 }
 
 // UnmarshalYAML accepts both spellings so the common case — a one-shot site —
@@ -88,14 +91,15 @@ func (s *siteDef) UnmarshalYAML(node *yaml.Node) error {
 		return nil
 	}
 	var raw struct {
-		Name  string   `yaml:"name"`
-		Kind  string   `yaml:"kind"`
-		Tools []string `yaml:"tools"`
+		Name     string   `yaml:"name"`
+		Kind     string   `yaml:"kind"`
+		Tools    []string `yaml:"tools"`
+		Thinking string   `yaml:"thinking"`
 	}
 	if err := decodeMapping(node, &raw); err != nil {
 		return fmt.Errorf("site: %w", err)
 	}
-	s.Name, s.Kind, s.Tools = raw.Name, raw.Kind, raw.Tools
+	s.Name, s.Kind, s.Tools, s.Thinking = raw.Name, raw.Kind, raw.Tools, raw.Thinking
 	if s.Kind == "" {
 		s.Kind = kindOneShot
 	}

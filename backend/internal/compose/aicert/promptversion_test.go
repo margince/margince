@@ -216,6 +216,33 @@ func TestPromptVersionRefusesACaseThatBuildsNoRequest(t *testing.T) {
 	}
 }
 
+// A request is routed under the site it names, so a case naming another site
+// certifies that site's contract, and a site declaring a thinking level whose
+// request names none certifies a call the level never reaches.
+func TestPromptVersionRefusesARequestMisnamingItsSite(t *testing.T) {
+	coldStart := testScenarioOnSite("one", "sitereadmessage", wideBands)
+	coldStart.Task = string(ai.TaskColdStart)
+	for name, tc := range map[string]struct {
+		scenario    Scenario
+		requestSite string
+		want        string
+	}{
+		"another site":                  {testScenarioOnSite("one", promptVariant, wideBands), "reply", `naming site "reply"`},
+		"no site on a site that thinks": {coldStart, "", "never reaches the router"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			census := censusOfPromptCases(t, promptCases{
+				site:   aitasks.Site{Task: ai.Task(tc.scenario.Task), Variant: tc.scenario.Site, Kind: ai.SiteKindOneShot},
+				system: "Describe the subject in one sentence.", maxTokens: 1024, requestSite: tc.requestSite,
+			})
+			_, err := PromptVersion(context.Background(), []Scenario{tc.scenario}, census)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("want a refusal containing %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
 func TestPromptVersionRefusesAScenarioNoCaseServes(t *testing.T) {
 	_, err := PromptVersion(context.Background(), []Scenario{testScenarioOnSite("one", "a_site_nobody_built", wideBands)}, testCensus(t))
 	if err == nil || !strings.Contains(err.Error(), "a_site_nobody_built") {
@@ -319,6 +346,8 @@ type promptCases struct {
 	system    string
 	maxTokens int
 	fenced    bool
+	// requestSite is the site the built request names.
+	requestSite string
 }
 
 func (c promptCases) Site() aitasks.Site { return c.site }
@@ -339,13 +368,14 @@ func (c promptCases) Prepare(fixture, _ json.RawMessage) (aitasks.PreparedCase, 
 		system += " " + fence.Rule("subject")
 		subject = fence.WrapAttr("source_id", ids.NewV7().String(), subject)
 	}
-	return promptCase{system: system, subject: subject, maxTokens: c.maxTokens}, nil
+	return promptCase{system: system, subject: subject, maxTokens: c.maxTokens, site: c.requestSite}, nil
 }
 
 type promptCase struct {
 	system    string
 	subject   string
 	maxTokens int
+	site      string
 }
 
 func (c promptCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
@@ -353,6 +383,7 @@ func (c promptCase) Run(ctx context.Context, completer aitasks.Completer) (aitas
 		System:    c.system,
 		Messages:  []model.Message{{Role: "user", Content: c.subject}},
 		MaxTokens: c.maxTokens,
+		Site:      c.site,
 	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)

@@ -79,6 +79,7 @@ The current_company_draft is application state, not an administrator statement. 
 ` + promptlang.Rule(locale),
 		Messages: alternatingTurns(messages), MaxTokens: ai.ReasoningOutputMaxTokens,
 		ResponseSchema: companyReadMessageSchema, SecretStripper: ai.NewSecretStripper(),
+		Site: "company_message",
 	}, nil
 }
 

@@ -1493,7 +1493,15 @@ cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite, thinking_level: l
 - **Omitted, the adapter decides**: a structured request thinks at `low`, and a
   Flash-Lite keeps its own shallower default (`minimal`), so it is sent no level
   at all. Naming `low` on a Flash-Lite therefore *raises* its thinking.
-- **A request's own level still wins** (`ProviderOptions["gemini"].thinking_level`).
+- **A site the task contract tells to think outranks it.** A site in
+  `backend/api/ai-tasks.yaml` may declare `thinking:` (cold_start's two company
+  conversations declare `low`); a request built for that site is sent that level
+  on a Gemini 3 rung whatever the binding names. No other provider is sent it:
+  neither the OpenAI nor the Ollama binding says whether its model can think,
+  and a level sent to one that cannot fails every call.
+- **A request's own level wins over both** (`ProviderOptions["gemini"].thinking_level`).
+  Strongest first: the request's own level, the site's, the binding's, the
+  adapter's default.
 - **Accepted values are `minimal`, `low`, `medium` and `high`.** Anything else, the
   field on a provider other than `gemini`, on the `embeddings:` lane, or on a
   Gemini 2.5 model (which answers the field with a 400) is a startup error.
