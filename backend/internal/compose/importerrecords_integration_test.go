@@ -34,14 +34,10 @@ import (
 
 // serveCreate drives one create handler as `as` and answers the status and the
 // created row's id (empty unless 201/200).
-func serveCreate(as context.Context, t *testing.T, path string, body any,
+func serveCreate(as context.Context, t *testing.T, path string, raw []byte,
 	serve func(http.ResponseWriter, *http.Request),
 ) (int, string) {
 	t.Helper()
-	raw, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("encoding %s: %v", path, err)
-	}
 	rec := httptest.NewRecorder()
 	serve(rec, httptest.NewRequest(http.MethodPost, path, bytes.NewReader(raw)).WithContext(as))
 	var out struct {
@@ -58,7 +54,7 @@ func serveCreate(as context.Context, t *testing.T, path string, body any,
 type recordWire struct {
 	table string
 	path  string
-	body  any
+	body  []byte
 	serve func(http.ResponseWriter, *http.Request)
 }
 
@@ -77,24 +73,30 @@ func recordWires(t *testing.T, e *integration.Env) []recordWire {
 	}
 	company := openapi_types.UUID(e.SeedCompany(t, "Importer Anchor GmbH", nil))
 	system := "mirror:hubspot"
+	encode := func(body []byte, err error) []byte {
+		if err != nil {
+			t.Fatalf("encoding a create body: %v", err)
+		}
+		return body
+	}
 	c := contacts.NewHandlers(InstallationDB(e.Pool))
 	d := deals.NewHandlers(e.DB(), DealsInstallation())
 	p := projects.HandlersOver(ProjectsStore(e.Pool))
 	return []recordWire{
-		{"contact", "/v1/contacts", crmcontracts.CreateContactRequest{FullName: "Imported Contact", SourceSystem: &system},
+		{"contact", "/v1/contacts", encode(json.Marshal(crmcontracts.CreateContactRequest{FullName: "Imported Contact", SourceSystem: &system})),
 			func(w http.ResponseWriter, r *http.Request) {
 				c.CreateContact(w, r, crmcontracts.CreateContactParams{})
 			}},
-		{"company", "/v1/companies", crmcontracts.CreateCompanyRequest{DisplayName: "Imported Company", SourceSystem: &system},
+		{"company", "/v1/companies", encode(json.Marshal(crmcontracts.CreateCompanyRequest{DisplayName: "Imported Company", SourceSystem: &system})),
 			func(w http.ResponseWriter, r *http.Request) {
 				c.CreateCompany(w, r, crmcontracts.CreateCompanyParams{})
 			}},
-		{"deal", "/v1/deals", crmcontracts.CreateDealRequest{
+		{"deal", "/v1/deals", encode(json.Marshal(crmcontracts.CreateDealRequest{
 			Name: "Imported Deal", PipelineId: pipeline.Id, StageId: (*pipeline.Stages)[0].Id, SourceSystem: &system,
-		}, func(w http.ResponseWriter, r *http.Request) { d.CreateDeal(w, r, crmcontracts.CreateDealParams{}) }},
-		{"project", "/v1/projects", crmcontracts.CreateProjectRequest{
+		})), func(w http.ResponseWriter, r *http.Request) { d.CreateDeal(w, r, crmcontracts.CreateDealParams{}) }},
+		{"project", "/v1/projects", encode(json.Marshal(crmcontracts.CreateProjectRequest{
 			Name: "Imported Project", CompanyId: company, Source: "ui", SourceSystem: &system,
-		}, func(w http.ResponseWriter, r *http.Request) {
+		})), func(w http.ResponseWriter, r *http.Request) {
 			p.CreateProject(w, r, crmcontracts.CreateProjectParams{})
 		}},
 	}
