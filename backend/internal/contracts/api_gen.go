@@ -22093,9 +22093,9 @@ type BlockedDomain struct {
 	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 	// found named a company; `stale_evidence` means the newest mail from the domain is too
-	// old to mint one from today's site; `near_duplicate` means the name it resolved to is
-	// close to a company already here, and which of them this domain belongs to is a
-	// human's call rather than the machine's.
+	// old to mint one from today's site; `near_duplicate` means more than one company
+	// here already carries the name it resolved to, and which of them this domain belongs
+	// to is a human's call rather than the machine's.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -22107,9 +22107,9 @@ type BlockedDomainAdmission string
 // BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 // `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 // found named a company; `stale_evidence` means the newest mail from the domain is too
-// old to mint one from today's site; `near_duplicate` means the name it resolved to is
-// close to a company already here, and which of them this domain belongs to is a
-// human's call rather than the machine's.
+// old to mint one from today's site; `near_duplicate` means more than one company
+// here already carries the name it resolved to, and which of them this domain belongs
+// to is a human's call rather than the machine's.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
