@@ -52,6 +52,7 @@ var listRecordFilters = map[string][]listFilter{
 	},
 	"company": {
 		{Name: "domain", Type: "string"},
+		{Name: "id", Type: "array"},
 		{Name: "industry", Type: "string"},
 		{Name: "lifecycle", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "customer", "former_customer", "disqualified"}},
 		{Name: "owner_id", Type: "string"},

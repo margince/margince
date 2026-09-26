@@ -39830,6 +39830,13 @@ export interface operations {
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
                 tag_mode?: "any" | "all" | "none";
+                /**
+                 * @description Narrow to these companies. Repeat the parameter for several, up to 100; more is `422`.
+                 *     A screen that names many companies it did not list itself, such as the deals board,
+                 *     reads them in one request instead of one each. An id the caller cannot see, or that
+                 *     is archived without `include_archived`, is simply absent from the page.
+                 */
+                id?: string[];
             };
             header?: never;
             path?: never;

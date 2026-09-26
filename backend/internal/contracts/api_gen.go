@@ -42545,6 +42545,12 @@ type ListCompaniesParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListCompaniesParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// Id Narrow to these companies. Repeat the parameter for several, up to 100; more is `422`.
+	// A screen that names many companies it did not list itself, such as the deals board,
+	// reads them in one request instead of one each. An id the caller cannot see, or that
+	// is archived without `include_archived`, is simply absent from the page.
+	Id *[]openapi_types.UUID `form:"id,omitempty" json:"id,omitempty"`
 }
 
 // ListCompaniesParamsCapturedByKind defines parameters for ListCompanies.
@@ -69460,6 +69466,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "id", r.URL.Query(), &params.Id, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		}
 		return
 	}

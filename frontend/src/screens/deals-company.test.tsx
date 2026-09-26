@@ -100,14 +100,20 @@ const render = (ui: ReactNode) => {
  * fetches, and `byId` is what a per-id read answers. A company in `byId` and
  * not in `page` is exactly the case that used to draw a card with no company.
  */
-// Which companies the board asked for one at a time, in order. A request the
-// screen could not have needed is as much a defect as a name it failed to show.
-function byIdCalls(fetchMock: { mock: { calls: unknown[][] } }): string[] {
+// Which companies the board asked for by id, one entry per request. A request
+// the screen could not have needed is as much a defect as a name it failed to
+// show.
+function byIdCalls(fetchMock: { mock: { calls: unknown[][] } }): string[][] {
   return fetchMock.mock.calls.flatMap((call) => {
     const first = call[0];
-    const url = String(first instanceof Request ? first.url : first);
-    const match = /\/companies\/([^/?]+)/.exec(url);
-    return match?.[1] ? [match[1]] : [];
+    const url = new URL(
+      String(first instanceof Request ? first.url : first),
+      "http://localhost",
+    );
+    const named = url.searchParams.getAll("id");
+    return url.pathname.endsWith("/companies") && named.length > 0
+      ? [named]
+      : [];
   });
 }
 
@@ -146,16 +152,23 @@ function stubBackend(opts: {
     }
     const byId = /\/companies\/([^/?]+)/.exec(url);
     if (byId) {
-      if (opts.refuse?.includes(byId[1] ?? "")) {
+      const company = opts.byId?.[byId[1]];
+      return company
+        ? jsonResponse(company)
+        : jsonResponse({ code: "not_found", title: "not found" }, 404);
+    }
+    const named = new URL(url, "http://localhost").searchParams.getAll("id");
+    if (url.includes("/companies") && named.length > 0) {
+      if (named.some((id) => opts.refuse?.includes(id))) {
         return jsonResponse(
           { code: "permission_denied", title: "permission denied" },
           403,
         );
       }
-      const company = opts.byId?.[byId[1]];
-      return company
-        ? jsonResponse(company)
-        : jsonResponse({ code: "not_found", title: "not found" }, 404);
+      return jsonResponse({
+        data: named.flatMap((id) => (opts.byId?.[id] ? [opts.byId[id]] : [])),
+        page: { next_cursor: null },
+      });
     }
     if (url.includes("/companies")) {
       if (opts.pageGate) {
@@ -432,7 +445,30 @@ describe("the board past the picker's first page", () => {
 
     openPage();
     expect(await screen.findByText("Northgate Systems")).toBeTruthy();
-    expect(byIdCalls(fetchMock)).toEqual(["o-offpage"]);
+    expect(byIdCalls(fetchMock)).toEqual([["o-offpage"]]);
+  });
+
+  // One read for every company the page did not hold, not one each: a cold
+  // board waited on a request per company before its cards had names.
+  it("asks for every off-page company in one read", async () => {
+    const fetchMock = stubBackend({
+      deals: [
+        deal({ id: "d1", name: "Fleet retrofit", company_id: "o-north" }),
+        deal({ id: "d2", name: "Depot rollout", company_id: "o-south" }),
+        deal({ id: "d3", name: "Yard audit", company_id: "o-north" }),
+      ],
+      page: [{ id: "o1", display_name: "Acme Corp" }],
+      byId: {
+        "o-north": { id: "o-north", display_name: "Northgate Systems" },
+        "o-south": { id: "o-south", display_name: "Southbay Freight" },
+      },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<DealsScreen />);
+
+    expect(await screen.findAllByText("Northgate Systems")).toHaveLength(2);
+    expect(await screen.findByText("Southbay Freight")).toBeTruthy();
+    expect(byIdCalls(fetchMock)).toEqual([["o-north", "o-south"]]);
   });
 });
 

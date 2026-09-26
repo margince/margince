@@ -2528,6 +2528,19 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
             Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: id
+          in: query
+          schema:
+            type: array
+            maxItems: 100
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to these companies. Repeat the parameter for several, up to 100; more is `422`.
+            A screen that names many companies it did not list itself, such as the deals board,
+            reads them in one request instead of one each. An id the caller cannot see, or that
+            is archived without `include_archived`, is simply absent from the page.
       responses:
         '200':
           description: A page of companies.
