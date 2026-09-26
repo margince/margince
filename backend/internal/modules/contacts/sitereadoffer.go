@@ -92,7 +92,9 @@ func (s *Store) StandingSiteReadOffer(ctx context.Context, readID ids.UUID) (*Si
 // ReplaceSiteReadOffer records the offer the caller's latest answered message
 // earned, nil for none, in place of whatever the slot held. accepted names the
 // standing offer that message accepted, if it did, so the audit row says which
-// Margince offer a yes turned into a proposed change.
+// Margince offer a yes turned into a proposed change. A yes consumes the slot
+// only while it still holds that offer: two answers to one offer are a conflict,
+// or both would grant it.
 //
 // Audited and not published: the closed catalog carries no site_read type, and
 // nothing downstream reads the slot. The change an accepted offer leads to is
@@ -132,6 +134,9 @@ func replaceSiteReadOfferTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, off
 	if err != nil {
 		return err
 	}
+	if accepted != nil && !sameSiteReadOffer(before, accepted) {
+		return fmt.Errorf("the offer this reply accepted was already answered: %w", apperrors.ErrConflict)
+	}
 	if before == nil && offer == nil {
 		return nil
 	}
@@ -152,6 +157,12 @@ func replaceSiteReadOfferTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, off
 		return fmt.Errorf("audit the site-read offer: %w", err)
 	}
 	return nil
+}
+
+func sameSiteReadOffer(held, accepted *SiteReadOffer) bool {
+	return held != nil && held.Field == accepted.Field && held.Value == accepted.Value &&
+		held.TurnDigest == accepted.TurnDigest && held.DraftVersion == accepted.DraftVersion &&
+		held.OfferedTo == accepted.OfferedTo && slices.Equal(held.SourceIDs, accepted.SourceIDs)
 }
 
 //nolint:nilnil // an empty slot is the ordinary answer, not an error
