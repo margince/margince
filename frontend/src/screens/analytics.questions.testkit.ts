@@ -4,6 +4,7 @@
 // The shapes the Questions stories and suites answer with, in one place so a
 // story and a test cannot come to model two different servers.
 
+import { meFixture } from "../app/mefixture";
 import type {
   AnalyticsAnswer,
   AnalyticsEntity,
@@ -45,7 +46,9 @@ export const CONTEXT = {
     submit_manager_forecast: true,
   },
   as_of: "2026-09-04T00:00:00Z",
-  timezone: "Europe/Berlin",
+  // The installation's zone as the shared session fixture names it, so this
+  // fixture spells no zone of its own.
+  timezone: meFixture().user.timezone,
   base_currency: "EUR",
 };
 

@@ -18,7 +18,7 @@ function drawerStory() {
     <StoryProviders>
       <ExplainDrawer
         figure="Qualified, EUR"
-        body={(opens) => <p>Records behind this figure (open {opens}).</p>}
+        body={() => <p>Records behind this figure.</p>}
       >
         Qualified
       </ExplainDrawer>

@@ -8,7 +8,9 @@ import { Button, Field } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
 import { MultiSelect, Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { forReader } from "../format/collate";
+import { ordinalNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import {
   draftProblem,
   type FilterDraft,
@@ -92,6 +94,7 @@ export function QuestionBuilder({
   saving: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const entity = entities.find((candidate) => candidate.name === draft.entity);
   const problem = draftProblem(draft, baseCurrency);
   const reason = problem ? t(problem) : undefined;
@@ -101,7 +104,7 @@ export function QuestionBuilder({
       value: candidate.name,
       label: entityLabel(t, candidate.name),
     }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => forReader(a.label, b.label, locale));
   return (
     <Panel title={t("analytics.q.builderTitle")}>
       <PanelBody>
@@ -222,12 +225,14 @@ function MeasureRows({
             <li
               key={measure.id}
               className="questions-row"
-              aria-label={t("analytics.q.measureN", { n: String(index + 1) })}
+              aria-label={t("analytics.q.measureN", {
+                n: ordinalNumber(index + 1),
+              })}
             >
               <Select
                 className="questions-control"
                 aria-label={t("analytics.q.calculationN", {
-                  n: String(index + 1),
+                  n: ordinalNumber(index + 1),
                 })}
                 options={fnsFor(entity).map((fn) => ({
                   value: fn,
@@ -245,7 +250,7 @@ function MeasureRows({
                 <Select
                   className="questions-control"
                   aria-label={t("analytics.q.measureFieldN", {
-                    n: String(index + 1),
+                    n: ordinalNumber(index + 1),
                   })}
                   options={fieldOptions(t, fieldsForFn(entity, measure.fn))}
                   value={measure.field}
@@ -259,7 +264,7 @@ function MeasureRows({
                 <span className="questions-remove">
                   <IconAction
                     label={t("analytics.q.removeMeasure", {
-                      n: String(index + 1),
+                      n: ordinalNumber(index + 1),
                     })}
                     icon={<X aria-hidden />}
                     onClick={() =>
@@ -376,15 +381,17 @@ function FilterRow({
   const controlOp = valueControlOp(filter.op);
   const fieldName = filter.field
     ? analyticsFieldLabel(t, filter.field)
-    : t("analytics.q.filterN", { n: String(position) });
+    : t("analytics.q.filterN", { n: ordinalNumber(position) });
   return (
     <li
       className="questions-row"
-      aria-label={t("analytics.q.filterN", { n: String(position) })}
+      aria-label={t("analytics.q.filterN", { n: ordinalNumber(position) })}
     >
       <Select
         className="questions-control"
-        aria-label={t("analytics.q.filterFieldN", { n: String(position) })}
+        aria-label={t("analytics.q.filterFieldN", {
+          n: ordinalNumber(position),
+        })}
         options={fieldOptions(t, fields)}
         value={filter.field}
         placeholder={t("analytics.q.chooseField")}
@@ -394,7 +401,9 @@ function FilterRow({
       />
       <Select
         className="questions-control"
-        aria-label={t("analytics.q.filterOperatorN", { n: String(position) })}
+        aria-label={t("analytics.q.filterOperatorN", {
+          n: ordinalNumber(position),
+        })}
         options={QUESTION_OPS.map((op) => ({
           value: op,
           label: opLabel(t, op),
@@ -416,7 +425,9 @@ function FilterRow({
             op={controlOp}
             value={filter.value}
             onChange={(value) => onChange({ ...filter, value })}
-            label={t("analytics.q.filterValueN", { n: String(position) })}
+            label={t("analytics.q.filterValueN", {
+              n: ordinalNumber(position),
+            })}
           />
         </div>
       )}
