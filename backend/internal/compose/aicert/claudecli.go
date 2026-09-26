@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -72,6 +73,16 @@ func cliJudgesOwnFamily(candidate, judge ai.ProviderConfig) bool {
 // tools, attachments, streaming or embeddings, which the judge never asks for.
 type claudeCLIJudge struct {
 	model string
+	// env is where the credential, PATH and passthrough variables come from;
+	// nil is the process environment.
+	env config.Lookup
+}
+
+func (j claudeCLIJudge) lookup() config.Lookup {
+	if j.env == nil {
+		return config.FromOS
+	}
+	return j.env
 }
 
 // Caps declares a text-only client with no window worth planning around.
@@ -103,7 +114,7 @@ func (j claudeCLIJudge) Complete(ctx context.Context, req model.Request) (resp m
 	if strings.HasPrefix(j.model, "-") {
 		return model.Response{}, fmt.Errorf("aicert: JUDGE=claude_cli:%s names a flag, not a model: %w", j.model, model.ErrRequestRejected)
 	}
-	binary, credential, err := cliPrerequisites()
+	binary, credential, err := cliPrerequisites(j.lookup())
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -129,7 +140,7 @@ func (j claudeCLIJudge) Complete(ctx context.Context, req model.Request) (resp m
 	defer cancel()
 	cmd := exec.CommandContext(ctx, binary, j.args(systemFile)...) // #nosec G204 -- the binary is the claude CLI found on PATH; every argument is a flag this file spells or the operator's JUDGE= model
 	cmd.Dir = dir
-	cmd.Env = cliEnv(dir, credential)
+	cmd.Env = cliEnv(j.lookup(), dir, credential)
 	cmd.Stdin = strings.NewReader(wire.Prompt)
 	cmd.WaitDelay = cliWaitDelay
 	killProcessGroupOnCancel(cmd)
@@ -172,13 +183,13 @@ func (j claudeCLIJudge) args(systemFile string) []string {
 
 // cliPrerequisites finds the CLI and the credential it will spend, so a missing
 // one fails the pre-flight in words rather than as a CLI that printed nothing.
-func cliPrerequisites() (binary, credential string, err error) {
+func cliPrerequisites(env config.Lookup) (binary, credential string, err error) {
 	binary, err = exec.LookPath(claudeCLIBinary)
 	if err != nil {
 		return "", "", fmt.Errorf("aicert: JUDGE=claude_cli needs the claude CLI on PATH (install Claude Code): %w", err)
 	}
 	for _, name := range claudeCLICredentials {
-		if os.Getenv(name) != "" {
+		if env(name) != "" {
 			return binary, name, nil
 		}
 	}
@@ -199,10 +210,10 @@ var cliPassthrough = []string{
 // cliEnv is the whole environment the CLI runs in. Built rather than inherited:
 // an inherited HOME would load the operator's own CLAUDE.md and memory, and an
 // inherited second credential would let the CLI pick one this lane did not.
-func cliEnv(home, credential string) []string {
-	env := []string{"HOME=" + home, "PATH=" + os.Getenv("PATH"), credential + "=" + os.Getenv(credential)}
+func cliEnv(lookup config.Lookup, home, credential string) []string {
+	env := []string{"HOME=" + home, "PATH=" + lookup("PATH"), credential + "=" + lookup(credential)}
 	for _, name := range cliPassthrough {
-		if value := os.Getenv(name); value != "" {
+		if value := lookup(name); value != "" {
 			env = append(env, name+"="+value)
 		}
 	}
