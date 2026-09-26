@@ -157,6 +157,34 @@ describe("the answer table", () => {
   });
 });
 
+describe("a company named by the answer", () => {
+  it("reads its name off the answer's labels, with no request per id", async () => {
+    stubServer();
+    const fetched = vi.mocked(fetch);
+    renderAnswer(
+      {
+        ...ANSWER,
+        columns: ["company_id", "count"],
+        rows: [
+          { company_id: "c-1", count: 4, _withheld: false },
+          { company_id: "c-2", count: 2, _withheld: false },
+        ],
+        labels: { company_id: { "c-1": "Brandt Maschinenbau" } },
+      },
+      { ...QUERY, group_by: ["company_id"], measures: [{ fn: "count" }] },
+    );
+    expect(await screen.findByText("Brandt Maschinenbau")).toBeTruthy();
+    // Unnamed for this reader: the id stands, shortened.
+    expect(screen.getByText("c-2…")).toBeTruthy();
+    const companyReads = fetched.mock.calls.filter(([input]) =>
+      String(input instanceof Request ? input.url : input).includes(
+        "/companies/",
+      ),
+    );
+    expect(companyReads).toEqual([]);
+  });
+});
+
 describe("a row's drill-down", () => {
   it("asks for the cell by its group keys in the question's order, null included", async () => {
     const user = userEvent.setup();
@@ -295,10 +323,29 @@ describe("a question that was not answered", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("heads the refusal in the reader's language, never the engine's English", () => {
+    render(
+      <QuestionFailure
+        error={
+          new ProblemError(
+            refusal("privacy", "too few records", "group by stage_id alone"),
+          )
+        }
+      />,
+    );
+    const heading = document.querySelector(".callout-title");
+    expect(heading?.textContent).toBe(
+      "The answer would describe too few records.",
+    );
+  });
+
   it("reads each refusal kind in its own words", () => {
     for (const [kind, words] of [
       ["invalid", "This question cannot be answered as asked."],
-      ["unsupported", "This question is not supported yet."],
+      [
+        "unsupported",
+        "This question cannot be answered with what is available to you.",
+      ],
     ]) {
       render(
         <QuestionFailure
@@ -323,5 +370,32 @@ describe("a question that was not answered", () => {
       />,
     );
     expect(screen.getByRole("alert").textContent).not.toContain("lens");
+  });
+});
+
+describe("a converted amount with no base currency", () => {
+  it("reads as no amount and says why, not as mixed currencies", async () => {
+    stubServer();
+    render(
+      <AnswerTable
+        query={{
+          ...QUERY,
+          group_by: ["stage_id"],
+          measures: [{ fn: "sum", field: "amount_base_minor" }],
+        }}
+        answer={{
+          ...ANSWER,
+          columns: ["stage_id", "sum_amount_base_minor"],
+          rows: [
+            { stage_id: "s-qual", sum_amount_base_minor: 5, _withheld: false },
+          ],
+        }}
+        baseCurrency={null}
+        source={{ kind: "query", query: QUERY }}
+      />,
+    );
+    expect(await screen.findByText("No amount")).toBeTruthy();
+    expect(screen.getByText("Currency not set")).toBeTruthy();
+    expect(screen.queryByText("Mixed currencies")).toBeNull();
   });
 });

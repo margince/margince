@@ -75,6 +75,7 @@ function fieldOptions(t: Translate, fields: readonly string[]) {
 export function QuestionBuilder({
   entities,
   draft,
+  baseCurrency,
   onChange,
   onAsk,
   onSave,
@@ -83,6 +84,7 @@ export function QuestionBuilder({
 }: Readonly<{
   entities: readonly AnalyticsEntity[];
   draft: QuestionDraft;
+  baseCurrency: string | null;
   onChange: (next: QuestionDraft) => void;
   onAsk: () => void;
   onSave: () => void;
@@ -91,7 +93,7 @@ export function QuestionBuilder({
 }>) {
   const t = useT();
   const entity = entities.find((candidate) => candidate.name === draft.entity);
-  const problem = draftProblem(draft);
+  const problem = draftProblem(draft, baseCurrency);
   const reason = problem ? t(problem) : undefined;
   const reasonId = useId();
   const population = [...entities]

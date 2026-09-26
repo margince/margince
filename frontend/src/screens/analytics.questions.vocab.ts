@@ -258,18 +258,39 @@ export function isMoneyField(field: string): boolean {
   return field.endsWith("_minor");
 }
 
-function isNativeMoney(field: string): boolean {
+export function isNativeMoneyField(field: string): boolean {
   return NATIVE_CURRENCY_MEASURES.some((native) => native === field);
 }
 
 // The one currency a question's filters pin every record to, if any.
-function filteredCurrency(query: AnalyticsQuery): string | null {
-  const pinned = (query.filters ?? []).find(
-    (f) => f.field === "currency" && f.op === "eq",
-  );
-  return typeof pinned?.value === "string" && pinned.value !== ""
-    ? pinned.value
+type FilterLike = Readonly<{ field: string; op: string; value?: unknown }>;
+
+// The one currency a question's filters pin every record to, if any.
+function pinnedCurrency(filters: readonly FilterLike[]): string | null {
+  const pinned = filters.find((f) => f.field === "currency" && f.op === "eq");
+  return typeof pinned?.value === "string" && pinned.value.trim() !== ""
+    ? pinned.value.trim()
     : null;
+}
+
+/**
+ * The currency an amount compared by a filter is in: the base currency for a
+ * converted measure, the pinned currency for one kept in each deal's own.
+ * Null when neither is known, undefined for a field that is not money. The
+ * reader types major units and the engine compares minor ones, so no money
+ * filter is sent without this.
+ */
+export function filterAmountCurrency(
+  field: string,
+  filters: readonly FilterLike[],
+  baseCurrency: string | null,
+): string | null | undefined {
+  if (!isMoneyField(field)) {
+    return undefined;
+  }
+  return isNativeMoneyField(field)
+    ? pinnedCurrency(filters)
+    : baseCurrency || null;
 }
 
 /**
@@ -279,7 +300,8 @@ function filteredCurrency(query: AnalyticsQuery): string | null {
 export type MeasureReading =
   | Readonly<{ kind: "number" }>
   | Readonly<{ kind: "money"; currency: string }>
-  | Readonly<{ kind: "mixed" }>;
+  | Readonly<{ kind: "mixed" }>
+  | Readonly<{ kind: "noBase" }>;
 
 export function measureReading(
   measure: AnalyticsMeasure,
@@ -292,7 +314,12 @@ export function measureReading(
     return { kind: "number" };
   }
   const currency = moneyCurrency(field, row, query, baseCurrency);
-  return currency ? { kind: "money", currency } : { kind: "mixed" };
+  if (currency) {
+    return { kind: "money", currency };
+  }
+  // A converted amount with no base currency to state it in is not a mix of
+  // currencies, and grouping by currency would not give it one.
+  return isNativeMoneyField(field) ? { kind: "mixed" } : { kind: "noBase" };
 }
 
 /**
@@ -310,10 +337,10 @@ export function moneyCurrency(
   if (!isMoneyField(field)) {
     return undefined;
   }
-  if (!isNativeMoney(field)) {
-    return baseCurrency;
+  if (!isNativeMoneyField(field)) {
+    return baseCurrency || null;
   }
-  return rowText(row, "currency") ?? filteredCurrency(query);
+  return rowText(row, "currency") ?? pinnedCurrency(query.filters ?? []);
 }
 
 function rowText(row: AnswerRow, column: string): string | null {
@@ -344,51 +371,47 @@ export function explainGroup(
 
 // --- A refusal ----------------------------------------------------------------
 
+type RefusalKind = components["schemas"]["AnalyticsRefusalDetails"]["kind"];
+
+// Each kind's heading, in the reader's language. Typed by the contract's own
+// union, so a kind the engine adds fails to compile here until it has words.
+export const REFUSAL_KEY: Readonly<Record<RefusalKind, MessageKey>> = {
+  invalid: "analytics.q.refusal.invalid",
+  unsupported: "analytics.q.refusal.unsupported",
+  privacy: "analytics.q.refusal.privacy",
+};
+
 export type Refusal = Readonly<{
-  kind: string;
+  kind: RefusalKind;
   suggest: string;
-  message: string | null;
+  message: string;
 }>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// "<kind>: <message> — <suggest>" is the detail's wire shape; the message is
-// the middle, which the structured details do not repeat.
-function refusalMessage(detail: unknown, kind: string, suggest: string) {
-  if (typeof detail !== "string") {
-    return null;
-  }
-  let message = detail.startsWith(`${kind}: `)
-    ? detail.slice(kind.length + 2)
-    : detail;
-  if (suggest !== "" && message.endsWith(` — ${suggest}`)) {
-    message = message.slice(0, -(suggest.length + 3));
-  }
-  return message.trim() === "" ? null : message;
+function isRefusalKind(kind: unknown): kind is RefusalKind {
+  return typeof kind === "string" && Object.hasOwn(REFUSAL_KEY, kind);
 }
 
 /**
  * The engine's refusal, read off a problem body: why the question was not
  * answered and the smallest change that would have worked. Null for any
- * other failure, which reads as an ordinary error.
+ * other failure, and for a kind this build has no words for, which then
+ * reads as an ordinary error.
  */
 export function refusalOf(problem: unknown): Refusal | null {
   if (!isRecord(problem) || !isRecord(problem.details)) {
     return null;
   }
   const { kind, suggest, message } = problem.details;
-  if (typeof kind !== "string" || kind === "") {
+  if (!isRefusalKind(kind)) {
     return null;
   }
-  const suggestion = typeof suggest === "string" ? suggest : "";
   return {
     kind,
-    suggest: suggestion,
-    message:
-      typeof message === "string" && message !== ""
-        ? message
-        : refusalMessage(problem.detail, kind, suggestion),
+    suggest: typeof suggest === "string" ? suggest : "",
+    message: typeof message === "string" ? message : "",
   };
 }

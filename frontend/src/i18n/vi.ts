@@ -4029,9 +4029,9 @@ export const vi = {
   "analytics.q.record": "Bản ghi",
   "analytics.q.recordId": "Mã",
   "analytics.q.refusal.invalid": "Không thể trả lời câu hỏi này như đã hỏi.",
-  "analytics.q.refusal.other": "Câu hỏi này chưa được trả lời.",
   "analytics.q.refusal.privacy": "Câu trả lời sẽ mô tả quá ít bản ghi.",
-  "analytics.q.refusal.unsupported": "Câu hỏi này chưa được hỗ trợ.",
+  "analytics.q.refusal.unsupported":
+    "Không thể trả lời câu hỏi này với những gì bạn có quyền truy cập.",
   "analytics.q.removeMeasure": "Xóa chỉ số {n}",
   "analytics.q.save": "Lưu câu hỏi",
   "analytics.q.savedBy": "Lưu bởi",
@@ -4040,6 +4040,15 @@ export const vi = {
   "analytics.q.withheldBody":
     "Nhóm có quá ít bản ghi sẽ bị ẩn, cùng với đủ phần còn lại để không thể suy ra nhóm đó từ các nhóm khác.",
   "analytics.q.withheldTitle": "Một số nhóm đã bị ẩn",
+  "analytics.q.amountInvalid":
+    "Hãy nhập mỗi số tiền dưới dạng số, không nhiều chữ số thập phân hơn đơn vị tiền tệ cho phép.",
+  "analytics.q.needCurrencyFilter":
+    "Hãy thêm bộ lọc “Tiền tệ là …” để so sánh số tiền theo đơn vị tiền tệ của từng deal.",
+  "analytics.q.scopeNotAvailable":
+    "Câu hỏi này được lưu cho phạm vi bản ghi mà bạn không thể đo. Câu hỏi sẽ được hỏi trên {scope}.",
+  "analytics.q.staleTitle": "Kết quả đã cũ",
+  "analytics.q.staleBody":
+    "Kết quả này dành cho câu hỏi đã hỏi lần trước. Hãy hỏi lại để cập nhật.",
   "analytics.q.calculationN": "Phép tính, chỉ số {n}",
   "analytics.q.measureFieldN": "Trường, chỉ số {n}",
   "analytics.q.filterFieldN": "Trường, bộ lọc {n}",

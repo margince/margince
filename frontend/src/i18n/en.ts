@@ -4179,9 +4179,9 @@ export const en = {
   "analytics.q.record": "Record",
   "analytics.q.recordId": "ID",
   "analytics.q.refusal.invalid": "This question cannot be answered as asked.",
-  "analytics.q.refusal.other": "This question was not answered.",
   "analytics.q.refusal.privacy": "The answer would describe too few records.",
-  "analytics.q.refusal.unsupported": "This question is not supported yet.",
+  "analytics.q.refusal.unsupported":
+    "This question cannot be answered with what is available to you.",
   "analytics.q.removeMeasure": "Remove measure {n}",
   "analytics.q.save": "Save question",
   "analytics.q.savedBy": "Saved by",
@@ -4190,6 +4190,15 @@ export const en = {
   "analytics.q.withheldBody":
     "A group with too few records is hidden, along with enough of the rest that it cannot be worked out from the others.",
   "analytics.q.withheldTitle": "Some groups are withheld",
+  "analytics.q.amountInvalid":
+    "Enter each amount as a number with no more decimals than its currency has.",
+  "analytics.q.needCurrencyFilter":
+    "Add a filter “Currency is …” to compare amounts in each deal’s own currency.",
+  "analytics.q.scopeNotAvailable":
+    "This question was saved for a record scope you cannot measure. It will be asked over {scope}.",
+  "analytics.q.staleTitle": "Answer is out of date",
+  "analytics.q.staleBody":
+    "This answer is for the question as last asked. Ask again to update it.",
   "analytics.q.calculationN": "Calculation, measure {n}",
   "analytics.q.measureFieldN": "Field, measure {n}",
   "analytics.q.filterFieldN": "Field, filter {n}",

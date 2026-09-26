@@ -4062,10 +4062,10 @@ export const de = {
   "analytics.q.record": "Datensatz",
   "analytics.q.recordId": "ID",
   "analytics.q.refusal.invalid": "Diese Frage lässt sich so nicht beantworten.",
-  "analytics.q.refusal.other": "Diese Frage wurde nicht beantwortet.",
   "analytics.q.refusal.privacy":
     "Die Antwort würde zu wenige Datensätze beschreiben.",
-  "analytics.q.refusal.unsupported": "Diese Frage wird noch nicht unterstützt.",
+  "analytics.q.refusal.unsupported":
+    "Diese Frage lässt sich mit dem, was dir zur Verfügung steht, nicht beantworten.",
   "analytics.q.removeMeasure": "Kennzahl {n} entfernen",
   "analytics.q.save": "Frage speichern",
   "analytics.q.savedBy": "Gespeichert von",
@@ -4074,6 +4074,15 @@ export const de = {
   "analytics.q.withheldBody":
     "Eine Gruppe mit zu wenigen Datensätzen wird verborgen, zusammen mit genug vom Rest, dass sie sich nicht herausrechnen lässt.",
   "analytics.q.withheldTitle": "Einige Gruppen sind verborgen",
+  "analytics.q.amountInvalid":
+    "Gib jeden Betrag als Zahl mit nicht mehr Nachkommastellen ein, als seine Währung hat.",
+  "analytics.q.needCurrencyFilter":
+    "Füge einen Filter „Währung ist …“ hinzu, um Beträge in der Währung des jeweiligen Deals zu vergleichen.",
+  "analytics.q.scopeNotAvailable":
+    "Diese Frage wurde für einen Datensatzumfang gespeichert, den du nicht messen kannst. Die Frage wird für {scope} gestellt.",
+  "analytics.q.staleTitle": "Antwort ist veraltet",
+  "analytics.q.staleBody":
+    "Diese Antwort gilt für die zuletzt gestellte Frage. Stelle die Frage erneut, um sie zu aktualisieren.",
   "analytics.q.calculationN": "Berechnung, Kennzahl {n}",
   "analytics.q.measureFieldN": "Feld, Kennzahl {n}",
   "analytics.q.filterFieldN": "Feld, Filter {n}",

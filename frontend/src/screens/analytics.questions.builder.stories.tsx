@@ -26,6 +26,7 @@ function Editing({ start }: Readonly<{ start: QuestionDraft }>) {
     <QuestionBuilder
       entities={ENTITIES}
       draft={draft}
+      baseCurrency="EUR"
       onChange={setDraft}
       onAsk={() => {}}
       onSave={() => {}}
@@ -101,6 +102,25 @@ export const YesOrNoAndOwners: Story = {
     filters: [
       { id: 2, field: "became_opportunity", op: "eq", value: true },
       { id: 3, field: "host_user_id", op: "eq", value: "u-2" },
+    ],
+  }),
+};
+
+// An amount is typed in the currency's own units; a deal's own amount can be
+// compared only once one currency is pinned, and the verbs say so until it is.
+export const AmountNeedsCurrency: Story = {
+  render: builderStory({
+    ...composed,
+    filters: [{ id: 3, field: "amount_minor", op: "gte", value: 50000 }],
+  }),
+};
+
+export const AmountInPinnedCurrency: Story = {
+  render: builderStory({
+    ...composed,
+    filters: [
+      { id: 3, field: "currency", op: "eq", value: "EUR" },
+      { id: 4, field: "amount_minor", op: "gte", value: 50000 },
     ],
   }),
 };

@@ -34,7 +34,11 @@ export default meta;
 
 type Story = StoryObj;
 
-function answerStory(query: AnalyticsQuery, answer: AnalyticsAnswer) {
+function answerStory(
+  query: AnalyticsQuery,
+  answer: AnalyticsAnswer,
+  baseCurrency: string | null = "EUR",
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
@@ -49,7 +53,7 @@ function answerStory(query: AnalyticsQuery, answer: AnalyticsAnswer) {
             <AnswerTable
               query={query}
               answer={answer}
-              baseCurrency="EUR"
+              baseCurrency={baseCurrency}
               source={{ kind: "query", query }}
             />
           </PanelBody>
@@ -211,4 +215,28 @@ export const PermissionDenied: Story = {
     code: "permission_denied",
     detail: "scope outside your lens",
   }),
+};
+
+// A converted amount with no base currency to state it in: no amount, and
+// why, rather than a hint to group by currency that would not help.
+export const NoBaseCurrency: Story = {
+  render: answerStory(
+    {
+      ...QUERY,
+      group_by: ["stage_id"],
+      measures: [{ fn: "sum", field: "amount_base_minor" }],
+    },
+    {
+      ...ANSWER,
+      columns: ["stage_id", "sum_amount_base_minor"],
+      rows: [
+        {
+          stage_id: "s-qual",
+          sum_amount_base_minor: 86_200_000,
+          _withheld: false,
+        },
+      ],
+    },
+    null,
+  ),
 };

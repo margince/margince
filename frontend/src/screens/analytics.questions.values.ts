@@ -16,7 +16,7 @@ import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 // forecast_category dimension values (report.go's forecastCategoryExpr):
 // the four the deal itself can carry, plus the server-derived "slipped" —
 // a claimed commit/best_case deal whose close date is past, missing, or
-// still provisional (formulas §11). Omitting it here doesn't shrink the
+// still provisional. Omitting it here doesn't shrink the
 // total; it moves the deal's amount into no tile at all.
 export const FORECAST_CATEGORIES = [
   { key: "commit", labelKey: "deal.fcCommit" },

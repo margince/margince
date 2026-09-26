@@ -41,11 +41,12 @@ import {
 } from "./analytics.explain";
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
-import { ENTITY_LABEL_KEY, QuestionsView } from "./analytics.questions";
+import { QuestionsView } from "./analytics.questions";
 import {
   FORECAST_CATEGORIES,
   MEETING_STATUSES,
 } from "./analytics.questions.values";
+import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ForecastShareActions } from "./analytics.share";
 import { QueryGate, throwProblem } from "./common";
@@ -1624,11 +1625,7 @@ function SectionBody({
   switch (section) {
     case "questions":
       return selection && context ? (
-        <QuestionsView
-          context={context}
-          selection={selection}
-          onSelectScope={onSelectScope}
-        />
+        <QuestionsView {...{ context, selection, onSelectScope }} />
       ) : null;
     case "coverage":
       // Like the other context-bearing sections: nothing renders before the

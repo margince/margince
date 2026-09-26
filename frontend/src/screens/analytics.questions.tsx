@@ -6,12 +6,14 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { routeHash, useRoute } from "../app/router";
 import { Button, PendingBody } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Stack } from "../design-system/stack";
 import { SurfaceState } from "../design-system/surfacestate";
-import { useT } from "../i18n";
+import { formatMoneyOrAbsent } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { openAnalyticsSection, openSavedQuestion } from "./analytics.address";
 import {
   type AnalyticsContext,
@@ -34,15 +36,13 @@ import {
   type AnalyticsQuery,
   analyticsFieldLabel,
   entityLabel,
+  filterAmountCurrency,
   measureLabel,
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";
 import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
-
-// The report cards name their populations through the same map.
-export { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 
 // The population a query names, as one comparable string: the page's picker
 // and a question already asked agree only when these do.
@@ -85,14 +85,16 @@ export function QuestionsView({
   selection: AnalyticsSelection;
   onSelectScope: (scope: AnalyticsScope) => void;
 }>) {
-  const {
-    default_scope: defaultScope,
-    allowed_scopes: allowedScopes,
-    base_currency: baseCurrency,
-  } = context;
+  const { default_scope: defaultScope, allowed_scopes: allowedScopes } =
+    context;
+  // An empty code names no currency, the same as an absent one.
+  const baseCurrency = context.base_currency || null;
   const route = useRoute();
   const runId = route.screen === "analytics" ? route.id2 : undefined;
   const [draft, setDraft] = useState<QuestionDraft>(() => newDraft(""));
+  // Set when an edited question was saved over a population this reader may
+  // not measure, so the builder says it will be asked over another one.
+  const [scopeNotice, setScopeNotice] = useState<string | null>(null);
   if (runId) {
     return (
       <SavedQuestion
@@ -101,15 +103,18 @@ export function QuestionsView({
         allowedScopes={allowedScopes}
         baseCurrency={baseCurrency}
         onEdit={(query) => {
-          setDraft(draftFromQuery(query));
+          setDraft(draftFromQuery(query, baseCurrency));
           // The question was asked over a population; editing it keeps that
-          // population rather than quietly re-asking over another.
+          // population, and says so when this reader may not measure it
+          // rather than quietly re-asking over another.
           const wanted = queryScopeKey(query);
-          const scope =
-            allowedScopes.find(
-              (candidate) => queryScopeKey(scopeQuery(candidate)) === wanted,
-            ) ?? defaultScope;
-          onSelectScope(scope);
+          const known = query.scope_kind
+            ? allowedScopes.find(
+                (candidate) => queryScopeKey(scopeQuery(candidate)) === wanted,
+              )
+            : defaultScope;
+          onSelectScope(known ?? defaultScope);
+          setScopeNotice(known ? null : defaultScope.label);
           openAnalyticsSection("questions");
         }}
       />
@@ -121,6 +126,8 @@ export function QuestionsView({
       draft={draft}
       onDraft={setDraft}
       baseCurrency={baseCurrency}
+      scopeNotice={scopeNotice}
+      onAsked={() => setScopeNotice(null)}
     />
   );
 }
@@ -130,11 +137,15 @@ function AskQuestion({
   draft,
   onDraft,
   baseCurrency,
+  scopeNotice,
+  onAsked,
 }: Readonly<{
   selection: AnalyticsSelection;
   draft: QuestionDraft;
   onDraft: (next: QuestionDraft) => void;
   baseCurrency: string | null;
+  scopeNotice: string | null;
+  onAsked: () => void;
 }>) {
   const t = useT();
   const schema = useAnalyticsSchema();
@@ -161,6 +172,7 @@ function AskQuestion({
         ? { ...question, groupBy: inOptionOrder(question.groupBy, entity) }
         : question,
       scope,
+      baseCurrency,
     );
   };
   // An answer is shown only under the population it was asked over. Changing
@@ -168,16 +180,34 @@ function AskQuestion({
   // another's name.
   const asked = ask.variables;
   const current = asked && queryScopeKey(asked) === queryScopeKey(scope);
+  // Changed since it was asked: the figures stay, under the question that
+  // produced them, and say they are not the question now on screen.
+  const stale = (entities: readonly AnalyticsEntity[]) =>
+    asked !== undefined &&
+    JSON.stringify(asAsked(draft, entities)) !== JSON.stringify(asked);
   return (
     <QueryGate query={schema} pendingLabel={t("analytics.q.loadingSchema")}>
       {(vocabulary) =>
         vocabulary.entities && vocabulary.entities.length > 0 ? (
           <Stack gap="4">
+            {scopeNotice && (
+              <Callout
+                tone="info"
+                kind="standing"
+                title={t("analytics.q.scopeNotAvailable", {
+                  scope: scopeNotice,
+                })}
+              />
+            )}
             <QuestionBuilder
               entities={vocabulary.entities}
               draft={draft}
+              baseCurrency={baseCurrency}
               onChange={onDraft}
-              onAsk={() => ask.mutate(asAsked(draft, vocabulary.entities))}
+              onAsk={() => {
+                onAsked();
+                ask.mutate(asAsked(draft, vocabulary.entities));
+              }}
               onSave={() => save.mutate(asAsked(draft, vocabulary.entities))}
               asking={ask.isPending}
               saving={save.isPending}
@@ -190,6 +220,15 @@ function AskQuestion({
                     <PendingBody label={t("analytics.q.asking")} />
                   )}
                   {ask.isError && <QuestionFailure error={ask.error} />}
+                  {ask.data && stale(vocabulary.entities) && (
+                    <Callout
+                      tone="warning"
+                      kind="standing"
+                      title={t("analytics.q.staleTitle")}
+                    >
+                      {t("analytics.q.staleBody")}
+                    </Callout>
+                  )}
                   {ask.data && (
                     <AnswerTable
                       query={asked}
@@ -308,6 +347,7 @@ function SavedQuestion({
           <PanelIntro>{t("analytics.q.readerAccess")}</PanelIntro>
           <QuestionSummary
             query={saved.query}
+            baseCurrency={baseCurrency}
             population={population}
             askedBy={<EntityRef kind="user" id={saved.asked_by} />}
           />
@@ -331,21 +371,31 @@ function SavedQuestion({
 /** The question a saved run asks, read back as facts rather than controls. */
 function QuestionSummary({
   query,
+  baseCurrency,
   population,
   askedBy,
 }: Readonly<{
   query: AnalyticsQuery;
+  baseCurrency: string | null;
   population: string | null;
   askedBy: ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const filters = query.filters ?? [];
   const namer = useValueNamer(
     query.entity,
     filters.map((f) => f.field),
-    filters.map((f) => ({ [f.field]: f.value })),
+    undefined,
   );
   const none = t("analytics.q.none");
+  // An amount travels in minor units and reads as money.
+  const filterValueText = (filter: (typeof filters)[number]) => {
+    const currency = filterAmountCurrency(filter.field, filters, baseCurrency);
+    return currency && typeof filter.value === "number"
+      ? formatMoneyOrAbsent(filter.value, currency, locale)
+      : namer(filter.field, filter.value);
+  };
   const facts = [
     {
       key: "population",
@@ -379,7 +429,7 @@ function QuestionSummary({
             [
               analyticsFieldLabel(t, f.field),
               opLabel(t, f.op),
-              takesValue(f.op) ? namer(f.field, f.value) : "",
+              takesValue(f.op) ? filterValueText(f) : "",
             ]
               .filter((part) => part !== "")
               .join(" "),

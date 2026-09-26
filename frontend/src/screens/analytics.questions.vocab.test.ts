@@ -146,12 +146,16 @@ describe("the cell a row names for its drill-down", () => {
 });
 
 describe("a refusal read off the problem body", () => {
-  it("separates the engine's message from its suggestion", () => {
+  it("reads the kind, suggestion and message from the structured details", () => {
     expect(
       refusalOf({
         code: "invalid_argument",
         detail: "privacy: too few records — group by stage",
-        details: { kind: "privacy", suggest: "group by stage" },
+        details: {
+          kind: "privacy",
+          message: "too few records",
+          suggest: "group by stage",
+        },
       }),
     ).toEqual({
       kind: "privacy",
@@ -160,7 +164,25 @@ describe("a refusal read off the problem body", () => {
     });
   });
 
-  it("is not a refusal without structured details", () => {
+  it("is not a refusal without structured details, or of a kind with no words", () => {
     expect(refusalOf({ code: "permission_denied", detail: "no" })).toBeNull();
+    expect(
+      refusalOf({
+        details: { kind: "too_expensive", message: "m", suggest: "s" },
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("a converted amount with no base currency", () => {
+  it("reads as absent, never as a mix of currencies", () => {
+    expect(
+      measureReading(
+        { fn: "sum", field: "amount_base_minor" },
+        {},
+        QUERY,
+        null,
+      ),
+    ).toEqual({ kind: "noBase" });
   });
 });

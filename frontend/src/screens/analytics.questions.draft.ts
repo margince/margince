@@ -5,12 +5,15 @@
 // draft becomes the query the engine reads, and a saved query becomes a draft
 // again. Rows carry ids so the builder keeps each row's focus while it edits.
 
+import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import type { MessageKey } from "../i18n/en";
 import {
   type AnalyticsEntity,
   type AnalyticsQuery,
   fieldsForFn,
+  filterAmountCurrency,
   filterFields,
+  isNativeMoneyField,
   type MeasureFn,
   QUESTION_LIMIT,
   type QuestionOp,
@@ -94,7 +97,10 @@ function valueMissing(value: LeafValue): boolean {
  * Why this draft cannot be asked yet, or null when it can. A reason rather
  * than a silent disabled button, and never a field filled in for the reader.
  */
-export function draftProblem(draft: QuestionDraft): MessageKey | null {
+export function draftProblem(
+  draft: QuestionDraft,
+  baseCurrency: string | null,
+): MessageKey | null {
   if (draft.entity === "") {
     return "analytics.q.needEntity";
   }
@@ -107,7 +113,40 @@ export function draftProblem(draft: QuestionDraft): MessageKey | null {
   if (draft.filters.some((f) => takesValue(f.op) && valueMissing(f.value))) {
     return "analytics.q.needValue";
   }
+  return amountProblem(draft, baseCurrency);
+}
+
+// A money filter compares an amount the reader typed in major units, so it
+// needs a currency to scale by and a figure that currency can hold.
+function amountProblem(
+  draft: QuestionDraft,
+  baseCurrency: string | null,
+): MessageKey | null {
+  for (const filter of draft.filters) {
+    const currency = filterAmountCurrency(
+      filter.field,
+      draft.filters,
+      baseCurrency,
+    );
+    if (currency === undefined || !takesValue(filter.op)) {
+      continue;
+    }
+    if (currency === null) {
+      return isNativeMoneyField(filter.field)
+        ? "analytics.q.needCurrencyFilter"
+        : "analytics.noBaseCurrencyWhy";
+    }
+    if (Number.isNaN(minorAmount(filter.value, currency))) {
+      return "analytics.q.amountInvalid";
+    }
+  }
   return null;
+}
+
+// The typed amount in the currency's minor units, or NaN when it is not a
+// number that currency can hold exactly.
+function minorAmount(value: LeafValue, currency: string): number {
+  return typeof value === "number" ? toMinorUnits(value, currency) : Number.NaN;
 }
 
 type ScopeWire = Readonly<{
@@ -119,6 +158,7 @@ type ScopeWire = Readonly<{
 export function toQuery(
   draft: QuestionDraft,
   scope: ScopeWire,
+  baseCurrency: string | null,
 ): AnalyticsQuery {
   const query: AnalyticsQuery = {
     entity: draft.entity,
@@ -134,11 +174,29 @@ export function toQuery(
   if (draft.filters.length > 0) {
     query.filters = draft.filters.map((f) =>
       takesValue(f.op)
-        ? { field: f.field, op: f.op, value: f.value }
+        ? { field: f.field, op: f.op, value: wireValue(f, draft, baseCurrency) }
         : { field: f.field, op: f.op },
     );
   }
   return query;
+}
+
+// A money amount leaves in minor units; every other value as typed.
+function wireValue(
+  filter: FilterDraft,
+  draft: QuestionDraft,
+  baseCurrency: string | null,
+): LeafValue {
+  const currency = filterAmountCurrency(
+    filter.field,
+    draft.filters,
+    baseCurrency,
+  );
+  if (!currency) {
+    return filter.value;
+  }
+  const minor = minorAmount(filter.value, currency);
+  return Number.isNaN(minor) ? filter.value : minor;
 }
 
 // A saved filter value arrives as JSON; the value control holds one of these.
@@ -153,8 +211,15 @@ function leafValue(value: unknown): LeafValue {
   return value == null ? "" : JSON.stringify(value);
 }
 
-/** A saved question back in the builder, so it can be changed and asked again. */
-export function draftFromQuery(query: AnalyticsQuery): QuestionDraft {
+/**
+ * A saved question back in the builder, so it can be changed and asked
+ * again. A money amount returns to the major units the reader types.
+ */
+export function draftFromQuery(
+  query: AnalyticsQuery,
+  baseCurrency: string | null,
+): QuestionDraft {
+  const filters = query.filters ?? [];
   let id = 0;
   return {
     entity: query.entity,
@@ -164,11 +229,17 @@ export function draftFromQuery(query: AnalyticsQuery): QuestionDraft {
       fn: m.fn,
       field: m.field ?? "",
     })),
-    filters: (query.filters ?? []).map((f) => ({
-      id: ++id,
-      field: f.field,
-      op: f.op,
-      value: leafValue(f.value),
-    })),
+    filters: filters.map((f) => {
+      const currency = filterAmountCurrency(f.field, filters, baseCurrency);
+      return {
+        id: ++id,
+        field: f.field,
+        op: f.op,
+        value:
+          currency && typeof f.value === "number"
+            ? toMajorUnits(f.value, currency)
+            : leafValue(f.value),
+      };
+    }),
   };
 }

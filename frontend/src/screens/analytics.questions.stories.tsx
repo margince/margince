@@ -200,3 +200,23 @@ export const SavedRunDenied: Story = {
     "#/analytics/questions/run-1",
   ),
 };
+
+// The question changed after it was asked: the figures stay under the
+// question that produced them, and say they are out of date.
+export const Stale: Story = {
+  render: viewStory({}),
+  play: async (context) => {
+    await askFixture(context);
+    await screen.findByText("€862,000.00");
+    await userEvent.click(
+      within(context.canvasElement).getByRole("button", { name: "Add filter" }),
+    );
+    await screen.findByText("Answer is out of date");
+  },
+};
+
+export const StalePhone: Story = {
+  ...Stale,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

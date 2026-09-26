@@ -15,7 +15,6 @@ import {
   MONEY_ABSENT,
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { derivationColumns } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import {
@@ -35,6 +34,7 @@ import {
   measureReading,
   moneyCurrency,
   QUESTION_LIMIT,
+  REFUSAL_KEY,
   refusalOf,
 } from "./analytics.questions.vocab";
 import { ProblemError, throwProblem } from "./common";
@@ -63,6 +63,9 @@ function measureCell(
   if (reading.kind === "mixed") {
     return t("analytics.q.mixedCurrencies");
   }
+  if (reading.kind === "noBase") {
+    return t("analytics.noBaseCurrency");
+  }
   return (
     <span className="t-num">
       {reading.kind === "money"
@@ -72,8 +75,10 @@ function measureCell(
   );
 }
 
-// Whether any shown cell sums one currency's amounts with another's.
-function hasMixedCurrency(
+// Whether any shown cell reads the way asked: an amount summed across
+// currencies, or a converted one with no base currency to state it in.
+function anyReading(
+  kind: "mixed" | "noBase",
   query: AnalyticsQuery,
   answer: AnalyticsAnswer,
   baseCurrency: string | null,
@@ -85,7 +90,7 @@ function hasMixedCurrency(
         const measure = measureOfColumn(query, column);
         return (
           measure !== undefined &&
-          measureReading(measure, row, query, baseCurrency).kind === "mixed"
+          measureReading(measure, row, query, baseCurrency).kind === kind
         );
       }),
   );
@@ -156,7 +161,11 @@ export function AnswerTable({
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
-  const namer = useValueNamer(query.entity, query.group_by ?? [], answer.rows);
+  const namer = useValueNamer(
+    query.entity,
+    query.group_by ?? [],
+    answer.labels,
+  );
   const shown = answer.rows.filter((row) => !isWithheldRow(row));
   const withheldGroups = answer.rows.length - shown.length;
   const closing: AnswerRow = { _withheld: true };
@@ -181,7 +190,7 @@ export function AnswerTable({
           {t("analytics.q.withheldBody")}
         </Callout>
       )}
-      {hasMixedCurrency(query, answer, baseCurrency) && (
+      {anyReading("mixed", query, answer, baseCurrency) && (
         <Callout
           tone="info"
           kind="standing"
@@ -189,6 +198,13 @@ export function AnswerTable({
         >
           {t("analytics.q.mixedBody")}
         </Callout>
+      )}
+      {anyReading("noBase", query, answer, baseCurrency) && (
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("analytics.noBaseCurrencyWhy")}
+        />
       )}
       {answer.rows.length === 0 ? (
         <EmptyState>{t("analytics.q.empty")}</EmptyState>
@@ -304,20 +320,12 @@ function ExplainRecords({
     queryFn: () => readExplanation(source, group),
   });
   const data = explanation.data;
-  const namer = useValueNamer(
-    query.entity,
-    data?.columns ?? [],
-    data?.rows ?? [],
-  );
+  const namer = useValueNamer(query.entity, data?.columns ?? [], data?.labels);
   if (explanation.isError) {
     return (
-      <ErrorLine
+      <QuestionFailure
         error={explanation.error}
-        actions={
-          <Button onClick={() => explanation.refetch()}>
-            {t("common.retry")}
-          </Button>
-        }
+        onRetry={() => explanation.refetch()}
       />
     );
   }
@@ -402,36 +410,35 @@ function recordCell(
   return frame.namer(column, value);
 }
 
-// What a refusal's kind means, as the lead-in under the engine's suggestion.
-const REFUSAL_KEY: Readonly<Record<string, MessageKey>> = {
-  invalid: "analytics.q.refusal.invalid",
-  unsupported: "analytics.q.refusal.unsupported",
-  privacy: "analytics.q.refusal.privacy",
-};
-
 /**
- * Why a question was not answered. A refusal is guidance, not a fault: it
- * leads with the smallest change that would have worked. Anything else is an
- * ordinary failure, in the reader's words.
+ * Why a question was not answered. A refusal is guidance, not a fault: the
+ * heading says in the reader's language what kind of refusal it is, and the
+ * engine's own account follows, the smallest change that would have worked
+ * first. Anything else is an ordinary failure, in the reader's words.
  */
-export function QuestionFailure({ error }: Readonly<{ error: unknown }>) {
+export function QuestionFailure({
+  error,
+  onRetry,
+}: Readonly<{ error: unknown; onRetry?: () => void }>) {
   const t = useT();
   const refusal =
     error instanceof ProblemError ? refusalOf(error.problem) : null;
   if (!refusal) {
-    return <ErrorLine error={error} />;
+    return (
+      <ErrorLine
+        error={error}
+        actions={
+          onRetry ? (
+            <Button onClick={onRetry}>{t("common.retry")}</Button>
+          ) : undefined
+        }
+      />
+    );
   }
-  const lead = Object.hasOwn(REFUSAL_KEY, refusal.kind)
-    ? t(REFUSAL_KEY[refusal.kind])
-    : t("analytics.q.refusal.other");
-  // The suggestion leads; the kind's sentence and the engine's own account of
-  // what was wrong follow it. With no suggestion, the kind's sentence leads.
-  const body = [refusal.suggest ? lead : "", refusal.message ?? ""]
-    .filter((part) => part !== "")
-    .join(" ");
   return (
-    <Callout tone="info" kind="outcome" title={refusal.suggest || lead}>
-      {body === "" ? undefined : body}
+    <Callout tone="info" kind="outcome" title={t(REFUSAL_KEY[refusal.kind])}>
+      {refusal.suggest !== "" && <p>{refusal.suggest}</p>}
+      {refusal.message !== "" && <p>{refusal.message}</p>}
     </Callout>
   );
 }

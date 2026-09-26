@@ -44,6 +44,7 @@ function Harness({
     <QuestionBuilder
       entities={ENTITIES}
       draft={draft}
+      baseCurrency="EUR"
       onChange={setDraft}
       onAsk={() => onAsk(draft)}
       onSave={() => {}}

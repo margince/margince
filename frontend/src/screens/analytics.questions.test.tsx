@@ -4,7 +4,9 @@
 
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Button } from "../design-system/atoms";
 import { pickOption } from "../design-system/select-testing";
 import { AnalyticsScreen } from "./analytics";
 import type { AnalyticsScope } from "./analytics.context";
@@ -202,5 +204,93 @@ describe("a saved question", () => {
     renderView();
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.getByRole("button", { name: "New question" })).toBeTruthy();
+  });
+});
+
+describe("an answer and the question on screen", () => {
+  it("says the answer is out of date once the question changes, keeping its columns", async () => {
+    const user = userEvent.setup();
+    stubServer();
+    renderView();
+    await chooseDeals(user);
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await screen.findByRole("columnheader", { name: "Stage" });
+    expect(screen.queryByText("Answer is out of date")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Add measure" }));
+    expect(await screen.findByText("Answer is out of date")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Stage" })).toBeTruthy();
+  });
+
+  it("hides an answer once the page measures another population", async () => {
+    const user = userEvent.setup();
+    stubServer();
+    const team = { kind: "team" as const, id: "t-1", label: "Team North" };
+    function Harness() {
+      const [scope, setScope] = useState<AnalyticsScope>(CONTEXT.default_scope);
+      return (
+        <>
+          <Button onClick={() => setScope(team)}>Measure team</Button>
+          <QuestionsView
+            context={{
+              ...CONTEXT,
+              allowed_scopes: [...CONTEXT.allowed_scopes, team],
+            }}
+            selection={{ scope }}
+            onSelectScope={setScope}
+          />
+        </>
+      );
+    }
+    render(<Harness />);
+    await chooseDeals(user);
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await screen.findByRole("columnheader", { name: "Stage" });
+    await user.click(screen.getByRole("button", { name: "Measure team" }));
+    expect(screen.queryByRole("columnheader", { name: "Stage" })).toBeNull();
+  });
+});
+
+describe("a saved question the reader cannot ask as saved", () => {
+  const foreign = {
+    id: "run-2",
+    query: {
+      ...QUERY,
+      scope_kind: "team",
+      scope_id: "t-9",
+      filters: [{ field: "amount_base_minor", op: "gte", value: 500_000 }],
+    },
+    answer: ANSWER,
+    asked_by: "u-1",
+    stored_floor: 5,
+  };
+
+  it("shows a filtered amount as money, not minor units", async () => {
+    globalThis.location.hash = "#/analytics/questions/run-2";
+    stubServer({ "GET /analytics/runs/run-2": () => jsonResponse(foreign) });
+    renderView();
+    expect(
+      await screen.findByText("Converted amount is at least €5,000.00"),
+    ).toBeTruthy();
+  });
+
+  it("says on Edit that its population is not available, and which one it will use", async () => {
+    const user = userEvent.setup();
+    globalThis.location.hash = "#/analytics/questions/run-2";
+    stubServer({ "GET /analytics/runs/run-2": () => jsonResponse(foreign) });
+    const chosen: AnalyticsScope[] = [];
+    renderView((scope) => chosen.push(scope));
+    await user.click(
+      await screen.findByRole("button", { name: "Edit question" }),
+    );
+    await act(async () => {
+      globalThis.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(
+      await screen.findByText(
+        "This question was saved for a record scope you cannot measure. It will be asked over Whole company.",
+      ),
+    ).toBeTruthy();
+    expect(chosen).toEqual([CONTEXT.default_scope]);
   });
 });
