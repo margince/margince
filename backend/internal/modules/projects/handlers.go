@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,7 +50,14 @@ func (h Handlers) CreateProject(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := projectCreateInput(req)
+	// A declared importer (a HUMAN holding import_run:create) may stamp the
+	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// grants included, gets the closed door.
+	mapInput := projectCreateInput
+	if auth.DeclaredImporter(r.Context()) {
+		mapInput = projectCreateInputFromImporter
+	}
+	in, err := mapInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -178,6 +186,17 @@ func (h Handlers) ArchiveProject(w http.ResponseWriter, r *http.Request, id crmc
 }
 
 func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInput, error) {
+	return projectCreateInputAdmitting(req, false)
+}
+
+// projectCreateInputFromImporter is projectCreateInput for a declared importer
+// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
+// namespace. provider.go keeps the closed door.
+func projectCreateInputFromImporter(req crmcontracts.CreateProjectRequest) (CreateProjectInput, error) {
+	return projectCreateInputAdmitting(req, true)
+}
+
+func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer bool) (CreateProjectInput, error) {
 	name, err := projectName(req.Name)
 	if err != nil {
 		return CreateProjectInput{}, err
@@ -195,7 +214,7 @@ func projectCreateInput(req crmcontracts.CreateProjectRequest) (CreateProjectInp
 	// namespace existed; this one never did, so a caller could spell the
 	// importer's namespace on a project and have the trust ladder read it back
 	// as captured history.
-	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
+	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateProjectInput{}, err
 	}
 	in := CreateProjectInput{

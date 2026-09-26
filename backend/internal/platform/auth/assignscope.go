@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -57,6 +58,22 @@ func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int)
 		alias, ownerPredicate(p, arg, unownedIsNobodys)(alias))
 }
 
+// newRecordOwnerSQL is AssigneeEligibleSQL for a NEW record's named owner,
+// where an invited colleague is also eligible. An invited colleague is a real
+// colleague who has not signed in yet, and naming them as the owner of a record
+// created on their behalf (an import, most of all) is the act the assignments
+// module already allows for responsibilities. Routing (round robin, SLA
+// reassignment, task fan-out) keeps asking AssigneeEligibleSQL, so nothing is
+// handed automatically to a seat nobody answers.
+//
+// Derived from AssigneeEligibleSQL rather than spelled again, so every other
+// clause stays the one rule; TestANewRecordMayNameAnInvitedOwner holds the
+// swap.
+func newRecordOwnerSQL(p principal.Principal, alias string, arg func(any) int) string {
+	return strings.Replace(AssigneeEligibleSQL(p, alias, arg),
+		alias+".status = 'active'", alias+".status IN ('active', 'invited')", 1)
+}
+
 // EnsureAssignee answers whether the caller may hand work to dest.
 //
 // The scope question is asked of a HYPOTHETICAL row: the app_user row is
@@ -68,6 +85,18 @@ func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int)
 // An unbounded seat still passes through the eligibility half: admin may assign
 // to anyone, and "anyone" has never included a suspended seat or an agent.
 func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	return ensureAssigneeWith(ctx, tx, dest, AssigneeEligibleSQL)
+}
+
+// EnsureNewRecordOwner is EnsureAssignee for the owner named on a record's
+// create, where an invited colleague is also eligible (newOwnerStatus).
+func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	return ensureAssigneeWith(ctx, tx, dest, newRecordOwnerSQL)
+}
+
+func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
+	eligible func(principal.Principal, string, func(any) int) string,
+) error {
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return err
@@ -81,7 +110,7 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 		`SELECT EXISTS (SELECT 1 FROM (
 		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = $%d) u WHERE %s)`,
-		destPos, AssigneeEligibleSQL(p, "u", arg)), args...).Scan(&permitted); err != nil {
+		destPos, eligible(p, "u", arg)), args...).Scan(&permitted); err != nil {
 		return err
 	}
 	return refuseIneligibleAssignee(permitted)

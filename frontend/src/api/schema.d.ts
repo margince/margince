@@ -19825,7 +19825,7 @@ export interface components {
             emails?: components["schemas"]["ContactEmailInput"][];
             phones?: components["schemas"]["ContactPhoneInput"][];
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -20160,7 +20160,7 @@ export interface components {
             parent_company_id?: string | null;
             domains?: components["schemas"]["CompanyDomainInput"][];
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -23866,7 +23866,7 @@ export interface components {
              */
             expected_close_date?: string | null;
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -24583,7 +24583,7 @@ export interface components {
             /** Format: date */
             target_end_date?: string | null;
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
