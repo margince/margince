@@ -70,8 +70,15 @@ func geminiRaisedToFloor(modelID, level, floor string) string {
 	if effortAtLeast(effective, floor) {
 		return level
 	}
+	if strings.Contains(modelID, "flash-lite-image") {
+		return lowestEffortAtLeast(floor, geminiFlashLiteImageLevels)
+	}
 	return floor
 }
+
+// geminiFlashLiteImageLevels is all gemini-3.1-flash-lite-image accepts; any
+// other level is a 400, so a floor between them is raised to high.
+var geminiFlashLiteImageLevels = []string{effortMinimal, effortHigh}
 
 // geminiTakesThinkingLevel reports whether a model accepts
 // thinkingConfig.thinkingLevel on generateContent. Google's reference for the

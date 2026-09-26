@@ -64,6 +64,9 @@ type providerDescriptor struct {
 	// thinkingFloor reports whether a binding's adapter maps a site's thinking
 	// floor onto its wire (sitethinking.go); nil maps none.
 	thinkingFloor func(ProviderConfig) bool
+	// floorSkipsTools marks an adapter that sends no floor on a request
+	// carrying tools, so an agent_loop site is never floored on it.
+	floorSkipsTools bool
 }
 
 // capSet is the set of wires an adapter answers on.
@@ -98,7 +101,7 @@ var providerRegistry = []providerDescriptor{
 	{
 		name: providerAnthropic, caps: capChat, egress: egressPublicOnly, keyEnv: "ANTHROPIC_API_KEY",
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
-		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor,
+		carriage: anthropicCarries, thinkingFloor: anthropicTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
 		name: providerOllama, caps: capChat, local: true, egress: egressOperatorEndpoint,
@@ -133,7 +136,7 @@ var providerRegistry = []providerDescriptor{
 		keyEnv: "OPENAI_COMPATIBLE_API_KEY", servedSource: servedIdentitySourceEcho,
 		public: true, carriage: carriesImages,
 		wildcardReason: "serves whichever vendor the operator pointed base_url at",
-		thinkingFloor:  openRouterTakesThinkingFloor,
+		thinkingFloor:  openRouterTakesThinkingFloor, floorSkipsTools: true,
 	},
 	{
 		name: providerOpenAI, caps: capChat, egress: egressPublicOnly, keyEnv: "OPENAI_API_KEY",

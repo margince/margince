@@ -16,14 +16,16 @@ import (
 )
 
 // openRouterModelList is the broker's /api/v1/models as it described this
-// tree's models on 2026-09-26, trimmed to the fields the floor reads.
+// tree's models on 2026-09-26, trimmed to the fields the floor reads, plus one
+// model that reasons by default and states no effort.
 const openRouterModelList = `{"data":[
 	{"id":"openai/gpt-oss-120b","reasoning":{"mandatory":true,"supported_efforts":["high","medium","low"],"default_effort":"medium"}},
 	{"id":"mistralai/mistral-medium-3-5","reasoning":{"supported_efforts":["high","none"],"default_effort":"high"}},
 	{"id":"mistralai/mistral-small-2603","reasoning":{"default_enabled":false,"supported_efforts":["high","none"],"default_effort":"high"}},
 	{"id":"google/gemma-4-31b-it","reasoning":{"default_enabled":false}},
 	{"id":"anthropic/claude-sonnet-4.6","reasoning":{"supported_efforts":["max","high","medium","low"],"default_effort":"medium"}},
-	{"id":"mistralai/ministral-8b-2512","reasoning":null}
+	{"id":"mistralai/ministral-8b-2512","reasoning":null},
+	{"id":"vendor/reasons-unstated","reasoning":{}}
 ]}`
 
 // brokerStub stands in for OpenRouter: it serves modelList (or modelsStatus)
@@ -97,6 +99,7 @@ func TestABrokerFloorRaisesOnlyAModelThatThinksLess(t *testing.T) {
 		"mistral-small is off; high is its lowest":  {"mistralai/mistral-small-2603", "low", `{"effort":"high"}`},
 		"gemma is off and grades no effort":         {"google/gemma-4-31b-it", "low", `{"enabled":true}`},
 		"ministral does not reason":                 {"mistralai/ministral-8b-2512", "low", ""},
+		"an unstated default is sent the floor":     {"vendor/reasons-unstated", "low", `{"effort":"low"}`},
 		"an unlisted model is sent nothing":         {"vendor/unlisted", "low", ""},
 		"a request with no floor is sent nothing":   {"google/gemma-4-31b-it", "", ""},
 	} {
@@ -165,6 +168,22 @@ func TestABrokerModelListFailureIsNotReadAgainOnEveryCall(t *testing.T) {
 	}
 }
 
+// A tool-carrying request is sent no floor, as on Anthropic's own wire: its
+// reasoning would have to be replayed, and this adapter keeps text only.
+func TestABrokerFloorIsNotSentWithTools(t *testing.T) {
+	stub := &brokerStub{}
+	client := newBrokerClient(t, stub, "google/gemma-4-31b-it", nil)
+	if _, err := client.Complete(context.Background(), model.Request{
+		Messages: []model.Message{{Role: "user", Content: "hi"}}, ThinkingFloor: "low",
+		Tools: []model.ToolDef{{Name: "lookup", InputSchema: json.RawMessage(`{"type":"object"}`)}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got, sent := stub.chats[0]["reasoning"]; sent {
+		t.Fatalf("reasoning = %s on a tool-carrying request, want none", got)
+	}
+}
+
 // A model list the broker will not serve costs the floor and never the call.
 func TestABrokerModelListFailureSendsNoFloorAndServesTheCall(t *testing.T) {
 	stub := &brokerStub{modelsStatus: http.StatusInternalServerError}
@@ -201,6 +220,7 @@ func TestAnAnthropicFloorTurnsOnOnlyAModelThatIsOff(t *testing.T) {
 		"sonnet 4.6 is off by default":          {"claude-sonnet-4-6", 8192, nil, `{"type":"adaptive"}`},
 		"haiku 4.5 takes only a budget":         {"claude-haiku-4-5-20251001", 8192, nil, `{"type":"enabled","budget_tokens":1024}`},
 		"a budget that leaves no answer is not": {"claude-haiku-4-5", 1024, nil, ""},
+		"nor one that leaves a sliver of it":    {"claude-haiku-4-5", 1500, nil, ""},
 		"opus 5.5 already thinks":               {"claude-opus-5-5", 8192, nil, ""},
 		"an unknown model is sent nothing":      {"claude-test", 8192, nil, ""},
 		"a tool-carrying request is sent none":  {"claude-sonnet-4-6", 8192, tool, ""},
@@ -248,6 +268,9 @@ func TestAnOpenAIFloorRaisesOnlyAShallowerDefault(t *testing.T) {
 		"a floor above medium is raised to":  {"gpt-5-mini", "high", nil, `{"effort":"high"}`},
 		"gpt-4.1 does not reason":            {"gpt-4.1", "low", nil, ""},
 		"the chat alias does not reason":     {"gpt-5-chat-latest", "high", nil, ""},
+		"o1 reasons at medium":               {"o1", "high", nil, `{"effort":"high"}`},
+		"o1-mini refuses the field":          {"o1-mini", "high", nil, ""},
+		"o1-preview refuses the field":       {"o1-preview-2024-09-12", "high", nil, ""},
 		"the request's own effort outranks":  {"gpt-5.4", "high", low, `{"effort":"low"}`},
 	} {
 		t.Run(name, func(t *testing.T) {

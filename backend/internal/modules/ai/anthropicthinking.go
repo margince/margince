@@ -62,6 +62,10 @@ func anthropicThinkingModeOf(modelID string) anthropicThinkingMode {
 // API's minimum, so minimal and low share it.
 var anthropicThinkingBudgets = map[string]int{effortMinimal: 1024, effortLow: 1024, effortMedium: 4096, effortHigh: 16384}
 
+// anthropicAnswerRoom is the least of max_tokens a thinking budget must leave
+// the answer, so a floor never cuts short a reply that fitted without it.
+const anthropicAnswerRoom = 1024
+
 type anthropicThinking struct {
 	Type         string `json:"type"`
 	BudgetTokens int    `json:"budget_tokens,omitempty"`
@@ -71,8 +75,9 @@ type anthropicThinking struct {
 //
 // A request carrying tools is sent none: a thinking turn that calls a tool must
 // be replayed with its thinking block, and this adapter keeps text only. A
-// budget that would not leave room for the answer (it must be below
-// max_tokens) is not sent either: the floor cannot be met without a cut answer.
+// budget that would leave the answer less than anthropicAnswerRoom of
+// max_tokens is not sent either: thinking may spend its whole budget, and the
+// floor is not worth a cut answer.
 func anthropicThinkingFor(modelID, floor string, maxTokens, tools int) *anthropicThinking {
 	if floor == "" || tools > 0 {
 		return nil
@@ -82,7 +87,7 @@ func anthropicThinkingFor(modelID, floor string, maxTokens, tools int) *anthropi
 		return &anthropicThinking{Type: "adaptive"}
 	case anthropicThinksWithBudget:
 		budget, ok := anthropicThinkingBudgets[floor]
-		if !ok || budget >= maxTokens {
+		if !ok || maxTokens-budget < anthropicAnswerRoom {
 			return nil
 		}
 		return &anthropicThinking{Type: "enabled", BudgetTokens: budget}

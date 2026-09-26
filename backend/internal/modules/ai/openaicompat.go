@@ -397,7 +397,7 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 	}
 	wire := c.chatWire(req, stream)
 	if wire.Reasoning == nil {
-		wire.Reasoning = c.reasoningFloor(ctx, wire.Model, req.ThinkingFloor)
+		wire.Reasoning = c.reasoningFloor(ctx, wire.Model, req.ThinkingFloor, len(req.Tools))
 	}
 	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {

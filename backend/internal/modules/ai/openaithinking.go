@@ -11,9 +11,12 @@ import "strings"
 
 // openaiEffortDefaults is each reasoning family's default effort, from the
 // vendor's model pages: 5.1, 5.2 and 5.4 default to none; gpt-5, 5.5, 5.6, 6
-// and the o-series to medium. Longer prefixes come first so they win.
+// and the o-series to medium, except o1-mini and o1-preview, which answer the
+// field with a 400. Longer prefixes come first so they win.
 var openaiEffortDefaults = []struct{ prefix, effort string }{
 	{"gpt-5-chat", ""},
+	{"o1-mini", ""},
+	{"o1-preview", ""},
 	{"gpt-5.1", effortNone},
 	{"gpt-5.2", effortNone},
 	{"gpt-5.4", effortNone},

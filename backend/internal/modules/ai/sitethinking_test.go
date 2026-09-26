@@ -126,6 +126,8 @@ func TestAGeminiFloorRaisesOnlyAShallowerDefault(t *testing.T) {
 		"the structured default is raised":      {"gemini-3.5-flash", "low", "high", "high"},
 		"a Gemini 2.5 is never named a level":   {"gemini-2.5-flash", "", "low", ""},
 		"no floor leaves the adapter's default": {siteThinkingFlashLite, "", "", ""},
+		"flash-lite-image skips to high":        {"gemini-3.1-flash-lite-image", "", "low", "high"},
+		"flash-lite-image keeps a met minimal":  {"gemini-3.1-flash-lite-image", "", "minimal", ""},
 	} {
 		if got := geminiRaisedToFloor(tc.model, tc.level, tc.floor); got != tc.want {
 			t.Errorf("%s: level = %q, want %q", name, got, tc.want)
@@ -182,5 +184,25 @@ func TestEverySiteThinkingLevelIsAGeminiThinkingLevel(t *testing.T) {
 	}
 	if declared == 0 {
 		t.Fatal("no site declares a thinking level, so this check read nothing")
+	}
+}
+
+// An agent_loop site's requests carry tools, and an adapter that drops the
+// floor on those is not recorded as having asked one.
+func TestAToolLoopSiteIsNotFlooredWhereToolsDropTheFloor(t *testing.T) {
+	sites := []Site{
+		{Name: "conversation", Kind: SiteKindMultiTurn, Thinking: effortLow},
+		{Name: "sweep", Kind: SiteKindAgentLoop, Thinking: effortLow},
+	}
+	if got, want := floorsAsked(sites, true), map[string]string{"conversation": effortLow}; !maps.Equal(got, want) {
+		t.Errorf("on an adapter that drops the floor on tools: %v, want %v", got, want)
+	}
+	if got := floorsAsked(sites, false); len(got) != 2 {
+		t.Errorf("on an adapter that floors tool requests too: %v, want both sites", got)
+	}
+	for _, provider := range []string{providerAnthropic, providerOpenAICompatible} {
+		if d, _ := providerByName(provider); !d.floorSkipsTools {
+			t.Errorf("%s sends no floor on a tool-carrying request and does not say so", provider)
+		}
 	}
 }

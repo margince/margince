@@ -7,13 +7,19 @@ package ai
 // broker's model list says, per model, whether reasoning is on by default and
 // which efforts it takes, so the floor is mapped from that and never guessed:
 //
-//   - on by default at an effort that meets the floor: nothing is sent;
+//   - on by default at a listed effort that meets the floor: nothing is sent;
 //   - otherwise the lowest listed effort that meets it;
+//   - on, listing no effort at all: the floor itself, since an unstated
+//     default is not known to meet it;
 //   - off, with no effort that meets it: `enabled: true`;
-//   - a model listing no reasoning, or a list that cannot be read: nothing.
+//   - a model listing no reasoning, a request carrying tools, or a list that
+//     cannot be read: nothing.
 //
-// A binding's own `routing.reasoning_effort` outranks the floor: the operator
-// chose it. `exclude` is never sent, so reasoning stays out of the answer.
+// A tool-carrying request is sent none for Anthropic's reason: a reasoning
+// turn that calls a tool must be replayed with its reasoning, and this adapter
+// keeps text only. A binding's own `routing.reasoning_effort` outranks the
+// floor: the operator chose it. `exclude` is never sent, so reasoning stays
+// out of the answer.
 
 import (
 	"context"
@@ -60,11 +66,14 @@ func openRouterReasoningFor(meta openRouterReasoning, floor string) *openAICompa
 		return nil
 	}
 	on := meta.Mandatory || meta.DefaultEnabled == nil || *meta.DefaultEnabled
-	if on && (meta.DefaultEffort == "" || effortAtLeast(meta.DefaultEffort, floor)) {
+	if on && effortAtLeast(meta.DefaultEffort, floor) {
 		return nil
 	}
 	if effort := lowestEffortAtLeast(floor, meta.SupportedEfforts); effort != "" {
 		return &openAICompatReasoningWire{Effort: effort}
+	}
+	if on && len(meta.SupportedEfforts) == 0 {
+		return &openAICompatReasoningWire{Effort: floor}
 	}
 	if on {
 		return nil
@@ -76,8 +85,8 @@ func openRouterReasoningFor(meta openRouterReasoning, floor string) *openAICompa
 // reasoningFloor is the `reasoning` block a request's floor sends on this
 // binding, nil off the broker. A model list that cannot be read is logged and
 // sends nothing: the floor is a hint, and the call it would fail worked before.
-func (c *openAICompatClient) reasoningFloor(ctx context.Context, modelID, floor string) *openAICompatReasoningWire {
-	if c.reasoning == nil || floor == "" {
+func (c *openAICompatClient) reasoningFloor(ctx context.Context, modelID, floor string, tools int) *openAICompatReasoningWire {
+	if c.reasoning == nil || floor == "" || tools > 0 {
 		return nil
 	}
 	catalog, err := c.reasoning.get(ctx, c.fetchReasoning)

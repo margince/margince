@@ -5,8 +5,11 @@ package ai
 
 // How much one site's requests think, when api/ai-tasks.yaml says so.
 //
-// A site's level is a FLOOR: think at least this much, never less than the
-// model's own default. The router puts it on Request.ThinkingFloor and each
+// A site's level is a FLOOR: think at least this much, and never less than the
+// adapter would send without it — which on a structured Gemini request is
+// already under the model's own default. It is a hint, not a guarantee: where
+// the adapter cannot map it (a tool-carrying request, an unreadable model
+// list) it is not sent. The router puts it on Request.ThinkingFloor and each
 // adapter maps it to its own wire. Precedence, strongest first: the request's
 // own ProviderOptions, then the binding's explicit setting (`thinking_level`,
 // `routing.reasoning_effort`), then the site floor, then the adapter default.
@@ -78,14 +81,23 @@ func ollamaTakesThinkingFloor(ProviderConfig) bool { return true }
 // SiteThinkingLevels is, per site of task, the floor a request built for that
 // site asks binding for; nil when no site declares one or binding takes none.
 // It names what was ASKED, not what was sent: a model whose own default is
-// already deeper is sent nothing, and still thought at least that much.
+// already deeper is sent nothing, and still thought at least that much. An
+// agent_loop site's requests carry tools, so it is left out where the adapter
+// drops the floor on those.
 func SiteThinkingLevels(binding ProviderConfig, task Task) map[string]string {
 	if !thinkingFloorReaches(binding) {
 		return nil
 	}
+	d, _ := providerByName(binding.Provider)
+	return floorsAsked(taskSites[task], d.floorSkipsTools)
+}
+
+// floorsAsked is SiteThinkingLevels over sites, for an adapter that drops the
+// floor on tool-carrying requests when skipsTools is set.
+func floorsAsked(sites []Site, skipsTools bool) map[string]string {
 	var levels map[string]string
-	for _, site := range taskSites[task] {
-		if site.Thinking == "" {
+	for _, site := range sites {
+		if site.Thinking == "" || (skipsTools && site.Kind == SiteKindAgentLoop) {
 			continue
 		}
 		if levels == nil {
