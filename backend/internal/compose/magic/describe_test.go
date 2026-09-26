@@ -95,3 +95,17 @@ func TestOneJobOnManyRecordsIsOneLineWithACount(t *testing.T) {
 		t.Fatalf("housekeeping %d, want the one row that said nothing counted", housekeeping)
 	}
 }
+
+// Two passes of one job over the same record count that record once.
+func TestAGroupCountsRecordsNotAuditRows(t *testing.T) {
+	now := time.Now()
+	first := auditRow("link-reconcile", "update", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now)
+	again := first
+	again.ID = ids.NewV7()
+	again.OccurredAt = now.Add(-time.Minute)
+	other := auditRow("link-reconcile", "update", "", `{"cohort_linked": 1, "cohort_promoted": 0}`, "", now.Add(-2*time.Minute))
+	lines, _ := linesOf([]entry{first, again, other}, 100)
+	if len(lines) != 1 || lines[0].Count == nil || *lines[0].Count != 2 {
+		t.Fatalf("got %d lines with count %v, want one line counting the two distinct records", len(lines), lines[0].Count)
+	}
+}

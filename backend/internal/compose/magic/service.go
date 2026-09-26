@@ -125,6 +125,14 @@ func (s *Service) Read(
 		if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
 			return err
 		}
+		// A line standing for many records has no single way back: the judge
+		// read one of its rows, and its answer about that row is not an answer
+		// about the rest. The line says nothing rather than something untrue.
+		for i := range lines {
+			if lines[i].Count != nil && *lines[i].Count > 1 {
+				lines[i].Undo = nil
+			}
+		}
 		// Retention, as counts beside the records' own lines; it names no
 		// record, so it has nothing for the undo judge to read.
 		retention, err := retentionSince(ctx, tx, from)

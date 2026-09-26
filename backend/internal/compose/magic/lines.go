@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // linesOf orders the admitted rows, dresses them, folds repeats into one line,
@@ -37,6 +38,9 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 	})
 	out := make([]crmcontracts.MagicLine, 0, limit)
 	group := map[string]int{}
+	// The RECORDS each line stands for, so two passes of one job over the same
+	// contact count it once: the count reads "N records", not N audit rows.
+	records := map[int]map[ids.UUID]bool{}
 	for _, e := range entries {
 		line, key, ok := lineOf(e)
 		if !ok {
@@ -44,15 +48,13 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 			continue
 		}
 		if at, seen := group[key]; seen {
-			count := 1
-			if out[at].Count != nil {
-				count = *out[at].Count
-			}
-			count++
+			records[at][e.EntityID] = true
+			count := len(records[at])
 			out[at].Count = &count
 			continue
 		}
 		group[key] = len(out)
+		records[len(out)] = map[ids.UUID]bool{e.EntityID: true}
 		out = append(out, line)
 	}
 	if len(out) > limit {
@@ -110,9 +112,15 @@ func lineOf(e entry) (crmcontracts.MagicLine, string, bool) {
 // groupKey is what two lines must share to be one line with a count: the same
 // job, doing the same thing, for the same reason, to the same kind of record.
 func groupKey(e entry, d description) string {
-	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), ""}
+	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", ""}
 	if d.reason != nil {
 		parts[4] = sentenceKey(*d.reason)
+	}
+	// Whose authority it ran under: the auto-apply sweep acts for each rep on
+	// their own standing decision, and folding two reps' actions into one line
+	// would name only one of them.
+	if e.OnBehalfOf != nil {
+		parts[5] = e.OnBehalfOf.String()
 	}
 	return strings.Join(parts, "\x00")
 }

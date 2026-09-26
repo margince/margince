@@ -55,10 +55,17 @@ func retentionSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]crmcontr
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT a.entity_type, a.evidence->>'retention_action', coalesce(a.evidence->>'retain_days', ''),
-		       count(*), max(a.occurred_at), (array_agg(a.id ORDER BY a.occurred_at DESC, a.id DESC))[1]
+		SELECT a.entity_type, coalesce(a.evidence->>'retention_action', a.action),
+		       coalesce(a.evidence->>'retain_days', ''),
+		       count(DISTINCT a.entity_id), max(a.occurred_at),
+		       (array_agg(a.id ORDER BY a.occurred_at DESC, a.id DESC))[1]
 		  FROM audit_log a
-		 WHERE a.occurred_at >= $1 AND a.evidence ? 'retention_action'
+		 WHERE a.occurred_at >= $1
+		   -- Every retention action but one states itself in its evidence. A
+		   -- contact erasure goes through the Art. 17 eraser, whose tombstone
+		   -- records the reason instead (privacy/erasure_tombstone.go).
+		   AND (a.evidence ? 'retention_action'
+		        OR (a.action = 'erase' AND a.entity_type = 'contact' AND a.evidence->>'reason' = 'retention'))
 		 GROUP BY 1, 2, 3
 		 ORDER BY 5 DESC`, since)
 	if err != nil {

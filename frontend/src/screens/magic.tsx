@@ -344,8 +344,8 @@ function LineSubject({ line }: Readonly<{ line: MagicLine }>) {
   const count = line.count ?? 1;
   // ONE line for a job that touched many records: the most recent one by
   // name, and how many more.
-  if (count > 1) {
-    return label
+  if (count > 1 || (!line.entity && line.count !== undefined)) {
+    return label && count > 1
       ? plural("magic.aboutMany", count - 1, {
           label,
           others: formatNumber(count - 1, locale),
