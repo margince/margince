@@ -384,7 +384,7 @@ func cacheKey(wsID ids.WorkspaceID, task Task, req model.Request) (string, error
 		ProviderOptions    map[string]json.RawMessage `json:"provider_options"`
 		ContextScopes      []string                   `json:"context_scopes"`
 		ContextFingerprint string                     `json:"context_fingerprint"`
-		Site               string                     `json:"site"`
+		Site               string                     `json:"site,omitempty"`
 		ThinkingFloor      string                     `json:"thinking_floor,omitempty"`
 	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor})
 	if err != nil {
