@@ -27,6 +27,7 @@ export const SECTIONS = [
   "outcomes",
   "coverage",
   "delivery",
+  "questions",
 ] as const;
 
 export type Section = (typeof SECTIONS)[number];
@@ -75,4 +76,12 @@ export function sectionFromAddress(segment: string | undefined): Section {
  */
 export function openAnalyticsSection(section: Section): void {
   navigate({ screen: "analytics", id: section });
+}
+
+/**
+ * Open one saved question, answered for whoever follows the link. The run id
+ * rides a segment below the section, so the address is the thing to share.
+ */
+export function openSavedQuestion(runId: string): void {
+  navigate({ screen: "analytics", id: "questions", id2: runId });
 }

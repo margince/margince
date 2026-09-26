@@ -98,3 +98,46 @@ export const CapturedThread: Story = { args: { activity: CAPTURED } };
 
 /** Outside the audience: the row keeps its verbs and loses the control. */
 export const Withheld: Story = { args: { activity: WITHHELD } };
+
+export const InvitationPending: Story = {
+  args: {
+    activity: {
+      ...BASE,
+      kind: "meeting",
+      meeting_status: "booked",
+      invitation_status: "pending",
+    },
+  },
+};
+export const InvitationConfirmed: Story = {
+  args: {
+    activity: {
+      ...BASE,
+      kind: "meeting",
+      meeting_status: "booked",
+      invitation_status: "confirmed",
+    },
+  },
+};
+export const InvitationNeedsAttention: Story = {
+  args: {
+    activity: {
+      ...BASE,
+      kind: "meeting",
+      meeting_status: "booked",
+      invitation_status: "needs_attention",
+    },
+  },
+};
+export const InvitationPendingDark: Story = {
+  ...InvitationPending,
+  globals: { theme: "dark" },
+};
+export const InvitationConfirmedDark: Story = {
+  ...InvitationConfirmed,
+  globals: { theme: "dark" },
+};
+export const InvitationNeedsAttentionDark: Story = {
+  ...InvitationNeedsAttention,
+  globals: { theme: "dark" },
+};

@@ -50,11 +50,22 @@ func newPublicBookingLimiters() publicBookingLimiters {
 func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
+			proposal := strings.HasPrefix(r.URL.Path, "/v1/public/proposal/")
+			management := strings.HasPrefix(r.URL.Path, "/v1/public/meeting/")
+			if !proposal && !management && !strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
 				next.ServeHTTP(w, r)
 				return
 			}
-			slug := strings.SplitN(strings.TrimPrefix(r.URL.Path, publicBookingPrefix), "/", 2)[0]
+			w.Header().Set("Referrer-Policy", "no-referrer")
+			w.Header().Set("Cache-Control", "no-store")
+			prefix := publicBookingPrefix
+			if management {
+				prefix = "/v1/public/meeting/"
+			}
+			if proposal {
+				prefix = "/v1/public/proposal/"
+			}
+			slug := strings.SplitN(strings.TrimPrefix(r.URL.Path, prefix), "/", 2)[0]
 			if slug == "" {
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return
@@ -63,14 +74,23 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
-			if r.Method == http.MethodPost && !limits.perSlug.Allow(slug) {
+			if r.Method != http.MethodGet && !limits.perSlug.Allow(slug) {
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
 
-			if _, err := store.ResolveBookingPage(r.Context(), slug); err != nil {
+			var resolveErr error
+			switch {
+			case proposal:
+				_, _, resolveErr = store.ResolveProposalToken(r.Context(), slug)
+			case management:
+				_, _, resolveErr = store.ResolveMeetingToken(r.Context(), slug)
+			default:
+				_, resolveErr = store.ResolveBookingPage(r.Context(), slug)
+			}
+			if resolveErr != nil {
 				// Unknown and revoked slugs read identically as absent.
-				httperr.Write(w, r, err)
+				httperr.Write(w, r, resolveErr)
 				return
 			}
 

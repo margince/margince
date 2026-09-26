@@ -72,8 +72,8 @@ func (*RetentionService) archiveDeal(ctx context.Context, tx pgx.Tx, id ids.UUID
 	return err
 }
 
-func (*RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	return anonymizeContactRecord(ctx, tx, id)
+func (s *RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	return anonymizeContactRecord(ctx, tx, id, s.eraser.payloads)
 }
 
 // SupportsRetentionAction reports whether the engine can perform this action on
@@ -209,7 +209,10 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 // deliberately rather than left for it to notice.
 //
 // Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/contactscrub_test.go)
-func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, payloads PayloadPurger) error {
+	if err := eraseContactMeetingCapabilities(ctx, tx, id, payloads); err != nil {
+		return err
+	}
 	// The identifiers the graph holds the subject by, read BEFORE the deletes
 	// below destroy the rows they come from. subjectGraphIdentifiers says which
 	// they are and why the order matters.
@@ -267,6 +270,30 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if err == nil {
 		err = deleteIdentifyingSatellites(ctx, tx, id)
 	}
+	if err == nil {
+		err = purgeAnonymizedContactJudgments(ctx, tx, id, subjectEmails)
+	}
+	if err == nil {
+		// Against the addresses READ AT THE TOP, not a subquery over
+		// contact_email: those rows are already gone by here, so a subquery
+		// would match nothing and this statement would delete nothing while
+		// looking like it did.
+		//
+		// The ledger carries the address a message arrived at and the display
+		// name it arrived with, and it is the key a later capture re-matches
+		// on — left behind it keeps answering with the contact this act just
+		// stopped naming.
+		_, err = tx.Exec(ctx, `
+			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
+	}
+	if err == nil {
+		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
+	}
+	return err
+}
+
+func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string) error {
+	var err error
 	// The JUDGEMENTS made about them: what a classifier concluded their replies
 	// meant with every human correction of it, what was read out of their
 	// conversations as promised or asked or decided, and the handoffs naming
@@ -320,22 +347,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		_, err = tx.Exec(ctx,
 			`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, id)
 	}
-	if err == nil {
-		// Against the addresses READ AT THE TOP, not a subquery over
-		// contact_email: those rows are already gone by here, so a subquery
-		// would match nothing and this statement would delete nothing while
-		// looking like it did.
-		//
-		// The ledger carries the address a message arrived at and the display
-		// name it arrived with, and it is the key a later capture re-matches
-		// on — left behind it keeps answering with the contact this act just
-		// stopped naming.
-		_, err = tx.Exec(ctx, `
-			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
-	}
-	if err == nil {
-		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
-	}
+
 	return err
 }
 

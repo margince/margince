@@ -5,7 +5,7 @@ import { useCanWriteRecord } from "../app/capability";
 import { Button, Modal, Skeleton } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
+import { type Translator, useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
 import { ConfirmDetailsAction, ConsentSection } from "./consent";
 import { consentWord } from "./contactreadings";
@@ -13,6 +13,8 @@ import { interactionIcon } from "./interactionchrome";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
+type GuardEntry = components["schemas"]["ContactConsentGuardEntry"];
+type Channel = GuardEntry["channel"];
 
 // The guard describes communication purposes; the drawer holds recorded consent.
 export function ConsentAndChannels({
@@ -39,23 +41,18 @@ export function ConsentAndChannels({
   const titleId = useId();
   const mayWrite = useCanWriteRecord("contact", view.contact);
   const entries = guard?.entries ?? [];
-  // WHICH email purpose. The guard answers one verdict per purpose, and taking
-  // the first of them painted the Email row with whichever the server happened
-  // to list first — a bare "Allowed" that the composer then contradicted with
-  // "sending will be refused until Margince has a record", because the two were
-  // answering about different purposes and neither said which.
-  //
-  // Correspondence is the one a rail can speak for: it is the purpose a reply
-  // rides, and the only one an inbound message can flip on its own. The others
-  // get their own rows below, each carrying its name.
-  const correspondence =
-    entries.find(
-      (entry) => entry.purpose_class === "business_correspondence",
-    ) ?? entries.find((entry) => entry.channel === "email");
+  // Correspondence is the one purpose the MAIL row speaks for: it is the
+  // purpose a reply rides, and the only one an inbound message can flip on its
+  // own. Where a workspace defines none the row stays unanswered, because a
+  // newsletter's grant drawn against Email is a permission the composer then
+  // refuses — two true answers a rep cannot reconcile. Every other purpose
+  // carries its own row and its own name below.
+  const correspondence = entries.find(
+    (entry) => entry.purpose_class === "business_correspondence",
+  );
   const otherPurposes = entries.filter(
     (entry) => entry.channel === "email" && entry !== correspondence,
   );
-  const phone = entries.find((entry) => entry.channel === "phone");
   const emails = view.contact.emails ?? [];
   const hasEmail = emails.length > 0;
   const knownRecipient =
@@ -75,24 +72,25 @@ export function ConsentAndChannels({
           </p>
         ) : (
           <>
-            <ConsentRow
-              icon={<Mail size={15} aria-hidden="true" />}
-              label={correspondence?.purpose_label ?? t("contact.rail.email")}
-              reachable={hasEmail}
-              verdict={correspondence?.verdict}
-              reason={correspondence?.reason}
-              unreachableWord={t("contact.rail.noEmailAddress")}
-            />
-            <ConsentRow
-              icon={<Phone size={15} aria-hidden="true" />}
-              label={t("contact.rail.phone")}
-              reachable={(view.contact.phones?.length ?? 0) > 0}
-              verdict={phone?.verdict}
-              unreachableWord={t("contact.rail.noPhoneNumber")}
-            />
+            {Object.entries(TRANSPORT_ROWS).map(([channel, transport]) => (
+              <ConsentRow
+                key={channel}
+                {...transport({
+                  contact: view.contact,
+                  entries,
+                  correspondence,
+                  t,
+                })}
+              />
+            ))}
             {/* A blocked identity still gets its row, with `reachable: false`: the
           conversation happened, and hiding the transport it happened on would
-          answer "can I write to them" by pretending they were never here. */}
+          answer "can I write to them" by pretending they were never here.
+          Correspondence answers for these too, and that is not the borrowing
+          the mail row refuses: the guard's channel is derived from the purpose
+          class, so it separates mail-shaped purposes from phone and says
+          nothing about chat — while a reply to someone who wrote to us rides
+          the same lawful basis whichever transport carried it. */}
             {channels.map((channel) => (
               <ConsentRow
                 key={channel.provider}
@@ -175,6 +173,17 @@ export function ConsentAndChannels({
 // is a fact about consent, and the row states the first before the second: a
 // permission to send where there is nowhere to send is not one a rep can act
 // on, and colouring it green says they may.
+type ConsentRowProps = Readonly<{
+  icon: ReactNode;
+  label: string;
+  reachable: boolean;
+  verdict: GuardEntry["verdict"] | undefined;
+  // Why this purpose answers as it does, under the row it explains. Absent for
+  // the transports, which answer on reachability and need no sentence.
+  reason?: string;
+  unreachableWord: string;
+}>;
+
 function ConsentRow({
   icon,
   label,
@@ -182,16 +191,7 @@ function ConsentRow({
   verdict,
   reason,
   unreachableWord,
-}: Readonly<{
-  icon: ReactNode;
-  label: string;
-  reachable: boolean;
-  verdict: string | undefined;
-  // Why this purpose answers as it does, under the row it explains. Absent for
-  // the transports, which answer on reachability and need no sentence.
-  reason?: string;
-  unreachableWord: string;
-}>) {
+}: ConsentRowProps) {
   const t = useT();
   return (
     <>
@@ -213,13 +213,47 @@ function ConsentRow({
   );
 }
 
-function verdictClass(verdict: string | undefined): string {
-  switch (verdict) {
-    case "allowed":
-      return "pe-rail-value pe-rail-value-good";
-    case "blocked":
-      return "pe-rail-value pe-rail-value-warning";
-    default:
-      return "pe-rail-value pe-rail-value-muted";
-  }
+type TransportRow = (reading: TransportReading) => ConsentRowProps;
+
+type TransportReading = Readonly<{
+  contact: Contact360["contact"];
+  entries: readonly GuardEntry[];
+  correspondence: GuardEntry | undefined;
+  t: Translator;
+}>;
+
+// One row per channel the guard answers on, keyed by the contract's union: a
+// channel it gains — or drops — fails the build here, so no entry reaches the
+// rail with nowhere to be drawn.
+const TRANSPORT_ROWS: Record<Channel, TransportRow> = {
+  email: ({ contact, correspondence, t }) => ({
+    icon: <Mail size={15} aria-hidden="true" />,
+    label: correspondence?.purpose_label ?? t("contact.rail.email"),
+    reachable: (contact.emails?.length ?? 0) > 0,
+    verdict: correspondence?.verdict,
+    reason: correspondence?.reason,
+    unreachableWord: t("contact.rail.noEmailAddress"),
+  }),
+  phone: ({ contact, entries, t }) => ({
+    icon: <Phone size={15} aria-hidden="true" />,
+    label: t("contact.rail.phone"),
+    reachable: (contact.phones?.length ?? 0) > 0,
+    verdict: entries.find((entry) => entry.channel === "phone")?.verdict,
+    unreachableWord: t("contact.rail.noPhoneNumber"),
+  }),
+};
+
+// Paired with consentWord's table, and with the same `??` for the same reason:
+// the union is a claim about the wire, so a verdict off a newer server than
+// this build would otherwise reach the class attribute as `undefined` and the
+// row would carry no tone at all.
+const VERDICT_TONE: Record<GuardEntry["verdict"], string> = {
+  allowed: "pe-rail-value-good",
+  blocked: "pe-rail-value-warning",
+  unknown: "pe-rail-value-muted",
+};
+
+function verdictClass(verdict: GuardEntry["verdict"] | undefined): string {
+  const tone = (verdict && VERDICT_TONE[verdict]) ?? VERDICT_TONE.unknown;
+  return `pe-rail-value ${tone}`;
 }

@@ -50,6 +50,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
 	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
+	"consent_purpose.class":            {"internal/modules/consent", "Class"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
 	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
 	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},

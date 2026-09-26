@@ -115,14 +115,21 @@ type IntentActions = Readonly<{
   search: (char: string) => void;
 }>;
 
-function keyDownHandler(open: boolean, actions: IntentActions) {
+function keyDownHandler(
+  open: boolean,
+  actions: IntentActions,
+  typing: () => boolean,
+) {
   return (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     // A modified press belongs to the browser or the OS (Alt+Arrow is history
     // navigation, Cmd+F is find) — never to a typeahead buffer.
     if (event.altKey || event.ctrlKey || event.metaKey) {
       return;
     }
-    const intent = intentFor(event.key, open);
+    const intent: KeyIntent =
+      open && event.key === " " && typing()
+        ? { act: "search", char: " " }
+        : intentFor(event.key, open);
     if (!intent) {
       return;
     }
@@ -264,6 +271,7 @@ export function useSelectListbox<T extends ListboxOption>(
   useActiveOptionVisible(open, active, listboxId);
 
   const openFrom = (step: 1 | -1) => {
+    typed.current = { query: "", at: 0 };
     setActive(startingActive(options, selectedIndex, step));
     setOpen(true);
   };
@@ -329,7 +337,13 @@ export function useSelectListbox<T extends ListboxOption>(
     popup,
     listboxId,
     optionDomId: (index: number) => `${listboxId}-option-${index}`,
-    onKeyDown: keyDownHandler(open, actions),
+    onKeyDown: keyDownHandler(
+      open,
+      actions,
+      () =>
+        typed.current.query !== "" &&
+        Date.now() - typed.current.at < TYPEAHEAD_RESET_MS,
+    ),
     // Pressing the trigger a second time closes on nothing chosen, which is
     // the same answer as Escape and as a press outside, so it leaves through
     // `abandon` like they do. Closed with `setOpen` alone it would be the one

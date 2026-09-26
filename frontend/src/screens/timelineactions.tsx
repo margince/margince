@@ -14,6 +14,7 @@
 import { type ReactNode, useState } from "react";
 
 import type { components } from "../api/schema";
+import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -85,6 +86,15 @@ export function TimelineActions({
         contactId={contactId}
         contentWithheld={activity.content_state === "withheld"}
       />
+      {activity.invitation_status && activity.content_state !== "withheld" && (
+        <Button
+          onClick={() =>
+            navigate({ screen: "book", id: `meeting-${activity.id}` })
+          }
+        >
+          {t(`scheduling.${activity.invitation_status}`)}
+        </Button>
+      )}
       {extra?.(activity)}
       <Button onClick={() => setRelink(true)}>{t("compose.relink")}</Button>
       {/* An EMAIL's audience is changed from the message, in the drawer, where

@@ -31,6 +31,7 @@ export function CompanyLogo({
           src={src}
           alt=""
           aria-hidden="true"
+          referrerPolicy="no-referrer"
           onLoad={() => setPaintedSrc(src)}
           onError={() => setBrokenSrc(src)}
         />

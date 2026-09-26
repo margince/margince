@@ -45,7 +45,7 @@ var subjectRowWriters = map[string]func(context.Context, pgx.Tx, ids.ContactID, 
 		return err
 	},
 	"the retention sweep": func(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails []string) error {
-		if err := anonymizeContactRecord(ctx, tx, contact.UUID); err != nil {
+		if err := anonymizeContactRecord(ctx, tx, contact.UUID, nil); err != nil {
 			return err
 		}
 		_, err := anonymizeLeadTwins(ctx, tx, contact, emails)

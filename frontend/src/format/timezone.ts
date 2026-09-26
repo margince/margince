@@ -62,6 +62,8 @@
 //
 // Do not import it into a screen. The gate in zone-by-purpose.test.ts refuses
 // that, and names this comment when it does.
+export const UTC_ZONE = "UTC";
+
 export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
 
 /**
@@ -101,7 +103,7 @@ export function zoneNameAndOffset(locale: string, at: Date): string {
 }
 
 export function viewerZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || UTC_ZONE;
 }
 
 // The offset (ms) `zone` sits at relative to UTC at the instant `utcMs`
@@ -161,7 +163,7 @@ function instantInZone(
 // The calendar day `zone`'s wall clock reads at `utcMs`, as `yyyy-mm-dd`.
 // Derived through Intl rather than by arithmetic on the offset, because the
 // offset is what is in question at the moments this is asked about.
-function dayInZone(utcMs: number, zone: string): string {
+export function dayInZone(utcMs: number, zone: string): string {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone: zone,
@@ -246,4 +248,44 @@ export function endOfDayInZone(dateOnly: string, zone: string): string {
   return new Date(
     instantInZone(dateOnly, zone, 23, 59, 59) + 999,
   ).toISOString();
+}
+
+/** City-first labels keep typeahead useful; values remain IANA identifiers. */
+export function timezoneOptions(locale: string, selected: string, at: Date) {
+  const zones = new Set([
+    UTC_ZONE,
+    viewerZone(),
+    ...(typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("timeZone")
+      : []),
+    ...(selected ? [selected] : []),
+  ]);
+  const collator = new Intl.Collator(locale);
+  return Array.from(zones, (zone) => timezoneOption(locale, zone, at)).sort(
+    (left, right) => collator.compare(left.label, right.label),
+  );
+}
+
+export function timezoneOption(locale: string, zone: string, at: Date) {
+  return { value: zone, label: timezoneOptionLabel(locale, zone, at) };
+}
+
+function timezoneOptionLabel(locale: string, zone: string, at: Date): string {
+  if (zone === UTC_ZONE) return UTC_ZONE;
+  const parts = zone.replaceAll("_", " ").split("/");
+  const city = parts.pop() ?? zone;
+  const place = parts.length ? `${city} (${parts.join(" / ")})` : city;
+  try {
+    const offset = new Intl.DateTimeFormat(locale, {
+      timeZone: zone,
+      timeZoneName: "shortOffset",
+    })
+      .formatToParts(at)
+      .find((part) => part.type === "timeZoneName")?.value;
+    return offset ? `${place} · ${offset.replace("GMT", "UTC")}` : place;
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    // Preserve a saved zone when the browser's timezone database is older.
+    return place;
+  }
 }

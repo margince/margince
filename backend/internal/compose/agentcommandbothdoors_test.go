@@ -298,6 +298,12 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 				`"entity_id":"` + primary.String() + `"}]}`
 		},
 	},
+	"createMeetingInvitation": {
+		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
+			return doorRequest(http.MethodPost, "/v1/scheduling/invitations", ids.UUID{}, invitationDoorBody(primary))
+		},
+		args: func(primary, _ ids.UUID) string { return invitationDoorBody(primary) },
+	},
 	"bookMeeting": {
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
 			return doorRequest(http.MethodPost, "/v1/bookings", ids.UUID{},
@@ -487,6 +493,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
 	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
+	agents.RegisterMeetingInvitationTool(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterImportTools(reg, bothDoorsImports{})
 	agents.RegisterTagTools(reg, bothDoorsTags{})
 	return reg
@@ -762,4 +769,12 @@ func stageToolSubject(ctx context.Context, r *agents.Registry, tool string, args
 		return agents.StageInfo{}, fmt.Errorf("%s describes no staging", tool)
 	}
 	return stager.StageInfo(ctx, args)
+}
+
+func invitationDoorBody(contact ids.UUID) string {
+	return `{"contact_id":"` + contact.String() + `","attendee_email":"buyer@example.test","start":"2026-10-05T09:00:00Z","end":"2026-10-05T09:30:00Z","subject":"Discovery","description":"Project scope","location":"Video call"}`
+}
+
+func (bothDoorsComms) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
+	return crmcontracts.MeetingInvitation{}, errBothDoorsExecuted
 }

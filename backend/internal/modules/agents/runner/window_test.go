@@ -219,6 +219,15 @@ func TestTheFrameOffersStoppingAsAMoveAndNotOnlyAsCompletion(t *testing.T) {
 	}
 }
 
+// A model given two sources that disagree smooths them into one story unless it
+// is told otherwise, and the story it invents is the part nothing checks.
+func TestTheFrameTellsAModelToNameADisagreementRatherThanReconcileIt(t *testing.T) {
+	prompt := systemPrompt(nil, promptfence.New(), "")
+	if !strings.Contains(prompt, mcp.ConflictingSourcesRule) {
+		t.Errorf("the frame no longer carries the conflicting-sources rule:\n%s", prompt)
+	}
+}
+
 // The published per-step cost is the part of a real step request that is not
 // transcript: the same system prompt and the same step schema the window sends,
 // so the budget gate holds the bytes a run pays rather than a model of them.

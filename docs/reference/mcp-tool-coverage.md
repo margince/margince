@@ -26,12 +26,12 @@ This page does not grade single steps or name a best model per site — that is
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 76 |
+| Tools the assistant is offered | 77 |
 | … some case requires | 36 |
 | … some case requires as one of a set | 1 |
-| … **no case requires** | 39 |
+| … **no case requires** | 40 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 13000 |
+| Prompt tokens spent on tools no case requires | 13177 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -42,12 +42,12 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-haiku-4-5-20251001` | 21 of 21 | 10 | 11 | 30/63 | 48% |
-| `claude-opus-5` | 21 of 21 | 19 | 2 | 57/63 | 90% |
+| `claude-opus-5` | 21 of 21 | 20 | 1 | 59/63 | 94% |
 | `claude-sonnet-5` | 21 of 21 | 16 | 5 | 45/63 | 71% |
 
 > `claude-haiku-4-5-20251001` below its bar on: case10_finish_the_import, case1_log_it, case20_put_it_in_the_board_pack, case21_what_are_we_closing, case31_wrong_word_on_the_record, case32_two_words_for_one_thing, case41_close_the_project, case42_can_i_answer_on_whatsapp, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
 
-> `claude-opus-5` below its bar on: case3_spreadsheet, case6_ask_the_company
+> `claude-opus-5` below its bar on: case3_spreadsheet
 
 > `claude-sonnet-5` below its bar on: case10_finish_the_import, case41_close_the_project, case4_use_the_moment, case5_before_the_meeting, case6_ask_the_company
 
@@ -58,7 +58,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A — MCP | Surface B — scheduled agents |
 |---|---|---|
 | Who drives it | a contact, watching | a job on a timer, unattended |
-| Menu | 76 tools, the whole catalog | 5 tools, declared per agent |
+| Menu | 77 tools, the whole catalog | 5 tools, declared per agent |
 | A wrong reach | the contact corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -149,7 +149,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The contacts are named, not their seats<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** A briefing arrives without naming a record<br>**2** The contacts are named, not their seats<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `search_records` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-haiku-4-5-20251001` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
-| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-opus-5` | **FAIL** | 1/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5` | **FAIL** | 0/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement is pointed out, not quietly resolved | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-haiku-4-5-20251001` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-opus-5` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
@@ -250,6 +250,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
+| `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `promote_lead` | 1.00 | 3 | `case40_sort_the_queue` |
@@ -317,8 +318,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `run_analytics_query` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `compose_analytics_report` | 0.00 | 0/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `search_records` | 0.00 | 0/3 | `case5_before_the_meeting` | `case5_before_the_meeting` |
-| `check_availability` | 0.67 | 2/3 | — | `case23_find_us_a_slot` |
 | `search_context` | 0.00 | 0/3 | `case6_ask_the_company` | `case6_ask_the_company` |
+| `check_availability` | 0.67 | 2/3 | — | `case23_find_us_a_slot` |
 | `advance_project_phase` | 0.33 | 1/3 | `case41_close_the_project` | `case41_close_the_project` |
 | `merge_records` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | — | `case33_two_cards_for_one_company` |
@@ -340,7 +341,6 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `preview_import` | 0.50 | 3/6 | `case3_spreadsheet` | `case10_finish_the_import`, `case3_spreadsheet` |
 | `log_activity` | 0.83 | 5/6 | — | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
-| `search_context` | 0.33 | 1/3 | `case6_ask_the_company` | `case6_ask_the_company` |
 | `commit_import` | 0.67 | 2/3 | — | `case10_finish_the_import` |
 | `list_channel_providers` | 0.67 | 2/3 | — | `case42_can_i_answer_on_whatsapp` |
 | `read_import_report` | 0.67 | 2/3 | — | `case10_finish_the_import` |
@@ -404,7 +404,7 @@ and the case's pass rate belongs to the set rather than to this row — which is
 corpus tests the tool anyway — that lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 39 tools no use case requires, **9 are graded elsewhere** and 30 are untried by any lane.
+So of the 40 tools no use case requires, **9 are graded elsewhere** and 31 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -418,7 +418,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `resolve_entities` | 493 | — | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` | — |
 | `forecast_movement` | 453 | — | — | — |
 | `advance_deal` | 446 | — | — | — |
-| `book_meeting` | 423 | — | — | — |
 | `annotate_brief` | 417 | `agent_loop` | — | `morning_brief` |
 | `review_commitments` | 401 | — | `case41_close_the_project` | `overnight_at_risk_sweep` |
 | `prep_for_meeting` | 394 | — | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |
@@ -426,6 +425,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `describe_report_vocabulary` | 349 | — | `case20_put_it_in_the_board_pack`, `case7_ask_for_a_number` | — |
 | `catch_me_up_on` | 348 | `agent_loop` | `case23_find_us_a_slot`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case5_before_the_meeting`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_record_fields` | 345 | — | — | — |
+| `book_meeting` | 344 | — | — | — |
 | `forecast_input_checks` | 324 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `demote_lead` | 317 | — | — | — |
 | `describe_analytics_vocabulary` | 286 | — | `case7_ask_for_a_number` | — |
@@ -433,6 +433,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `draft_follow_ups_for` | 273 | — | — | — |
 | `prepare_handoff` | 267 | — | `case41_close_the_project` | — |
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |
+| `invite_meeting` | 256 | — | — | — |
 | `company_coverage` | 246 | — | `case5_before_the_meeting` | — |
 | `describe_report_blocks` | 245 | — | `case20_put_it_in_the_board_pack` | — |
 | `decide_approval_bundle` | 235 | — | — | — |

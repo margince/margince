@@ -43,6 +43,7 @@ export function useClipboardCopy(
   text: string,
   labels: Readonly<{ copy: string; copied: string; remedy: string }>,
   onCopied?: () => void,
+  html?: string,
 ): Readonly<{
   label: string;
   copied: boolean;
@@ -74,7 +75,16 @@ export function useClipboardCopy(
       setFailed(true);
       return;
     }
-    writer.writeText(text).then(
+    const operation =
+      html && typeof ClipboardItem !== "undefined" && writer.write
+        ? writer.write([
+            new ClipboardItem({
+              "text/plain": new Blob([text], { type: "text/plain" }),
+              "text/html": new Blob([html], { type: "text/html" }),
+            }),
+          ])
+        : writer.writeText(text);
+    operation.then(
       () => {
         if (mine !== attempt.current) return;
         setWritten(text);

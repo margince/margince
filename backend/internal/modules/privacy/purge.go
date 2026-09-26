@@ -173,7 +173,7 @@ func (s *RetentionService) AnonymiseContacts(ctx context.Context, contacts []ids
 
 func (s *RetentionService) anonymiseOneContact(ctx context.Context, id ids.UUID, reason PurgeReason) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := anonymizeContactRecord(ctx, tx, id); err != nil {
+		if err := anonymizeContactRecord(ctx, tx, id, s.eraser.payloads); err != nil {
 			return err
 		}
 		// The verb spelled as a literal, not through the constant: the audit

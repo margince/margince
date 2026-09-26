@@ -4715,6 +4715,208 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/booking/{host_slug}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        /** Read the host-approved booking page identity and meeting details. */
+        get: operations["getPublicSchedulingProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/meeting/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        /** Read one invitation using its private management capability. */
+        get: operations["getPublicMeetingInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change one invitation using its private management capability. */
+        patch: operations["changePublicMeetingInvitation"];
+        trace?: never;
+    };
+    "/scheduling/invitations/{id}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find alternative times for one existing invitation. */
+        get: operations["getMeetingAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/meeting/{token}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find alternative times for one existing invitation. */
+        get: operations["getPublicMeetingAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a personal, expiring invitation without reserving time or sending mail. */
+        post: operations["createMeetingProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/proposal/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        /** Read host-approved personal meeting details without contact data. */
+        get: operations["getPublicMeetingProposal"];
+        put?: never;
+        /**
+         * Choose one time using a personal proposal's bound recipient.
+         * @description Acceptance atomically consumes the capability. A second acceptance returns conflict and cannot queue another invitation.
+         */
+        post: operations["acceptPublicMeetingProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/proposal/{token}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check current availability for this personal proposal. */
+        get: operations["getPublicProposalAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/calendars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the current host's connected calendars for scheduling settings. */
+        get: operations["getSchedulingCalendars"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the caller's reusable booking page and scheduling policy. */
+        get: operations["getSchedulingProfile"];
+        /** Configure and activate the caller's booking page. */
+        put: operations["putSchedulingProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve a meeting and request a calendar-native invitation. */
+        post: operations["createMeetingInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/invitations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Read invitation delivery and calendar state. */
+        get: operations["getMeetingInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Reschedule, cancel or retry an invitation through its original calendar event. */
+        patch: operations["changeMeetingInvitation"];
+        trace?: never;
+    };
     "/availability": {
         parameters: {
             query?: never;
@@ -4724,9 +4926,9 @@ export interface paths {
         };
         /**
          * Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
-         * @description Reads connected-calendar free/busy and returns candidate slots. 🟢 read-only — proposes,
-         *     never books. Scheduling is a **governed MCP tool** (`features/07 §5c`): this read pairs with
-         *     the `book_meeting` action below, which writes.
+         * @description With reliable=true, reads live calendar occupancy and applies bookable hours,
+         *     notice, buffers and booking horizon. Without it, returns CRM-only availability
+         *     for compatibility. This read never books or sends an invitation.
          */
         get: operations["getAvailability"];
         put?: never;
@@ -4748,9 +4950,8 @@ export interface paths {
         put?: never;
         /**
          * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-         * @description Records the meeting on the timeline. **No invite is sent — this build has no outbound
-         *     calendar or mail transport behind a booking**, so whoever books it has to tell the
-         *     attendee themselves. The calendar integrations are capture-only (inbound import).
+         * @description Records the meeting on the timeline. No invite is sent. Use the explicit
+         *     scheduling invitation command to create an event and notify the attendee.
          *
          *     It RUNS DIRECTLY (ADR-0055), on the
          *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
@@ -14147,8 +14348,10 @@ export interface paths {
          *     refusal that says "you may not read that" tells them the column exists.
          *
          *     `version` changes when the vocabulary does, including when one seat's grants change.
-         *     A query planned against an older version is refused rather than run, because a plan
-         *     naming a field that has since moved would render SQL against a column that is gone.
+         *     Every answer echoes the version it was asked in as `schema_version`, so a caller can
+         *     tell whether two answers were asked in the same vocabulary. A query carries no version
+         *     and is judged by the vocabulary current when it runs: a field that has since gone is
+         *     refused by name, like any other field the caller cannot name.
          */
         get: operations["getAnalyticsSchema"];
         put?: never;
@@ -19835,7 +20038,7 @@ export interface components {
             emails?: components["schemas"]["ContactEmailInput"][];
             phones?: components["schemas"]["ContactPhoneInput"][];
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -20170,7 +20373,7 @@ export interface components {
             parent_company_id?: string | null;
             domains?: components["schemas"]["CompanyDomainInput"][];
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -22695,10 +22898,10 @@ export interface components {
          */
         ContactMomentDestination: {
             /**
-             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system.
+             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
              * @enum {string}
              */
-            surface: "composer" | "meeting_brief" | "research" | "record" | "task" | "activity_log";
+            surface: "composer" | "meeting_brief" | "research" | "record" | "task" | "activity_log" | "booking";
             /** @enum {string|null} */
             entity_type?: "contact" | "company" | "deal" | "activity" | null;
             /** Format: uuid */
@@ -23876,7 +24079,7 @@ export interface components {
              */
             expected_close_date?: string | null;
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -24593,7 +24796,7 @@ export interface components {
             /** Format: date */
             target_end_date?: string | null;
             source: string;
-            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire. */
+            /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
         } & {
             [key: string]: unknown;
@@ -25231,6 +25434,116 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
         };
+        PublicSchedulingProfile: {
+            host_name: string;
+            company_name: string;
+            logo_url?: string;
+            title: string;
+            location: string;
+            duration_minutes: number;
+            enabled: boolean;
+        };
+        SchedulingProfile: {
+            enabled: boolean;
+            /** @enum {string} */
+            provider: "" | "gcal" | "graphcal";
+            calendar_id: string;
+            blocking_calendars?: string[];
+            duration_minutes: number;
+            notice_minutes: number;
+            horizon_days: number;
+            buffer_minutes: number;
+            title: string;
+            location: string;
+            host_name?: string;
+            company_name?: string;
+            logo_url?: string;
+            readonly slug?: string;
+            readonly public_url?: string;
+            replace_link?: boolean;
+            /** @description Send one operational email reminder one hour before future meetings. */
+            email_reminder?: boolean;
+        };
+        MeetingInvitationRequest: {
+            /** Format: uuid */
+            contact_id: string;
+            /** Format: email */
+            attendee_email: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            subject: string;
+            location: string;
+            description: string;
+        };
+        MeetingAvailability: {
+            slots: {
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+            }[];
+            truncated: boolean;
+        };
+        MeetingProposalRequest: {
+            /** Format: uuid */
+            contact_id: string;
+            /** Format: email */
+            attendee_email: string;
+            subject: string;
+            location: string;
+            description: string;
+            duration_minutes: number;
+            options: {
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+            }[];
+        };
+        PublicMeetingProposal: {
+            profile: components["schemas"]["PublicSchedulingProfile"];
+            description: string;
+            options: {
+                /** Format: date-time */
+                start: string;
+                /** Format: date-time */
+                end: string;
+            }[];
+            /** Format: date-time */
+            expires_at: string;
+            used: boolean;
+            meeting?: components["schemas"]["MeetingInvitation"];
+        };
+        MeetingInvitation: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "pending" | "confirmed" | "needs_attention" | "rescheduling" | "canceling" | "canceled";
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            subject: string;
+            location: string;
+            /** Format: int64 */
+            version: number;
+            calendar_url?: string;
+            management_token?: string;
+            /** @enum {string} */
+            reminder_status?: "off" | "pending" | "queued" | "unavailable";
+        };
+        MeetingInvitationChange: {
+            /** @enum {string} */
+            action: "reschedule" | "cancel" | "retry";
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            start?: string;
+            /** Format: date-time */
+            end?: string;
+        };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
          *     **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
@@ -25323,6 +25636,11 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
+            /**
+             * @description Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
+             * @enum {string|null}
+             */
+            readonly invitation_status?: null | "pending" | "confirmed" | "rescheduling" | "canceling" | "needs_attention" | "canceled";
             /** @description Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part. */
             source_system?: string | null;
             /** @description Provider message/event id — idempotency key part. */
@@ -28995,7 +29313,7 @@ export interface components {
         };
         /** @description The populations and fields one caller may ask about. */
         AnalyticsSchema: {
-            /** @description Changes when this caller's vocabulary changes. A query planned against an older version is refused rather than run. */
+            /** @description Changes when this caller's vocabulary changes. Echoed on every answer as `schema_version`. */
             version: string;
             entities: components["schemas"]["AnalyticsEntity"][];
         };
@@ -29079,12 +29397,49 @@ export interface components {
              * @description Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
              */
             run_id?: string;
+            labels?: components["schemas"]["AnalyticsIdLabels"];
+        };
+        /** @description Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it. */
+        AnalyticsIdLabels: {
+            [key: string]: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
+         *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+         */
+        AnalyticsRefusal: {
+            /**
+             * Format: uri
+             * @default about:blank
+             */
+            type: string;
+            title?: string;
+            status: number;
+            code: string;
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            details?: components["schemas"]["AnalyticsRefusalDetails"];
+        };
+        /** @description Why a question was not answered, in parts a client can render. `detail` beside it says the same as one sentence, for a reader that has only prose. */
+        AnalyticsRefusalDetails: {
+            /**
+             * @description `invalid`: the question means nothing as asked, such as a sum over a stage name. `unsupported`: it names a population, field, aggregate or comparison this caller's vocabulary does not have. `privacy`: the answer would describe too few records.
+             * @enum {string}
+             */
+            kind: "invalid" | "unsupported" | "privacy";
+            /** @description What is wrong, in the asker's terms. */
+            message: string;
+            /** @description The smallest change that would have worked. */
+            suggest: string;
         };
         /** @description A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor. */
         ReportRun: {
             /** Format: uuid */
             id: string;
-            /** @description The question as it was saved, unchanged. */
+            /** @description The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none. */
             query: components["schemas"]["AnalyticsQuery"];
             /** @description The question re-asked under the reading caller's authority. NOT the rows the asker saw: those were narrowed for them. */
             answer: components["schemas"]["AnalyticsAnswer"];
@@ -29163,8 +29518,9 @@ export interface components {
             group?: unknown[];
         };
         AnalyticsExplanation: {
+            /** @description The keys a row may carry, in order: `id`, the dimensions, the measured fields, and `label` last when at least one row was named. */
             columns: string[];
-            /** @description The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. */
+            /** @description The records, each carrying its id, the dimensions that put it in this group, and the fields the measures were computed over. `label` is the record's display name, read under this caller's own grants; it is ABSENT on a row the caller may not name, which keeps its id and nothing more. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -29172,6 +29528,7 @@ export interface components {
             withheld: boolean;
             /** @description The cell covers more records than were returned. A reader who adds up the rows and finds less than the cell needs to know why. */
             truncated: boolean;
+            labels?: components["schemas"]["AnalyticsIdLabels"];
         };
         /**
          * @description One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -39799,6 +40156,13 @@ export interface operations {
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
                 tag_mode?: "any" | "all" | "none";
+                /**
+                 * @description Narrow to these companies. Repeat the parameter for several, up to 100; more is `422`.
+                 *     A screen that names many companies it did not list itself, such as the deals board,
+                 *     reads them in one request instead of one each. An id the caller cannot see, or that
+                 *     is archived without `include_archived`, is simply absent from the page.
+                 */
+                id?: string[];
             };
             header?: never;
             path?: never;
@@ -44864,9 +45228,570 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getPublicSchedulingProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public booking page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSchedulingProfile"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getPublicMeetingInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invitation state without CRM data. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingInvitation"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    changePublicMeetingInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingInvitationChange"];
+            };
+        };
+        responses: {
+            /** @description Calendar change pending. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingInvitation"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getMeetingAvailability: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Alternative slots excluding this meeting's own occupancy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingAvailability"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getPublicMeetingAvailability: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Alternative slots excluding this meeting's own occupancy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingAvailability"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createMeetingProposal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description A private single-use link for the selected contact. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        url: string;
+                        /** Format: date-time */
+                        expires_at: string;
+                    };
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getPublicMeetingProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposal details, with no recipient or CRM identity disclosed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMeetingProposal"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    acceptPublicMeetingProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date-time */
+                    start: string;
+                    /** Format: date-time */
+                    end: string;
+                    consent: {
+                        wording: string;
+                        policy_version: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Invitation pending calendar confirmation. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingInvitation"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getPublicProposalAvailability: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Slots currently available for this proposal's duration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingAvailability"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSchedulingCalendars: {
+        parameters: {
+            query: {
+                provider: "gcal" | "graphcal";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calendar names and event-creation permissions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        writable: boolean;
+                        primary: boolean;
+                    }[];
+                };
+            };
+            /** @description The calendar connection is unavailable. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSchedulingProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Personal scheduling configuration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingProfile"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    putSchedulingProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingProfile"];
+            };
+        };
+        responses: {
+            /** @description Saved configuration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingProfile"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createMeetingInvitation: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
+                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
+                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
+                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
+                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
+                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
+                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description Durable invitation command; inspect status before claiming confirmation. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingInvitation"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getMeetingInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current invitation state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingInvitation"];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    changeMeetingInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingInvitationChange"];
+            };
+        };
+        responses: {
+            /** @description Change accepted for provider delivery. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingInvitation"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getAvailability: {
         parameters: {
             query: {
+                reliable?: boolean;
                 /** @description Host to check (defaults to the caller). */
                 host_user_id?: string;
                 from: string;
@@ -45084,6 +46009,13 @@ export interface operations {
                     start: string;
                     /** Format: date-time */
                     end: string;
+                    /**
+                     * @deprecated
+                     * @description Accepted for compatibility. Public bookings always send a calendar invitation; the host must enable their page.
+                     * @default calendar
+                     * @enum {string}
+                     */
+                    delivery?: "record_only" | "calendar";
                     subject?: string;
                     booker: {
                         name: string;
@@ -45096,7 +46028,7 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Booked; a minimal confirmation (no CRM record data disclosed). `marketing` reports what
+             * @description Reserved; `pending` becomes `confirmed` only after the calendar accepts the invitation. `marketing` reports what
              *     became of the newsletter tick, separately from the booking itself: a question this
              *     installation could not put — no live mailbox on the record, a purpose archived since the
              *     form was published, no mail lane wired at all — leaves the meeting standing and says
@@ -45117,7 +46049,8 @@ export interface operations {
                          * @description The slot is held. A booking that did not commit answers an error status instead.
                          * @enum {string}
                          */
-                        booking: "confirmed";
+                        booking: "pending" | "confirmed" | "rescheduling" | "canceling" | "canceled" | "needs_attention";
+                        invitation?: components["schemas"]["MeetingInvitation"];
                         /**
                          * @description `not_requested` — the form carried no tick. `pending_confirmation` — the question
                          *     was queued for delivery and the grant waits on the subject answering it; queued
@@ -58568,7 +59501,7 @@ export interface operations {
                     "application/json": components["schemas"]["IssuedForecastShare"];
                 };
             };
-            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            /** @description The share cannot be issued as asked: an expiry in the past or past the ceiling, a kind that is neither live nor snapshot, a snapshot naming no state or one taken over a different population, or a scope whose id disagrees with its kind. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -58724,13 +59657,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsAnswer"];
                 };
             };
-            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            /** @description The question is unanswerable as written: a population or field this caller cannot name, a measure that means nothing over that column, an aggregate or comparison the engine does not have, or a filter separating out too few records to answer about. `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58756,6 +59689,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            /** @description The saved question, re-asked for this caller, is refused — the same refusal they would get asking it directly, such as a field outside their own vocabulary. `details` carries the refusal's kind and what would have worked. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58788,13 +59730,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsExplanation"];
                 };
             };
-            /** @description The cell names a different number of group keys than the saved question grouped by. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. */
+            /** @description The cell names a different number of group keys than the saved question grouped by, or the saved question, re-asked for this caller, is refused. A typed refusal rather than a validation error: the request is well-formed and the mismatch is only knowable against the stored question. `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58825,13 +59767,13 @@ export interface operations {
                     "application/json": components["schemas"]["RenderedReport"];
                 };
             };
-            /** @description The document is not in the block grammar — an unknown block, a literal number, a figure block naming no cell, or an untyped callout. The message names the block by index. */
+            /** @description The document is not in the block grammar — an unknown block, a literal number, a figure block naming no cell, or an untyped callout — and the message names the block by index. Or a cited run's question, re-asked for this reader, is refused, and `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -58862,13 +59804,13 @@ export interface operations {
                     "application/json": components["schemas"]["AnalyticsExplanation"];
                 };
             };
-            /** @description The request is unanswerable as written: an expiry past the ceiling, a field this caller cannot name, a measure that means nothing over that column, or a filter separating out too few records to answer about. The body names what would have worked. */
+            /** @description The question is unanswerable as written: a population or field this caller cannot name, a measure that means nothing over that column, an aggregate or comparison the engine does not have, or a filter separating out too few records to answer about. `details` carries the refusal's kind and what would have worked. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
                 };
             };
             401: components["responses"]["Unauthorized"];

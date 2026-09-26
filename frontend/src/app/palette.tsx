@@ -8,7 +8,7 @@ import {
   SearchField,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useDialogFocus } from "../design-system/dialogfocus";
+import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -95,8 +95,8 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
-  // A read ends in saving the company, which only an admin may do (contacts'
-  // requireAnchorAdministrator); any other seat would read a site it cannot keep.
+  // Company profile draws its website card for an admin seat only, so only an
+  // admin finds the page by that card's words; any other seat would land on none.
   const isAdmin = useHoldsAdminRole();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
@@ -124,12 +124,6 @@ export function useBuiltinCommands(): Command[] {
       type: "screen",
       route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
-    const readCompany: Command = {
-      id: "action:read-company",
-      label: t("action.readCompany"),
-      type: "action",
-      route: { screen: "onboarding", id: "company" },
-    };
     const actions: Command[] = [
       {
         id: "action:new-deal",
@@ -137,7 +131,6 @@ export function useBuiltinCommands(): Command[] {
         type: "action",
         route: { screen: "deals", id: CREATE_ID },
       },
-      ...(isAdmin ? [readCompany] : []),
       {
         id: "action:booking",
         label: t("action.booking"),
@@ -157,7 +150,13 @@ export function useBuiltinCommands(): Command[] {
     const settingsScreens: Command[] = visible.map((page) => ({
       id: `screen:settings-${page.id}`,
       label: t(`settings.tab.${page.id}`),
-      keywords: [page.id, ...(SETTINGS_ALIASES[page.id] ?? [])],
+      keywords: [
+        page.id,
+        ...(SETTINGS_ALIASES[page.id] ?? []),
+        ...(page.id === "company" && isAdmin
+          ? [t("settings.companyRefresh")]
+          : []),
+      ],
       type: "screen",
       route: settingsHref(page.id),
     }));
@@ -467,15 +466,22 @@ export function paletteHotkeyCaps(platform: string): readonly string[] {
   return /mac|iphone|ipad|ipod/i.test(platform) ? ["⌘", "K"] : ["Ctrl", "K"];
 }
 
-export function usePaletteHotkey(toggle: () => void) {
+export function usePaletteHotkey(
+  open: boolean,
+  setOpen: (open: boolean) => void,
+) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        toggle();
+        // An open dialog makes the rest of the app unreachable, the palette with
+        // it; asked only while closed, so the palette's own box never blocks it.
+        if (open || liveDialogs().length === 0) {
+          setOpen(!open);
+        }
       }
     };
     globalThis.addEventListener("keydown", onKey);
     return () => globalThis.removeEventListener("keydown", onKey);
-  }, [toggle]);
+  }, [open, setOpen]);
 }

@@ -63,9 +63,20 @@ func (e *RefusalError) Error() string {
 
 // Unwrap maps every refusal to ErrInvalidArgument.
 //
-// The HTTP layer then answers 422 for all of them, which is right: each is the
+// The HTTP layer then answers 400 for all of them, which is right: each is the
 // caller's request being unanswerable as written, and none is a server fault or
 // a permission denial. A privacy refusal is deliberately NOT a 403 — 403 would
 // say the data exists and is withheld, and the point of the floor is to say
 // nothing about a group that small.
 func (e *RefusalError) Unwrap() error { return apperrors.ErrInvalidArgument }
+
+// FaultReference implements apperrors.ReferencedFault: the refusal's parts as
+// fields, so a client branches on the kind and shows the suggestion without
+// parsing the detail sentence, which stays exactly as Error() spells it.
+func (e *RefusalError) FaultReference() map[string]any {
+	return map[string]any{"kind": string(e.Kind), "message": e.Message, "suggest": e.Suggest}
+}
+
+// Unreferenced is the sentinel that decides the status, not the receiver,
+// which would send classification straight back here.
+func (e *RefusalError) Unreferenced() error { return apperrors.ErrInvalidArgument }

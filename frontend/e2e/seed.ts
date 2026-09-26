@@ -6,6 +6,7 @@ import {
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
+import { bookingInvitation, bookingProfile } from "../src/screens/book.testkit";
 import { aiAdminFixture } from "./ai-admin-fixture";
 import { type MockProject, projectMock } from "./projectmock";
 
@@ -2398,6 +2399,15 @@ export async function mockApi(
       }
       return json(existing);
     }
+    if (path === "/scheduling/profile" || path === "/public/booking/host-1/profile") {
+      return json({ ...bookingProfile, slug: "host-1", public_url: "https://crm.example.test/#/book/host-1" });
+    }
+    if (path === "/scheduling/calendars") {
+      return json([{ id: "primary", name: "Work calendar", writable: true, primary: true }]);
+    }
+    if (path === "/public/meeting/guest-booking") {
+      return json({ ...bookingInvitation, ...publicSlots[0] });
+    }
     if (path === "/public/booking/host-1/availability") {
       return json({ slots: publicSlots });
     }
@@ -2426,7 +2436,7 @@ export async function mockApi(
           409,
         );
       }
-      return json({ start: body.start, end: body.end }, 201);
+      return json({ start: body.start, end: body.end, booking: "pending", invitation: { ...bookingInvitation, start: body.start, end: body.end, management_token: "guest-booking" } }, 201);
     }
     if (path === "/availability") {
       return json({

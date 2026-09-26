@@ -46,6 +46,11 @@ func activityCapturedPayload(kind, channelProvider string) crmcontracts.PublicEv
 type LogActivityInput struct {
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
+	// invitedAssignee admits an invited colleague as the task's assignee. Only
+	// the HTTP create handler sets it, for an assignee the caller NAMED; every
+	// automatic writer (deal check-up, lead SLA, email requests) leaves it
+	// false and keeps handing work to active seats only.
+	invitedAssignee bool
 	Kind            string
 	// ChannelProvider names the messaging transport that carried this activity —
 	// a channel_provider row — and is empty for anything that did not travel on
@@ -261,6 +266,9 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
+	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -277,8 +285,14 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	// in nobody's list for however long it took to notice.
 	//
 	// Checked against the resolved assignee rather than the input, so the
-	// self-assignment above is covered by the same question.
-	if err := ensureAssigneeCanHoldWork(ctx, tx, assignee); err != nil {
+	// self-assignment above is covered by the same question. An invited
+	// colleague may be given a NEW task when the caller named them over HTTP
+	// (invitedAssignee); automatic writers keep the active-only check.
+	checkAssignee := ensureAssigneeCanHoldWork
+	if in.invitedAssignee {
+		checkAssignee = ensureNewTaskAssignee
+	}
+	if err := checkAssignee(ctx, tx, assignee); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 
@@ -315,10 +329,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
-		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, source_system, source_id, source, captured_by,
+		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
 		                       source_activity_id, raw, duration_seconds)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
 		         NULLIF($19, ''), $20, $21, $22, $23, $24)`,
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.

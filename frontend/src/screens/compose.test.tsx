@@ -501,10 +501,10 @@ describe("ComposeModal", () => {
       screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
-    // The editor's own text, read back the way a reader sees it: the body is a
-    // contentEditable surface and carries no `value` to query.
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
-    expect(messageText("Body")).toBe("Thanks for the note.");
+    await waitFor(() =>
+      expect(messageText("Body")).toBe("Thanks for the note."),
+    );
     // EmailDraft.to prefills the recipient chips.
     expect(screen.getByText("buyer@acme.test")).toBeTruthy();
   });
@@ -2415,7 +2415,7 @@ describe("ComposeModal started from an account", () => {
 
     // Sarah's draft, her address, her disclosure and her reasons all go with
     // her. The rep drafts again for Mark, or writes it themselves.
-    expect(messageText("Body")).toBe("");
+    await waitFor(() => expect(messageText("Body")).toBe(""));
     expect(screen.queryByText(/Based on/)).toBeNull();
     expect(screen.queryByText(/AI assistance/)).toBeNull();
   });

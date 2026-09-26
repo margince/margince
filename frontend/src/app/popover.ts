@@ -1,4 +1,5 @@
 import { type RefObject, useEffect } from "react";
+import { coveredByDialog } from "../design-system/dialogfocus";
 
 /**
  * Dismissal for a popover that owns the document while it is open.
@@ -23,7 +24,7 @@ export function usePopoverDismiss(
       return;
     }
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || coveredByDialog(panel.current)) {
         return;
       }
       // One keystroke closes one layer. A row inside may open a layer of its

@@ -45,11 +45,13 @@ import (
 // record contains, so "this table has no owner_id" is never on its own a
 // reason to skip the probe.
 var rowScopedResponses = map[string]expectedTarget{
-	"Contact": {table: "contact", idPath: "id"},
-	"Company": {table: "company", idPath: "id"},
-	"Deal":    {table: "deal", idPath: "id"},
-	"Lead":    {table: "lead", idPath: "id"},
-	"Project": {table: "project", idPath: "id"},
+	"MeetingInvitation":                    {table: "activity", idPath: "id"},
+	"inline:POST /v1/scheduling/proposals": {table: "activity", idPath: "id"},
+	"Contact":                              {table: "contact", idPath: "id"},
+	"Company":                              {table: "company", idPath: "id"},
+	"Deal":                                 {table: "deal", idPath: "id"},
+	"Lead":                                 {table: "lead", idPath: "id"},
+	"Project":                              {table: "project", idPath: "id"},
 	// A contract has no owner column; it is row-scoped through the deal it came
 	// from, falling back to its company (ADR-0109 §8). It still hands back
 	// a record — terms, value, dates — so it is probed like any other.

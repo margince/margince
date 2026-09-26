@@ -166,7 +166,9 @@ type SARPackage struct {
 	CaptureDispositions []map[string]any `json:"capture_dispositions"`
 	// The governed outbound messages addressed to the subject: what was sent
 	// to them, when, and whether it left (comms_outbound).
-	SentMessages []map[string]any `json:"sent_messages"`
+	MeetingProposals   []map[string]any `json:"meeting_proposals"`
+	MeetingInvitations []map[string]any `json:"meeting_invitations"`
+	SentMessages       []map[string]any `json:"sent_messages"`
 	// The messages addressed to the subject that have NOT been sent: waiting
 	// for their moment, withdrawn, or held for a human (scheduled_send,
 	// ADR-0104). Held apart from SentMessages because the distinction is the

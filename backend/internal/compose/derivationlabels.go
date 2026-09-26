@@ -88,13 +88,5 @@ func labelDerivationRows(ctx context.Context, names attention.Names, entity stri
 // wire value by the time it lands here, so a string is what the seam gets
 // back from a UUID column.
 func rowRecordID(row map[string]any) (ids.UUID, bool) {
-	raw, ok := row["id"].(string)
-	if !ok {
-		return ids.UUID{}, false
-	}
-	id, err := ids.Parse(raw)
-	if err != nil {
-		return ids.UUID{}, false
-	}
-	return id, true
+	return columnRecordID(row, "id")
 }

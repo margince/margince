@@ -168,6 +168,15 @@ export function ContactActions({
               {/* Companies, deals, leads and projects all carry this. A contact
                   did not, so the one record type most likely to be private to
                   one seat was the one with no way to hand it to a colleague. */}
+              <Button
+                onClick={() =>
+                  navigate({ screen: "book", id: `contact-${contactId}` })
+                }
+                disabled={logPending}
+                reasonId={logRefused}
+              >
+                {t("scheduling.new")}
+              </Button>
               <ShareAction
                 recordType="contact"
                 recordId={contactId}

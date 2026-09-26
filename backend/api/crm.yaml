@@ -2528,6 +2528,19 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
             Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: id
+          in: query
+          schema:
+            type: array
+            maxItems: 100
+            items: { type: string, format: uuid }
+          style: form
+          explode: true
+          description: |
+            Narrow to these companies. Repeat the parameter for several, up to 100; more is `422`.
+            A screen that names many companies it did not list itself, such as the deals board,
+            reads them in one request instead of one each. An id the caller cannot see, or that
+            is archived without `include_archived`, is simply absent from the page.
       responses:
         '200':
           description: A page of companies.
@@ -7054,6 +7067,356 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /public/booking/{host_slug}/profile:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Public]
+      operationId: getPublicSchedulingProfile
+      security: []
+      summary: Read the host-approved booking page identity and meeting details.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: Public booking page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicSchedulingProfile' }
+  /public/meeting/{token}:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Public]
+      operationId: getPublicMeetingInvitation
+      security: []
+      summary: Read one invitation using its private management capability.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: Invitation state without CRM data.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingInvitation' }
+    patch:
+      tags: [Public]
+      operationId: changePublicMeetingInvitation
+      security: []
+      x-agent-access: human-only
+      summary: Change one invitation using its private management capability.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingInvitationChange' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '202':
+          description: Calendar change pending.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingInvitation' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/invitations/{id}/availability:
+    get:
+      tags: [Activities]
+      operationId: getMeetingAvailability
+      security:
+        - cookieAuth: []
+      summary: Find alternative times for one existing invitation.
+      x-agent-access: human-only
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Alternative slots excluding this meeting's own occupancy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /public/meeting/{token}/availability:
+    get:
+      tags: [Public]
+      operationId: getPublicMeetingAvailability
+      summary: Find alternative times for one existing invitation.
+      security: []
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Alternative slots excluding this meeting's own occupancy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /scheduling/proposals:
+    post:
+      tags: [Activities]
+      operationId: createMeetingProposal
+      security:
+        - cookieAuth: []
+      summary: Create a personal, expiring invitation without reserving time or sending mail.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingProposalRequest' }
+      responses:
+        '201':
+          description: A private single-use link for the selected contact.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, url, expires_at]
+                properties:
+                  id: { type: string, format: uuid }
+                  url: { type: string }
+                  expires_at: { type: string, format: date-time }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /public/proposal/{token}:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Public]
+      operationId: getPublicMeetingProposal
+      security: []
+      summary: Read host-approved personal meeting details without contact data.
+      responses:
+        '200':
+          description: Proposal details, with no recipient or CRM identity disclosed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicMeetingProposal' }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      tags: [Public]
+      operationId: acceptPublicMeetingProposal
+      security: []
+      x-agent-access: human-only
+      summary: Choose one time using a personal proposal's bound recipient.
+      description: Acceptance atomically consumes the capability. A second acceptance returns conflict and cannot queue another invitation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start, end, consent]
+              properties:
+                start: { type: string, format: date-time }
+                end: { type: string, format: date-time }
+                consent:
+                  type: object
+                  required: [wording, policy_version]
+                  properties:
+                    wording: { type: string }
+                    policy_version: { type: string }
+      responses:
+        '202':
+          description: Invitation pending calendar confirmation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingInvitation' }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /public/proposal/{token}/availability:
+    get:
+      tags: [Public]
+      operationId: getPublicProposalAvailability
+      security: []
+      summary: Check current availability for this personal proposal.
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Slots currently available for this proposal's duration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /scheduling/calendars:
+    get:
+      tags: [Activities]
+      operationId: getSchedulingCalendars
+      security:
+        - cookieAuth: []
+      x-agent-access: human-only
+      summary: List the current host's connected calendars for scheduling settings.
+      parameters:
+        - { name: provider, in: query, required: true, schema: { type: string, enum: [gcal, graphcal] } }
+      responses:
+        '200':
+          description: Calendar names and event-creation permissions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, name, writable, primary]
+                  properties:
+                    id: { type: string }
+                    name: { type: string }
+                    writable: { type: boolean }
+                    primary: { type: boolean }
+        default:
+          description: The calendar connection is unavailable.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /scheduling/profile:
+    get:
+      tags: [Activities]
+      operationId: getSchedulingProfile
+      summary: Read the caller's reusable booking page and scheduling policy.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: Personal scheduling configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingProfile' }
+    put:
+      tags: [Activities]
+      operationId: putSchedulingProfile
+      security:
+        - cookieAuth: []
+      summary: Configure and activate the caller's booking page.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingProfile' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: Saved configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingProfile' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/invitations:
+    post:
+      tags: [Activities]
+      operationId: createMeetingInvitation
+      summary: Reserve a meeting and request a calendar-native invitation.
+      x-mcp-tool: { verb: invite_meeting, record_type: contact, tier: confirmation_required, scope: send }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingInvitationRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '202':
+          description: Durable invitation command; inspect status before claiming confirmation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingInvitation' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/invitations/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Activities]
+      operationId: getMeetingInvitation
+      summary: Read invitation delivery and calendar state.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: Current invitation state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingInvitation' }
+    patch:
+      tags: [Activities]
+      operationId: changeMeetingInvitation
+      security:
+        - cookieAuth: []
+      summary: Reschedule, cancel or retry an invitation through its original calendar event.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingInvitationChange' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '202':
+          description: Change accepted for provider delivery.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingInvitation' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ------------------------------ /availability + /bookings (E04 meeting scheduling) ----------
   /availability:
     get:
@@ -7061,11 +7424,12 @@ paths:
       operationId: getAvailability
       summary: Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
       description: |
-        Reads connected-calendar free/busy and returns candidate slots. 🟢 read-only — proposes,
-        never books. Scheduling is a **governed MCP tool** (`features/07 §5c`): this read pairs with
-        the `book_meeting` action below, which writes.
+        With reliable=true, reads live calendar occupancy and applies bookable hours,
+        notice, buffers and booking horizon. Without it, returns CRM-only availability
+        for compatibility. This read never books or sends an invitation.
       x-mcp-tool: { verb: check_availability, tier: auto_execute, scope: read }
       parameters:
+        - { name: reliable, in: query, required: false, schema: { type: boolean, default: false } }
         - { name: host_user_id, in: query, required: false, schema: { type: string, format: uuid }, description: 'Host to check (defaults to the caller).' }
         - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
         - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
@@ -7103,9 +7467,8 @@ paths:
       operationId: bookMeeting
       summary: Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
       description: |
-        Records the meeting on the timeline. **No invite is sent — this build has no outbound
-        calendar or mail transport behind a booking**, so whoever books it has to tell the
-        attendee themselves. The calendar integrations are capture-only (inbound import).
+        Records the meeting on the timeline. No invite is sent. Use the explicit
+        scheduling invitation command to create an event and notify the attendee.
 
         It RUNS DIRECTLY (ADR-0055), on the
         passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
@@ -7248,6 +7611,7 @@ paths:
               properties:
                 start: { type: string, format: date-time }
                 end:   { type: string, format: date-time }
+                delivery: { type: string, enum: [record_only, calendar], default: calendar, deprecated: true, description: "Accepted for compatibility. Public bookings always send a calendar invitation; the host must enable their page." }
                 subject: { type: string }
                 booker:
                   type: object
@@ -7259,7 +7623,7 @@ paths:
       responses:
         '201':
           description: |
-            Booked; a minimal confirmation (no CRM record data disclosed). `marketing` reports what
+            Reserved; `pending` becomes `confirmed` only after the calendar accepts the invitation. `marketing` reports what
             became of the newsletter tick, separately from the booking itself: a question this
             installation could not put — no live mailbox on the record, a purpose archived since the
             form was published, no mail lane wired at all — leaves the meeting standing and says
@@ -7275,8 +7639,9 @@ paths:
                   end:   { type: string, format: date-time }
                   booking:
                     type: string
-                    enum: [confirmed]
+                    enum: [pending, confirmed, rescheduling, canceling, canceled, needs_attention]
                     description: 'The slot is held. A booking that did not commit answers an error status instead.'
+                  invitation: { $ref: '#/components/schemas/MeetingInvitation' }
                   marketing:
                     type: string
                     enum: [not_requested, pending_confirmation, not_asked]
@@ -20324,10 +20689,9 @@ paths:
               schema: { $ref: '#/components/schemas/IssuedForecastShare' }
         '400':
           description: >-
-            The request is unanswerable as written: an expiry past the ceiling, a field
-            this caller cannot name, a measure that means nothing over that column, or a
-            filter separating out too few records to answer about. The body names what
-            would have worked.
+            The share cannot be issued as asked: an expiry in the past or past the ceiling,
+            a kind that is neither live nor snapshot, a snapshot naming no state or one taken
+            over a different population, or a scope whose id disagrees with its kind.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -20470,8 +20834,10 @@ paths:
         refusal that says "you may not read that" tells them the column exists.
 
         `version` changes when the vocabulary does, including when one seat's grants change.
-        A query planned against an older version is refused rather than run, because a plan
-        naming a field that has since moved would render SQL against a column that is gone.
+        Every answer echoes the version it was asked in as `schema_version`, so a caller can
+        tell whether two answers were asked in the same vocabulary. A query carries no version
+        and is judged by the vocabulary current when it runs: a field that has since gone is
+        refused by name, like any other field the caller cannot name.
       # NOT an agent tool, and the reason is measured rather than a preference:
       # the served catalog sits within a few hundred tokens of the certification
       # lane's floor, and a vocabulary tool would recite per-caller derived
@@ -20531,13 +20897,13 @@ paths:
               schema: { $ref: '#/components/schemas/AnalyticsAnswer' }
         '400':
           description: >-
-            The request is unanswerable as written: an expiry past the ceiling, a field
-            this caller cannot name, a measure that means nothing over that column, or a
-            filter separating out too few records to answer about. The body names what
-            would have worked.
+            The question is unanswerable as written: a population or field this caller
+            cannot name, a measure that means nothing over that column, an aggregate or
+            comparison the engine does not have, or a filter separating out too few records
+            to answer about. `details` carries the refusal's kind and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -20575,6 +20941,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReportRun' }
+        '400':
+          description: >-
+            The saved question, re-asked for this caller, is refused — the same refusal they
+            would get asking it directly, such as a field outside their own vocabulary.
+            `details` carries the refusal's kind and what would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -20623,11 +20997,13 @@ paths:
         '400':
           description: >-
             The cell names a different number of group keys than the saved question grouped
-            by. A typed refusal rather than a validation error: the request is well-formed
-            and the mismatch is only knowable against the stored question.
+            by, or the saved question, re-asked for this caller, is refused. A typed refusal
+            rather than a validation error: the request is well-formed and the mismatch is
+            only knowable against the stored question. `details` carries the refusal's kind
+            and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -20677,11 +21053,12 @@ paths:
         '400':
           description: >-
             The document is not in the block grammar — an unknown block, a literal number, a
-            figure block naming no cell, or an untyped callout. The message names the block
-            by index.
+            figure block naming no cell, or an untyped callout — and the message names the
+            block by index. Or a cited run's question, re-asked for this reader, is refused,
+            and `details` carries the refusal's kind and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -20720,13 +21097,13 @@ paths:
               schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
         '400':
           description: >-
-            The request is unanswerable as written: an expiry past the ceiling, a field
-            this caller cannot name, a measure that means nothing over that column, or a
-            filter separating out too few records to answer about. The body names what
-            would have worked.
+            The question is unanswerable as written: a population or field this caller
+            cannot name, a measure that means nothing over that column, an aggregate or
+            comparison the engine does not have, or a filter separating out too few records
+            to answer about. `details` carries the refusal's kind and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -28179,7 +28556,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -28641,7 +29018,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -32040,8 +32417,8 @@ components:
             `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier.
             `research` — the deep-research drawer. `record` — another record page. `task` — the
             task sheet. `activity_log` — the log-activity form, for writing down a note or a
-            meeting that happened off-system.
-          enum: [composer, meeting_brief, research, record, task, activity_log]
+            meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
+          enum: [composer, meeting_brief, research, record, task, activity_log, booking]
         entity_type:
           type: [string, 'null']
           enum: [contact, company, deal, activity, null]
@@ -33382,7 +33759,7 @@ components:
         owner_id: { type: [string, 'null'], format: uuid }
         expected_close_date: { type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).' }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -34179,7 +34556,7 @@ components:
         started_at: { type: [string, 'null'], format: date }
         target_end_date: { type: [string, 'null'], format: date }
         source: { type: string }
-        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire.' }
+        source_system: { type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
       additionalProperties: true
       x-extension: true
 
@@ -34898,6 +35275,121 @@ components:
         entity_type: { type: string, enum: [contact, company, deal, lead, project] }
         entity_id: { type: string, format: uuid }
 
+    PublicSchedulingProfile:
+      type: object
+      required: [host_name, company_name, title, location, duration_minutes, enabled]
+      properties:
+        host_name: { type: string }
+        company_name: { type: string }
+        logo_url: { type: string }
+        title: { type: string }
+        location: { type: string }
+        duration_minutes: { type: integer }
+        enabled: { type: boolean }
+    SchedulingProfile:
+      type: object
+      required: [enabled, provider, calendar_id, duration_minutes, notice_minutes, horizon_days, buffer_minutes, title, location]
+      properties:
+        enabled: { type: boolean }
+        provider: { type: string, enum: ['', gcal, graphcal] }
+        calendar_id: { type: string, maxLength: 512 }
+        blocking_calendars: { type: array, maxItems: 10, items: { type: string, maxLength: 512 } }
+        duration_minutes: { type: integer, minimum: 15, maximum: 480 }
+        notice_minutes: { type: integer, minimum: 0, maximum: 10080 }
+        horizon_days: { type: integer, minimum: 1, maximum: 90 }
+        buffer_minutes: { type: integer, minimum: 0, maximum: 120 }
+        title: { type: string, maxLength: 200 }
+        location: { type: string, maxLength: 1000 }
+        host_name: { type: string, maxLength: 200 }
+        company_name: { type: string, maxLength: 200 }
+        logo_url: { type: string, maxLength: 2000 }
+        slug: { type: string, readOnly: true }
+        public_url: { type: string, readOnly: true }
+        replace_link: { type: boolean, writeOnly: true }
+        email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
+    MeetingInvitationRequest:
+      type: object
+      required: [contact_id, attendee_email, start, end, subject, location, description]
+      properties:
+        contact_id: { type: string, format: uuid }
+        attendee_email: { type: string, format: email }
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+        subject: { type: string, maxLength: 200 }
+        location: { type: string, maxLength: 1000 }
+        description: { type: string, maxLength: 5000 }
+    MeetingAvailability:
+      type: object
+      required: [slots, truncated]
+      properties:
+        slots:
+          type: array
+          items:
+            type: object
+            required: [start, end]
+            properties:
+              start: { type: string, format: date-time }
+              end: { type: string, format: date-time }
+        truncated: { type: boolean }
+    MeetingProposalRequest:
+      type: object
+      required: [contact_id, attendee_email, subject, location, description, duration_minutes, options]
+      properties:
+        contact_id: { type: string, format: uuid }
+        attendee_email: { type: string, format: email }
+        subject: { type: string, minLength: 1, maxLength: 200 }
+        location: { type: string, maxLength: 1000 }
+        description: { type: string, maxLength: 5000 }
+        duration_minutes: { type: integer, minimum: 15, maximum: 480 }
+        options:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required: [start, end]
+            properties:
+              start: { type: string, format: date-time }
+              end: { type: string, format: date-time }
+    PublicMeetingProposal:
+      type: object
+      required: [profile, description, options, expires_at, used]
+      properties:
+        profile: { $ref: '#/components/schemas/PublicSchedulingProfile' }
+        description: { type: string }
+        options:
+          type: array
+          items:
+            type: object
+            required: [start, end]
+            properties:
+              start: { type: string, format: date-time }
+              end: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        used: { type: boolean }
+        meeting: { $ref: '#/components/schemas/MeetingInvitation' }
+    MeetingInvitation:
+      type: object
+      required: [id, status, start, end, subject, location, version]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [pending, confirmed, needs_attention, rescheduling, canceling, canceled] }
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+        subject: { type: string }
+        location: { type: string }
+        version: { type: integer, format: int64 }
+        calendar_url: { type: string }
+        management_token: { type: string }
+        reminder_status: { type: string, enum: [off, pending, queued, unavailable] }
+    MeetingInvitationChange:
+      type: object
+      required: [action, version]
+      properties:
+        action: { type: string, enum: [reschedule, cancel, retry] }
+        version: { type: integer, format: int64 }
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+
     Activity:
       type: object
       description: |
@@ -35020,6 +35512,11 @@ components:
             links, is_done/due_at for a task, provenance and timestamps — and subject, body,
             thread_key, capture_label, source_id and raw are null. An `available` row is complete.
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.' }
+        invitation_status:
+          type: [string, 'null']
+          readOnly: true
+          enum: [null, pending, confirmed, rescheduling, canceling, needs_attention, canceled]
+          description: Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
         source_system: { type: [string, 'null'], description: 'Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller''s own. Idempotency key part.' }
         source_id: { type: [string, 'null'], description: Provider message/event id — idempotency key part. }
         source_activity_id:
@@ -35287,7 +35784,10 @@ components:
             one a human logging their own day can assert.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
-        meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled] }
+        meeting_status:
+          type: [string, 'null']
+          enum: [null, booked, held, no_show, canceled]
+          x-enum-varnames: [CreateActivityRequestMeetingStatusBooked, CreateActivityRequestMeetingStatusHeld, CreateActivityRequestMeetingStatusNoShow, CreateActivityRequestMeetingStatusCanceled]
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         links:
@@ -39343,8 +39843,8 @@ components:
         version:
           type: string
           description: >-
-            Changes when this caller's vocabulary changes. A query planned against an
-            older version is refused rather than run.
+            Changes when this caller's vocabulary changes. Echoed on every answer as
+            `schema_version`.
         entities:
           type: array
           items: { $ref: '#/components/schemas/AnalyticsEntity' }
@@ -39511,6 +40011,53 @@ components:
           description: >-
             Where this answer was saved, present only when the query asked for it. A report
             block cites this id plus a cell's coordinates instead of carrying the number.
+        labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
+      additionalProperties: false
+    AnalyticsIdLabels:
+      type: object
+      description: >-
+        Display names for the ids in the grouped columns that name a company or a project,
+        keyed by column and then id, read under this caller's own grants. An id this caller
+        may not name is absent, and so is a column with nothing named; the id still stands
+        on the row. A withheld row carries no id, so nothing here names it.
+      additionalProperties:
+        type: object
+        additionalProperties: { type: string }
+    AnalyticsRefusal:
+      description: >-
+        A problem body whose `details` spell out an analytics refusal, present whenever the
+        engine refused the question. A 400 the engine did not write — a malformed scope, a
+        document outside the block grammar — carries the problem alone.
+
+        The envelope is `Problem`'s, restated rather than composed with `allOf` so the
+        breaking-change check can read it; a gate holds the two property sets equal.
+      type: object
+      required: [status, code]
+      properties:
+        type: { type: string, format: uri, default: about:blank }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        details: { $ref: '#/components/schemas/AnalyticsRefusalDetails' }
+    AnalyticsRefusalDetails:
+      type: object
+      description: >-
+        Why a question was not answered, in parts a client can render. `detail` beside it
+        says the same as one sentence, for a reader that has only prose.
+      required: [kind, message, suggest]
+      properties:
+        kind:
+          type: string
+          enum: [invalid, unsupported, privacy]
+          description: >-
+            `invalid`: the question means nothing as asked, such as a sum over a stage name.
+            `unsupported`: it names a population, field, aggregate or comparison this
+            caller's vocabulary does not have. `privacy`: the answer would describe too few
+            records.
+        message: { type: string, description: "What is wrong, in the asker's terms." }
+        suggest: { type: string, description: "The smallest change that would have worked." }
       additionalProperties: false
     ReportRun:
       type: object
@@ -39523,7 +40070,10 @@ components:
         id: { type: string, format: uuid }
         query:
           allOf: [{ $ref: '#/components/schemas/AnalyticsQuery' }]
-          description: The question as it was saved, unchanged.
+          description: >-
+            The question as it was saved, with one addition: `limit` is always present and
+            is the bound this read applied, including the default when the asker named
+            none.
         answer:
           allOf: [{ $ref: '#/components/schemas/AnalyticsAnswer' }]
           description: >-
@@ -39701,6 +40251,9 @@ components:
         columns:
           type: array
           items: { type: string }
+          description: >-
+            The keys a row may carry, in order: `id`, the dimensions, the measured fields,
+            and `label` last when at least one row was named.
         rows:
           type: array
           items:
@@ -39708,7 +40261,9 @@ components:
             additionalProperties: true
           description: >-
             The records, each carrying its id, the dimensions that put it in this group,
-            and the fields the measures were computed over.
+            and the fields the measures were computed over. `label` is the record's display
+            name, read under this caller's own grants; it is ABSENT on a row the caller may
+            not name, which keeps its id and nothing more.
         withheld:
           type: boolean
           description: >-
@@ -39719,6 +40274,7 @@ components:
           description: >-
             The cell covers more records than were returned. A reader who adds up the rows
             and finds less than the cell needs to know why.
+        labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
       additionalProperties: false
     WeeklyPlan:
       type: object

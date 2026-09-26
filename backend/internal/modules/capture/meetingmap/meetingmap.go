@@ -75,6 +75,7 @@ type Event struct {
 	// unreadable start, which the Sink then stamps with capture time rather than
 	// sorting the row to the beginning of history — so a decoder that cannot
 	// read a start leaves this zero rather than guessing.
+	EndsAt    time.Time
 	StartsAt  time.Time
 	Organizer Actor
 	Attendees []Actor
@@ -104,15 +105,16 @@ type Meeting struct {
 	// it. Empty when none was stated, and then the meeting carries no
 	// cross-provider identity and dedupes on the natural key alone, exactly as
 	// it did before.
-	icalUID       string
-	subject       string
-	body          string
-	occurredAt    time.Time
-	cancelled     bool
-	ownerDeclined bool
-	hasExternal   bool // any party outside the OWNER's own domain — the floor, see Settle
-	addresses     []string
-	participants  connector.Parties
+	icalUID         string
+	subject         string
+	body            string
+	occurredAt      time.Time
+	durationSeconds *int
+	cancelled       bool
+	ownerDeclined   bool
+	hasExternal     bool // any party outside the OWNER's own domain — the floor, see Settle
+	addresses       []string
+	participants    connector.Parties
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -124,13 +126,14 @@ func Classify(ev Event, owner string) Meeting {
 	organizerDom := domainOf(ev.Organizer.Email)
 
 	return Meeting{
-		id:            strings.TrimSpace(ev.ID),
-		icalUID:       strings.TrimSpace(ev.ICalUID),
-		subject:       strings.TrimSpace(ev.Subject),
-		body:          buildBody(ev, attendeeEmails),
-		occurredAt:    ev.StartsAt,
-		cancelled:     ev.Cancelled,
-		ownerDeclined: ev.OwnerDeclined,
+		id:              strings.TrimSpace(ev.ID),
+		icalUID:         strings.TrimSpace(ev.ICalUID),
+		subject:         strings.TrimSpace(ev.Subject),
+		body:            buildBody(ev, attendeeEmails),
+		occurredAt:      ev.StartsAt,
+		durationSeconds: eventDuration(ev),
+		cancelled:       ev.Cancelled,
+		ownerDeclined:   ev.OwnerDeclined,
 		// The organizer counts as a party: an externally-organized meeting is a
 		// customer touch even when the owner is the only listed attendee.
 		//
@@ -210,10 +213,11 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
-			Kind:       "meeting",
-			Subject:    m.subject,
-			Body:       m.body,
-			OccurredAt: m.occurredAt,
+			Kind:            "meeting",
+			Subject:         m.subject,
+			Body:            m.body,
+			OccurredAt:      m.occurredAt,
+			DurationSeconds: m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
 		},
@@ -470,4 +474,12 @@ func SettlementOf(raw []byte, owner string, decode Decode) (Settlement, error) {
 	}
 	_, settlement := Classify(ev, owner).Settle()
 	return settlement, nil
+}
+
+func eventDuration(event Event) *int {
+	if event.StartsAt.IsZero() || !event.EndsAt.After(event.StartsAt) {
+		return nil
+	}
+	seconds := int(event.EndsAt.Sub(event.StartsAt) / time.Second)
+	return &seconds
 }

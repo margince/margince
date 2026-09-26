@@ -53,8 +53,9 @@ export const THEME_LABEL_KEYS = {
  */
 const SETTINGS_SEAT = 0;
 const THEME_SEAT = 1;
-const SIGN_OUT_SEAT = 2;
-const SEAT_COUNT = 3;
+const BOOKING_SEAT = 2;
+const SIGN_OUT_SEAT = 3;
+const SEAT_COUNT = 4;
 
 /**
  * Who is signed in, in the shapes the block prints them in.
@@ -466,27 +467,21 @@ function AccountPanel({
       {/* The groups: where you go, then the way out. An <hr> rather than a border
           on the last row — it separates a group, and a screen reader is told so. */}
       <hr />
+      <a
+        className="acctrow"
+        href={routeHash({ screen: "book" })}
+        role="menuitem"
+        {...seat(BOOKING_SEAT)}
+        onClick={onDismiss}
+      >
+        {t("scheduling.myLink")}
+      </a>
       <SignOutRow seat={seat(SIGN_OUT_SEAT)} />
     </div>
   );
 }
 
-/**
- * The account block: who is signed in, and the things it is FOR.
- *
- * It is the product's ONE appearance control and its ONE door into settings — the
- * sidebar's foot carried that door and no longer exists — so the panel holds the
- * identity at the top, the settings door, the theme choice, and the way out.
- * Theme is here rather than only on a settings page because a reader changing the
- * appearance wants to see the appearance change, not to navigate to a form and
- * find their way back.
- *
- * The trigger is the avatar and nothing else, at every width: the strip has no
- * room for a name over an address, so the sentence they would carry is present
- * for a screen reader and clipped for the eye. That is the technique the agent
- * dock uses when it is a glyph, rather than a tooltip standing in for text that
- * was never rendered.
- */
+/** The account menu owns settings, appearance, booking links and sign-out. */
 export function AccountMenu() {
   const t = useT();
   const me = useMe();

@@ -139,12 +139,12 @@ looking like something somebody here typed.
 
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, with the placeholder **Search or ask Margince**.
-Each row carries a badge: **Screen** for a sidebar screen, **Action** for something it does (**New deal**, **Read a company**, **Booking page**), and **Record** for a record that matches what you typed.
+Each row carries a badge: **Screen** for a sidebar screen, **Action** for something it does (**New deal**, **Booking page**), and **Record** for a record that matches what you typed.
 It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, "password" finds **Account**.
 Its first row is always **Ask your documents**.
 
 ### How do I open the command palette?
-To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux, from any screen.
+To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux, from any screen while no dialog is open.
 You can also click the search field **Search or ask Margince** in the top bar.
 Press ⌘K again, or Esc, to close it.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.

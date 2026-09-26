@@ -106,6 +106,17 @@ func stageCreateInput(req crmcontracts.CreateStageRequest) (CreateStageInput, er
 }
 
 func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
+	return dealCreateInputAdmitting(req, false)
+}
+
+// dealCreateInputFromImporter is dealCreateInput for a declared importer
+// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
+// namespace. provider.go keeps the closed door.
+func dealCreateInputFromImporter(req crmcontracts.CreateDealRequest) (CreateDealInput, error) {
+	return dealCreateInputAdmitting(req, true)
+}
+
+func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool) (CreateDealInput, error) {
 	if req.Name == "" {
 		return CreateDealInput{}, &RequiredFieldError{Field: "name"}
 	}
@@ -114,7 +125,7 @@ func dealCreateInput(req crmcontracts.CreateDealRequest) (CreateDealInput, error
 	// on the attempt rather than only on an otherwise-complete body. Answering
 	// "pipeline_id is required" to a forged-provenance write would tell the caller
 	// how to make the forgery land.
-	if err := provenance.RefuseWire(req.Source, req.SourceSystem); err != nil {
+	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateDealInput{}, err
 	}
 	// A deal is born INTO a stage of a pipeline, and neither is defaultable here:

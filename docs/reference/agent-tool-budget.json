@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 76,
-    "system_frame_tokens": 448,
-    "tokens": 24624,
+    "tools": 77,
+    "system_frame_tokens": 516,
+    "tokens": 24778,
     "median_tool_tokens": 272,
-    "mean_tool_tokens": 323
+    "mean_tool_tokens": 321
   },
   "agents": [
     {
@@ -46,12 +46,12 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 76,
-      "tokens": 3483,
+      "of_served_tools": 77,
+      "tokens": 3551,
       "listing_tokens": 1746,
       "step_schema_tokens": 1288,
       "percent_of_ceiling": 10,
-      "headroom_tokens": 19727,
+      "headroom_tokens": 19659,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -67,12 +67,12 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 76,
-      "tokens": 4840,
+      "of_served_tools": 77,
+      "tokens": 4908,
       "listing_tokens": 2585,
       "step_schema_tokens": 1807,
       "percent_of_ceiling": 14,
-      "headroom_tokens": 18370,
+      "headroom_tokens": 18302,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -155,10 +155,6 @@
       "tokens": 440
     },
     {
-      "name": "book_meeting",
-      "tokens": 423
-    },
-    {
       "name": "annotate_brief",
       "tokens": 417
     },
@@ -179,10 +175,6 @@
       "tokens": 383
     },
     {
-      "name": "check_availability",
-      "tokens": 366
-    },
-    {
       "name": "describe_report_vocabulary",
       "tokens": 349
     },
@@ -195,8 +187,16 @@
       "tokens": 345
     },
     {
+      "name": "book_meeting",
+      "tokens": 344
+    },
+    {
       "name": "search_context",
       "tokens": 344
+    },
+    {
+      "name": "check_availability",
+      "tokens": 342
     },
     {
       "name": "advance_project_phase",
@@ -253,6 +253,10 @@
     {
       "name": "describe_query_vocabulary",
       "tokens": 266
+    },
+    {
+      "name": "invite_meeting",
+      "tokens": 256
     },
     {
       "name": "company_coverage",

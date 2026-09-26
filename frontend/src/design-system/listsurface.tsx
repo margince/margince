@@ -16,6 +16,7 @@ import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { Button, Checkbox, OverflowMenu, Radio } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { ChipValueList } from "./listfiltervalues";
 import {
   type ListChip,
@@ -801,10 +802,9 @@ export function Menu({
 /**
  * Escape closes the open popup and hands focus back to whatever opened it.
  *
- * Without it the only way out of a filter or column menu is a pointer click
- * elsewhere — and a reader who tabbed into the menu would be returned to the
- * top of the document when it closed, rather than to the control they were
- * standing on.
+ * Without it the only way out of a filter or column menu is a click elsewhere,
+ * and a reader who tabbed in would land at the top of the document when it
+ * closed rather than on the control they were standing on.
  *
  * Keyed on WHICH popup is open rather than on whether one is: moving straight
  * from one trigger to the next never passes through a closed state, so a
@@ -823,7 +823,7 @@ export function useCloseOnEscape(openKey: string | null, close: () => void) {
     }
     opener.current = document.activeElement;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
+      if (event.key !== "Escape" || coveredByDialog(opener.current)) {
         return;
       }
       latest.current();

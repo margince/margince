@@ -44,6 +44,7 @@ type rawEvent struct {
 	BodyPreview string       `json:"bodyPreview"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	IsCancelled bool         `json:"isCancelled"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	IsAllDay    bool         `json:"isAllDay"`    //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	End         graphTime    `json:"end"`
 	Start       graphTime    `json:"start"`
 	Organizer   graphActor   `json:"organizer"`
 	Attendees   []graphActor `json:"attendees"`
@@ -117,6 +118,7 @@ func decode(ev rawEvent) meetingmap.Event {
 		Subject:       ev.Subject,
 		Description:   ev.BodyPreview,
 		StartsAt:      parseStart(ev.Start, ev.IsAllDay),
+		EndsAt:        parseStart(ev.End, ev.IsAllDay),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
 		Attendees:     attendees,
 	}

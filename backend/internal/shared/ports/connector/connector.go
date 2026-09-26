@@ -265,6 +265,15 @@ type NormalizedRecord struct {
 	// key. Empty only for a mail record with none of its three sources.
 	ThreadKey string
 
+	// ReplyTo lists the Message-IDs a mail record says it answers — In-Reply-To
+	// and each References entry, unbracketed. ThreadKey is derived from the
+	// first of them; the full list is what lets capture join two thread roots
+	// that turn out to be one conversation, because mail programs shorten the
+	// References header. The sender's text, so capture acts on an entry only
+	// when the same seat holds the message it names. Empty for anything that
+	// is not mail.
+	ReplyTo []string
+
 	// The FURTHER parties beyond the mailbox owner and Counterparty — CCs, a
 	// meeting's attendees and organizer. Additive rather than a replacement,
 	// because direction is defined against the two ENDS of the exchange and

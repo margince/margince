@@ -59,7 +59,8 @@ type Sink struct {
 	// cancelMeeting closes a captured meeting the calendar says is off — called
 	// off by its organizer, or declined by the seat whose calendar it is. Nil
 	// captures meetings and cancels none.
-	cancelMeeting MeetingCloser
+	cancelMeeting     MeetingCloser
+	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
 	// the behaviour that predates the take-over.
@@ -72,7 +73,10 @@ type Sink struct {
 	meetingIdentityKind string
 	meetingIdentityKey  MeetingIdentityKeyer
 	resolveIdentity     IdentityResolver
-	claimIdentity       IdentityClaimer
+	// threadJoin merges the threads one email's reply links reach
+	// (threadjoin.go). Zero threads on the References root alone.
+	threadJoin    ThreadJoiner
+	claimIdentity IdentityClaimer
 	// language is the installation's base language a staged merge's summary is
 	// written in; nil writes English.
 	language baselanguage.Resolver
@@ -165,8 +169,10 @@ var _ connector.Sink = (*Sink)(nil)
 // replace. Nothing but the integration lane would notice.
 //
 // This line is what makes that a compile error instead.
-var _ connector.MeetingCanceller = (*Sink)(nil)
-var _ connector.MessageRemover = (*Sink)(nil)
+var (
+	_ connector.MeetingCanceller = (*Sink)(nil)
+	_ connector.MessageRemover   = (*Sink)(nil)
+)
 
 // Upsert lands one normalized record: raw original + domain row +
 // audit + captured event, one transaction, idempotent on the natural

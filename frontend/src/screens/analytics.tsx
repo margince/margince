@@ -41,6 +41,12 @@ import {
 } from "./analytics.explain";
 import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
+import { QuestionsView } from "./analytics.questions";
+import {
+  FORECAST_CATEGORIES,
+  MEETING_STATUSES,
+} from "./analytics.questions.values";
+import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ForecastShareActions } from "./analytics.share";
 import { QueryGate, throwProblem } from "./common";
@@ -109,6 +115,7 @@ const SECTION_REPORTS = {
   coverage: [],
   // What was sold becoming what is delivered: the three project reports.
   delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
+  questions: [],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
 type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
@@ -211,20 +218,6 @@ function absentReading(
   return "analytics.readingNone";
 }
 
-// A report's own name, spelled once: the segment picker and the heading of the
-// card that segment opens read the same key, so the tab and the surface behind
-// it cannot drift into two names for one report.
-const REPORT_LABEL_KEY = {
-  "pipeline-current": "analytics.reportDeals",
-  forecast: "analytics.reportForecast",
-  "open-deals-per-company": "analytics.reportOpenByCompany",
-  "win-loss": "analytics.reportWinLoss",
-  "stage-age": "analytics.reportStageAge",
-  "projects-by-phase": "analytics.reportProjectsByPhase",
-  "project-commitments": "analytics.reportProjectCommitments",
-  "projects-gone-quiet": "analytics.reportProjectsGoneQuiet",
-} as const satisfies Record<ReportKey, string>;
-
 // The line under a report's title, for the reports whose copy says something
 // the card's own title does not. A report absent from here gets no caption: an
 // explanation beside a report it does not describe is worse than none.
@@ -276,19 +269,6 @@ const REPORT_AGGREGATES: Record<ReportKey, ReportAggregate[]> = {
   "project-commitments": [],
   "projects-gone-quiet": [],
 };
-
-// forecast_category dimension values (report.go's forecastCategoryExpr):
-// the four the deal itself can carry, plus the server-derived "slipped" —
-// a claimed commit/best_case deal whose close date is past, missing, or
-// still provisional (formulas §11). Omitting it here doesn't shrink the
-// total; it moves the deal's amount into no tile at all.
-const FORECAST_CATEGORIES = [
-  { key: "commit", labelKey: "deal.fcCommit" },
-  { key: "best_case", labelKey: "deal.fcBestCase" },
-  { key: "pipeline", labelKey: "deal.fcPipeline" },
-  { key: "omitted", labelKey: "deal.fcOmitted" },
-  { key: "slipped", labelKey: "deal.fcSlipped" },
-] as const;
 
 // One forecast category as one slot of the strip: the raw total is the reading
 // and the probability-weighted total is the basis it was drawn from, which is
@@ -1001,17 +981,6 @@ function useDataCoverage() {
 
 type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
 
-// The current standing a meeting can hold, in the order a week reads: what is
-// ahead, what happened, what did not, what was called off. A hand-kept mirror
-// of the server's CHECK vocabulary — a status the server grows is absent here
-// until this list learns it, rather than mislabeled.
-const MEETING_STATUSES = [
-  { key: "booked", labelKey: "analytics.meetingsBooked" },
-  { key: "held", labelKey: "analytics.meetingsHeld" },
-  { key: "no_show", labelKey: "analytics.meetingsNoShow" },
-  { key: "canceled", labelKey: "analytics.meetingsCanceled" },
-] as const;
-
 // The seat's own outcomes: open pipeline and meetings, nothing computed here.
 //
 // Drawn only under an OWNER default lens. The report engine's population
@@ -1483,7 +1452,7 @@ function ReportCard({
   });
 
   return (
-    <QueryGate query={reportQuery} pendingLabel={t(REPORT_LABEL_KEY[report])}>
+    <QueryGate query={reportQuery} pendingLabel={t(ENTITY_LABEL_KEY[report])}>
       {(run) => (
         <ExplainFrame
           frame={{
@@ -1492,7 +1461,7 @@ function ReportCard({
           }}
         >
           <Panel
-            title={t(REPORT_LABEL_KEY[report])}
+            title={t(ENTITY_LABEL_KEY[report])}
             // The verb that reveals the derivation under this panel: it
             // announces its open state and names what it controls, so a
             // reader who cannot see the panel appear is still told it did.
@@ -1604,6 +1573,7 @@ export function AnalyticsScreen() {
           outcomes: t("analytics.sectionOutcomes"),
           coverage: t("analytics.sectionCoverage"),
           delivery: t("analytics.sectionDelivery"),
+          questions: t("analytics.sectionQuestions"),
         }}
         label={t("analytics.sections")}
       />
@@ -1628,6 +1598,7 @@ export function AnalyticsScreen() {
         locale={locale}
         context={context.data}
         selection={selection}
+        onSelectScope={selectScope}
         stages={pipelineQuery.data?.stages ?? []}
       />
     </div>
@@ -1641,18 +1612,27 @@ function SectionBody({
   locale,
   context,
   selection,
+  onSelectScope,
   stages,
 }: Readonly<{
   section: Section;
   locale: Locale;
   context: components["schemas"]["AnalyticsContext"] | undefined;
   selection: AnalyticsSelection | null;
+  onSelectScope: (scope: AnalyticsSelection["scope"]) => void;
   stages: readonly Stage[];
 }>) {
   switch (section) {
+    case "questions":
+      return selection && context ? (
+        <QuestionsView
+          context={context}
+          selection={selection}
+          onSelectScope={onSelectScope}
+        />
+      ) : null;
     case "coverage":
-      // Like the other context-bearing sections: nothing renders before the
-      // frame arrives, so the view never has to guess a zone.
+      // Nothing renders before the frame arrives, so no zone is guessed.
       return context ? (
         <DataCoverageView locale={locale} timezone={context.timezone} />
       ) : null;

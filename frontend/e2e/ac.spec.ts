@@ -378,6 +378,20 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
   await expect(page).toHaveURL(/#\/deals$/);
 });
 
+// A dialog makes the rest of the app unreachable, the palette with it. Raised
+// over one, Escape closed the dialog underneath and left the palette standing.
+test("AC-shell-3: ⌘K does nothing while a dialog is up", async ({ page }) => {
+  await page.goto("/#/deals/new");
+  const form = page.getByRole("dialog", { name: "Neuer Deal" });
+  await expect(form).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.press("Escape");
+  await expect(form).toHaveCount(0);
+  await expect(
+    page.getByRole("searchbox", { name: "Befehlspalette" }),
+  ).toHaveCount(0);
+});
+
 test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   await page.goto("/#/home");
   const topbar = page.locator(".topbar");
@@ -414,10 +428,8 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
   ).toHaveAttribute("href", "#/settings");
-  // ONE row in here navigates. Counted as anchors rather than by the link role:
-  // inside a `role="menu"` every row carries `role="menuitem"`, which is what a
-  // menu's keyboard contract needs and what replaces the implicit link role.
-  await expect(menu.locator("a[href]")).toHaveCount(1);
+  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/book");
+  await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
   // Appearance is a submenu, not a control sitting open in the menu: three
@@ -982,14 +994,11 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   ).toBeVisible();
 });
 
-test("AC-book: the booking page renders rail-less with live slots", async ({
-  page,
-}) => {
+test("AC-book: the reusable booking link is available for sharing and signatures", async ({ page }) => {
   await page.goto("/#/book");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: /06\.07\.2026/ }).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: de["scheduling.myLink"] })).toHaveValue("https://crm.example.test/#/book/host-1");
+  await expect(page.getByRole("button", { name: de["scheduling.copySignature"] })).toBeEnabled();
 });
 
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
@@ -1124,67 +1133,41 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   await expect(page.getByText(/mgp_/)).toHaveCount(0);
 });
 
-test("AC-book-public (B-EP09.14): consent gates booking and the policy passes through verbatim", async ({
-  page,
-}) => {
+test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({ page }) => {
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  const slot = page.getByRole("button", { name: /06\.07\.2026/ }).first();
-  await expect(slot).toBeDisabled();
-  await page
-    .getByRole("textbox", { name: de["book.name"], exact: true })
-    .fill("Jonas Beispiel");
-  await page
-    .getByRole("textbox", { name: de["book.email"] })
-    .fill("jonas@beispiel.example");
-  await expect(slot).toBeDisabled();
-  await page.getByRole("checkbox").check();
-  await expect(slot).toBeEnabled();
-  const wording = page.locator("[data-consent-wording]");
-  // The assert above waited on the SLOT; this is a different element, and a
-  // bare textContent would answer null on the tick before it paints.
-  await expect(wording).toBeVisible();
-  const shownWording = await wording.textContent();
-  const requestPromise = page.waitForRequest(
-    (request) =>
-      request.method() === "POST" &&
-      request.url().includes("/public/booking/host-1"),
-  );
-  await slot.click();
+  const submit = page.getByRole("button", { name: de["scheduling.book"] });
+  await expect(submit).toBeDisabled();
+  await page.getByRole("button", { name: /06\.07\.2026/ }).first().click();
+  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
+  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await expect(submit).toBeDisabled();
+  const consent = page.getByRole("checkbox", { name: de["book.consentWording"] });
+  await consent.check();
+  await expect(submit).toBeEnabled();
+  const shownWording = await page.getByText(de["book.consentWording"], { exact: true }).textContent();
+  const requestPromise = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/public/booking/host-1"));
+  await submit.click();
   const request = await requestPromise;
   const body = request.postDataJSON();
-  // the wording the visitor SAW is byte-for-byte what was submitted
   expect(body.consent.wording).toBe(shownWording);
   expect(body.consent.policy_version).toBeTruthy();
-  // And NO purpose id. Purpose ids are per-installation uuids minted at seed
-  // time with no anonymous read of them, so anything an anonymous page put here
-  // would be a value it was never given — which is what a stand-in id did, on
-  // every installation, until the door learned to resolve its own lane. The
-  // page names the wording it showed and nothing the server already knows.
   expect(body.consent.purpose_id).toBeUndefined();
-  // Exact: this build transmits nothing, so the card confirms the slot and
-  // promises nothing beyond it. A substring is satisfied by a longer sentence
-  // that does promise something, which is the claim this copy had removed.
-  await expect(
-    page.getByText(de["book.confirmed"], { exact: true }),
-  ).toBeVisible();
+  expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
+  await expect(page.getByRole("heading", { name: de["scheduling.pending"] })).toBeVisible();
+  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
 });
 
-test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({
-  page,
-}) => {
+test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({ page }) => {
   await page.goto("/#/book/host-1");
-  await page
-    .getByRole("textbox", { name: de["book.name"], exact: true })
-    .fill("Jonas Beispiel");
-  await page
-    .getByRole("textbox", { name: de["book.email"] })
-    .fill("jonas@beispiel.example");
+  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
+  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /12:00/ }).click();
-  await expect(page.getByText(de["book.failed"])).toBeVisible();
+  await page.getByRole("button", { name: de["scheduling.book"] }).click();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(page.getByText(de["book.confirmed"])).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({
@@ -1870,6 +1853,7 @@ const ADDRESSED_VIEWS = [
   "companies/o-brandt/tasks",
   "analytics/forecast",
   "analytics/pipeline",
+  "analytics/questions",
   // The three record headers whose verbs are icon-only: the name a sighted
   // reader gets on hover is not the name axe checks, so what is swept here is
   // the other half — that every square carries an accessible name at all, and
@@ -2025,6 +2009,79 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expect(drawer.getByText(de["explain.excluded_one"])).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "analytics — a row's explain drawer open");
+  });
+
+  // The Questions section with a question asked and one of its rows opened:
+  // the builder's rows of pickers, the answer table and the drawer it opens
+  // are three surfaces the closed tab never draws. The engine's three routes
+  // are stubbed here because the shared mock answers no analytics question.
+  test("no AA violations on an asked question with its drawer open", async ({
+    page,
+  }) => {
+    const json = (body: unknown) => ({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+    await page.route("**/analytics/schema", (route) =>
+      route.fulfill(
+        json({
+          version: "v1",
+          entities: [
+            {
+              name: "deals-by-stage",
+              group_by: ["currency", "stage_id", "status"],
+              measures: ["amount_minor"],
+            },
+          ],
+        }),
+      ),
+    );
+    await page.route("**/analytics/query", (route) =>
+      route.fulfill(
+        json({
+          columns: ["count"],
+          rows: [{ count: 12, _withheld: false }],
+          withheld: false,
+          total_safe: true,
+          schema_version: "v1",
+        }),
+      ),
+    );
+    await page.route("**/analytics/explain", (route) =>
+      route.fulfill(
+        json({
+          columns: ["id", "status"],
+          rows: [{ id: "d-fleet", status: "open" }],
+          withheld: false,
+          truncated: false,
+        }),
+      ),
+    );
+    await page.goto("/#/analytics/questions");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page
+      .getByRole("combobox", { name: de["analytics.q.population"] })
+      .click();
+    await page
+      .getByRole("option", { name: de["analytics.reportDealsByStage"] })
+      .click();
+    await page.getByRole("button", { name: de["analytics.q.ask"] }).click();
+    await page
+      .getByRole("button", {
+        name: de["explain.cell"].replace(
+          "{figure}",
+          de["analytics.q.allRecords"],
+        ),
+      })
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(
+      page,
+      "analytics — an asked question's drawer open",
+    );
   });
 
   // The forecast's Shared links drawer with rows in it, and the confirmation a
@@ -2963,8 +3020,6 @@ test("the shared links drawer is worked by the keyboard alone", async ({
   await page.keyboard.press("Escape");
   await expect(confirm).toBeHidden();
   await expect(closeLinks.first()).toBeFocused();
-  // The confirmation stays the top layer until its exit has played out.
-  await expect(page.locator('[role="dialog"]')).toHaveCount(1);
 
   // Escape on the drawer closes it and hands focus back to its trigger.
   await page.keyboard.press("Escape");

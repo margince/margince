@@ -3,7 +3,12 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDate } from "./format";
-import { FALLBACK_RECORD_ZONE, startOfDayInZone, viewerZone } from "./timezone";
+import {
+  FALLBACK_RECORD_ZONE,
+  startOfDayInZone,
+  timezoneOptions,
+  viewerZone,
+} from "./timezone";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -126,5 +131,42 @@ describe("startOfDayInZone", () => {
     expect(startOfDayInZone("2026-04-04", "America/Santiago")).toBe(
       "2026-04-04T03:00:00.000Z",
     );
+  });
+});
+
+describe("timezone choices", () => {
+  it("names cities and their offset at the supplied date while retaining wire IDs", () => {
+    const winter = timezoneOptions(
+      "en",
+      "Europe/Berlin",
+      new Date("2026-01-15T12:00:00Z"),
+    );
+    const summer = timezoneOptions(
+      "en",
+      "Europe/Berlin",
+      new Date("2026-07-15T12:00:00Z"),
+    );
+    expect(winter.find((zone) => zone.value === "Europe/Berlin")?.label).toBe(
+      "Berlin (Europe) · UTC+1",
+    );
+    expect(summer.find((zone) => zone.value === "Europe/Berlin")?.label).toBe(
+      "Berlin (Europe) · UTC+2",
+    );
+    expect(
+      winter.find((zone) => zone.value === "Asia/Kathmandu")?.label ??
+        winter.find((zone) => zone.value === "Asia/Katmandu")?.label,
+    ).toContain("UTC+5:45");
+  });
+
+  it("keeps a saved alias even when it is absent from the browser's preferred names", () => {
+    const zones = timezoneOptions(
+      "en",
+      "US/Eastern",
+      new Date("2026-01-15T12:00:00Z"),
+    );
+    expect(zones.find((zone) => zone.value === "US/Eastern")?.label).toBe(
+      "Eastern (US) · UTC-5",
+    );
+    expect(zones.filter((zone) => zone.value === "UTC")).toHaveLength(1);
   });
 });

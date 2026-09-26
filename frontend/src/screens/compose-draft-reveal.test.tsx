@@ -125,6 +125,8 @@ describe("where a finished draft leaves the reader", () => {
     // band is the notice, and the words are what the press was for.
     await waitFor(() => expect(reveal).toHaveBeenCalled());
     expect(reveal).toHaveBeenCalledWith({ block: "nearest" });
-    expect(editor.textContent).toContain("You asked what this would cost");
+    await waitFor(() =>
+      expect(editor.textContent).toContain("You asked what this would cost"),
+    );
   });
 });

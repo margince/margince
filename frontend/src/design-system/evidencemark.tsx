@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useT } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
 import { usePortalPanelFocus } from "./portalfocus";
 import type { ConfidenceLevel, Provenance } from "./trust";
@@ -117,7 +118,7 @@ export function EvidenceMark({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !coveredByDialog(triggerRef.current)) {
         setOpen(false);
         // Focus returns to what opened the panel, so Escape does not drop
         // the reader at the top of the document.

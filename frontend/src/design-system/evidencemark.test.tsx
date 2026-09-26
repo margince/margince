@@ -7,10 +7,12 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { EvidenceMark } from "./evidencemark";
+import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
+import { Modal } from "./modal";
 
 // Hover intent is inert here unless a case arms it (vitest.setup.ts), so a
 // click alone decides whether the panel is open. The cases that arm it wait for
@@ -93,6 +95,35 @@ describe("evidence mark", () => {
     });
     // Escape must not drop the reader at the top of the document.
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("leaves Escape to a dialog raised over it", async () => {
+    const onDialogClose = vi.fn();
+    const page = (dialogOpen: boolean) => (
+      <LocaleProvider initial="en">
+        <EvidenceMark
+          value="1998"
+          source={{
+            provenance: { kind: "agent", agent: "capture" },
+            snippet: "Founded in 1998",
+          }}
+        />
+        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+          <Heading size="large" id="edit">
+            Edit deal
+          </Heading>
+        </Modal>
+      </LocaleProvider>
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(page(false));
+    await user.click(screen.getByRole("button", { name: /1998/ }));
+    rerender(page(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(screen.getByText("Founded in 1998")).toBeTruthy();
   });
 
   it("offers no full-history link when there is nowhere to send the reader", async () => {

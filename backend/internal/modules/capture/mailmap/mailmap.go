@@ -42,6 +42,11 @@ type Message struct {
 	counterparty     string
 	counterpartyName string // display name from the counterparty's header — untrusted text
 	threadKey        string // conversation identity: References root / In-Reply-To / own Message-ID
+	// replyTo lists the Message-IDs this message says it answers: In-Reply-To
+	// and each References entry, unbracketed and deduplicated. threadKey keeps
+	// only the first; the rest is what joins two roots of one conversation
+	// once a mail program has shortened the chain (capture/threadjoin.go).
+	replyTo []string
 	// deliveredTo is the address the receiving infrastructure recorded this
 	// message as delivered to, from a position a sender could not have
 	// authored, and empty whenever no such claim can be trusted
@@ -176,6 +181,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		counterparty:     counterparty,
 		counterpartyName: counterpartyName,
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
+		replyTo:          replyIDs(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		deliveredTo:      deliveredTo,
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
@@ -288,6 +294,43 @@ func threadKey(references, inReplyTo, messageID string) string {
 	return trimAngle(strings.TrimSpace(messageID))
 }
 
+// maxReplyIDs bounds how many referenced ids one message contributes. A real
+// References chain is a handful of ids; the header is the sender's text, and
+// an unbounded list would let one message fan out into arbitrarily many rows.
+const maxReplyIDs = 50
+
+// maxReplyIDBytes is the longest referenced id kept, the same bound the
+// capture sink holds a thread key to (maxIndexedHeaderChars).
+const maxReplyIDBytes = 998
+
+// replyIDs lists every Message-ID this message says it answers: In-Reply-To
+// first, then the References chain from its newest end, so the ids nearest
+// this message survive the bound. Its own id and anything oversized are left
+// out.
+func replyIDs(references, inReplyTo, messageID string) []string {
+	own := trimAngle(strings.TrimSpace(messageID))
+	refs := strings.Fields(references)
+	candidates := make([]string, 0, len(refs)+1)
+	candidates = append(candidates, strings.Fields(inReplyTo)...)
+	for i := len(refs) - 1; i >= 0; i-- {
+		candidates = append(candidates, refs[i])
+	}
+	seen := make(map[string]bool, len(candidates))
+	out := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		id := trimAngle(c)
+		if id == "" || id == own || seen[id] || len(id) > maxReplyIDBytes {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+		if len(out) == maxReplyIDs {
+			break
+		}
+	}
+	return out
+}
+
 // trimAngle strips the RFC822 angle brackets off a message id.
 func trimAngle(id string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(id, "<"), ">")
@@ -349,6 +392,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		DeliveredTo:  m.deliveredTo,
 		Counterparty: m.recordCounterparty(),
 		ThreadKey:    m.threadKey,
+		ReplyTo:      m.replyTo,
 		Participants: m.participants.Participants,
 		Addresses:    m.addresses,
 		Parts:        m.recordParts(),

@@ -52,6 +52,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 		RelationshipType: enumArg(params.RelationshipType),
 		Domain:           params.Domain,
 		TagIDs:           uuidArgs(params.TagId),
+		IDs:              uuidArgs(params.Id),
 	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {
@@ -79,7 +80,14 @@ func (h Handlers) CreateCompany(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := companyCreateInput(req)
+	// A declared importer (a HUMAN holding import_run:create) may stamp the
+	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// grants included, gets the closed door.
+	mapInput := companyCreateInput
+	if auth.DeclaredImporter(r.Context()) {
+		mapInput = companyCreateInputFromImporter
+	}
+	in, err := mapInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -466,3 +466,9 @@ func isDestructive(action string) bool {
 // (voice_learning_signal.retention_until, set at capture); this sweep only
 // honors it — the window is the ai module's fixed operational floor, not a
 // policy-configurable domain record.
+
+// WithPayloadVault lets destructive actions retire sealed booking capabilities.
+func (s *RetentionService) WithPayloadVault(payloads PayloadPurger) *RetentionService {
+	s.eraser = s.eraser.WithPayloadVault(payloads)
+	return s
+}

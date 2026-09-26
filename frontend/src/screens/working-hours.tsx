@@ -11,6 +11,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
@@ -224,11 +225,7 @@ function WorkingHoursForm({
         hint={t("workingHours.timezoneHelp")}
       >
         {(control) => (
-          <TextInput
-            {...control}
-            value={zone}
-            onChange={(event) => setZone(event.target.value)}
-          />
+          <TimezoneSelect {...control} value={zone} onChange={setZone} />
         )}
       </Field>
       <Button onClick={submit} disabled={save.isPending}>

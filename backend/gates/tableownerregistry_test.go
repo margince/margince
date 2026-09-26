@@ -171,6 +171,7 @@ var tableOwners = map[string]string{
 	// second provider's copy of a message resolves to, so it belongs to the
 	// module that owns that row.
 	"activity_identity":        "internal/modules/activities",
+	"activity_mail_reference":  "internal/modules/activities",
 	"activity_sales_state":     "internal/modules/activities",
 	"activity_reader_state":    "internal/modules/activities",
 	"activity_review_template": "internal/modules/activities",
@@ -205,6 +206,8 @@ var tableOwners = map[string]string{
 	// is written by exactly the module that writes those rows.
 	"stored_object_intent": "internal/modules/activities",
 	"deal_document_hide":   "internal/modules/activities",
+	"meeting_proposal":     "internal/modules/activities",
+	"meeting_invitation":   "internal/modules/activities",
 	"booking_page":         "internal/modules/activities",
 	// approvals (signing_key backs the approval-token JWS; the autonomy policy
 	// is what each rep has decided about a KIND of proposal, so it belongs to

@@ -138,10 +138,29 @@ function openPanelIn(
     : null;
 }
 
+/** The modal dialogs that are up, in document order. */
+export function liveDialogs(): HTMLElement[] {
+  // A leaving dialog is still painted, inside the `inert` its surface marks the
+  // exit with; it can take no key, so the layer beneath it is already on top.
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      '[role="dialog"][aria-modal="true"]',
+    ),
+  ].filter((layer) => layer.closest("[inert]") === null);
+}
+
+/**
+ * Whether a live dialog the element is not inside sits on top. A layer under
+ * one leaves Escape to it; a layer opened from inside the dialog keeps its own.
+ */
+export function coveredByDialog(element: Element | null): boolean {
+  const layers = liveDialogs();
+  const top = layers[layers.length - 1];
+  return top !== undefined && !top.contains(element);
+}
+
 function ownsKeyboard(container: HTMLElement | null): boolean {
-  const layers = document.querySelectorAll<HTMLElement>(
-    '[role="dialog"][aria-modal="true"]',
-  );
+  const layers = liveDialogs();
   const top = layers[layers.length - 1];
   return !top || top === container || openPanelIn(top) === container;
 }

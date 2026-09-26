@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 76 |
+| Tools | 77 |
 | Resources | 12 |
-| Tool catalog | 219.8 KB |
+| Tool catalog | 221.9 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57403 |
+| Approx. wire tokens | 57948 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 99.6 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 57.4 KB | 26% | Yes, every step |
-| Input schemas | 46.7 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.0 KB | 7% | Partly |
-| **Description + input schema** | **104.1 KB** | **47%** | **the recurring cost** |
+| Output schemas | 100.7 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 57.6 KB | 25% | Yes, every step |
+| Input schemas | 47.3 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.2 KB | 7% | Partly |
+| **Description + input schema** | **104.9 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -60,7 +60,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (76)
+### Tools (77)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -70,9 +70,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
-| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.8 KB |
+| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.7 KB |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
@@ -99,6 +99,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
+| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.5 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
@@ -691,7 +692,7 @@ Move a project to another phase — initiative, pursuing, delivering, closed. Th
 
 **Write findings onto the morning brief**
 
-Write what you found onto the morning brief you just read: one sentence about the night as a whole, and for each deal you looked at, why it is on the list, what changed, and the one next move you would make. It writes onto that user's own brief for today and nothing else — it cannot be pointed at another user, another day, or a deal that is not already in their queue, and it cannot change the ranking. Every evidence id you cite must be one the brief already recorded for that item; citing anything else refuses the whole write, so cite from what read_brief gave you rather than from memory. Use log_activity to record something that happened on a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass is a correction rather than an addition. (Governance: runs immediately; requires passport scope "write".)
+Write what you found onto the morning brief you just read: one sentence about the night as a whole, and for each deal you looked at, why it is on the list, what changed, and the one next move you would make. It writes onto that contact's own brief for today and nothing else — it cannot be pointed at another contact, another day, or a deal that is not already in their queue, and it cannot change the ranking. Every evidence id you cite must be one the brief already recorded for that item; citing anything else refuses the whole write, so cite from what read_brief gave you rather than from memory. Use log_activity to record something that happened on a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass is a correction rather than an addition. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1171,7 +1172,7 @@ Retire a record that should no longer be worked — a duplicate, a dead company,
 
 **Relationships going cold**
 
-Answer "where are our relationships thin?": across the caller's OPEN deals, the ones resting on a single contact, missing an engaged champion, or carried almost entirely by one colleague on our side. It sweeps open deals — a deal already won or lost is not at risk and is left out — and it takes no arguments, because the caller's own visibility already decides which deals these are. It is about the shape of the relationships around a deal, not about the deal's own momentum. Use whats_slipping_this_week when the question is about deals losing momentum, and company_coverage when the question is about one deal rather than the whole book. Each finding names its deal_id and the contacts it is about; those are what intro_path_to and who_knows take next. (Governance: runs immediately; requires passport scope "read".)
+Answer "where are our relationships thin?": across the caller's OPEN deals, the ones resting on a single contact, missing an engaged champion, or carried almost entirely by one contact on our side. It sweeps open deals — a deal already won or lost is not at risk and is left out — and it takes no arguments, because the caller's own visibility already decides which deals these are. It is about the shape of the relationships around a deal, not about the deal's own momentum. Use whats_slipping_this_week when the question is about deals losing momentum, and company_coverage when the question is about one deal rather than the whole book. Each finding names its deal_id and the contacts it is about; those are what intro_path_to and who_knows take next. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -1370,7 +1371,7 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
 
 **Book a meeting**
 
-Hold a slot in the host's calendar and record the meeting against the records it is about. Needs at least one link saying what it is about. The slot is taken and the meeting is a real commitment, and by default it is taken when this call answers — where an installation has raised this verb to confirm first, the answer is a staged approval instead. No attendee list: who is invited is the calendar connection's business. Check the slot is free first — this tool does not. Use check_availability to find the time, and log_activity to record a meeting that already happened. Keep the staged approval id and re-send the identical start, end and links: the approval is bound to the meeting as it was described. (Governance: runs immediately; requires passport scope "send".)
+Record a meeting against linked CRM records without sending an invitation. Reserves the recorded interval locally. It does not create a calendar event or notify attendees. Needs at least one record link. Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past meeting. Keep the recorded activity id. Do not describe a record-only booking as an invitation sent. (Governance: runs immediately; requires passport scope "send".)
 
 <details><summary>Input schema</summary>
 
@@ -1774,7 +1775,7 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
 
 **Check calendar availability**
 
-Find when a host is free, so a time can be proposed to someone. It reads free/busy over the window you ask for and books nothing. It answers for one host — the acting user unless another is named — not for the invitees. `calendar_backing` says what the window rests on: with no calendar connected the slots are only what meetings recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, because another colleague's connector state is theirs. Unless it says `calendar`, a free window is no evidence the host is free, and none at all that a meeting they told you about is missing from their diary. Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already exists and the goal is walking in ready. Keep the exact start and end of the slot you intend to take; book_meeting takes those, and a slot re-derived later may no longer be free. (Governance: runs immediately; requires passport scope "read".)
+Find candidate times for a host without booking or sending anything. Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability. Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -1796,6 +1797,11 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
       "description": "Defaults to the acting principal's user",
       "format": "uuid",
       "type": "string"
+    },
+    "reliable": {
+      "default": false,
+      "description": "Require live calendar occupancy and booking policy; fails if unavailable",
+      "type": "boolean"
     },
     "to": {
       "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
@@ -3333,7 +3339,7 @@ Answer one staged action for the colleague asking you: approve it, which lets it
       "type": "string"
     },
     "reason": {
-      "description": "Why, in the decider's own words. Recorded with the decision.",
+      "description": "Why, in the deciding contact's words. Recorded with the decision.",
       "type": "string"
     },
     "staged_action_id": {
@@ -3547,7 +3553,7 @@ Answer every still-waiting proposal that one act staged together — the overnig
       "type": "string"
     },
     "reason": {
-      "description": "Why, in the decider's own words. Recorded against every member.",
+      "description": "Why, in the deciding contact's words. Recorded against every member.",
       "type": "string"
     }
   },
@@ -4793,7 +4799,7 @@ Compose an email: a reply to a recorded thread (activity_id), or a FIRST message
 
 **Draft follow-ups**
 
-Draft a follow-up for each deal in a segment at once — today only the slipping deals — and leave each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a human finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
+Draft a follow-up for each deal in a segment at once — today only the slipping deals — and leave each draft on its own deal's timeline. It writes drafts and sends none of them, and it drafts only for deals whose risk is evidenced, so it covers the same set whats_slipping_this_week reports. One call writes to many records, up to a server-side ceiling of 25. Use draft_email for one specific conversation; this tool answers "chase everything that is slipping", not "reply to this". Each draft comes back with its deal_id and draft_activity_id — those are how a contact finds the drafts to review. (Governance: runs immediately; requires passport scope "draft".)
 
 <details><summary>Input schema</summary>
 
@@ -4975,7 +4981,7 @@ Draft a follow-up for each deal in a segment at once — today only the slipping
 
 **Enrich a company from its website**
 
-Learn about a company by reading its public website, and propose what was found for a human to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a human approves every call before it runs; requires passport scope "enrich".)
+Learn about a company by reading its public website, and propose what was found for a contact to accept onto the record. It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing lands on the record until someone accepts it, which is the review that guards this, not an approval on the call. Reading one page answers immediately; reading a whole site is queued and answers with a read id rather than the content. What it finds is captured text from a third party, not a fact this workspace has verified. Use qualify_lead when the missing values are already derivable from the record itself, which costs no external read and needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was queued — the result is collected against it later. (Governance: a human approves every call before it runs; requires passport scope "enrich".)
 
 <details><summary>Input schema</summary>
 
@@ -6172,11 +6178,197 @@ Find a warm route into a company: who we already know there, and which colleague
 
 </details>
 
+### invite_meeting
+
+**Send a calendar invitation**
+
+Create a real calendar invitation for one contact and notify their chosen address. Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification. Use book_meeting only to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times. Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation. (Governance: a human approves every call before it runs; requires passport scope "send".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "attendee_email": {
+      "type": "string"
+    },
+    "contact_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "end": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "start": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "attendee_email",
+    "contact_id",
+    "description",
+    "end",
+    "location",
+    "start",
+    "subject"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "calendar_url": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "management_token": {
+          "type": "string"
+        },
+        "reminder_status": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "end",
+        "id",
+        "location",
+        "start",
+        "status",
+        "subject",
+        "version"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### list_approvals
 
 **List what is waiting for a decision**
 
-The staged actions waiting for a human's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approval answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires passport scope "read".)
+The staged actions waiting for a contact's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approval answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -6536,7 +6728,7 @@ Find out which messaging transports exist in THIS installation, and what each is
 
 **List colleagues**
 
-List who works HERE — colleagues holding a seat, not the contacts stored as contact records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a colleague has no seat. search_records/contact finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
+List the contacts who work HERE — colleagues holding a seat, not the contacts stored as contact records. Reads only, and lists seats that can actually receive work — archived, suspended and locked-out ones are absent. `truncated` means there are more. A `q` matching nobody answers with `all_colleagues` and a warning; that list is ABSENT if it could not be read and partial if `all_colleagues_truncated`, so read the warning before concluding a contact has no seat. search_records/contact finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take. Never assign to an is_agent seat. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -7059,7 +7251,7 @@ List every pipeline this workspace has with its live stages — the configuratio
 
 **List records**
 
-Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope "read".)
+Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one contact owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Use search_records when the question is what a record is called rather than which records meet a condition, and run_report when the answer is a count or a total rather than the records themselves. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -9137,7 +9329,7 @@ Renders its result in [`ui://margince/handoff.html`](#handoff_view), visible to 
 
 **Preview an import**
 
-Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
+Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the contact weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -10315,7 +10507,7 @@ Read one staged action in full: the exact change proposed, the record it acts on
 
 **Read the morning brief**
 
-Read the ranked queue the user you act for sees when they open their morning brief — the deals the workspace decided are worth their attention today, in order, with the rows behind each ranking. It re-reads the last assembled run rather than building a new one, so its as_of says how current it is, and it is that user's own queue: it cannot be asked for anyone else's. Acting on, dismissing or snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are losing momentum regardless of what today's brief chose, and read_record for what one of these deals currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking rested on rather than restating the item's own summary. (Governance: runs immediately; requires passport scope "read".)
+Read the ranked queue the contact you act for sees when they open their morning brief — the deals the workspace decided are worth their attention today, in order, with the rows behind each ranking. It re-reads the last assembled run rather than building a new one, so its as_of says how current it is, and it is that contact's own queue: it cannot be asked for anyone else's. Acting on, dismissing or snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are losing momentum regardless of what today's brief chose, and read_record for what one of these deals currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking rested on rather than restating the item's own summary. (Governance: runs immediately; requires passport scope "read".)
 
 Renders its result in [`ui://margince/company-brief.html`](#company_brief_view), visible to `model`, `app`.
 
@@ -10560,7 +10752,7 @@ Renders its result in [`ui://margince/company-brief.html`](#company_brief_view),
 
 **Read an import report**
 
-What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what the user weighs before committing. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
+What an import will do, or did: rows created, updated, failed, unusable, duplicates. These counts are what a contact weighs before committing. Same shape before and after. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -13296,7 +13488,7 @@ Answer a question about totals, counts or breakdowns by running one of this work
 
 **Search for relevant material**
 
-Find the records most relevant to a description, ranked by meaning as well as by wording, each with the excerpt that ranked it. Ranked, never exhaustive: records that also match may be absent, and no count of them exists. You can narrow it to particular record types, but not by field, date or owner, and it does not group or total. It cannot be narrowed to a project either: the index carries no project column. Use catch_me_up_on with project_id for one project, query_workspace when the question has conditions, a date bound or a related record to reach through, and search_records when you have the exact name or phrase. Read `coverage`: `partial_degraded` means `notes` matters, and `semantic_ranking_degraded_to_lexical` there means the ranking fell back to word overlap. Keep each hit's record_type and id. (Governance: runs immediately; requires passport scope "read".)
+Find the records most relevant to a description, ranked by meaning as well as by wording, each with the excerpt that ranked it. Ranked, never exhaustive: records that also match may be absent, and no count of them exists. You can narrow it to particular record types, but not by field, date or owner, and it does not group or total. It cannot be narrowed to a project either: the index carries no project column, so use catch_me_up_on with project_id for that. Use query_workspace when the question has conditions, a date bound or a related record to reach through, and search_records when you have the exact name or phrase. Read `coverage`: `partial_degraded` means `notes` matters, and `semantic_ranking_degraded_to_lexical` there means the ranking fell back to word overlap. Keep each hit's record_type and id. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -14892,7 +15084,7 @@ Renders its result in [`ui://margince/pipeline-review.html`](#pipeline_review_vi
 
 **Who knows this contact**
 
-Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest first, with the interaction counts that ground the warmth. It reports relationships this workspace can evidence from its own recorded interactions, so a genuine relationship nobody has logged does not appear. Never spoken is reported as no relationship rather than a score of zero. Use intro_path_to when you want a route into a COMPANY rather than the colleagues who know one contact. Each colleague comes back with a user_id; the strength bucket, not the raw score, is what a colleague should be asked about. (Governance: runs immediately; requires passport scope "read".)
+Answer "who here knows this contact?": the colleagues with a relationship to one contact, warmest first, with the interaction counts that ground the warmth. It reports relationships this workspace can evidence from its own recorded interactions, so a genuine relationship nobody has logged does not appear. Never spoken is reported as no relationship rather than a score of zero. Use intro_path_to when you want a route into a COMPANY rather than the contacts who know one contact. Each colleague comes back with a user_id; the strength bucket, not the raw score, is what a contact should be asked about. (Governance: runs immediately; requires passport scope "read".)
 
 Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_view), visible to `model`, `app`.
 

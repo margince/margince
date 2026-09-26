@@ -421,8 +421,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"activity_participant.activity_id": "child row: written only beside the activity itself, inside the transaction that mints it",
 	// The external identities one message answers to, and the row a second
 	// provider's copy of it resolves to.
-	"activity_identity.activity_id":   "gated: the WRITE is a child row, claimed only beside the activity it names inside the transaction that mints it, on an id the store generated rather than one a caller supplied. The READ is where disclosure would live — resolving an identity tells a caller which activity already holds their message — and it goes through readActivity, whose own row-scope gate answers ErrNotFound for a row outside the caller's scope; that miss falls through to an ordinary create, so an out-of-scope incumbent is never named. ON DELETE CASCADE, plus an explicit purge on the erasure path, because erasure archives rather than deletes and an identity outliving its content would resolve a later arrival onto an emptied row",
-	"activity_participant.contact_id": "server-derived: the counterparty the ensure chokepoint resolved, or a link the activities store already gated",
+	"activity_mail_reference.activity_id": "gated: the WRITE is a child row stored beside the email a capture just landed or took over, on the id the capture itself resolved, inside that capture's transaction. The READ (activities.MailNeighboursTx) answers activity ids only to capture's thread join, which acts on a neighbour solely when the capturing seat holds it (its own capture_import row) and only ever rewrites thread keys; no id, subject or content reaches a caller. ON DELETE CASCADE, plus an explicit purge on the erasure path beside activity_identity, because erasure archives rather than deletes",
+	"activity_identity.activity_id":       "gated: the WRITE is a child row, claimed only beside the activity it names inside the transaction that mints it, on an id the store generated rather than one a caller supplied. The READ is where disclosure would live — resolving an identity tells a caller which activity already holds their message — and it goes through readActivity, whose own row-scope gate answers ErrNotFound for a row outside the caller's scope; that miss falls through to an ordinary create, so an out-of-scope incumbent is never named. ON DELETE CASCADE, plus an explicit purge on the erasure path, because erasure archives rather than deletes and an identity outliving its content would resolve a later arrival onto an emptied row",
+	"activity_participant.contact_id":     "server-derived: the counterparty the ensure chokepoint resolved, or a link the activities store already gated",
 	// The named audience of a limited activity. Written only by the audience
 	// endpoint, which has put the activity through the content gate first.
 	"activity_audience_member.activity_id":       "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",
@@ -474,7 +475,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// written. Every later read of the run record (GetTranscriptRead,
 	// LatestTranscriptRead, ReadTranscript) re-probes the same way rather than
 	// trusting the stored pointer.
-	"transcript_read.activity_id": "client-supplied and gated: every path resolves the activity through readActivity's ActivityContentClause walk, so an unseeable transcript is ErrNotFound rather than a readable run record",
+	"meeting_invitation.activity_id": "server-derived: insertInvitation uses the activity just created by LogActivityTx in the same transaction; host reads and changes pass readActivity, while public readers require the hashed guest capability",
+	"meeting_proposal.activity_id":   "server-derived: CreateProposal uses its newly created note in the same transaction; host replay reads pass readActivity and anonymous reads require the expiring recipient capability",
+	"transcript_read.activity_id":    "client-supplied and gated: every path resolves the activity through readActivity's ActivityContentClause walk, so an unseeable transcript is ErrNotFound rather than a readable run record",
 	// The technical lookup's per-lane ledger. The company is client-supplied —
 	// it is the record the reader pressed "Nachschauen" on — and every entry
 	// point puts it through the gate first: RecordTechnicalLane calls
