@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -606,4 +607,138 @@ func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testin
 	}
 	fresh, _ := e.heldDraftFor(t, deal)
 	wantSeat(t, "the draft the next sweep composed", e.seatOf(t, fresh), &e.Rep2)
+}
+
+// stagedFollowUp seeds a deal owned by Rep1 whose nightly card is waiting.
+func (e *reconcileEnv) stagedFollowUp(t *testing.T, name string) (ids.UUID, ids.ApprovalID) {
+	t.Helper()
+	deal := e.SeedDeal(t, name, e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Call on "+name, 3)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	id, _ := e.followUpApproval(t, deal)
+	return deal, id
+}
+
+func (e *reconcileEnv) dealOwner(t *testing.T, deal ids.UUID) ids.UUID {
+	t.Helper()
+	var owner ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `SELECT owner_id FROM deal WHERE id = $1`, deal).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	return owner
+}
+
+// A store built without the hand-over refuses to move an owner rather than
+// commit a reassignment that leaves the cards pinned to the previous seat — on
+// both writers. Re-sending the owner the deal already has moves nothing, so it
+// needs no hand-over and goes through.
+func TestAStoreWithoutTheHandOverRefusesToMoveTheOwner(t *testing.T) {
+	e := setupReconcile(t)
+	deal, id := e.stagedFollowUp(t, "No hand-over wired")
+	unwired := deals.NewStore(e.DB(), deals.Installation{})
+	dealID := ids.From[ids.DealKind](deal)
+
+	next := ids.From[ids.UserKind](e.Rep2)
+	if _, err := unwired.UpdateDeal(e.Admin(), dealID, deals.UpdateDealInput{OwnerID: &next}); err == nil {
+		t.Fatal("an update with no hand-over wired moved the owner")
+	}
+	if _, err := unwired.ClaimDeal(e.Admin(), dealID, nil); err == nil {
+		t.Fatal("a claim with no hand-over wired moved the owner")
+	}
+	if got := e.dealOwner(t, deal); got != e.Rep1 {
+		t.Errorf("the deal is owned by %s after two refused reassignments, want %s", got, e.Rep1)
+	}
+	wantSeat(t, "the card after the refused reassignments", e.seatOf(t, id), &e.Rep1)
+
+	same := ids.From[ids.UserKind](e.Rep1)
+	if _, err := unwired.UpdateDeal(e.Admin(), dealID, deals.UpdateDealInput{OwnerID: &same}); err != nil {
+		t.Fatalf("re-sending the current owner asked for a hand-over: %v", err)
+	}
+	if got := e.seatMoves(t, id, e.Rep1); got != 0 {
+		t.Errorf("re-sending the current owner recorded %d seat moves, want 0", got)
+	}
+}
+
+// An archived deal is frozen: reassigning it is refused as absent, and its
+// waiting card stays where it was.
+func TestAnArchivedDealIsNotHandedOver(t *testing.T) {
+	e := setupReconcile(t)
+	deal, id := e.stagedFollowUp(t, "Archived with a card waiting")
+	if _, err := e.Deals.ArchiveDeal(e.Admin(), ids.From[ids.DealKind](deal), nil); err != nil {
+		t.Fatalf("archiving: %v", err)
+	}
+	next := ids.From[ids.UserKind](e.Rep2)
+	_, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{OwnerID: &next})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("reassigning an archived deal → %v, want ErrNotFound", err)
+	}
+	wantSeat(t, "the archived deal's card", e.seatOf(t, id), &e.Rep1)
+}
+
+// Every seat move and every withdrawal is audited, and the audit row names who
+// did it. A hand-over run with nobody to name is refused for both — the card
+// neither moves nor is withdrawn.
+func TestAHandOverNobodyCanBeNamedForIsRefused(t *testing.T) {
+	e := setupReconcile(t)
+	e.grantOwner(t, e.Rep2, reconcileOwnerPolicy)
+	taskDeal, task := e.stagedFollowUp(t, "Task card, nobody named")
+	draftDeal := e.SeedDeal(t, "Draft card, nobody named", e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, draftDeal, "Kickoff")
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	draft, _ := e.heldDraftFor(t, draftDeal)
+
+	anonymous := principal.WithWorkspaceID(context.Background(), e.WS)
+	for name, deal := range map[string]ids.UUID{"the task card": taskDeal, "the drafted reply": draftDeal} {
+		err := e.DB().Tx(anonymous, func(tx pgx.Tx) error {
+			return approvals.FollowDealOwnerInTx(anonymous, tx, deal, &e.Rep1, &e.Rep2)
+		})
+		if err == nil {
+			t.Errorf("%s: a hand-over with no actor to audit went through", name)
+		}
+	}
+	wantSeat(t, "the task card", e.seatOf(t, task), &e.Rep1)
+	if got := e.statusOf(t, draft); got != "pending" {
+		t.Errorf("the drafted reply is %q after a refused hand-over, want pending", got)
+	}
+}
+
+// failingDrafter stands in for a drafting engine that is down.
+type failingDrafter struct {
+	followUpReplySeam
+}
+
+func (failingDrafter) DraftEmail(context.Context, ids.UUID, string) (string, string, error) {
+	return "", "", errors.New("the drafting engine is unavailable")
+}
+
+// A drafting failure fails the pass for that deal. It is not quietly turned
+// into a task proposal, which would hide the fault and — through the pending
+// check — keep the reply from ever being drafted.
+func TestADraftingFailureStagesNothingInsteadOfATask(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Drafter down", e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, deal, "Kickoff")
+	stager := followUpStager{
+		svc:   e.svc,
+		draft: failingDrafter{followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{})},
+		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
+		pool:  e.Pool,
+	}
+	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:overnight")
+	if err := deals.NewFollowUpReconciler(e.DB(), stager, quiet).ReconcileWorkspace(sweep); err == nil {
+		t.Fatal("the pass reported success while the drafter was down")
+	}
+	var pending int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM approval WHERE target_entity_id = $1 AND status = 'pending'`, deal).Scan(&pending); err != nil {
+		t.Fatal(err)
+	}
+	if pending != 0 {
+		t.Errorf("%d cards staged while the drafter was down, want 0", pending)
+	}
 }
