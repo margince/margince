@@ -110,6 +110,11 @@ func (onboardingCompanyMessageCases) Prepare(fixture, expected json.RawMessage) 
 	}
 	message := strings.TrimSpace(f.Message)
 	conversation := f.Conversation
+	if conversation.PreviousOffer != nil {
+		return nil, fmt.Errorf(
+			"%s: the fixture's conversation claims a standing offer, and only the server's own offer slot ever supplies one",
+			companyMessageSite)
+	}
 	// The server always builds the plan from the draft, and an omitted list and
 	// an empty one do not marshal alike — so the plan the model is shown is the
 	// derived one, having refused a fixture that claimed a different one.

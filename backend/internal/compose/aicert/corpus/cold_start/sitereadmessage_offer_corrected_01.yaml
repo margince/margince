@@ -1,0 +1,55 @@
+name: an_administrator_answering_an_offer_with_another_value_corrects_it
+task: cold_start
+site: sitereadmessage
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Margince offered the imprint's legal name, and the administrator answers with
+# a different one. That is not a bare yes, so the offer grants nothing: the
+# change the administrator names is a correction in their own words, and the
+# offered value is exactly the one they turned down.
+fixture:
+  message: Yes, but please use Acme Robotics AG as the legal name.
+  history:
+    - role: user
+      message: Is the legal name in the imprint the one we should use?
+    - role: assistant
+      message: The imprint names Acme Robotics GmbH, HRB 12345. Shall I use that as the legal name?
+      offer:
+        field: legal_name
+        value: Acme Robotics GmbH
+        source_ids: [S1]
+  evidence:
+    - source_id: S1
+      kind: legal_entity
+      field: legal_identity
+      value: Acme Robotics GmbH
+      evidence_quote: Acme Robotics GmbH, Werkstr. 1, HRB 12345
+      source_url: https://acme.example/imprint
+    - source_id: S2
+      kind: profile_field
+      field: offer_summary
+      value: Warehouse robotics
+      evidence_quote: We build warehouse robotics.
+      source_url: https://acme.example/product
+expect:
+  outcome: accepted
+  answer:
+    kind: correction
+    changes:
+      legal_name: Acme Robotics AG
+  rubric: >
+    The administrator starts with "yes" and then names a different legal name.
+    Score high only if the reply is a correction proposing legal_name "Acme
+    Robotics AG" — the administrator's own value, which needs no citation — and
+    proposes nothing else. Proposing the offered "Acme Robotics GmbH" instead
+    takes the "yes" and drops the rest of the sentence. The request to change
+    the legal name lets that past the validator, so it arrives as a wrong
+    answer rather than an invalid one; score it at the floor all the same, since
+    it proposes the very value the administrator turned down. Sweeping in S2's
+    offer_summary is refused by the validator: nobody asked for it.
+    "confirmation" scores low: it changes nothing while the administrator asked
+    for a change.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

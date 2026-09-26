@@ -5695,6 +5695,7 @@ public.site_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.company_id uuid gen=- def=-
 public.site_read.confirmed_at timestamp with time zone gen=- def=-
 public.site_read.contacts jsonb NOT NULL gen=- def='[]'::jsonb
+public.site_read.conversation_offer jsonb gen=- def=-
 public.site_read.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.draft_version integer NOT NULL gen=- def=1
 public.site_read.fact_count integer NOT NULL gen=- def=0

@@ -23,6 +23,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -54,13 +56,15 @@ func (s companyReadCompleterStub) Complete(context.Context, model.Request) (mode
 func companyReadCorrectionFixture() companyReadMessageFixture {
 	return companyReadMessageFixture{
 		Message: "Please correct the legal name to Acme Robotics GmbH.",
-		History: []crmcontracts.CompanySiteReadConversationTurn{
-			{Role: crmcontracts.CompanySiteReadConversationTurnRoleUser, Message: "What did you find in the imprint?"},
-			{
+		History: companyReadFixtureTurns(
+			crmcontracts.CompanySiteReadConversationTurn{
+				Role: crmcontracts.CompanySiteReadConversationTurnRoleUser, Message: "What did you find in the imprint?",
+			},
+			crmcontracts.CompanySiteReadConversationTurn{
 				Role:    crmcontracts.CompanySiteReadConversationTurnRoleAssistant,
 				Message: "The imprint names Acme Robotics GmbH, HRB 12345.",
 			},
-		},
+		),
 		Evidence: []companyReadEvidence{
 			{
 				ID: "S1", Kind: "legal_entity", Field: "legal_identity",
@@ -73,6 +77,17 @@ func companyReadCorrectionFixture() companyReadMessageFixture {
 			},
 		},
 	}
+}
+
+// companyReadOfferFixture is the administrator saying a bare yes to the legal
+// name Margince's previous turn offered, recorded as that turn's offer.
+func companyReadOfferFixture() companyReadMessageFixture {
+	fixture := companyReadCorrectionFixture()
+	fixture.Message = "Yes, that's right."
+	fixture.History[0].Message = "Is the legal name in the imprint the one we should use?"
+	fixture.History[1].Message = "The imprint names Acme Robotics GmbH, HRB 12345. Shall I use that as the legal name?"
+	fixture.History[1].Offer = &companyReadOffer{Field: fieldLegalName, Value: "Acme Robotics GmbH", SourceIDs: []string{"S1"}}
+	return fixture
 }
 
 // companyReadQuestionFixture is the same dossier under a question. Nothing in
@@ -288,7 +303,9 @@ func TestCompanyReadMessageCaseSeparatesTheRightAnswerFromAWellFormedWrongOne(t 
 // derives it differently.
 func TestCompanyReadMessageCaseRunsWhatProductionRuns(t *testing.T) {
 	cases := []struct {
-		name string
+		name     string
+		fixture  companyReadMessageFixture
+		expected json.RawMessage
 		// wantRefusedBy is production's own refusal, empty when production
 		// accepts. The case owes the same verdict in the same words: a detail
 		// that paraphrases is a diagnosis a reader has to translate back.
@@ -298,28 +315,34 @@ func TestCompanyReadMessageCaseRunsWhatProductionRuns(t *testing.T) {
 	}{
 		{
 			name: "a change the administrator asked for", reply: companyReadCorrectionReply,
+			fixture: companyReadCorrectionFixture(), expected: companyReadCorrectionExpectation(t),
 			wantResult: aitasks.OutcomeAccepted,
 		},
 		{
 			name: "a change nobody authorized", reply: companyReadUnaskedChangeReply,
+			fixture: companyReadCorrectionFixture(), expected: companyReadCorrectionExpectation(t),
 			wantResult:    aitasks.OutcomeInvalid,
 			wantRefusedBy: `compose: company read answer proposes "industry" without an administrator change request`,
+		},
+		{
+			// The offer reaches production through the slot its own previous
+			// reply wrote, and reaches the case through the fixture's turn. Both
+			// must stand, or the yes grants in one and not the other.
+			name: "a yes to Margince's offer", reply: companyReadCorrectionReply,
+			fixture: companyReadOfferFixture(), expected: companyReadCorrectionExpectation(t),
+			wantResult: aitasks.OutcomeAccepted,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fixture := companyReadCorrectionFixture()
-			history, err := companyReadConversation(&fixture.History)
-			if err != nil {
-				t.Fatalf("mapping the fixture's history: %v", err)
-			}
+			history, offer := productionOfferTurn(t, tc.fixture)
 			brain := &replyBrainStub{response: model.Response{Text: tc.reply}}
 			engine := deepReadEngine{brain: brain}
 			_, productionErr := engine.answerCompanySiteRead(
-				context.Background(), strings.TrimSpace(fixture.Message), history, fixture.Evidence,
+				context.Background(), strings.TrimSpace(tc.fixture.Message), history, tc.fixture.Evidence, offer,
 			)
 
-			outcome, trace := runCompanyReadCase(t, fixture, companyReadCorrectionExpectation(t), tc.reply)
+			outcome, trace := runCompanyReadCase(t, tc.fixture, tc.expected, tc.reply)
 
 			productionRefusal := ""
 			if productionErr != nil {
@@ -337,6 +360,40 @@ func TestCompanyReadMessageCaseRunsWhatProductionRuns(t *testing.T) {
 			assertSameCompanyReadRequest(t, brain.request, trace.Requests[0])
 		})
 	}
+}
+
+// productionOfferTurn replays the fixture the way the transport lives it: each
+// offer the fixture records is written by the finish of the reply that made it,
+// and the current message reads the slot back through beginOfferTurn.
+func productionOfferTurn(t *testing.T, fixture companyReadMessageFixture) ([]model.Message, *companyReadOffer) {
+	t.Helper()
+	ctx := offerAdminCtx()
+	slot := &memoryOfferSlot{}
+	read := &contacts.SiteRead{ID: ids.NewV7(), DraftVersion: companyReadFixtureDraftVersion}
+	wire := make([]crmcontracts.CompanySiteReadConversationTurn, 0, len(fixture.History))
+	for _, turn := range fixture.History {
+		wire = append(wire, turn.CompanySiteReadConversationTurn)
+		if turn.Role != crmcontracts.CompanySiteReadConversationTurnRoleAssistant {
+			continue
+		}
+		made := companyReadModelReply{Message: turn.Message}
+		if turn.Offer != nil {
+			made.Offers = []companyReadOffer{*turn.Offer}
+		}
+		previous := offerTurn{store: slot, readID: read.ID, draftVersion: read.DraftVersion, recorded: slot.slot}
+		if err := previous.finish(ctx, "", made); err != nil {
+			t.Fatalf("recording the fixture's offer: %v", err)
+		}
+	}
+	history, err := companyReadConversation(&wire)
+	if err != nil {
+		t.Fatalf("mapping the fixture's history: %v", err)
+	}
+	turn, err := beginOfferTurn(ctx, slot, read, history)
+	if err != nil {
+		t.Fatalf("reading the offer slot: %v", err)
+	}
+	return history, turn.standing
 }
 
 // assertSameCompanyReadRequest compares two requests for the same turn. The

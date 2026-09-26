@@ -83,8 +83,8 @@ The current_company_draft is application state, not an administrator statement. 
 }
 
 // newOnboardingCompanyGate closes the company-read validator over what THIS
-// conversation authorizes. It is the dossier conversation's gate plus the two
-// grants only the wizard has: the completion plan's next required field, which
+// conversation authorizes. It is the dossier conversation's gate, standing offer
+// included, plus the two grants only the wizard has: the completion plan's next required field, which
 // lets a bare value with no field name in it correct that field, and the clarify
 // option the administrator clicked, which grants exactly that field with that
 // value verbatim.
@@ -97,14 +97,11 @@ func newOnboardingCompanyGate(
 	message string, history []model.Message, conversation onboardingConversationContext,
 	selection *crmcontracts.OnboardingClarifySelection,
 ) companyReadGate {
-	known := make(map[string]companyReadEvidence, len(conversation.Dossier))
-	for _, source := range conversation.Dossier {
-		known[source.ID] = source
-	}
 	gate := companyReadGate{
-		known:         known,
-		statements:    administratorConversation(history, message),
-		authorization: newCompanyChangeAuthorization(message, history, conversation.NextRequired),
+		known:      companyReadEvidenceIndex(conversation.Dossier),
+		statements: administratorConversation(history, message),
+		authorization: newCompanyChangeAuthorization(message, history, conversation.NextRequired).
+			withStandingOffer(conversation.PreviousOffer),
 	}
 	if selection != nil {
 		// The clicked option IS an administrator statement: its value is

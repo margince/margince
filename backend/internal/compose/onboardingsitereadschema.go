@@ -15,15 +15,16 @@ import (
 
 // companyReadMessageSchema is the answer every onboarding conversation site
 // shares, in the order the model writes it: what kind of answer, the answer,
-// then the changes and their sources.
+// then the changes, the offer, and their sources.
 //
 // Its two closed sets are READ from the lists the validator holds the reply
 // to — the kinds from companyConversationKinds, the fields from the contract's
 // own enum — so a value the model may write is exactly one the validator keeps.
 //
 // The bounds are the validator's alone: at most companyReadChangeLimit
-// changes, and no source cited twice. `maxItems` and `uniqueItems` are outside
-// the builder's vocabulary (see package schema), so neither is stated here.
+// changes and companyReadOfferLimit offers, and no source cited twice.
+// `maxItems` and `uniqueItems` are outside the builder's vocabulary (see
+// package schema), so neither is stated here.
 var companyReadMessageSchema = schema.Must(schema.Record(
 	schema.Field("kind", schema.Enum(companyConversationKinds...)),
 	schema.Field("message", schema.String()),
@@ -31,6 +32,11 @@ var companyReadMessageSchema = schema.Must(schema.Record(
 		schema.Field("field", schema.Enum(companyReadChangeFields()...)),
 		schema.Field("value", schema.String()),
 		schema.Field("reason", schema.String()),
+		schema.Field("source_ids", schema.Array(schema.String())),
+	))),
+	schema.Field("offers", schema.Array(schema.Record(
+		schema.Field("field", schema.Enum(companyReadChangeFields()...)),
+		schema.Field("value", schema.String()),
 		schema.Field("source_ids", schema.Array(schema.String())),
 	))),
 	schema.Field("source_ids", schema.Array(schema.String())),

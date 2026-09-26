@@ -36,8 +36,7 @@ const onboardingClarifyOptionLimit = 6
 // and nothing else; every other change still answers to the phrase
 // heuristics in companyChangeAuthorization.allows.
 func (a companyChangeAuthorization) withSelectedOption(field, value string) companyChangeAuthorization {
-	a.selectedField = strings.TrimSpace(field)
-	a.selectedValue = strings.TrimSpace(value)
+	a.selected = exactGrant{field: strings.TrimSpace(field), value: strings.TrimSpace(value)}
 	return a
 }
 

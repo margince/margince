@@ -48,7 +48,7 @@ func TestTheCompanyReadPromptAndSchemaNameTheSameFields(t *testing.T) {
 // kind outside the list fails both.
 func TestTheCompanyReadSchemaAndValidatorAgreeOnKinds(t *testing.T) {
 	reply := func(kind string) string {
-		return `{"kind":"` + kind + `","message":"m","proposed_changes":[],"source_ids":[]}`
+		return `{"kind":"` + kind + `","message":"m","proposed_changes":[],"offers":[],"source_ids":[]}`
 	}
 	for _, kind := range append(slices.Clone(companyConversationKinds), "chitchat") {
 		schemaErr := schema.ValidateJSON(companyReadMessageSchema, reply(kind))

@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 25,
+    "sites_best_current": 22,
     "sites_best_partial": 0,
-    "sites_best_stale": 22,
+    "sites_best_stale": 25,
     "sites_absent": 0,
-    "scenarios": 154,
+    "scenarios": 156,
     "records": 173,
     "bindings": 17,
     "self_judged_records": 4
@@ -664,7 +664,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 33,
           "passed": 30,
           "cases_failing_often": 1,
@@ -3034,9 +3034,9 @@
         "env": "cloud_frontier"
       },
       "sites": 41,
-      "sites_current": 19,
+      "sites_current": 16,
       "sites_partial": 0,
-      "sites_stale": 22,
+      "sites_stale": 25,
       "runs": 495,
       "passed": 485,
       "reliability": 0.9797979797979798,
@@ -5459,17 +5459,8 @@
       "key": "cold_start/acts",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_factual_question_about_connecting_is_answered",
@@ -5504,9 +5495,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 21,
           "passed": 21,
@@ -5519,7 +5510,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_factual_question_about_connecting_is_answered, a_progress_question_is_answered_as_status, an_ambiguous_reference_is_asked_about_rather_than_guessed, asking_what_to_do_next_is_answered_as_a_recommendation, results_act_keeps_an_off_topic_request_in_scope",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ],
+            "grader_changed": [
+              "a_factual_question_about_connecting_is_answered",
+              "a_progress_question_is_answered_as_status",
+              "an_ambiguous_reference_is_asked_about_rather_than_guessed",
+              "asking_what_to_do_next_is_answered_as_a_recommendation",
+              "results_act_keeps_an_off_topic_request_in_scope"
+            ]
+          }
         },
         {
           "binding": {
@@ -5720,17 +5727,8 @@
       "key": "cold_start/company_message",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "supported_degraded",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "bare_answer_corrects_the_field_the_wizard_asked_for",
@@ -5745,9 +5743,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -5760,7 +5758,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario bare_answer_corrects_the_field_the_wizard_asked_for since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ],
+            "grader_changed": [
+              "bare_answer_corrects_the_field_the_wizard_asked_for"
+            ]
+          }
         },
         {
           "binding": {
@@ -6102,22 +6108,23 @@
       "key": "cold_start/sitereadmessage",
       "scope": "single_turn",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "not_supported",
-        "reliability": 0.5,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
-          "name": "an_administrator_agreeing_confirms_and_changes_nothing_further",
+          "name": "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_accepted_01.yaml"
+        },
+        {
+          "name": "an_administrator_agreeing_with_a_plain_question_changes_nothing",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_confirmation_01.yaml"
+        },
+        {
+          "name": "an_administrator_answering_an_offer_with_another_value_corrects_it",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_corrected_01.yaml"
         },
         {
           "name": "dossier_correction_the_administrator_asked_for",
@@ -6132,10 +6139,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
-          "scenarios_total": 2,
+          "scenarios_measured": 0,
+          "scenarios_total": 4,
           "runs": 6,
           "passed": 3,
           "reliability": 0.5,
@@ -6147,7 +6154,15 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "dossier_correction_the_administrator_asked_for"
+            ],
+            "grader_changed": [
+              "dossier_correction_the_administrator_asked_for"
+            ]
+          }
         },
         {
           "binding": {
@@ -6158,7 +6173,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 4,
           "runs": 6,
           "passed": 3,
           "reliability": 0.5,
@@ -6170,14 +6185,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds)",
           "stale_cause": {
             "prompt_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ],
             "grader_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ]
           }
@@ -6191,7 +6204,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": null,
-          "scenarios_total": 2,
+          "scenarios_total": 4,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -6214,7 +6227,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 4,
           "runs": 6,
           "passed": 5,
           "reliability": 0.8333333333333334,
@@ -6226,14 +6239,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds)",
           "stale_cause": {
             "prompt_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ],
             "grader_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ]
           }
@@ -6247,7 +6258,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 4,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
@@ -6259,14 +6270,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds)",
           "stale_cause": {
             "prompt_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ],
             "grader_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ]
           }
@@ -6280,7 +6289,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 4,
           "runs": 6,
           "passed": 3,
           "reliability": 0.5,
@@ -6292,14 +6301,12 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): an_administrator_agreeing_confirms_and_changes_nothing_further, dossier_correction_the_administrator_asked_for",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_correction_the_administrator_asked_for since the record scored it (it also scored an_administrator_agreeing_confirms_and_changes_nothing_further, which the corpus no longer holds)",
           "stale_cause": {
             "prompt_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ],
             "grader_changed": [
-              "an_administrator_agreeing_confirms_and_changes_nothing_further",
               "dossier_correction_the_administrator_asked_for"
             ]
           }

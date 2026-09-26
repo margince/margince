@@ -56,7 +56,7 @@ func TestCompanyReadAnswerBuildsABoundedGroundedModelRequest(t *testing.T) {
 	got, err := engine.answerCompanySiteRead(context.Background(), "Please update the legal name to Acme GmbH.", history, []companyReadEvidence{{
 		ID: "S1", Kind: "legal_entity", Field: "legal_identity", Value: "Acme GmbH",
 		Quote: "Acme GmbH, HRB 12345", URL: "https://acme.example/imprint",
-	}})
+	}}, nil)
 	if err != nil {
 		t.Fatalf("answerCompanySiteRead: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestCompanyReadAnswerBuildsABoundedGroundedModelRequest(t *testing.T) {
 
 	want := errors.New("provider unavailable")
 	engine.brain = &replyBrainStub{err: want}
-	if _, err := engine.answerCompanySiteRead(context.Background(), "Try again", nil, nil); !errors.Is(err, want) {
+	if _, err := engine.answerCompanySiteRead(context.Background(), "Try again", nil, nil, nil); !errors.Is(err, want) {
 		t.Fatalf("provider error = %v, want %v", err, want)
 	}
 }

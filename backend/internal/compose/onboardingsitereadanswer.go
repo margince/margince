@@ -37,11 +37,12 @@ import (
 // the model can tell apart.
 //
 //promptlang:exempt this endpoint has no language to pass: it is a one-admin conversation, so the reader's locale is the right answer rather than the base language, and CompanySiteReadMessageRequest carries no locale field the way its sibling OnboardingCompanyMessageRequest does. Adding one is a contract change; tracked rather than defaulted, because guessing here would answer a German admin in English while claiming to be governed.
-func companyReadAnswerRequest(message string, history []model.Message, evidence []companyReadEvidence) (model.Request, error) {
+func companyReadAnswerRequest(message string, history []model.Message, evidence []companyReadEvidence, offer *companyReadOffer) (model.Request, error) {
 	fence := promptfence.New()
 	contextJSON, err := json.Marshal(struct {
-		Dossier []companyReadEvidence `json:"dossier_evidence"`
-	}{Dossier: evidence})
+		Dossier       []companyReadEvidence `json:"dossier_evidence"`
+		PreviousOffer *companyReadOffer     `json:"your_previous_offer,omitempty"`
+	}{Dossier: evidence, PreviousOffer: offer})
 	if err != nil {
 		return model.Request{}, err
 	}
@@ -61,7 +62,7 @@ func companyReadAnswerRequest(message string, history []model.Message, evidence 
 // companyReadGate is the company-read validator closed over the three things it
 // judges a reply against: the dossier the model was shown, every statement the
 // administrator has made in this conversation, and the authorization those
-// statements grant.
+// statements — and the standing offer they may accept — grant.
 //
 // It is one constructor rather than three call-site derivations because all
 // three come from the same message, history and evidence the request is built
@@ -75,16 +76,21 @@ type companyReadGate struct {
 	authorization companyChangeAuthorization
 }
 
-func newCompanyReadGate(message string, history []model.Message, evidence []companyReadEvidence) companyReadGate {
+func newCompanyReadGate(message string, history []model.Message, evidence []companyReadEvidence, offer *companyReadOffer) companyReadGate {
+	return companyReadGate{
+		known:         companyReadEvidenceIndex(evidence),
+		statements:    administratorConversation(history, message),
+		authorization: newCompanyChangeAuthorization(message, history, "").withStandingOffer(offer),
+	}
+}
+
+// companyReadEvidenceIndex keys the dossier by the source id a reply cites.
+func companyReadEvidenceIndex(evidence []companyReadEvidence) map[string]companyReadEvidence {
 	known := make(map[string]companyReadEvidence, len(evidence))
 	for _, source := range evidence {
 		known[source.ID] = source
 	}
-	return companyReadGate{
-		known:         known,
-		statements:    administratorConversation(history, message),
-		authorization: newCompanyChangeAuthorization(message, history, ""),
-	}
+	return known
 }
 
 // validate judges the model's raw text, which is the shape the shape-retry
