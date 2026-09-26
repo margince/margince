@@ -14,12 +14,8 @@ import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
-import {
-  buildColumns,
-  type CompanyNaming,
-  DealScreen,
-  DealsScreen,
-} from "./deals";
+import type { CompanyNaming } from "./dealcompanymarks";
+import { buildColumns, DealScreen, DealsScreen } from "./deals";
 
 // How a deal's company reads, on the three surfaces that show one.
 //
