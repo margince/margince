@@ -226,9 +226,7 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 //	lead → lead         MergeLead      lead:update
 //	lead → contact      PromoteLead    lead:update + contact:create, never contact:update
 //
-// A promoting rep does not thereby hold contact:update, and a rule of "update
-// on whichever subject survives" once rolled promotions back on a grant the
-// caller was never required to have.
+// Promotion never requires contact:update.
 func admitACarry(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
 	switch {
 	case !from.ContactID.IsZero() && !to.ContactID.IsZero():

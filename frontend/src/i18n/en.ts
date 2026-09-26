@@ -523,8 +523,7 @@ export const en = {
   "history.field.scope": "Scope",
   "history.field.stopped": "Stopped",
   "history.field.stops_carried": "Contact blocks copied",
-  "history.field.consent_records_carried":
-    "Consent links and records moved over",
+  "history.field.consent_records_carried": "Consent data carried",
   "history.field.submission_decision": "Submission decision",
   "history.field.vat_checked_at": "VAT checked",
   "history.field.vat_consultation_number": "VAT consultation number",

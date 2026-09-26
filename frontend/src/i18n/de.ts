@@ -539,8 +539,7 @@ export const de = {
   "history.field.scope": "Umfang",
   "history.field.stopped": "Gestoppt",
   "history.field.stops_carried": "Übernommene Kontaktsperren",
-  "history.field.consent_records_carried":
-    "Übernommene Einwilligungslinks und -nachweise",
+  "history.field.consent_records_carried": "Übernommene Einwilligungsdaten",
   "history.field.submission_decision": "Entscheidung zur Einreichung",
   "history.field.vat_checked_at": "USt-ID geprüft",
   "history.field.vat_consultation_number": "Abfragenummer der USt-ID-Prüfung",

@@ -535,7 +535,7 @@ export const vi = {
   "history.field.scope": "Phạm vi",
   "history.field.stopped": "Đã dừng",
   "history.field.stops_carried": "Lệnh dừng đã chuyển",
-  "history.field.consent_records_carried": "Liên kết và hồ sơ đồng ý đã chuyển",
+  "history.field.consent_records_carried": "Dữ liệu đồng ý đã chuyển",
   "history.field.submission_decision": "Quyết định về yêu cầu",
   "history.field.vat_checked_at": "Đã kiểm tra mã số thuế",
   "history.field.vat_consultation_number": "Số tra cứu mã số thuế",
