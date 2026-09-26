@@ -35,7 +35,8 @@ import (
 // had not, so a task could be MINTED onto an agent seat and only fail to move
 // afterwards.
 func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
-	return ensureSeatHoldsWork(ctx, tx, assigneeID, `status = 'active'`)
+	return ensureSeatHoldsWork(ctx, tx, assigneeID,
+		`SELECT is_agent FROM app_user WHERE id = $1 AND status = 'active' AND archived_at IS NULL`)
 }
 
 // ensureNewTaskAssignee is ensureAssigneeCanHoldWork for a task being CREATED,
@@ -45,17 +46,18 @@ func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.U
 // same rule a new lead's owner follows. Moving an EXISTING task keeps asking
 // ensureAssigneeCanHoldWork, so nothing is re-routed to a seat nobody answers.
 func ensureNewTaskAssignee(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
-	return ensureSeatHoldsWork(ctx, tx, assigneeID, `status IN ('active', 'invited')`)
+	return ensureSeatHoldsWork(ctx, tx, assigneeID,
+		`SELECT is_agent FROM app_user WHERE id = $1 AND status IN ('active', 'invited') AND archived_at IS NULL`)
 }
 
-func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID, status string) error {
+// ensureSeatHoldsWork runs one of the two seat questions above. Each is spelled
+// out whole, so the liveness gate reads both halves of every statement.
+func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID, seatSQL string) error {
 	if assigneeID == nil {
 		return nil
 	}
 	var isAgent bool
-	err := tx.QueryRow(ctx,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND `+status+` AND archived_at IS NULL`,
-		*assigneeID).Scan(&isAgent)
+	err := tx.QueryRow(ctx, seatSQL, *assigneeID).Scan(&isAgent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A seat that is not there, not active, or archived is answered the way
 		// it always was: not found, indistinguishable from a guessed id.
