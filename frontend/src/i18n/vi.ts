@@ -10423,7 +10423,7 @@ export const vi = {
     "Đã xóa nội dung bản chép lời đã quá hạn lưu trữ",
   "magic.action.retention_deal_archive":
     "Đã lưu trữ giao dịch đã đóng đã quá hạn lưu trữ",
-  "magic.why.mail_filed": "Địa chỉ người gửi thuộc về liên hệ này.",
+  "magic.why.mail_filed": "Địa chỉ bên gửi thuộc về liên hệ này.",
   "magic.why.public_records":
     "Từ trang web công khai và bản ghi DNS của công ty.",
   "magic.why.site_read": "Đọc trên {site}.",
@@ -10441,7 +10441,7 @@ export const vi = {
   "magic.by.lead_routing": "Phân phối khách hàng tiềm năng",
   "magic.by.mailbox": "Đồng bộ hộp thư",
   "magic.by.agent": "Một tác tử",
-  "magic.by.system": "Margince",
+  "magic.by.system": "Hệ thống Margince",
   "magic.col.when": "Khi nào",
   "magic.failingSince": "Lỗi từ {when}",
   "magic.col.wayBack": "Cách hoàn tác",

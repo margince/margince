@@ -10508,7 +10508,8 @@ export const de = {
   "magic.aboutCount_one": "{count} Datensatz",
   "magic.aboutCount_other": "{count} Datensätze",
   "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
-  "magic.action.company_profile_read": "Technisches Profil der Firma gelesen",
+  "magic.action.company_profile_read":
+    "Technisches Profil des Unternehmens gelesen",
   "magic.action.fields_changed": "{fields} geändert",
   "magic.action.retention_lead_anonymize":
     "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist anonymisiert",
@@ -10519,14 +10520,14 @@ export const de = {
   "magic.action.retention_contact_erase":
     "Kontakte nach Ablauf der Aufbewahrungsfrist gelöscht",
   "magic.action.retention_activity_archive":
-    "E-Mails, Meetings und Notizen nach Ablauf der Aufbewahrungsfrist archiviert",
+    "E-Mails, Termine und Notizen nach Ablauf der Aufbewahrungsfrist archiviert",
   "magic.action.retention_activity_erase":
     "Transkriptinhalte nach Ablauf der Aufbewahrungsfrist gelöscht",
   "magic.action.retention_deal_archive":
     "Abgeschlossene Deals nach Ablauf der Aufbewahrungsfrist archiviert",
   "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
   "magic.why.public_records":
-    "Aus der öffentlichen Website und den DNS-Einträgen der Firma.",
+    "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
   "magic.why.site_read": "Gelesen auf {site}.",
   "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
   "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",

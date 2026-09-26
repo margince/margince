@@ -236,7 +236,7 @@ describe("the receipt draws every lane it promises", () => {
       await screen.findByText("Filed captured email under this contact"),
     ).toBeTruthy();
     expect(
-      screen.getByText("The sender's address belongs to this contact."),
+      screen.getByText("The sender’s address belongs to this contact."),
     ).toBeTruthy();
     expect(screen.getByText("Mail filing")).toBeTruthy();
     expect(screen.getByText("Anna Keller and 1,199 more")).toBeTruthy();

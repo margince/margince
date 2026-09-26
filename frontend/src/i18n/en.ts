@@ -10695,7 +10695,7 @@ export const en = {
   "magic.aboutCount_one": "{count} record",
   "magic.aboutCount_other": "{count} records",
   "magic.action.mail_filed": "Filed captured email under this contact",
-  "magic.action.company_profile_read": "Read the company's technical profile",
+  "magic.action.company_profile_read": "Read the company’s technical profile",
   "magic.action.fields_changed": "Changed {fields}",
   "magic.action.retention_lead_anonymize":
     "Anonymized unconverted leads past their retention period",
@@ -10711,9 +10711,9 @@ export const en = {
     "Erased transcript content past its retention period",
   "magic.action.retention_deal_archive":
     "Archived closed deals past their retention period",
-  "magic.why.mail_filed": "The sender's address belongs to this contact.",
+  "magic.why.mail_filed": "The sender’s address belongs to this contact.",
   "magic.why.public_records":
-    "From the company's public website and DNS records.",
+    "From the company’s public website and DNS records.",
   "magic.why.site_read": "Read on {site}.",
   "magic.why.signature": "Taken from an email signature.",
   "magic.why.retention": "Retention rule: after {days} days.",
