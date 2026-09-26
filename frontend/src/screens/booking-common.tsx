@@ -1,8 +1,7 @@
 import { useRef } from "react";
 import { navigate } from "../app/router";
 import { Button, Field } from "../design-system/atoms";
-import { Select } from "../design-system/select";
-import { UTC_ZONE, viewerZone } from "../format/timezone";
+import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useT } from "../i18n";
 import { PoweredBy } from "./buyerroomframe";
 
@@ -16,21 +15,10 @@ export function BookingZone({
   onChange,
 }: Readonly<{ value: string; onChange: (zone: string) => void }>) {
   const t = useT();
-  const zones = Array.from(
-    new Set([UTC_ZONE, viewerZone(), ...Intl.supportedValuesOf("timeZone")]),
-  );
   return (
     <Field label={t("scheduling.timezone")}>
       {(control) => (
-        <Select
-          {...control}
-          value={value}
-          options={zones.map((zone) => ({
-            value: zone,
-            label: zone.replaceAll("_", " "),
-          }))}
-          onChange={onChange}
-        />
+        <TimezoneSelect {...control} value={value} onChange={onChange} />
       )}
     </Field>
   );

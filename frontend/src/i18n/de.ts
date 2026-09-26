@@ -8469,7 +8469,7 @@ export const de = {
   "workingHours.days": "Arbeitstage",
   "workingHours.timezone": "Zeitzone",
   "workingHours.timezoneHelp":
-    "Zeitzone für Beginn und Ende. Aus diesem Browser vorausgefüllt.",
+    "Wähle eine Stadt in derselben Zeitzone. Tippe bei geöffneter Liste ihren Namen, um dorthin zu springen. Bis eine Auswahl gespeichert ist, gilt die Zeitzone des Browsers.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.saveFailed": "Arbeitszeiten nicht gespeichert",

@@ -66,7 +66,7 @@ Also called: dark mode, light mode, appearance, colour scheme.
 To set when customers can book time with you in Margince, open Settings → **Account** and fill in the **Bookable hours** card.
 1. Set **Day starts** and **Day ends**.
 2. Tick your **Working days**.
-3. Check the **Timezone**, which is prefilled from your browser.
+3. Choose a city in the **Timezone** dropdown, which uses the browser timezone until a choice is saved. Type the city name while the list is open to jump to it.
 4. Choose **Save working hours**.
 Until you save, the card says **Not set yet** and customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.
 Also called: working hours, availability, office hours.
