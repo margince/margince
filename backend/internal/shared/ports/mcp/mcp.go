@@ -196,6 +196,10 @@ const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with oth
 // Two surfaces state it: the agent runner's frame for this product's own
 // agents, and the MCP server instructions for a client's model, which never
 // reads that frame. One constant, so the two cannot drift apart.
+// Held by: TestTheFrameTellsAModelToNameADisagreementRatherThanReconcileIt
+// (backend/internal/modules/agents/runner/window_test.go) and
+// TestTheInstructionsTellAClientsModelToNameADisagreement
+// (backend/internal/modules/agents/modern_test.go).
 const ConflictingSourcesRule = "When two sources disagree, say that they disagree and name both; " +
 	"never invent an event that would reconcile them. Where a structured field on a record " +
 	"(a date, an amount, a status) disagrees with prose someone wrote, the field wins: " +
