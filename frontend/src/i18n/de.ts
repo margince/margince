@@ -4053,7 +4053,7 @@ export const de = {
   "analytics.share.populationOwner": "Teammitglied",
   "analytics.share.closeTitle": "Diesen Link schließen?",
   "analytics.share.closeBody":
-    "Der Link öffnet sofort nicht mehr, für alle, die ihn haben. Ein geschlossener Link lässt sich nicht wieder öffnen.",
+    "Der Link funktioniert ab sofort für niemanden mehr, der ihn hat. Ein geschlossener Link lässt sich nicht wieder öffnen.",
   "analytics.frame": "Stand {asOf} · {zone}",
   "review.title": "Prüfungen vor der Einschätzung",
   "review.ready": "Bereit",
