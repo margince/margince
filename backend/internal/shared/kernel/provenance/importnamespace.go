@@ -75,6 +75,12 @@ func EngineReminderSource(sourceSystem string) bool {
 	return slices.Contains(EngineReminderSources(), sourceSystem)
 }
 
+// ReminderAnchorSeparator sits between a quiet-account reminder's identity and
+// its anchor (the last genuine touch, RFC 3339 in UTC) in the reminder's
+// source_id. The automation engine writes the key with it and the activities
+// resolver reads the anchor back with it.
+const ReminderAnchorSeparator = ":anchor:"
+
 // EngineReminderSources lists the quiet-account reminder identities, for a
 // query that selects the reminders themselves.
 func EngineReminderSources() []string {

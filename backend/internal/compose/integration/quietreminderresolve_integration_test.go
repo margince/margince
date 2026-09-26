@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -193,5 +194,87 @@ func TestTheEnginesOwnRowDoesNotCloseAQuietReminder(t *testing.T) {
 
 	if got := openTaskCountOn(t, e, "deal", deal); got != 1 {
 		t.Fatalf("open reminders on the deal = %d, want 1 — the engine's own note is not engagement", got)
+	}
+}
+
+// logTouchAt is logTouch at a chosen instant: a history import delivers mail
+// long after it was sent, dated when it was sent.
+func logTouchAt(t *testing.T, e *Env, at time.Time, links ...activities.ActivityLinkInput) ids.UUID {
+	t.Helper()
+	subject := "Imported thread"
+	direction := "outbound"
+	touch, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &direction, OccurredAt: &at,
+		Links: links, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("logging the touch: %v", err)
+	}
+	return ids.UUID(touch.Id)
+}
+
+// seedRemindedQuietDeal is a quiet deal whose reminder the scan has already
+// minted, anchored on quietSince.
+func seedRemindedQuietDeal(t *testing.T, e *Env) ids.UUID {
+	t.Helper()
+	conn := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+	deal := e.SeedDeal(t, "Imported History Deal", pipeline, open, nil)
+	backdateCreatedAt(t, conn, "deal", deal, longEstablished)
+	linkQuietTouch(t, conn, e.WS, "deal", deal)
+	seedNoActivityReminder(t, conn, e.WS)
+	runEligibilityScan(t, e)
+	if got := openTaskCountOn(t, e, "deal", deal); got != 1 {
+		t.Fatalf("open reminders after the scan = %d, want 1", got)
+	}
+	return deal
+}
+
+// Mail dated at or before the reminder's anchor does not end the silence the
+// reminder is about, and the anchor has not moved, so closing it would leave
+// the silence reported by nobody.
+func TestMailDatedBeforeTheAnchorLeavesTheQuietReminderOpen(t *testing.T) {
+	for name, at := range map[string]time.Time{
+		"older":         quietSince.AddDate(0, 0, -3),
+		"at the anchor": quietSince,
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := Setup(t)
+			deal := seedRemindedQuietDeal(t, e)
+
+			deliverCaptured(t, e, logTouchAt(t, e, at, activities.ActivityLinkInput{EntityType: "deal", EntityID: deal}))
+			if got := openTaskCountOn(t, e, "deal", deal); got != 1 {
+				t.Fatalf("open reminders = %d, want 1 — mail from before the silence began does not answer it", got)
+			}
+
+			runEligibilityScan(t, e)
+			if got := taskCountOn(t, e, "deal", deal); got != 1 {
+				t.Fatalf("reminder tasks after a rescan = %d, want still 1", got)
+			}
+		})
+	}
+}
+
+// Mail sent after the anchor but captured only after the reminder was minted —
+// a history import finishing late — proves the reminder wrong and closes it.
+// The deal is still quiet since that mail, so the next scan asks once more,
+// naming the later date.
+func TestDelayedMailNewerThanTheAnchorClosesTheQuietReminder(t *testing.T) {
+	e := Setup(t)
+	deal := seedRemindedQuietDeal(t, e)
+	sent := quietSince.AddDate(0, 0, 5)
+
+	deliverCaptured(t, e, logTouchAt(t, e, sent, activities.ActivityLinkInput{EntityType: "deal", EntityID: deal}))
+	if got := openTaskCountOn(t, e, "deal", deal); got != 0 {
+		t.Fatalf("open reminders = %d, want 0 — the mail answers the reminder", got)
+	}
+
+	runEligibilityScan(t, e)
+	if got := openTaskCountOn(t, e, "deal", deal); got != 1 {
+		t.Fatalf("open reminders after a rescan = %d, want 1 — the deal is quiet again since %s", got, sent.Format(time.DateOnly))
+	}
+	runEligibilityScan(t, e)
+	if got := taskCountOn(t, e, "deal", deal); got != 2 {
+		t.Fatalf("reminder tasks after a second rescan = %d, want 2 — the closed one and one for the new silence", got)
 	}
 }

@@ -181,7 +181,7 @@ func anchorIdempotencyKey(name string, entity datasource.EntityRef, anchor time.
 	if anchorErr != nil {
 		return prefix + ":anchor-error:" + anchorErr.Error()
 	}
-	return prefix + ":anchor:" + anchor.UTC().Format(time.RFC3339Nano)
+	return prefix + provenance.ReminderAnchorSeparator + anchor.UTC().Format(time.RFC3339Nano)
 }
 
 // noActivityReminder reminds an entity's owner once its most recent

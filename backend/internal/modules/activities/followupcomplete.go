@@ -91,13 +91,17 @@ func (s *Store) CompleteCarriedSystemTasks(ctx context.Context, activityIDs []id
 // A lead's reminders close through CompleteOpenSystemTasksForLead.
 //
 // Only a genuine touch answers one — the same test the scan's anchor reads —
-// so the engine's own writes, a notice or a private row close nothing.
+// so the engine's own writes, a notice or a private row close nothing. And
+// only a touch strictly newer than the reminder's anchor: a history import
+// delivering older mail does not end the silence, and since the anchor is
+// unchanged the scan would never ask again.
 func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID ids.ActivityID) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	landed := arg(activityID)
 	where := storekit.SQLf(`a.source_system = ANY($%[2]d)
-			AND EXISTS (SELECT 1 FROM activity landed WHERE landed.id = $%[1]d AND %[3]s)
+			AND EXISTS (SELECT 1 FROM activity landed WHERE landed.id = $%[1]d AND %[3]s
+			            AND landed.occurred_at > coalesce(%[5]s, '-infinity'))
 			AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND (
 			      l.deal_id IN (SELECT t.deal_id FROM activity_link t WHERE t.activity_id = $%[1]d)
 			   OR l.contact_id IN (SELECT t.contact_id FROM activity_link t WHERE t.activity_id = $%[1]d)
@@ -105,8 +109,21 @@ func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID 
 			                       WHERE reach.activity_id = $%[1]d)))`,
 		landed, arg(provenance.EngineReminderSources()),
 		genuineEngagement("landed", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)),
-		CompanyReachSet())
+		CompanyReachSet(),
+		reminderAnchor("a", arg(provenance.ReminderAnchorSeparator)))
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
+}
+
+// reminderAnchor reads a quiet reminder's anchor back out of its source_id,
+// or NULL when the key carries none that parses — a key written on a failed
+// anchor decode (":anchor-error:"). A NULL anchor keeps the plain close: any
+// genuine touch answers the reminder, which is what it did before the anchor
+// was read. The pattern guards the cast, so a malformed key cannot fail the
+// whole firing.
+func reminderAnchor(alias string, separatorPos int) string {
+	return storekit.SQLf(`(CASE WHEN split_part(%[1]s.source_id, $%[2]d, 2)
+		    ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$'
+		  THEN split_part(%[1]s.source_id, $%[2]d, 2)::timestamptz END)`, alias, separatorPos)
 }
 
 // completeOpenSystemTasksLinkedBy completes every open system-minted task the
