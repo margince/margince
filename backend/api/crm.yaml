@@ -20324,10 +20324,9 @@ paths:
               schema: { $ref: '#/components/schemas/IssuedForecastShare' }
         '400':
           description: >-
-            The request is unanswerable as written: an expiry past the ceiling, a field
-            this caller cannot name, a measure that means nothing over that column, or a
-            filter separating out too few records to answer about. The body names what
-            would have worked.
+            The share cannot be issued as asked: an expiry in the past or past the ceiling,
+            a kind that is neither live nor snapshot, a snapshot naming no state or one taken
+            over a different population, or a scope whose id disagrees with its kind.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -20470,8 +20469,10 @@ paths:
         refusal that says "you may not read that" tells them the column exists.
 
         `version` changes when the vocabulary does, including when one seat's grants change.
-        A query planned against an older version is refused rather than run, because a plan
-        naming a field that has since moved would render SQL against a column that is gone.
+        Every answer echoes the version it was asked in as `schema_version`, so a caller can
+        tell whether two answers were asked in the same vocabulary. A query carries no version
+        and is judged by the vocabulary current when it runs: a field that has since gone is
+        refused by name, like any other field the caller cannot name.
       # NOT an agent tool, and the reason is measured rather than a preference:
       # the served catalog sits within a few hundred tokens of the certification
       # lane's floor, and a vocabulary tool would recite per-caller derived
@@ -20531,13 +20532,13 @@ paths:
               schema: { $ref: '#/components/schemas/AnalyticsAnswer' }
         '400':
           description: >-
-            The request is unanswerable as written: an expiry past the ceiling, a field
-            this caller cannot name, a measure that means nothing over that column, or a
-            filter separating out too few records to answer about. The body names what
-            would have worked.
+            The question is unanswerable as written: a population or field this caller
+            cannot name, a measure that means nothing over that column, an aggregate or
+            comparison the engine does not have, or a filter separating out too few records
+            to answer about. `details` carries the refusal's kind and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -20575,6 +20576,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReportRun' }
+        '400':
+          description: >-
+            The saved question, re-asked for this caller, is refused — the same refusal they
+            would get asking it directly, such as a field outside their own vocabulary.
+            `details` carries the refusal's kind and what would have worked.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -20623,11 +20632,13 @@ paths:
         '400':
           description: >-
             The cell names a different number of group keys than the saved question grouped
-            by. A typed refusal rather than a validation error: the request is well-formed
-            and the mismatch is only knowable against the stored question.
+            by, or the saved question, re-asked for this caller, is refused. A typed refusal
+            rather than a validation error: the request is well-formed and the mismatch is
+            only knowable against the stored question. `details` carries the refusal's kind
+            and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -20677,11 +20688,12 @@ paths:
         '400':
           description: >-
             The document is not in the block grammar — an unknown block, a literal number, a
-            figure block naming no cell, or an untyped callout. The message names the block
-            by index.
+            figure block naming no cell, or an untyped callout — and the message names the
+            block by index. Or a cited run's question, re-asked for this reader, is refused,
+            and `details` carries the refusal's kind and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -20720,13 +20732,13 @@ paths:
               schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
         '400':
           description: >-
-            The request is unanswerable as written: an expiry past the ceiling, a field
-            this caller cannot name, a measure that means nothing over that column, or a
-            filter separating out too few records to answer about. The body names what
-            would have worked.
+            The question is unanswerable as written: a population or field this caller
+            cannot name, a measure that means nothing over that column, an aggregate or
+            comparison the engine does not have, or a filter separating out too few records
+            to answer about. `details` carries the refusal's kind and what would have worked.
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -39333,8 +39345,8 @@ components:
         version:
           type: string
           description: >-
-            Changes when this caller's vocabulary changes. A query planned against an
-            older version is refused rather than run.
+            Changes when this caller's vocabulary changes. Echoed on every answer as
+            `schema_version`.
         entities:
           type: array
           items: { $ref: '#/components/schemas/AnalyticsEntity' }
@@ -39501,6 +39513,53 @@ components:
           description: >-
             Where this answer was saved, present only when the query asked for it. A report
             block cites this id plus a cell's coordinates instead of carrying the number.
+        labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
+      additionalProperties: false
+    AnalyticsIdLabels:
+      type: object
+      description: >-
+        Display names for the ids in the grouped columns that name a company or a project,
+        keyed by column and then id, read under this caller's own grants. An id this caller
+        may not name is absent, and so is a column with nothing named; the id still stands
+        on the row. A withheld row carries no id, so nothing here names it.
+      additionalProperties:
+        type: object
+        additionalProperties: { type: string }
+    AnalyticsRefusal:
+      description: >-
+        A problem body whose `details` spell out an analytics refusal, present whenever the
+        engine refused the question. A 400 the engine did not write — a malformed scope, a
+        document outside the block grammar — carries the problem alone.
+
+        The envelope is `Problem`'s, restated rather than composed with `allOf` so the
+        breaking-change check can read it; a gate holds the two property sets equal.
+      type: object
+      required: [status, code]
+      properties:
+        type: { type: string, format: uri, default: about:blank }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        details: { $ref: '#/components/schemas/AnalyticsRefusalDetails' }
+    AnalyticsRefusalDetails:
+      type: object
+      description: >-
+        Why a question was not answered, in parts a client can render. `detail` beside it
+        says the same as one sentence, for a reader that has only prose.
+      required: [kind, message, suggest]
+      properties:
+        kind:
+          type: string
+          enum: [invalid, unsupported, privacy]
+          description: >-
+            `invalid`: the question means nothing as asked, such as a sum over a stage name.
+            `unsupported`: it names a population, field, aggregate or comparison this
+            caller's vocabulary does not have. `privacy`: the answer would describe too few
+            records.
+        message: { type: string, description: "What is wrong, in the asker's terms." }
+        suggest: { type: string, description: "The smallest change that would have worked." }
       additionalProperties: false
     ReportRun:
       type: object
@@ -39513,7 +39572,10 @@ components:
         id: { type: string, format: uuid }
         query:
           allOf: [{ $ref: '#/components/schemas/AnalyticsQuery' }]
-          description: The question as it was saved, unchanged.
+          description: >-
+            The question as it was saved, with one addition: `limit` is always present and
+            is the bound this read applied, including the default when the asker named
+            none.
         answer:
           allOf: [{ $ref: '#/components/schemas/AnalyticsAnswer' }]
           description: >-
@@ -39691,6 +39753,9 @@ components:
         columns:
           type: array
           items: { type: string }
+          description: >-
+            The keys a row may carry, in order: `id`, the dimensions, the measured fields,
+            and `label` last when at least one row was named.
         rows:
           type: array
           items:
@@ -39698,7 +39763,9 @@ components:
             additionalProperties: true
           description: >-
             The records, each carrying its id, the dimensions that put it in this group,
-            and the fields the measures were computed over.
+            and the fields the measures were computed over. `label` is the record's display
+            name, read under this caller's own grants; it is ABSENT on a row the caller may
+            not name, which keeps its id and nothing more.
         withheld:
           type: boolean
           description: >-
@@ -39709,6 +39776,7 @@ components:
           description: >-
             The cell covers more records than were returned. A reader who adds up the rows
             and finds less than the cell needs to know why.
+        labels: { $ref: '#/components/schemas/AnalyticsIdLabels' }
       additionalProperties: false
     WeeklyPlan:
       type: object

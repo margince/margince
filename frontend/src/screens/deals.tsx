@@ -156,6 +156,7 @@ import {
   withoutScreenDials,
 } from "./listquery";
 import { useOpenEmail } from "./openemail";
+import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
@@ -205,27 +206,6 @@ function usePipeline(pipelineId?: string | null) {
         throw new Error("no pipeline");
       }
       return pipeline;
-    },
-  });
-}
-
-// The plural read over ALL pipelines (D-9's selector) — a DISTINCT cache key
-// from usePipeline's ["pipelines"] (which DealScreen still reads as a single
-// Pipeline). Sharing the key would let the cache hold either shape depending
-// on which screen loaded last; ["pipelines","all"] still gets refreshed by
-// any mutation that invalidates the ["pipelines"] prefix (react-query prefix
-// matching), so freshness is preserved without a shape collision.
-function usePipelines() {
-  return useQuery({
-    queryKey: ["pipelines", "all"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
     },
   });
 }

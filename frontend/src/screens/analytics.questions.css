@@ -1,0 +1,52 @@
+/* The question builder. The report and its grouping stand side by side while
+   there is room and stack on a phone, where a row of two pickers would leave
+   neither wide enough to read its choice. */
+.questions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-4);
+}
+
+/* Measure and filter rows: a numbered list, because "measure 2" is how a
+   reader and a screen reader both refer to one. */
+.questions-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* One row's pickers share the line and wrap as the column narrows; the
+   remove glyph keeps its own square at the end. */
+.questions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.questions-control {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+/* On a phone the pickers stack, one per line, so a row reads top to bottom
+   in the order it is filled in, and the remove glyph stays beside the first
+   of them rather than trailing on a line of its own. */
+@media (max-width: 640px) {
+  .questions-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .questions-row > :not(.questions-remove) {
+    grid-column: 1;
+  }
+
+  .questions-remove {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}

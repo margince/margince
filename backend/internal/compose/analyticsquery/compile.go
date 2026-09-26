@@ -137,10 +137,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	}
 	where = append(where, scoped...)
 
-	sql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(selects, ", "), entity.From)
-	if len(where) > 0 {
-		sql += " WHERE " + strings.Join(where, " AND ")
-	}
+	sql := fmt.Sprintf("SELECT %s FROM %s%s", strings.Join(selects, ", "), entity.From, whereSQL(where))
 	if groupCount > 0 {
 		sql += " GROUP BY " + groupPositions(groupCount)
 	}
@@ -150,7 +147,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	if groupCount > 0 {
 		sql += " ORDER BY " + groupPositions(groupCount)
 	}
-	sql += fmt.Sprintf(" LIMIT %s", bind(boundedLimit(q.Limit)))
+	sql += fmt.Sprintf(" LIMIT %s", bind(AppliedLimit(q.Limit)))
 
 	plan := Plan{
 		SQL: sql, Args: args, Columns: columns,
@@ -319,6 +316,16 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 	return out, nil
 }
 
+// whereSQL renders the conditions, or nothing: a population with no base
+// predicate, no filter and no narrowing is every row, and `WHERE` alone is not
+// a statement.
+func whereSQL(where []string) string {
+	if len(where) == 0 {
+		return ""
+	}
+	return " WHERE " + strings.Join(where, " AND ")
+}
+
 // groupPositions renders GROUP BY and ORDER BY as ordinals.
 //
 // Positions rather than repeating the expressions: an expression written twice
@@ -332,7 +339,9 @@ func groupPositions(n int) string {
 	return strings.Join(parts, ", ")
 }
 
-func boundedLimit(want int) int {
+// AppliedLimit is the bound the engine puts on a question asking for want
+// groups — what a reader is told when an answer stops short.
+func AppliedLimit(want int) int {
 	if want <= 0 {
 		return defaultLimit
 	}
