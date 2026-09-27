@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -343,5 +344,24 @@ func TestADeadlockedAttemptRunsOnceMoreAndNoMore(t *testing.T) {
 	attempts = 0
 	if err := engine.transact(e.Admin(), func(pgx.Tx) error { attempts++; return deadlock }); !errors.Is(err, deadlock) || attempts != 2 {
 		t.Errorf("two deadlocks → %v after %d attempts, want the deadlock after two", err, attempts)
+	}
+}
+
+// A caller whose role may not change the record type at all is refused the
+// whole change, rather than told every row is someone else's.
+func TestACallerWithoutTheGrantIsRefusedTheWholeChange(t *testing.T) {
+	e := integration.Setup(t)
+	store := contacts.NewStore(e.DB())
+	company, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Grantless AG", Source: "manual"})
+	if err != nil {
+		t.Fatalf("CreateCompany: %v", err)
+	}
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
+	_, err = bulkEngineFor(e).Preview(rep1, bulkChange{
+		recordType: crmcontracts.BulkRecordTypeCompany, verb: crmcontracts.BulkVerbArchive,
+		items: []crmcontracts.BulkItem{{Id: company.Id, Version: *company.Version}},
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("archiving companies without the company grant → %v, want permission denied", err)
 	}
 }
