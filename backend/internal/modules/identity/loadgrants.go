@@ -171,3 +171,12 @@ func SeatAllows(ctx context.Context, tx pgx.Tx, seat ids.UserID, object string, 
 	}
 	return perms.Allows(object, action), nil
 }
+
+// teamIDsOf types raw team ids, the reverse of rawTeamIDs.
+func teamIDsOf(teams []ids.UUID) []ids.TeamID {
+	out := make([]ids.TeamID, len(teams))
+	for i, t := range teams {
+		out[i] = ids.From[ids.TeamKind](t)
+	}
+	return out
+}

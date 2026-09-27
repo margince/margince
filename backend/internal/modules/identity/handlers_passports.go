@@ -50,7 +50,7 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 			httperr.Write(w, r, httperr.Validation("scopes", "invalid_scope", badScope.Error()))
 			return
 		}
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, archivedRoleRefusal(err))
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.IssuePassportResponse{

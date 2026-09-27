@@ -69,9 +69,11 @@ export function InviteUserForm({
   const [name, setName] = useState("");
   const assignable = useAssignableRoles(true);
   const offered = assignable.data ?? [];
-  // The ordinary seat most colleagues hold. Every member administrator may hand
-  // it out: it confers no administration grant and the narrowest row scope.
+  // The ordinary seat most colleagues hold, as the starting choice. A member
+  // administrator whose own access does not cover it is not offered it, and
+  // picks a role they are offered before the form sends anything.
   const [role, setRole] = useState<Role>("rep");
+  const offersRole = offered.some((one) => one.key === role);
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const teams = useRoster("team", true);
@@ -112,7 +114,10 @@ export function InviteUserForm({
   });
 
   const canInvite =
-    email.trim().length > 0 && displayName.length > 0 && !invite.isPending;
+    email.trim().length > 0 &&
+    displayName.length > 0 &&
+    offersRole &&
+    !invite.isPending;
 
   return (
     // A real <form>, so Enter submits it — and the house dialog stack, so the
@@ -161,7 +166,8 @@ export function InviteUserForm({
         {(control) => (
           <Select
             {...control}
-            value={role}
+            value={offersRole ? role : ""}
+            placeholder={t("users.setRole")}
             disabled={assignable.isPending}
             onChange={setRole}
             options={roleOptions(t, offered)}
@@ -201,7 +207,7 @@ export function InviteUserForm({
         )}
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>
-      <AccessPreviewPanel role={role} teamIds={teamIds} />
+      {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
       {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}

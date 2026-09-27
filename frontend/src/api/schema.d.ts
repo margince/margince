@@ -12104,9 +12104,11 @@ export interface paths {
          *     not on `role_admin`: a member administrator hands roles out without editing them.
          *
          *     Each role listed is one the assignment ceiling admits for this caller — the same
-         *     check `inviteUser` and `changeUserRole` run. It is an offer, not a promise: those
-         *     writes also check the member being re-roled, and still refuse a target this caller
-         *     does not contain. Ordered by key.
+         *     check `inviteUser` and `changeUserRole` run. For a caller who is not an admin that
+         *     ceiling is containment: the caller must already hold every grant the stored role
+         *     document names (extension grants included), its row scope and every field it reads.
+         *     It is an offer, not a promise: the writes also check the teams the account will be
+         *     on and the member being re-roled. Ordered by key.
          */
         get: operations["listAssignableRoles"];
         put?: never;
@@ -12370,9 +12372,9 @@ export interface paths {
          *     role's field masks. It gets a generated key (`custom_<slug of the name>`, never a
          *     seeded key, never changed afterwards) and `is_system: false`.
          *
-         *     Gated on `role_admin.create`. A caller who is not an admin must already hold every
-         *     grant the copied role confers and a row scope at least as wide: a copy is a new
-         *     role holding those grants, and nobody makes a role wider than themselves.
+         *     Admin only (403 `widening_requires_admin` for any other holder of `role_admin.create`):
+         *     a new role is authority nobody held before. In this version only an admin may widen
+         *     what a role grants; other holders of `role_admin` may rename, narrow and archive.
          *
          *     No public event: the closed catalog has no role-definition type. The audit row
          *     names the new role, its source and its name.
@@ -12403,9 +12405,8 @@ export interface paths {
         /**
          * Rename a role or change its row scope. Human-only.
          * @description Gated on `role_admin.update`. Renaming and narrowing the row scope are open to every
-         *     holder of the grant. Widening the row scope is refused (403) unless the caller's own
-         *     row scope is at least as wide, and refused for a role the caller holds: nobody widens
-         *     their own role. An admin is exempt from both.
+         *     holder of the grant. Widening the row scope is admin only (403
+         *     `widening_requires_admin`): it reaches every holder's teams at once.
          *
          *     Send the `version` you read in `If-Match`; a stale one is refused 409 `version_skew`.
          *     The audit row carries the before and after of each changed field.
@@ -12454,9 +12455,11 @@ export interface paths {
         put?: never;
         /**
          * Restore an archived role. Human-only.
-         * @description Gated on `role_admin.delete`, like archiving. The role comes back with the grants and
-         *     field masks it had. Restoring a live role is a no-op. Refused 409 `role_name_taken`
-         *     when a live role has taken its name in the meantime; rename that one first.
+         * @description Admin only (403 `widening_requires_admin` for any other holder of `role_admin.delete`):
+         *     restoring hands the role's grants back to every member still holding it. The role
+         *     comes back with the grants and field masks it had. Restoring a live role is a no-op.
+         *     Refused 409 `role_name_taken` when a live role has taken its name in the meantime;
+         *     rename that one first.
          */
         post: operations["restoreRole"];
         delete?: never;
@@ -12508,9 +12511,8 @@ export interface paths {
          *     storing a typo would create a grant nobody can ever satisfy and no screen can explain.
          *
          *     Gated on `role_admin.update`. Turning a verb OFF is open to every holder of the grant.
-         *     Turning one ON is refused (403) unless the caller holds that verb themselves, and
-         *     refused for a role the caller holds: nobody widens their own role. An admin is exempt
-         *     from both, which is how a newly installed extension's objects are first granted. The
+         *     Turning one ON is admin only (403 `widening_requires_admin`), which is also how a newly
+         *     installed extension's objects are first granted. The
          *     seeded `admin` role's grants on the administration objects cannot be narrowed (409
          *     `admin_role_floor`), because an installation whose admin role lost `role_admin` or
          *     `user_admin` could not be administered back.
@@ -29243,7 +29245,7 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. `listAssignableRoles` names the roles this caller may hand out. */
+            /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out. */
             role: string;
             /** @description The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent. */
             team_ids?: string[];
@@ -39287,6 +39289,15 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            /** @description `archived_role_held` — the caller holds an archived role and gets no new credential until an admin gives them a live role. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -56975,7 +56986,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description Refused with `code: not_deactivated` — only a deactivated member can be reactivated, and this one is in some other state. Both reachable states need a different action, not this one: an `invited` member has never set a password, and a `suspended` member is held for a reason that reactivating would clear without it ever being resolved. (An `active` member is a no-op and answers 200, not this.) */
+            /** @description Refused with `code: not_deactivated` — only a deactivated member can be reactivated, and this one is in some other state. Both reachable states need a different action, not this one: an `invited` member has never set a password, and a `suspended` member is held for a reason that reactivating would clear without it ever being resolved. (An `active` member is a no-op and answers 200, not this.) Or `archived_role_held` — the member still holds an archived role, which would hand the account its grants back the moment the role is restored; an admin gives them a live role first. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -57012,7 +57023,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused, with the reason distinguished by the problem `code`: `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), or `member_not_active` (the member is suspended or deactivated, so redemption would refuse the link this call would mint). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `public_base_url_unset` (no canonical base to build a link against — an operator configuration gap), `member_not_active` (the member is suspended or deactivated, so redemption would refuse the link this call would mint), or `archived_role_held` (the member holds an archived role; an admin gives them a live role first). */
             409: {
                 headers: {
                     [name: string]: unknown;

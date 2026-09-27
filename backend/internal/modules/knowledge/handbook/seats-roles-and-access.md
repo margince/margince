@@ -145,9 +145,9 @@ someone reports an empty app, check their role first.
 
 Holding more than one role gives you the widest of them.
 
-The six roles are seeded with the product, not frozen: an administrator can
-change their grants, or copy one into a new role through the `/roles` API (no
-settings page yet). An archived role grants nothing. This page describes the
+The six roles are seeded, not frozen. Through the `/roles` API (no settings page
+yet) only an Admin copies, restores or widens a role; other role editors rename,
+narrow or archive. An archived role grants nothing. This page describes the
 **seeded** grants; the permission decides, so a custom role reaches what it holds.
 
 ## Row scope: which records, not which kinds
@@ -342,11 +342,11 @@ permission, so a custom role holding it manages colleagues without being called
 Admin.
 
 **Your access must cover theirs.** Acting on an **Admin's** account takes the
-Admin role itself, whatever else you hold. For anyone else, deactivating or
-reactivating needs their administration permissions and row scope, and a
-set-password link or a role change needs everything they hold, fields and teams
-included. Only an Admin changes their own role, and the role pickers offer only
-roles you may hand out.
+Admin role itself. Otherwise, deactivating or reactivating needs their
+administration permissions and row scope; a set-password link, a role change or
+an invite needs everything the account holds or will hold, fields and teams
+included. Only an Admin changes their own role. A member on an archived role
+gets no link or reactivation until an Admin gives them a live role.
 
 **Inviting.** You choose a role, and the colleague is created with no password.
 If your installation sends email, they get a link. If not, the administrator

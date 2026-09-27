@@ -98,7 +98,10 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 		// cannot sign in today, but it can be REACTIVATED — at which point it
 		// carries whatever role this call granted, so handing one out here is
 		// handing one out.
-		roleID, err := roleForAssignment(ctx, tx, actor, role)
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		roleID, err := roleForAssignment(ctx, tx, actor, role, nil)
 		if err != nil {
 			return err
 		}

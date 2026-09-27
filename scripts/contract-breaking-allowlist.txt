@@ -43,4 +43,4 @@ e3f137e00f6409dbbaa0e805d01f745c1c6feb94 9be587d2f86d1ab30eac64d5819338629ddf23e
 41b8f2ae94d71705d00374e8d3fbcf6c082b2b6f 0ce4c55952a2994e94f0ae0fa57318914cc8e0b1 ratified-1065-a-booking-belongs-to-at-least-one-record
 a5f0633da0c9bcb048f592cef53e3bced9583c4e e5a82786d1b7231e23936099e6305e7b9244be81 ratified-the-app-reads-from-its-own-tables-overlay-mode-retired
 5e7322a19add0abe471ee81d480f4931a57aaa65 09f13f8289b92ae1b235888e670839824759dacd ratified-the-meeting-plans-arc-is-the-companys-not-an-accounts
-71fb6d7418adcb9bbaff9affd0beb6ee7dee16bd 65b4919b692476b75dc82d2c41c1372839b25306 ratified-4744-a-role-is-a-row-the-closed-role-enums-become-a-checked-key
+71fb6d7418adcb9bbaff9affd0beb6ee7dee16bd 72897d4d8e3265c5869edb546128f17718ea75a3 ratified-4744-a-role-is-a-row-the-closed-role-enums-become-a-checked-key

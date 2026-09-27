@@ -90,6 +90,9 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 	}
 	var out Team
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		var before Team
 		if err := tx.QueryRow(ctx, `SELECT id, name, archived_at FROM team WHERE id = $1 FOR UPDATE`, id).
 			Scan(&before.ID, &before.Name, &before.ArchivedAt); err != nil {
@@ -139,6 +142,9 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// The team is locked for the write: an archive committing between
 		// this check and the insert would otherwise leave a member on a
 		// team nobody can see, holding authority the moment it is restored.

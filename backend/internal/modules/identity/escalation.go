@@ -35,6 +35,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -215,37 +216,18 @@ func masksContained(caller, target []principal.FieldMask) bool {
 	return true
 }
 
-// refuseUnlessCallerHoldsGrant refuses a role-editor write that turns on a verb
-// the caller does not hold.
-//
-// Needs no transaction: it compares what the write WOULD grant against what the
-// caller already holds, and both are values in hand. The stored document is not
-// read at all, because what a role currently grants does not bound what this
-// caller may add to it — only the caller's own authority does.
-func refuseUnlessCallerHoldsGrant(actor Identity, object string, grant storedGrant) error {
-	if actor.hasRole(roleAdmin) {
-		return nil
-	}
-	held := actor.Permissions.Objects[object]
-	if !held.Contains(principal.ObjectGrant(grant)) {
-		return apperrors.ErrPermissionDenied
-	}
-	return nil
-}
-
 // roleForAssignment reads the live role a key names, refuses it when this
-// caller may not hand it out, and returns its id for the assignment row.
+// caller may not hand it to an account on these teams, and returns its id for
+// the assignment row.
 //
-// FOR SHARE, so an archive cannot slip between this read and the assignment:
-// archiving takes the row FOR UPDATE and then counts holders, so it either
-// waits for this transaction and counts the new holder, or commits first and
-// this read finds no live role. An archived role answers errUnknownRole — it is
-// not a role anybody can be given.
-func roleForAssignment(ctx context.Context, tx pgx.Tx, actor Identity, roleKey string) (ids.UUID, error) {
+// Its caller holds lockAuthorization, which archiving takes too, so the role
+// cannot be archived between this read and the assignment. An archived role
+// answers errUnknownRole — it is not a role anybody can be given.
+func roleForAssignment(ctx context.Context, tx pgx.Tx, actor Identity, roleKey string, teams []ids.TeamID) (ids.UUID, error) {
 	var roleID ids.UUID
 	var raw []byte
 	err := tx.QueryRow(ctx,
-		`SELECT id, permissions FROM role WHERE key = $1 AND archived_at IS NULL FOR SHARE`,
+		`SELECT id, permissions FROM role WHERE key = $1 AND archived_at IS NULL`,
 		roleKey).Scan(&roleID, &raw)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, errUnknownRole
@@ -253,53 +235,83 @@ func roleForAssignment(ctx context.Context, tx pgx.Tx, actor Identity, roleKey s
 	if err != nil {
 		return ids.UUID{}, err
 	}
-	if err := refuseUnlessCallerMayAssign(actor, roleKey, raw); err != nil {
+	if err := refuseUnlessCallerMayAssign(ctx, tx, actor, roleKey, raw, teams); err != nil {
 		return ids.UUID{}, err
 	}
 	return roleID, nil
 }
 
-// refuseUnlessCallerMayAssign answers the other half: may this caller hand out
-// THIS role. A delegated holder assigning `admin` — or a custom role carrying
-// the role editor, or the installation reset — reaches the same takeover by a
-// longer path than a password link.
+// refuseUnlessCallerMayAssign answers the other half: may this caller produce
+// an account holding THIS role on these teams. Handing out a role is handing
+// out an account — an invite mails its link to an address the caller chooses —
+// so a caller who is not an admin must already hold everything that account
+// will: every grant the stored document names, its row scope, the teams it
+// reaches and every field it reads.
 //
-// The literal admin role requires the literal admin role. Every other key is
-// checked by containment over the administration grants and the row scope, so
-// nobody hands out authority they do not have.
-func refuseUnlessCallerMayAssign(actor Identity, roleKey string, raw []byte) error {
+// The grants come off the STORED document rather than policy.Parse, which
+// drops an object this installation cannot name. Such a grant still counts: the
+// caller holds nothing on it, so containment cannot be shown and the
+// assignment is refused rather than handing out authority an extension's
+// return would switch on.
+func refuseUnlessCallerMayAssign(ctx context.Context, tx pgx.Tx, actor Identity, roleKey string, raw []byte, teams []ids.TeamID) error {
 	if actor.hasRole(roleAdmin) {
 		return nil
 	}
 	if roleKey == roleAdmin {
 		return apperrors.ErrPermissionDenied
 	}
-	// Resolved through the same Parse/Merge the login path uses, so what the
-	// role WOULD confer on its holder is what is compared. A second decoder here
-	// would be a second answer to "what does this document grant", and the two
-	// would disagree the first time Parse's vocabulary changed.
-	doc, err := policy.Parse(raw)
+	stored, err := decodeRoleObjects(raw)
 	if err != nil {
 		return err
 	}
-	would := policy.Merge(map[string]policy.Document{roleKey: doc})
-
-	// Containment over the ADMINISTRATION objects, not over every object.
-	//
-	// Full containment was the first rule here and it was wrong in the direction
-	// that matters: a member administrator delegated onboarding holds user_admin
-	// and little else, so requiring them to hold deal.create and contact.update
-	// before they could invite a rep refused the exact delegation this change
-	// exists to enable. An admit test caught it; the refusal arms alone would
-	// have passed against a guard that refused everybody.
-	//
-	// What escalates is handing out AUTHORITY, and authority is what these
-	// objects name. A role carrying role_admin or system_reset reaches back and
-	// rewrites who may do what, so a caller must already hold it before they may
-	// hand it out. Row scope escalates exactly like a grant: a caller bounded to
-	// their team must not hand out a role that reads every row.
-	if !containsAdministration(actor.Permissions, would) {
+	scope, err := policy.RowScopeOf(raw)
+	if err != nil {
+		return err
+	}
+	masks, err := loadFieldMasks(ctx, tx, []string{roleKey})
+	if err != nil {
+		return err
+	}
+	objects := make(map[string]principal.ObjectGrant, len(stored))
+	for object, grant := range stored {
+		objects[object] = principal.ObjectGrant(grant)
+	}
+	account := seatGrants{
+		teams: teams,
+		perms: principal.Permissions{Objects: objects, RowScope: scope, FieldMasks: masks},
+	}
+	if !containsWholeAccess(actor, account) {
 		return apperrors.ErrPermissionDenied
+	}
+	return nil
+}
+
+// refuseWhileHoldingArchivedRole refuses a verb that would put an account back
+// in somebody's hands while it holds an archived role. Restoring the role
+// would hand that account its grants again without any assignment check, so
+// the member is given a live role first.
+func refuseWhileHoldingArchivedRole(ctx context.Context, tx pgx.Tx, userID ids.UserID) error {
+	var held bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id
+		  WHERE ra.user_id = $1 AND r.archived_at IS NOT NULL)`, userID).Scan(&held); err != nil {
+		return err
+	}
+	if held {
+		return errArchivedRoleHeld
+	}
+	return nil
+}
+
+// lockAuthorization serializes every write that decides, or changes, who may
+// do what: role edits, assignments, team membership, deactivation, and the
+// credentials a member administrator hands out. Each takes it as the first
+// statement of its transaction and checks containment after it, so no role
+// can widen between a check and the write it admits. One installation per
+// database, so one key.
+func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('margince:authz')::bigint)`); err != nil {
+		return fmt.Errorf("identity: serializing an authorization change: %w", err)
 	}
 	return nil
 }

@@ -87,9 +87,17 @@ func (e *revocationEnv) maskRole(t *testing.T, key string) {
 		key); err != nil {
 		t.Fatalf("masking %s: %v", key, err)
 	}
+	e.dropMasksAfter(t, key)
+}
+
+// dropMasksAfter removes a role's masks when the test ends: field_mask has no
+// workspace column, so a mask left behind reaches the next test's role of the
+// same key, a copy's included.
+func (e *revocationEnv) dropMasksAfter(t *testing.T, key string) {
+	t.Helper()
 	t.Cleanup(func() {
 		if _, err := e.owner.Exec(context.Background(), `DELETE FROM field_mask WHERE role_key = $1`, key); err != nil {
-			t.Errorf("removing %s's mask: %v", key, err)
+			t.Errorf("removing %s's masks: %v", key, err)
 		}
 	})
 }
@@ -130,6 +138,7 @@ func TestACopiedRoleKeepsItsSourcesGrantsAndMasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("copying: %v", err)
 	}
+	e.dropMasksAfter(t, copied.Key)
 	if copied.Key != "custom_field_sales_dach" || copied.Name != "Field sales DACH" || copied.IsSystem {
 		t.Errorf("copy = key %q name %q system %v, want custom_field_sales_dach, the trimmed name, not system",
 			copied.Key, copied.Name, copied.IsSystem)
@@ -151,6 +160,7 @@ func TestACopiedRoleKeepsItsSourcesGrantsAndMasks(t *testing.T) {
 		t.Errorf("a second role with the same name, other case: %v, want errRoleNameTaken", err)
 	}
 	second, err := e.svc.CreateRole(e.wsCtx(e.admin), e.admin, source, "Field-Sales DACH!")
+	e.dropMasksAfter(t, second.Key)
 	if err != nil || second.Key != "custom_field_sales_dach_2" {
 		t.Errorf("a name slugging to a used key got %q (%v), want custom_field_sales_dach_2", second.Key, err)
 	}
@@ -194,42 +204,50 @@ func TestARoleIsRenamedAndRescopedUnderIfMatch(t *testing.T) {
 	}
 }
 
-// Widening passes through the caller's own authority; narrowing does not.
-func TestWideningARoleNeedsTheCallersOwnAuthority(t *testing.T) {
-	e := setupRevocationEnv(t, "role-widen")
-	editorRole := e.customRole(t, "Role editor", "rep", map[string]storedGrant{objectRoleAdmin: fullGrant})
-	editor := e.seat(t, "editor", editorRole)
-	other := e.customRole(t, "Viewer", "read_only", nil)
+// A role editor who is not an admin may narrow a role and nothing else: every
+// write that could widen what a role grants is the admin's, whatever the
+// editor holds themselves.
+func TestAnEditorWhoIsNotAnAdminOnlyNarrows(t *testing.T) {
+	e := setupRevocationEnv(t, "role-narrow")
+	editor := e.seat(t, "editor", e.customRole(t, "Role editor", "admin", map[string]storedGrant{objectUserAdmin: {}}))
+	other := e.customRole(t, "Viewer", "read_only", map[string]storedGrant{"deal": {Read: true, Update: true}})
+	e.scopeRole(t, other, principal.RowScopeTeam)
+	archivable := e.customRole(t, "Seasonal", "rep", nil)
 	ctx := e.wsCtx(editor)
+	name := "Viewer EMEA"
+	own, all := principal.RowScopeOwn, principal.RowScopeAll
 
-	if _, err := e.svc.SetRoleObjectGrant(ctx, editor, other, "deal", storedGrant{Create: true, Read: true}, nil); err != nil {
-		t.Errorf("turning on a verb the editor holds, on a role they do not hold: %v", err)
+	for verb, call := range map[string]func() error{
+		"rename": func() error { _, err := e.svc.UpdateRole(ctx, editor, other, RoleChange{Name: &name}, nil); return err },
+		"narrow the row scope": func() error {
+			_, err := e.svc.UpdateRole(ctx, editor, other, RoleChange{RowScope: &own}, nil)
+			return err
+		},
+		"turn a verb off": func() error {
+			_, err := e.svc.SetRoleObjectGrant(ctx, editor, other, "deal", storedGrant{Read: true}, nil)
+			return err
+		},
+		"archive": func() error { _, err := e.svc.ArchiveRole(ctx, editor, archivable); return err },
+	} {
+		if err := call(); err != nil {
+			t.Errorf("an editor may %s: %v", verb, err)
+		}
 	}
-	if _, err := e.svc.SetRoleObjectGrant(ctx, editor, other, "deal", storedGrant{Read: true, Delete: true}, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("turning on delete, which the editor lacks: %v, want permission denied", err)
-	}
-	if _, err := e.svc.SetRoleObjectGrant(e.wsCtx(e.admin), e.admin, other, "deal", fullGrant, nil); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.svc.SetRoleObjectGrant(ctx, editor, other, "deal", storedGrant{Read: true, Delete: true}, nil); err != nil {
-		t.Errorf("narrowing a role while keeping a verb the editor lacks: %v, want allowed", err)
-	}
-	all := principal.RowScopeAll
-	if _, err := e.svc.UpdateRole(ctx, editor, other, RoleChange{RowScope: &all}, nil); err != nil {
-		t.Errorf("keeping the viewer at all: %v", err)
-	}
-	team := principal.RowScopeTeam
-	if _, err := e.svc.UpdateRole(ctx, editor, other, RoleChange{RowScope: &team}, nil); err != nil {
-		t.Errorf("narrowing the viewer's row scope: %v, want allowed", err)
-	}
-	if _, err := e.svc.UpdateRole(ctx, editor, other, RoleChange{RowScope: &all}, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("widening past the editor's own row scope: %v, want permission denied", err)
-	}
-	if _, err := e.svc.CreateRole(ctx, editor, "admin", "Second admin"); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("copying admin, which is wider than the editor: %v, want permission denied", err)
-	}
-	if _, err := e.svc.CreateRole(ctx, editor, "rep", "Plain copy"); err != nil {
-		t.Errorf("copying rep, which the editor contains: %v", err)
+	for verb, call := range map[string]func() error{
+		"turn a verb on": func() error {
+			_, err := e.svc.SetRoleObjectGrant(ctx, editor, other, "deal", storedGrant{Read: true, Create: true}, nil)
+			return err
+		},
+		"widen the row scope": func() error {
+			_, err := e.svc.UpdateRole(ctx, editor, other, RoleChange{RowScope: &all}, nil)
+			return err
+		},
+		"copy a role":    func() error { _, err := e.svc.CreateRole(ctx, editor, "rep", "Plain copy"); return err },
+		"restore a role": func() error { _, err := e.svc.RestoreRole(ctx, editor, archivable); return err },
+	} {
+		if err := call(); !errors.Is(err, errWideningRequiresAdmin) {
+			t.Errorf("an editor tried to %s: %v, want errWideningRequiresAdmin", verb, err)
+		}
 	}
 }
 
@@ -337,6 +355,9 @@ func TestAnAssignmentRacingAnArchiveFindsNoRole(t *testing.T) {
 	archived := make(chan error, 1)
 	go func() {
 		archived <- e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+			if err := lockAuthorization(ctx, tx); err != nil {
+				return err
+			}
 			if _, err := archiveRoleTx(ctx, tx, key); err != nil {
 				return err
 			}
@@ -374,5 +395,5 @@ func waitForALockWaiter(t *testing.T, e *revocationEnv) {
 			return
 		}
 	}
-	t.Fatal("the assignment never waited on the role lock — it read past the archive")
+	t.Fatal("the assignment never waited on the authorization lock — it read past the archive")
 }

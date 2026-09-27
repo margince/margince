@@ -23,7 +23,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,7 +68,7 @@ const (
 var roleKeyUnsafe = regexp.MustCompile(`[^a-z0-9]+`)
 
 // CreateRole makes a role as a copy of a live one, under a new name and a key
-// generated from it.
+// generated from it. Admin only: a new role is authority nobody held before.
 //
 // The stored document is copied as it is, not through policy.Parse: Parse
 // drops a grant on an object this installation cannot name, so a copy made
@@ -80,27 +79,26 @@ func (s *Service) CreateRole(ctx context.Context, actor Identity, copyFrom, name
 	if err != nil {
 		return roleRow{}, err
 	}
+	if err := refuseWideningUnlessAdmin(actor, true); err != nil {
+		return roleRow{}, err
+	}
 	name, err = validRoleName(name)
 	if err != nil {
 		return roleRow{}, err
 	}
 	var created roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockRoleNames(ctx, tx); err != nil {
+		if err := lockAuthorization(ctx, tx); err != nil {
 			return err
 		}
 		var sourceID ids.UUID
-		var raw []byte
 		err := tx.QueryRow(ctx,
-			`SELECT id, permissions FROM role WHERE key = $1 AND archived_at IS NULL FOR SHARE`,
-			copyFrom).Scan(&sourceID, &raw)
+			`SELECT id FROM role WHERE key = $1 AND archived_at IS NULL`,
+			copyFrom).Scan(&sourceID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errUnknownRole
 		}
 		if err != nil {
-			return err
-		}
-		if err := refuseUnlessCallerHoldsDocument(actor, copyFrom, raw); err != nil {
 			return err
 		}
 		if err := refuseTakenRoleName(ctx, tx, name, ""); err != nil {
@@ -117,29 +115,6 @@ func (s *Service) CreateRole(ctx context.Context, actor Identity, copyFrom, name
 		return roleRow{}, err
 	}
 	return created, nil
-}
-
-// refuseUnlessCallerHoldsDocument refuses a caller who is not an admin copying
-// a role wider than themselves. A copy is a new role holding the source's
-// grants, and the role editor lets nobody write a grant they lack.
-func refuseUnlessCallerHoldsDocument(actor Identity, key string, raw []byte) error {
-	if actor.hasRole(roleAdmin) {
-		return nil
-	}
-	doc, err := policy.Parse(raw)
-	if err != nil {
-		return err
-	}
-	would := policy.Merge(map[string]policy.Document{key: doc})
-	for object, grant := range would.Objects {
-		if !actor.Permissions.Objects[object].Contains(grant) {
-			return apperrors.ErrPermissionDenied
-		}
-	}
-	if would.RowScope.Wider(actor.Permissions.RowScope) {
-		return apperrors.ErrPermissionDenied
-	}
-	return nil
 }
 
 // insertRoleCopy writes the new role row, copies the source's field masks and
@@ -180,9 +155,8 @@ type RoleChange struct {
 // UpdateRole renames a live role or moves its row scope.
 //
 // Renaming and narrowing are open to every role_admin.update holder: neither
-// gives anybody anything. Widening the row scope reaches every holder of the
-// role at once, so a caller who is not an admin must already reach that far,
-// and may not widen a role they hold.
+// gives anybody anything. Widening the row scope reaches every holder's teams
+// at once, so only an admin does it.
 func (s *Service) UpdateRole(ctx context.Context, actor Identity, key string, change RoleChange, ifVersion *int64) (roleRow, error) {
 	ctx, err := admit(ctx, actor, objectRoleAdmin, principal.ActionUpdate)
 	if err != nil {
@@ -203,7 +177,7 @@ func (s *Service) UpdateRole(ctx context.Context, actor Identity, key string, ch
 	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockRoleNames(ctx, tx); err != nil {
+		if err := lockAuthorization(ctx, tx); err != nil {
 			return err
 		}
 		var err error
@@ -235,7 +209,8 @@ func applyRoleChange(ctx context.Context, tx pgx.Tx, actor Identity, key string,
 	if ifVersion != nil && *ifVersion != before.Version {
 		return roleRow{}, apperrors.ErrVersionSkew
 	}
-	if err := refuseRowScopeWidening(actor, key, before.RowScope, change.RowScope); err != nil {
+	widens := change.RowScope != nil && change.RowScope.Wider(before.RowScope)
+	if err := refuseWideningUnlessAdmin(actor, widens); err != nil {
 		return roleRow{}, err
 	}
 	if change.Name != nil && !strings.EqualFold(*change.Name, before.Name) {
@@ -274,19 +249,6 @@ func roleChangeImages(before roleRow, change RoleChange) (after roleRow, beforeI
 	return after, beforeImage, afterImage
 }
 
-// refuseRowScopeWidening applies the grant editor's widening rules to the row
-// scope: a caller who is not an admin reaches no farther through a role than
-// they already do, and widens no role they hold.
-func refuseRowScopeWidening(actor Identity, key string, before principal.RowScope, after *principal.RowScope) error {
-	if after == nil || !after.Wider(before) || actor.hasRole(roleAdmin) {
-		return nil
-	}
-	if after.Wider(actor.Permissions.RowScope) {
-		return apperrors.ErrPermissionDenied
-	}
-	return refuseWideningOwnRole(actor, key, true)
-}
-
 // ArchiveRole takes a custom role out of use. It grants nothing while archived
 // and cannot be assigned; its grants and field masks stay for RestoreRole.
 // Archiving an archived role changes nothing.
@@ -297,6 +259,9 @@ func (s *Service) ArchiveRole(ctx context.Context, actor Identity, key string) (
 	}
 	var out roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		var err error
 		out, err = archiveRoleTx(ctx, tx, key)
 		return err
@@ -310,10 +275,10 @@ func (s *Service) ArchiveRole(ctx context.Context, actor Identity, key string) (
 // archiveRoleTx locks the role, refuses a system role and one a member who can
 // sign in holds, and archives it.
 //
-// The row is locked before the holders are counted, and every assignment reads
-// the role FOR SHARE (roleForAssignment). So an assignment racing this either
-// commits first and is counted here, or waits and then finds no live role — a
-// member cannot end up on an archived role through it.
+// Its caller holds lockAuthorization, as every assignment does, so an
+// assignment racing this either commits first and is counted here, or waits
+// and then finds no live role — a member cannot end up on an archived role
+// through it.
 func archiveRoleTx(ctx context.Context, tx pgx.Tx, key string) (roleRow, error) {
 	roleID, err := roleIDByKey(ctx, tx, key)
 	if err != nil {
@@ -351,15 +316,19 @@ func archiveRoleTx(ctx context.Context, tx pgx.Tx, key string) (roleRow, error) 
 }
 
 // RestoreRole brings an archived role back with the grants and masks it had.
-// Restoring a live role changes nothing.
+// Restoring a live role changes nothing. Admin only: a restored role hands its
+// grants back to every member still holding it, with no assignment check.
 func (s *Service) RestoreRole(ctx context.Context, actor Identity, key string) (roleRow, error) {
 	ctx, err := admit(ctx, actor, objectRoleAdmin, principal.ActionDelete)
 	if err != nil {
 		return roleRow{}, err
 	}
+	if err := refuseWideningUnlessAdmin(actor, true); err != nil {
+		return roleRow{}, err
+	}
 	var out roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockRoleNames(ctx, tx); err != nil {
+		if err := lockAuthorization(ctx, tx); err != nil {
 			return err
 		}
 		var err error
@@ -422,13 +391,6 @@ func unknownRoleIfMissing(err error) error {
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return errUnknownRole
 	}
-	return err
-}
-
-// lockRoleNames serializes every write that claims a role name or key, so two
-// creates of one name cannot both pass the check before either inserts.
-func lockRoleNames(ctx context.Context, tx pgx.Tx) error {
-	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('margince:role-names')::bigint)`)
 	return err
 }
 

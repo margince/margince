@@ -35,29 +35,50 @@ func (s *Service) ListAssignableRoles(ctx context.Context, actor Identity) ([]as
 	}
 	var out []assignableRole
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			`SELECT key, name, is_system, permissions FROM role WHERE archived_at IS NULL ORDER BY key`)
+		candidates, err := liveRoleDocuments(ctx, tx)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var role assignableRole
-			var raw []byte
-			if err := rows.Scan(&role.Key, &role.Name, &role.IsSystem, &raw); err != nil {
-				return err
-			}
-			switch err := refuseUnlessCallerMayAssign(actor, role.Key, raw); {
+		for _, candidate := range candidates {
+			// No teams: the list is asked before the invite names any, and the
+			// write checks the teams it is given.
+			switch err := refuseUnlessCallerMayAssign(ctx, tx, actor, candidate.Key, candidate.raw, nil); {
 			case err == nil:
-				out = append(out, role)
+				out = append(out, candidate.assignableRole)
 			case !errors.Is(err, apperrors.ErrPermissionDenied):
 				return err
 			}
 		}
-		return rows.Err()
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// liveRoleDocument is one live role with its stored permissions document.
+type liveRoleDocument struct {
+	assignableRole
+	raw []byte
+}
+
+// liveRoleDocuments reads every live role, ordered by key, and closes the rows
+// before returning so the caller may query again inside the same transaction.
+func liveRoleDocuments(ctx context.Context, tx pgx.Tx) ([]liveRoleDocument, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT key, name, is_system, permissions FROM role WHERE archived_at IS NULL ORDER BY key`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []liveRoleDocument
+	for rows.Next() {
+		var role liveRoleDocument
+		if err := rows.Scan(&role.Key, &role.Name, &role.IsSystem, &role.raw); err != nil {
+			return nil, err
+		}
+		out = append(out, role)
+	}
+	return out, rows.Err()
 }

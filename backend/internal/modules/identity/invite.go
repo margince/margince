@@ -61,6 +61,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 	ctx = actorCtx(ctx, actor)
 	var newUserID ids.UserID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// An invited member is a full seat — the insert below takes the column's
 		// default and there is no read-seat invite — so every invite is one more
 		// seat against the licensed ceiling, and it is refused here rather than
@@ -76,7 +79,7 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		// themselves an admin and walk in with the token in the response body.
 		// ChangeUserRole carries the same ceiling for the same reason; handing
 		// out a role is handing out a role whichever verb spells it.
-		roleID, err := roleForAssignment(ctx, tx, actor, in.Role)
+		roleID, err := roleForAssignment(ctx, tx, actor, in.Role, teamIDsOf(in.TeamIDs))
 		if err != nil {
 			return err
 		}

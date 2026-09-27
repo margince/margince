@@ -159,26 +159,32 @@ func (h Handlers) moveRole(w http.ResponseWriter, r *http.Request, key string,
 	httperr.WriteJSON(w, http.StatusOK, wireRole(row))
 }
 
-// roleEditRefusal names the role editor's conflicts, each with what to do next.
+// roleEditRefusal names the role editor's refusals, each with what to do next.
 func roleEditRefusal(err error) error {
 	for _, refusal := range []struct {
 		cause  error
+		status int
 		code   string
 		detail string
 	}{
-		{errRoleNameTaken, "role_name_taken", "another role already has this name; choose a different one"},
-		{errSystemRole, "system_role", "a role the product ships cannot be archived"},
+		{errRoleNameTaken, http.StatusConflict, "role_name_taken", "another role already has this name; choose a different one"},
+		{errSystemRole, http.StatusConflict, "system_role", "a role the product ships cannot be archived"},
 		{
-			errRoleInUse, "role_in_use",
+			errRoleInUse, http.StatusConflict, "role_in_use",
 			"members who can sign in hold this role; give them another role before archiving it",
 		},
 		{
-			errAdminRoleFloor, "admin_role_floor",
+			errAdminRoleFloor, http.StatusConflict, "admin_role_floor",
 			"the admin role keeps its administration rights, so the installation can always be administered",
+		},
+		{
+			errWideningRequiresAdmin, http.StatusForbidden, "widening_requires_admin",
+			"only an admin may create or restore a role, widen its row scope or turn a right on; " +
+				"you may rename a role, narrow it or archive it",
 		},
 	} {
 		if errors.Is(err, refusal.cause) {
-			return refuseAs(err, refusal.cause, http.StatusConflict, refusal.code, refusal.detail)
+			return refuseAs(err, refusal.cause, refusal.status, refusal.code, refusal.detail)
 		}
 	}
 	return err

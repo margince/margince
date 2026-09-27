@@ -168,6 +168,18 @@ func TestTheRoleEditorConflictsCarryDistinctCodes(t *testing.T) {
 			t.Errorf("%v: %d/%q, want 409/%q", cause, detailed.Status, detailed.Code, want)
 		}
 	}
+	// Widening is a permission, not a conflict: the same write succeeds for an
+	// admin, so the refusal is 403 with its own code.
+	var widening *httperr.DetailedError
+	if !errors.As(roleEditRefusal(errWideningRequiresAdmin), &widening) ||
+		widening.Status != http.StatusForbidden || widening.Code != "widening_requires_admin" {
+		t.Errorf("widening by a non-admin rendered as %+v, want 403/widening_requires_admin", widening)
+	}
+	var archived *httperr.DetailedError
+	if !errors.As(archivedRoleRefusal(errArchivedRoleHeld), &archived) ||
+		archived.Status != http.StatusConflict || archived.Code != "archived_role_held" {
+		t.Errorf("an archived role held rendered as %+v, want 409/archived_role_held", archived)
+	}
 	other := errors.New("connection reset")
 	if got := roleEditRefusal(other); !errors.Is(got, other) {
 		t.Errorf("an unrelated error was rewritten to %v", got)

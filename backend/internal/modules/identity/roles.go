@@ -46,8 +46,8 @@ import (
 var errUnknownObject = fmt.Errorf("%w: no RBAC object with this name is defined", apperrors.ErrNotFound)
 
 var (
-	errOwnRoleWidened = fmt.Errorf("%w: a member may not widen a role they hold", apperrors.ErrPermissionDenied)
-	errAdminRoleFloor = fmt.Errorf("%w: the admin role keeps its administration grants", apperrors.ErrConflict)
+	errWideningRequiresAdmin = fmt.Errorf("%w: only an admin may widen what a role grants", apperrors.ErrPermissionDenied)
+	errAdminRoleFloor        = fmt.Errorf("%w: the admin role keeps its administration grants", apperrors.ErrConflict)
 )
 
 // storedGrant is one object's CRUD as `role.permissions` SPELLS it — lower-case
@@ -155,6 +155,9 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		var err error
 		updated, err = applyRoleObjectGrant(ctx, tx, actor, roleKey, object, grant, ifVersion)
 		return err
@@ -210,19 +213,10 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, actor Identity, roleKe
 	if before, err = decodeRoleObjects(rawBefore); err != nil {
 		return roleRow{}, err
 	}
-	// The editor is security-administrator authority, not an ordinary toggle: a
-	// holder writing a verb they do not themselves hold would grant themselves
-	// that authority through whichever role they can already be assigned. So the
-	// caller must already hold every verb this write turns on.
-	//
-	// Turning a verb OFF is not checked, and that asymmetry is deliberate: a
-	// delegated holder narrowing a role gives nobody anything. Widening is the
-	// direction that escalates.
-	added := grantAdded(before[object], grant)
-	if err := refuseUnlessCallerHoldsGrant(actor, object, added); err != nil {
-		return roleRow{}, err
-	}
-	if err := refuseWideningOwnRole(actor, roleKey, added != storedGrant{}); err != nil {
+	// Turning a verb ON reaches every holder of the role at once, whatever
+	// teams and fields they hold, so only an admin does it. Turning one OFF
+	// gives nobody anything and is open to every holder of the grant.
+	if err := refuseWideningUnlessAdmin(actor, grantAdded(before[object], grant) != storedGrant{}); err != nil {
 		return roleRow{}, err
 	}
 	// The seeded admin role keeps every administration grant it holds. Taking
@@ -301,13 +295,12 @@ func grantAdded(before, after storedGrant) storedGrant {
 	}
 }
 
-// refuseWideningOwnRole refuses a caller who is not an admin widening a role
-// they hold. Whatever they turn on reaches them through that role at once, so
-// the check that the caller already holds it is the only thing between the
-// editor and a ladder.
-func refuseWideningOwnRole(actor Identity, roleKey string, widens bool) error {
-	if widens && !actor.hasRole(roleAdmin) && actor.hasRole(roleKey) {
-		return errOwnRoleWidened
+// refuseWideningUnlessAdmin refuses a caller who is not an admin a write that
+// widens what a role grants: a new role, a restored one, a wider row scope or a
+// verb turned on. Narrowing needs no ceiling, because it gives nobody anything.
+func refuseWideningUnlessAdmin(actor Identity, widens bool) error {
+	if widens && !actor.hasRole(roleAdmin) {
+		return errWideningRequiresAdmin
 	}
 	return nil
 }

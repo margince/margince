@@ -84,6 +84,7 @@ func TestAPasswordLinkNeedsEveryFieldTheTargetReads(t *testing.T) {
 	// A copy carries the source's mask; taking user_admin away leaves a rep
 	// who withholds the same field the caller does.
 	maskedRep := e.customRole(t, "Masked rep", callerRole, map[string]storedGrant{objectUserAdmin: {}})
+	e.dropMasksAfter(t, maskedRep)
 
 	unmasked := e.seat(t, "unmasked", "rep")
 	if _, _, err := e.svc.IssuePasswordLink(e.wsCtx(caller), caller, unmasked.UserID); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -140,6 +141,33 @@ func TestAPasswordLinkNeedsTheTeamsTheTargetReaches(t *testing.T) {
 			t.Errorf("%s: %v, want admitted", tc.name, err)
 		}
 	}
+
+	// A role change is held against the teams the member is already on: an
+	// own-scoped rep on South gains South's records by becoming team-scoped.
+	for team, refused := range map[ids.UUID]bool{north.ID: false, south.ID: true} {
+		member := e.seat(t, "rescoped-"+strconv.FormatBool(refused), "rep", team)
+		err := e.svc.ChangeUserRole(e.wsCtx(caller), caller, member.UserID, teamRep)
+		if refused && !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("making a rep on another team team-scoped: %v, want permission denied", err)
+		}
+		if !refused && err != nil {
+			t.Errorf("making a rep on the caller's team team-scoped: %v, want admitted", err)
+		}
+	}
+
+	// An invite is held against the teams it lands the account on.
+	for team, refused := range map[ids.UUID]bool{north.ID: false, south.ID: true} {
+		_, _, err := e.svc.InviteUser(e.wsCtx(caller), caller, InviteUserInput{
+			Email: "invited-" + strconv.FormatBool(refused) + "@" + e.slug + ".test", DisplayName: "Invited",
+			Role: teamRep, TeamIDs: []ids.UUID{team},
+		})
+		if refused && !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("inviting a team rep onto another team: %v, want permission denied", err)
+		}
+		if !refused && err != nil {
+			t.Errorf("inviting a team rep onto the caller's team: %v, want admitted", err)
+		}
+	}
 }
 
 // A copy of the admin role contains everything the admin holds and is still
@@ -194,5 +222,88 @@ func TestTheAssignableRolesAreExactlyTheRolesAnInviteAccepts(t *testing.T) {
 
 	if _, err := e.svc.ListAssignableRoles(e.wsCtx(e.member), e.member); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a member without user_admin reading the assignable roles: %v, want permission denied", err)
+	}
+}
+
+// The account an invite or a role change produces is held against everything
+// the delegate holds, read off the stored role: a record grant, an extension
+// grant this build no longer composes, and a field the delegate cannot read.
+func TestADelegateProducesNoAccountWiderThanTheirOwn(t *testing.T) {
+	e := setupRevocationEnv(t, "assign-whole")
+	registerExtObject(t)
+	delegateRole := e.customRole(t, "Member admin", "rep", map[string]storedGrant{
+		objectUserAdmin: fullGrant, "deal": {},
+	})
+	e.maskRole(t, delegateRole)
+	delegate := e.seat(t, "delegate", delegateRole)
+	masked := e.customRole(t, "Masked rep", "rep", map[string]storedGrant{"deal": {}})
+	e.maskRole(t, masked)
+	withDeals := e.customRole(t, "Rep with deals", "rep", map[string]storedGrant{"deal": {Read: true}})
+	withExt := e.customRole(t, "Rep with notes", "rep", map[string]storedGrant{"deal": {}, extObject: {Read: true}})
+	ResetRbacObjectsForTest()
+	// Each role below differs from the admitted one on ONE axis, so each carries
+	// the delegate's mask unless the mask is the axis it tests.
+	e.maskRole(t, withDeals)
+	e.maskRole(t, withExt)
+	unmasked := e.customRole(t, "Unmasked rep", "rep", map[string]storedGrant{"deal": {}})
+	target := e.seat(t, "target", masked)
+	ctx := e.wsCtx(delegate)
+
+	for i, tc := range []struct {
+		name    string
+		role    string
+		refused bool
+	}{
+		{"a role inside the delegate's own", masked, false},
+		{"a role reading deals", withDeals, true},
+		{"a role holding an extension grant", withExt, true},
+		{"a role reading a field the delegate cannot", unmasked, true},
+	} {
+		_, _, invited := e.svc.InviteUser(ctx, delegate, InviteUserInput{
+			Email: "whole-" + strconv.Itoa(i) + "@" + e.slug + ".test", DisplayName: "Whole", Role: tc.role,
+		})
+		assigned := e.svc.ChangeUserRole(ctx, delegate, target.UserID, tc.role)
+		for verb, err := range map[string]error{"invite into": invited, "assign": assigned} {
+			if tc.refused && !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Errorf("%s %s: %v, want permission denied", verb, tc.name, err)
+			}
+			if !tc.refused && err != nil {
+				t.Errorf("%s %s: %v, want admitted", verb, tc.name, err)
+			}
+		}
+	}
+}
+
+// Archive, reactivate, link, restore: the chain that would hand a delegate an
+// account on a role wider than theirs. It stops at reactivation, and a member
+// on an archived role gets no link and no passport either.
+func TestAMemberOnAnArchivedRoleIsNotHandedBack(t *testing.T) {
+	e := setupRevocationEnv(t, "archived-held")
+	ctx := e.wsCtx(e.admin)
+	strong := e.customRole(t, "Strong", "management", nil)
+	holder := e.seat(t, "holder", strong)
+	if err := e.svc.DeactivateUser(ctx, e.admin, DeactivateUserInput{UserID: holder.UserID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.ArchiveRole(ctx, e.admin, strong); err != nil {
+		t.Fatalf("archiving a role only a deactivated member holds: %v", err)
+	}
+
+	if err := e.svc.ReactivateUser(ctx, e.admin, holder.UserID); !errors.Is(err, errArchivedRoleHeld) {
+		t.Errorf("reactivating a member on an archived role: %v, want errArchivedRoleHeld", err)
+	}
+	if _, _, err := e.svc.IssuePasswordLink(ctx, e.admin, holder.UserID); !errors.Is(err, errArchivedRoleHeld) {
+		t.Errorf("a link for a member on an archived role: %v, want errArchivedRoleHeld", err)
+	}
+	if _, err := e.svc.IssuePassport(e.wsCtx(holder), holder, IssuePassportInput{Scopes: []string{"read"}}); !errors.Is(err, errArchivedRoleHeld) {
+		t.Errorf("a passport for a member on an archived role: %v, want errArchivedRoleHeld", err)
+	}
+
+	// Given a live role, the same member comes back.
+	if err := e.svc.ChangeUserRole(ctx, e.admin, holder.UserID, "rep"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.svc.ReactivateUser(ctx, e.admin, holder.UserID); err != nil {
+		t.Errorf("reactivating the member once reassigned: %v", err)
 	}
 }

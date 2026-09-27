@@ -73,6 +73,10 @@ var (
 	// the status while letting the handler say which of the two happened.
 	errUnknownRole = fmt.Errorf("%w: no role with this key is defined", apperrors.ErrNotFound)
 	errOwnRole     = fmt.Errorf("%w: a member may not change their own role", apperrors.ErrPermissionDenied)
+	// A member holding an archived role gets it back the moment it is restored,
+	// with no assignment check. So nothing hands that account back to anybody
+	// until an admin gives them a live role.
+	errArchivedRoleHeld = fmt.Errorf("%w: the member holds an archived role", apperrors.ErrConflict)
 )
 
 // ReactivateUser returns a deactivated member to 'active' so they may sign in
@@ -84,9 +88,15 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// Restoring an admin somebody removed is the mirror of removing one, so
 		// it carries the same ceiling.
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachDenial); err != nil {
+			return err
+		}
+		if err := refuseWhileHoldingArchivedRole(ctx, tx, userID); err != nil {
 			return err
 		}
 		var status, seat string
@@ -215,6 +225,9 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		return err
 	}
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// A delegated holder must not lock out an administrator. The last-admin
 		// invariant below is a different question — it stops the LAST one going
 		// whoever asks — and neither substitutes for the other.
@@ -396,6 +409,9 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// A delegated caller re-roling themselves passes every containment
 		// check trivially, since everybody contains themselves, and would hand
 		// themselves record work they lack. The literal admin already holds the
@@ -411,7 +427,11 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachTakeover); err != nil {
 			return err
 		}
-		roleID, err := roleForAssignment(ctx, tx, actor, toRole)
+		teams, err := loadLiveTeams(ctx, tx, []ids.UUID{userID.UUID})
+		if err != nil {
+			return err
+		}
+		roleID, err := roleForAssignment(ctx, tx, actor, toRole, teams[userID.UUID])
 		if err != nil {
 			return err
 		}
