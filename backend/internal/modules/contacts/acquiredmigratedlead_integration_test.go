@@ -5,14 +5,14 @@
 
 package contacts
 
-// A person the old CRM held as a lead is a migrated record, whichever door
-// later turns them into a contact.
+// A counterparty the old CRM held as a lead is a migrated record, whichever
+// door later turns them into a contact.
 //
-// The HubSpot import files a person with no deal and no conversation as a lead.
-// When a connected mailbox then finds mail with them, capture mints a contact
-// beside the lead. On the first import with a connected mailbox, nine of sixteen
-// Art. 14 cases were exactly these people: carried over from HubSpot, and owed
-// nothing (consent.DutyFor, "crm_migration").
+// The HubSpot import files a counterparty with no deal and no conversation as a
+// lead. When a connected mailbox then finds mail with them, capture mints a
+// contact beside the lead. On the first import with a connected mailbox, nine
+// of sixteen Art. 14 cases were exactly these: carried over from HubSpot, and
+// owed nothing (consent.DutyFor, "crm_migration").
 
 import (
 	"context"
@@ -75,7 +75,7 @@ func TestAnAddressAMigratedLeadHoldsIsACRMMigration(t *testing.T) {
 		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
 	}
 	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredCRMMigration {
-		t.Errorf("a person the old CRM held as a lead is recorded as %q, want %q", kind, AcquiredCRMMigration)
+		t.Errorf("a counterparty the old CRM held as a lead is recorded as %q, want %q", kind, AcquiredCRMMigration)
 	}
 }
 

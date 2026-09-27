@@ -240,11 +240,11 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 // heldByMigratedLeadTx reports that a lead carried over from the previous CRM
 // already holds this address.
 //
-// The import files a person with no deal and no conversation as a LEAD, not a
-// contact. When a connected mailbox later finds mail with them, capture mints a
-// contact beside that lead — and without this, the contact read as a stranger
-// found in old mail and owed an Art. 14 notice, though the person came over from
-// the old CRM like every other migrated record (DutyFor, "crm_migration").
+// The import files a counterparty with no deal and no conversation as a LEAD,
+// not a contact. When a connected mailbox later finds mail with them, capture
+// mints a contact beside that lead — and without this, the contact read as a
+// stranger found in old mail and owed an Art. 14 notice, though they came over
+// from the old CRM like every other migrated record (DutyFor, "crm_migration").
 //
 // The address must be the one the lead was IMPORTED with, read from its create
 // audit row. Only an importer may write the mirror: prefix, but anyone who may
