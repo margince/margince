@@ -73,7 +73,14 @@ const (
 // passes reading one mail cannot take turns overwriting each other. An identical
 // value still advances observed_at — the row then says "still true as of now",
 // which is what stops a late-arriving OLDER statement from winning afterwards.
-func (p contactProfileFieldPrecedence) conflictClause() string {
+//
+// A phone row is keyed by its number, so a value that differs under the same
+// key is the same number spelled differently, never a replacement. When the
+// statement DID replace another number (replacing), the buffer it carries is
+// the undo and wins over whatever the row held, and the date test is dropped:
+// the number list has already decided this statement is the newer one, and a
+// row it could not update would lose the replaced number for good.
+func (p contactProfileFieldPrecedence) conflictClause(replacing bool) string {
 	switch p {
 	case replaceOnAcceptance:
 		// The undo buffer is CLEARED, not carried. A human choosing this value
@@ -91,6 +98,18 @@ func (p contactProfileFieldPrecedence) conflictClause() string {
 		    superseded_captured_by = NULL,
 		    superseded_observed_at = NULL`
 	case supersedeOnNewerObservation:
+		if replacing {
+			return `DO UPDATE SET value = EXCLUDED.value,
+			    evidence_snippet = EXCLUDED.evidence_snippet,
+			    source_ref = EXCLUDED.source_ref,
+			    confidence = EXCLUDED.confidence,
+			    source = EXCLUDED.source,
+			    captured_by = EXCLUDED.captured_by,
+			    observed_at = EXCLUDED.observed_at,
+			    superseded_value = EXCLUDED.superseded_value,
+			    superseded_captured_by = EXCLUDED.superseded_captured_by,
+			    superseded_observed_at = EXCLUDED.superseded_observed_at`
+		}
 		return `DO UPDATE SET value = EXCLUDED.value,
 		    evidence_snippet = EXCLUDED.evidence_snippet,
 		    source_ref = EXCLUDED.source_ref,
@@ -99,15 +118,18 @@ func (p contactProfileFieldPrecedence) conflictClause() string {
 		    captured_by = EXCLUDED.captured_by,
 		    observed_at = EXCLUDED.observed_at,
 		    superseded_value = CASE
-		        WHEN contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
+		        WHEN contact_profile_field.value_key = ''
+		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
 		        THEN contact_profile_field.value
 		        ELSE contact_profile_field.superseded_value END,
 		    superseded_captured_by = CASE
-		        WHEN contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
+		        WHEN contact_profile_field.value_key = ''
+		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
 		        THEN contact_profile_field.captured_by
 		        ELSE contact_profile_field.superseded_captured_by END,
 		    superseded_observed_at = CASE
-		        WHEN contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
+		        WHEN contact_profile_field.value_key = ''
+		         AND contact_profile_field.value IS DISTINCT FROM EXCLUDED.value
 		        THEN contact_profile_field.observed_at
 		        ELSE contact_profile_field.superseded_observed_at END
 		  WHERE EXCLUDED.observed_at > contact_profile_field.observed_at`
@@ -242,7 +264,7 @@ func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		       COALESCE(r.value, NULLIF($10::text, ''), NULLIF($12::text, '')), r.captured_by, r.observed_at
 		  FROM (SELECT 1) AS one LEFT JOIN replaced r ON true
 		`+precedence.answeredGuard()+`
-		ON CONFLICT (contact_id, field, value_key) `+precedence.conflictClause(),
+		ON CONFLICT (contact_id, field, value_key) `+precedence.conflictClause(replaces != ""),
 		contactID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
 		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded,
 		valueKey, replaces)

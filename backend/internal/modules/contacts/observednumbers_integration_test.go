@@ -120,3 +120,44 @@ func TestADiscoveredNumberDefersToAStatedOne(t *testing.T) {
 		t.Errorf("phone evidence = %v, want only the stated number", got)
 	}
 }
+
+// Research already put evidence for number B on the record — without adding B
+// to the number list — and then a newer signature replaces the live number A
+// with B. B's row already exists, so the replacement lands as an update of it;
+// the undo must still name A, whether research spelled B the canonical way or
+// its own.
+func TestAReplacementOntoExistingEvidenceKeepsItsUndo(t *testing.T) {
+	for name, researched := range map[string]string{
+		"canonical": "+49302222222",
+		"formatted": "+49 (30) 222-2222",
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupDedupe(t)
+			ctx := e.as()
+			contactID, _ := e.seedEmployedContact(ctx, t,
+				"Rhea Research", "rhea@research.example", "Research AS", "research.example")
+			seedOldWorkNumbers(ctx, t, e, contactID, "+49301111111")
+			if _, err := e.store.SaveResearchClaims(ctx, contactID, []ResearchClaimInput{{
+				Field: fieldPhone, Value: researched, Quote: "Rhea Research, " + researched,
+				SourceURL: "https://research.example/team",
+			}}); err != nil {
+				t.Fatalf("accepting the researched number: %v", err)
+			}
+
+			if !fillFromSignature(ctx, t, e, contactID, SignatureField{
+				Name: fieldPhone, Value: "+49 30 2222222", Evidence: "+49 30 2222222", Confidence: 0.9,
+			}) {
+				t.Fatal("the signature wrote no number, so there is nothing to undo")
+			}
+			if got := phoneEvidence(ctx, t, e, contactID); !maps.Equal(got, map[string]string{"+49302222222": "+49301111111"}) {
+				t.Fatalf("phone evidence (number: replaced) = %v, want B's row to name A as what it replaced", got)
+			}
+			if err := e.store.RestoreProfileField(ctx, contactID, fieldPhone, ""); err != nil {
+				t.Fatalf("restore: %v", err)
+			}
+			if got := livePhones(ctx, t, e, contactID); !slices.Equal(got, []string{"+49301111111"}) {
+				t.Errorf("live numbers = %v after the undo, want A back and B retired", got)
+			}
+		})
+	}
+}
