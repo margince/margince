@@ -5,8 +5,9 @@ package auth
 
 // The refusals the whole-record admissions make before any row is read. Each
 // case passes a nil transaction, so an admission that forgot a check and went
-// on to query would panic rather than pass. The row halves are the integration
-// suite's (compose/recordaccess_integration_test.go), against real rows.
+// on to query would panic rather than pass. The row halves and the seat
+// ceiling, which is asked after the row, are the integration suite's
+// (compose/integration/recordaccess_integration_test.go), against real rows.
 
 import (
 	"context"
@@ -18,23 +19,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func withGrant(scope principal.RowScope, seat principal.SeatType, grant principal.ObjectGrant) principal.Principal {
+func withGrant(scope principal.RowScope, grant principal.ObjectGrant) principal.Principal {
 	p := human(scope)
-	p.SeatType = seat
+	p.SeatType = principal.SeatFull
 	p.Permissions.Objects = map[string]principal.ObjectGrant{"contact": grant}
 	return p
 }
 
-func TestAReadSeatMayNotChangeARecordWhateverItsRoleGrants(t *testing.T) {
-	p := withGrant(principal.RowScopeAll, principal.SeatRead, principal.ObjectGrant{Read: true, Update: true})
-	err := EnsureChangeable(principal.WithActor(context.Background(), p), nil, "contact", ids.NewV7())
-	if !errors.Is(err, apperrors.ErrSeatTierInsufficient) {
-		t.Fatalf("err = %v, want ErrSeatTierInsufficient: an all-scope role on a read seat still changes nothing", err)
-	}
-}
-
 func TestChangingARecordNeedsTheUpdateGrant(t *testing.T) {
-	p := withGrant(principal.RowScopeAll, principal.SeatFull, principal.ObjectGrant{Read: true})
+	p := withGrant(principal.RowScopeAll, principal.ObjectGrant{Read: true})
 	err := EnsureChangeable(principal.WithActor(context.Background(), p), nil, "contact", ids.NewV7())
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("err = %v, want ErrPermissionDenied: owning a row is not the verb to change it", err)
@@ -42,7 +35,7 @@ func TestChangingARecordNeedsTheUpdateGrant(t *testing.T) {
 }
 
 func TestReadingARecordNeedsTheReadGrant(t *testing.T) {
-	p := withGrant(principal.RowScopeAll, principal.SeatFull, principal.ObjectGrant{Update: true})
+	p := withGrant(principal.RowScopeAll, principal.ObjectGrant{Update: true})
 	err := EnsureReadable(principal.WithActor(context.Background(), p), nil, "contact", ids.NewV7())
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("err = %v, want ErrPermissionDenied: row scope never answers whether a seat reads the table", err)

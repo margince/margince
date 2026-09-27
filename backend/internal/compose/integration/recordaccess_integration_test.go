@@ -36,10 +36,10 @@ import (
 // AdminUser is in no team.
 //
 //   - Rep1, Rep3: rep (own scope). Rep2: manager (team scope). AdminUser: admin.
-//   - reader: read_only role on a READ seat, in Team1.
+//   - reader: the rep role on a READ seat, in Team1, owning a contact of its own.
 //   - roleless: a live member holding no role, so no contact read at all.
 //
-// Records: a workspace contact Rep1 owns; a contact Rep3 made private and
+// Records: a workspace contact Rep1 owns; one the reader owns; a contact Rep3 made private and
 // shared with Rep1 (read), Team1 (write) and Rep2 (a share that has lapsed); a
 // workspace company Rep3 owns; a company nobody owns; an archived contact.
 type accessWorld struct {
@@ -48,6 +48,7 @@ type accessWorld struct {
 	reads            compose.RecordAccessReads
 	reader, roleless ids.UUID
 	workspaceContact ids.UUID
+	readerContact    ids.UUID
 	privateContact   ids.UUID
 	ownedCompany     ids.UUID
 	ownerlessCompany ids.UUID
@@ -67,9 +68,10 @@ func setupAccessWorld(t *testing.T) *accessWorld {
 	e.GrantRole(t, e.Rep2, "manager")
 	e.GrantRole(t, e.Rep3, "rep")
 	e.GrantRole(t, e.AdminUser, "admin")
-	e.GrantRole(t, w.reader, "read_only")
+	e.GrantRole(t, w.reader, "rep")
 
 	w.workspaceContact = e.SeedContact(t, "Open Contact", &e.Rep1)
+	w.readerContact = e.SeedContact(t, "Reader's Contact", &w.reader)
 	w.privateContact = w.seedPrivateContact(t)
 	w.ownedCompany = e.SeedCompany(t, "Owned GmbH", &e.Rep3)
 	w.ownerlessCompany = e.SeedCompany(t, "Nobody's AG", &e.Rep3)
@@ -203,6 +205,7 @@ func TestWhoCanSeeARecordAgreesWithItsReadAndEditPaths(t *testing.T) {
 		caller ids.UUID
 	}{
 		{"a workspace contact", "contact", w.workspaceContact, e.Rep1},
+		{"a contact a read seat owns", "contact", w.readerContact, e.Rep1},
 		{"a private contact with shares", "contact", w.privateContact, e.Rep3},
 		{"a company with an owner", "company", w.ownedCompany, e.AdminUser},
 		{"a company nobody owns", "company", w.ownerlessCompany, e.Rep1},
@@ -250,6 +253,24 @@ func TestAWorkspaceContactListsEveryReaderAndOnlyThem(t *testing.T) {
 	}
 	if colleague := listed[e.Rep3]; colleague.Group != crmcontracts.RecordAccessMemberGroupEveryone || colleague.CanChange {
 		t.Errorf("a rep in another team: group %q can_change=%v, want everyone and read only", colleague.Group, colleague.CanChange)
+	}
+}
+
+func TestARecordAReadSeatOwnsOpensForItButDoesNotChange(t *testing.T) {
+	w := setupAccessWorld(t)
+	owner, ok := w.everyone(t, w.e.Rep1, "contact", w.readerContact)[w.reader]
+	if !ok || owner.Group != crmcontracts.RecordAccessMemberGroupOwner {
+		t.Fatalf("the read seat's own contact: listed=%v group %q, want listed as owner", ok, owner.Group)
+	}
+	if owner.CanChange || len(owner.ChangeReasons) != 0 {
+		t.Errorf("a read seat can change its own contact (reasons %v): the seat ceiling holds whatever the role grants", owner.ChangeReasons)
+	}
+	you, err := w.reads.Read(w.as(t, w.reader), "contact", w.readerContact, nil, nil)
+	if err != nil {
+		t.Fatalf("the read seat reading its own contact: %v", err)
+	}
+	if you.You.CanChange || !hasCode(you.You.ReadReasons, crmcontracts.RecordAccessReasonCodeOwner) {
+		t.Errorf("the read seat's own line: can_change=%v read reasons %v", you.You.CanChange, you.You.ReadReasons)
 	}
 }
 
@@ -313,8 +334,8 @@ func TestOnlyAMemberAdministratorSeesRolesAndTeams(t *testing.T) {
 	}
 	asAdmin := w.everyone(t, e.AdminUser, "contact", w.privateContact)
 	reader := asAdmin[w.reader]
-	if reader.Roles == nil || !slices.Contains(*reader.Roles, "read_only") {
-		t.Errorf("the admin is shown roles %v for the read seat, want read_only", reader.Roles)
+	if reader.Roles == nil || !slices.Contains(*reader.Roles, "rep") {
+		t.Errorf("the admin is shown roles %v for the read seat, want rep", reader.Roles)
 	}
 	if !slices.ContainsFunc(reader.ReadReasons, func(r crmcontracts.RecordAccessReason) bool {
 		return r.Code == crmcontracts.RecordAccessReasonCodeTeamShare && r.TeamId != nil && ids.UUID(*r.TeamId) == e.Team1

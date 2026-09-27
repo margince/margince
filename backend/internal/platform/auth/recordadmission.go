@@ -30,16 +30,23 @@ func EnsureReadable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 	return EnsureVisible(ctx, tx, table, id)
 }
 
-// EnsureChangeable admits an edit of one record: the seat ceiling, the object's
-// update grant, then write authority over a LIVE row.
+// EnsureChangeable admits an edit of one record: the object's update grant,
+// write authority over a LIVE row, then the seat ceiling.
 //
 // The ceiling is asked here although the session door already refuses a read
 // seat's mutating request, because this is also the answer a "who can change
-// this" read gives about somebody who is not making a request at all. It
-// compares against SeatRead rather than asking CanMutate for the reason
-// writeAuthorityPredicateAs gives: an internal principal with no seat to
+// this" read gives about somebody who is not making a request at all. It comes
+// last so a read seat's standing write share is still refused by the write arm
+// itself, and it compares against SeatRead rather than asking CanMutate for the
+// reason writeAuthorityPredicateAs gives: an internal principal with no seat to
 // resolve is not a read seat.
 func EnsureChangeable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	if err := Require(ctx, table, principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := EnsureWritableLive(ctx, tx, table, id); err != nil {
+		return err
+	}
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return err
@@ -47,8 +54,5 @@ func EnsureChangeable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 	if p.SeatType == principal.SeatRead {
 		return fmt.Errorf("%s.%s: %w", table, principal.ActionUpdate, apperrors.ErrSeatTierInsufficient)
 	}
-	if err := Require(ctx, table, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return EnsureWritableLive(ctx, tx, table, id)
+	return nil
 }
