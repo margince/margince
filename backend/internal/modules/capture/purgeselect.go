@@ -467,11 +467,11 @@ func SelectWorkspacePurgeSubjectTx(
 	defer rows.Close()
 	for rows.Next() {
 		var id ids.UUID
-		var withheld bool
+		var withheld string
 		if err := rows.Scan(&id, &withheld); err != nil {
 			return subject, fmt.Errorf("capture: selecting what a workspace purge would destroy: %w", err)
 		}
-		if withheld {
+		if withheld != "" {
 			// The same answer the seat purge gives: an obligation the
 			// installation owes somebody else is not the workspace's to
 			// destroy, and it is REPORTED rather than silently skipped.
@@ -482,6 +482,7 @@ func SelectWorkspacePurgeSubjectTx(
 			// failed purge that destroys nothing at all, including the rows the
 			// admin could have had.
 			subject.Restricted = append(subject.Restricted, id)
+			subject.noteWithheld(withheld, id)
 			continue
 		}
 		subject.SoleImports = append(subject.SoleImports, id)
