@@ -75,8 +75,11 @@ type Event struct {
 	// unreadable start, which the Sink then stamps with capture time rather than
 	// sorting the row to the beginning of history — so a decoder that cannot
 	// read a start leaves this zero rather than guessing.
-	EndsAt    time.Time
-	StartsAt  time.Time
+	EndsAt   time.Time
+	StartsAt time.Time
+	// AllDay says the provider stated a date, not a time: StartsAt is then the
+	// AllDayStart noon anchor rather than a moment anybody scheduled.
+	AllDay    bool
 	Organizer Actor
 	Attendees []Actor
 }
@@ -109,6 +112,7 @@ type Meeting struct {
 	subject         string
 	body            string
 	occurredAt      time.Time
+	allDay          bool
 	durationSeconds *int
 	cancelled       bool
 	ownerDeclined   bool
@@ -131,6 +135,7 @@ func Classify(ev Event, owner string) Meeting {
 		subject:         strings.TrimSpace(ev.Subject),
 		body:            buildBody(ev, attendeeEmails),
 		occurredAt:      ev.StartsAt,
+		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
 		cancelled:       ev.Cancelled,
 		ownerDeclined:   ev.OwnerDeclined,
@@ -231,7 +236,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		//
 		// Empty when the provider stated no UID, and then the meeting dedupes on
 		// the natural key alone exactly as it did before.
-		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt},
+		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay},
 		Participants:      m.participants.Participants,
 		Addresses:         m.addresses,
 	}.WithProviderAttestedParticipants(true)

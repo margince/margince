@@ -94,13 +94,23 @@ func (s *Sink) identityOfRecord(rec connector.NormalizedRecord) (kind, key strin
 	}
 	if s.meetingIdentityKind != "" && s.meetingIdentityKey != nil && rec.CrossDoorIdentity.Stated() {
 		return s.meetingIdentityKind, s.meetingIdentityKey(
-			rec.CrossDoorIdentity.Series,
-			// The occurrence as an instant, handed to the keyer as the text the
-			// import door states, so both doors reach one spelling through one
-			// function.
-			rec.CrossDoorIdentity.Occurrence.UTC().Format(time.RFC3339))
+			rec.CrossDoorIdentity.Series, occurrenceText(rec.CrossDoorIdentity))
 	}
 	return "", ""
+}
+
+// occurrenceText is the occurrence handed to the keyer as the text the import
+// door states, so both doors reach one spelling through one function.
+//
+// An all-day occurrence goes over as its DATE. Its instant is the noon anchor
+// this system stores all-day events at, while an import states the same
+// meeting as the date's midnight; keyed as instants the two never meet, and a
+// HubSpot import plus the connected calendar hold every all-day event twice.
+func occurrenceText(id connector.CrossDoorIdentity) string {
+	if id.AllDay {
+		return id.Occurrence.UTC().Format(time.DateOnly)
+	}
+	return id.Occurrence.UTC().Format(time.RFC3339)
 }
 
 // activityHoldingIdentity answers the activity another door already filed this

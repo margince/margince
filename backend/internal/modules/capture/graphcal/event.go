@@ -119,6 +119,7 @@ func decode(ev rawEvent) meetingmap.Event {
 		Description:   ev.BodyPreview,
 		StartsAt:      parseStart(ev.Start, ev.IsAllDay),
 		EndsAt:        parseStart(ev.End, ev.IsAllDay),
+		AllDay:        ev.IsAllDay,
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
 		Attendees:     attendees,
 	}

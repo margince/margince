@@ -124,6 +124,7 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		Description:   ev.Description,
 		StartsAt:      parseStart(ev.Start),
 		EndsAt:        parseStart(ev.End),
+		AllDay:        isAllDay(ev.Start),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:     attendees,
 	}
@@ -201,6 +202,16 @@ func parseStart(start eventDateTime) time.Time {
 		return t
 	}
 	return time.Time{}
+}
+
+// isAllDay reports that Google stated the start as a date with no time — the
+// shape parseStart anchors at noon.
+func isAllDay(start eventDateTime) bool {
+	if strings.TrimSpace(start.DateTime) != "" {
+		return false
+	}
+	_, ok := meetingmap.AllDayStart(start.Date)
+	return ok
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if it
