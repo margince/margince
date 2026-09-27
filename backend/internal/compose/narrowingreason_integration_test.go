@@ -229,12 +229,7 @@ func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
 	const stuck, fine = "buyer@stuckpromotion.example", "buyer@finepromotion.example"
 	loseTheLivePromotion(t, e, stuck, "thr-stuck")
 	loseTheLivePromotion(t, e, fine, "thr-fine")
-	e.WsExec(t, fmt.Sprintf(`
-		CREATE FUNCTION refuse_stuck_contact() RETURNS trigger LANGUAGE plpgsql AS $$
-		BEGIN RAISE EXCEPTION 'refused for the test'; END $$;
-		CREATE TRIGGER refuse_stuck_contact BEFORE UPDATE ON contact
-		FOR EACH ROW WHEN (OLD.id = '%s') EXECUTE FUNCTION refuse_stuck_contact();`,
-		contactIDFor(t, e, stuck)))
+	refuseUpdates(t, "contact", fmt.Sprintf("OLD.id = '%s'", contactIDFor(t, e, stuck)))
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err == nil {
