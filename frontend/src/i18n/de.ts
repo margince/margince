@@ -3819,7 +3819,7 @@ export const de = {
   "whoCanSee.reason.userShare": "Direkt geteilt",
   "whoCanSee.reason.teamShare": "Über eine Teamfreigabe",
   "whoCanSee.reason.teamShareNamed": "Über das Team {team}",
-  "whoCanSee.reason.sameTeam": "Im Team der zuständigen Person",
+  "whoCanSee.reason.sameTeam": "Im Team des zuständigen Teammitglieds",
   "whoCanSee.reason.allRecords": "Rolle umfasst alle Datensätze",
   "whoCanSee.reason.writeShare": "Freigabe erlaubt Bearbeiten",
   "whoCanSee.you.change.contact":

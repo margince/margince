@@ -218,7 +218,10 @@ describe("RecordAccess — a contact", () => {
       archived_at: "2026-08-02T00:00:00Z",
     });
     expect(screen.getByText("Shared")).toBeTruthy();
-    expect(screen.queryByRole("button")).toBeNull();
+    // Only the way to the full answer stays; the toggle does not.
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Who has access",
+    ]);
   });
 
   it("keeps the private badge and explains a refused sharing attempt", async () => {
