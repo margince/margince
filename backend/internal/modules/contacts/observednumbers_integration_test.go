@@ -161,3 +161,26 @@ func TestAReplacementOntoExistingEvidenceKeepsItsUndo(t *testing.T) {
 		})
 	}
 }
+
+// The same number in another spelling is not a replacement: a signature
+// stating the number research already recorded leaves no undo behind.
+func TestARespelledNumberIsNotAReplacement(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contactID, _ := e.seedEmployedContact(ctx, t,
+		"Otto Spelling", "otto@spelling.example", "Spelling AS", "spelling.example")
+	if _, err := e.store.SaveResearchClaims(ctx, contactID, []ResearchClaimInput{{
+		Field: fieldPhone, Value: "+49 (30) 222-2222", Quote: "Otto Spelling, +49 (30) 222-2222",
+		SourceURL: "https://spelling.example/team",
+	}}); err != nil {
+		t.Fatalf("accepting the researched number: %v", err)
+	}
+	if !fillFromSignature(ctx, t, e, contactID, SignatureField{
+		Name: fieldPhone, Value: "+49 30 2222222", Evidence: "+49 30 2222222", Confidence: 0.9,
+	}) {
+		t.Fatal("the signature wrote no number")
+	}
+	if got := phoneEvidence(ctx, t, e, contactID); !maps.Equal(got, map[string]string{"+49302222222": ""}) {
+		t.Errorf("phone evidence (number: replaced) = %v, want one row that replaced nothing", got)
+	}
+}
