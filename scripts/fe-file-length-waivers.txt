@@ -85,7 +85,6 @@
 626 frontend/src/screens/leads.list.tsx
 628 frontend/src/screens/partners.tsx
 661 frontend/src/screens/record360/citations.tsx
-662 frontend/src/screens/entityref.tsx
 529 frontend/src/screens/contractform.tsx
 671 frontend/src/screens/users-admin.tsx
 662 frontend/src/screens/worklist.dispositions.tsx

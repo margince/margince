@@ -20,13 +20,9 @@ import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import {
-  rosterMissLabel,
-  useRoster,
-  useRosterNames,
-  useRosterPartial,
-} from "./entityref";
+import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
 import { MergeAction } from "./merge";
+import { memberName, useRosterNames } from "./roster";
 import { ShareAction } from "./share";
 
 // The account header's editable pieces: lifecycle and owner, the two values a
@@ -187,11 +183,9 @@ export function CompanyLifecycleControl({
 
 // What to call an owner the roster's answer does not name. "No longer in the
 // user list" is a claim about a read that came back WITHOUT them, so it is the
-// only reading this screen supplies; the three that are not about an owner at
-// all — still reading, read failed, walk stopped short — belong to the roster
-// and are spelled once there. Shared by every control here that names the
-// current owner, so one of them cannot go on making the claim after the others
-// stopped.
+// only reading this screen supplies; still reading, read failed and walk stopped
+// short belong to the roster and are spelled once there. Shared by every control
+// here that names the current owner, so none goes on making the claim alone.
 function unresolvedOwnerLabel(
   roster: Readonly<{ isPending: boolean; isError: boolean }>,
   partial: boolean,
@@ -235,27 +229,18 @@ export function CompanyOwnerControl({
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
-  // The account's current owner may sit outside what the roster read — a
-  // deactivated user, or a workspace deeper than the walk reaches — and a select
-  // whose current value is not an option renders blank. Naming them keeps the
-  // control honest about who owns it today even when it cannot resolve them;
-  // which sentence is honest is `unresolvedOwnerLabel`'s question, not this
-  // one's.
+  // The current owner may not be offerable (invited, deactivated, or past the
+  // walk), and a select whose value is no option renders blank. An invited one
+  // is named; for the rest, `unresolvedOwnerLabel` says which honest sentence.
   if (
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)
   ) {
-    // An INVITED owner is off the offerable list and still has a name: an
-    // import hands accounts to colleagues before they first sign in.
-    const named = (allMembers.data ?? []).find(
-      (entry) => "display_name" in entry && entry.id === company.owner_id,
-    );
     owners.unshift({
       value: company.owner_id,
       label:
-        named && "display_name" in named
-          ? named.display_name
-          : unresolvedOwnerLabel(roster, rosterPartial, t),
+        memberName(allMembers.data, company.owner_id) ??
+        unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }
   // "Unowned" is offered only while the account IS unowned. `owner_id` cannot
