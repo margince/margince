@@ -3807,12 +3807,11 @@ export const de = {
     "{count} Teammitglied mit Zugriff auf Unternehmen",
   "whoCanSee.everyone.company_other":
     "{count} Teammitglieder mit Zugriff auf Unternehmen",
-  "whoCanSee.unlisted_one":
-    "{count} weiteres Teammitglied ist nicht aufgeführt.",
-  "whoCanSee.unlisted_other":
-    "{count} weitere Teammitglieder sind nicht aufgeführt.",
+  "whoCanSee.teamAccess_one":
+    "{count} weiteres Teammitglied hat über ein Team Zugriff oder Bearbeitungsrechte. Nur Admins sehen, wer.",
+  "whoCanSee.teamAccess_other":
+    "{count} weitere Teammitglieder haben über ein Team Zugriff oder Bearbeitungsrechte. Nur Admins sehen, wer.",
   "whoCanSee.canChange": "Kann bearbeiten",
-  "whoCanSee.canOpen": "Kann ansehen",
   "whoCanSee.until": "bis {date}",
   "whoCanSee.reason.workspace": "Für alle Nutzenden offen",
   "whoCanSee.reason.owner": "Zuständig",

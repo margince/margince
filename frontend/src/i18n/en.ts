@@ -3919,10 +3919,11 @@ export const en = {
   "whoCanSee.everyone.contact_other": "{count} users with contact access",
   "whoCanSee.everyone.company_one": "{count} user with company access",
   "whoCanSee.everyone.company_other": "{count} users with company access",
-  "whoCanSee.unlisted_one": "{count} more user is not listed.",
-  "whoCanSee.unlisted_other": "{count} more users are not listed.",
+  "whoCanSee.teamAccess_one":
+    "{count} more user has access or can edit through a team. Only admins see who.",
+  "whoCanSee.teamAccess_other":
+    "{count} more users have access or can edit through a team. Only admins see who.",
   "whoCanSee.canChange": "Can edit",
-  "whoCanSee.canOpen": "Can view",
   "whoCanSee.until": "until {date}",
   "whoCanSee.reason.workspace": "Open to all users",
   "whoCanSee.reason.owner": "Owns it",

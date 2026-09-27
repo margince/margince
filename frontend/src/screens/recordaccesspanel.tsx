@@ -9,11 +9,13 @@
 // The server judges each colleague by the record's own read and edit gates;
 // this file only groups and words the answer. It is refetched after every
 // successful write (app/queryclient.ts) and when the earliest share lapses.
-// Role, team and seat changes made elsewhere show on the next load.
+// Role, team and seat changes made elsewhere show on the next load. A reader
+// outside member administration is shown every colleague judged without their
+// teams, and a count of the colleagues a team adds.
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { api } from "../api/client";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect } from "react";
+import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { Avatar, Badge, Disclosure } from "../design-system/atoms";
 import {
@@ -27,7 +29,7 @@ import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { LoadMoreButton, QueryGate, throwProblem } from "./common";
 import "./recordaccesspanel.css";
 
 type RecordAccessAnswer = components["schemas"]["RecordAccess"];
@@ -44,15 +46,18 @@ export function recordAccessKey(kind: AccessKind, id: string) {
   return ["record-access", kind, id] as const;
 }
 
-// One page as wide as the contract allows. A larger company says how many are
-// not listed rather than paging a panel.
+// One page as wide as the contract allows; a larger company loads more.
 const PAGE = 200;
 
 async function fetchAccess(
   kind: AccessKind,
   id: string,
+  cursor: string | null,
 ): Promise<RecordAccessAnswer> {
-  const params = { path: { id }, query: { limit: PAGE } };
+  const params = {
+    path: { id },
+    query: { limit: PAGE, ...(cursor ? { cursor } : {}) },
+  };
   const { data, error } =
     kind === "contact"
       ? await api.GET("/contacts/{id}/access", { params })
@@ -126,9 +131,9 @@ function MemberRow({
       {member.roles?.map((role) => (
         <RoleBadge key={role} roleKey={role} />
       ))}
-      <Badge tone={member.can_change ? "accent" : undefined}>
-        {t(member.can_change ? "whoCanSee.canChange" : "whoCanSee.canOpen")}
-      </Badge>
+      {member.can_change && (
+        <Badge tone="accent">{t("whoCanSee.canChange")}</Badge>
+      )}
     </PanelRow>
   );
 }
@@ -154,20 +159,27 @@ function YouLine({
   );
 }
 
+// The first page carries the counts and the reader's own line; every loaded
+// page adds its rows.
 function AccessBody({
-  answer,
+  pages,
   kind,
   words,
-}: Readonly<{ answer: RecordAccessAnswer; kind: AccessKind; words: Words }>) {
+  more,
+}: Readonly<{
+  pages: RecordAccessAnswer[];
+  kind: AccessKind;
+  words: Words;
+  more: ReactNode;
+}>) {
   const { t } = words;
   const plural = usePlural();
   const { locale } = useLocale();
   const count = (n: number) => ({ count: formatNumber(n, locale) });
-  const byGroup = (group: Group) =>
-    answer.data.filter((m) => m.group === group);
+  const answer = pages[0];
+  const rows = pages.flatMap((page) => page.data);
+  const byGroup = (group: Group) => rows.filter((m) => m.group === group);
   const everyone = byGroup("everyone");
-  const unlisted =
-    (answer.page.total ?? answer.data.length) - answer.data.length;
   return (
     <>
       <PanelBody>
@@ -209,15 +221,32 @@ function AccessBody({
         </PanelBody>
       )}
       <PanelBody>
-        {unlisted > 0 && (
-          <p className="t-caption">
-            {plural("whoCanSee.unlisted", unlisted, count(unlisted))}
+        {more}
+        {answer.team_access_count > 0 && (
+          <p className="t-caption" data-testid="who-can-see-team-access">
+            {plural(
+              "whoCanSee.teamAccess",
+              answer.team_access_count,
+              count(answer.team_access_count),
+            )}
           </p>
         )}
         <p className="t-caption">{t(`whoCanSee.emails.${kind}`)}</p>
       </PanelBody>
     </>
   );
+}
+
+// When to read the answer again for a share that lapses: at the lapse, but
+// never sooner than a minute from now, so a client clock running ahead of the
+// server cannot turn it into a loop, and never later than an hour, which also
+// keeps the delay inside what a timer can hold.
+export const REFRESH_FLOOR_MS = 60_000;
+export const REFRESH_CEILING_MS = 60 * 60_000;
+
+function refreshDelay(refreshAt: string, now: number): number {
+  const until = Date.parse(refreshAt) - now;
+  return Math.min(REFRESH_CEILING_MS, Math.max(REFRESH_FLOOR_MS, until));
 }
 
 /**
@@ -232,29 +261,43 @@ export function WhoCanSeePanel({
   const { locale } = useLocale();
   const zone = viewerZone();
   const queryClient = useQueryClient();
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: recordAccessKey(kind, recordId),
-    queryFn: () => fetchAccess(kind, recordId),
+    initialPageParam: FIRST_PAGE,
+    queryFn: ({ pageParam }) => fetchAccess(kind, recordId, pageParam),
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
-  const refreshAt = query.data?.refresh_at;
+  // Armed again after every read and counted from it, so a read that came back
+  // before the lapse (the same refresh_at) still schedules the next one.
+  const refreshAt = query.data?.pages[0]?.refresh_at;
+  const readAt = query.dataUpdatedAt;
   useEffect(() => {
     if (!refreshAt) {
       return undefined;
     }
-    const wait = Math.max(0, Date.parse(refreshAt) - Date.now());
-    const timer = setTimeout(() => {
-      void queryClient.invalidateQueries({
-        queryKey: recordAccessKey(kind, recordId),
-      });
-    }, wait);
+    const timer = setTimeout(
+      () => {
+        void queryClient.invalidateQueries({
+          queryKey: recordAccessKey(kind, recordId),
+        });
+      },
+      refreshDelay(refreshAt, readAt),
+    );
     return () => clearTimeout(timer);
-  }, [refreshAt, kind, recordId, queryClient]);
+  }, [refreshAt, readAt, kind, recordId, queryClient]);
 
   const words: Words = { t, date: (iso) => formatDate(iso, locale, zone) };
   return (
     <Panel title={t("whoCanSee.title")}>
       <QueryGate query={query} pendingLabel={t("whoCanSee.title")}>
-        {(answer) => <AccessBody answer={answer} kind={kind} words={words} />}
+        {(data) => (
+          <AccessBody
+            pages={data.pages}
+            kind={kind}
+            words={words}
+            more={<LoadMoreButton query={query} />}
+          />
+        )}
       </QueryGate>
     </Panel>
   );

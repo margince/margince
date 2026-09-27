@@ -62,6 +62,7 @@ function answer(over: Partial<RecordAccess>): RecordAccess {
     page: { has_more: false, total: 4 },
     group_counts: { owner: 1, shared: 0, team_shared: 0, everyone: 3 },
     can_change_count: 2,
+    team_access_count: 0,
     refresh_at: null,
     ...over,
   };
@@ -161,6 +162,21 @@ export const ReadOnlyAndArchived: Story = {
           read_reasons: [{ code: "workspace_visible" }],
           change_reasons: [],
         },
+      })}
+    />
+  ),
+};
+
+/** What a rep reads when a team adds access: colleagues are shown by what
+ *  holds without their teams, and the ones a team adds are counted. */
+export const AsARepWithTeamAccess: Story = {
+  render: () => (
+    <Panel
+      body={answer({
+        data: [owner, ...colleagues.slice(1)],
+        group_counts: { owner: 1, shared: 0, team_shared: 0, everyone: 2 },
+        can_change_count: 1,
+        team_access_count: 2,
       })}
     />
   ),

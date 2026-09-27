@@ -3771,10 +3771,11 @@ export const vi = {
   "whoCanSee.everyone.contact_other": "{count} thành viên có quyền xem liên hệ",
   "whoCanSee.everyone.company_one": "{count} thành viên có quyền xem công ty",
   "whoCanSee.everyone.company_other": "{count} thành viên có quyền xem công ty",
-  "whoCanSee.unlisted_one": "Còn {count} thành viên không được liệt kê.",
-  "whoCanSee.unlisted_other": "Còn {count} thành viên không được liệt kê.",
+  "whoCanSee.teamAccess_one":
+    "Thêm {count} thành viên có quyền xem hoặc sửa qua một nhóm. Chỉ quản trị viên thấy đó là ai.",
+  "whoCanSee.teamAccess_other":
+    "Thêm {count} thành viên có quyền xem hoặc sửa qua một nhóm. Chỉ quản trị viên thấy đó là ai.",
   "whoCanSee.canChange": "Được sửa",
-  "whoCanSee.canOpen": "Được xem",
   "whoCanSee.until": "đến {date}",
   "whoCanSee.reason.workspace": "Mở cho mọi thành viên",
   "whoCanSee.reason.owner": "Là chủ sở hữu",

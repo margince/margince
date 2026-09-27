@@ -7,11 +7,16 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { WhoCanSeePanel } from "./recordaccesspanel";
+import {
+  REFRESH_CEILING_MS,
+  REFRESH_FLOOR_MS,
+  WhoCanSeePanel,
+} from "./recordaccesspanel";
 
 // The panel groups what the server judged; it decides nothing. These cases
 // hold the grouping, the collapsed "everyone" row and the reader's own line.
@@ -35,11 +40,17 @@ function render(ui: ReactNode) {
   );
 }
 
-function serve(body: RecordAccess) {
+// Serves one answer, or a later page when the request carries its cursor.
+function serve(body: RecordAccess, later: Record<string, RecordAccess> = {}) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = input instanceof Request ? input.url : String(input);
-    if (url.includes("/contacts/c-1/access")) {
-      return new Response(JSON.stringify(body), {
+    const url = new URL(
+      input instanceof Request ? input.url : String(input),
+      "https://test.local",
+    );
+    if (url.pathname.endsWith("/contacts/c-1/access")) {
+      const cursor = url.searchParams.get("cursor");
+      const page = cursor ? later[cursor] : body;
+      return new Response(JSON.stringify(page), {
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -95,6 +106,7 @@ function answer(over: Partial<RecordAccess>): RecordAccess {
     page: { has_more: false, total: 5 },
     group_counts: { owner: 1, shared: 1, team_shared: 1, everyone: 2 },
     can_change_count: 1,
+    team_access_count: 0,
     refresh_at: null,
     ...over,
   };
@@ -178,24 +190,91 @@ describe("WhoCanSeePanel", () => {
     expect(screen.getByText("Admin")).toBeTruthy();
   });
 
-  it("says how many colleagues the page did not list", async () => {
-    serve(answer({ page: { has_more: true, total: 205 } }));
+  it("loads the next page, and a colleague on it joins their group", async () => {
+    const user = userEvent.setup();
+    serve(
+      answer({
+        data: [member("u-kim", "Kim Rep", {})],
+        page: { has_more: true, next_cursor: "c-2", total: 2 },
+        group_counts: { owner: 1, shared: 0, team_shared: 0, everyone: 1 },
+      }),
+      {
+        "c-2": answer({
+          data: [owner],
+          page: { has_more: false, next_cursor: null, total: 2 },
+        }),
+      },
+    );
     render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
 
-    expect(
-      await screen.findByText("200 more users are not listed."),
-    ).toBeTruthy();
+    await screen.findByText("1 user with contact access");
+    expect(screen.queryByTestId("who-can-see-owner")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+
+    const ownerGroup = await screen.findByTestId("who-can-see-owner");
+    expect(within(ownerGroup).getByText("Alex Owner")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
-  it("reads the answer again when the earliest share lapses", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      const lapse = new Date(Date.now() + 60_000).toISOString();
-      const fetchMock = serve(answer({ refresh_at: lapse }));
-      render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
-      await screen.findByTestId("who-can-see-you");
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+  it("counts, without naming, the colleagues a team adds", async () => {
+    serve(answer({ team_access_count: 3 }));
+    render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
 
+    const line = await screen.findByTestId("who-can-see-team-access");
+    expect(line.textContent).toBe(
+      "3 more users have access or can edit through a team. Only admins see who.",
+    );
+  });
+
+  // Each case runs on fake timers, so the waits cost no wall-clock time.
+  async function refetchesAfter(refreshAt: (now: number) => string) {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const fetchMock = serve(answer({ refresh_at: refreshAt(Date.now()) }));
+    render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
+    await screen.findByTestId("who-can-see-you");
+    return fetchMock;
+  }
+
+  it("reads the answer again when the earliest share lapses", async () => {
+    try {
+      const fetchMock = await refetchesAfter((now) =>
+        new Date(now + 90_000).toISOString(),
+      );
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(31_000);
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The client clock runs ahead of the server's: the lapse has passed here
+  // and not there, so the answer comes back unchanged. It is asked again a
+  // minute later, and again after that, rather than once and never.
+  it("keeps asking at a floor when the lapse is already past here", async () => {
+    try {
+      const fetchMock = await refetchesAfter((now) =>
+        new Date(now - 5_000).toISOString(),
+      );
+      await vi.advanceTimersByTimeAsync(REFRESH_FLOOR_MS + 1_000);
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      await vi.advanceTimersByTimeAsync(REFRESH_FLOOR_MS + 1_000);
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A lapse a month away is past what a timer can hold; it is asked about at
+  // the ceiling instead of at once.
+  it("waits no longer than the ceiling for a distant lapse", async () => {
+    try {
+      const fetchMock = await refetchesAfter((now) =>
+        new Date(now + 30 * 24 * 3_600_000).toISOString(),
+      );
+      await vi.advanceTimersByTimeAsync(REFRESH_CEILING_MS - 60_000);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(61_000);
       await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     } finally {
