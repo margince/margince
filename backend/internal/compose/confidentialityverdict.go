@@ -405,13 +405,13 @@ const confidentialityStragglerBatch = 200
 // written. Its subject is a query, so a workspace with none does nothing.
 func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (sweepTally, error) {
 	var tally sweepTally
-	err := e.finishSettledThreads(ctx, &tally)
+	err := e.finishSettledThreadsInto(ctx, &tally)
 	return tally, err
 }
 
-// finishSettledThreads is the pass, counting into tally as each repair
+// finishSettledThreadsInto is the pass, counting into tally as each repair
 // commits.
-func (e *ConfidentialityVerdictEngine) finishSettledThreads(ctx context.Context, tally *sweepTally) error {
+func (e *ConfidentialityVerdictEngine) finishSettledThreadsInto(ctx context.Context, tally *sweepTally) error {
 	// The pass's own provenance, taken once for the listing and again per
 	// thread below, so each repair's stamps and audience events trace together
 	// under a correlation id of their own.
