@@ -7,6 +7,7 @@ import { useToast } from "../design-system/toast";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useBulkSelection } from "./bulkverbs";
 import { throwProblem, useViewerId } from "./common";
 import { contactCreateFields, mapContactBody } from "./contactformfields";
 import { CreateAction, type CreateField, type FormRows } from "./create";
@@ -183,6 +184,11 @@ export function ContactsScreen() {
     initialSort: "-created_at",
     fetchPage: fetchContactsPage,
   });
+  const selection = useBulkSelection({
+    rows: state.rows,
+    recordType: "contact",
+    labelOf: (contact) => contact.full_name,
+  });
 
   return (
     <div className="wrap">
@@ -298,6 +304,7 @@ export function ContactsScreen() {
         saveView={<SaveViewAction resource="contacts" query={state.query} />}
         rowKey={(contact) => contact.id}
         rowRoute={(contact) => ({ screen: "contacts", id: contact.id })}
+        selection={selection}
         dataChips={[...ownerChips, ...tagChips]}
         dataViews={savedViews}
         views={[...standardViews(viewerId)]}
