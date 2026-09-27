@@ -505,3 +505,30 @@ func TestTheRetentionPassDeletesLapsedConfirmationsAndKeepsLiveOnes(t *testing.T
 		t.Errorf("%d live confirmations remain, want the one still inside its window", n)
 	}
 }
+
+// A reservation for a change that then fails to commit is given back, so the
+// agent is not charged for records that never changed.
+func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
+	e := integration.Setup(t)
+	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow)
+	engine := newBulkEngine(e.DB(), auth.NewGate(nil, auth.WithVolumeMeter(meter)))
+	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	items := seedBulkContacts(t, e, e.Rep1, 3)
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(),
+		`ALTER TABLE bulk_operation ADD CONSTRAINT bulk_test_refuses_every_batch CHECK (changed_count < 0) NOT VALID`); err != nil {
+		t.Fatalf("installing the refusal: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `ALTER TABLE bulk_operation DROP CONSTRAINT IF EXISTS bulk_test_refuses_every_batch`); err != nil {
+			t.Errorf("removing the refusal: %v", err)
+		}
+	})
+
+	if _, err := engine.Execute(agent, reassignTo(e.Rep2, items)); err == nil {
+		t.Fatal("the change committed although its batch row was refused")
+	}
+	if got := meter.Read(agent, agentvolume.Writes).Observed; got != 0 {
+		t.Errorf("the window reads %d writes after a change that did not commit, want 0", got)
+	}
+}
