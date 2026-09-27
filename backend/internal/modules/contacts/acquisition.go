@@ -120,18 +120,25 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 // subject_initiated row the creation would have written had the mails been read
 // in order; the earlier row stays, because it is a true record of what was
 // known then. A contact that already holds one gets no second.
-func RecordSubjectWroteTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sent time.Time, capturedBy string) error {
-	var held bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM contact_acquisition_evidence
-		                WHERE contact_id = $1 AND kind = $2)`,
-		contactID, AcquiredSubjectInitiated).Scan(&held); err != nil {
-		return fmt.Errorf("contacts: does this contact already hold a subject acquisition: %w", err)
+//
+// Its own statement rather than recordAcquisition, which belongs to creation
+// alone: this row names the MAIL that evidences it (source_entity_type/id), so
+// a later dispute can open the message the settled duty rests on. The existence
+// check and the insert are one statement; the caller holds the contact's
+// acquisition rows locked, which is what serializes two deliveries of it.
+func RecordSubjectWroteTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, mail ids.UUID, sent time.Time, capturedBy string,
+) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO contact_acquisition_evidence
+		       (contact_id, kind, source_entity_type, source_entity_id, occurred_at, captured_by)
+		SELECT $1, $2, 'activity', $3, $4, $5
+		 WHERE NOT EXISTS (SELECT 1 FROM contact_acquisition_evidence
+		                    WHERE contact_id = $1 AND kind = $2)`,
+		contactID, AcquiredSubjectInitiated, mail, sent, capturedBy); err != nil {
+		return fmt.Errorf("contacts: recording that this contact wrote to us: %w", err)
 	}
-	if held {
-		return nil
-	}
-	return recordAcquisition(ctx, tx, contactID, Acquisition{Kind: AcquiredSubjectInitiated, OccurredAt: &sent}, capturedBy)
+	return nil
 }
 
 // acquisitionForCreate is the acquisition a typed create records: what the

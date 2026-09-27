@@ -36,9 +36,28 @@ func withAddress(t *testing.T, e *apptest.AppEnv, contactID, email string) {
 	}
 }
 
-// capturedMailFrom writes one captured mail sent from an address, and answers
-// its id.
+// capturedUnknown makes a contact the way capture does when it cannot name the
+// source: unknown_legacy, written by a connector.
+func capturedUnknown(t *testing.T, e *apptest.AppEnv, name string) string {
+	t.Helper()
+	contact := contactAcquiredAs(t, e, name, "unknown_legacy")
+	if _, err := e.Owner.Exec(context.Background(), `
+		UPDATE contact_acquisition_evidence SET captured_by = 'connector:gmail' WHERE contact_id = $1`,
+		contact); err != nil {
+		t.Fatalf("stating capture wrote the acquisition: %v", err)
+	}
+	return contact
+}
+
+// capturedMailFrom writes one mail a connector delivered from an address, and
+// answers its id.
 func capturedMailFrom(t *testing.T, e *apptest.AppEnv, from string, bulk bool) ids.UUID {
+	t.Helper()
+	return mailFrom(t, e, from, bulk, "connector:gmail")
+}
+
+// mailFrom writes one inbound mail from an address, stamped by whoever wrote it.
+func mailFrom(t *testing.T, e *apptest.AppEnv, from string, bulk bool, capturedBy string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	ctx := context.Background()
@@ -46,7 +65,7 @@ func capturedMailFrom(t *testing.T, e *apptest.AppEnv, from string, bulk bool) i
 		INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id,
 		                      source, captured_by, bulk_mail_attested)
 		VALUES ($1, 'email', 'hello', 'inbound', now() - interval '1 day', 'gmail', $2,
-		        'gmail:seed', 'connector:gmail', $3)`, id, id.String(), bulk); err != nil {
+		        'gmail:seed', $4, $3)`, id, id.String(), bulk, capturedBy); err != nil {
 		t.Fatalf("capturing a mail: %v", err)
 	}
 	if _, err := e.Owner.Exec(ctx, `
@@ -91,7 +110,7 @@ func acquisitionKinds(t *testing.T, e *apptest.AppEnv, contactID string) map[str
 func TestTheirLaterMailSettlesTheNoticeCase(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contact := contactAcquiredAs(t, e, "Late Writer", "unknown_legacy")
+	contact := capturedUnknown(t, e, "Late Writer")
 	withAddress(t, e, contact, "late.writer@customer.test")
 	driveNoticeCase(t, e, contact)
 	if _, state, _, found := noticeCaseFor(t, e, contact); !found || state != "open" {
@@ -121,7 +140,7 @@ func TestTheirLaterMailSettlesTheNoticeCase(t *testing.T) {
 func TestTheirEarlierMailOpensNoCase(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contact := contactAcquiredAs(t, e, "Early Writer", "unknown_legacy")
+	contact := capturedUnknown(t, e, "Early Writer")
 	withAddress(t, e, contact, "early.writer@customer.test")
 	capturedMailFrom(t, e, "early.writer@customer.test", false)
 
@@ -136,7 +155,7 @@ func TestTheirEarlierMailOpensNoCase(t *testing.T) {
 func TestABulkMailSettlesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contact := contactAcquiredAs(t, e, "List Sender", "unknown_legacy")
+	contact := capturedUnknown(t, e, "List Sender")
 	withAddress(t, e, contact, "news@list.test")
 	driveNoticeCase(t, e, contact)
 
@@ -160,5 +179,38 @@ func TestAReferralStaysOwedAfterTheyWrite(t *testing.T) {
 
 	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
 		t.Errorf("a referral's case moved to %q after they wrote, want it still open", state)
+	}
+}
+
+// A mail a seat logged by hand carries whatever From the seat typed. It must
+// not close a legal duty: only a mail a connector took out of a real mailbox
+// counts.
+func TestAHandLoggedMailSettlesNothing(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := capturedUnknown(t, e, "Typed Sender")
+	withAddress(t, e, contact, "typed@customer.test")
+	driveNoticeCase(t, e, contact)
+
+	driveCapturedMail(t, e, mailFrom(t, e, "typed@customer.test", false, "human:seed"))
+
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
+		t.Errorf("a hand-logged mail moved the case to %q, want it still open", state)
+	}
+}
+
+// An unknown source a seat stated is a claim about somewhere else, and the
+// contact writing later does not answer it. Only capture's own unknown is.
+func TestAnUnknownASeatStatedStaysOwed(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := contactAcquiredAs(t, e, "Seat Unknown", "unknown_legacy")
+	withAddress(t, e, contact, "seat.unknown@customer.test")
+	driveNoticeCase(t, e, contact)
+
+	driveCapturedMail(t, e, capturedMailFrom(t, e, "seat.unknown@customer.test", false))
+
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
+		t.Errorf("a seat-stated unknown moved to %q after they wrote, want it still open", state)
 	}
 }

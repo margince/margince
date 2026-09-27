@@ -124,8 +124,13 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 // creation doors, and a contact created by a path predating them has none.
 // Recording a duty from no evidence would be inventing one.
 func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
+	// The same lock settleSender takes first, so the two decide in order.
+	if err := lockAcquisitionsTx(ctx, tx, contactID); err != nil {
+		return err
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, coalesce(a.occurred_at, a.captured_at)
+		SELECT a.id, a.kind, coalesce(a.occurred_at, a.captured_at),
+		       starts_with(a.captured_by, 'connector:')
 		  FROM contact_acquisition_evidence a
 		 WHERE a.contact_id = $1
 		   AND NOT EXISTS (
@@ -139,11 +144,12 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		id       ids.UUID
 		kind     string
 		occurred *time.Time
+		captured bool
 	}
 	var pending []owed
 	for rows.Next() {
 		var o owed
-		if err := rows.Scan(&o.id, &o.kind, &o.occurred); err != nil {
+		if err := rows.Scan(&o.id, &o.kind, &o.occurred, &o.captured); err != nil {
 			rows.Close()
 			return fmt.Errorf("read an acquisition: %w", err)
 		}
@@ -168,10 +174,11 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		if !isOwed {
 			continue
 		}
-		// Their own mail was captured before this ran: the unknown source is
-		// known after all, and the duty it would open is one nobody owes. The
-		// other order — case first, mail second — is settleWhenSubjectWrote.
-		if wrote && o.kind == contacts.AcquiredUnknownLegacy {
+		// Their own mail was captured before this ran: the source capture could
+		// not name is the contact after all, and the duty it would open is one
+		// nobody owes. Capture's own unknowns only, the rule settleSender keeps.
+		// The other order — case first, mail second — is settleWhenSubjectWrote.
+		if wrote && o.captured && o.kind == contacts.AcquiredUnknownLegacy {
 			continue
 		}
 		// The clock runs from the ACQUISITION, not from now: an import landing
