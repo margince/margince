@@ -123,10 +123,16 @@ func (e *verdictEnv) teamLead() context.Context {
 	})
 }
 
-// figureAt reads GET /worklist/response's projection with the clock at `at`.
+// figureAt reads GET /worklist/response's projection over its default
+// fortnight with the clock at `at`.
 func (e *verdictEnv) figureAt(ctx context.Context, t *testing.T, at time.Time) crmcontracts.ResponseMetrics {
 	t.Helper()
-	got, err := newAttentionService(e.Pool, nil, func() time.Time { return at }).ResponseMetrics(ctx, 14)
+	return e.figureOver(ctx, t, at, 14)
+}
+
+func (e *verdictEnv) figureOver(ctx context.Context, t *testing.T, at time.Time, days int) crmcontracts.ResponseMetrics {
+	t.Helper()
+	got, err := newAttentionService(e.Pool, nil, func() time.Time { return at }).ResponseMetrics(ctx, days)
 	if err != nil {
 		t.Fatalf("reading the response figures: %v", err)
 	}
@@ -158,6 +164,11 @@ func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 	if whole.AtRiskJudged != 6 || whole.AtRiskBookedSameDay != 1 {
 		t.Errorf("an unbounded reader sees %d judged and %d booked, want 6 and 1 — the task counts on the day it was "+
 			"created, not on the day before it and not on the day after", whole.AtRiskJudged, whole.AtRiskBookedSameDay)
+	}
+	// Two days back from `later` hold one whole day, the one after the task.
+	if short := e.figureOver(e.Admin(), t, later, 2); short.AtRiskJudged != 2 || short.AtRiskBookedSameDay != 0 {
+		t.Errorf("a two-day window counts %d judged and %d booked, want 2 and 0 — only the day after the task "+
+			"lies wholly inside it", short.AtRiskJudged, short.AtRiskBookedSameDay)
 	}
 	team := e.figureAt(e.teamLead(), t, later)
 	if team.AtRiskJudged != whole.AtRiskJudged || team.AtRiskBookedSameDay != whole.AtRiskBookedSameDay {
