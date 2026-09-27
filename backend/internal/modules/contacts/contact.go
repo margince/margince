@@ -325,18 +325,6 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 			return err
 		}
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
-		if in.Social != nil || in.Emails != nil || in.Phones != nil {
-			// The relation replacement rides the contact row's version
-			// bump (updated_at below), so If-Match still guards it and
-			// the audit row still records the transition.
-			//
-			// Emails and Phones are in this condition for a second reason:
-			// without it a row whose ONLY change is an address or a number
-			// hits p.Empty() below and returns having written nothing, so a
-			// corrected export would report success and drop every such edit
-			// in the file.
-			p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
-		}
 		if p.Empty() {
 			out = current
 			return nil
@@ -357,8 +345,17 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 			}
 		}
 
-		if err := replaceContactAddresses(ctx, tx, id, in); err != nil {
-			return err
+		if in.Emails != nil || in.Phones != nil {
+			by, err := storekit.CapturedBy(ctx)
+			if err != nil {
+				return err
+			}
+			if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
+				return err
+			}
+			if err := replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones); err != nil {
+				return err
+			}
 		}
 		// AFTER the addresses are replaced, never before: the cohort pass
 		// selects the correspondence to attach by reading this contact's live
@@ -438,6 +435,18 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*st
 		p.Set("address_region", cur.Region, in.Address.Region)
 		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
 		p.Set("address_country", cur.Country, in.Address.Country)
+	}
+	if in.Social != nil || in.Emails != nil || in.Phones != nil {
+		// The relation replacement rides the contact row's version
+		// bump (updated_at below), so If-Match still guards it and
+		// the audit row still records the transition.
+		//
+		// Emails and Phones are in this condition for a second reason:
+		// without it a row whose ONLY change is an address or a number
+		// hits p.Empty() below and returns having written nothing, so a
+		// corrected export would report success and drop every such edit
+		// in the file.
+		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	return p, nil
 }

@@ -10,11 +10,11 @@ package contacts
 // it has then. A contact captured from mail or imported without a name starts
 // as its address ("sahner"), and the real name arrives later by an edit
 // ("Gerhard Sahner"). That edit is the moment the duplicate becomes visible —
-// the same person already sat under another address — and nothing looked.
+// the same contact already sat under another address — and nothing looked.
 //
 // Every write that changes full_name re-runs the fuzzy tier and the
 // name-collision lane and files what they find. Unlike the company re-check it
-// also runs for a human's edit: a person correcting a name is exactly who
+// also runs for a human's edit: a human correcting a name is exactly who
 // reveals the twin. It never merges and never overrules the rename; the pair
 // goes on the review queue.
 

@@ -25,13 +25,13 @@ import (
 
 // seedEnrichedDeals writes `n` deals the rep owns and, for each, one machine
 // update that set its next step — one job's work over many records.
-func seedEnrichedDeals(t *testing.T, e *Env, owner ids.UUID, n int) []ids.UUID {
+func seedEnrichedDeals(t *testing.T, e *Env, owner ids.UUID, n int) {
 	t.Helper()
-	return seedDealUpdates(t, e, owner, n, `{"next_step": "Call the buyer"}`)
+	seedDealUpdates(t, e, owner, n, `{"next_step": "Call the buyer"}`)
 }
 
 // seedDealUpdates is seedEnrichedDeals with the update's after-image named.
-func seedDealUpdates(t *testing.T, e *Env, owner ids.UUID, n int, after string) []ids.UUID {
+func seedDealUpdates(t *testing.T, e *Env, owner ids.UUID, n int, after string) {
 	t.Helper()
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	deals := make([]ids.UUID, n)
@@ -65,7 +65,6 @@ func seedDealUpdates(t *testing.T, e *Env, owner ids.UUID, n int, after string) 
 	if err != nil {
 		t.Fatalf("seeding the enriched deals: %v", err)
 	}
-	return deals
 }
 
 func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) {

@@ -22,9 +22,12 @@ import (
 // withholds them: a currency or an ARR beside a withheld amount still says how
 // big the deal is (deals/fieldmask.go).
 var coupledMasks = map[string][]string{
-	"amount_minor":       {"amount_minor", "expected_arr_minor", "currency"},
-	"expected_arr_minor": {"amount_minor", "expected_arr_minor", "currency"},
+	"amount_minor":       dealMoneyFields,
+	"expected_arr_minor": dealMoneyFields,
 }
+
+// dealMoneyFields are the three a deal's own read withholds as one.
+var dealMoneyFields = []string{"amount_minor", "expected_arr_minor", "currency"}
 
 // referenceFields are links to OTHER records. The record's own read withholds
 // each one the reader cannot open; this list would show the raw id either way,

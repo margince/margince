@@ -128,6 +128,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/magic/undoversion.go":                                "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
 	"internal/compose/briefs/briefcontinuity.go:previousRanking":           "the previous run's ranking, so a brief can say what moved. The briefs package asks the deal object gate at its own entry points",
 	"internal/compose/briefs/brieflineage.go:briefLineage":                 "a brief item's lineage across runs, behind those same gated entry points",
 	"internal/compose/briefs/briefreads.go:briefCandidates":                "the candidate deals a brief ranks, behind the gated brief entry",

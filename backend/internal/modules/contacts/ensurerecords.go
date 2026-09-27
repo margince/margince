@@ -206,7 +206,7 @@ func acquiredFromCapture(replied bool) string {
 // address that SENT us a captured message gave us its data by writing, whether
 // or not we had written first. Bulk mail does not count, as it does not for a
 // reply (capture's wroteBackTx): a newsletter is a list writing to everyone,
-// not a person writing to us. A first mail from a stranger is them contacting
+// not the sender writing to us. A first mail from a stranger is them contacting
 // us, and a disclosure duty for it would be owed to nobody. Only the reverse —
 // an address we wrote to, or saw on a Cc, that never wrote — stays unknown.
 func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email string) (string, error) {
