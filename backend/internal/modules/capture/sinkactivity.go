@@ -178,14 +178,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
-		if err := s.reclaimMeetingIdentity(ctx, tx, id, rec); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		// A replay of THIS calendar's own key only. A row reached through
-		// the cross-door identity is another door's filing of the meeting,
-		// and a second calendar still describing the old time would move it
-		// back.
-		if err := s.moveOnReplay(ctx, tx, id, rec, alreadyFiled); err != nil {
+		if err := s.settleMeetingReplay(ctx, tx, id, rec, alreadyFiled); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
