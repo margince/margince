@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,11 +37,31 @@ func renamesAContact(currentName string, in UpdateContactInput) bool {
 	return in.FullName != nil && NormalizeContactName(*in.FullName) != NormalizeContactName(currentName)
 }
 
+// recheckIfRenamed runs the re-check when an update moved the contact's name.
+//
+// The name-lane lock is taken here, after the row lock the update already
+// holds. That order cannot deadlock against a create: a create takes the name
+// lock and then inserts a NEW row, never waiting on an existing one, and the
+// re-check below only reads other contacts.
+func recheckIfRenamed(ctx context.Context, tx pgx.Tx, id ids.ContactID, currentName string, in UpdateContactInput) error {
+	if !renamesAContact(currentName, in) {
+		return nil
+	}
+	if err := lockNameLane(ctx, tx, *in.FullName); err != nil {
+		return err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return recheckContactNameForDuplicates(ctx, tx, id, by)
+}
+
 // recheckContactNameForDuplicates scores a renamed contact against the rest of
 // the workspace and files the pair the fuzzy tier or the name-collision lane
-// names. The caller holds the name-lane lock for the new name (lockNameLane),
-// taken before the row lock, so two renames converging on one name cannot both
-// read no incumbent and land unfiled.
+// names. The caller holds the name-lane lock for the new name (lockNameLane), so
+// two renames converging on one name cannot both read no incumbent and land
+// unfiled.
 //
 // The exact lanes are skipped: the contact holds its own addresses and phones,
 // so they would name itself. Its addresses still ride the candidate, because

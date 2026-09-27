@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -144,19 +143,6 @@ func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (
 		return "", err
 	}
 	return storekit.CapturedBy(ctx)
-}
-
-// acquisitionForCreate is the acquisition a typed create records: what the
-// caller declared, or — for a create stamped with the reserved import namespace,
-// which only a declared importer may write — a contact carried over from the
-// CRM used before.
-func acquisitionForCreate(in CreateContactInput) Acquisition {
-	if in.Acquisition.Kind == "" && in.SourceSystem != nil && provenance.ReservedSourceSystem(*in.SourceSystem) {
-		out := in.Acquisition
-		out.Kind = AcquiredCRMMigration
-		return out
-	}
-	return in.Acquisition
 }
 
 // createContactInTx is CreateContact's transactional body, shared by the
@@ -359,13 +345,6 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 		if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
 			return err
 		}
-		renamed := renamesAContact(current.FullName, in)
-		if renamed {
-			// Before the row lock, in the order every name-lane writer takes it.
-			if err := lockNameLane(ctx, tx, *in.FullName); err != nil {
-				return err
-			}
-		}
 		if err := p.ApplyGuarded(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
 			if constraint, ok := storekit.CheckViolation(err); ok && constraint == "contact_owner_private_names_its_owner" {
 				return &RequiredFieldError{Field: filterOwnerID}
@@ -378,17 +357,8 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 			}
 		}
 
-		if in.Emails != nil || in.Phones != nil {
-			by, err := storekit.CapturedBy(ctx)
-			if err != nil {
-				return err
-			}
-			if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
-				return err
-			}
-			if err := replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones); err != nil {
-				return err
-			}
+		if err := replaceContactAddresses(ctx, tx, id, in); err != nil {
+			return err
 		}
 		// AFTER the addresses are replaced, never before: the cohort pass
 		// selects the correspondence to attach by reading this contact's live
@@ -406,14 +376,8 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
 			return fmt.Errorf("emit contact.updated: %w", err)
 		}
-		if renamed {
-			by, err := storekit.CapturedBy(ctx)
-			if err != nil {
-				return err
-			}
-			if err := recheckContactNameForDuplicates(ctx, tx, id, by); err != nil {
-				return err
-			}
+		if err := recheckIfRenamed(ctx, tx, id, current.FullName, in); err != nil {
+			return err
 		}
 		if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read updated contact: %w", err)

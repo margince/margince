@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The closed vocabulary of how a contact was obtained.
@@ -108,4 +109,17 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		return fmt.Errorf("contacts: recording how this contact was acquired: %w", err)
 	}
 	return nil
+}
+
+// acquisitionForCreate is the acquisition a typed create records: what the
+// caller declared, or — for a create stamped with the reserved import namespace,
+// which only a declared importer may write — a contact carried over from the
+// CRM used before.
+func acquisitionForCreate(in CreateContactInput) Acquisition {
+	if in.Acquisition.Kind == "" && in.SourceSystem != nil && provenance.ReservedSourceSystem(*in.SourceSystem) {
+		out := in.Acquisition
+		out.Kind = AcquiredCRMMigration
+		return out
+	}
+	return in.Acquisition
 }

@@ -473,3 +473,19 @@ func attachContactReachability(ctx context.Context, tx pgx.Tx, idx map[openapi_t
 	}
 	return rows.Err()
 }
+
+// replaceContactAddresses replaces the address and number sets an update names,
+// and leaves them alone when it names neither.
+func replaceContactAddresses(ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput) error {
+	if in.Emails == nil && in.Phones == nil {
+		return nil
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	if err := replaceContactEmails(ctx, tx, workspaceID(ctx), id, in.Source, by, in.Emails); err != nil {
+		return err
+	}
+	return replaceContactPhones(ctx, tx, id, in.Source, by, in.Phones)
+}
