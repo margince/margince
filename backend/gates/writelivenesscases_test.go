@@ -158,6 +158,31 @@ func write(tx T) {
 		subject: true,
 		answers: map[string]bool{"company": true, "activity": false},
 	}, {
+		// The refusal arrives through a constant the statement is built from.
+		// Read as a hole, it left this write reported as bare while it was not.
+		name: "a refusal that arrives through a package-level constant",
+		source: `package p
+const liveCompany = "archived_at IS NULL"
+const retire = "UPDATE company SET legal_name = $2 WHERE id = $1 AND " + liveCompany
+func write(tx T) {
+	tx.Exec(ctx, retire)
+}`,
+		subject: true,
+		stated:  true,
+		answers: map[string]bool{"company": true},
+	}, {
+		// The same writer with the refusal taken out of the constant: resolving
+		// the constant must not credit what it no longer says.
+		name: "the same constant with the refusal removed",
+		source: `package p
+const liveCompany = "legal_hold IS NOT TRUE"
+const retire = "UPDATE company SET legal_name = $2 WHERE id = $1 AND " + liveCompany
+func write(tx T) {
+	tx.Exec(ctx, retire)
+}`,
+		subject: true,
+		answers: map[string]bool{"company": false},
+	}, {
 		// The marker must be a call site, not prose. A gate that read comments
 		// would let a sentence about liveness stand in for one.
 		name: "a marker named only in a comment",
