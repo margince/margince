@@ -6,8 +6,8 @@ package contacts
 // The one writer of contact_profile_field, and the precedence rule it carries.
 //
 // Several passes fill this table — a mail signature, a site read, a human's
-// acceptance of a research claim — and a conflict clause chosen per pass makes
-// the value a field holds depend on which pass ran last.
+// acceptance of a research claim — and each writer's precedence decides whether
+// its value claims an empty field, replaces the one there, or supersedes it.
 //
 // The rule is not "first wins" or "last wins". It is about WHO is writing:
 //

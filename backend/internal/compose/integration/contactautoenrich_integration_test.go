@@ -202,6 +202,47 @@ func TestContactAutoEnrichFillsAContactFromTheirEmployersStagedPage(t *testing.T
 	}
 }
 
+// A withdrawal the database refuses fails the pass, so the bus retries it,
+// rather than leaving a rep asked to create a lead for a contact that exists.
+func TestContactAutoEnrichFailsWhenTheProposalCannotBeWithdrawn(t *testing.T) {
+	e := Setup(t)
+	contactID, companyID := seedEmployedContact(t, e, "Anna Muster")
+	approvalID := stageSiteLead(t, e, companyID, sitePage{
+		Name:            "Anna Muster",
+		Role:            "Head of Delivery",
+		EvidenceSnippet: "Anna Muster — Head of Delivery",
+		SourceURL:       "https://gitex.com/team",
+	})
+	owner := OwnerConn(t)
+	ctx := context.Background()
+	if _, err := owner.Exec(ctx, `
+		CREATE FUNCTION refuse_withdrawal() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN RAISE EXCEPTION 'refused by the test'; END $$;
+		CREATE TRIGGER refuse_withdrawal BEFORE UPDATE ON approval FOR EACH ROW
+		EXECUTE FUNCTION refuse_withdrawal();`); err != nil {
+		t.Fatalf("installing the refusal: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(ctx, `DROP TRIGGER refuse_withdrawal ON approval; DROP FUNCTION refuse_withdrawal();`); err != nil {
+			t.Errorf("removing the refusal: %v", err)
+		}
+	})
+
+	if err := newEnricher(e).HandleEvent(ctx, contactCreated(contactID)); err == nil {
+		t.Fatal("HandleEvent succeeded although the proposal could not be withdrawn")
+	}
+
+	var live bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT expires_at >= created_at FROM approval WHERE id = $1`, approvalID).Scan(&live)
+	}); err != nil {
+		t.Fatalf("reading the proposal back: %v", err)
+	}
+	if !live {
+		t.Error("the proposal reads as withdrawn although its withdrawal was refused")
+	}
+}
+
 // The match is narrow on purpose. A page contact who is not unmistakably this
 // contact must leave the record alone rather than be settled by a sweep.
 func TestContactAutoEnrichLeavesAContactAloneWhenThePageNamesSomebodyElse(t *testing.T) {
