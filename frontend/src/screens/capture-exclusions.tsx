@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
@@ -24,9 +19,8 @@ import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useFolderOptions } from "./capture-exclusions.queries";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { isMailbox } from "./connectorproviders";
-import { useConnectors } from "./connectors";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
 // store at all. Two scopes on one card, because a reader sees both kinds of
@@ -34,7 +28,6 @@ import { useConnectors } from "./connectors";
 // their own (anyone may keep their own correspondent out of a shared CRM).
 
 type CaptureExclusion = components["schemas"]["CaptureExclusion"];
-type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Scope = components["schemas"]["CaptureExclusionScope"];
 type Kind = components["schemas"]["CaptureExclusionKind"];
 
@@ -63,70 +56,6 @@ function useExclusions() {
       }
       return data;
     },
-  });
-}
-
-/**
- * The caller's own connected mailboxes.
- *
- * A container rule names ONE provider's own token, so the picker has to know
- * WHOSE folders it is offering. Reading that from the seat's own connections
- * is what makes the kind work for an Outlook or IMAP mailbox instead of only
- * for Gmail, and it is the same seat-scoped list the server enumerates from.
- *
- * Calendars are left out on the same rule the server applies: a calendar
- * carries no mail, so it has no folder a message could be excluded from.
- */
-function useMailboxes(enabled: boolean) {
-  const connectors = useConnectors({ enabled });
-  return {
-    mailboxes: (connectors.data?.data ?? []).filter(
-      (conn) => isMailbox(conn.provider) && conn.status === "connected",
-    ),
-    isPending: connectors.isPending,
-  };
-}
-
-/**
- * The folders those mailboxes have, one live read each.
- *
- * Asked only while the container kind is chosen, because it costs a provider
- * round trip: the list is live by design — a folder made this morning is one
- * somebody may want excluded this morning — so it is read when the picker
- * opens rather than kept warm.
- *
- * A provider that does not list folders (501) and a mailbox that is not
- * connected (404) both resolve to NO containers. Neither is a fault the reader
- * can act on, and the kind simply has nothing to offer from that mailbox. Any
- * OTHER answer — an unreachable provider above all — is left to fail, because
- * "your mailbox has no folders" and "we could not ask your mailbox" are
- * different facts and a reader acts on them differently.
- */
-function useContainers(
-  mailboxes: readonly CaptureConnection[],
-  enabled: boolean,
-) {
-  return useQueries({
-    queries: mailboxes.map((mailbox) => ({
-      queryKey: ["connector-containers", mailbox.provider],
-      enabled,
-      // One round trip per opening of the dialog, not per keystroke.
-      staleTime: 60_000,
-      retry: false,
-      queryFn: async () => {
-        const { data, error, response } = await api.GET(
-          "/connectors/{provider}/containers",
-          { params: { path: { provider: mailbox.provider } } },
-        );
-        if (response.status === 404 || response.status === 501) {
-          return { containers: [] };
-        }
-        if (error || !data) {
-          throwProblem(error);
-        }
-        return data;
-      },
-    })),
   });
 }
 
@@ -357,37 +286,18 @@ function ExcludeDialog({
   const [kind, setKind] = useState<Kind>("address");
   const [draft, setDraft] = useState("");
   const picking = kind === "container";
-  const { mailboxes, isPending: mailboxesPending } = useMailboxes(picking);
-  const containers = useContainers(mailboxes, picking);
-  // Every connected mailbox's folders in one list. The value stays
-  // provider-qualified, so two mailboxes that both call a folder "Archive"
-  // remain two different rules; the label carries the account when there is
-  // more than one mailbox to tell apart.
-  const offered = mailboxes.flatMap((mailbox, index) =>
-    (containers[index]?.data?.containers ?? []).map((container) => ({
-      value: `${mailbox.provider}:${container.id}`,
-      label:
-        mailboxes.length > 1
-          ? `${mailbox.account_label ?? mailbox.provider} — ${container.name}`
-          : container.name,
-    })),
-  );
-  const containersPending =
-    mailboxesPending || containers.some((query) => query.isPending);
-  // A provider that did not answer is not a mailbox with no folders.
-  const containersFailed = containers.some((query) => query.isError);
+  const folders = useFolderOptions(picking);
   // A container rule lives in ONE mailbox, which the database says too
   // (capture_exclusion_container_is_personal). So choosing it narrows the scope
   // rather than leaving a workspace rule that names a label meaning nothing in
   // anybody else's mail.
   const effectiveScope: Scope = kind === "container" ? "user" : scope;
   // Anyone may keep their own correspondent out of a shared CRM; a rule that
-  // binds everybody is admin/ops work. So the refusal follows the SCOPE the
-  // reader has picked, and the sentence sits with the controls it refuses.
-  // It follows the scope the rule would actually be WRITTEN at: a container
-  // rule is forced to `user` above, so picking one after having chosen
-  // workspace must not leave the picker disabled for a rule that binds only
-  // the reader's own mailbox.
+  // binds everybody is admin/ops work, and the sentence sits with the controls
+  // it refuses. It follows the scope the rule would actually be WRITTEN at: a
+  // container rule is forced to `user` above, so picking one after having
+  // chosen workspace must not leave the picker disabled for a rule that binds
+  // only the reader's own mailbox.
   const refused = effectiveScope === "workspace" && !canManageWorkspace;
   const value = draft.trim();
   return (
@@ -436,8 +346,8 @@ function ExcludeDialog({
               <Select
                 {...control}
                 value={draft}
-                disabled={refused || offered.length === 0}
-                options={offered}
+                disabled={refused || folders.options.length === 0}
+                options={folders.options}
                 onChange={setDraft}
               />
             )}
@@ -456,7 +366,7 @@ function ExcludeDialog({
             onChange={(event) => setDraft(event.target.value)}
           />
         )}
-        {picking && !containersPending && containersFailed && (
+        {picking && !folders.isPending && folders.isError && (
           <Callout
             tone="danger"
             kind="outcome"
@@ -466,9 +376,11 @@ function ExcludeDialog({
           </Callout>
         )}
         {picking &&
-          !containersPending &&
-          !containersFailed &&
-          offered.length === 0 && <p>{t("captureExclusions.noContainers")}</p>}
+          !folders.isPending &&
+          !folders.isError &&
+          folders.options.length === 0 && (
+            <p>{t("captureExclusions.noContainers")}</p>
+          )}
         {refused && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {add.isError && (
           <Callout

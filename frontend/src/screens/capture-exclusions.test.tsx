@@ -570,3 +570,49 @@ describe("the picker follows the seat's own mailbox", () => {
     expect(picker.disabled).toBe(false);
   });
 });
+
+// A list of connections that could not be read is not a seat with no mailbox.
+// Same distinction as a failed folder read, one layer up.
+it("says so when the connections themselves cannot be read", async () => {
+  const user = userEvent.setup();
+  const { fetchMock } = backend(CAPTURE_EDITOR);
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (
+        request.url.includes("/connectors") &&
+        !request.url.includes("/containers")
+      ) {
+        return new Response(JSON.stringify({ title: "no answer" }), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return fetchMock(input, init);
+    },
+  );
+  render(
+    <Providers>
+      <CaptureExclusionsCard />
+    </Providers>,
+  );
+
+  await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
+  await user.click(
+    screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+  );
+  await user.click(
+    screen.getByRole("button", {
+      name: en["captureExclusions.kind.container"],
+    }),
+  );
+
+  await waitFor(() =>
+    expect(
+      screen.getByText(en["captureExclusions.containersUnreadable"]),
+    ).toBeTruthy(),
+  );
+  expect(screen.queryByText(en["captureExclusions.noContainers"])).toBeNull();
+});
