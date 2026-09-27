@@ -6,7 +6,7 @@ package compose
 // The receipt a purge hands back, and the row that has to agree with it.
 //
 // The information sheet promises a colleague that captured mail can be deleted
-// irrevocably. The cascade behind that promise is thorough; what the person it
+// irrevocably. The cascade behind that promise is thorough; what the colleague it
 // was made to got back was nothing, so the one claim about THEIR data was the
 // one they had to take on trust. This is the answer, and the half that matters
 // most is what was KEPT: a deletion that correctly leaves a Handelsbrief
