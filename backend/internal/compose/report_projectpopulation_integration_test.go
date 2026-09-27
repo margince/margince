@@ -113,7 +113,7 @@ func TestAListingsRowHandlesOpenForTheCallerTheyWereServedTo(t *testing.T) {
 			rec, req, "project-commitments", crmcontracts.ExplainReportParams{})
 		var detail derivationWire
 		decodeWire(t, rec, http.StatusOK, &detail)
-		if detail.TotalRows != 1 || fmt.Sprint(detail.Rows[0]["id"]) != fmt.Sprint(row["project_id"]) {
+		if detail.TotalRows != 1 || len(detail.Rows) != 1 || fmt.Sprint(detail.Rows[0]["id"]) != fmt.Sprint(row["project_id"]) {
 			t.Errorf("the handle for project %v opened %+v, want that one project", row["project_id"], detail.Rows)
 		}
 		opened++

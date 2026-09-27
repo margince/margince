@@ -312,13 +312,13 @@ func TestATypedQuestionsNamedScopeIsAppliedToAnInstallWideReport(t *testing.T) {
 	}
 
 	unscoped, err := e.askAnalytics(rep, t, count)
-	if err != nil || fmt.Sprint(unscoped.Rows[0]["n"]) != "14" {
+	if err != nil || len(unscoped.Rows) != 1 || fmt.Sprint(unscoped.Rows[0]["n"]) != "14" {
 		t.Fatalf("the unscoped count = %+v (%v), want the installation's 14", unscoped.Rows, err)
 	}
 	mine := count
 	mine.ScopeKind, mine.ScopeID = ScopeKindOwner, e.Rep1.String()
 	answer, err := e.askAnalytics(rep, t, mine)
-	if err != nil || fmt.Sprint(answer.Rows[0]["n"]) != "7" {
+	if err != nil || len(answer.Rows) != 1 || fmt.Sprint(answer.Rows[0]["n"]) != "7" {
 		t.Errorf("scoped to the rep, the count = %+v (%v), want their own 7", answer.Rows, err)
 	}
 	theirs := count

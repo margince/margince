@@ -2935,7 +2935,7 @@ export const de = {
   "deals.filterStalled": "Nur stockende",
   "deals.filterOwnerMe": "Meine Deals",
   "deals.totalsOwnerNotMeasurable":
-    "Nur geladene Deals. Die Summen dieses Zuständigen darfst du nicht auswerten.",
+    "Nur geladene Deals. Die Summen der zuständigen Person darfst du nicht auswerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.filterPartner": "Partner",

@@ -164,6 +164,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "confirm.done.body",
     "coverage.risk.single_threaded_ours",
     "deal.notYoursToChange",
+    "deals.totalsOwnerNotMeasurable",
     "lead.notYoursToChange",
     "ob.conv.team.body",
     "ob.conv.voice.speakerContinue",
