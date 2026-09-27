@@ -24,13 +24,13 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import { AFTER_THE_DAY } from "./worklist.layout";
 import {
   type HiddenBacklog,
   type HiddenRule,
   useHiddenBacklog,
   useHiddenBacklogRows,
-} from "./worklist.queries";
+} from "./worklist.hidden.queries";
+import { AFTER_THE_DAY } from "./worklist.layout";
 import "./worklist.css";
 
 /**

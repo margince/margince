@@ -69,7 +69,7 @@
 545 frontend/src/screens/connected-agents.tsx
 540 frontend/src/screens/scheduledsends.tsx
 554 frontend/src/screens/users-access.tsx
-560 frontend/src/screens/worklist.queries.ts
+534 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx
 562 frontend/src/screens/project360.tsx
 538 frontend/src/screens/adddocument.tsx
@@ -95,7 +95,7 @@
 716 frontend/src/screens/installation-settings.tsx
 760 frontend/src/screens/extension-access.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
-777 frontend/src/screens/worklist.tsx
+737 frontend/src/screens/worklist.tsx
 790 frontend/src/screens/companycontacts/summary.tsx
 792 frontend/src/screens/import.tsx
 810 frontend/src/screens/voice-dna.tsx
