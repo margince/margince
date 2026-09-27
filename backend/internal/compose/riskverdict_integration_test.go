@@ -133,17 +133,18 @@ func (e *verdictEnv) figureAt(ctx context.Context, t *testing.T, at time.Time) c
 	return got
 }
 
-// The pass on two days, the task booked on the second: the second day is a
-// hit, the first a miss, and only material at-risk deals are judged at all.
+// The pass on three days, the task booked on the middle one: that day is a
+// hit, the days either side are misses, and only material at-risk deals are
+// judged at all.
 func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 	e := setupVerdicts(t)
-	dayBefore := e.taskAt.Add(-24 * time.Hour)
-	e.passAt(t, dayBefore)
+	e.passAt(t, e.taskAt.Add(-24*time.Hour))
 	e.passAt(t, e.taskAt)
+	e.passAt(t, e.taskAt.Add(24*time.Hour))
 
 	for name, deal := range map[string]ids.UUID{"booked": e.booked, "other team's": e.other} {
-		if got := e.verdicts(t, deal); got != 2 {
-			t.Errorf("the %s material at-risk deal has %d verdicts over two days, want 2", name, got)
+		if got := e.verdicts(t, deal); got != 3 {
+			t.Errorf("the %s material at-risk deal has %d verdicts over three days, want 3", name, got)
 		}
 	}
 	for name, deal := range map[string]ids.UUID{"€100 at-risk": e.small, "€200 at-risk": e.mid, "not at risk": e.calm} {
@@ -154,9 +155,9 @@ func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 
 	later := e.taskAt.Add(48 * time.Hour)
 	whole := e.figureAt(e.Admin(), t, later)
-	if whole.AtRiskJudged != 4 || whole.AtRiskBookedSameDay != 1 {
-		t.Errorf("an unbounded reader sees %d judged and %d booked, want 4 and 1 — the task counts on the day it was "+
-			"created and not on the day before", whole.AtRiskJudged, whole.AtRiskBookedSameDay)
+	if whole.AtRiskJudged != 6 || whole.AtRiskBookedSameDay != 1 {
+		t.Errorf("an unbounded reader sees %d judged and %d booked, want 6 and 1 — the task counts on the day it was "+
+			"created, not on the day before it and not on the day after", whole.AtRiskJudged, whole.AtRiskBookedSameDay)
 	}
 	team := e.figureAt(e.teamLead(), t, later)
 	if team.AtRiskJudged != whole.AtRiskJudged || team.AtRiskBookedSameDay != whole.AtRiskBookedSameDay {
@@ -183,6 +184,51 @@ func TestALeadWithoutDealReadIsRefused(t *testing.T) {
 		ResponseMetrics(noDeals, 14)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a lead without deal.read read the figure (err %v), want a permission refusal", err)
+	}
+}
+
+// A meeting and an archived task are not next steps: the meeting's row is
+// dated by the calendar sync, and an archived task is retired.
+//
+// Both land on the other team's deal and the pass runs on the day they were
+// created. The booked deal's own task counts only if it was created that same
+// day, which the suite reads off the rows rather than assuming.
+func TestOnlyALiveTaskIsANextStep(t *testing.T) {
+	e := setupVerdicts(t)
+	subject, ahead := "Quarterly review", time.Now().AddDate(0, 0, 3)
+	link := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: e.other}}
+	meeting, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &ahead, Source: "manual", Links: link,
+	})
+	if err != nil {
+		t.Fatalf("booking the meeting: %v", err)
+	}
+	retired, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &ahead, Source: "manual", Links: link,
+	})
+	if err != nil {
+		t.Fatalf("booking the task to retire: %v", err)
+	}
+	if _, err := e.Activities.ArchiveActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(retired.Id)), nil); err != nil {
+		t.Fatalf("retiring the task: %v", err)
+	}
+	e.passAt(t, meeting.CreatedAt)
+
+	zone, err := installationZone(e.Admin(), e.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	onDay := func(at time.Time) bool {
+		return at.In(zone).Format(time.DateOnly) == meeting.CreatedAt.In(zone).Format(time.DateOnly)
+	}
+	want := 0
+	if onDay(e.taskAt) {
+		want = 1
+	}
+	got := e.figureAt(e.Admin(), t, meeting.CreatedAt.Add(48*time.Hour))
+	if got.AtRiskJudged != 2 || got.AtRiskBookedSameDay != want {
+		t.Errorf("%d judged and %d booked, want 2 and %d — a meeting or an archived task on the other deal "+
+			"must not count as its next step", got.AtRiskJudged, got.AtRiskBookedSameDay, want)
 	}
 }
 
