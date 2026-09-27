@@ -10156,6 +10156,8 @@ export const en = {
   "worklist.hidden.setAside.detail":
     "Snoozed or marked not yours. Snoozed items return automatically.",
   "worklist.hidden.shown": "The Worklist shows {count}.",
+  "worklist.hidden.rows.loading": "Loading the held-back messages…",
+  "worklist.hidden.rows.empty": "Nothing is held back by this rule now.",
   "worklist.filter.label": "Work type",
   "worklist.filter.all": "All",
   "worklist.filter.customer_waiting": "Customer waiting",

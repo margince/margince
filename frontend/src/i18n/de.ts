@@ -9976,6 +9976,8 @@ export const de = {
   "worklist.hidden.setAside.detail":
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
+  "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
+  "worklist.hidden.rows.empty": "Diese Regel hält gerade nichts zurück.",
   "worklist.filter.label": "Art der Arbeit",
   "worklist.filter.all": "Alle",
   "worklist.filter.customer_waiting": "Kontakt wartet",

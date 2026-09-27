@@ -48,6 +48,8 @@ export type Receipt = components["schemas"]["Receipt"];
 export type TeamException = components["schemas"]["TeamException"];
 export type TeamBoardMember = components["schemas"]["TeamBoardMember"];
 export type HiddenBacklog = components["schemas"]["HiddenBacklog"];
+export type HiddenBacklogRows = components["schemas"]["HiddenBacklogRows"];
+export type HiddenRule = HiddenBacklogRows["rule"];
 
 export const worklistKey = ["worklist"] as const;
 
@@ -205,6 +207,24 @@ export function useHiddenBacklog(enabled: boolean) {
     queryKey: [...worklistKey, "hidden"],
     queryFn: async (): Promise<HiddenBacklog> => {
       const { data, error } = await api.GET("/worklist/hidden", {});
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+// The messages one hiding rule holds back, read only once a reader opens the
+// figure: the counts ride every worklist load, the rows are asked for.
+export function useHiddenBacklogRows(rule: HiddenRule, enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: [...worklistKey, "hidden", rule],
+    queryFn: async (): Promise<HiddenBacklogRows> => {
+      const { data, error } = await api.GET("/worklist/hidden/{rule}", {
+        params: { path: { rule } },
+      });
       if (error) {
         throwProblem(error);
       }

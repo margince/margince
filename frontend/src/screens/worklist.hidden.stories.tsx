@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 import { StoryProviders } from "./story-utils";
 import { HiddenFigures } from "./worklist.hidden";
 
@@ -15,6 +16,7 @@ const meta: Meta<typeof HiddenFigures> = {
   title: "Records/Worklist/Hidden backlog",
   component: HiddenFigures,
   parameters: { layout: "padded" },
+  args: { onOpenEmail: fn() },
   decorators: [
     (Story) => (
       <StoryProviders>

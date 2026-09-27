@@ -428,6 +428,16 @@
   grid-template-columns: auto 1fr;
 }
 
+/* The messages behind one figure, under its disclosure. */
+.worklist-hidden-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 /* Tabular so four rows of figures line up rather than drifting by digit
    width. */
 .worklist-hidden-count {

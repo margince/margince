@@ -547,7 +547,10 @@ function WorklistBody({
             )}
           {/* This diagnostic counts all readable history, not personal obligations. */}
           {owner === "" && scope === "all" && (
-            <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
+            <HiddenBacklogPanel
+              enabled={day.scope_options.includes("team")}
+              onOpenEmail={onOpenEmail}
+            />
           )}
           {/* LAST, and open. A reader opens this page to find what to do next;
           what is already finished answers a different question — worth having,
