@@ -138,9 +138,17 @@ async function readRosterPage(
   // The two endpoints answer differently-typed rows, so each arm reads its own
   // — a shared call would have to assert one shape onto the other.
   if (kind === "user") {
+    // WITH the invited seats: this walk also NAMES people, and an imported
+    // record's owner is often a colleague who has not signed in yet — left off,
+    // their owner column showed a raw id. `useRoster`, which the pickers read,
+    // filters them back out, so nobody is offered work they cannot open.
     const { data, error } = await api.GET("/users", {
       params: {
-        query: { limit: ROSTER_PAGE_SIZE, ...(cursor ? { cursor } : {}) },
+        query: {
+          limit: ROSTER_PAGE_SIZE,
+          include_invited: true,
+          ...(cursor ? { cursor } : {}),
+        },
       },
     });
     if (error) throwProblem(error);
@@ -208,8 +216,16 @@ function useRosterWalk(kind: RosterKind, enabled: boolean) {
 export function useRoster(kind: RosterKind, enabled: boolean) {
   return useQuery({
     ...rosterQueryOptions(kind, enabled),
-    select: (roster: Roster) => roster.entries,
+    select: offerable,
   });
+}
+
+// The members a picker may OFFER: everyone the walk read except invited seats,
+// who sign in nowhere yet. The walk keeps them for naming only.
+function offerable(roster: Roster): RosterEntry[] {
+  return roster.entries.filter(
+    (entry) => !("status" in entry) || entry.status !== "invited",
+  );
 }
 
 /**

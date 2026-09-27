@@ -428,7 +428,9 @@ describe("EntityRef", () => {
 // none. The cursor is the page's index, so a request that forgot to echo it
 // would read page one forever and the walk would never terminate.
 function stubPagedRoster(
-  pages: ReadonlyArray<ReadonlyArray<{ id: string; display_name: string }>>,
+  pages: ReadonlyArray<
+    ReadonlyArray<{ id: string; display_name: string; status?: string }>
+  >,
 ) {
   const cursors: Array<string | null> = [];
   vi.stubGlobal(
@@ -570,5 +572,50 @@ describe("the roster walk", () => {
     // that non-answer as settled fact.
     expect(await screen.findByText("Name did not load")).toBeTruthy();
     expect(screen.queryByText("u-far")).toBeNull();
+  });
+});
+
+// An imported record is often owned by a colleague who has not signed in yet.
+// The roster NAMES them, so their owner column reads a name rather than an id;
+// the pickers still leave them out, so nobody is offered work they cannot open.
+describe("invited seats", () => {
+  it("names an invited owner, and asks the roster for invited seats to do it", async () => {
+    stubPagedRoster([
+      [
+        { id: "u-1", display_name: "Priya Shah", status: "active" },
+        { id: "u-2", display_name: "Rainer Schuller", status: "invited" },
+      ],
+    ]);
+    render(<EntityRef kind="user" id="u-2" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Rainer Schuller")).toBeTruthy(),
+    );
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([request]) => new URL((request as Request).url))
+      .find((url) => url.pathname.endsWith("/users"));
+    expect(asked?.searchParams.get("include_invited")).toBe("true");
+  });
+
+  it("does not offer an invited seat in an owner picker", async () => {
+    stubPagedRoster([
+      [
+        { id: "u-1", display_name: "Priya Shah", status: "active" },
+        { id: "u-2", display_name: "Rainer Schuller", status: "invited" },
+      ],
+    ]);
+    const user = userEvent.setup();
+    renderRosterHost();
+
+    await user.click(
+      await screen.findByRole("combobox", { name: en["deals.bulkOwner"] }),
+    );
+    expect(
+      await screen.findByRole("option", { name: "Priya Shah" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: "Rainer Schuller" }),
+    ).toBeNull();
   });
 });

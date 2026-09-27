@@ -47211,6 +47211,11 @@ type ListUsersParams struct {
 
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
+
+	// IncludeInvited Also list invited seats — members who have not signed in yet. For NAMING the people records
+	// already point at (an imported record's owner is often an invited colleague); any member may ask.
+	// Pickers leave it off, so nobody is offered work they cannot open.
+	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
 
 // PreviewAccessParams defines parameters for PreviewAccess.
@@ -91044,6 +91049,19 @@ func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_inactive"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_inactive", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "include_invited" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_invited", r.URL.Query(), &params.IncludeInvited, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_invited"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_invited", Err: err})
 		}
 		return
 	}

@@ -103,6 +103,15 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 	if containsUser(roster.Data, invited.ID) {
 		t.Fatalf("the assignee roster offers the invited member %s, who cannot sign in", invited.ID)
 	}
+	// The NAMING roster does carry them: a record an import handed to this
+	// member before they signed in must show their name, not their id.
+	var namingRoster userListWire
+	if status := e.Call(t, "GET", "/v1/users?include_invited=true", nil, nil, &namingRoster); status != http.StatusOK {
+		t.Fatalf("list users with include_invited -> %d, want 200", status)
+	}
+	if !containsUser(namingRoster.Data, invited.ID) {
+		t.Fatalf("the naming roster leaves out the invited member %s, so their records show an id", invited.ID)
+	}
 	var adminRoster userListWire
 	if status := e.Call(t, "GET", "/v1/users?include_inactive=true", nil, nil, &adminRoster); status != http.StatusOK {
 		t.Fatalf("list users with include_inactive -> %d, want 200", status)
