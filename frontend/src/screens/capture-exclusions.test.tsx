@@ -698,7 +698,7 @@ describe("the deletion receipt", () => {
         under_statute: 2,
         under_request: 0,
         statutory_class: "commercial_correspondence",
-        statutory_period: "P6Y",
+        statutory_years: 6,
         statutory_from_year_end: true,
       },
     });
@@ -713,7 +713,11 @@ describe("the deletion receipt", () => {
     await user.click(screen.getByRole("button", { name: "Check first" }));
 
     const kept = await screen.findByText(/kept as commercial correspondence/);
-    expect(kept.textContent).toContain("P6Y");
+    // The years a reader can act on, and the anchor that makes six years mean
+    // up to seven. A raw ISO duration here would be a machine's spelling.
+    expect(kept.textContent).toContain("6 years");
+    expect(kept.textContent).toContain("end of the calendar year");
+    expect(kept.textContent).not.toContain("P6Y");
   });
 
   // The three reasons lift on different days, so they are different sentences.
@@ -840,4 +844,102 @@ it("destroys only after the preview, and reports it in the past tense", async ()
   expect(screen.getByText(/Your access to it has ended/)).toBeTruthy();
   expect(screen.getByText(/stripped of identifying details/)).toBeTruthy();
   expect(purgeCalls.some((url) => url.includes("preview=false"))).toBe(true);
+});
+
+// Without the year-end anchor the promise is plainly the period itself, and
+// saying otherwise would overstate how long somebody's mail is held.
+it("drops the year-end qualifier when the period does not carry one", async () => {
+  const user = userEvent.setup();
+  const { fetchMock } = backend(CAPTURE_EDITOR);
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (request.url.includes("/purge")) {
+        return new Response(
+          JSON.stringify({
+            destroyed: 0,
+            released: 0,
+            skipped: 1,
+            anonymised: 0,
+            preview: true,
+            kept: {
+              held: 0,
+              under_statute: 1,
+              under_request: 0,
+              statutory_class: "commercial_correspondence",
+              statutory_years: 2,
+              statutory_from_year_end: false,
+            },
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return fetchMock(input, init);
+    },
+  );
+  render(
+    <Providers>
+      <CaptureExclusionsCard />
+    </Providers>,
+  );
+
+  await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
+  await user.click(
+    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
+  );
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+
+  const kept = await screen.findByText(/kept as commercial correspondence/);
+  expect(kept.textContent).toContain("2 years");
+  expect(kept.textContent).not.toContain("end of the calendar year");
+});
+
+// A period the packs declare in months or days has no number this copy could
+// say truthfully, so the class is named and the period is not.
+it("names the class without a period it cannot state in years", async () => {
+  const user = userEvent.setup();
+  const { fetchMock } = backend(CAPTURE_EDITOR);
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (request.url.includes("/purge")) {
+        return new Response(
+          JSON.stringify({
+            destroyed: 0,
+            released: 0,
+            skipped: 1,
+            anonymised: 0,
+            preview: true,
+            kept: {
+              held: 0,
+              under_statute: 1,
+              under_request: 0,
+              statutory_class: "commercial_correspondence",
+              statutory_from_year_end: false,
+            },
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return fetchMock(input, init);
+    },
+  );
+  render(
+    <Providers>
+      <CaptureExclusionsCard />
+    </Providers>,
+  );
+
+  await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
+  await user.click(
+    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
+  );
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+
+  const kept = await screen.findByText(/kept as commercial correspondence/);
+  expect(kept.textContent).not.toContain("The law requires keeping");
 });

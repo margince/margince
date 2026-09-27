@@ -117,8 +117,10 @@ func keptContract(kept KeptBreakdown) crmcontracts.CaptureKeptBreakdown {
 	}
 	if kept.StatutoryClass != "" {
 		out.StatutoryClass = &kept.StatutoryClass
-		out.StatutoryPeriod = &kept.StatutoryPeriod
 		out.StatutoryFromYearEnd = &kept.StatutoryFromYearEnd
+		if kept.StatutoryYears > 0 {
+			out.StatutoryYears = &kept.StatutoryYears
+		}
 	}
 	return out
 }

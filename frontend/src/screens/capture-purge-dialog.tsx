@@ -127,8 +127,25 @@ function PurgeReceipt({ outcome }: Readonly<{ outcome: PurgeOutcome }>) {
         <p>
           {plural("capturePurge.keptStatute", kept.under_statute, {
             count: n(kept.under_statute),
-            period: kept.statutory_period ?? "",
           })}
+          {/* The period is a second sentence rather than a clause, because the
+              year-end anchor changes it: "six years" and "six years after the
+              end of the calendar year it arrived in" are different promises,
+              and only the second is true of a Handelsbrief. Omitted entirely
+              when the packs declare a period that is not whole years, since
+              there is no number this copy could say truthfully. */}
+          {kept.statutory_years !== undefined && kept.statutory_years > 0 && (
+            <>
+              {" "}
+              {plural(
+                kept.statutory_from_year_end
+                  ? "capturePurge.keptForFromYearEnd"
+                  : "capturePurge.keptFor",
+                kept.statutory_years,
+                { years: n(kept.statutory_years) },
+              )}
+            </>
+          )}
         </p>
       )}
       {kept.under_request > 0 && (

@@ -22923,8 +22923,10 @@ type CaptureKeptBreakdown struct {
 	// message's own date — the difference between "six years" and "up to seven".
 	StatutoryFromYearEnd *bool `json:"statutory_from_year_end,omitempty"`
 
-	// StatutoryPeriod That class's period as an ISO 8601 duration (`P6Y`).
-	StatutoryPeriod *string `json:"statutory_period,omitempty"`
+	// StatutoryYears How many years that class keeps its records, as a number the reader's own copy renders.
+	// Absent when the compiled-in packs declare a period that is not whole years, because a
+	// screen that rounded one would misstate how long somebody's mail is held.
+	StatutoryYears *int `json:"statutory_years,omitempty"`
 
 	// UnderRequest Messages a data-subject request is still about, and which it needs in order to be answered.
 	UnderRequest int `json:"under_request"`

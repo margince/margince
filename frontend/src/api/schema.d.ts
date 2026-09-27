@@ -18368,8 +18368,12 @@ export interface components {
              *     shown a rule beside a zero would reasonably think it applied to their deletion.
              */
             statutory_class?: string;
-            /** @description That class's period as an ISO 8601 duration (`P6Y`). */
-            statutory_period?: string;
+            /**
+             * @description How many years that class keeps its records, as a number the reader's own copy renders.
+             *     Absent when the compiled-in packs declare a period that is not whole years, because a
+             *     screen that rounded one would misstate how long somebody's mail is held.
+             */
+            statutory_years?: number;
             /**
              * @description True when the period counts from the end of the calendar year rather than from the
              *     message's own date — the difference between "six years" and "up to seven".

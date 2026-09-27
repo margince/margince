@@ -8877,7 +8877,7 @@ export const en = {
   "captureExclusions.kind.container": "Label, folder or mailbox",
   "captureExclusions.scopeLabel": "Applies to",
   "capturePurge.open": "Delete mail already captured from {value}",
-  "capturePurge.title": "Delete mail already captured from {value}",
+  "capturePurge.title": "Delete mail already captured from {value}?",
   "capturePurge.intro":
     "This destroys the messages this rule already matched: text, original, attachments and everything derived from them. It cannot be undone. Check first what it would remove.",
   "capturePurge.preview": "Check first",
@@ -8901,9 +8901,15 @@ export const en = {
   "capturePurge.keptHeld_other":
     "{count} messages were kept: they are pinned, and stay until whoever pinned them lifts that.",
   "capturePurge.keptStatute_one":
-    "{count} message was kept as commercial correspondence. The law requires keeping it for {period}, so it is not yours to delete.",
+    "{count} message was kept as commercial correspondence, which is not yours to delete.",
   "capturePurge.keptStatute_other":
-    "{count} messages were kept as commercial correspondence. The law requires keeping them for {period}, so they are not yours to delete.",
+    "{count} messages were kept as commercial correspondence, which is not yours to delete.",
+  "capturePurge.keptFor_one": "The law requires keeping it for {years} year.",
+  "capturePurge.keptFor_other": "The law requires keeping it for {years} years.",
+  "capturePurge.keptForFromYearEnd_one":
+    "The law requires keeping it for {years} year after the end of the calendar year it arrived in.",
+  "capturePurge.keptForFromYearEnd_other":
+    "The law requires keeping it for {years} years after the end of the calendar year it arrived in.",
   "capturePurge.keptRequest_one":
     "{count} message was kept: a data-protection request is still being answered and needs it.",
   "capturePurge.keptRequest_other":

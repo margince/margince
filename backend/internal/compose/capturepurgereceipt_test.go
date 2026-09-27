@@ -38,7 +38,7 @@ func TestTheBreakdownCountsEachReasonApart(t *testing.T) {
 // commercial correspondence at all.
 func TestTheStatutoryRuleIsNamedOnlyWhenItKeptSomething(t *testing.T) {
 	quiet := keptBreakdown(capture.PurgeSubject{Held: ids2(1)})
-	if quiet.StatutoryClass != "" || quiet.StatutoryPeriod != "" {
+	if quiet.StatutoryClass != "" || quiet.StatutoryYears != 0 {
 		t.Fatalf("got %+v, want the statutory rule unnamed when it shielded nothing", quiet)
 	}
 
@@ -49,8 +49,8 @@ func TestTheStatutoryRuleIsNamedOnlyWhenItKeptSomething(t *testing.T) {
 	if named.UnderStatute != 1 {
 		t.Fatalf("got %+v, want the shielded message counted", named)
 	}
-	if named.StatutoryClass != "" && named.StatutoryPeriod == "" {
-		t.Error("a named class arrived without the period that goes with it")
+	if named.StatutoryYears < 0 {
+		t.Errorf("years = %d, want a period that is never negative", named.StatutoryYears)
 	}
 }
 
@@ -58,7 +58,7 @@ func TestTheStatutoryRuleIsNamedOnlyWhenItKeptSomething(t *testing.T) {
 // nothing was shielded, so a client never renders a rule beside a zero.
 func TestTheContractOmitsAStatutoryRuleThatKeptNothing(t *testing.T) {
 	quiet := keptContract(KeptBreakdown{Held: 1})
-	if quiet.StatutoryClass != nil || quiet.StatutoryPeriod != nil || quiet.StatutoryFromYearEnd != nil {
+	if quiet.StatutoryClass != nil || quiet.StatutoryYears != nil || quiet.StatutoryFromYearEnd != nil {
 		t.Fatalf("got %+v, want the statutory fields absent", quiet)
 	}
 	if quiet.Held != 1 {
@@ -67,13 +67,22 @@ func TestTheContractOmitsAStatutoryRuleThatKeptNothing(t *testing.T) {
 
 	named := keptContract(KeptBreakdown{
 		UnderStatute: 2, StatutoryClass: "commercial_correspondence",
-		StatutoryPeriod: "P6Y", StatutoryFromYearEnd: true,
+		StatutoryYears: 6, StatutoryFromYearEnd: true,
 	})
 	if named.StatutoryClass == nil || *named.StatutoryClass != "commercial_correspondence" {
 		t.Fatalf("class = %v, want it carried onto the wire", named.StatutoryClass)
 	}
-	if named.StatutoryPeriod == nil || *named.StatutoryPeriod != "P6Y" {
-		t.Fatalf("period = %v, want it carried", named.StatutoryPeriod)
+	if named.StatutoryYears == nil || *named.StatutoryYears != 6 {
+		t.Fatalf("years = %v, want the period carried as a number", named.StatutoryYears)
+	}
+
+	// A class the packs declare in months or days reaches the wire without a
+	// period: there is no whole-year number the copy could state truthfully.
+	unstatable := keptContract(KeptBreakdown{
+		UnderStatute: 1, StatutoryClass: "commercial_correspondence",
+	})
+	if unstatable.StatutoryClass == nil || unstatable.StatutoryYears != nil {
+		t.Fatalf("got %+v, want the class named and the period absent", unstatable)
 	}
 	// The difference between "six years" and "up to seven".
 	if named.StatutoryFromYearEnd == nil || !*named.StatutoryFromYearEnd {

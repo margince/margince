@@ -8664,7 +8664,7 @@ export const vi = {
   "captureExclusions.kind.container": "Nhãn, thư mục hoặc hộp thư",
   "captureExclusions.scopeLabel": "Áp dụng cho",
   "capturePurge.open": "Xóa thư đã thu thập từ {value}",
-  "capturePurge.title": "Xóa thư đã thu thập từ {value}",
+  "capturePurge.title": "Xóa thư đã thu thập từ {value}?",
   "capturePurge.intro":
     "Thao tác này hủy các thư mà quy tắc này đã khớp: nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
   "capturePurge.preview": "Xem trước",
@@ -8684,13 +8684,19 @@ export const vi = {
   "capturePurge.anonymised_other":
     "{count} liên hệ đã được gỡ bỏ thông tin nhận dạng, vì thư của bạn là lý do duy nhất CRM biết đến họ.",
   "capturePurge.keptHeld_one":
-    "{count} thư được giữ lại: thư đang bị ghim, và còn cho đến khi được gỡ.",
+    "{count} thư được giữ lại: thư đang được ghim, và còn cho đến khi được gỡ.",
   "capturePurge.keptHeld_other":
-    "{count} thư được giữ lại: chúng đang bị ghim, và còn cho đến khi được gỡ.",
+    "{count} thư được giữ lại: chúng đang được ghim, và còn cho đến khi được gỡ.",
   "capturePurge.keptStatute_one":
-    "{count} thư được giữ lại như thư tín thương mại. Luật yêu cầu lưu giữ trong {period}, nên bạn không được xóa.",
+    "{count} thư được giữ lại như thư tín thương mại, mà bạn không được xóa.",
   "capturePurge.keptStatute_other":
-    "{count} thư được giữ lại như thư tín thương mại. Luật yêu cầu lưu giữ trong {period}, nên bạn không được xóa.",
+    "{count} thư được giữ lại như thư tín thương mại, mà bạn không được xóa.",
+  "capturePurge.keptFor_one": "Luật yêu cầu lưu giữ trong {years} năm.",
+  "capturePurge.keptFor_other": "Luật yêu cầu lưu giữ trong {years} năm.",
+  "capturePurge.keptForFromYearEnd_one":
+    "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
+  "capturePurge.keptForFromYearEnd_other":
+    "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
   "capturePurge.keptRequest_one":
     "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần thư đó.",
   "capturePurge.keptRequest_other":

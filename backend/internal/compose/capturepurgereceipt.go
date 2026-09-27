@@ -38,12 +38,16 @@ type KeptBreakdown struct {
 	// long — empty when nothing was shielded by it, so a reader is never shown
 	// a rule that kept nothing.
 	StatutoryClass string `json:"statutory_class,omitempty"`
-	// StatutoryPeriod is that class's period in ISO 8601 (P6Y), and
-	// StatutoryFromYearEnd says it counts from the end of the calendar year
-	// rather than from the message's own date — which is the difference
+	// StatutoryYears is how long that class keeps its records, in whole years,
+	// and zero when the packs declare a period that is not whole years — a
+	// screen that rounded one would misstate how long somebody's mail is held.
+	// ISO 8601 deliberately does NOT travel: "P6Y" is a machine's spelling, and
+	// this number is read by a colleague.
+	StatutoryYears int `json:"statutory_years,omitempty"`
+	// StatutoryFromYearEnd says the period counts from the end of the calendar
+	// year rather than from the message's own date, which is the difference
 	// between "six years" and "up to seven".
-	StatutoryPeriod      string `json:"statutory_period,omitempty"`
-	StatutoryFromYearEnd bool   `json:"statutory_from_year_end,omitempty"`
+	StatutoryFromYearEnd bool `json:"statutory_from_year_end,omitempty"`
 }
 
 // keptBreakdown says why a purge left what it left.
@@ -61,8 +65,14 @@ func keptBreakdown(subject capture.PurgeSubject) KeptBreakdown {
 	if kept.UnderStatute > 0 {
 		name, keep, fromYearEnd := privacy.StatutoryFloorClass()
 		kept.StatutoryClass = name
-		kept.StatutoryPeriod = keep.String()
 		kept.StatutoryFromYearEnd = fromYearEnd
+		// Only a whole-year period is reported. A class declared in months or
+		// days has no number this copy can say truthfully, and rounding it
+		// would tell somebody their mail is held for longer or shorter than it
+		// is — so the sentence falls back to naming the class alone.
+		if keep.Months == 0 && keep.Days == 0 {
+			kept.StatutoryYears = keep.Years
+		}
 	}
 	return kept
 }

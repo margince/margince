@@ -148,10 +148,22 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if workspaceScoped {
 		reason = privacy.PurgeWorkspaceRule
 	}
-	if err := p.auditPurgeReceipt(ctx, exclusionID, outcome); err != nil {
+	if err := p.carryOut(ctx, subject, contacts, actor.UserID, reason); err != nil {
 		return PurgeOutcome{}, err
 	}
-	if err := p.carryOut(ctx, subject, contacts, actor.UserID, reason); err != nil {
+	// AFTER the cascade, deliberately. Written first it would certify a plan
+	// rather than an act: carryOut commits per item, so a run that failed
+	// halfway would leave a receipt claiming everything went. Written here it
+	// records a cascade that finished.
+	//
+	// The residue is the opposite order's: this write can fail after the
+	// destruction committed, and then the purge answers an error with no
+	// summary row. That is the better failure of the two — the per-activity
+	// rows the cascade wrote are still there, so the trail is short a summary
+	// rather than carrying a false one, and a caller told it failed is told
+	// something true. Making neither possible needs a durable pending receipt
+	// finalized after the cascade, which is #6378.
+	if err := p.auditPurgeReceipt(ctx, exclusionID, outcome); err != nil {
 		return PurgeOutcome{}, err
 	}
 	return outcome, nil
