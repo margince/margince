@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package contacts
+
+// Per-number undo when one statement replaced two numbers.
+
+import (
+	"context"
+	"errors"
+	"maps"
+	"slices"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// A card that changes the German AND the Singapore number leaves two undos,
+// one per number. Restoring without naming one is refused rather than guessed,
+// and naming one brings back that number alone.
+func TestTwoReplacedNumbersEachKeepTheirOwnUndo(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contactID, _ := e.seedEmployedContact(ctx, t,
+		"Sara Two", "sara@two.example", "Two AS", "two.example")
+	seedOldWorkNumbers(ctx, t, e, contactID, "+49301111111", "+6561111111")
+
+	importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Sara Two\nTEL;TYPE=WORK:+49 30 2222222\nTEL;TYPE=WORK:+65 6222 2222\n"+
+			"EMAIL;TYPE=WORK:sara@two.example\nEND:VCARD\n")
+
+	if got := phoneEvidence(ctx, t, e, contactID); !maps.Equal(got, map[string]string{
+		"+49302222222": "+49301111111", "+6562222222": "+6561111111",
+	}) {
+		t.Fatalf("phone evidence (number: replaced) = %v, want each new number to name the one of its country", got)
+	}
+
+	var ambiguous *values.ParseError
+	if err := e.store.RestoreProfileField(ctx, contactID, fieldPhone, ""); !errors.As(err, &ambiguous) {
+		t.Fatalf("undo naming no number = %v, want a validation refusal: two numbers can be restored", err)
+	}
+	if err := e.store.RestoreProfileField(ctx, contactID, fieldPhone, "+65 6222 2222"); err != nil {
+		t.Fatalf("undo of the Singapore number: %v", err)
+	}
+	if got := livePhones(ctx, t, e, contactID); !slices.Equal(slices.Sorted(slices.Values(got)),
+		[]string{"+49302222222", "+6561111111"}) {
+		t.Errorf("live numbers = %v, want the old Singapore number back and the new German one untouched", got)
+	}
+}
+
+func seedOldWorkNumbers(ctx context.Context, t *testing.T, e *dedupeEnv, contactID ids.ContactID, numbers ...string) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		for i, number := range numbers {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO contact_phone (contact_id, phone, phone_type, is_primary, position, source, captured_by, observed_at)
+				VALUES ($1, $2, 'work', $3, $4, 'manual', 'human:test', now() - interval '30 days')`,
+				contactID, number, i == 0, i); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
