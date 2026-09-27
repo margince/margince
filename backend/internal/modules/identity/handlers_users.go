@@ -101,7 +101,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a user with this email already exists in this company; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
-		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
+		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
 	h.sendInvite(r, email.String(), rawToken)

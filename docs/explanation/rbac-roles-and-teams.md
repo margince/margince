@@ -219,6 +219,13 @@ A **team** (`team` table) is a named group; **`team_membership`** joins users to
    wants standing write access among colleagues authors a custom role at `team` scope, and the
    predicate still renders the arm for it.
 
+**Only a literal admin changes who is on a team**: adding or removing a member, archiving or
+restoring the team, or inviting a member onto one (`identity/teams.go`,
+`refuseTeamMembershipUnlessAdmin`, 403 `team_membership_requires_admin`). Membership widens or
+ends a member's team reach and decides who leads and coaches them, which is role authority, and
+`team_admin` is not. A holder of `team_admin` creates and renames teams; neither changes anybody's
+reach.
+
 Teams do **not** carry their own permissions — a team is not a role. (A role *assignment* can be
 scoped to a team, but the grants still come from the role.)
 

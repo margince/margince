@@ -6,6 +6,7 @@ import { UserPlus } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useHoldsAdminRole } from "../app/capability";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
@@ -75,9 +76,12 @@ export function InviteUserForm({
   const [role, setRole] = useState<Role>("rep");
   const offersRole = offered.some((one) => one.key === role);
   const [teamIds, setTeamIds] = useState<string[]>([]);
+  // Only an admin puts a member on a team (identity/teams.go), so only an
+  // admin is asked which teams the new member joins.
+  const placesOnTeams = useHoldsAdminRole();
   const [error, setError] = useState<string | null>(null);
-  const teams = useRoster("team", true);
-  const teamsPartial = useRosterPartial("team", true);
+  const teams = useRoster("team", placesOnTeams);
+  const teamsPartial = useRosterPartial("team", placesOnTeams);
 
   // The role and the team set ride as the mutation's variable rather than
   // through the closure: react-query re-arms a mutation's options in a passive effect,
@@ -127,7 +131,7 @@ export function InviteUserForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (canInvite) {
-          invite.mutate({ role, teams: teamIds });
+          invite.mutate({ role, teams: placesOnTeams ? teamIds : [] });
         }
       }}
     >
@@ -174,39 +178,43 @@ export function InviteUserForm({
           />
         )}
       </Field>
-      {/* The teams the member joins on arrival. A team-scoped role with no
-          team edits only its own records, and the preview below says so
-          before the invite goes out. */}
-      <fieldset className="users-invite-teams">
-        <legend className="t-name">{t("users.teamsLabel")}</legend>
-        {(teams.data ?? []).flatMap((entry) =>
-          "name" in entry ? (
-            <Checkbox
-              key={entry.id}
-              className="t-body"
-              label={entry.name}
-              checked={teamIds.includes(entry.id)}
-              onChange={(event) =>
-                setTeamIds((current) =>
-                  event.target.checked
-                    ? [...current, entry.id]
-                    : current.filter((id) => id !== entry.id),
-                )
-              }
-            />
-          ) : (
-            []
-          ),
-        )}
-        {/* "No teams yet" is a claim about the workspace, so only a roster
-            read to its end may make it: a walk that stopped early would have
-            an admin invite contacts into no team at all on the strength of
-            pages nothing read. */}
-        {teams.data?.length === 0 && !teamsPartial && (
-          <p>{t("users.noTeamsYet")}</p>
-        )}
-        <RosterPartialNote partial={teamsPartial} />
-      </fieldset>
+      {placesOnTeams && (
+        <>
+          {/* The teams the member joins on arrival. A team-scoped role with no
+              team edits only its own records, and the preview below says so
+              before the invite goes out. */}
+          <fieldset className="users-invite-teams">
+            <legend className="t-name">{t("users.teamsLabel")}</legend>
+            {(teams.data ?? []).flatMap((entry) =>
+              "name" in entry ? (
+                <Checkbox
+                  key={entry.id}
+                  className="t-body"
+                  label={entry.name}
+                  checked={teamIds.includes(entry.id)}
+                  onChange={(event) =>
+                    setTeamIds((current) =>
+                      event.target.checked
+                        ? [...current, entry.id]
+                        : current.filter((id) => id !== entry.id),
+                    )
+                  }
+                />
+              ) : (
+                []
+              ),
+            )}
+            {/* "No teams yet" is a claim about the workspace, so only a roster
+                read to its end may make it: a walk that stopped early would have
+                an admin invite contacts into no team at all on the strength of
+                pages nothing read. */}
+            {teams.data?.length === 0 && !teamsPartial && (
+              <p>{t("users.noTeamsYet")}</p>
+            )}
+            <RosterPartialNote partial={teamsPartial} />
+          </fieldset>
+        </>
+      )}
       {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
       {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather

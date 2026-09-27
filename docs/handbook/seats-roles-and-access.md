@@ -65,7 +65,7 @@ To create a team in Margince, open **Settings → Teams** and choose **New team*
 2. Choose **New team**.
 3. Fill **Team name** (required), for example "DACH Sales".
 4. Choose **Create team**.
-To add colleagues, open the team and tick their names under **Team members**. Only active human users can be added. Without the permission the page says "Your role cannot manage teams."
+To add colleagues, an Admin opens the team and ticks their names under **Team members**. Only active human users can be added. Without the permission the page says "Your role cannot manage teams."
 Also called: group, squad, sales team.
 
 ### How do I change someone's seat from read to full?
@@ -279,10 +279,9 @@ open it. Copy the address to ask someone who has access."
 
 ## Teams
 
-A team in Margince is a named group of colleagues. Creating one, archiving
-it or changing who is in it takes the team-administration permission
-(`team_admin`), which only the Admin role holds by default. Anyone can see the
-list of teams.
+A team in Margince is a named group of colleagues. Creating or renaming one
+takes the team-administration permission (`team_admin`). **Only an Admin changes
+who is on a team**, or archives or restores one. Anyone can see the teams.
 
 **A team carries no permissions of its own.** It is not a role. It does two
 things:

@@ -60904,10 +60904,10 @@ type ServerInterface interface {
 	// List workspace teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
-	// Create a team. Admin only.
+	// Create a team. Needs `team_admin.create`.
 	// (POST /teams)
 	CreateTeam(w http.ResponseWriter, r *http.Request)
-	// Rename, archive or restore a team. Admin only.
+	// Rename, archive or restore a team.
 	// (PATCH /teams/{id})
 	UpdateTeam(w http.ResponseWriter, r *http.Request, id Id)
 	// Take a member off a team. Admin only; idempotent.
@@ -64888,13 +64888,13 @@ func (_ Unimplemented) ListTeams(w http.ResponseWriter, r *http.Request, params 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a team. Admin only.
+// Create a team. Needs `team_admin.create`.
 // (POST /teams)
 func (_ Unimplemented) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Rename, archive or restore a team. Admin only.
+// Rename, archive or restore a team.
 // (PATCH /teams/{id})
 func (_ Unimplemented) UpdateTeam(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)

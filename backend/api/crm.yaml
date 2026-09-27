@@ -17451,8 +17451,9 @@ paths:
         Creates an active member with the chosen system role and no password, then issues a
         single-use set-password token. When an email sender is configured the invite link is
         mailed to the new address; otherwise the member sets a password through the standard
-        account-recovery flow. Admin-only (`role: admin`); an agent may never provision a human.
-        Emits `user.invited`.
+        account-recovery flow. Needs `user_admin.create`; an agent may never provision a human.
+        Naming `team_ids` puts the member on those teams, which only an admin may do: any other
+        caller gets 403 `team_membership_requires_admin`. Emits `user.invited`.
       x-agent-access: human-only
       requestBody:
         required: true
@@ -18231,7 +18232,10 @@ paths:
       operationId: createTeam
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
-      summary: Create a team. Admin only.
+      summary: Create a team. Needs `team_admin.create`.
+      description: |
+        A new team has no members, so it changes nobody's reach; any holder of
+        `team_admin.create` may create one. Only an admin puts anybody on it.
       requestBody:
         required: true
         content:
@@ -18256,7 +18260,12 @@ paths:
       operationId: updateTeam
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
-      summary: Rename, archive or restore a team. Admin only.
+      summary: Rename, archive or restore a team.
+      description: |
+        Renaming needs `team_admin.update`. Archiving or restoring switches every member's
+        team reach off or on, so it is admin only, like every other change to who is on a
+        team: a holder of `team_admin` who is not an admin gets 403
+        `team_membership_requires_admin`.
       requestBody:
         required: true
         content:
@@ -18290,6 +18299,9 @@ paths:
       description: |
         Membership resolves `row_scope: team` and team shares from the next request on. Members of
         the team may edit records owned by anyone on it.
+
+        Only an admin changes who is on a team. A holder of `team_admin.update` who is not an
+        admin gets 403 `team_membership_requires_admin`, for themselves as for anybody else.
       responses:
         '204': { description: On the team. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -18301,6 +18313,10 @@ paths:
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
       summary: Take a member off a team. Admin only; idempotent.
+      description: |
+        Removing a member ends their team reach and who leads or coaches them there, so it is
+        admin only too: 403 `team_membership_requires_admin` for any other holder of
+        `team_admin.update`.
       responses:
         '204': { description: Off the team. }
         '401': { $ref: '#/components/responses/Unauthorized' }

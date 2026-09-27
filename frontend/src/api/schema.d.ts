@@ -12081,8 +12081,9 @@ export interface paths {
          * @description Creates an active member with the chosen system role and no password, then issues a
          *     single-use set-password token. When an email sender is configured the invite link is
          *     mailed to the new address; otherwise the member sets a password through the standard
-         *     account-recovery flow. Admin-only (`role: admin`); an agent may never provision a human.
-         *     Emits `user.invited`.
+         *     account-recovery flow. Needs `user_admin.create`; an agent may never provision a human.
+         *     Naming `team_ids` puts the member on those teams, which only an admin may do: any other
+         *     caller gets 403 `team_membership_requires_admin`. Emits `user.invited`.
          */
         post: operations["inviteUser"];
         delete?: never;
@@ -12582,7 +12583,11 @@ export interface paths {
          */
         get: operations["listTeams"];
         put?: never;
-        /** Create a team. Admin only. */
+        /**
+         * Create a team. Needs `team_admin.create`.
+         * @description A new team has no members, so it changes nobody's reach; any holder of
+         *     `team_admin.create` may create one. Only an admin puts anybody on it.
+         */
         post: operations["createTeam"];
         delete?: never;
         options?: never;
@@ -12606,7 +12611,13 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Rename, archive or restore a team. Admin only. */
+        /**
+         * Rename, archive or restore a team.
+         * @description Renaming needs `team_admin.update`. Archiving or restoring switches every member's
+         *     team reach off or on, so it is admin only, like every other change to who is on a
+         *     team: a holder of `team_admin` who is not an admin gets 403
+         *     `team_membership_requires_admin`.
+         */
         patch: operations["updateTeam"];
         trace?: never;
     };
@@ -12626,10 +12637,18 @@ export interface paths {
          * Put a member on a team. Admin only; idempotent.
          * @description Membership resolves `row_scope: team` and team shares from the next request on. Members of
          *     the team may edit records owned by anyone on it.
+         *
+         *     Only an admin changes who is on a team. A holder of `team_admin.update` who is not an
+         *     admin gets 403 `team_membership_requires_admin`, for themselves as for anybody else.
          */
         put: operations["addTeamMember"];
         post?: never;
-        /** Take a member off a team. Admin only; idempotent. */
+        /**
+         * Take a member off a team. Admin only; idempotent.
+         * @description Removing a member ends their team reach and who leads or coaches them there, so it is
+         *     admin only too: 403 `team_membership_requires_admin` for any other holder of
+         *     `team_admin.update`.
+         */
         delete: operations["removeTeamMember"];
         options?: never;
         head?: never;

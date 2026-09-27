@@ -23,25 +23,32 @@ const FIELD_SALES = {
   is_system: false,
 };
 
-function renderForm(offered: readonly (typeof FIELD_SALES)[]) {
+function renderForm(
+  offered: readonly (typeof FIELD_SALES)[],
+  roles: string[] = ["admin"],
+) {
   installFetchStub({
-    "GET /me": () => jsonResponse(meFixture({ allow: {} })),
-    "GET /teams": () => jsonResponse({ data: [], next_cursor: null }),
+    "GET /me": () => jsonResponse(meFixture({ roles, allow: {} })),
+    "GET /teams": () =>
+      jsonResponse({
+        data: [{ id: "t-1", name: "Nord" }],
+        page: { has_more: false, next_cursor: null },
+      }),
     "GET /users/assignable-roles": () => jsonResponse({ roles: offered }),
     "GET /users/access-preview": () =>
       jsonResponse({ role: "rep", row_scope: "own", objects: {} }),
   });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <InviteUserForm onInvited={() => undefined} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 afterEach(() => {
@@ -73,5 +80,19 @@ describe("InviteUserForm role", () => {
     const role = await screen.findByRole("combobox", { name: /role/i });
     await waitFor(() => expect(role).toHaveTextContent("User"));
     expect(screen.getByRole("button", { name: /invite/i })).toBeEnabled();
+  });
+
+  // Only an admin puts a member on a team, so only an admin is asked which.
+  it("asks an admin which teams the member joins, and nobody else", async () => {
+    renderForm([FIELD_SALES]);
+    expect(await screen.findByRole("checkbox", { name: "Nord" })).toBeTruthy();
+    cleanup();
+
+    const client = renderForm([FIELD_SALES], ["custom_member_admin"]);
+    // Settled first: before /me answers, nobody is an admin, and an empty
+    // form would pass for the wrong reason.
+    await waitFor(() => expect(client.getQueryData(["me"])).toBeDefined());
+    await screen.findByRole("combobox", { name: /role/i });
+    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 });

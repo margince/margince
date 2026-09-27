@@ -155,17 +155,14 @@ func TestAPasswordLinkNeedsTheTeamsTheTargetReaches(t *testing.T) {
 		}
 	}
 
-	// An invite is held against the teams it lands the account on.
-	for team, refused := range map[ids.UUID]bool{north.ID: false, south.ID: true} {
+	// Only an admin invites onto a team, whichever team it is.
+	for _, team := range []ids.UUID{north.ID, south.ID} {
 		_, _, err := e.svc.InviteUser(e.wsCtx(caller), caller, InviteUserInput{
-			Email: "invited-" + strconv.FormatBool(refused) + "@" + e.slug + ".test", DisplayName: "Invited",
+			Email: "invited@" + e.slug + ".test", DisplayName: "Invited",
 			Role: teamRep, TeamIDs: []ids.UUID{team},
 		})
-		if refused && !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("inviting a team rep onto another team: %v, want permission denied", err)
-		}
-		if !refused && err != nil {
-			t.Errorf("inviting a team rep onto the caller's team: %v, want admitted", err)
+		if !errors.Is(err, errTeamMembershipRequiresAdmin) {
+			t.Errorf("a delegate inviting onto a team: %v, want errTeamMembershipRequiresAdmin", err)
 		}
 	}
 }
@@ -305,5 +302,49 @@ func TestAMemberOnAnArchivedRoleIsNotHandedBack(t *testing.T) {
 	}
 	if err := e.svc.ReactivateUser(ctx, e.admin, holder.UserID); err != nil {
 		t.Errorf("reactivating the member once reassigned: %v", err)
+	}
+}
+
+// Only an admin changes who is on a team. A holder of team_admin who is not an
+// admin may create and rename a team, and may not add anybody — themselves
+// included — take anybody off, or archive or restore the team.
+func TestOnlyAnAdminChangesWhoIsOnATeam(t *testing.T) {
+	e := setupRevocationEnv(t, "team-members")
+	delegate := e.seat(t, "delegate", e.customRole(t, "Team admin", "rep", map[string]storedGrant{
+		objectTeamAdmin: {Create: true, Read: true, Update: true},
+	}))
+	colleague := e.seat(t, "colleague", "rep")
+	ctx := e.wsCtx(delegate)
+	team, err := e.svc.CreateTeam(ctx, delegate, "North")
+	if err != nil {
+		t.Fatalf("a team_admin holder creating a team: %v", err)
+	}
+	renamed := "North DACH"
+	if _, err := e.svc.UpdateTeam(ctx, delegate, team.ID, UpdateTeamInput{Name: &renamed}); err != nil {
+		t.Errorf("a team_admin holder renaming a team: %v", err)
+	}
+
+	archived := true
+	for verb, err := range map[string]error{
+		"add themselves":  e.svc.SetTeamMember(ctx, delegate, team.ID, delegate.UserID.UUID, true),
+		"add a colleague": e.svc.SetTeamMember(ctx, delegate, team.ID, colleague.UserID.UUID, true),
+		"archive the team": func() error {
+			_, err := e.svc.UpdateTeam(ctx, delegate, team.ID, UpdateTeamInput{Archived: &archived})
+			return err
+		}(),
+	} {
+		if !errors.Is(err, errTeamMembershipRequiresAdmin) {
+			t.Errorf("a team_admin holder tried to %s: %v, want errTeamMembershipRequiresAdmin", verb, err)
+		}
+	}
+
+	if err := e.svc.SetTeamMember(e.wsCtx(e.admin), e.admin, team.ID, colleague.UserID.UUID, true); err != nil {
+		t.Fatalf("an admin adding a colleague: %v", err)
+	}
+	if err := e.svc.SetTeamMember(ctx, delegate, team.ID, colleague.UserID.UUID, false); !errors.Is(err, errTeamMembershipRequiresAdmin) {
+		t.Errorf("a team_admin holder removing a colleague: %v, want errTeamMembershipRequiresAdmin", err)
+	}
+	if err := e.svc.SetTeamMember(e.wsCtx(e.admin), e.admin, team.ID, colleague.UserID.UUID, false); err != nil {
+		t.Errorf("an admin removing a colleague: %v", err)
 	}
 }

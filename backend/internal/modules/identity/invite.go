@@ -53,6 +53,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 	if err != nil {
 		return ids.UserID{}, "", err
 	}
+	if err := refuseTeamMembershipUnlessAdmin(actor, len(teams) > 0); err != nil {
+		return ids.UserID{}, "", err
+	}
 	in.TeamIDs = teams
 	raw, tokenHash, err := mintSessionToken()
 	if err != nil {
@@ -79,7 +82,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		// themselves an admin and walk in with the token in the response body.
 		// ChangeUserRole carries the same ceiling for the same reason; handing
 		// out a role is handing out a role whichever verb spells it.
-		roleID, err := roleForAssignment(ctx, tx, actor, in.Role, teamIDsOf(in.TeamIDs))
+		// No teams to weigh: only an admin invites onto a team, and an admin
+		// needs no containment.
+		roleID, err := roleForAssignment(ctx, tx, actor, in.Role, nil)
 		if err != nil {
 			return err
 		}
