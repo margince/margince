@@ -58,7 +58,9 @@ const READER = {
 // `roster` is what /users answers with, as one complete page — the walk stops on
 // a null cursor. An empty one is the honest shape of an author the roster does
 // not carry, not a broken stub.
-function stub(roster: ReadonlyArray<{ id: string; display_name: string }>) {
+function stub(
+  roster: ReadonlyArray<{ id: string; display_name: string; status?: string }>,
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -202,6 +204,18 @@ describe("who owns this record", () => {
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
     expect(document.body.textContent).not.toContain("u-owner");
+  });
+
+  it("names an owner who is invited but has not signed in yet", async () => {
+    stub([
+      { id: "u-owner", display_name: "Rainer Schuller", status: "invited" },
+    ]);
+    renderFacts();
+
+    // An import hands accounts to colleagues before they first sign in. They
+    // are not offered as a new owner, and they are still named as this one.
+    expect(await screen.findByText("Rainer Schuller")).toBeTruthy();
+    expect(screen.queryByText(en["ref.notInRoster"])).toBeNull();
   });
 
   it("says the owner is outside the user list once the roster has answered without them", async () => {

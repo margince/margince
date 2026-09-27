@@ -20,7 +20,12 @@ import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
+import {
+  rosterMissLabel,
+  useRoster,
+  useRosterNames,
+  useRosterPartial,
+} from "./entityref";
 import { MergeAction } from "./merge";
 import { ShareAction } from "./share";
 
@@ -223,6 +228,7 @@ export function CompanyOwnerControl({
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
+  const allMembers = useRosterNames("user", Boolean(company.owner_id));
   const rosterPartial = useRosterPartial("user", true);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
@@ -239,9 +245,17 @@ export function CompanyOwnerControl({
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)
   ) {
+    // An INVITED owner is off the offerable list and still has a name: an
+    // import hands accounts to colleagues before they first sign in.
+    const named = (allMembers.data ?? []).find(
+      (entry) => "display_name" in entry && entry.id === company.owner_id,
+    );
     owners.unshift({
       value: company.owner_id,
-      label: unresolvedOwnerLabel(roster, rosterPartial, t),
+      label:
+        named && "display_name" in named
+          ? named.display_name
+          : unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }
   // "Unowned" is offered only while the account IS unowned. `owner_id` cannot

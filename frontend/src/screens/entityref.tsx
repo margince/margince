@@ -220,6 +220,19 @@ export function useRoster(kind: RosterKind, enabled: boolean) {
   });
 }
 
+/**
+ * Every member the walk read, invited seats included — for NAMING someone a
+ * record already points at (a header's owner, a column), never for offering
+ * choices. `useRoster` is the offerable list; an owner who is invited is on
+ * this one and not on that one.
+ */
+export function useRosterNames(kind: RosterKind, enabled: boolean) {
+  return useQuery({
+    ...rosterQueryOptions(kind, enabled),
+    select: (roster: Roster) => roster.entries,
+  });
+}
+
 // The members a picker may OFFER: everyone the walk read except invited seats,
 // who sign in nowhere yet. The walk keeps them for naming only.
 function offerable(roster: Roster): RosterEntry[] {
@@ -605,7 +618,7 @@ function RecordRef({
  */
 export function rosterOwnerName(
   ownerId: string | null | undefined,
-  roster: ReturnType<typeof useRoster>,
+  roster: ReturnType<typeof useRosterNames>,
   partial: boolean,
   t: ReturnType<typeof useT>,
   unowned: string,

@@ -29,7 +29,7 @@ import {
 import {
   EntityRef,
   rosterOwnerName,
-  useRoster,
+  useRosterNames,
   useRosterPartial,
 } from "../entityref";
 import { FxLine } from "./dealcockpit";
@@ -123,7 +123,7 @@ export function DealIdentityFacts({
   const baseCurrency = useInstallationSettings().data?.base_currency ?? null;
   // Only asked for when there is an owner to name: an unowned deal needs no
   // roster read to say so.
-  const roster = useRoster("user", Boolean(deal.owner_id));
+  const roster = useRosterNames("user", Boolean(deal.owner_id));
   const partial = useRosterPartial("user", Boolean(deal.owner_id));
   const masked = deal.masked_fields ?? [];
   // An em dash rather than the stage id: a deal whose stage was archived out
