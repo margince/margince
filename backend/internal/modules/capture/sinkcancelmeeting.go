@@ -122,6 +122,10 @@ func (s *Sink) CancelIdentifiedMeeting(
 			// answered), or no by-identity seam: the natural key had the word.
 			return err
 		}
+		fallback, err := s.identityMayCancel(ctx, tx, key)
+		if err != nil || !fallback {
+			return err
+		}
 		matched, found, err := s.activityHoldingIdentity(ctx, tx, connector.NormalizedRecord{
 			NaturalKey: key, CrossDoorIdentity: identity,
 		})
@@ -131,4 +135,29 @@ func (s *Sink) CancelIdentifiedMeeting(
 		_, err = s.cancelMeetingByID(ctx, tx, matched, key, at)
 		return err
 	})
+}
+
+// identityMayCancel reports whether a cancellation may go past its natural key
+// to the meeting its identity resolves to. Two conditions, each closing a way
+// the fallback would reach a row it should not:
+//
+//   - The key names a CALENDAR provider. The provenance check above binds the
+//     key to the acting connector, but any connector may state its own key; a
+//     mail or chat connector has no calendar event to cancel, and letting it
+//     state an identity would let it close meetings by UID. calendarWriteScopes
+//     is the one list of calendar providers this package keeps.
+//   - NO row exists under the key, in any state. The natural-key cancel skips
+//     an archived or restricted row by design; that row is still this event's
+//     meeting, and it being retired is not a reason to go and cancel another.
+func (s *Sink) identityMayCancel(ctx context.Context, tx pgx.Tx, key connector.NaturalKey) (bool, error) {
+	if _, calendar := calendarWriteScopes[key.SourceSystem]; !calendar {
+		return false, nil
+	}
+	var captured bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)`,
+		key.SourceSystem, key.SourceID).Scan(&captured); err != nil {
+		return false, fmt.Errorf("capture: is anything captured under this calendar event: %w", err)
+	}
+	return !captured, nil
 }

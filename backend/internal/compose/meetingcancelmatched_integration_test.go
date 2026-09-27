@@ -112,3 +112,43 @@ func TestTheNaturalKeyStillAnswersFirst(t *testing.T) {
 		t.Error("the identity cancelled a second row although the natural key had found the meeting")
 	}
 }
+
+// A mail or chat connector has no calendar event to cancel. Stating its own key
+// and an identity must not let it close meetings by UID.
+func TestANonCalendarConnectorCannotCancelByIdentity(t *testing.T) {
+	e := integration.Setup(t)
+	imported := importMeeting(t, e, "human:"+e.AdminUser.String())
+	mailKey := connector.NaturalKey{SourceSystem: "gmail", SourceID: "msg-1"}
+
+	if err := identifiedCalendarSink(e).CancelIdentifiedMeeting(
+		connectorOwnerCtx(e, e.AdminUser, "gmail"), mailKey, importedIdentity, meetingStart); err != nil {
+		t.Fatalf("cancelling: %v", err)
+	}
+
+	if status, set := readMeetingStatus(t, e, imported); set && status == "canceled" {
+		t.Error("a mail connector cancelled a meeting through its iCal identity")
+	}
+}
+
+// A row under the calendar's own key that was archived is still this event's
+// meeting. Its being retired is not a reason to go and cancel another row.
+func TestAnArchivedRowUnderTheKeyStopsTheFallback(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity SET archived_at = now() WHERE id = $1`, captured)
+		return err
+	}); err != nil {
+		t.Fatalf("archiving the captured meeting: %v", err)
+	}
+	imported := importMeeting(t, e, "human:"+e.AdminUser.String())
+
+	if err := identifiedCalendarSink(e).CancelIdentifiedMeeting(
+		calendarOwnerCtx(e, e.AdminUser), meetingKey, importedIdentity, meetingStart); err != nil {
+		t.Fatalf("cancelling: %v", err)
+	}
+
+	if status, set := readMeetingStatus(t, e, imported); set && status == "canceled" {
+		t.Error("an archived row under the calendar's key let the identity cancel a different meeting")
+	}
+}
