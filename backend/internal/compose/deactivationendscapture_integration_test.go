@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -173,4 +175,100 @@ func isDue(t *testing.T, e *integration.Env, owner ids.UUID, provider string) bo
 		}
 	}
 	return false
+}
+
+// The audit row says WHY, not just what: a withdrawal by departure and one by
+// hand leave the same field images, and only the evidence tells them apart.
+func TestTheWithdrawalAuditNamesTheDeactivation(t *testing.T) {
+	e := integration.Setup(t)
+	seedCaptureConnection(t, e, e.Rep1, "gmail", []byte(`{"token":"live"}`))
+
+	deactivate(t, e, e.Rep1)
+
+	reasons := e.WsCount(t, `
+		SELECT count(*) FROM audit_log
+		 WHERE entity_type = 'capture_connection' AND action = 'archive'
+		   AND evidence->>'reason' IS NOT NULL AND evidence->>'reason' <> ''`)
+	if reasons != 1 {
+		t.Fatalf("audit rows naming a reason = %d, want the withdrawal to say why", reasons)
+	}
+}
+
+// The destruction half, which runs after the withdrawal commits: the pointer
+// to the vaulted secret is cleared, so nothing is left naming a blob that
+// should no longer exist.
+func TestReapingClearsTheCredentialPointerOfAWithdrawnConnection(t *testing.T) {
+	e := integration.Setup(t)
+	vault := keyvault.NewMemory()
+	ref, err := vault.Put(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), []byte(`{"token":"secret"}`))
+	if err != nil {
+		t.Fatalf("sealing the credential: %v", err)
+	}
+	seedVaultedConnection(t, e, e.Rep1, "gmail", string(ref))
+
+	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, vault)
+	// Withdrawn first, exactly as the deactivation transaction leaves it.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_connection SET status = 'disconnected', auth = NULL WHERE user_id = $1`, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("withdrawing: %v", err)
+	}
+
+	if err := r.ReapWithdrawnCredentials(e.As(e.Rep1, nil, integration.AccountRepPerms),
+		ids.From[ids.UserKind](e.Rep1)); err != nil {
+		t.Fatalf("ReapWithdrawnCredentials: %v", err)
+	}
+	if got := credentialRef(t, e, e.Rep1, "gmail"); got != nil {
+		t.Fatalf("credential_ref = %q, want it cleared once the secret is destroyed", *got)
+	}
+	// And the secret itself is gone, which is the point — the pointer being
+	// clear would otherwise only mean nothing can find it.
+	if _, err := vault.Get(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), ref); !errors.Is(err, keyvault.ErrNotFound) {
+		t.Fatalf("the vaulted credential survived the reap: %v", err)
+	}
+}
+
+// A connection still LIVE keeps its credential, whatever else the seat has
+// had withdrawn. Reaping is for what a withdrawal left behind, and a pass
+// that reached a connected row would strand a secret it still needs.
+func TestReapingLeavesALiveConnectionAlone(t *testing.T) {
+	e := integration.Setup(t)
+	seedVaultedConnection(t, e, e.Rep1, "gmail", "ref-still-in-use")
+
+	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, keyvault.NewMemory())
+	if err := r.ReapWithdrawnCredentials(e.As(e.Rep1, nil, integration.AccountRepPerms),
+		ids.From[ids.UserKind](e.Rep1)); err != nil {
+		t.Fatalf("ReapWithdrawnCredentials: %v", err)
+	}
+	ref := credentialRef(t, e, e.Rep1, "gmail")
+	if ref == nil || *ref != "ref-still-in-use" {
+		t.Fatalf("a connected connection lost its credential pointer: %v", ref)
+	}
+}
+
+func seedVaultedConnection(t *testing.T, e *integration.Env, owner ids.UUID, provider, ref string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_connection (provider, user_id, status, credential_ref)
+			VALUES ($1, $2, 'connected', $3)`, provider, owner, ref)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the vaulted %s connection: %v", provider, err)
+	}
+}
+
+func credentialRef(t *testing.T, e *integration.Env, owner ids.UUID, provider string) *string {
+	t.Helper()
+	var ref *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT credential_ref FROM capture_connection WHERE user_id = $1 AND provider = $2`,
+			owner, provider).Scan(&ref)
+	}); err != nil {
+		t.Fatalf("reading the credential ref: %v", err)
+	}
+	return ref
 }

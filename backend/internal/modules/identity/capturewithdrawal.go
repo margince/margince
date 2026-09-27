@@ -27,6 +27,11 @@ import (
 // have to read the same as a withdrawal's in one trail.
 const captureConnectionObject = "capture_connection"
 
+// evidenceKeyReason names why a mutation happened, beside the field images
+// that say what it changed. Spelled as privacy spells it, so one query reads
+// the reason off any audited write that carries one.
+const evidenceKeyReason = "reason"
+
 // withdrawCaptureConnections disconnects every capture connection this seat
 // owns, inside the caller's transaction.
 //
@@ -90,9 +95,16 @@ func withdrawCaptureConnections(ctx context.Context, tx pgx.Tx, userID ids.UserI
 		// One row per connection, naming the status it was withdrawn FROM, so
 		// the trail says which mailboxes a departure actually stopped rather
 		// than that a departure happened.
-		if _, err := storekit.Audit(ctx, tx, "archive", captureConnectionObject, w.id,
+		// The reason rides EVIDENCE rather than the images: the images are the
+		// row's own fields, and a withdrawal by departure and a withdrawal by
+		// hand leave the same ones. Why it happened is context about the
+		// mutation, which is exactly what evidence is for — and it is the
+		// difference between "this mailbox was disconnected" and "this mailbox
+		// was disconnected because the colleague left".
+		if _, err := storekit.AuditWithEvidence(ctx, tx, "archive", captureConnectionObject, w.id,
 			captureConnectionImage(w.provider, w.prior, w.label),
-			captureConnectionImage(w.provider, "disconnected", w.label)); err != nil {
+			captureConnectionImage(w.provider, "disconnected", w.label),
+			map[string]any{evidenceKeyReason: deactivatedUserRevokeReason}); err != nil {
 			return err
 		}
 	}

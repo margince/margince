@@ -59,6 +59,11 @@ type Service struct {
 	// installationDescribed answers whether the anchor company exists, injected
 	// because contacts owns it (installationdescribed.go). Nil refuses every seat.
 	installationDescribed InstallationDescribed
+	// captureReaper destroys the provider secrets a deactivation's withdrawal
+	// left in the vault, injected because capture owns it (capturereaper.go).
+	// Nil leaves them for capture's own sweep; the withdrawal itself has
+	// already committed either way.
+	captureReaper CaptureCredentialReaper
 }
 
 func NewService(pool *pgxpool.Pool) *Service {

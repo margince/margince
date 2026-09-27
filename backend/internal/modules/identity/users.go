@@ -213,7 +213,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 	if err != nil {
 		return err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A delegated holder must not lock out an administrator. The last-admin
 		// invariant below is a different question — it stops the LAST one going
 		// whoever asks — and neither substitutes for the other.
@@ -256,7 +256,19 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, in.UserID.UUID,
 			userDeactivatedPayload(in.UserID, actor.UserID, in.Reason))
-	})
+	}); err != nil {
+		return err
+	}
+	// The withdrawal above committed, so the mailbox has already stopped being
+	// read. What is left is the secret it named, which lives in a vault this
+	// module cannot reach and which no transaction could have held anyway —
+	// destroying it before the commit would orphan a live connection if the
+	// transaction then rolled back. It reports nothing: see
+	// CaptureCredentialReaper for why a cleanup must not fail the departure.
+	if s.captureReaper != nil {
+		s.captureReaper(ctx, in.UserID)
+	}
+	return nil
 }
 
 // revokeBorrowedAuthority ends everything that answers to this human rather
