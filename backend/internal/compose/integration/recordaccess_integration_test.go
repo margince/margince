@@ -181,7 +181,7 @@ func pathAdmits(t *testing.T, what string, err error) bool {
 
 // opensAndChanges asks the record's own read path and its own edit path, the
 // latter with an empty patch so nothing is written.
-func (w *accessWorld) opensAndChanges(t *testing.T, ctx context.Context, table string, id ids.UUID) (bool, bool) {
+func (w *accessWorld) opensAndChanges(ctx context.Context, t *testing.T, table string, id ids.UUID) (bool, bool) {
 	t.Helper()
 	if table == "contact" {
 		cid := ids.From[ids.ContactKind](id)
@@ -213,7 +213,7 @@ func TestWhoCanSeeARecordAgreesWithItsReadAndEditPaths(t *testing.T) {
 	} {
 		listed := w.everyone(t, rec.caller, rec.table, rec.id)
 		for _, member := range w.liveMembers(t) {
-			opens, changes := w.opensAndChanges(t, w.as(t, member), rec.table, rec.id)
+			opens, changes := w.opensAndChanges(w.as(t, member), t, rec.table, rec.id)
 			got, isListed := listed[member]
 			if isListed != opens {
 				t.Errorf("%s: member %s listed=%v but the read path admits=%v", rec.name, member, isListed, opens)
