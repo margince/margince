@@ -38,6 +38,15 @@ func (r *Registry) ReapWithdrawnCredentials(ctx context.Context, userID ids.User
 	if !ok {
 		return errors.New("capture: reaping withdrawn credentials without a workspace in context")
 	}
+	// Every statement below runs on the post-commit cleanup budget, detached
+	// from the caller, the way Disconnect's own phases 2 and 3 are: the
+	// withdrawal has already committed, so a client that hangs up the moment
+	// it has its answer must not be the reason a revoked credential stays
+	// decryptable — or, worse, the reason a secret is destroyed while the row
+	// still names it, which is what cancelling between the delete and the
+	// clear would leave.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), keyvault.CleanupTimeout)
+	defer cancel()
 	type stranded struct {
 		provider string
 		ref      string

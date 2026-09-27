@@ -354,3 +354,40 @@ func adminIdentity(e *integration.Env) identity.Identity {
 		Permissions: integration.AdminPerms,
 	}
 }
+
+// The reap runs on the post-commit cleanup budget, not the caller's. A client
+// that hangs up the moment it has its answer must not be the reason a revoked
+// credential stays decryptable — nor, worse, the reason a secret is destroyed
+// while the row still names it.
+func TestReapingSurvivesACallerThatHasAlreadyHungUp(t *testing.T) {
+	e := integration.Setup(t)
+	vault := keyvault.NewMemory()
+	ref, err := vault.Put(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), []byte(`{"token":"secret"}`))
+	if err != nil {
+		t.Fatalf("sealing the credential: %v", err)
+	}
+	seedVaultedConnection(t, e, e.Rep1, string(ref))
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_connection SET status = 'disconnected' WHERE user_id = $1`, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("withdrawing: %v", err)
+	}
+
+	// Cancelled BEFORE the reap is asked to run, which is the worst version of
+	// the request ending early.
+	ctx, cancel := context.WithCancel(e.As(e.Rep1, nil, integration.AccountRepPerms))
+	cancel()
+
+	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, vault)
+	if err := r.ReapWithdrawnCredentials(ctx, ids.From[ids.UserKind](e.Rep1)); err != nil {
+		t.Fatalf("ReapWithdrawnCredentials on a cancelled caller: %v", err)
+	}
+	if got := credentialRef(t, e, e.Rep1); got != nil {
+		t.Errorf("credential_ref = %q, want it cleared despite the caller hanging up", *got)
+	}
+	if _, err := vault.Get(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), ref); !errors.Is(err, keyvault.ErrNotFound) {
+		t.Fatalf("the credential survived a reap whose caller hung up: %v", err)
+	}
+}
