@@ -143,7 +143,9 @@ describe("the bulk change preview", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(
-      await within(dialog).findByText("This changes 2 of the 3 selected records."),
+      await within(dialog).findByText(
+        "This changes 2 of the 3 selected records.",
+      ),
     ).toBeInTheDocument();
     const excluded = within(dialog)
       .getByText("Clara Ruiz")

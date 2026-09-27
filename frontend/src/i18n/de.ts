@@ -3013,8 +3013,10 @@ export const de = {
   "bulk.titleReassign": "Zuständigkeit für ausgewählte {unit} ändern?",
   "bulk.titleArchive": "Ausgewählte {unit} archivieren?",
   "bulk.checking": "Auswahl wird geprüft…",
-  "bulk.affects_one": "Geändert wird {count} von {total} ausgewählten Datensätzen.",
-  "bulk.affects_other": "Geändert werden {count} von {total} ausgewählten Datensätzen.",
+  "bulk.affects_one":
+    "Geändert wird {count} von {total} ausgewählten Datensätzen.",
+  "bulk.affects_other":
+    "Geändert werden {count} von {total} ausgewählten Datensätzen.",
   "bulk.nothing":
     "Es würde sich nichts ändern. Alle ausgewählten Datensätze bleiben, wie sie sind.",
   "bulk.largeTitle": "Große Änderung",
