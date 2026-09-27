@@ -361,7 +361,8 @@ what the classifier concluded about each: a contact, a role mailbox, an automate
 tool, a newsletter, an advisor, personal. You can overrule any of them.
 **Business** readmits a sender; **Exclude** destroys what they brought into your
 mailbox and stops the next message. A decision you make is never overwritten by
-a later verdict.
+a later verdict. **Waiting on a decision**, under the list, names the contacts
+only you see until their sender is decided: the set an admin sees only counted.
 
 **Held threads** (Settings → Connections) — the threads your mailbox is
 withholding right now, with the reason. **Share with the team** releases one.

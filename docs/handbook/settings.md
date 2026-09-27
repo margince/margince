@@ -322,6 +322,10 @@ reading and emptying the installation are no longer three buttons on one screen.
 - **Search index** — rebuilding the index behind search and the AI's retrieval.
 - **Background jobs** — "Queued background jobs and failed jobs by owner."
   Admin and Ops.
+- **Mail capture checks** — whether mail capture's background repair passes keep
+  up: when each last succeeded, and how many contacts, threads and filed
+  meetings are waiting in each mailbox. Counts only; the contacts and messages
+  stay visible to their mailbox owner alone. Same readers as Background jobs.
 - **Reset data** — returns an installation to its first-boot state. It only
   appears where the installation has deliberately armed the capability. Treat it
   as what it is.
