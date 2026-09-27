@@ -450,3 +450,30 @@ func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 		t.Errorf("%d verdicts outlived their deal", got)
 	}
 }
+
+// A pass starting a moment before local midnight files its judgement under
+// the day it started in, even when the clock has moved on by the time it
+// writes: the pass reads the clock once.
+func TestAPassCrossingMidnightKeepsItsDay(t *testing.T) {
+	e := setupVerdicts(t)
+	zone, err := installationZone(e.Admin(), e.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ahead := time.Now().In(zone).AddDate(0, 0, 2)
+	start := time.Date(ahead.Year(), ahead.Month(), ahead.Day(), 23, 59, 59, 0, zone)
+	reads := 0
+	clock := func() time.Time {
+		reads++
+		// Every read after the first is past midnight.
+		return start.Add(time.Duration(reads-1) * 2 * time.Second)
+	}
+	w := newRiskVerdictSweepWorker(e.Pool, clock, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err := w.recordWorkspace(context.Background(), e.WS); err != nil {
+		t.Fatalf("the pass starting at %s: %v", start, err)
+	}
+	day := e.WsScalar(t, `SELECT local_day::text FROM deal_risk_day WHERE judged_at = $1`, start)
+	if want := start.Format(time.DateOnly); day != want {
+		t.Fatalf("a pass starting on %s filed its judgement under %s", want, day)
+	}
+}
