@@ -324,8 +324,12 @@ func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
-	if got := e.verdicts(t, e.booked); got != 1 {
-		t.Errorf("the booked deal holds %d verdicts after the sweep, want the fresh one alone", got)
+	// Asked of the row that should SURVIVE, because a count alone reads the
+	// same when the sweep takes the fresh verdict and leaves the aged one.
+	fresh := e.WsCount(t, `SELECT count(*) FROM deal_risk_verdict WHERE deal_id = $1
+		AND created_at > now() - interval '1 day'`, e.booked)
+	if got := e.verdicts(t, e.booked); got != 1 || fresh != 1 {
+		t.Errorf("the booked deal holds %d verdicts after the sweep (%d fresh), want the fresh one alone", got, fresh)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1`, e.booked); got != 1 {
 		t.Error("the sweep took the deal with its verdict — only the record of the judgement ages out")
