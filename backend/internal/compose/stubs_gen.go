@@ -1743,6 +1743,10 @@ func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmco
 	httperr.NotImplemented(w, r, "GetMagic")
 }
 
+func (stubs) GetMagicLineRecords(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.GetMagicLineRecordsParams) {
+	httperr.NotImplemented(w, r, "GetMagicLineRecords")
+}
+
 func (stubs) GetMailDraft(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMailDraftParams) {
 	httperr.NotImplemented(w, r, "GetMailDraft")
 }

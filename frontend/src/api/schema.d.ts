@@ -8462,6 +8462,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/magic/lines/{id}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every record one done line stands for, with what changed on each and whether it can be taken back.
+         * @description A done line folds one job's work into one sentence and a count: "Changed industry,
+         *     offer summary — GEM and 150 more". This read opens it: each record the line
+         *     stands for, the old and new value of every field that moved, and whether that one
+         *     change can be undone. The undo itself is the record's own restore route
+         *     (`POST /records/{entity_type}/{id}/history/{audit_id}/restore`), sent with the
+         *     `version` the answer carries.
+         *
+         *     The line is named by its `id` (the newest audit entry it holds) and the window
+         *     it was drawn in (`since`, the receipt's own `since`). The same grouping that drew
+         *     the line picks its records, over the same row scope, so a reader is only ever
+         *     shown records the page already counted for them. A record two passes of one job
+         *     touched appears once, with its newest change.
+         */
+        get: operations["getMagicLineRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist": {
         parameters: {
             query?: never;
@@ -37341,6 +37372,30 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** @description One page of the records a done line stands for. */
+        MagicLineRecords: {
+            data: components["schemas"]["MagicLineRecord"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        /** @description One record a done line stands for, and its newest change in the window. */
+        MagicLineRecord: {
+            /** Format: uuid */
+            audit_id: string;
+            /** Format: date-time */
+            occurred_at: string;
+            entity: components["schemas"]["MagicEntityRef"];
+            /** @description Every field the change moved, old value to new. Bookkeeping keys are left out. */
+            changes: components["schemas"]["MagicFieldChange"][];
+            undo: components["schemas"]["MagicUndo"];
+        };
+        MagicFieldChange: {
+            /** @description The field's key as the record stores it (`industry`, `legal_name`). */
+            field: string;
+            /** @description The value before the change; absent when the field was empty. */
+            before?: unknown;
+            /** @description The value after the change; absent when the change cleared it. */
+            after?: unknown;
+        };
         /** @description The record this line is about, where it names one. */
         MagicEntityRef: {
             type: string;
@@ -37401,6 +37456,11 @@ export interface components {
              * @description The entry a restore would name. Present exactly when `undoable` is true — a client that had one without the other would draw a control with nothing to send.
              */
             audit_id?: string;
+            /**
+             * Format: int64
+             * @description The record's current version, sent as the restore's `If-Match`. Present exactly when `undoable` is true.
+             */
+            version?: number;
         };
         /**
          * @description How the deal behind a row is STANDING, beside the move that acts on it.
@@ -51769,6 +51829,38 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getMagicLineRecords: {
+        parameters: {
+            query: {
+                /** @description The receipt's `since`, so the line is regrouped over the window it was drawn in. */
+                since: string;
+                /** @description Opaque position from a previous page's `next_cursor`. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The line's `id`. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the line's records. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MagicLineRecords"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getWorklist: {

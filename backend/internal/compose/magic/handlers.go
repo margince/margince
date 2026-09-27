@@ -13,8 +13,11 @@ package magic
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Handlers binds the route to the read.
@@ -35,6 +38,23 @@ func (h Handlers) GetMagic(
 		limit = *params.Limit
 	}
 	out, err := h.svc.Read(r.Context(), params.Since, limit)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// GetMagicLineRecords opens one done line: the records it stands for, what
+// changed on each, and whether each change can be taken back.
+func (h Handlers) GetMagicLineRecords(
+	w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params crmcontracts.GetMagicLineRecordsParams,
+) {
+	limit := 0
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+	out, err := h.svc.LineRecords(r.Context(), ids.UUID(id), params.Since, params.Cursor, limit)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

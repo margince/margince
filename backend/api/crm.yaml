@@ -12512,6 +12512,54 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /magic/lines/{id}/records:
+    get:
+      tags: [Brief]
+      operationId: getMagicLineRecords
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Every record one done line stands for, with what changed on each and whether it can be taken back.
+      description: |
+        A done line folds one job's work into one sentence and a count: "Changed industry,
+        offer summary — GEM and 150 more". This read opens it: each record the line
+        stands for, the old and new value of every field that moved, and whether that one
+        change can be undone. The undo itself is the record's own restore route
+        (`POST /records/{entity_type}/{id}/history/{audit_id}/restore`), sent with the
+        `version` the answer carries.
+
+        The line is named by its `id` (the newest audit entry it holds) and the window
+        it was drawn in (`since`, the receipt's own `since`). The same grouping that drew
+        the line picks its records, over the same row scope, so a reader is only ever
+        shown records the page already counted for them. A record two passes of one job
+        touched appears once, with its newest change.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: The line's `id`.
+        - name: since
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+          description: The receipt's `since`, so the line is regrouped over the window it was drawn in.
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: Opaque position from a previous page's `next_cursor`.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: One page of the line's records.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MagicLineRecords' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
 
   /worklist:
     get:
@@ -49189,6 +49237,42 @@ components:
           type: object
           additionalProperties: { type: string }
 
+    MagicLineRecords:
+      type: object
+      description: One page of the records a done line stands for.
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/MagicLineRecord' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    MagicLineRecord:
+      type: object
+      description: One record a done line stands for, and its newest change in the window.
+      required: [audit_id, occurred_at, entity, changes, undo]
+      properties:
+        audit_id: { type: string, format: uuid }
+        occurred_at: { type: string, format: date-time }
+        entity: { $ref: '#/components/schemas/MagicEntityRef' }
+        changes:
+          type: array
+          description: Every field the change moved, old value to new. Bookkeeping keys are left out.
+          items: { $ref: '#/components/schemas/MagicFieldChange' }
+        undo: { $ref: '#/components/schemas/MagicUndo' }
+
+    MagicFieldChange:
+      type: object
+      required: [field]
+      properties:
+        field:
+          type: string
+          description: The field's key as the record stores it (`industry`, `legal_name`).
+        before:
+          description: The value before the change; absent when the field was empty.
+        after:
+          description: The value after the change; absent when the change cleared it.
+
     MagicEntityRef:
       type: object
       description: The record this line is about, where it names one.
@@ -49273,6 +49357,12 @@ components:
             The entry a restore would name. Present exactly when `undoable` is true — a
             client that had one without the other would draw a control with nothing to
             send.
+        version:
+          type: integer
+          format: int64
+          description: >-
+            The record's current version, sent as the restore's `If-Match`. Present
+            exactly when `undoable` is true.
 
     WorklistDealVerdict:
       type: object

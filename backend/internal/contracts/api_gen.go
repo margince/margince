@@ -32701,6 +32701,18 @@ type MagicEntityRef struct {
 	Type  string  `json:"type"`
 }
 
+// MagicFieldChange defines model for MagicFieldChange.
+type MagicFieldChange struct {
+	// After The value after the change; absent when the change cleared it.
+	After interface{} `json:"after,omitempty"`
+
+	// Before The value before the change; absent when the field was empty.
+	Before interface{} `json:"before,omitempty"`
+
+	// Field The field's key as the record stores it (`industry`, `legal_name`).
+	Field string `json:"field"`
+}
+
 // MagicLine One thing the machinery did, needs, could not finish, or is watching.
 //
 // EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
@@ -32764,6 +32776,30 @@ type MagicLine struct {
 
 // MagicLineLane Which lane this line belongs to. Carried on the line as well as by the array it sits in, so a client that flattens the four for a preview does not lose which one a line came from.
 type MagicLineLane string
+
+// MagicLineRecord One record a done line stands for, and its newest change in the window.
+type MagicLineRecord struct {
+	AuditId openapi_types.UUID `json:"audit_id"`
+
+	// Changes Every field the change moved, old value to new. Bookkeeping keys are left out.
+	Changes []MagicFieldChange `json:"changes"`
+
+	// Entity The record this line is about, where it names one.
+	Entity     MagicEntityRef `json:"entity"`
+	OccurredAt time.Time      `json:"occurred_at"`
+
+	// Undo Whether this change can be taken back, and why not when it cannot.
+	//
+	// A greyed control with no reason is the shape this replaces. The reasons are
+	// compose/undoability's own vocabulary rather than a second set written here.
+	Undo MagicUndo `json:"undo"`
+}
+
+// MagicLineRecords One page of the records a done line stands for.
+type MagicLineRecords struct {
+	Data []MagicLineRecord `json:"data"`
+	Page PageInfo          `json:"page"`
+}
 
 // MagicNotShown One kind of thing this read left out, and how many of it there were.
 type MagicNotShown struct {
@@ -32861,6 +32897,9 @@ type MagicUndo struct {
 	// Reason Why not, when it is not. Absent when it is.
 	Reason   *string `json:"reason,omitempty"`
 	Undoable bool    `json:"undoable"`
+
+	// Version The record's current version, sent as the restore's `If-Match`. Present exactly when `undoable` is true.
+	Version *int64 `json:"version,omitempty"`
 }
 
 // MailDraft One rep's unsent message, readable by its author and nobody else. Not an activity.
@@ -45580,6 +45619,16 @@ type GetMagicParams struct {
 	// Since The instant to report from. Absent means the acting rep's last brief cutoff, and 24 hours where there is no brief — a window the reader has not already seen, rather than a fixed one that repeats what they read this morning.
 	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
 	Limit *int       `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetMagicLineRecordsParams defines parameters for GetMagicLineRecords.
+type GetMagicLineRecordsParams struct {
+	// Since The receipt's `since`, so the line is regrouped over the window it was drawn in.
+	Since time.Time `form:"since" json:"since"`
+
+	// Cursor Opaque position from a previous page's `next_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // GetMailDraftParams defines parameters for GetMailDraft.
@@ -59827,6 +59876,9 @@ type ServerInterface interface {
 	// What the machinery did, what it needs, what it could not finish, and what it is watching.
 	// (GET /magic)
 	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
+	// Every record one done line stands for, with what changed on each and whether it can be taken back.
+	// (GET /magic/lines/{id}/records)
+	GetMagicLineRecords(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMagicLineRecordsParams)
 	// The caller's own unsent message for one place the composer opens.
 	// (GET /mail-drafts)
 	GetMailDraft(w http.ResponseWriter, r *http.Request, params GetMailDraftParams)
@@ -63184,6 +63236,12 @@ func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, 
 // What the machinery did, what it needs, what it could not finish, and what it is watching.
 // (GET /magic)
 func (_ Unimplemented) GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Every record one done line stands for, with what changed on each and whether it can be taken back.
+// (GET /magic/lines/{id}/records)
+func (_ Unimplemented) GetMagicLineRecords(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetMagicLineRecordsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -82524,6 +82582,80 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// GetMagicLineRecords operation middleware
+func (siw *ServerInterfaceWrapper) GetMagicLineRecords(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMagicLineRecordsParams
+
+	// ------------- Required query parameter "since" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "since", r.URL.Query(), &params.Since, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "since"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "since", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMagicLineRecords(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMailDraft operation middleware
 func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.Request) {
 
@@ -95117,6 +95249,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/magic/lines/{id}/records", wrapper.GetMagicLineRecords)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/mail-drafts", wrapper.GetMailDraft)

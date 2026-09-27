@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // LastBrief answers when the acting rep's overnight run last read the records.
@@ -131,6 +132,12 @@ func (s *Service) Read(
 		for i := range lines {
 			if lines[i].Count != nil && *lines[i].Count > 1 {
 				lines[i].Undo = nil
+				continue
+			}
+			if lines[i].Entity != nil {
+				if err := attachVersion(ctx, tx, lines[i].Undo, lines[i].Entity.Type, ids.UUID(lines[i].Entity.Id)); err != nil {
+					return err
+				}
 			}
 		}
 		// Retention, as counts beside the records' own lines; it names no

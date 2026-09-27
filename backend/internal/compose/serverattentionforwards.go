@@ -6,6 +6,8 @@ package compose
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -22,6 +24,11 @@ func (s Server) GetAttention(w http.ResponseWriter, r *http.Request) {
 // GetMagic forwards the machinery's receipt to its own surface.
 func (s Server) GetMagic(w http.ResponseWriter, r *http.Request, params crmcontracts.GetMagicParams) {
 	s.magicHandlers.GetMagic(w, r, params)
+}
+
+// GetMagicLineRecords forwards opening one receipt line to the same surface.
+func (s Server) GetMagicLineRecords(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params crmcontracts.GetMagicLineRecordsParams) {
+	s.magicHandlers.GetMagicLineRecords(w, r, id, params)
 }
 
 // GetWorklist forwards the ranked read to the same assembled surface.
