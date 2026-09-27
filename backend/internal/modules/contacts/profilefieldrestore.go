@@ -61,8 +61,9 @@ const restoreSource = "human_restore"
 //
 // valueKey names the row for a field that holds several, which is a phone: one
 // row per number, each with its own undo. Empty is enough while only one row of
-// the field has something to restore, and ErrInvalidArgument when several do,
-// because guessing would bring back a number the reader was not looking at.
+// the field has something to restore, and a validation refusal (422) when
+// several do, because guessing would bring back a number the reader was not
+// looking at.
 func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID, field, valueKey string) error {
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return err
