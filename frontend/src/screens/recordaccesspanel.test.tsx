@@ -222,7 +222,7 @@ describe("WhoCanSeePanel", () => {
 
     const line = await screen.findByTestId("who-can-see-team-access");
     expect(line.textContent).toBe(
-      "3 more users have access or can edit through a team. Only admins see who.",
+      "3 more users have access or can edit through a team. Only admins can see who.",
     );
   });
 

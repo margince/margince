@@ -3802,15 +3802,15 @@ export const de = {
   "whoCanSee.everyone.contact_one":
     "{count} Teammitglied mit Zugriff auf Kontakte",
   "whoCanSee.everyone.contact_other":
-    "{count} Teammitglieder mit Zugriff auf Kontakte",
+    "{count} Nutzende mit Zugriff auf Kontakte",
   "whoCanSee.everyone.company_one":
     "{count} Teammitglied mit Zugriff auf Unternehmen",
   "whoCanSee.everyone.company_other":
-    "{count} Teammitglieder mit Zugriff auf Unternehmen",
+    "{count} Nutzende mit Zugriff auf Unternehmen",
   "whoCanSee.teamAccess_one":
-    "{count} weiteres Teammitglied hat über ein Team Zugriff oder Bearbeitungsrechte. Nur Admins sehen, wer.",
+    "{count} weiteres Teammitglied hat über ein Team Zugriff oder Bearbeitungsrechte. Nur Admins können sehen, wer dazugehört.",
   "whoCanSee.teamAccess_other":
-    "{count} weitere Teammitglieder haben über ein Team Zugriff oder Bearbeitungsrechte. Nur Admins sehen, wer.",
+    "{count} weitere Nutzende haben über ein Team Zugriff oder Bearbeitungsrechte. Nur Admins können sehen, wer dazugehört.",
   "whoCanSee.canChange": "Kann bearbeiten",
   "whoCanSee.until": "bis {date}",
   "whoCanSee.reason.workspace": "Für alle Nutzenden offen",
