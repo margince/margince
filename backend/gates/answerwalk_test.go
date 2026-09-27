@@ -38,6 +38,7 @@ var answerWalksAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/capture/sinkreply.go:emitReply":                       "capture's reply formula: an inbound on a thread we wrote on is a reply for the engagement score, whichever came first; a question about the counterparty, not about whether this message is owed",
 	"internal/modules/capture/correspondencegate.go:wroteOnTwoThreadsTx":    "counts the separate threads we wrote to one address on, as evidence of a relationship for the first-time-sender gate; it reads no inbound and answers nothing",
 	"internal/modules/capture/correspondencegate.go:wroteBackTx":            "the first-time-sender gate asks whether the workspace has a conversation with this address on this thread at all, deliberately unordered in time so a post-dated Date header cannot defeat it; not whether one message was answered",
+	"internal/modules/capture/replyevidence.go:ownerAnswered":               "the reverse question: whether the address answered US, on a thread we wrote on, as the evidence that publishes a contact kept private while our mail went unanswered; it decides no badge and no lane row",
 })
 
 // Both patterns read a statement lower-cased with its whitespace folded, so
