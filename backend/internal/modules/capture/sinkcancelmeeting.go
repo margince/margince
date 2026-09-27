@@ -144,8 +144,8 @@ func (s *Sink) CancelIdentifiedMeeting(
 //   - The key names a CALENDAR provider. The provenance check above binds the
 //     key to the acting connector, but any connector may state its own key; a
 //     mail or chat connector has no calendar event to cancel, and letting it
-//     state an identity would let it close meetings by UID. calendarWriteScopes
-//     is the one list of calendar providers this package keeps.
+//     state an identity would let it close meetings by UID. The calendar
+//     providers are the ones calendarWriteScopes names.
 //   - NO row exists under the key, in any state. The natural-key cancel skips
 //     an archived or restricted row by design; that row is still this event's
 //     meeting, and it being retired is not a reason to go and cancel another.
