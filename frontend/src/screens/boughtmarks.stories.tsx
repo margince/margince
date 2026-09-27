@@ -46,7 +46,7 @@ export const ReceiptOpen: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       within(canvasElement).getByRole("button", {
-        name: "Where “+4915112345678” came from",
+        name: "bought: where “+4915112345678” came from",
       }),
     );
   },

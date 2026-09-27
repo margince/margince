@@ -120,8 +120,15 @@ const view: Contact360 = {
   ],
 };
 
+// A value that is plain text is underlined in place and named after itself; a
+// value that is a control gets the word "bought" beside it, named word first.
 function mark(subject: string) {
   return en["evidence.explain"].replace("{value}", subject);
+}
+function beside(subject: string) {
+  return en["evidence.explainBeside"]
+    .replace("{label}", en["evidence.bought"])
+    .replace("{value}", subject);
 }
 
 function mount(shown: Contact360 = view) {
@@ -145,35 +152,38 @@ afterEach(cleanup);
 describe("bought values on the contact page", () => {
   it("marks exactly the values the server lists as bought", async () => {
     mount();
-    await screen.findByRole("button", { name: mark("dana@bought.example") });
+    await screen.findByRole("button", { name: beside("dana@bought.example") });
     expect(
-      screen.getByRole("button", { name: mark("+4915112345678") }),
+      screen.getByRole("button", { name: beside("+4915112345678") }),
     ).toBeTruthy();
     // The title twice: underlined in the header, marked beside the details field.
     expect(
-      screen.getAllByRole("button", { name: mark("Head of Revenue") }),
-    ).toHaveLength(2);
+      screen.getByRole("button", { name: mark("Head of Revenue") }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: beside("Head of Revenue") }),
+    ).toBeTruthy();
     // Once in the header, once on the Employers row.
     expect(
-      screen.getAllByRole("button", { name: mark("Bought Employer") }),
+      screen.getAllByRole("button", { name: beside("Bought Employer") }),
     ).toHaveLength(2);
 
     expect(
-      screen.queryByRole("button", { name: mark("dana@typed.example") }),
+      screen.queryByRole("button", { name: beside("dana@typed.example") }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: mark("+4930123456") }),
+      screen.queryByRole("button", { name: beside("+4930123456") }),
     ).toBeNull();
     expect(
       screen.queryByRole("button", {
-        name: mark("https://www.linkedin.com/in/dana"),
+        name: beside("https://www.linkedin.com/in/dana"),
       }),
     ).toBeNull();
   });
 
   it("never puts a mark inside another control", async () => {
     mount();
-    await screen.findByRole("button", { name: mark("dana@bought.example") });
+    await screen.findByRole("button", { name: beside("dana@bought.example") });
     // The Employers rows mount after their own reads: wait for the row's text.
     await waitFor(() =>
       expect(screen.getAllByText("Bought Employer").length).toBeGreaterThan(1),
@@ -191,9 +201,9 @@ describe("bought values on the contact page", () => {
       provider_profiles: [],
     });
     await screen.findByText("dana@bought.example");
-    expect(
-      screen.queryAllByRole("button", { name: /Where “.*” came from/ }),
-    ).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: /came from/ })).toHaveLength(
+      0,
+    );
   });
 
   it("dates each bought location and department by the run that last reported it", async () => {

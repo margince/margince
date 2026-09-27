@@ -1504,6 +1504,7 @@ export const de = {
   "co.partial":
     "Einige Bereiche wurden nicht geladen, daher ist diese Seite möglicherweise unvollständig.",
   "evidence.explain": "Herkunft von „{value}“",
+  "evidence.explainBeside": "{label}: Herkunft von „{value}“",
   "evidence.fullHistory": "Vollständiger Verlauf",
   "co.section.unavailable":
     "Einige Daten wurden nicht geladen, daher ist dieser Bereich möglicherweise unvollständig.",

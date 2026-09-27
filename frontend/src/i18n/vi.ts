@@ -1485,6 +1485,7 @@ export const vi = {
   "co.partial":
     "Một phần trang này không tải được, nên có thể chưa hiển thị hết mọi thứ của tài khoản này.",
   "evidence.explain": 'Nguồn của "{value}"',
+  "evidence.explainBeside": '{label}: nguồn của "{value}"',
   "evidence.fullHistory": "Lịch sử đầy đủ",
   "co.section.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
   "billing.title": "Liên hệ hóa đơn",

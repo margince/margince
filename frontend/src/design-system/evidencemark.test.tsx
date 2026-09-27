@@ -256,3 +256,29 @@ it("opens under a settled pointer and closes when it leaves", async () => {
   fireEvent.pointerLeave(mark);
   await waitFor(() => expect(screen.queryByRole("region")).toBeNull());
 });
+
+// A mark beside its value shows a word ("bought", "read") rather than the value,
+// and a voice user targets a control by the words on screen: the name has to
+// open with that word (WCAG 2.5.3), then say which value it explains.
+describe("evidence mark beside its value", () => {
+  const source = {
+    provenance: { kind: "connector" as const, connector: "Surfe" },
+  };
+  for (const [locale, word] of [
+    ["en", "bought"],
+    ["de", "gekauft"],
+  ] as const) {
+    it(`opens its name with the word it shows (${locale})`, () => {
+      render(
+        <LocaleProvider initial={locale}>
+          <EvidenceMark value={word} subject="Head of Sales" source={source} />
+        </LocaleProvider>,
+      );
+      const trigger = screen.getByRole("button");
+      const name = trigger.getAttribute("aria-label") ?? "";
+      expect(trigger.textContent).toBe(word);
+      expect(name.startsWith(word)).toBe(true);
+      expect(name).toContain("Head of Sales");
+    });
+  }
+});

@@ -50,15 +50,19 @@ export function EvidenceMark({
   // renders as plain text: an underline that opens an empty popover teaches
   // the reader to stop opening them.
   value: string;
-  // What the accessible name says the mark explains, when the mark sits BESIDE
-  // its value and shows a word ("read", "bought") instead of it: every such
-  // mark would otherwise be named after the same word.
+  // What the mark explains, when it sits BESIDE its value and shows a word
+  // ("read", "bought") instead of it. The accessible name then opens with that
+  // word, so a voice user can say what they see, and names the value after it.
   subject?: string;
   source?: EvidenceMarkSource;
   onOpenHistory?: () => void;
   historyLabel?: string;
 }>) {
   const t = useT();
+  const name =
+    subject === value
+      ? t("evidence.explain", { value })
+      : t("evidence.explainBeside", { label: value, value: subject });
   const [open, setOpen] = useState(false);
   // How the panel came to be open. A press is a reader asking for it, and
   // focus follows into the panel's own controls (the "Full history" button);
@@ -165,7 +169,7 @@ export function EvidenceMark({
         className="evmark-trigger"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-label={t("evidence.explain", { value: subject })}
+        aria-label={name}
         onClick={() => {
           setOpenedBy("press");
           setOpen((was) => !was);
