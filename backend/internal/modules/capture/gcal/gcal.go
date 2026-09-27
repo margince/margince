@@ -158,8 +158,13 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 // no longer honors, and a list gone stale. The third is not an error path — the
 // token works, but occurrences that were past the capture horizon when the list
 // was taken never change, so no incremental pull will ever mention them again.
+//
+// A stale list with a working token drains the token FIRST. The full list only
+// reaches back 90 days, so a change still waiting in the old token — a decline
+// on a meeting that ended four months ago — would otherwise be dropped with the
+// token it was waiting in.
 func (c *Connector) selectEvents(ctx context.Context, access string, cur cursorState) ([][]byte, string, bool, error) {
-	if cur.SyncToken == "" || c.listIsStale(cur.ListedAt) {
+	if cur.SyncToken == "" {
 		events, next, err := c.api.ListInitial(ctx, access)
 		return events, next, true, err
 	}
@@ -170,6 +175,13 @@ func (c *Connector) selectEvents(ctx context.Context, access string, cur cursorS
 	}
 	if err != nil {
 		return nil, "", false, err
+	}
+	if c.listIsStale(cur.ListedAt) {
+		listed, fresh, err := c.api.ListInitial(ctx, access)
+		if err != nil {
+			return nil, "", false, err
+		}
+		return append(events, listed...), fresh, true, nil
 	}
 	return events, next, false, nil
 }

@@ -151,3 +151,22 @@ func (s *Sink) claimRecordIdentity(
 	_, err := s.claimIdentity(ctx, tx, id, kind, key, capturedByFor(ctx, rec))
 	return err
 }
+
+// reclaimMeetingIdentity files a REPLAYED meeting under its identity again,
+// once the replay is proven to be this seat's own row.
+//
+// A meeting's key can change under a row that already exists: an all-day
+// occurrence was keyed by its noon anchor before it was keyed by its date. The
+// claim runs only when a row is born, so without this the row would keep the
+// old key forever, and an import stating the date would land a second copy.
+// Re-claiming a key the row already holds is a no-op, and losing it to another
+// row is not an error (claimRecordIdentity). Mail is left alone: its identity
+// is its Message-ID, which never changes.
+func (s *Sink) reclaimMeetingIdentity(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord,
+) error {
+	if !rec.CrossDoorIdentity.Stated() {
+		return nil
+	}
+	return s.claimRecordIdentity(ctx, tx, id, rec)
+}

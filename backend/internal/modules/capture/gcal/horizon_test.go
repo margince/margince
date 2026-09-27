@@ -63,16 +63,25 @@ func TestAnIncrementalPullHoldsTheSameEdge(t *testing.T) {
 }
 
 // A list older than a month is taken again, because an occurrence that was past
-// the edge last time never changes and no incremental pull mentions it.
+// the edge last time never changes and no incremental pull mentions it. What
+// the old token still holds is read first: the full list reaches back only 90
+// days, so a change to an older meeting would be lost with the token.
 func TestAStaleListIsTakenAgainAndRedated(t *testing.T) {
-	api := &fakeAPI{owner: gcalOwner, initialToken: "sync-fresh", deltaToken: "sync-next"}
+	api := &fakeAPI{
+		owner: gcalOwner, initialToken: "sync-fresh", deltaToken: "sync-next",
+		delta: [][]byte{eventJSON(t, "old-change", "confirmed", "Review", "2026-05-01T10:00:00Z", gcalOwner, "client@acme.com")},
+	}
 	prior, _ := json.Marshal(cursorState{SyncToken: "sync-abc", ListedAt: horizonNow.Add(-relistAfter)})
-	cur, err := pinnedConnector(api).Sync(context.Background(), authBytes(t), prior, &recordingSink{})
+	sink := &recordingSink{}
+	cur, err := pinnedConnector(api).Sync(context.Background(), authBytes(t), prior, sink)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
-	if api.initialCalls != 1 || api.incrementalCalls != 0 {
-		t.Fatalf("stale list: initial=%d incremental=%d, want a re-list only", api.initialCalls, api.incrementalCalls)
+	if api.initialCalls != 1 || api.incrementalCalls != 1 {
+		t.Fatalf("stale list: initial=%d incremental=%d, want the token drained, then a re-list", api.initialCalls, api.incrementalCalls)
+	}
+	if len(sink.recs) != 1 || sink.recs[0].NaturalKey.SourceID != "old-change" {
+		t.Fatalf("captured %+v, want the change the old token still held", sink.recs)
 	}
 	cs, _ := parseCursor(cur)
 	if cs.SyncToken != "sync-fresh" || !cs.ListedAt.Equal(horizonNow) {
