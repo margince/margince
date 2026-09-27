@@ -146,7 +146,11 @@ someone reports an empty app, check their role first.
 Holding more than one role gives you the widest of them.
 
 The six roles are seeded with the product, but they are not frozen: an
-administrator can change what they grant. This page describes the **seeded**
+administrator can change what they grant, and can make a new role by copying
+one, then rename it, change its row scope or archive it. A role made this way
+has a key starting `custom_`. There is no settings page for this yet; it is done
+through the `/roles` API. An archived role grants nothing and cannot be given to
+anyone. This page describes the **seeded**
 grants. What actually decides a request is the permission, so a custom role
 holding one reaches what it names, and an Admin whose role lost one does not.
 
@@ -345,6 +349,19 @@ Admin.
 (inviting one, changing their role, deactivating them) takes the literal Admin
 role, whatever else you hold. A grant that could reach an Admin would be a way to
 become one.
+
+Below that ceiling, you may only act on a colleague whose access yours covers:
+
+- **Deactivating or reactivating** someone needs every administration permission
+  they hold, and a row scope at least as wide as theirs.
+- **Getting a set-password link for someone, or changing their role**, needs
+  everything they hold: every permission, their row scope, the teams they reach,
+  and every field they can read. Either act hands you their account or reshapes
+  all of it.
+- You cannot change **your own** role unless you are an Admin.
+
+The role list in the invite form and on each member's row offers only the roles
+you may hand out.
 
 **Inviting.** You choose a role, and the colleague is created with no password.
 If your installation sends email, they get a link. If not, the administrator
