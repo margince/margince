@@ -166,17 +166,27 @@ it("says a pass that never ran has never run, rather than drawing it clean", asy
   ).toBeInTheDocument();
 });
 
-it("reports a malformed payload rather than drawing a clean installation", async () => {
-  stubRoutes({
-    "GET /admin/capture-health": () =>
-      jsonResponse({ generated_at: GENERATED, mailboxes: [] }),
-  });
+// One part missing at a time, so each part of the shape check is proven on
+// its own rather than by a payload that fails several of them at once.
+it.each(["generated_at", "mailboxes", "sweeps", "classifier", "held_meetings"])(
+  "reports a payload without %s rather than drawing a clean installation",
+  async (field) => {
+    const { [field as keyof Health]: _dropped, ...partial } = HEALTH;
+    stubRoutes({
+      "GET /admin/capture-health": () => jsonResponse(partial),
+    });
 
-  render(<CaptureHealthCard />);
+    render(<CaptureHealthCard />);
 
-  expect(await screen.findByRole("alert")).toBeInTheDocument();
-  expect(screen.queryByText("Keeping up")).not.toBeInTheDocument();
-});
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("Keeping up")).not.toBeInTheDocument();
+    // The report refused as unreadable, not a body that crashed on the gap:
+    // the boundary's fallback would also be an alert.
+    expect(
+      screen.queryByText("This card stopped working"),
+    ).not.toBeInTheDocument();
+  },
+);
 
 it("withholds the card from a seat without the grant, and asks the server nothing", async () => {
   const sent = stubRoutes({
