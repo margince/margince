@@ -201,11 +201,12 @@ func (r *WriteReservation) Refund(ctx context.Context) {
 // transaction, before it commits, and refunds the reservation if the commit
 // does not happen. A human is outside the control.
 func (g *Gate) ReserveRecordWrites(ctx context.Context, tool string, n int) (*WriteReservation, error) {
+	// Nothing to reserve answers an empty reservation, whose Refund does nothing.
 	if g == nil || g.volume == nil || n <= 0 {
-		return nil, nil
+		return &WriteReservation{}, nil
 	}
 	if p, ok := principal.Actor(ctx); !ok || p.Type != principal.PrincipalAgent {
-		return nil, nil
+		return &WriteReservation{}, nil
 	}
 	reserver, ok := g.volume.(VolumeReserver)
 	if !ok {
