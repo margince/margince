@@ -177,66 +177,14 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		if err != nil {
 			return err
 		}
-		var appliedFields []string
-		// Every field this pass landed, as it found it and as it left it —
-		// keyed by the field name, whether it is a column of the contact or a
-		// row of contact_profile_field. The site and search fills record the
-		// sidecar fields the same way, and a field that projected as a change
-		// from one writer and as nothing from another would give one field two
-		// histories.
-		before, after := map[string]any{}, map[string]any{}
-		var numbers []SignatureField
-		for _, f := range fields {
-			if corrected[f.Name] {
-				// A human ruled on this field. Their answer stands until they
-				// confirm a replacement, so the statement is evidence for that
-				// confirm and not a write.
-				res.Skipped++
-				continue
-			}
-			if f.Name == fieldPhone {
-				// A signature lists several numbers, and they are applied as
-				// one set below.
-				numbers = append(numbers, f)
-				continue
-			}
-			applied, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
-			if err != nil {
-				return err
-			}
-			if !applied {
-				res.Skipped++
-				continue
-			}
-			res.Applied++
-			appliedFields = append(appliedFields, f.Name)
-			// Named, not quoted. This pass parses its values out of a message
-			// somebody sent, and one of the fields it can fill is a phone
-			// number; audit_log is append-only, so a value written here outlives
-			// the erasure that clears the record it came from. The same refusal
-			// the bought-claim writers make, for the same reason and the same
-			// closed vocabulary of field names.
-			//
-			// nil rather than the replaced value, even though this pass can now
-			// replace one: the before image is subject to the same refusal as
-			// the after image. What was there is recoverable from the field
-			// row's own undo buffer, which erasure clears with the record.
-			before[f.Name] = nil
-			after[f.Name] = signatureFieldFilled
-		}
-		landed, err := applySignatureNumbers(ctx, tx, contactID, sourceRef, observedAt, numbers)
+		appliedFields, err := s.applySignatureStatement(ctx, tx, contactID, sourceRef, observedAt, fields, corrected, &res)
 		if err != nil {
 			return err
-		}
-		res.Applied += landed
-		res.Skipped += len(numbers) - landed
-		if landed > 0 {
-			appliedFields = append(appliedFields, fieldPhone)
-			before[fieldPhone], after[fieldPhone] = nil, signatureFieldFilled
 		}
 		if len(appliedFields) == 0 {
 			return nil
 		}
+		before, after := signatureImages(appliedFields)
 		// The write shape: the enrichment is a contact mutation, so the
 		// audit row and the contact.updated outbox event ride this commit.
 		//
@@ -259,6 +207,72 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		return SignatureApplyResult{}, err
 	}
 	return res, nil
+}
+
+// applySignatureStatement lands every field of one signature that no human has
+// ruled on, and returns the names of those that landed.
+func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult) ([]string, error) {
+	var appliedFields []string
+	var numbers []SignatureField
+	for _, f := range fields {
+		if corrected[f.Name] {
+			// A human ruled on this field. Their answer stands until they
+			// confirm a replacement, so the statement is evidence for that
+			// confirm and not a write.
+			res.Skipped++
+			continue
+		}
+		if f.Name == fieldPhone {
+			// A signature lists several numbers, and they are applied as one
+			// set below.
+			numbers = append(numbers, f)
+			continue
+		}
+		applied, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
+		if err != nil {
+			return nil, err
+		}
+		if !applied {
+			res.Skipped++
+			continue
+		}
+		res.Applied++
+		appliedFields = append(appliedFields, f.Name)
+	}
+	landed, err := applySignatureNumbers(ctx, tx, contactID, sourceRef, observedAt, numbers)
+	if err != nil {
+		return nil, err
+	}
+	res.Applied += landed
+	res.Skipped += len(numbers) - landed
+	if landed > 0 {
+		appliedFields = append(appliedFields, fieldPhone)
+	}
+	return appliedFields, nil
+}
+
+// signatureImages is every field this pass landed, as it found it and as it
+// left it — keyed by the field name, whether it is a column of the contact or
+// a row of contact_profile_field. The site and search fills record the sidecar
+// fields the same way, and a field that projected as a change from one writer
+// and as nothing from another would give one field two histories.
+//
+// Named, not quoted. This pass parses its values out of a message somebody
+// sent, and one of the fields it can fill is a phone number; audit_log is
+// append-only, so a value written here outlives the erasure that clears the
+// record it came from. The same refusal the bought-claim writers make, for the
+// same reason and the same closed vocabulary of field names.
+//
+// nil rather than the replaced value, even though this pass can replace one:
+// the before image is subject to the same refusal as the after image. What was
+// there is recoverable from the field row's own undo buffer, which erasure
+// clears with the record.
+func signatureImages(appliedFields []string) (before, after map[string]any) {
+	before, after = map[string]any{}, map[string]any{}
+	for _, name := range appliedFields {
+		before[name], after[name] = nil, signatureFieldFilled
+	}
+	return before, after
 }
 
 // signatureFieldFilled marks a field this pass answered. The image says WHICH

@@ -814,11 +814,9 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 		{survivor, "https://survivor.test", "+4930111111"}, {duplicate, "https://duplicate.test", "+4930222222"},
 	} {
 		SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-			VALUES ($1, '`+p.id.String()+`', 'website', '`+p.website+`', 'sig',
-			        'activity:x', 'capture_enrich', 'agent:enrich')`)
+			VALUES ($1, '`+p.id.String()+`', 'website', '`+p.website+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
 		SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value_key, value, evidence_snippet, source_ref, source, captured_by)
-			VALUES ($1, '`+p.id.String()+`', 'phone', '`+p.number+`', '`+p.number+`', 'sig',
-			        'activity:x', 'capture_enrich', 'agent:enrich')`)
+			VALUES ($1, '`+p.id.String()+`', 'phone', '`+p.number+`', '`+p.number+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
 	}
 
 	if _, err := e.Contacts.MergeContact(e.Admin(),
