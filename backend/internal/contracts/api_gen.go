@@ -6265,6 +6265,27 @@ func (e ContactProfileFieldVerdict) Valid() bool {
 	}
 }
 
+// Defines values for ContactProviderAttributeKind.
+const (
+	ContactProviderAttributeKindDepartment ContactProviderAttributeKind = "department"
+	ContactProviderAttributeKindLocation   ContactProviderAttributeKind = "location"
+	ContactProviderAttributeKindSeniority  ContactProviderAttributeKind = "seniority"
+)
+
+// Valid indicates whether the value is a known member of the ContactProviderAttributeKind enum.
+func (e ContactProviderAttributeKind) Valid() bool {
+	switch e {
+	case ContactProviderAttributeKindDepartment:
+		return true
+	case ContactProviderAttributeKindLocation:
+		return true
+	case ContactProviderAttributeKindSeniority:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactProviderEmailEmailType.
 const (
 	ContactProviderEmailEmailTypeContactProviderEmailEmailTypePersonal     ContactProviderEmailEmailType = "personal"
@@ -22376,6 +22397,24 @@ type BlockedDomainListResponse struct {
 	Total int `json:"total"`
 }
 
+// BoughtField One value on a contact that a data provider's purchase wrote and still owns.
+type BoughtField struct {
+	// AppliedAt When the purchase wrote it.
+	AppliedAt time.Time `json:"applied_at"`
+
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
+	Provider Provider `json:"provider"`
+
+	// Target Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought.
+	Target string `json:"target"`
+}
+
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
@@ -26463,6 +26502,9 @@ type Contact struct {
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
+	// BoughtFields Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
+	BoughtFields *[]BoughtField `json:"bought_fields,omitempty"`
+
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
@@ -27332,6 +27374,18 @@ type ContactProfileFieldField string
 // ContactProfileFieldVerdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
 type ContactProfileFieldVerdict string
 
+// ContactProviderAttribute defines model for ContactProviderAttribute.
+type ContactProviderAttribute struct {
+	Kind ContactProviderAttributeKind `json:"kind"`
+
+	// RetrievedAt When the run that last reported this value retrieved it.
+	RetrievedAt time.Time `json:"retrieved_at"`
+	Value       string    `json:"value"`
+}
+
+// ContactProviderAttributeKind defines model for ContactProviderAttribute.Kind.
+type ContactProviderAttributeKind string
+
 // ContactProviderEmail defines model for ContactProviderEmail.
 type ContactProviderEmail struct {
 	// EmailType May be classified from the frozen requested cascade when Surfe omits `emailType`.
@@ -27378,6 +27432,9 @@ type ContactProviderPhone struct {
 // overwrite canonical fields. The reader sees one of these per connection, so every value
 // on the page says who was paid for it.
 type ContactProviderProfile struct {
+	// Attributes The location, departments and seniorities, one entry per distinct value, each dated by the run that last reported it. Runs replace the location and add to the other two, so the profile's own `retrieved_at` would misdate every value an older run reported. Never copied into the contact's address.
+	Attributes *[]ContactProviderAttribute `json:"attributes,omitempty"`
+
 	// CategoriesAsked What the latest run actually PUT TO the provider. Usually every requested category, but not always: a fallback fires only when the category it follows comes back empty, and a category with a prerequisite is skipped when that prerequisite found nothing — Surfe asks for no mobile number when it found no email. Neither was sent, so neither is a question the provider declined to answer, and counting them would report a lookup nobody made. This is the honest denominator for "how much of what we asked came back".
 	CategoriesAsked        *[]string `json:"categories_asked,omitempty"`
 	CategoriesNotRequested []string  `json:"categories_not_requested"`
@@ -49612,6 +49669,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "author")
 	}
 
+	if raw, found := object["bought_fields"]; found {
+		err = json.Unmarshal(raw, &a.BoughtFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'bought_fields': %w", err)
+		}
+		delete(object, "bought_fields")
+	}
+
 	if raw, found := object["captured_by"]; found {
 		err = json.Unmarshal(raw, &a.CapturedBy)
 		if err != nil {
@@ -49865,6 +49930,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["author"], err = json.Marshal(a.Author)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
+	if a.BoughtFields != nil {
+		object["bought_fields"], err = json.Marshal(a.BoughtFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bought_fields': %w", err)
 		}
 	}
 

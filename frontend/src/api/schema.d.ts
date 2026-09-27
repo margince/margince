@@ -20083,6 +20083,8 @@ export interface components {
             country?: string | null;
             departments: string[];
             seniorities: string[];
+            /** @description The location, departments and seniorities, one entry per distinct value, each dated by the run that last reported it. Runs replace the location and add to the other two, so the profile's own `retrieved_at` would misdate every value an older run reported. Never copied into the contact's address. */
+            attributes?: components["schemas"]["ContactProviderAttribute"][];
             latest_run?: components["schemas"]["ProviderRun"];
             /**
              * @description Every retained completed run whose claims contribute to this snapshot. Normally the
@@ -20090,6 +20092,16 @@ export interface components {
              *     rather than merely stored (PI-AC-11).
              */
             contributing_runs?: components["schemas"]["ProviderRun"][];
+        };
+        ContactProviderAttribute: {
+            /** @enum {string} */
+            kind: "location" | "department" | "seniority";
+            value: string;
+            /**
+             * Format: date-time
+             * @description When the run that last reported this value retrieved it.
+             */
+            retrieved_at: string;
         };
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
@@ -20129,6 +20141,8 @@ export interface components {
              */
             readonly primary_email?: string | null;
             phones?: components["schemas"]["ContactPhone"][];
+            /** @description Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company. */
+            readonly bought_fields?: components["schemas"]["BoughtField"][];
             /**
              * @description Per-channel reachability (design §6.6), derived from `contact_channel_identity`.
              *     Exposes `{provider, reachable, since}` only — the channel account id (an opaque
@@ -20181,6 +20195,17 @@ export interface components {
             archived_at?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** @description One value on a contact that a data provider's purchase wrote and still owns. */
+        BoughtField: {
+            /** @description Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought. */
+            target: string;
+            provider: components["schemas"]["Provider"];
+            /**
+             * Format: date-time
+             * @description When the purchase wrote it.
+             */
+            applied_at: string;
         };
         /** @description The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per contact, so a contact has at most one. */
         ContactEmployer: {

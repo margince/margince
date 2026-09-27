@@ -28568,6 +28568,14 @@ components:
         country: { type: [string, 'null'] }
         departments: { type: array, items: { type: string } }
         seniorities: { type: array, items: { type: string } }
+        attributes:
+          type: array
+          description: >-
+            The location, departments and seniorities, one entry per distinct value, each
+            dated by the run that last reported it. Runs replace the location and add to
+            the other two, so the profile's own `retrieved_at` would misdate every value an
+            older run reported. Never copied into the contact's address.
+          items: { $ref: '#/components/schemas/ContactProviderAttribute' }
         latest_run: { $ref: '#/components/schemas/ProviderRun' }
         contributing_runs:
           type: array
@@ -28576,6 +28584,13 @@ components:
             single latest run; after a merge it spans both sides so purchased values stay visible
             rather than merely stored (PI-AC-11).
           items: { $ref: '#/components/schemas/ProviderRun' }
+    ContactProviderAttribute:
+      type: object
+      required: [kind, value, retrieved_at]
+      properties:
+        kind: { type: string, enum: [location, department, seniority] }
+        value: { type: string }
+        retrieved_at: { type: string, format: date-time, description: When the run that last reported this value retrieved it. }
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.
@@ -28666,6 +28681,16 @@ components:
         phones:
           type: array
           items: { $ref: '#/components/schemas/ContactPhone' }
+        bought_fields:
+          type: array
+          readOnly: true
+          description: >-
+            Which of this contact's values a data provider's purchase put there and which
+            still hold what it wrote. A value a colleague has since edited, replaced or
+            archived is not listed, and neither is one "Delete bought data" took back. Sent
+            on the single-contact read (and so on the 360), never on a list. An employment
+            is listed only when the caller may see that employment edge and its company.
+          items: { $ref: '#/components/schemas/BoughtField' }
         reachability:
           type: array
           readOnly: true
@@ -28731,6 +28756,21 @@ components:
         request still succeeds. A picklist value outside the declared options is the one
         typed refusal (422, the column's CHECK constraint). Reads surface only ACTIVE
         columns; a retired field's stored values are preserved but leave the payload.
+
+    BoughtField:
+      type: object
+      description: One value on a contact that a data provider's purchase wrote and still owns.
+      required: [target, provider, applied_at]
+      properties:
+        target:
+          type: string
+          description: >-
+            Which value: `title`, `linkedin`, `email:<contact email id>`,
+            `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id
+            for the repeatable values, because a contact may hold several and only the row
+            the purchase wrote is bought.
+        provider: { $ref: '#/components/schemas/Provider' }
+        applied_at: { type: string, format: date-time, description: When the purchase wrote it. }
 
     ContactEmployer:
       type: object
