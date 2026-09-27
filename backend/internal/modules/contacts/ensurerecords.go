@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // reviewPair is the record capture just minted, as the review queue needs to
@@ -226,5 +227,37 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 	if wrote {
 		return AcquiredSubjectInitiated, nil
 	}
+	migrated, err := heldByMigratedLeadTx(ctx, tx, email)
+	if err != nil {
+		return "", err
+	}
+	if migrated {
+		return AcquiredCRMMigration, nil
+	}
 	return AcquiredUnknownLegacy, nil
+}
+
+// heldByMigratedLeadTx reports that a lead carried over from the previous CRM
+// already holds this address.
+//
+// The import files a person with no deal and no conversation as a LEAD, not a
+// contact. When a connected mailbox later finds mail with them, capture mints a
+// contact beside that lead — and without this, the contact read as a stranger
+// found in old mail and owed an Art. 14 notice, though the person came over from
+// the old CRM like every other migrated record (DutyFor, "crm_migration").
+//
+// Archived leads count too: a lead promoted or retired after the import was
+// still obtained by the old system. An erased lead has had its address
+// scrubbed, so it matches nothing.
+func heldByMigratedLeadTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM lead
+		   WHERE email = lower($1)
+		     AND starts_with(source_system, $2))`,
+		email, provenance.ReservedSourceSystemPrefix).Scan(&held); err != nil {
+		return false, fmt.Errorf("contacts: did a migrated lead hold this address: %w", err)
+	}
+	return held, nil
 }
