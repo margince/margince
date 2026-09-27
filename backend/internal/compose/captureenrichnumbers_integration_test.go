@@ -132,6 +132,28 @@ func TestEveryNumberASignatureListsIsRecorded(t *testing.T) {
 	})
 }
 
+// A trimmed signature that also changes one number replaces that number's own
+// predecessor, never the number it simply stopped listing.
+func TestAChangedNumberReplacesItsOwnCountryNotAnOmittedOne(t *testing.T) {
+	e := integration.Setup(t)
+	contact := seedEnrichContact(t, e, "bob@trim.example", fourNumberSignature(germany))
+	brain := &signatureScriptBrain{fields: phoneReply(germany, vietnam, singapore, thailand)}
+	runEnrichPass(t, e, brain)
+
+	const singaporeNew = "+65 9555 0199"
+	seedLaterMail(t, e, contact, "bob@trim.example", "Hi,\n\nBob Contact\nSingapore: "+singaporeNew, "1 hour")
+	brain.fields = phoneReply(singaporeNew)
+	runEnrichPass(t, e, brain)
+
+	want := []string{"+491755550101", "+6595550199", "+66975550104", "+84355550102"}
+	if got := liveNumbers(t, e, contact); !slices.Equal(got, want) {
+		t.Fatalf("live numbers = %v, want the new Singapore number in place of the old one and the rest kept", got)
+	}
+	if got := numberEvidence(t, e, contact)["+6595550199"].replaced; got != "+6595550103" {
+		t.Errorf("the new Singapore number records it replaced %q, want the old Singapore number", got)
+	}
+}
+
 func runEnrichPass(t *testing.T, e *integration.Env, brain *signatureScriptBrain) {
 	t.Helper()
 	enricher := NewCaptureEnricher(e.Pool, brain, slog.New(slog.DiscardHandler))

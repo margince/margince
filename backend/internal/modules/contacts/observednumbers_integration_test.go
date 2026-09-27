@@ -69,3 +69,27 @@ func seedOldWorkNumbers(ctx context.Context, t *testing.T, e *dedupeEnv, contact
 		t.Fatal(err)
 	}
 }
+
+// Two German numbers, and a newer statement that changes the mobile and lists
+// it FIRST. The unchanged desk number is confirmed before anything looks for a
+// number to replace, so the new mobile replaces the old mobile and not the desk
+// number it happens to precede.
+func TestAChangedNumberListedFirstDoesNotRetireAnUnchangedOneOfItsCountry(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contactID, _ := e.seedEmployedContact(ctx, t,
+		"Jonas Desk", "jonas@desk.example", "Desk AS", "desk.example")
+	seedOldWorkNumbers(ctx, t, e, contactID, "+49301111111", "+491701111111")
+
+	importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Jonas Desk\nTEL;TYPE=WORK:+49 170 2222222\nTEL;TYPE=WORK:+49 30 1111111\n"+
+			"EMAIL;TYPE=WORK:jonas@desk.example\nEND:VCARD\n")
+
+	if got := slices.Sorted(slices.Values(livePhones(ctx, t, e, contactID))); !slices.Equal(got,
+		[]string{"+491702222222", "+49301111111"}) {
+		t.Errorf("live numbers = %v, want the desk number kept and the mobile replaced", got)
+	}
+	if got := phoneEvidence(ctx, t, e, contactID)["+491702222222"]; got != "+491701111111" {
+		t.Errorf("the new mobile records it replaced %q, want the old mobile", got)
+	}
+}
