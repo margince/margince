@@ -122,7 +122,7 @@ it("counts each mailbox and the installation without naming what waits", async (
     screen.getByText(/contacts: oldest has waited 3 days/),
   ).toBeInTheDocument();
   expect(screen.getByText("4 pending")).toBeInTheDocument();
-  expect(screen.getByText("1 out of attempts")).toBeInTheDocument();
+  expect(screen.getByText("1 sender with no retries left")).toBeInTheDocument();
   expect(screen.getByText("201 meetings held")).toBeInTheDocument();
 });
 
