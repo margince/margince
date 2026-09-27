@@ -36,8 +36,9 @@ const (
 // calendar now says, and reports whether anything changed.
 //
 // The same row rules as a cancellation, under the row's own lock: only a
-// meeting, only a live and unrestricted one. A start the calendar could not
-// state (zero) moves nothing — the stored start is better than capture time.
+// meeting, only a live and unrestricted one, and only the arriving seat's own.
+// A start the calendar could not state (zero) moves nothing — the stored start
+// is better than capture time.
 // An unchanged start and length write nothing, so a resynced calendar costs no
 // audit row and no event.
 func MoveCapturedMeetingTx(
@@ -63,6 +64,14 @@ func MoveCapturedMeetingTx(
 	if storedStart.Equal(start) && sameDuration(storedDuration, duration) {
 		return false, nil
 	}
+	// Only the seat whose row it is — the same rule a cross-door match binds
+	// by. A replay proves the delivery describes this meeting; it does not
+	// prove the delivering calendar may rewrite it, and a second connection
+	// holding the same event id must not move another seat's meeting.
+	mine, err := BindableTo(ctx, tx, id)
+	if err != nil || !mine {
+		return false, err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity SET occurred_at = $2, duration_seconds = $3,
 		       version = version + 1, updated_at = now()
@@ -75,10 +84,15 @@ func MoveCapturedMeetingTx(
 	if err != nil {
 		return false, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: crmcontracts.PublicEventActivityChangedFields{OccurredAt: &start},
-	}); err != nil {
-		return false, err
+	// The event names what the contract can name. It carries occurred_at and
+	// no duration, so a change of length alone is in the audit row and
+	// announces nothing rather than claiming the start moved.
+	if !storedStart.Equal(start) {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
+			ChangedFields: crmcontracts.PublicEventActivityChangedFields{OccurredAt: &start},
+		}); err != nil {
+			return false, err
+		}
 	}
 	return true, nil
 }

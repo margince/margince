@@ -111,3 +111,18 @@ func TestAnotherConnectorCannotMoveACalendarMeeting(t *testing.T) {
 		t.Errorf("the meeting moved to %s, want it left at %s", got, meetingStart)
 	}
 }
+
+// A second connection holding the same event id belongs to another seat, and
+// may not move this seat's meeting.
+func TestAnotherSeatsCalendarCannotMoveTheMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureMeeting(t, e, e.AdminUser)
+
+	if err := movingCalendarSink(e).MoveMeeting(
+		calendarOwnerCtx(e, ids.NewV7()), meetingKey, meetingStart.AddDate(2, 0, 0), nil); err != nil {
+		t.Fatalf("moving: %v", err)
+	}
+	if got := readMeetingStart(t, e, id); !got.Equal(meetingStart) {
+		t.Errorf("another seat's calendar moved the meeting to %s, want it left at %s", got, meetingStart)
+	}
+}
