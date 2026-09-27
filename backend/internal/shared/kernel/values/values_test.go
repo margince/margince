@@ -78,6 +78,31 @@ func TestParsePhone(t *testing.T) {
 	}
 }
 
+// One case per code length, and pairs that share a first digit across lengths,
+// because that is where a prefix split goes wrong.
+func TestCountryCodeSplitsOnTheAssignedCodeLength(t *testing.T) {
+	for in, want := range map[string]string{
+		"+14155550123":  "1",
+		"+74951234567":  "7",
+		"+491755871285": "49",
+		"+6590860197":   "65",
+		"+84356664058":  "84",
+		"+66973030502":  "66",
+		"+35312345678":  "353",
+		"+42012345678":  "420",
+		"+97112345678":  "971",
+		"+88612345678":  "886",
+	} {
+		phone, err := ParsePhone(in)
+		if err != nil {
+			t.Fatalf("ParsePhone(%q): %v", in, err)
+		}
+		if got := phone.CountryCode(); got != want {
+			t.Errorf("CountryCode(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestParseDomain(t *testing.T) {
 	for _, tc := range []struct {
 		in   string
