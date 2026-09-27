@@ -26,12 +26,12 @@ This page does not grade single steps or name a best model per site — that is
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 78 |
+| Tools the assistant is offered | 77 |
 | … some case requires | 36 |
 | … some case requires as one of a set | 1 |
-| … **no case requires** | 41 |
+| … **no case requires** | 40 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 13512 |
+| Prompt tokens spent on tools no case requires | 13356 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -58,7 +58,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A — MCP | Surface B — scheduled agents |
 |---|---|---|
 | Who drives it | a contact, watching | a job on a timer, unattended |
-| Menu | 78 tools, the whole catalog | 5 tools, declared per agent |
+| Menu | 77 tools, the whole catalog | 5 tools, declared per agent |
 | A wrong reach | the contact corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -404,7 +404,7 @@ and the case's pass rate belongs to the set rather than to this row — which is
 corpus tests the tool anyway — that lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 41 tools no use case requires, **9 are graded elsewhere** and 32 are untried by any lane.
+So of the 40 tools no use case requires, **9 are graded elsewhere** and 31 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -448,7 +448,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `relink_thread` | 196 | — | — | — |
 | `list_pipelines` | 191 | — | `case1_log_it`, `case20_put_it_in_the_board_pack` | — |
 | `intro_path_to` | 187 | — | — | — |
-| `check_location_support` | 156 | — | — | — |
 | `whoami` | 129 | — | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp` | — |
 | `read_import_run` | 67 | — | `case10_finish_the_import`, `case3_spreadsheet` | — |
 

@@ -113,7 +113,6 @@ Columns:
 | `invite_meeting` | 🟡 | `send` | yes |
 | `catch_me_up_on` | 🟢 | `read` | — |
 | `check_availability` | 🟢 | `read` | — |
-| `check_location_support` | 🟢 | `read` | — |
 | `commit_import` | 🟢 | `write` | — |
 | `create_record` | 🟢 / 🟡 | `write` | — |
 | `create_tag` | 🟢 | `write` | — |

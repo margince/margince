@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 78 |
-| Resources | 12 |
-| Tool catalog | 225.9 KB |
-| Resource catalog | 4.5 KB |
-| Approx. wire tokens | 58965 |
+| Tools | 77 |
+| Resources | 11 |
+| Tool catalog | 224.0 KB |
+| Resource catalog | 4.1 KB |
+| Approx. wire tokens | 58377 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 103.2 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 58.4 KB | 25% | Yes, every step |
-| Input schemas | 47.9 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.5 KB | 7% | Partly |
-| **Description + input schema** | **106.2 KB** | **47%** | **the recurring cost** |
+| Output schemas | 102.2 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 57.8 KB | 25% | Yes, every step |
+| Input schemas | 47.8 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.2 KB | 7% | Partly |
+| **Description + input schema** | **105.6 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -45,7 +45,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 ## Index
 
-### Resources (12)
+### Resources (11)
 
 - [`margince://capabilities`](#capabilities) — What this installation can do
 - [`margince://schema/query`](#query_vocabulary) — Workspace query vocabulary
@@ -58,9 +58,8 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/commitments.html`](#commitments_view) — Open commitments
 - [`ui://margince/handoff.html`](#handoff_view) — Delivery handoff
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
-- [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (78)
+### Tools (77)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -73,7 +72,6 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
-| [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
@@ -319,35 +317,6 @@ The deals at risk this week, worst first, with the evidence each risk claim rest
       "connectDomains": [],
       "frameDomains": [],
       "resourceDomains": []
-    },
-    "prefersBorder": true
-  }
-}
-```
-
-</details>
-
-### geo_probe_view
-
-`ui://margince/geo-probe.html` · text/html;profile=mcp-app
-
-**Location check**
-
-Whether this host lets a view read the device's position, and the browser's own words when it does not.
-
-<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
-
-```json
-{
-  "ui": {
-    "csp": {
-      "baseUriDomains": [],
-      "connectDomains": [],
-      "frameDomains": [],
-      "resourceDomains": []
-    },
-    "permissions": {
-      "geolocation": {}
     },
     "prefersBorder": true
   }
@@ -1856,132 +1825,6 @@ Find candidate times for a host without booking or sending anything. Set reliabl
         "calendar_backing",
         "slots",
         "truncated"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### check_location_support
-
-**Can a card read this device's location**
-
-Find out whether this chat host lets a Margince card read the device's location, which is what would let a contact be tagged with the event you are standing at. It does not read a location and cannot: the answer comes from the card shown beside this result, and only after the contact using it presses the button on that card. A host is free to refuse, and refusing is the expected outcome until one is shown not to. To record where something happened, put it in the activity you log with log_activity; this tool tags nothing and writes nothing. (Governance: runs immediately; requires passport scope "read".)
-
-Renders its result in [`ui://margince/geo-probe.html`](#geo_probe_view), visible to `model`, `app`.
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "answered_by": {
-          "type": "string"
-        },
-        "declared_permission": {
-          "type": "string"
-        },
-        "note": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "answered_by",
-        "declared_permission",
-        "note"
       ],
       "type": "object"
     },

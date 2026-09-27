@@ -102,8 +102,8 @@ const THE_HEIGHT = "var(--controlHeight)";
  *
  * This is the reading that covers what the markup cannot say. A class assembled
  * from a template — `.btn-${variant}` — or joined in a helper is invisible to
- * an AST walk of the markup, and three of the controls below (`.railmore`,
- * `.calendar-day`, `.probe-button`) arrive only this way.
+ * an AST walk of the markup, and two of the controls below (`.railmore`,
+ * `.calendar-day`) arrive only this way.
  */
 function pressableClasses(): Set<string> {
   const out = new Set<string>();
@@ -288,7 +288,6 @@ const ACCEPTED = new Map<string, string>([
       ".btn-federated beside it carries one",
   ],
   ["ob-gate-submit", "the onboarding gate's door, the same floor"],
-  ["probe-button", "the standalone MCP view's one action, sized for a thumb"],
   [
     "commstatus",
     "a 44px finger target around a mark that stays 18px, so the mark keeps " +

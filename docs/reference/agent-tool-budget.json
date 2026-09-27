@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 78,
+    "tools": 77,
     "system_frame_tokens": 516,
-    "tokens": 25113,
-    "median_tool_tokens": 272,
-    "mean_tool_tokens": 321
+    "tokens": 24957,
+    "median_tool_tokens": 273,
+    "mean_tool_tokens": 323
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 78,
+      "of_served_tools": 77,
       "tokens": 3551,
       "listing_tokens": 1746,
       "step_schema_tokens": 1288,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 78,
+      "of_served_tools": 77,
       "tokens": 4908,
       "listing_tokens": 2585,
       "step_schema_tokens": 1807,
@@ -361,10 +361,6 @@
     {
       "name": "remove_tag",
       "tokens": 166
-    },
-    {
-      "name": "check_location_support",
-      "tokens": 156
     },
     {
       "name": "read_project_360",

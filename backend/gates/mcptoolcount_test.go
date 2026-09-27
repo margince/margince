@@ -68,10 +68,8 @@ const clientToolCeiling = 100
 //
 // It comes DOWN when the verb reconciliation lands, and a ceiling that did not
 // follow it down would quietly re-bank the room it freed.
-// search_report_evidence is the one surface that may state what share of a
-// saved run's records support a claim; it costs one more tool, leaving 22 of a
-// client's 100 slots for other servers.
-const publishedToolCeiling = 78
+// At 77 it leaves 23 of a client's 100 slots for other servers.
+const publishedToolCeiling = 77
 
 type mcpInfoFile struct {
 	Totals struct {

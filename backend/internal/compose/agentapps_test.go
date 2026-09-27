@@ -199,18 +199,11 @@ func TestEveryViewIsServedUnderTheAppProfile(t *testing.T) {
 		}
 		// Compared against a WHOLE value rather than field by field: a permission
 		// added to the seam later would be invisible to a hand-written list, and
-		// silently-unchecked is the one thing a permission must not be.
-		//
-		// The expected value is per view, and that IS the assertion. A host maps
-		// this declaration onto an iframe `allow` attribute, so a card that
+		// silently-unchecked is the one thing a permission must not be. A host
+		// maps this declaration onto an iframe `allow` attribute, so a card that
 		// declares a permission it never uses would carry the capability if its
-		// code were ever substituted. Geolocation belongs to the probe, which is
-		// the only view that reads a position; every product card asks for
-		// nothing. A permission spreading to a second view fails here.
+		// code were ever substituted.
 		want := mcp.ResourcePermissions{}
-		if r.URI == apps.GeoProbeURI {
-			want.Geolocation = true
-		}
 		if r.UI.Permissions != want {
 			t.Errorf("the view %s asks for browser permissions %+v, want %+v — a card declaring a permission "+
 				"it does not use is a widening of the sandbox, and this assertion is where it gets argued",
