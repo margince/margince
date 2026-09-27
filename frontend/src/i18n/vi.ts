@@ -8666,22 +8666,34 @@ export const vi = {
   "capturePurge.open": "Xóa thư đã thu thập từ {value}",
   "capturePurge.title": "Xóa thư đã thu thập từ {value}",
   "capturePurge.intro":
-    "Thao tác này hủy các thư mà quy tắc này đã khớp — nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
+    "Thao tác này hủy các thư mà quy tắc này đã khớp: nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
   "capturePurge.preview": "Xem trước",
   "capturePurge.confirm": "Xóa vĩnh viễn",
   "capturePurge.done": "Đóng",
   "capturePurge.failed": "Việc xóa không chạy",
-  "capturePurge.wouldDestroy": "{count} thư sẽ bị hủy.",
-  "capturePurge.destroyed": "Đã hủy {count} thư.",
-  "capturePurge.released":
+  "capturePurge.wouldDestroy_one": "{count} thư sẽ bị hủy.",
+  "capturePurge.wouldDestroy_other": "{count} thư sẽ bị hủy.",
+  "capturePurge.destroyed_one": "Đã hủy {count} thư.",
+  "capturePurge.destroyed_other": "Đã hủy {count} thư.",
+  "capturePurge.released_one":
     "{count} thư cũng được đồng nghiệp thu thập. Quyền truy cập của bạn kết thúc; bản của họ vẫn còn.",
-  "capturePurge.anonymised":
-    "{count} liên hệ đã được gỡ bỏ thông tin nhận dạng — những liên hệ mà chúng tôi chỉ biết nhờ thư của bạn.",
-  "capturePurge.keptHeld":
+  "capturePurge.released_other":
+    "{count} thư cũng được đồng nghiệp thu thập. Quyền truy cập của bạn kết thúc; bản của họ vẫn còn.",
+  "capturePurge.anonymised_one":
+    "{count} liên hệ đã được gỡ bỏ thông tin nhận dạng, vì thư của bạn là lý do duy nhất CRM biết đến họ.",
+  "capturePurge.anonymised_other":
+    "{count} liên hệ đã được gỡ bỏ thông tin nhận dạng, vì thư của bạn là lý do duy nhất CRM biết đến họ.",
+  "capturePurge.keptHeld_one":
+    "{count} thư được giữ lại: thư đang bị ghim, và còn cho đến khi được gỡ.",
+  "capturePurge.keptHeld_other":
     "{count} thư được giữ lại: chúng đang bị ghim, và còn cho đến khi được gỡ.",
-  "capturePurge.keptStatute":
-    "{count} thư được giữ lại như thư tín thương mại. Luật yêu cầu lưu giữ trong {period} — cả chúng tôi lẫn bạn đều không được xóa.",
-  "capturePurge.keptRequest":
+  "capturePurge.keptStatute_one":
+    "{count} thư được giữ lại như thư tín thương mại. Luật yêu cầu lưu giữ trong {period}, nên bạn không được xóa.",
+  "capturePurge.keptStatute_other":
+    "{count} thư được giữ lại như thư tín thương mại. Luật yêu cầu lưu giữ trong {period}, nên bạn không được xóa.",
+  "capturePurge.keptRequest_one":
+    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần thư đó.",
+  "capturePurge.keptRequest_other":
     "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần chúng.",
   "captureExclusions.containerLabel": "Thư mục hoặc nhãn",
   "captureExclusions.noContainers":

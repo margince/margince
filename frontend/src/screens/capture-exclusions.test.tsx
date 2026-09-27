@@ -737,7 +737,51 @@ describe("the deletion receipt", () => {
     await openPurge(user);
     await user.click(screen.getByRole("button", { name: "Check first" }));
 
-    expect(await screen.findByText(/they are pinned/)).toBeTruthy();
+    expect(await screen.findByText(/is pinned/)).toBeTruthy();
     expect(screen.queryByText(/commercial correspondence/)).toBeNull();
   });
+});
+
+// The third reason, which renders on its own branch: a request still being
+// answered needs the mail to answer with, and lifts on a different day from
+// a pin or a retention window.
+it("names an open request as the reason mail was kept", async () => {
+  const user = userEvent.setup();
+  const { fetchMock } = backend(CAPTURE_EDITOR);
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (request.url.includes("/purge")) {
+        return new Response(
+          JSON.stringify({
+            destroyed: 0,
+            released: 0,
+            skipped: 1,
+            anonymised: 0,
+            preview: true,
+            kept: { held: 0, under_statute: 0, under_request: 1 },
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return fetchMock(input, init);
+    },
+  );
+  render(
+    <Providers>
+      <CaptureExclusionsCard />
+    </Providers>,
+  );
+
+  await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
+  await user.click(
+    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
+  );
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+
+  expect(
+    await screen.findByText(/data-protection request is still being answered/),
+  ).toBeTruthy();
 });

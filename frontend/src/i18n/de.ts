@@ -8733,23 +8733,35 @@ export const de = {
   "capturePurge.open": "Bereits erfasste Post von {value} löschen",
   "capturePurge.title": "Bereits erfasste Post von {value} löschen",
   "capturePurge.intro":
-    "Das vernichtet die Nachrichten, auf die diese Regel bereits zugetroffen hat — Text, Original, Anhänge und alles daraus Abgeleitete. Das lässt sich nicht rückgängig machen. Sieh dir zuerst an, was wegfiele.",
+    "Das vernichtet die Nachrichten, auf die diese Regel bereits zugetroffen hat: Text, Original, Anhänge und alles daraus Abgeleitete. Das lässt sich nicht rückgängig machen. Sieh dir zuerst an, was wegfiele.",
   "capturePurge.preview": "Erst prüfen",
   "capturePurge.confirm": "Endgültig löschen",
   "capturePurge.done": "Schließen",
   "capturePurge.failed": "Die Löschung lief nicht",
-  "capturePurge.wouldDestroy": "{count} Nachrichten würden vernichtet.",
-  "capturePurge.destroyed": "{count} Nachrichten vernichtet.",
-  "capturePurge.released":
-    "{count} hat auch eine Kollegin erfasst. Dein Zugriff darauf endet; ihre Kopie bleibt.",
-  "capturePurge.anonymised":
-    "Bei {count} Kontakten wurden die identifizierenden Angaben entfernt — bei jenen, die wir nur wegen deiner Post kannten.",
-  "capturePurge.keptHeld":
-    "{count} bleiben erhalten: sie sind festgesetzt und bleiben, bis das aufgehoben wird.",
-  "capturePurge.keptStatute":
-    "{count} bleiben als Handelsbriefe erhalten. Das Gesetz verlangt, sie {period} aufzubewahren — weder wir noch du dürfen sie löschen.",
-  "capturePurge.keptRequest":
-    "{count} bleiben erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
+  "capturePurge.wouldDestroy_one": "{count} Nachricht würde vernichtet.",
+  "capturePurge.wouldDestroy_other": "{count} Nachrichten würden vernichtet.",
+  "capturePurge.destroyed_one": "{count} Nachricht vernichtet.",
+  "capturePurge.destroyed_other": "{count} Nachrichten vernichtet.",
+  "capturePurge.released_one":
+    "{count} Nachricht hat auch eine Kollegin erfasst. Dein Zugriff darauf endet; ihre Kopie bleibt.",
+  "capturePurge.released_other":
+    "{count} Nachrichten hat auch eine Kollegin erfasst. Dein Zugriff darauf endet; ihre Kopie bleibt.",
+  "capturePurge.anonymised_one":
+    "Bei {count} Kontakt wurden die identifizierenden Angaben entfernt, denn nur deine Post war der Grund, warum das CRM ihn kannte.",
+  "capturePurge.anonymised_other":
+    "Bei {count} Kontakten wurden die identifizierenden Angaben entfernt, denn nur deine Post war der Grund, warum das CRM sie kannte.",
+  "capturePurge.keptHeld_one":
+    "{count} Nachricht bleibt erhalten: sie ist festgesetzt und bleibt, bis das aufgehoben wird.",
+  "capturePurge.keptHeld_other":
+    "{count} Nachrichten bleiben erhalten: sie sind festgesetzt und bleiben, bis das aufgehoben wird.",
+  "capturePurge.keptStatute_one":
+    "{count} Nachricht bleibt als Handelsbrief erhalten. Das Gesetz verlangt, sie {period} aufzubewahren; du darfst sie nicht löschen.",
+  "capturePurge.keptStatute_other":
+    "{count} Nachrichten bleiben als Handelsbriefe erhalten. Das Gesetz verlangt, sie {period} aufzubewahren; du darfst sie nicht löschen.",
+  "capturePurge.keptRequest_one":
+    "{count} Nachricht bleibt erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
+  "capturePurge.keptRequest_other":
+    "{count} Nachrichten bleiben erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
   "captureExclusions.containerLabel": "Ordner oder Label",
   "captureExclusions.noContainers":
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",

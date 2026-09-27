@@ -8879,23 +8879,35 @@ export const en = {
   "capturePurge.open": "Delete mail already captured from {value}",
   "capturePurge.title": "Delete mail already captured from {value}",
   "capturePurge.intro":
-    "This destroys the messages this rule already matched — text, original, attachments and everything derived from them. It cannot be undone. Check first what it would remove.",
+    "This destroys the messages this rule already matched: text, original, attachments and everything derived from them. It cannot be undone. Check first what it would remove.",
   "capturePurge.preview": "Check first",
   "capturePurge.confirm": "Delete permanently",
   "capturePurge.done": "Close",
   "capturePurge.failed": "The deletion did not run",
-  "capturePurge.wouldDestroy": "{count} messages would be destroyed.",
-  "capturePurge.destroyed": "{count} messages destroyed.",
-  "capturePurge.released":
-    "{count} were also captured by a colleague. Your access to them has ended; their copy stays.",
-  "capturePurge.anonymised":
-    "{count} contacts were stripped of their identifying details — those your mail was the only reason we knew.",
-  "capturePurge.keptHeld":
-    "{count} were kept: they are pinned, and stay until whoever pinned them lifts it.",
-  "capturePurge.keptStatute":
-    "{count} were kept as commercial correspondence. The law requires keeping these for {period} — not ours to delete, and not yours.",
-  "capturePurge.keptRequest":
-    "{count} were kept: a data-protection request is still being answered and needs them.",
+  "capturePurge.wouldDestroy_one": "{count} message would be destroyed.",
+  "capturePurge.wouldDestroy_other": "{count} messages would be destroyed.",
+  "capturePurge.destroyed_one": "{count} message destroyed.",
+  "capturePurge.destroyed_other": "{count} messages destroyed.",
+  "capturePurge.released_one":
+    "{count} message was also captured by a colleague. Your access to it has ended; their copy stays.",
+  "capturePurge.released_other":
+    "{count} messages were also captured by a colleague. Your access to them has ended; their copy stays.",
+  "capturePurge.anonymised_one":
+    "{count} contact was stripped of identifying details, because your mail was the only reason the CRM knew them.",
+  "capturePurge.anonymised_other":
+    "{count} contacts were stripped of identifying details, because your mail was the only reason the CRM knew them.",
+  "capturePurge.keptHeld_one":
+    "{count} message was kept: it is pinned, and stays until whoever pinned it lifts that.",
+  "capturePurge.keptHeld_other":
+    "{count} messages were kept: they are pinned, and stay until whoever pinned them lifts that.",
+  "capturePurge.keptStatute_one":
+    "{count} message was kept as commercial correspondence. The law requires keeping it for {period}, so it is not yours to delete.",
+  "capturePurge.keptStatute_other":
+    "{count} messages were kept as commercial correspondence. The law requires keeping them for {period}, so they are not yours to delete.",
+  "capturePurge.keptRequest_one":
+    "{count} message was kept: a data-protection request is still being answered and needs it.",
+  "capturePurge.keptRequest_other":
+    "{count} messages were kept: a data-protection request is still being answered and needs them.",
   "captureExclusions.containerLabel": "Folder or label",
   "captureExclusions.noContainers":
     "This mailbox reported no folders. Connect a mailbox that has them, or keep senders out by address or domain instead.",
