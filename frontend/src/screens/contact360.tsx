@@ -140,8 +140,13 @@ export function IdentityRail({
   children,
 }: Readonly<{ view: Contact360; children?: ReactNode }>) {
   const t = useT();
+  // A phone has one evidence row per number, so a number finds its own
+  // receipt by its E.164 key; every other field has one row.
   const byField = new Map<string, ProfileField>(
-    (view.profile_fields ?? []).map((f) => [f.field, f]),
+    (view.profile_fields ?? []).map((f) => [
+      f.field === "phone" ? `phone:${f.value_key ?? f.value}` : f.field,
+      f,
+    ]),
   );
   const current = currentEmployer(view.employments?.data);
   const career = (view.employments?.data ?? []).filter(
@@ -177,7 +182,10 @@ export function IdentityRail({
                 key: `phone-${p.id}`,
                 term: t("contact.identity.phone"),
                 value: (
-                  <Evidenced value={p.phone} field={byField.get("phone")} />
+                  <Evidenced
+                    value={p.phone}
+                    field={byField.get(`phone:${p.phone}`)}
+                  />
                 ),
               })),
               ...(current

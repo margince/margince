@@ -238,3 +238,55 @@ describe("what the editor opens on", () => {
     expect(body.value_captured_at).toBe("2026-08-01T08:00:00Z");
   });
 });
+
+describe("a phone is a list", () => {
+  // Each number has its own evidence row and its own undo, so the undo names
+  // the number it is about; without it the server cannot tell which of a
+  // contact's numbers the reader meant.
+  it("undoes the number whose row the reader pressed, by its key", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "http://localhost",
+        );
+        if (url.pathname.endsWith("/restore")) {
+          calls.push(`${url.pathname}${url.search}`);
+          return new Response(null, { status: 204 });
+        }
+        return new Response(
+          JSON.stringify({
+            user: { id: "u-1", email: "rep@example.com", name: "Demo Rep" },
+            authorization: MAY_CORRECT,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+    renderFields([
+      field({
+        field: "phone",
+        value: "+491715550109",
+        value_key: "+491715550109",
+        superseded_value: "+491755550101",
+      }),
+      field({
+        field: "phone",
+        value: "+6595550103",
+        value_key: "+6595550103",
+      }),
+    ]);
+
+    const undo = await screen.findAllByRole("button", { name: "Undo" });
+    expect(undo).toHaveLength(1);
+    await userEvent.click(undo[0]);
+
+    await waitFor(() =>
+      expect(calls).toEqual([
+        "/v1/contacts/p-1/profile-fields/phone/restore?value_key=%2B491715550109",
+      ]),
+    );
+  });
+});

@@ -1359,7 +1359,8 @@ export interface paths {
          * Put back the value a newer statement replaced.
          * @description Undo for one enriched field. A signature or a business card stating something newer
          *     replaces what the record holds and keeps the replaced value in `superseded_value`;
-         *     this puts that value back and clears the buffer.
+         *     this puts that value back and clears the buffer. For a phone the undo is per
+         *     number: the replaced number comes back and the number that replaced it is retired.
          *
          *     Human-only, and deliberately: the machine is what wrote the replacement, so an agent
          *     undoing it would be one authority arguing with itself.
@@ -21828,18 +21829,27 @@ export interface components {
         };
         /**
          * @description One enriched field with the evidence it was read from. Evidence-or-omit: a row
-         *     exists only where a verbatim snippet was captured.
+         *     exists only where a verbatim snippet was captured. A phone is a list, so a contact
+         *     has one `phone` row per number, told apart by `value_key`; every other field has at
+         *     most one row.
          */
         ContactProfileField: {
             /** @enum {string} */
             field: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
             value: string;
             /**
+             * @description What tells two rows of one field apart: the E.164 number for a `phone` row, empty
+             *     for every other field. Pass it to the restore to name which number to undo.
+             */
+            value_key?: string;
+            /**
              * @description What this field held before a newer statement replaced it. The contact's own
              *     signature or business card, carrying a later date than the value on record,
              *     replaces what is older than it — including a value a colleague typed, because a
-             *     number stated last week outranks one typed in March. Present only where
-             *     something was actually replaced, and it is what the undo control restores.
+             *     number stated last week outranks one typed in March. For a phone it is the older
+             *     number of the same country this number replaced; a number a newer statement
+             *     simply leaves out is kept, not replaced. Present only where something was
+             *     actually replaced, and it is what the undo control restores.
              */
             superseded_value?: string | null;
             /**
@@ -39956,7 +39966,14 @@ export interface operations {
     };
     restoreContactProfileField: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which row of a field that holds several — a phone number, as the row's
+                 *     `value_key`. May be omitted while only one row of the field has something to
+                 *     restore; answers 422 when several do.
+                 */
+                value_key?: string;
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -39983,6 +40000,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getContactAccess: {
