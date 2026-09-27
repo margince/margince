@@ -41046,7 +41046,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, seat_usage, team_oversight]
+         authentication_policy, oauth_application, seat_usage, team_oversight, team_lead]
 
     RbacAction:
       type: string

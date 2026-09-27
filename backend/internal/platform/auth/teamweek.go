@@ -41,11 +41,10 @@ const (
 // Home offers the week on, so the control cannot offer a door the store
 // refuses.
 //
-// A lead is a coaching seat, the same one RequireCoach admits: team_membership
-// records who is on a team and not who leads it, and a coaching role is the
-// only thing in the tree that says "this seat leads the team it is on". An
-// own-scoped seat is refused whatever it holds, because the page it would get
-// is about colleagues whose rows it cannot read.
+// A lead is a seat holding team_lead.read: team_membership records who is on a
+// team and not who leads it, and that grant is what says "this seat leads the
+// team it is on". An own-scoped seat is refused whatever it holds, because the
+// page it would get is about colleagues whose rows it cannot read.
 //
 // Home offers the week on this answer, carried as the worklist's `team_week`;
 // the worklist's own `team` scope is the team's live work and stays on row
@@ -66,7 +65,7 @@ func TeamWeekReachOf(ctx context.Context) TeamWeekReach {
 	if Allows(ctx, objTeamOversight, principal.ActionRead) {
 		return ReachesEveryTeam
 	}
-	if p.Type == principal.PrincipalHuman && coaches(p) {
+	if leads(p, principal.ActionRead) {
 		return ReachesTeamsLed
 	}
 	return ReachesNoTeam

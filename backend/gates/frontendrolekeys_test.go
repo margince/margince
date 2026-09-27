@@ -269,3 +269,20 @@ func seededRoleKeyList(t *testing.T) []string {
 	sort.Strings(keys)
 	return keys
 }
+
+// seededRoleEntry matches one entry of identity's systemRoles table.
+var seededRoleEntry = regexp.MustCompile(`\{"([a-z_]+)",\s*"[^"]*"\}`)
+
+// seededRoleKeys reads the keys identity seeds out of its systemRoles table.
+func seededRoleKeys(t *testing.T) map[string]bool {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("internal", "modules", "identity", "service.go"))
+	if err != nil {
+		t.Fatalf("reading the identity service source: %v", err)
+	}
+	keys := map[string]bool{}
+	for _, m := range seededRoleEntry.FindAllSubmatch(raw, -1) {
+		keys[string(m[1])] = true
+	}
+	return keys
+}

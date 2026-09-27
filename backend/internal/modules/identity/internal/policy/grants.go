@@ -287,6 +287,10 @@ const (
 	// read; read_only holds nothing, because reaching every record is not a
 	// claim to read a manager's verdict on a named colleague.
 	objTeamOversight = "team_oversight"
+	// Leading the teams a seat is on: create raises a coaching notice for a
+	// teammate, read opens a led team's week. Admin, management and manager
+	// hold both; a rep on a team does not coach their teammates.
+	objTeamLead = "team_lead"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do

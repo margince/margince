@@ -75,16 +75,19 @@ func TestTheOfferedScopesMatchTheReadersOwnReach(t *testing.T) {
 	}
 }
 
-// seat is a reader shaped like a role: its row scope, its role key, and whether
-// it holds the team oversight grant. Every one reads deals.
-func seat(tier principal.RowScope, role string, oversees bool) context.Context {
+// holds names which of the two team grants a test seat carries.
+type holds struct{ leads, oversees bool }
+
+// seat is a reader shaped like a role: its row scope, and which of the team
+// lead and team oversight grants it holds. Every one reads deals.
+func seat(tier principal.RowScope, grants holds) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
 		Type:   principal.PrincipalHuman,
 		UserID: ids.MustParse("01a05500-0000-7000-8000-000000000001"),
 		Permissions: principal.Permissions{
-			RoleKeys: []string{role},
 			Objects: map[string]principal.ObjectGrant{
-				"team_oversight": {Read: oversees},
+				"team_lead":      {Read: grants.leads},
+				"team_oversight": {Read: grants.oversees},
 				"deal":           {Read: true},
 			},
 			RowScope: tier,
@@ -102,11 +105,12 @@ func TestTheTeamWeekIsOfferedApartFromTheTeamScope(t *testing.T) {
 		reader context.Context
 		week   crmcontracts.WorklistTeamWeek
 	}{
-		{"read_only", seat(principal.RowScopeAll, "read_only", false), crmcontracts.WorklistTeamWeekNone},
-		{"custom team-scoped seat", seat(principal.RowScopeTeam, "team_member", false), crmcontracts.WorklistTeamWeekNone},
-		{"manager", seat(principal.RowScopeTeam, "manager", false), crmcontracts.WorklistTeamWeekTeamsLed},
-		{"management", seat(principal.RowScopeAll, "management", true), crmcontracts.WorklistTeamWeekEveryTeam},
-		{"rep", seat(principal.RowScopeOwn, "rep", false), crmcontracts.WorklistTeamWeekNone},
+		{"read_only", seat(principal.RowScopeAll, holds{}), crmcontracts.WorklistTeamWeekNone},
+		{"custom team-scoped seat", seat(principal.RowScopeTeam, holds{}), crmcontracts.WorklistTeamWeekNone},
+		{"custom team-scoped lead", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.WorklistTeamWeekTeamsLed},
+		{"manager", seat(principal.RowScopeTeam, holds{leads: true}), crmcontracts.WorklistTeamWeekTeamsLed},
+		{"management", seat(principal.RowScopeAll, holds{leads: true, oversees: true}), crmcontracts.WorklistTeamWeekEveryTeam},
+		{"rep", seat(principal.RowScopeOwn, holds{}), crmcontracts.WorklistTeamWeekNone},
 	}
 	for _, tc := range cases {
 		if got := teamWeekFor(tc.reader); got != tc.week {

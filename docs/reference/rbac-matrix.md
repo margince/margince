@@ -117,6 +117,7 @@ changes none.
 | `system_reset` | ---D | ---- | ---- | ---- | ---- | ---- |
 | `tag` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `team_admin` | CRU- | ---- | ---- | ---- | ---- | ---- |
+| `team_lead` | CR-- | CR-- | CR-- | ---- | ---- | ---- |
 | `team_oversight` | -R-- | -R-- | ---- | ---- | ---- | ---- |
 | `user_admin` | CRUD | ---- | ---- | ---- | ---- | ---- |
 | `voice_profile` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |

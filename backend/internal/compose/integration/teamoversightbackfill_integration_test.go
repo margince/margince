@@ -20,15 +20,15 @@ import (
 
 const teamOversightVersion = "1790508883"
 
-// runTeamOversightMigration executes one direction of the migration's own SQL.
-func runTeamOversightMigration(ctx context.Context, t *testing.T, e *apptest.AppEnv, up bool) {
+// runCoreMigration executes one direction of one core migration's own SQL.
+func runCoreMigration(ctx context.Context, t *testing.T, e *apptest.AppEnv, version string, up bool) {
 	t.Helper()
 	core, err := migrations.Core()
 	if err != nil {
 		t.Fatalf("loading the core migrations: %v", err)
 	}
 	for _, migration := range core.Migrations {
-		if migration.Version != teamOversightVersion {
+		if migration.Version != version {
 			continue
 		}
 		sql := migration.DownSQL
@@ -40,14 +40,14 @@ func runTeamOversightMigration(ctx context.Context, t *testing.T, e *apptest.App
 			t.Fatalf("opening the migration transaction: %v", err)
 		}
 		if _, err := tx.Exec(ctx, sql); err != nil {
-			t.Fatalf("running migration %s (up=%v): %v", teamOversightVersion, up, err)
+			t.Fatalf("running migration %s (up=%v): %v", version, up, err)
 		}
 		if err := tx.Commit(ctx); err != nil {
-			t.Fatalf("committing migration %s: %v", teamOversightVersion, err)
+			t.Fatalf("committing migration %s: %v", version, err)
 		}
 		return
 	}
-	t.Fatalf("no core migration has version %s", teamOversightVersion)
+	t.Fatalf("no core migration has version %s", version)
 }
 
 // oversees reads whether a system role's stored document grants the read.
@@ -90,7 +90,7 @@ func TestTheOversightBackfillNeverWidensANarrowedRole(t *testing.T) {
 				}
 			}
 
-			runTeamOversightMigration(ctx, t, e, true)
+			runCoreMigration(ctx, t, e, teamOversightVersion, true)
 
 			if got := oversees(ctx, t, e, "management"); got != tc.want {
 				t.Errorf("management oversees every team = %v, want %v", got, tc.want)
@@ -115,8 +115,8 @@ func TestTheOversightRollbackKeepsAnOperatorsDenial(t *testing.T) {
 		t.Fatalf("denying management oversight: %v", err)
 	}
 
-	runTeamOversightMigration(ctx, t, e, false)
-	runTeamOversightMigration(ctx, t, e, true)
+	runCoreMigration(ctx, t, e, teamOversightVersion, false)
+	runCoreMigration(ctx, t, e, teamOversightVersion, true)
 
 	if oversees(ctx, t, e, "management") {
 		t.Error("down then up turned the operator's denial on management back into a grant")
