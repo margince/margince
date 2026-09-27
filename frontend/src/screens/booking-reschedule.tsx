@@ -7,7 +7,8 @@ import { formatDateTime } from "../format/format";
 import { dayInZone, startOfDayInZone, viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { BookingZone } from "./booking-common";
-import { QueryGate, throwProblem } from "./common";
+import { throwBookingProblem } from "./booking-errors";
+import { QueryGate } from "./common";
 
 export function BookingReschedule({
   id,
@@ -29,7 +30,7 @@ export function BookingReschedule({
     end: string;
   } | null>(null);
   const query = useQuery({
-    queryKey: ["meeting-alternatives", id, token, from],
+    queryKey: ["meeting-alternatives", id, token, from, locale],
     queryFn: async () => {
       const window = {
         from,
@@ -42,7 +43,7 @@ export function BookingReschedule({
         : await api.GET("/scheduling/invitations/{id}/availability", {
             params: { path: { id: id ?? "" }, query: window },
           });
-      if (result.error) throwProblem(result.error);
+      if (result.error) throwBookingProblem(result.error, t);
       return result.data;
     },
   });

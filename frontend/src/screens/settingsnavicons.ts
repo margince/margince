@@ -8,6 +8,7 @@ import {
   Blocks,
   BookOpen,
   Building2,
+  CalendarDays,
   ClipboardCheck,
   Database,
   Gauge,
@@ -34,6 +35,7 @@ import type { SettingsPageId } from "./settingscatalog";
  */
 export const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   account: UserRound,
+  meetings: CalendarDays,
   voice: Mic,
   agents: KeyRound,
   connections: Plug,

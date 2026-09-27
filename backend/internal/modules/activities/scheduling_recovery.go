@@ -121,13 +121,9 @@ func (s *Store) invitationAvailability(ctx context.Context, host ids.UserID, id 
 	if err != nil {
 		return nil, false, err
 	}
-	earliest := s.now().Add(time.Duration(profile.NoticeMinutes) * time.Minute)
-	latest := s.now().AddDate(0, 0, profile.HorizonDays)
-	if from.Before(earliest) {
-		from = earliest
-	}
-	if to.After(latest) {
-		to = latest
+	from, to, err = s.bookingWindow(profile, from, to)
+	if err != nil {
+		return nil, false, err
 	}
 	hours, err := s.strictHours(ctx, host)
 	if err != nil {

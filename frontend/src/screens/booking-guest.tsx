@@ -20,6 +20,7 @@ import { dayInZone, startOfDayInZone, viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { BookingFooter, BookingZone, useBookingIntent } from "./booking-common";
 
+import { throwBookingProblem } from "./booking-errors";
 import { QueryGate, throwProblem } from "./common";
 
 export const PUBLIC_BOOKING_CONSENT = { policy_version: "2026-07" };
@@ -59,7 +60,7 @@ export function BookingGuestScreen({
     },
   });
   const slots = useQuery({
-    queryKey: ["public-booking-slots", hostSlug, proposalToken, from],
+    queryKey: ["public-booking-slots", hostSlug, proposalToken, from, locale],
     enabled: profile.data?.enabled === true,
     queryFn: async () => {
       if (proposalToken) {
@@ -77,7 +78,7 @@ export function BookingGuestScreen({
             },
           },
         );
-        if (error) throwProblem(error);
+        if (error) throwBookingProblem(error, t);
         return data;
       }
 
@@ -95,7 +96,7 @@ export function BookingGuestScreen({
           },
         },
       );
-      if (error) throwProblem(error);
+      if (error) throwBookingProblem(error, t);
       return data;
     },
   });

@@ -87,7 +87,11 @@ export function BookingCalendars({
                     {...control}
                     values={blocking}
                     options={calendars
-                      .filter((item) => item.id !== calendar)
+                      .filter(
+                        (item) =>
+                          item.id !== calendar &&
+                          !(calendar === "primary" && item.primary),
+                      )
                       .map((item) => ({ value: item.id, label: item.name }))}
                     onChange={onBlocking}
                   />

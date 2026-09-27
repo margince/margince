@@ -119,6 +119,7 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
+import { MeetingSettings } from "./meeting-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OvernightGrantCard } from "./overnight-grant";
@@ -137,7 +138,6 @@ import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
-import { WorkingHoursCard } from "./working-hours";
 import "./settings.css";
 
 import { ProvidersStat, SpendStat } from "./ai-settings";
@@ -187,16 +187,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return (
-        <>
-          <AccountCard />
-          {/* When this contact is bookable. Under the identity because it is a
-              statement about this reader rather than about the workspace: their
-              own week is theirs to set, and an admin setting it for them is the
-              shape the design refuses. */}
-          <WorkingHoursCard />
-        </>
-      );
+      return <AccountCard />;
+    case "meetings":
+      return <MeetingSettings />;
     case "voice":
       return <VoiceDnaCard />;
     case "agents":

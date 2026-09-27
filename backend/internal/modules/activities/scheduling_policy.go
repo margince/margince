@@ -115,18 +115,11 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 	if !to.After(from) || to.Sub(from) > maxAvailabilityWindow {
 		return nil, false, errAvailabilityWindowTooWide
 	}
-	now := s.now()
-	earliest := now.Add(time.Duration(profile.NoticeMinutes) * time.Minute)
-	latest := now.AddDate(0, 0, profile.HorizonDays)
-	if from.Before(earliest) {
-		from = earliest
+	from, to, err = s.bookingWindow(profile, from, to)
+	if err != nil {
+		return nil, false, err
 	}
-	if to.After(latest) {
-		to = latest
-	}
-	if !to.After(from) {
-		return []slot{}, false, nil
-	}
+
 	hours, err := s.strictHours(ctx, host)
 	if err != nil {
 		return nil, false, err
@@ -137,6 +130,28 @@ func (s *Store) hostReliableAvailability(ctx context.Context, host ids.UserID, f
 	}
 	free, truncated := policySlots(from, to, duration, busy, hours)
 	return free, truncated, nil
+}
+
+func (s *Store) bookingWindow(profile crmcontracts.SchedulingProfile, from, to time.Time) (time.Time, time.Time, error) {
+	now := s.now()
+	earliest := now.Add(time.Duration(profile.NoticeMinutes) * time.Minute)
+	latest := now.AddDate(0, 0, profile.HorizonDays)
+	if !from.Before(latest) {
+		return from, to, &SchedulingArgumentError{Field: "from", Code: "booking_horizon", Message: fmt.Sprintf("This date is outside the booking window. Choose a date within the next %d days.", profile.HorizonDays)} //nolint:goconst // Request field, unrelated to the email sender role.
+	}
+	if !earliest.Before(latest) {
+		return from, to, &SchedulingArgumentError{Field: "notice_minutes", Code: "booking_limits", Message: "Booking limits leave no bookable times. Reduce minimum notice or extend the booking horizon."}
+	}
+	if !to.After(earliest) {
+		return from, to, &SchedulingArgumentError{Field: "to", Code: "booking_notice", Message: fmt.Sprintf("This window ends before bookings are allowed. Choose a future time with at least %d minutes of notice.", profile.NoticeMinutes)}
+	}
+	if from.Before(earliest) {
+		from = earliest
+	}
+	if to.After(latest) {
+		to = latest
+	}
+	return from, to, nil
 }
 
 func policySlots(from, to time.Time, duration time.Duration, busy []slot, hours WorkingHours) ([]slot, bool) {

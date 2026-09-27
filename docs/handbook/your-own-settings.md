@@ -1,7 +1,7 @@
 # Your own settings
 
-Your own settings in Margince are the five pages under **You** in Settings:
-**Account**, **Writing voice**, **Agents**, **Connections** and **Capture
+Your own settings in Margince are the six pages under **You** in Settings:
+**Account**, **Meetings**, **Writing voice**, **Agents**, **Connections** and **Capture
 activity**. Everything here changes your own seat and nobody else's, with two
 named exceptions that carry one company-wide card each — Connections and Capture
 activity.
@@ -10,7 +10,7 @@ For everything else, see [Settings](settings.md).
 
 ### How do I open my own settings?
 To open your own settings in Margince, open the account menu at the top right and choose **Settings**, then pick a page under **You**.
-The five pages are **Account** (name, password, signature, language, appearance, bookable hours), **Writing voice**, **Agents**, **Connections** and **Capture activity**.
+The six pages are **Account** (name, password, signature, language, appearance), **Meetings** (bookable hours, calendars and booking preferences), **Writing voice**, **Agents**, **Connections** and **Capture activity**.
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
@@ -62,11 +62,13 @@ You can do the same from the account menu at the top right, under **Theme**. Bot
 **System** follows your device's own light or dark setting and keeps following it.
 Also called: dark mode, light mode, appearance, colour scheme.
 
+## Meetings
+
 ### How do I set my bookable hours?
-To set when customers can book time with you in Margince, open Settings → **Account** and fill in the **Bookable hours** card.
+To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in the **Bookable hours** card.
 1. Set **Day starts** and **Day ends**.
 2. Tick your **Working days**.
-3. Choose a city in the **Timezone** dropdown, which uses the browser timezone until a choice is saved. Type the city name while the list is open to jump to it.
+3. Choose a city in the **Timezone** dropdown, which shows the timezone currently used for availability. Type the city name while the list is open to jump to it.
 4. Choose **Save working hours**.
 Until you save, the card says **Not set yet** and customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.
 Also called: working hours, availability, office hours.
@@ -75,13 +77,31 @@ The Bookable hours card is personal: "Personal setting. Only you set your
 hours." Nobody sets them for you, and you set them for nobody else. Narrowing
 them says what it costs: "Customers have fewer times to choose from."
 
+### Calendar and booking preferences
+
+Open **Settings → Meetings** to set working hours and timezone, the calendar
+that receives invitations, and other calendars whose busy events block times.
+With one connected calendar provider, Margince selects it automatically. With
+both Google Calendar and Microsoft Outlook connected, choose the provider here.
+Read-only connections must be reconnected before they can send invitations.
+
+Set the meeting duration, minimum notice, buffer and booking horizon on this
+page. Dates beyond that horizon cannot be booked; extend it here to offer later
+dates. All-day events marked busy are respected. In the booking form,
+**Find next available times** searches the rest of your booking horizon.
+
+**My booking link** remains the place to copy a reusable public link for your
+email signature, preview it, pause it or replace it. Opening meeting settings
+from a booking draft opens another tab; returning refreshes the saved setup.
+
 ### How do I share a booking link?
-Open the account menu → **My booking link**. Connect or reconnect Google Calendar
-or Outlook Calendar with permission to create invitations. Set your public name,
-meeting details and availability limits, save them, then choose **Enable bookings**.
+Open **Settings → Meetings**. Connect or reconnect Google Calendar or Outlook
+Calendar with permission to create invitations. Set your public name, company
+logo, meeting details and availability limits, then save. Open the account menu
+→ **My booking link** and choose **Enable bookings**.
 A calendar marked **Read-only calendar** is connected for reading events but
 cannot send invitations. In Settings → Connections, choose **Reconnect** and
-allow invitation access. Choose the event calendar when returning to booking.
+allow invitation access. Choose the event calendar in Settings → Meetings.
 Copy the link to share it anywhere, or choose **Copy signature link** to paste a
 clickable booking link into your email signature. Guests choose a time and enter
 their own details; you do not need to select a contact first.

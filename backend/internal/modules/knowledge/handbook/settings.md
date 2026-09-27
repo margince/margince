@@ -25,7 +25,7 @@ You see only the pages your permissions open. The Reset data page appears only w
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
 - Change your password, display name, email signature, language or theme (appearance): **Account**.
-- Set when customers can book you: **Account**, in **Bookable hours**.
+- Set when customers can book you: **Meetings**, in **Bookable hours**.
 - Set up how your drafts sound: **Writing voice**.
 - Create or revoke an API key for an AI agent: **Agents**.
 - Connect your mailbox or calendar, or import from LinkedIn: **Connections**.

@@ -9,9 +9,12 @@ contact to be selected first.
 ## Availability and calendars
 
 Each host controls their working days, daily start and end, and IANA timezone
-under Settings → Account → Bookable hours. Unset hours use 09:00–17:00 Monday to
+under Settings → Meetings → Bookable hours. Unset hours use 09:00–17:00 Monday to
 Friday in the installation timezone. The scheduling profile adds duration,
-minimum notice, a buffer on both sides, and a booking horizon. Slots advance in
+minimum notice, a buffer on both sides, and a booking horizon, in the same settings page.
+A single connected provider is selected automatically; multiple connected providers
+offer a choice. Destination and additional blocking calendars are configured here,
+while My booking link controls sharing, pausing and replacing the public URL. Slots advance in
 15-minute increments in the host's timezone; their duration is independent of
 that increment. Guests can choose their display timezone.
 
@@ -28,6 +31,11 @@ their exact duration; the exclusion constraint uses half-open intervals so
 adjacent meetings can coexist. Older reservations retain their historical
 one-hour exclusion until explicitly changed. Calendar capture preserves the
 provider's duration when it is supplied.
+
+A search entirely beyond the booking horizon or before minimum notice returns a
+specific validation error rather than an empty calendar. The invitation screen
+shows the last bookable date and can search the remaining horizon in bounded
+windows. All-day events marked busy always block booking.
 
 The server validates hours, notice, horizon, duration and live occupancy when an
 invitation is requested or moved. A host lock serializes local reservations.

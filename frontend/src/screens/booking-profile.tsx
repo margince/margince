@@ -1,40 +1,26 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Copy, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Field,
-  TextInput,
-} from "../design-system/atoms";
+import { Badge, Button, TextInput } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
-import { BookingCalendars } from "./booking-calendars";
 import { BookingBack } from "./booking-common";
 import { QueryGate, throwProblem } from "./common";
+import { useSchedulingProfile } from "./scheduling-profile-query";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
 export function BookingProfileScreen() {
   const t = useT();
-  const query = useQuery({
-    queryKey: ["scheduling-profile"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/scheduling/profile");
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
+  const query = useSchedulingProfile();
   return (
     <div className="book-page">
       <BookingBack />
@@ -62,7 +48,6 @@ export function BookingProfileScreen() {
 function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const client = useQueryClient();
-  const [form, setForm] = useState(profile);
   const calendar = useBookingCalendar(profile.provider, false);
   const [replace, setReplace] = useState(false);
   const signature = useMemo(() => {
@@ -87,9 +72,13 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
     remedy: t("scheduling.copyFallback"),
   });
   const save = useMutation({
-    mutationFn: async (value: Profile) => {
+    mutationFn: async (
+      value: Partial<Pick<Profile, "enabled" | "replace_link">>,
+    ) => {
+      const latest = await api.GET("/scheduling/profile");
+      if (latest.error) throwProblem(latest.error);
       const { data, error } = await api.PUT("/scheduling/profile", {
-        body: value,
+        body: { ...latest.data, ...value },
       });
       if (error) throwProblem(error);
       return data;
@@ -97,7 +86,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
     onSuccess: (value) => client.setQueryData(["scheduling-profile"], value),
   });
   return (
-    <div className="book-profile-grid">
+    <div className="book-form">
       <Panel title={t("scheduling.myLink")} tone="accent">
         <PanelBody>
           <Badge tone={profile.enabled ? "success" : "default"}>
@@ -148,9 +137,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
           <div className="book-actions">
             <Button
               disabled={save.isPending}
-              onClick={() =>
-                save.mutate({ ...profile, enabled: !profile.enabled })
-              }
+              onClick={() => save.mutate({ enabled: !profile.enabled })}
             >
               {t(profile.enabled ? "scheduling.pause" : "scheduling.resume")}
             </Button>
@@ -169,7 +156,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
             pending={save.isPending}
             onConfirm={() =>
               save.mutate(
-                { ...profile, replace_link: true },
+                { replace_link: true },
                 { onSuccess: () => setReplace(false) },
               )
             }
@@ -180,195 +167,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
           <ErrorLine error={save.error} />
         </PanelBody>
       </Panel>
-      <Panel title={t("scheduling.settings")}>
-        <PanelBody>
-          <form
-            className="book-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              save.mutate(form);
-            }}
-          >
-            <Field label={t("scheduling.provider")}>
-              {(control) => (
-                <Select
-                  {...control}
-                  value={form.provider}
-                  options={[
-                    { value: "", label: t("scheduling.chooseProvider") },
-                    { value: "gcal", label: "Google Calendar" },
-                    { value: "graphcal", label: "Microsoft Outlook" },
-                  ]}
-                  onChange={(value) => {
-                    if (
-                      value === "" ||
-                      value === "gcal" ||
-                      value === "graphcal"
-                    )
-                      setForm({
-                        ...form,
-                        provider: value,
-                        calendar_id: "primary",
-                        blocking_calendars: [],
-                      });
-                  }}
-                />
-              )}
-            </Field>
-            <BookingCalendars
-              provider={form.provider}
-              calendar={form.calendar_id}
-              blocking={form.blocking_calendars ?? []}
-              onCalendar={(calendar_id) => setForm({ ...form, calendar_id })}
-              onBlocking={(blocking_calendars) =>
-                setForm({ ...form, blocking_calendars })
-              }
-            />
-            <Field label={t("scheduling.hostName")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  required
-                  value={form.host_name ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, host_name: e.target.value })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={t("scheduling.companyName")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={form.company_name ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, company_name: e.target.value })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={t("scheduling.logo")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  type="url"
-                  value={form.logo_url ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, logo_url: e.target.value })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={t("scheduling.subject")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                />
-              )}
-            </Field>
-            <Field label={t("scheduling.location")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={form.location}
-                  onChange={(e) =>
-                    setForm({ ...form, location: e.target.value })
-                  }
-                />
-              )}
-            </Field>
-            <Checkbox
-              label={t("scheduling.emailReminder")}
-              checked={form.email_reminder ?? false}
-              onChange={(event) =>
-                setForm({ ...form, email_reminder: event.target.checked })
-              }
-            />
-            <p className="t-caption">{t("scheduling.reminderHelp")}</p>
-            <div className="book-policy-fields">
-              <Field label={t("scheduling.duration")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="number"
-                    min={15}
-                    max={480}
-                    value={form.duration_minutes}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        duration_minutes: Number(e.target.value),
-                      })
-                    }
-                  />
-                )}
-              </Field>
-              <Field label={t("scheduling.notice")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="number"
-                    min={0}
-                    max={10080}
-                    value={form.notice_minutes}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        notice_minutes: Number(e.target.value),
-                      })
-                    }
-                  />
-                )}
-              </Field>
-              <Field label={t("scheduling.buffer")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="number"
-                    min={0}
-                    max={120}
-                    value={form.buffer_minutes}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        buffer_minutes: Number(e.target.value),
-                      })
-                    }
-                  />
-                )}
-              </Field>
-              <Field label={t("scheduling.horizon")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="number"
-                    min={1}
-                    max={90}
-                    value={form.horizon_days}
-                    onChange={(e) =>
-                      setForm({ ...form, horizon_days: Number(e.target.value) })
-                    }
-                  />
-                )}
-              </Field>
-            </div>
-            <div className="book-actions">
-              <Button type="submit" variant="primary" disabled={save.isPending}>
-                {t("scheduling.save")}
-              </Button>
-              <Button
-                onClick={() => navigate({ screen: "settings", id: "account" })}
-              >
-                {t("scheduling.hours")}
-              </Button>
-            </div>
-          </form>
-          <ErrorLine error={save.error} />
-        </PanelBody>
-      </Panel>
+      <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
 import {
   briefEmpty,
@@ -1125,7 +1125,7 @@ export type MockApiOptions = Readonly<{
 }>;
 
 export async function mockApi(
-  target: Page,
+  target: Page | BrowserContext,
   options?: MockApiOptions,
 ): Promise<void> {
   if (process.env.BASE_URL) {

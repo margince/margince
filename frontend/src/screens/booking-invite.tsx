@@ -10,14 +10,17 @@ import { MeetingSlots } from "../design-system/meetingslots";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordPicker } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { dayInZone, startOfDayInZone, viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useInviteAvailability } from "./booking-availability";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack, BookingZone, useBookingIntent } from "./booking-common";
 import { BookingProposal } from "./booking-proposal";
 import { BookingSetup } from "./booking-setup";
 import { QueryGate, throwProblem } from "./common";
+import { useSchedulingProfile } from "./scheduling-profile-query";
+import { useWorkingHours } from "./working-hours";
 
 type Request = components["schemas"]["MeetingInvitationRequest"];
 export function BookingInviteScreen({
@@ -35,6 +38,8 @@ export function BookingInviteScreen({
   const [editedSubject, setSubject] = useState<string | null>(null);
   const [editedLocation, setLocation] = useState<string | null>(null);
   const [description, setDescription] = useState("");
+  const [searchAhead, setSearchAhead] = useState(false);
+  const hours = useWorkingHours(true);
   const [from, setFrom] = useState(() => new Date().toISOString());
   const [editedDuration, setDuration] = useState<number | null>(null);
   const [selected, setSelected] = useState<{
@@ -52,41 +57,27 @@ export function BookingInviteScreen({
       return data;
     },
   });
-  const profile = useQuery({
-    queryKey: ["scheduling-profile"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/scheduling/profile");
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  const subject = editedSubject ?? profile.data?.title ?? t("book.subject");
-  const location = editedLocation ?? profile.data?.location ?? "";
-  const duration = editedDuration ?? profile.data?.duration_minutes ?? 30;
+  const profile = useSchedulingProfile(true);
+  const defaults = profile.data ?? {
+    title: t("book.subject"),
+    location: "",
+    duration_minutes: 30,
+    provider: "",
+  };
+  const subject = editedSubject ?? defaults.title;
+  const location = editedLocation ?? defaults.location;
+  const duration = editedDuration ?? defaults.duration_minutes;
   const attendee = email ?? bookingRecipient(contact.data);
-  const { ready, connections } = useBookingCalendar(
-    profile.data?.provider ?? "",
-    false,
-  );
+  const { ready, connections } = useBookingCalendar(defaults.provider, false);
   const configured = ready;
-  const slots = useQuery({
-    queryKey: ["reliable-availability", from, duration],
-    enabled: configured,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/availability", {
-        params: {
-          query: {
-            from,
-            to: new Date(new Date(from).getTime() + 7 * 86400000).toISOString(),
-            duration_minutes: duration,
-            reliable: true,
-          },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
+  const { earliest, latest, outsideHorizon, slots } = useInviteAvailability(
+    from,
+    duration,
+    searchAhead,
+    configured,
+    profile.data,
+    hours.data,
+  );
   const send = useMutation({
     mutationFn: async (body: Request) => {
       const { data, error } = await api.POST("/scheduling/invitations", {
@@ -144,15 +135,7 @@ export function BookingInviteScreen({
                   setSelectedContactId(value.id);
                   setEmail(null);
                 }}
-                searchTargets={async (q) => {
-                  const { data, error } = await api.GET("/search", {
-                    params: { query: { q, limit: 10 } },
-                  });
-                  if (error) throwProblem(error);
-                  return data.data
-                    .filter((hit) => hit.type === "contact")
-                    .map((hit) => ({ id: hit.id, name: hit.title ?? hit.id }));
-                }}
+                searchTargets={searchBookingContacts}
               />
               <Field label={t("book.attendee")}>
                 {(control) => (
@@ -265,10 +248,13 @@ export function BookingInviteScreen({
                     <TextInput
                       {...control}
                       type="date"
+                      min={dayInZone(earliest, zone)}
+                      max={dayInZone(latest, zone)}
                       value={dayInZone(new Date(from).getTime(), zone)}
                       onChange={(e) => {
                         if (e.target.value) {
                           setFrom(startOfDayInZone(e.target.value, zone));
+                          setSearchAhead(false);
                           setSelected(null);
                           setOptions([]);
                         }
@@ -276,6 +262,15 @@ export function BookingInviteScreen({
                     />
                   )}
                 </Field>
+                <p className="t-caption">
+                  {t("scheduling.bookingUntil", {
+                    date: formatDate(
+                      new Date(latest).toISOString(),
+                      locale,
+                      zone,
+                    ),
+                  })}
+                </p>
                 {mode === "propose" && (
                   <p className="t-caption">
                     {plural("scheduling.selectOptions", options.length, {
@@ -284,9 +279,12 @@ export function BookingInviteScreen({
                   </p>
                 )}
                 <BookingZone value={zone} onChange={setZone} />
-                {!configured ? (
-                  <p>{t("scheduling.finishSetup")}</p>
-                ) : (
+                <AvailabilityNotice
+                  hours={hours}
+                  configured={configured}
+                  outsideHorizon={outsideHorizon}
+                />
+                {configured && !outsideHorizon && (
                   <QueryGate pendingLabel={t("common.loading")} query={slots}>
                     {(value) => (
                       <>
@@ -308,7 +306,16 @@ export function BookingInviteScreen({
                               );
                             else setSelected(slot);
                           }}
-                          empty={t("scheduling.noTimes")}
+                          empty={t(
+                            searchAhead
+                              ? "scheduling.noTimesHorizon"
+                              : "scheduling.noTimes",
+                          )}
+                        />
+                        <EmptyAvailability
+                          empty={value.slots.length === 0}
+                          searched={searchAhead}
+                          onSearch={() => setSearchAhead(true)}
                         />
                         {value.truncated && (
                           <Button
@@ -382,7 +389,73 @@ function InviteSetup({
       {(pending || connectionsPending) && <p>{t("common.loading")}</p>}
       <ErrorLine error={error} />
       {profile && !pending && !connectionsPending && !configured && (
-        <BookingSetup key={profile.provider} profile={profile} />
+        <BookingSetup />
+      )}
+    </>
+  );
+}
+
+function EmptyAvailability({
+  empty,
+  searched,
+  onSearch,
+}: Readonly<{ empty: boolean; searched: boolean; onSearch: () => void }>) {
+  const t = useT();
+  if (!empty) return null;
+  return (
+    <div className="book-form">
+      <p className="t-caption">{t("scheduling.noTimesHelp")}</p>
+      <p className="t-caption">{t("scheduling.allDayBlocks")}</p>
+      {!searched && (
+        <Button onClick={onSearch}>{t("scheduling.findNext")}</Button>
+      )}
+      <a href="#/settings/meetings" target="_blank" rel="noreferrer">
+        {t("scheduling.openSettings")}
+      </a>
+    </div>
+  );
+}
+
+async function searchBookingContacts(q: string) {
+  const { data, error } = await api.GET("/search", {
+    params: { query: { q, limit: 10 } },
+  });
+  if (error) throwProblem(error);
+  return data.data
+    .filter((hit) => hit.type === "contact")
+    .map((hit) => ({ id: hit.id, name: hit.title ?? hit.id }));
+}
+
+function AvailabilityNotice({
+  hours,
+  configured,
+  outsideHorizon,
+}: Readonly<{
+  hours: ReturnType<typeof useWorkingHours>;
+  configured: boolean;
+  outsideHorizon: boolean;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {hours.data?.working_hours && (
+        <p className="t-caption">
+          {t("scheduling.effectiveHours", {
+            start: hours.data.working_hours.start_time,
+            end: hours.data.working_hours.end_time,
+            zone: hours.data.working_hours.timezone,
+          })}
+        </p>
+      )}
+      <ErrorLine error={hours.error} />
+      {!configured && <p>{t("scheduling.finishSetup")}</p>}
+      {configured && outsideHorizon && (
+        <div className="book-form">
+          <p>{t("scheduling.outsideHorizon")}</p>
+          <a href="#/settings/meetings" target="_blank" rel="noreferrer">
+            {t("scheduling.openSettings")}
+          </a>
+        </div>
       )}
     </>
   );

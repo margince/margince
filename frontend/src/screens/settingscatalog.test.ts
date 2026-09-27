@@ -66,6 +66,7 @@ describe("the scope each page declares", () => {
   const DECLARED_SCOPE: Record<SettingsPageId, SettingsScope> = {
     // Wholly the reader's own.
     account: "self",
+    meetings: "self",
     voice: "self",
     agents: "self",
 
@@ -189,6 +190,7 @@ describe("what each page lets a reader change", () => {
   const DECLARED_CHANGES: Record<SettingsPageId, string> = {
     // The reader's own rows, with no grant between them and the control.
     account: "always",
+    meetings: "always",
     agents: "always",
     connections: "always",
     "capture-activity": "always",
@@ -364,6 +366,7 @@ describe("who may open what", () => {
     // first paint.
     expect(visibleIds(nobody)).toEqual([
       "account",
+      "meetings",
       "voice",
       "agents",
       "connections",
@@ -904,10 +907,11 @@ describe("what the rail carries and what it leaves behind", () => {
   it("gives a rep the pages they work in, and only those", () => {
     const reach = settingsReach(seededRep);
     expect(reach.acts.map((page) => page.id)).toEqual([
-      // Their own five, minus Voice — a rep holds voice_profile create and
+      // Their own six, minus Voice — a rep holds voice_profile create and
       // update, so Voice IS theirs; it is here for that reason and not because
       // the page sits under their own heading.
       "account",
+      "meetings",
       "voice",
       "agents",
       "connections",

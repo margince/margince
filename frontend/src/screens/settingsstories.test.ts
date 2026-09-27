@@ -122,7 +122,7 @@ describe("the settings stories are filed where the product files them", () => {
   // health/Dead work`; 95 → 96 for `Governance/System health/Mail capture
   // checks`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(96);
+    expect(settingsStories.length).toBe(97);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

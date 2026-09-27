@@ -14,7 +14,7 @@ import { meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
 import { WorkingHoursCard } from "./working-hours";
 
-// Settings → Account → when you are bookable. The reader's own setting, so no
+// Settings → Meetings → when you are bookable. The reader's own setting, so no
 // grant fixture appears below: there is no seat that could be refused it, and
 // an admin does not set a colleague's week here.
 //
@@ -83,6 +83,17 @@ afterEach(() => {
 });
 
 describe("WorkingHoursCard", () => {
+  it("shows the effective server timezone before the first save", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(false, { ...FALLBACK, timezone: "Asia/Bangkok" }).fetchMock,
+    );
+    render(<WorkingHoursCard />);
+    expect(
+      (await screen.findByRole("combobox", { name: "Timezone" })).textContent,
+    ).toContain("Bangkok");
+  });
+
   it("offers the fallback as a starting point rather than as somebody's decision", async () => {
     vi.stubGlobal("fetch", backendFor(false).fetchMock);
     render(<WorkingHoursCard />);

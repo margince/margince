@@ -34,3 +34,13 @@ export const CalendarSetupDark: Story = {
   ...CalendarSetup,
   globals: { theme: "dark" },
 };
+
+export const BusyWeek: Story = {
+  render: bookingFrame(
+    () => <BookingInviteScreen contactId={bookingContact.id} />,
+    {
+      "GET /availability": () => jsonResponse({ slots: [], truncated: false }),
+    },
+  ),
+};
+export const BusyWeekDark: Story = { ...BusyWeek, globals: { theme: "dark" } };

@@ -11,6 +11,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   bookingConnection,
   bookingContact,
+  bookingHours,
   bookingInvitation,
   bookingProfile,
   bookingSlots,
@@ -22,12 +23,6 @@ import { BookingProfileScreen } from "./booking-profile";
 import { mount, view } from "./contactpage.testkit";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-const readyCalendar = {
-  id: "ada@example.test",
-  name: "Work calendar",
-  writable: true,
-  primary: true,
-};
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -44,49 +39,34 @@ it("books from an empty Meetings tab with this contact selected", async () => {
   );
   expect(window.location.hash).toBe("#/book/contact-p-1");
 });
-it("selects an already-connected calendar without leaving or losing the invitation", async () => {
+it("opens meeting settings in another tab without discarding the invitation draft", async () => {
   const user = userEvent.setup();
-  const saved: unknown[] = [];
   installFetchStub({
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, provider: "", enabled: false }),
-    "GET /scheduling/calendars": () => jsonResponse([readyCalendar]),
     [`GET /contacts/${bookingContact.id}`]: () => jsonResponse(bookingContact),
-    "GET /availability": () =>
-      jsonResponse({ slots: bookingSlots, truncated: false }),
-    "PUT /scheduling/profile": async (req) => {
-      const body = req;
-      saved.push(body);
-      return jsonResponse({
-        ...bookingProfile,
-        enabled: false,
-        calendar_id: readyCalendar.id,
-      });
-    },
+    "GET /me/working-hours": () => jsonResponse(bookingHours),
   });
   render(
     <StoryProviders>
       <BookingInviteScreen contactId={bookingContact.id} />
     </StoryProviders>,
   );
-  expect(await screen.findByText(/Invitation access granted/)).toBeTruthy();
+  const settings = await screen.findByRole("link", {
+    name: "Open meeting settings",
+  });
+  expect(settings.getAttribute("href")).toBe("#/settings/meetings");
+  expect(settings.getAttribute("target")).toBe("_blank");
   await user.type(
     screen.getByLabelText("Message for your guest"),
-    "Discuss our project",
+    "Keep my draft",
   );
-  await user.click(screen.getByRole("button", { name: "Use this calendar" }));
-  await waitFor(() => expect(saved).toHaveLength(1));
-  expect(saved[0]).toMatchObject({ provider: "gcal", enabled: false });
+  expect(screen.queryByLabelText("Calendar provider")).toBeNull();
+  expect(screen.queryByLabelText("Invitation calendar")).toBeNull();
   expect(screen.getByLabelText("Message for your guest")).toHaveProperty(
     "value",
-    "Discuss our project",
-  );
-  expect(screen.getByDisplayValue(bookingContact.primary_email)).toBeTruthy();
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("button", { name: "Use this calendar" }),
-    ).toBeNull(),
+    "Keep my draft",
   );
 });
 for (const status of [
@@ -154,43 +134,6 @@ it("shows the personal proposal's title, duration and location", async () => {
   expect(screen.getByText("60 min")).toBeTruthy();
 });
 
-it("keeps settings changed in another tab when saving the calendar", async () => {
-  const user = userEvent.setup();
-  let latest = { ...bookingProfile, provider: "", enabled: true };
-  const saved: unknown[] = [];
-  installFetchStub({
-    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
-    "GET /scheduling/profile": () => jsonResponse(latest),
-    "GET /scheduling/calendars": () => jsonResponse([readyCalendar]),
-    [`GET /contacts/${bookingContact.id}`]: () => jsonResponse(bookingContact),
-    "GET /availability": () => jsonResponse({ slots: [], truncated: false }),
-    "PUT /scheduling/profile": (body) => {
-      saved.push(body);
-      return jsonResponse({ ...latest, provider: "gcal" });
-    },
-  });
-  render(
-    <StoryProviders>
-      <BookingInviteScreen contactId={bookingContact.id} />
-    </StoryProviders>,
-  );
-  await screen.findByText(/Invitation access granted/);
-  latest = {
-    ...latest,
-    enabled: false,
-    title: "Changed in another tab",
-    buffer_minutes: 25,
-  };
-  await user.click(screen.getByRole("button", { name: "Use this calendar" }));
-  await waitFor(() => expect(saved).toHaveLength(1));
-  expect(saved[0]).toMatchObject({
-    enabled: false,
-    title: "Changed in another tab",
-    buffer_minutes: 25,
-    provider: "gcal",
-  });
-});
-
 it("refreshes the worker's version after a cancellation conflict", async () => {
   const user = userEvent.setup();
   let version = 1;
@@ -248,54 +191,6 @@ it("refreshes the worker's version after a cancellation conflict", async () => {
   ]);
 });
 
-it("keeps calendar-error recovery in another tab", async () => {
-  installFetchStub({
-    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
-    "GET /scheduling/profile": () =>
-      jsonResponse({ ...bookingProfile, provider: "" }),
-    "GET /scheduling/calendars": () =>
-      jsonResponse(
-        { code: "unavailable", title: "Calendar unavailable", status: 503 },
-        503,
-      ),
-    [`GET /contacts/${bookingContact.id}`]: () => jsonResponse(bookingContact),
-  });
-  render(
-    <StoryProviders>
-      <BookingInviteScreen contactId={bookingContact.id} />
-    </StoryProviders>,
-  );
-  const recovery = await screen.findByRole("link", {
-    name: "Open calendar connections",
-  });
-  expect(recovery.getAttribute("target")).toBe("_blank");
-  expect(recovery.getAttribute("href")).toBe("#/settings/connections");
-});
-
-it("explains that an expired calendar needs reconnection", async () => {
-  installFetchStub({
-    "GET /connectors": () =>
-      jsonResponse({
-        data: [{ ...bookingConnection, status: "reauth_required" }],
-      }),
-    "GET /scheduling/profile": () => jsonResponse(bookingProfile),
-    [`GET /contacts/${bookingContact.id}`]: () => jsonResponse(bookingContact),
-  });
-  render(
-    <StoryProviders>
-      <BookingInviteScreen contactId={bookingContact.id} />
-    </StoryProviders>,
-  );
-  expect(
-    await screen.findByText(
-      "Your calendar connection has expired. Reconnect it to send invitations.",
-    ),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Use this calendar" }),
-  ).toHaveProperty("disabled", true);
-});
-
 it("warns when an active public page cannot send calendar invitations", async () => {
   installFetchStub({
     "GET /connectors": () =>
@@ -309,8 +204,36 @@ it("warns when an active public page cannot send calendar invitations", async ()
   );
   expect(
     await screen.findByText(
-      "Your booking page is active, but calendar invitations are unavailable. Check the calendar connection below or pause the page.",
+      "Your booking page is active, but calendar invitations are unavailable. Open meeting settings to check the connection or pause the page.",
     ),
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Pause bookings" })).toBeTruthy();
+});
+
+it("pauses a public link without overwriting meeting settings saved in another tab", async () => {
+  const user = userEvent.setup();
+  let latest = { ...bookingProfile, enabled: true };
+  const writes: unknown[] = [];
+  installFetchStub({
+    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
+    "GET /scheduling/profile": () => jsonResponse(latest),
+    "PUT /scheduling/profile": (body) => {
+      writes.push(body);
+      return jsonResponse({ ...latest, enabled: false });
+    },
+  });
+  render(
+    <StoryProviders>
+      <BookingProfileScreen />
+    </StoryProviders>,
+  );
+  const pause = await screen.findByRole("button", { name: "Pause bookings" });
+  latest = { ...latest, horizon_days: 90, calendar_id: "another-calendar" };
+  await user.click(pause);
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    enabled: false,
+    horizon_days: 90,
+    calendar_id: "another-calendar",
+  });
 });

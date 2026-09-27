@@ -69,6 +69,33 @@ export const en = {
   "scheduling.settings": "Meeting settings",
   "scheduling.save": "Save settings",
   "scheduling.saved": "Settings saved",
+  "settings.tab.meetings": "Meetings",
+  "settings.page.meetings.sub":
+    "Working hours, calendars and booking preferences.",
+  "scheduling.missingSavedCalendar":
+    "The saved event calendar is unavailable. Choose another calendar before enabling bookings.",
+  "scheduling.providerChanged":
+    "Your saved calendar provider is unavailable. Saving will use the connected calendar shown here.",
+  "scheduling.windowHorizon":
+    "This date is beyond the host’s booking window. Choose an earlier date.",
+  "scheduling.windowNotice":
+    "This date is too soon for the required notice. Choose a later date.",
+  "scheduling.windowLimits":
+    "The minimum notice leaves no time within the booking window. The host needs to adjust meeting settings.",
+  "scheduling.openSettings": "Open meeting settings",
+  "scheduling.setupInSettings":
+    "Set up calendars and availability in Settings → Meetings; this draft stays open.",
+  "scheduling.noTimesHelp":
+    "Busy events, working hours and booking limits determine availability.",
+  "scheduling.findNext": "Find next available times",
+  "scheduling.noTimesHorizon":
+    "No available times within the booking horizon. Review meeting settings and calendar events.",
+  "scheduling.allDayBlocks":
+    "All-day events marked busy also block available times.",
+  "scheduling.effectiveHours": "Bookable hours: {start} to {end} ({zone}).",
+  "scheduling.bookingUntil": "Bookings available through {date}.",
+  "scheduling.outsideHorizon":
+    "This date is outside the booking horizon. Choose an earlier date or update meeting settings.",
   "scheduling.provider": "Calendar provider",
   "scheduling.proposalChanged":
     "This link keeps the details you already created. You can create a new link for your changes; the previous link remains valid until it expires.",
@@ -76,10 +103,9 @@ export const en = {
   "scheduling.calendar": "Event calendar",
   "scheduling.bookContact": "Book a meeting",
   "scheduling.setupCalendar": "Choose your booking calendar",
-  "scheduling.selectCalendarHelp":
-    "Choose a calendar for invitations and public bookings; meeting details stay here.",
+
   "scheduling.chooseProvider": "Choose a calendar provider",
-  "scheduling.useCalendar": "Use this calendar",
+
   "scheduling.readOnlyCalendar":
     "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
   "scheduling.disconnectedCalendar":
@@ -91,14 +117,14 @@ export const en = {
   "scheduling.meetingChanged":
     "The meeting changed. Review the updated details and try again.",
   "scheduling.publicCalendarUnavailable":
-    "Your booking page is active, but calendar invitations are unavailable. Check the calendar connection below or pause the page.",
+    "Your booking page is active, but calendar invitations are unavailable. Open meeting settings to check the connection or pause the page.",
   "scheduling.manageConnection": "Open calendar connections",
   "scheduling.calendarConnected":
     "Connected: {account}. Invitation access granted.",
   "scheduling.noWritableCalendar":
     "No editable calendar is available. Choose another provider or check your calendar permissions.",
   "scheduling.finishSetup":
-    "Choose your booking calendar above to see available times.",
+    "Complete calendar setup in meeting settings to choose available times.",
   "scheduling.readOnlyBadge": "Read-only calendar",
   "scheduling.connect": "Connect or reconnect calendar",
   "scheduling.connectionHelp":
@@ -112,7 +138,7 @@ export const en = {
   "scheduling.notice": "Minimum notice in minutes",
   "scheduling.buffer": "Buffer in minutes",
   "scheduling.horizon": "Booking horizon in days",
-  "scheduling.hours": "Edit bookable hours",
+
   "scheduling.invite": "Send an invite",
   "scheduling.contact": "Who are you meeting?",
   "scheduling.guestAgenda": "What would you like to discuss?",
@@ -8741,8 +8767,10 @@ export const en = {
   "workingHours.end": "Day ends",
   "workingHours.days": "Working days",
   "workingHours.timezone": "Timezone",
+  "workingHours.browserZone":
+    "Your browser uses {zone}. The selection above is the timezone used for availability.",
   "workingHours.timezoneHelp":
-    "Choose a city in the same timezone. Type its name while the list is open to jump to it. The browser timezone is used until a choice is saved.",
+    "Timezone used to calculate availability. Search for a city or region.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
   "workingHours.narrowed": "Customers have fewer times to choose from.",
   "workingHours.saveFailed": "Working hours not saved",

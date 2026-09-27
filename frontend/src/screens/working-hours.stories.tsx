@@ -17,7 +17,7 @@ import { WorkingHoursCard } from "./working-hours";
 // offered meanwhile, and a window they chose.
 
 const meta: Meta<typeof WorkingHoursCard> = {
-  title: "Settings/You/Account/Working hours",
+  title: "Settings/You/Meetings/Working hours",
   component: WorkingHoursCard,
   parameters: { layout: "padded" },
 };

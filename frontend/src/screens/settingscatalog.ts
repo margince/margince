@@ -250,6 +250,13 @@ export const SETTINGS_PAGES = [
     changes: always,
   },
   {
+    id: "meetings",
+    group: "me",
+    scope: "self",
+    requires: always,
+    changes: always,
+  },
+  {
     id: "voice",
     group: "me",
     scope: "self",

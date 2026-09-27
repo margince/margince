@@ -40,3 +40,13 @@ export const bookingConnection = {
   account_label: "ada@example.test",
   scopes: ["https://www.googleapis.com/auth/calendar.events.owned"],
 };
+
+export const bookingHours = {
+  chosen: true,
+  working_hours: {
+    start_time: "09:00",
+    end_time: "17:00",
+    days: [1, 2, 3, 4, 5],
+    timezone: "Europe/Berlin",
+  },
+};

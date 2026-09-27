@@ -77,6 +77,33 @@ export const vi = {
   "scheduling.settings": "Cài đặt cuộc họp",
   "scheduling.save": "Lưu cài đặt",
   "scheduling.saved": "Đã lưu cài đặt",
+  "settings.tab.meetings": "Cuộc họp",
+  "settings.page.meetings.sub": "Giờ làm việc, lịch và tùy chọn đặt lịch.",
+  "scheduling.missingSavedCalendar":
+    "Lịch sự kiện đã lưu không khả dụng. Chọn lịch khác trước khi bật đặt lịch.",
+  "scheduling.providerChanged":
+    "Nhà cung cấp lịch đã lưu không khả dụng. Khi lưu, lịch đã kết nối hiển thị ở đây sẽ được sử dụng.",
+  "scheduling.windowHorizon":
+    "Ngày này nằm ngoài khoảng thời gian cho phép đặt lịch của người tổ chức. Chọn ngày sớm hơn.",
+  "scheduling.windowNotice":
+    "Ngày này không đáp ứng thời gian báo trước. Chọn ngày muộn hơn.",
+  "scheduling.windowLimits":
+    "Thời gian báo trước không để lại thời gian nào trong khoảng cho phép đặt lịch. Người tổ chức cần điều chỉnh cài đặt cuộc họp.",
+  "scheduling.openSettings": "Mở cài đặt cuộc hẹn",
+  "scheduling.setupInSettings":
+    "Thiết lập lịch và giờ trống trong Cài đặt → Cuộc hẹn; bản nháp này vẫn mở.",
+  "scheduling.noTimesHelp":
+    "Sự kiện bận, giờ làm việc và giới hạn đặt lịch quyết định thời gian trống.",
+  "scheduling.findNext": "Tìm giờ trống tiếp theo",
+  "scheduling.noTimesHorizon":
+    "Không có giờ trống trong khoảng cho phép đặt lịch. Kiểm tra cài đặt cuộc hẹn và sự kiện lịch.",
+  "scheduling.allDayBlocks":
+    "Sự kiện cả ngày được đánh dấu bận cũng chặn giờ trống.",
+  "scheduling.effectiveHours":
+    "Giờ cho phép đặt lịch: {start} đến {end} ({zone}).",
+  "scheduling.bookingUntil": "Có thể đặt lịch đến {date}.",
+  "scheduling.outsideHorizon":
+    "Ngày này nằm ngoài khoảng cho phép đặt lịch. Chọn ngày sớm hơn hoặc cập nhật cài đặt cuộc hẹn.",
   "scheduling.provider": "Nhà cung cấp lịch",
   "scheduling.proposalChanged":
     "Liên kết này giữ nguyên thông tin đã tạo. Bạn có thể tạo liên kết mới cho các thay đổi; liên kết cũ vẫn có hiệu lực đến khi hết hạn.",
@@ -84,10 +111,9 @@ export const vi = {
   "scheduling.calendar": "Lịch cuộc hẹn",
   "scheduling.bookContact": "Đặt cuộc họp",
   "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
-  "scheduling.selectCalendarHelp":
-    "Chọn lịch cho lời mời và đặt lịch công khai; thông tin cuộc họp vẫn được giữ.",
+
   "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
-  "scheduling.useCalendar": "Sử dụng lịch này",
+
   "scheduling.readOnlyCalendar":
     "Lịch đã kết nối để đọc sự kiện. Kết nối lại và cấp quyền gửi lời mời để tạo, đổi lịch và hủy cuộc họp.",
   "scheduling.disconnectedCalendar":
@@ -98,13 +124,14 @@ export const vi = {
   "scheduling.meetingChanged":
     "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
   "scheduling.publicCalendarUnavailable":
-    "Trang đặt lịch đang hoạt động nhưng chưa thể gửi lời mời lịch. Kiểm tra kết nối lịch bên dưới hoặc tạm dừng trang.",
+    "Trang đặt lịch đang hoạt động nhưng không thể gửi lời mời lịch. Mở cài đặt cuộc hẹn để kiểm tra kết nối hoặc tạm dừng trang.",
   "scheduling.manageConnection": "Mở kết nối lịch",
   "scheduling.calendarConnected":
     "Đã kết nối: {account}. Đã cấp quyền gửi lời mời.",
   "scheduling.noWritableCalendar":
     "Không có lịch có thể chỉnh sửa. Chọn nhà cung cấp khác hoặc kiểm tra quyền truy cập lịch.",
-  "scheduling.finishSetup": "Chọn lịch đặt cuộc họp ở trên để xem giờ trống.",
+  "scheduling.finishSetup":
+    "Hoàn tất thiết lập lịch trong cài đặt cuộc hẹn để chọn giờ trống.",
   "scheduling.readOnlyBadge": "Lịch chỉ đọc",
   "scheduling.connect": "Kết nối hoặc kết nối lại lịch",
   "scheduling.connectionHelp":
@@ -118,7 +145,7 @@ export const vi = {
   "scheduling.notice": "Thời gian báo trước tính bằng phút",
   "scheduling.buffer": "Thời gian đệm tính bằng phút",
   "scheduling.horizon": "Khoảng thời gian đặt lịch tính bằng ngày",
-  "scheduling.hours": "Chỉnh sửa giờ nhận lịch",
+
   "scheduling.invite": "Gửi lời mời",
   "scheduling.contact": "Bạn sẽ gặp ai?",
   "scheduling.guestAgenda": "Bạn muốn trao đổi về điều gì?",
@@ -8525,8 +8552,10 @@ export const vi = {
   "workingHours.end": "Kết thúc ngày",
   "workingHours.days": "Những ngày bạn làm việc",
   "workingHours.timezone": "Múi giờ của bạn",
+  "workingHours.browserZone":
+    "Trình duyệt của bạn sử dụng {zone}. Lựa chọn ở trên là múi giờ dùng để tính thời gian trống.",
   "workingHours.timezoneHelp":
-    "Chọn một thành phố có cùng múi giờ. Nhập tên khi danh sách đang mở để chuyển đến thành phố đó. Múi giờ của trình duyệt được dùng cho đến khi lưu lựa chọn.",
+    "Múi giờ dùng để tính thời gian trống. Tìm theo thành phố hoặc khu vực.",
   "workingHours.narrowedTitle": "Bạn nhận lịch trong ít thời gian hơn",
   "workingHours.narrowed":
     "Sẽ có ít khách tìm được giờ hẹn hơn. Đó là thay đổi bạn vừa lưu, không phải lỗi.",

@@ -69,3 +69,59 @@ func TestEveryRequiredMeetingBodyIDIsNamedWhenAbsent(t *testing.T) {
 		t.Fatalf("missing contact was not identified: %+v", fault)
 	}
 }
+
+func TestBookingWindowExplainsDatesBeyondTheHorizonAndBeforeNotice(t *testing.T) {
+	now := time.Date(2026, 9, 27, 4, 0, 0, 0, time.UTC)
+	store := NewStore(nil).WithClock(func() time.Time { return now })
+	profile := defaultSchedulingProfile()
+	for _, test := range []struct {
+		name     string
+		from, to time.Time
+		code     string
+	}{
+		{"November exceeds thirty days", time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC), time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC), "booking_horizon"},
+		{"notice has not elapsed", now, now.Add(time.Hour), "booking_notice"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, _, err := store.bookingWindow(profile, test.from, test.to)
+			fault, _ := httperr.Classify(err)
+			if fault.Status != 422 || len(fault.Fields) != 1 || fault.Fields[0].Code != test.code {
+				t.Fatalf("expected specific window refusal, got %+v", fault)
+			}
+		})
+	}
+	from, to, err := store.bookingWindow(profile, now, now.AddDate(0, 0, 31))
+	if err != nil || !from.Equal(now.Add(2*time.Hour)) || !to.Equal(now.AddDate(0, 0, 30)) {
+		t.Fatalf("window %v %v: %v", from, to, err)
+	}
+	profile.HorizonDays = 90
+	if _, _, err := store.bookingWindow(profile, time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC), time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("extended horizon refused November: %v", err)
+	}
+}
+
+func TestAnAllDayBusyWeekStaysBusyAndTheFollowingWeekCanBeBooked(t *testing.T) {
+	from := monday(0)
+	busy := []slot{{Start: from, End: from.AddDate(0, 0, 7)}}
+	free, _ := policySlots(from, from.AddDate(0, 0, 7), 30*time.Minute, busy, fallbackWorkingHours())
+	if len(free) != 0 {
+		t.Fatalf("ignored the calendar's busy status: %v", free)
+	}
+	free, _ = policySlots(from.AddDate(0, 0, 7), from.AddDate(0, 0, 14), 30*time.Minute, busy, fallbackWorkingHours())
+	if len(free) == 0 {
+		t.Fatal("a past all-day block removed later free times")
+	}
+}
+
+func TestNoticeBeyondTheHorizonDoesNotProduceAReversedProviderWindow(t *testing.T) {
+	now := monday(6)
+	store := NewStore(nil).WithClock(func() time.Time { return now })
+	profile := defaultSchedulingProfile()
+	profile.HorizonDays = 1
+	profile.NoticeMinutes = 3 * 24 * 60
+	_, _, err := store.bookingWindow(profile, now, now.AddDate(0, 0, 7))
+	fault, _ := httperr.Classify(err)
+	if fault.Status != 422 || len(fault.Fields) != 1 || fault.Fields[0].Code != "booking_limits" {
+		t.Fatalf("invalid provider window admitted: %+v", fault)
+	}
+}

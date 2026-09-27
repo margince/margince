@@ -226,6 +226,7 @@ const SEEDED_OPS_READS: GrantSpec = {
 // currency. A sales rep does not see the installation's sign-in policy.
 const SEEDED_READ_PAGES = pagesNamed(
   "account",
+  "meetings",
   "voice",
   "agents",
   "connections",
@@ -252,6 +253,7 @@ const SEEDED_READ_PAGES = pagesNamed(
 
 const SEEDED_OPS_PAGES = pagesNamed(
   "account",
+  "meetings",
   "voice",
   "agents",
   "connections",

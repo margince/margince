@@ -3,6 +3,7 @@ import { BookingScreen } from "./book";
 import {
   bookingConnection,
   bookingContact,
+  bookingHours,
   bookingInvitation,
   bookingProfile,
   bookingSlots,
@@ -16,6 +17,7 @@ import {
 export function bookingFrame(view: () => ReactNode, overrides: RouteMap = {}) {
   return () => {
     installFetchStub({
+      "GET /me/working-hours": () => jsonResponse(bookingHours),
       "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
       "GET /scheduling/profile": () => jsonResponse(bookingProfile),
       "GET /scheduling/calendars": () =>

@@ -72,6 +72,33 @@ export const de = {
   "scheduling.settings": "Termineinstellungen",
   "scheduling.save": "Einstellungen speichern",
   "scheduling.saved": "Einstellungen gespeichert",
+  "settings.tab.meetings": "Termine",
+  "settings.page.meetings.sub":
+    "Buchbare Zeiten, Kalender und Buchungseinstellungen.",
+  "scheduling.missingSavedCalendar":
+    "Der gespeicherte Kalender ist nicht verfügbar. Wähle einen anderen Kalender, bevor du Buchungen aktivierst.",
+  "scheduling.providerChanged":
+    "Dein gespeicherter Kalenderanbieter ist nicht verfügbar. Beim Speichern wird der hier angezeigte verbundene Kalender verwendet.",
+  "scheduling.windowHorizon":
+    "Dieses Datum liegt außerhalb des Buchungszeitraums der einladenden Person. Wähle ein früheres Datum.",
+  "scheduling.windowNotice":
+    "Dieses Datum liegt vor der erforderlichen Vorlaufzeit. Wähle ein späteres Datum.",
+  "scheduling.windowLimits":
+    "Die Vorlaufzeit lässt keine Zeit im Buchungszeitraum frei. Die einladende Person muss die Termineinstellungen anpassen.",
+  "scheduling.openSettings": "Termineinstellungen öffnen",
+  "scheduling.setupInSettings":
+    "Kalender und Verfügbarkeit unter Einstellungen → Termine einrichten; dieser Entwurf bleibt geöffnet.",
+  "scheduling.noTimesHelp":
+    "Belegte Termine, buchbare Zeiten und Buchungsgrenzen bestimmen die Verfügbarkeit.",
+  "scheduling.findNext": "Nächste freie Zeiten suchen",
+  "scheduling.noTimesHorizon":
+    "Keine freien Zeiten im Buchungszeitraum. Termineinstellungen und Kalendereinträge prüfen.",
+  "scheduling.allDayBlocks":
+    "Als belegt markierte ganztägige Ereignisse blockieren ebenfalls freie Zeiten.",
+  "scheduling.effectiveHours": "Buchbare Zeiten: {start} bis {end} ({zone}).",
+  "scheduling.bookingUntil": "Buchungen bis {date} möglich.",
+  "scheduling.outsideHorizon":
+    "Dieses Datum liegt außerhalb des Buchungszeitraums. Früheres Datum wählen oder Termineinstellungen ändern.",
   "scheduling.provider": "Kalenderanbieter",
   "scheduling.proposalChanged":
     "Dieser Link behält die bereits erstellten Angaben. Für deine Änderungen kannst du einen neuen Link erstellen; der bisherige bleibt bis zu seinem Ablauf gültig.",
@@ -79,10 +106,9 @@ export const de = {
   "scheduling.calendar": "Kalender für Einladungen",
   "scheduling.bookContact": "Termin buchen",
   "scheduling.setupCalendar": "Buchungskalender auswählen",
-  "scheduling.selectCalendarHelp":
-    "Wähle den Kalender für Einladungen und öffentliche Buchungen; Termindetails bleiben hier.",
+
   "scheduling.chooseProvider": "Kalenderanbieter auswählen",
-  "scheduling.useCalendar": "Diesen Kalender verwenden",
+
   "scheduling.readOnlyCalendar":
     "Dein Kalender ist zum Lesen verbunden. Verbinde ihn erneut und erlaube Einladungen, um Termine zu erstellen, zu verschieben und abzusagen.",
   "scheduling.disconnectedCalendar":
@@ -94,14 +120,14 @@ export const de = {
   "scheduling.meetingChanged":
     "Der Termin wurde geändert. Prüfe die aktuellen Details und versuche es erneut.",
   "scheduling.publicCalendarUnavailable":
-    "Deine Buchungsseite ist aktiv, aber Kalendereinladungen sind nicht verfügbar. Prüfe die Kalenderverbindung unten oder pausiere die Seite.",
+    "Die Buchungsseite ist aktiv, aber Kalendereinladungen sind nicht verfügbar. Termineinstellungen öffnen und Verbindung prüfen oder die Seite pausieren.",
   "scheduling.manageConnection": "Kalenderverbindungen öffnen",
   "scheduling.calendarConnected":
     "Verbunden: {account}. Zugriff für Einladungen erteilt.",
   "scheduling.noWritableCalendar":
     "Kein bearbeitbarer Kalender verfügbar. Wähle einen anderen Anbieter oder prüfe deine Kalenderberechtigungen.",
   "scheduling.finishSetup":
-    "Wähle oben deinen Buchungskalender, um freie Zeiten zu sehen.",
+    "Kalender in den Termineinstellungen einrichten, um freie Zeiten auszuwählen.",
   "scheduling.readOnlyBadge": "Kalender nur lesbar",
   "scheduling.connect": "Kalender verbinden oder erneut verbinden",
   "scheduling.connectionHelp":
@@ -115,7 +141,7 @@ export const de = {
   "scheduling.notice": "Vorlauf in Minuten",
   "scheduling.buffer": "Puffer in Minuten",
   "scheduling.horizon": "Buchungszeitraum in Tagen",
-  "scheduling.hours": "Buchbare Zeiten bearbeiten",
+
   "scheduling.invite": "Einladung senden",
   "scheduling.contact": "Wen möchtest du treffen?",
   "scheduling.guestAgenda": "Was möchtest du besprechen?",
@@ -8594,8 +8620,10 @@ export const de = {
   "workingHours.end": "Tagesende",
   "workingHours.days": "Arbeitstage",
   "workingHours.timezone": "Zeitzone",
+  "workingHours.browserZone":
+    "Dein Browser verwendet {zone}. Die Auswahl oben ist die Zeitzone für die Verfügbarkeit.",
   "workingHours.timezoneHelp":
-    "Wähle eine Stadt in derselben Zeitzone. Tippe bei geöffneter Liste ihren Namen, um dorthin zu springen. Bis eine Auswahl gespeichert ist, gilt die Zeitzone des Browsers.",
+    "Zeitzone für die Verfügbarkeit. Suche nach einer Stadt oder Region.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.saveFailed": "Arbeitszeiten nicht gespeichert",

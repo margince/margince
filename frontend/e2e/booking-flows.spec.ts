@@ -3,7 +3,7 @@ import { de } from "../src/i18n/de";
 import { bookingConnection, bookingContact, bookingInvitation, bookingProfile, bookingSlots } from "../src/screens/book.testkit";
 import { mockApi } from "./seed";
 
-test.beforeEach(async ({ page }) => { await mockApi(page); });
+test.beforeEach(async ({ page, context }) => { await mockApi(context); await page.clock.setFixedTime(new Date("2026-09-27T06:00:00Z")); });
 
 test("Meetings opens a booking for the contact", async ({page}) => {
  await page.goto("/#/contacts/p-anna/meetings");
@@ -12,48 +12,58 @@ test("Meetings opens a booking for the contact", async ({page}) => {
  await expect(page.getByRole("heading", {name: de["scheduling.new"]})).toBeVisible();
 });
 
-test("reconnecting in another tab refreshes permissions without losing the draft", async ({page}) => {
+test("reconnecting in another tab refreshes permissions without losing the draft", async ({page, context}) => {
  let reconnected = false;
- await page.route("**/v1/connectors", route => route.fulfill({json: {data: [{...bookingConnection, scopes: reconnected ? bookingConnection.scopes : ["https://www.googleapis.com/auth/calendar.readonly"]}]}}));
- await page.route("**/v1/scheduling/profile", route => route.fulfill({json: {...bookingProfile, provider: "", enabled: false}}));
- await page.route("**/v1/scheduling/calendars?*", route => route.fulfill({json: [{id: "work-id", name: "Work calendar", primary: true, writable: true}]}));
+ await context.route("**/v1/connectors", route => route.fulfill({json: {data: [{...bookingConnection, scopes: reconnected ? bookingConnection.scopes : ["https://www.googleapis.com/auth/calendar.readonly"]}]}}));
+ await context.route("**/v1/scheduling/profile", route => route.fulfill({json: {...bookingProfile, provider: reconnected ? "gcal" : "", enabled: false}}));
+ await context.route("**/v1/scheduling/calendars?*", route => route.fulfill({json: [{id: "work-id", name: "Work calendar", primary: true, writable: true}]}));
  await page.goto(`/#/book/contact-${bookingContact.id}`);
- await expect(page.getByText(de["scheduling.readOnlyCalendar"])).toBeVisible();
+ await expect(page.getByText(de["scheduling.setupInSettings"])).toBeVisible();
  await page.getByLabel(de["scheduling.agenda"]).fill("Keep this draft");
  const popupPromise = page.waitForEvent("popup");
- await page.getByRole("link", {name: de["scheduling.manageConnection"]}).click();
+ await page.getByRole("link", {name: de["scheduling.openSettings"]}).click();
  const popup = await popupPromise;
- await expect(popup).toHaveURL(/settings\/connections/);
+ await expect(popup).toHaveURL(/settings\/meetings/);
+ await expect(popup.getByText(de["scheduling.readOnlyCalendar"])).toBeVisible();
  reconnected = true;
  await popup.close();
  await page.bringToFront();
  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
- await expect(page.getByRole("button", {name: de["scheduling.useCalendar"]})).toBeEnabled();
+ await expect(page.getByRole("link", {name: de["scheduling.openSettings"]})).toHaveCount(0);
  await expect(page.getByLabel(de["scheduling.agenda"])).toHaveValue("Keep this draft");
 });
 
-test("connected calendar setup keeps the draft, then sends and cancels an invitation", async ({page}) => {
+test("connected calendar setup keeps the draft, then sends and cancels an invitation", async ({page, context}) => {
  let configured = false;
  let status = "pending";
  const invitations: unknown[] = [];
- await page.route("**/v1/connectors", route => route.fulfill({json: {data: [bookingConnection]}}));
- await page.route("**/v1/scheduling/calendars?*", route => route.fulfill({json: [{id: "work-id", name: "Work calendar", primary: true, writable: true}]}));
- await page.route("**/v1/scheduling/profile", async route => {
+ await context.route("**/v1/connectors", route => route.fulfill({json: {data: [bookingConnection]}}));
+ await context.route("**/v1/scheduling/calendars?*", route => route.fulfill({json: [{id: "work-id", name: "Work calendar", primary: true, writable: true}]}));
+ await context.route("**/v1/scheduling/profile", async route => {
   if (route.request().method() === "PUT") {
    expect(route.request().postDataJSON()).toMatchObject({provider: "gcal", calendar_id: "work-id", enabled: false}); configured = true;
   }
   await route.fulfill({json: {...bookingProfile, provider: configured ? "gcal" : "", calendar_id: "work-id", enabled: false}});
  });
- await page.route(`**/v1/contacts/${bookingContact.id}`, route => route.fulfill({json: bookingContact}));
- await page.route("**/v1/availability?*", route => route.fulfill({json: {slots: bookingSlots, truncated: false}}));
- await page.route("**/v1/scheduling/invitations", async route => {invitations.push(route.request().postDataJSON()); await route.fulfill({json: bookingInvitation, status: 201});});
- await page.route(`**/v1/scheduling/invitations/${bookingInvitation.id}`, async route => {
+ await context.route(`**/v1/contacts/${bookingContact.id}`, route => route.fulfill({json: bookingContact}));
+ await context.route("**/v1/availability?*", route => route.fulfill({json: {slots: bookingSlots, truncated: false}}));
+ await context.route("**/v1/scheduling/invitations", async route => {invitations.push(route.request().postDataJSON()); await route.fulfill({json: bookingInvitation, status: 201});});
+ await context.route(`**/v1/scheduling/invitations/${bookingInvitation.id}`, async route => {
   if (route.request().method() === "PATCH") { expect(route.request().postDataJSON()).toMatchObject({action: "cancel"}); status = "canceling"; }
   await route.fulfill({json: {...bookingInvitation, status}});
  });
  await page.goto(`/#/book/contact-${bookingContact.id}`);
  await page.getByLabel(de["scheduling.agenda"]).fill("Discuss scope");
- await page.getByRole("button", {name: de["scheduling.useCalendar"]}).click();
+ const settingsPromise = page.waitForEvent("popup");
+ await page.getByRole("link", {name: de["scheduling.openSettings"]}).click();
+ const settings = await settingsPromise;
+ await expect(settings.getByRole("heading", {name: de["workingHours.title"]})).toBeVisible();
+ await expect(settings.getByRole("combobox", {name: de["scheduling.provider"]})).toHaveCount(0);
+ await settings.getByRole("button", {name: de["scheduling.save"],exact:true}).click();
+ await expect(settings.getByText(de["settings.saved"],{exact:true})).toBeVisible();
+ await settings.close();
+ await page.bringToFront();
+ await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
  await expect(page.getByLabel(de["scheduling.agenda"])).toHaveValue("Discuss scope");
  await page.getByRole("combobox", {name: de["scheduling.method"]}).click();
  await page.getByRole("option", {name: de["scheduling.invite"]}).click();
@@ -67,21 +77,21 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
  await expect(page.getByRole("heading", {name: de["scheduling.canceling"]})).toBeVisible();
 });
 
-test("personal proposal opens the guest page and accepts the chosen time", async ({page}) => {
- await page.route("**/v1/connectors", route => route.fulfill({json: {data: [bookingConnection]}}));
- await page.route(`**/v1/contacts/${bookingContact.id}`, route => route.fulfill({json: bookingContact}));
- await page.route("**/v1/availability?*", route => route.fulfill({json: {slots: bookingSlots, truncated: false}}));
- await page.route("**/v1/scheduling/proposals", async route => {
+test("personal proposal opens the guest page and accepts the chosen time", async ({page, context}) => {
+ await context.route("**/v1/connectors", route => route.fulfill({json: {data: [bookingConnection]}}));
+ await context.route(`**/v1/contacts/${bookingContact.id}`, route => route.fulfill({json: bookingContact}));
+ await context.route("**/v1/availability?*", route => route.fulfill({json: {slots: bookingSlots, truncated: false}}));
+ await context.route("**/v1/scheduling/proposals", async route => {
   expect(route.request().postDataJSON().options).toEqual(bookingSlots);
   await route.fulfill({status:201, json: {id:"proposal-1", url:"/#/book/proposal-personal", expires_at:"2026-10-06T09:00:00Z"}});
  });
- await page.route("**/v1/public/proposal/personal", async route => {
+ await context.route("**/v1/public/proposal/personal", async route => {
   if(route.request().method()==="POST") {
    expect(route.request().postDataJSON()).toMatchObject({...bookingSlots[0],consent:{policy_version:"2026-07"}});
    await route.fulfill({json:{...bookingInvitation,management_token:"guest-booking"}});
   } else await route.fulfill({json:{profile:{...bookingProfile,title:"Personal discovery"},description:"Discuss scope",options:bookingSlots,expires_at:"2026-10-06T09:00:00Z",used:false}});
  });
- await page.route("**/v1/public/proposal/personal/availability?*", route => route.fulfill({json:{slots:[],truncated:false}}));
+ await context.route("**/v1/public/proposal/personal/availability?*", route => route.fulfill({json:{slots:[],truncated:false}}));
  await page.goto(`/#/book/contact-${bookingContact.id}`);
  await page.locator(".meeting-slots button").nth(0).click();
  await page.locator(".meeting-slots button").nth(1).click();
@@ -95,14 +105,14 @@ test("personal proposal opens the guest page and accepts the chosen time", async
  await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
 });
 
-test("guest reschedules only after confirming the replacement time", async ({page}) => {
+test("guest reschedules only after confirming the replacement time", async ({page, context}) => {
  let status="confirmed";
  const changes:unknown[]=[];
- await page.route("**/v1/public/meeting/guest-booking", async route => {
+ await context.route("**/v1/public/meeting/guest-booking", async route => {
   if(route.request().method()==="PATCH") {changes.push(route.request().postDataJSON());status="rescheduling";}
   await route.fulfill({json:{...bookingInvitation,status}});
  });
- await page.route("**/v1/public/meeting/guest-booking/availability?*", route => route.fulfill({json:{slots:bookingSlots,truncated:false}}));
+ await context.route("**/v1/public/meeting/guest-booking/availability?*", route => route.fulfill({json:{slots:bookingSlots,truncated:false}}));
  await page.goto("/#/book/manage-guest-booking");
  await page.getByRole("button",{name:de["scheduling.reschedule"]}).click();
  await page.locator(".meeting-slots button").last().click();
@@ -110,4 +120,20 @@ test("guest reschedules only after confirming the replacement time", async ({pag
  await page.getByRole("button",{name:de["scheduling.saveTime"]}).click();
  await expect(page.getByRole("heading",{name:de["scheduling.rescheduling"]})).toBeVisible();
  expect(changes).toEqual([{action:"reschedule",version:1,...bookingSlots[1]}]);
+});
+
+test("busy-week guidance finds later times and explains dates outside the horizon", async ({page, context}) => {
+ let calls = 0;
+ await context.route("**/v1/connectors", route => route.fulfill({json: {data:[bookingConnection]}}));
+ await context.route("**/v1/availability?*", route => route.fulfill({json: {slots: ++calls === 1 ? [] : bookingSlots, truncated:false}}));
+ await page.goto(`/#/book/contact-${bookingContact.id}`);
+ await expect(page.getByText(de["scheduling.allDayBlocks"])).toBeVisible();
+ await page.getByRole("button", {name:de["scheduling.findNext"]}).click();
+ await expect(page.locator(".meeting-slots button")).toHaveCount(2);
+ const date = page.getByLabel(de["scheduling.date"]);
+ await expect(date).toHaveAttribute("max","2026-10-27");
+ await date.fill("2026-11-02");
+ await expect(page.getByText(de["scheduling.outsideHorizon"])).toBeVisible();
+ await expect(page.getByText(de["scheduling.noTimes"])).toHaveCount(0);
+ expect(calls).toBe(2);
 });
