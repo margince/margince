@@ -27,6 +27,8 @@ const (
 	byMailReader    = "magic.by.mail_reader"
 	byMailFiling    = "magic.by.mail_filing"
 	byAutomation    = "magic.by.automation"
+
+	whySiteUnnamed = "magic.why.site_read_unnamed"
 )
 
 // description is what one audit row says to a reader.
@@ -112,7 +114,7 @@ func reasonFromEvidence(evidence, after map[string]any) *crmcontracts.MagicSente
 			values := map[string]string{"site": site}
 			return &crmcontracts.MagicSentence{Key: "magic.why.site_read", Values: &values}
 		}
-		return &crmcontracts.MagicSentence{Key: "magic.why.site_read_unnamed"}
+		return &crmcontracts.MagicSentence{Key: whySiteUnnamed}
 	case "capture_enrich":
 		return &crmcontracts.MagicSentence{Key: "magic.why.signature"}
 	}

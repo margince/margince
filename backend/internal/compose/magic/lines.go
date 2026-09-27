@@ -57,7 +57,7 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 			case isSiteReason(out[at].Reason) && !sameReason(out[at].Reason, line.Reason):
 				// One record, read from two sites: naming the newer one would
 				// hide the other, so the line names neither.
-				out[at].Reason = &crmcontracts.MagicSentence{Key: "magic.why.site_read_unnamed"}
+				out[at].Reason = &crmcontracts.MagicSentence{Key: whySiteUnnamed}
 			}
 			continue
 		}
@@ -142,8 +142,8 @@ func groupKey(e entry, d description) string {
 // over 234 companies would be 234 lines again; grouped without them, one line
 // would name one company's site as the source for all of them.
 var manyReasons = map[string]string{
-	"magic.why.site_read":         "magic.why.site_read_each",
-	"magic.why.site_read_unnamed": "magic.why.site_read_each",
+	"magic.why.site_read": "magic.why.site_read_each",
+	whySiteUnnamed:        "magic.why.site_read_each",
 }
 
 // reasonForMany is the reason a line says once it stands for more than one record.
