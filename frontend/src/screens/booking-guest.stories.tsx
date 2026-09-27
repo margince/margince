@@ -33,3 +33,57 @@ export const PausedPreviewPhone: Story = {
   ...PausedPreview,
   tags: ["uat-phone"],
 };
+
+export const PreviewEmpty: Story = {
+  render: bookingFrame(() => <BookingGuestScreen hostSlug="" preview />, {
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, enabled: false }),
+    "GET /availability": () => jsonResponse({ slots: [], truncated: false }),
+  }),
+};
+export const PreviewCalendarError: Story = {
+  render: bookingFrame(() => <BookingGuestScreen hostSlug="" preview />, {
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, enabled: false }),
+    "GET /availability": () =>
+      jsonResponse(
+        {
+          title: "Calendar unavailable",
+          status: 503,
+          detail: "Reconnect your calendar in Meetings settings and try again.",
+        },
+        503,
+      ),
+  }),
+};
+
+export const PreviewEmptyDark: Story = {
+  ...PreviewEmpty,
+  globals: { theme: "dark" },
+};
+export const PreviewEmptyPhone: Story = {
+  ...PreviewEmpty,
+  tags: ["uat-phone"],
+};
+export const PreviewCalendarErrorDark: Story = {
+  ...PreviewCalendarError,
+  globals: { theme: "dark" },
+};
+export const PreviewCalendarErrorPhone: Story = {
+  ...PreviewCalendarError,
+  tags: ["uat-phone"],
+};
+export const PreviewSetup: Story = {
+  render: bookingFrame(() => <BookingGuestScreen hostSlug="" preview />, {
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, enabled: false, provider: "" }),
+  }),
+};
+export const PreviewSetupDark: Story = {
+  ...PreviewSetup,
+  globals: { theme: "dark" },
+};
+export const PreviewSetupPhone: Story = {
+  ...PreviewSetup,
+  tags: ["uat-phone"],
+};

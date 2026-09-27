@@ -73,10 +73,37 @@ export function BookingGuestScreen({
       return { ...data, proposal: null };
     },
   });
+  const needsCalendar =
+    preview &&
+    profile.isSuccess &&
+    !("provider" in profile.data && profile.data.provider);
   const slots = useQuery({
-    queryKey: ["public-booking-slots", hostSlug, proposalToken, from, locale],
-    enabled: !preview && profile.data?.enabled === true,
+    queryKey: [
+      preview ? "reliable-availability" : "public-booking-slots",
+      preview ? "booking-preview" : hostSlug,
+      proposalToken,
+      from,
+      locale,
+      preview ? profile.data : undefined,
+    ],
+    enabled:
+      profile.isSuccess && !needsCalendar && (preview || profile.data.enabled),
     queryFn: async () => {
+      if (preview) {
+        const { data, error } = await api.GET("/availability", {
+          params: {
+            query: {
+              from,
+              to: new Date(
+                new Date(from).getTime() + 7 * 86400000,
+              ).toISOString(),
+              reliable: true,
+            },
+          },
+        });
+        if (error) throwBookingProblem(error, t);
+        return data;
+      }
       if (proposalToken) {
         const { data, error } = await api.GET(
           "/public/proposal/{token}/availability",
@@ -168,6 +195,7 @@ export function BookingGuestScreen({
       void profile.refetch();
     },
   });
+  const publicUnavailable = !preview && !profile.data?.enabled;
   const previewNotice = t(
     profile.data?.enabled
       ? "scheduling.previewActive"
@@ -178,7 +206,7 @@ export function BookingGuestScreen({
       <div className="book-guest-column">
         <QueryGate pendingLabel={t("common.loading")} query={profile}>
           {(host) =>
-            !host.enabled && !preview ? (
+            publicUnavailable ? (
               <Panel>
                 <PanelBody>
                   {host.proposal?.meeting?.management_token ? (
@@ -306,7 +334,11 @@ export function BookingGuestScreen({
                             />
                           )}
                         </Field>
-                        {!preview && (
+                        {needsCalendar ? (
+                          <p className="t-caption">
+                            {t("scheduling.previewCalendarSetup")}
+                          </p>
+                        ) : (
                           <QueryGate
                             pendingLabel={t("common.loading")}
                             query={slots}

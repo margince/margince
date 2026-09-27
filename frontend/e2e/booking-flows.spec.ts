@@ -139,6 +139,13 @@ test("busy-week guidance finds later times and explains dates outside the horizo
 });
 
 test("meeting settings shows the reusable link, saves hours, and previews a paused page", async ({page, context}) => {
+ const availability: string[] = [];
+ await context.route("**/v1/availability?*", async route => {
+  const url = new URL(route.request().url());
+  expect(url.searchParams.get("reliable")).toBe("true");
+  availability.push(url.searchParams.get("from") ?? "");
+  await route.fulfill({json:{slots:bookingSlots,truncated:false}});
+ });
  let profile = {...bookingProfile, enabled:false};
  const writes: unknown[] = [];
  await context.route("**/v1/connectors", route => route.fulfill({json:{data:[bookingConnection]}}));
@@ -165,6 +172,17 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
  await expect(page).toHaveURL(/#\/book\/preview$/);
  await expect(page.getByText(de["scheduling.previewPaused"])).toBeVisible();
  await expect(page.getByRole("heading",{name:bookingProfile.title})).toBeVisible();
+ const slot = page.locator(".meeting-slots button").first();
+ await expect(slot).toBeVisible();
+ await slot.click();
+ await expect(slot).toHaveAttribute("aria-pressed","true");
+ await page.getByLabel(de["book.name"],{exact:true}).fill("Demo guest");
+ await page.getByLabel(de["book.email"],{exact:true}).fill("guest@example.test");
+ await page.getByRole("checkbox").check();
  await expect(page.getByRole("button",{name:de["scheduling.book"]})).toBeDisabled();
+ await page.getByLabel(de["scheduling.date"]).fill("2026-10-12");
+ await expect.poll(() => availability.length).toBe(2);
+ await expect(slot).toBeVisible();
+ await expect(page.getByRole("button",{pressed:true})).toHaveCount(0);
  expect(writes).toHaveLength(1);
 });

@@ -119,6 +119,8 @@ export const de = {
     "Die Administration muss die Terminbuchung erlauben.",
   "scheduling.meetingChanged":
     "Der Termin wurde geändert. Prüfe die aktuellen Details und versuche es erneut.",
+  "scheduling.previewCalendarSetup":
+    "Wähle unter Einstellungen → Termine einen Kalender aus, um verfügbare Zeiten in der Vorschau zu sehen.",
   "scheduling.publicCalendarUnavailable":
     "Die Buchungsseite ist aktiv, aber Kalendereinladungen sind nicht verfügbar. Termineinstellungen öffnen und Verbindung prüfen oder die Seite pausieren.",
   "scheduling.manageConnection": "Kalenderverbindungen öffnen",

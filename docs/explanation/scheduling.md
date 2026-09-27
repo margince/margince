@@ -80,8 +80,10 @@ Meetings settings starts with the host's reusable booking link and Copy action.
 The same link can be shared directly or added to an email signature. Every host
 can preview, copy, pause, resume or replace it there or from My booking link.
 Preview requires the host's session and shows the saved page even while booking
-is paused; its confirmation action is disabled and it makes no public booking
-or availability requests. Visitors still cannot book a paused page.
+is paused. It reads the host's live availability through the authenticated
+availability endpoint, using the saved duration, hours and calendar policy.
+Times can be selected and browsed, but confirmation is disabled and the preview
+makes no booking requests. Visitors still cannot book a paused page.
 
 Company name and logo come from the current anchor company, including on personal
 proposals. Old per-host company overrides are ignored. The logo remains public even if all booking pages are paused. The anonymous

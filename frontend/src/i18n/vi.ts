@@ -123,6 +123,8 @@ export const vi = {
   "scheduling.bookRefused": "Quản trị viên cần cấp quyền đặt cuộc họp.",
   "scheduling.meetingChanged":
     "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
+  "scheduling.previewCalendarSetup":
+    "Chọn lịch trong Cài đặt → Cuộc họp để xem trước các khung giờ còn trống.",
   "scheduling.publicCalendarUnavailable":
     "Trang đặt lịch đang hoạt động nhưng không thể gửi lời mời lịch. Mở cài đặt cuộc hẹn để kiểm tra kết nối hoặc tạm dừng trang.",
   "scheduling.manageConnection": "Mở kết nối lịch",

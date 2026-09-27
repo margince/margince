@@ -116,6 +116,8 @@ export const en = {
     "An administrator must grant permission to book meetings.",
   "scheduling.meetingChanged":
     "The meeting changed. Review the updated details and try again.",
+  "scheduling.previewCalendarSetup":
+    "Choose a calendar in Settings → Meetings to preview available times.",
   "scheduling.publicCalendarUnavailable":
     "Your booking page is active, but calendar invitations are unavailable. Open meeting settings to check the connection or pause the page.",
   "scheduling.manageConnection": "Open calendar connections",
