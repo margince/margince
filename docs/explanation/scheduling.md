@@ -76,7 +76,23 @@ onto the same activity.
 
 ## Public and personal links
 
-Every host can create, preview, copy, pause, resume or replace their public link.
+Meetings settings starts with the host's reusable booking link and Copy action.
+The same link can be shared directly or added to an email signature. Every host
+can preview, copy, pause, resume or replace it there or from My booking link.
+Preview requires the host's session and shows the saved page even while booking
+is paused; its confirmation action is disabled and it makes no public booking
+or availability requests. Visitors still cannot book a paused page.
+
+Company name and logo come from the current anchor company, including on personal
+proposals. Old per-host company overrides are ignored. The logo remains public even if all booking pages are paused. The anonymous
+logo route serves only that company's normalized PNG; it cannot address other companies or
+read their profiles. Removing or replacing the anchor mark changes the public
+image without each host saving their settings again.
+
+Minimum notice is entered in hours and stored in the API's existing minutes.
+24 hours means a full day ahead, rather than a midnight cutoff. The location
+field accepts a physical address or an existing Google Meet, Zoom or Teams link;
+it does not generate a video conference or refer to the reusable booking page.
 Replacing it revokes old public URLs; it does not revoke existing guests' private
 meeting-management links. A paused page stops new public bookings. Already issued personal proposals remain usable until their expiry; pause is not a recall of invitations. Profile
 responses contain only the public host name, company, logo, meeting details and

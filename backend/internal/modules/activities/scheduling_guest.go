@@ -54,6 +54,7 @@ func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Requ
 		writeStoreErr(w, r, err)
 		return
 	}
+	profile = h.store.brandSchedulingProfile(r.Context(), profile)
 	out := crmcontracts.PublicSchedulingProfile{
 		Title: profile.Title, Location: profile.Location,
 		DurationMinutes: profile.DurationMinutes, Enabled: profile.Enabled,

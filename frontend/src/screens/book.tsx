@@ -8,6 +8,7 @@ export { PUBLIC_BOOKING_CONSENT } from "./booking-guest";
 
 export function BookingScreen({ hostSlug }: Readonly<{ hostSlug?: string }>) {
   if (!hostSlug) return <BookingProfileScreen />;
+  if (hostSlug === "preview") return <BookingGuestScreen hostSlug="" preview />;
   if (hostSlug === "contact") return <BookingInviteScreen />;
   if (hostSlug.startsWith("contact-"))
     return <BookingInviteScreen key={hostSlug} contactId={hostSlug.slice(8)} />;

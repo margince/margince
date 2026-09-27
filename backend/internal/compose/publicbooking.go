@@ -81,6 +81,8 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 
 			var resolveErr error
 			switch {
+			case r.Method == http.MethodGet && r.URL.Path == publicBookingPrefix+"company-logo":
+				// The anchor mark is public installation branding, not a host capability.
 			case proposal:
 				_, _, resolveErr = store.ResolveProposalToken(r.Context(), slug)
 			case management:

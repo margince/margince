@@ -137,3 +137,34 @@ test("busy-week guidance finds later times and explains dates outside the horizo
  await expect(page.getByText(de["scheduling.noTimes"])).toHaveCount(0);
  expect(calls).toBe(2);
 });
+
+test("meeting settings shows the reusable link, saves hours, and previews a paused page", async ({page, context}) => {
+ let profile = {...bookingProfile, enabled:false};
+ const writes: unknown[] = [];
+ await context.route("**/v1/connectors", route => route.fulfill({json:{data:[bookingConnection]}}));
+ await context.route("**/v1/scheduling/calendars?*", route => route.fulfill({json:[{id:"primary",name:"Work",primary:true,writable:true}]}));
+ await context.route("**/v1/scheduling/profile", async route => {
+  if(route.request().method()==="PUT") {
+   const input = route.request().postDataJSON();
+   writes.push(input);
+   profile = {...profile, notice_minutes:input.notice_minutes};
+  }
+  await route.fulfill({json:profile});
+ });
+ await page.goto("/#/settings/meetings");
+ await expect(page.getByRole("textbox",{name:de["scheduling.myLink"]})).toHaveValue(bookingProfile.public_url ?? "");
+ await expect(page.getByRole("button",{name:de["scheduling.copyLink"],exact:true})).toBeVisible();
+ await expect(page.getByLabel("Firmenname")).toHaveCount(0);
+ await expect(page.getByPlaceholder("https://meet.google.com/abc-defg-hij")).toBeVisible();
+ await page.getByLabel(de["scheduling.notice"]).fill("24");
+ await page.getByRole("button",{name:de["scheduling.save"],exact:true}).click();
+ await expect(page.getByText(de["settings.saved"],{exact:true})).toBeVisible();
+ expect(writes).toHaveLength(1);
+ expect(writes[0]).toMatchObject({notice_minutes:1440,enabled:false});
+ await page.getByRole("button",{name:de["scheduling.preview"]}).click();
+ await expect(page).toHaveURL(/#\/book\/preview$/);
+ await expect(page.getByText(de["scheduling.previewPaused"])).toBeVisible();
+ await expect(page.getByRole("heading",{name:bookingProfile.title})).toBeVisible();
+ await expect(page.getByRole("button",{name:de["scheduling.book"]})).toBeDisabled();
+ expect(writes).toHaveLength(1);
+});

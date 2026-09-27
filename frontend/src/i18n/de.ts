@@ -133,12 +133,21 @@ export const de = {
   "scheduling.connectionHelp":
     "Zum Senden von Einladungen ist Schreibzugriff nötig. Verbinde einen nur lesbaren Kalender erneut.",
   "scheduling.hostName": "Dein öffentlicher Name",
-  "scheduling.companyName": "Firmenname",
-  "scheduling.logo": "Öffentliche URL des Firmenlogos",
   "scheduling.subject": "Termintitel",
   "scheduling.location": "Ort oder Besprechungslink",
   "scheduling.duration": "Dauer in Minuten",
-  "scheduling.notice": "Vorlauf in Minuten",
+  "scheduling.noticeHelp":
+    "24 Stunden bedeutet mindestens einen vollen Tag im Voraus.",
+  "scheduling.anchorBrand":
+    "Firmenname und Logo stammen aus deinem Firmenprofil.",
+  "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
+  "scheduling.locationHelp":
+    "Füge deinen Google-Meet-, Zoom- oder Teams-Link ein oder gib eine Adresse an. Das ist der Treffpunkt, nicht deine Buchungsseite.",
+  "scheduling.previewActive":
+    "Nur Vorschau. Deine Buchungsseite ist aktiv; aus dieser Vorschau werden keine Einladungen versendet.",
+  "scheduling.previewPaused":
+    "Nur Vorschau. Öffentliche Buchungen sind pausiert. Aktiviere deinen Link in den Termineinstellungen, damit Gäste buchen können.",
+  "scheduling.notice": "Vorlauf in Stunden",
   "scheduling.buffer": "Puffer in Minuten",
   "scheduling.horizon": "Buchungszeitraum in Tagen",
 

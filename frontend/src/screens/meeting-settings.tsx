@@ -12,6 +12,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingCalendars } from "./booking-calendars";
+import { BookingProfileScreen } from "./booking-profile";
 import { QueryGate, throwProblem, useMe } from "./common";
 import { useConnectors } from "./connectors";
 import { useSchedulingProfile } from "./scheduling-profile-query";
@@ -25,6 +26,7 @@ export function MeetingSettings() {
   const canBook = useCanWrite("activity", "create");
   return (
     <>
+      {canBook && <BookingProfileScreen embedded />}
       <WorkingHoursCard />
       {canBook ? (
         <MeetingPreferences />
@@ -49,6 +51,9 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
   const toast = useToast();
   const [baseline, setBaseline] = useState(profile);
   const [form, setForm] = useState(profile);
+  const [noticeHours, setNoticeHours] = useState(
+    String(Number((profile.notice_minutes / 60).toFixed(2))),
+  );
   useUnsavedGuard(JSON.stringify(form) !== JSON.stringify(baseline));
   const {
     connections,
@@ -60,7 +65,7 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
     calendars,
     selected,
     needsCalendar,
-  } = useMeetingCalendar(form, baseline);
+  } = useMeetingCalendar({ ...form, enabled: profile.enabled }, baseline);
   const save = useMutation({
     mutationFn: async ({
       original,
@@ -81,6 +86,7 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
     onSuccess: async (value) => {
       setBaseline(value);
       setForm(value);
+      setNoticeHours(String(Number((value.notice_minutes / 60).toFixed(2))));
       client.setQueryData(["scheduling-profile"], value);
       await client.invalidateQueries({ queryKey: ["reliable-availability"] });
       toast.show(t("settings.saved"));
@@ -186,7 +192,7 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
               {(control) => (
                 <TextInput
                   {...control}
-                  required={form.enabled}
+                  required={profile.enabled}
                   value={form.host_name ?? ""}
                   onChange={(e) =>
                     setForm({ ...form, host_name: e.target.value })
@@ -194,29 +200,10 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
                 />
               )}
             </Field>
-            <Field label={t("scheduling.companyName")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={form.company_name ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, company_name: e.target.value })
-                  }
-                />
-              )}
-            </Field>
-            <Field label={t("scheduling.logo")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  type="url"
-                  value={form.logo_url ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, logo_url: e.target.value })
-                  }
-                />
-              )}
-            </Field>
+            <p className="t-caption">
+              {t("scheduling.anchorBrand")}{" "}
+              <a href="#/settings/company">{t("settings.companyTitle")}</a>
+            </p>
             <Field label={t("scheduling.subject")}>
               {(control) => (
                 <TextInput
@@ -227,10 +214,14 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
                 />
               )}
             </Field>
-            <Field label={t("scheduling.location")}>
+            <Field
+              label={t("scheduling.location")}
+              hint={t("scheduling.locationHelp")}
+            >
               {(control) => (
                 <TextInput
                   {...control}
+                  placeholder={t("scheduling.locationExample")}
                   value={form.location}
                   onChange={(e) =>
                     setForm({ ...form, location: e.target.value })
@@ -264,20 +255,26 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
                   />
                 )}
               </Field>
-              <Field label={t("scheduling.notice")}>
+              <Field
+                label={t("scheduling.notice")}
+                hint={t("scheduling.noticeHelp")}
+              >
                 {(control) => (
                   <TextInput
                     {...control}
                     type="number"
                     min={0}
-                    max={10080}
-                    value={form.notice_minutes}
-                    onChange={(e) =>
+                    max={168}
+                    step="any"
+                    required
+                    value={noticeHours}
+                    onChange={(e) => {
+                      setNoticeHours(e.target.value);
                       setForm({
                         ...form,
-                        notice_minutes: Number(e.target.value),
-                      })
-                    }
+                        notice_minutes: Math.round(Number(e.target.value) * 60),
+                      });
+                    }}
                   />
                 )}
               </Field>
@@ -331,7 +328,6 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
           <ErrorLine error={save.error} />
         </PanelBody>
       </Panel>
-      <a href="#/book">{t("scheduling.myLink")}</a>
     </div>
   );
 }
@@ -346,8 +342,6 @@ function changedMeetingPreferences(
     "calendar_id",
     "blocking_calendars",
     "host_name",
-    "company_name",
-    "logo_url",
     "title",
     "location",
     "email_reminder",

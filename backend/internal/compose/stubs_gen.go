@@ -2083,6 +2083,10 @@ func (stubs) DeleteProviderData(w nethttp.ResponseWriter, r *nethttp.Request, pr
 	httperr.NotImplemented(w, r, "DeleteProviderData")
 }
 
+func (stubs) GetPublicBookingCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetPublicBookingCompanyLogo")
+}
+
 func (stubs) BookPublicMeeting(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string, params crmcontracts.BookPublicMeetingParams) {
 	httperr.NotImplemented(w, r, "BookPublicMeeting")
 }

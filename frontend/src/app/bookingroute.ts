@@ -3,6 +3,7 @@ export function isPublicBookingId(id?: string): boolean {
   return Boolean(
     id &&
       id !== "contact" &&
+      id !== "preview" &&
       !id.startsWith("contact-") &&
       !id.startsWith("meeting-"),
   );

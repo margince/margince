@@ -98,7 +98,8 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 	if err != nil {
 		return crmcontracts.SchedulingProfile{}, err
 	}
-	return s.hostSchedulingProfile(ctx, host)
+	profile, err := s.hostSchedulingProfile(ctx, host)
+	return s.brandSchedulingProfile(ctx, profile), err
 }
 
 func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
@@ -106,7 +107,7 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 		return err
 	}
 	if p.Enabled && (p.HostName == nil || strings.TrimSpace(*p.HostName) == "") {
-		return errBookingProfileBrand
+		return &SchedulingArgumentError{Field: "host_name", Code: "required", Message: "Add your public name before enabling bookings"}
 	}
 	if p.Enabled && p.Provider != "gcal" && p.Provider != "graphcal" {
 		return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar before enabling bookings"}
@@ -117,7 +118,7 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	return validateSchedulingBrand(p)
 }
 
-var errBookingProfileBrand = &SchedulingArgumentError{Field: "profile", Code: "invalid_brand", Message: "Use a short display name and an HTTPS company-logo address"}
+var errBookingProfileBrand = &SchedulingArgumentError{Field: "profile", Code: "invalid_brand", Message: "Use a public name of at most 200 characters"}
 
 // SaveSchedulingProfile validates live calendar authority before publishing a booking link.
 func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.SchedulingProfile) (crmcontracts.SchedulingProfile, error) {
@@ -125,6 +126,7 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	if err != nil {
 		return profile, err
 	}
+	profile.CompanyName, profile.LogoUrl = nil, nil
 	if err := validateSchedulingProfile(profile); err != nil {
 		return profile, err
 	}
@@ -146,7 +148,8 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	if err != nil {
 		return profile, err
 	}
-	return s.hostSchedulingProfile(ctx, host)
+	saved, err := s.hostSchedulingProfile(ctx, host)
+	return s.brandSchedulingProfile(ctx, saved), err
 }
 
 func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, profile *crmcontracts.SchedulingProfile) error {
@@ -191,14 +194,8 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 }
 
 func validateSchedulingBrand(p crmcontracts.SchedulingProfile) error {
-	if p.HostName != nil && len(*p.HostName) > 200 || p.CompanyName != nil && len(*p.CompanyName) > 200 {
+	if p.HostName != nil && len(*p.HostName) > 200 {
 		return errBookingProfileBrand
-	}
-	if p.LogoUrl != nil && *p.LogoUrl != "" {
-		u, err := url.Parse(*p.LogoUrl)
-		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || len(*p.LogoUrl) > 2000 {
-			return errBookingProfileBrand
-		}
 	}
 	return nil
 }

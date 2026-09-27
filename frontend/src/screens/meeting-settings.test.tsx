@@ -2,12 +2,12 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import {
   bookingConnection,
   bookingHours,
   bookingProfile,
 } from "./book.testkit";
-import { BookingProfileScreen } from "./booking-profile";
 import { MeetingSettings } from "./meeting-settings";
 import {
   installFetchStub,
@@ -194,7 +194,7 @@ it("does not offer disconnected providers or retain their old calendar ids", asy
   });
 });
 
-it("saves public host branding alongside meeting policy", async () => {
+it("edits the host name while company branding comes from the anchor", async () => {
   const user = userEvent.setup();
   const writes: unknown[] = [];
   mount({
@@ -206,14 +206,20 @@ it("saves public host branding alongside meeting policy", async () => {
   const name = await screen.findByLabelText("Your public name");
   await user.clear(name);
   await user.type(name, "Ada Example");
-  const logo = screen.getByLabelText("Public company logo URL");
-  await user.clear(logo);
-  await user.type(logo, "https://example.test/logo.png");
+  expect(screen.queryByLabelText("Company name")).toBeNull();
+  expect(screen.queryByLabelText("Public company logo URL")).toBeNull();
+  expect(
+    screen.getByText(
+      /Company name and logo are taken from your company profile/,
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.getByPlaceholderText("https://meet.google.com/abc-defg-hij"),
+  ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Save settings" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({
     host_name: "Ada Example",
-    logo_url: "https://example.test/logo.png",
   });
 });
 
@@ -324,7 +330,6 @@ it("sets a public name during setup and then enables the reusable booking link",
   render(
     <StoryProviders>
       <MeetingSettings />
-      <BookingProfileScreen />
     </StoryProviders>,
   );
   await user.type(
@@ -343,4 +348,86 @@ it("sets a public name during setup and then enables the reusable booking link",
     calendar_id: "work",
     enabled: true,
   });
+});
+
+it.each([
+  ["24", 1440],
+  ["1.5", 90],
+  ["0", 0],
+  ["168", 10080],
+])("saves %s hours as %i minutes", async (hours, minutes) => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  mount({
+    "PUT /scheduling/profile": (body) => {
+      writes.push(body);
+      return jsonResponse({ ...bookingProfile, notice_minutes: minutes });
+    },
+  });
+  const notice = await screen.findByLabelText("Minimum notice in hours");
+  expect(notice).toHaveProperty("value", "2");
+  await user.clear(notice);
+  await user.type(notice, hours);
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({ notice_minutes: minutes });
+});
+it("puts the reusable link before working hours and copies it", async () => {
+  const user = userEvent.setup();
+  const copy = stubClipboard("accepts");
+  mount();
+  const link = await screen.findByRole("textbox", { name: "My booking link" });
+  expect(link).toHaveProperty("value", bookingProfile.public_url);
+  const hours = screen.getByRole("heading", { name: "Bookable hours" });
+  expect(
+    link.compareDocumentPosition(hours) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  expect(copy.written).toEqual([bookingProfile.public_url]);
+  await user.click(screen.getByRole("button", { name: "Preview public page" }));
+  expect(window.location.hash).toBe("#/book/preview");
+});
+
+it("uses the link's current enabled state without losing an edited title", async () => {
+  const user = userEvent.setup();
+  let latest: unknown = { ...bookingProfile, enabled: false };
+  mount({
+    "GET /scheduling/profile": () => jsonResponse(latest),
+    "PUT /scheduling/profile": (body) => {
+      latest = body;
+      return jsonResponse(body);
+    },
+  });
+  const title = await screen.findByLabelText("Meeting title");
+  await user.clear(title);
+  await user.type(title, "Keep this draft");
+  const name = screen.getByLabelText("Your public name");
+  expect(name).toHaveProperty("required", false);
+  await user.click(screen.getByRole("button", { name: "Enable bookings" }));
+  await waitFor(() => expect(name).toHaveProperty("required", true));
+  expect(title).toHaveProperty("value", "Keep this draft");
+  await user.click(screen.getByRole("button", { name: "Pause bookings" }));
+  await waitFor(() => expect(name).toHaveProperty("required", false));
+  expect(title).toHaveProperty("value", "Keep this draft");
+});
+it("displays an old minute value concisely without changing it on unrelated saves", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  mount({
+    "GET /scheduling/profile": () =>
+      jsonResponse({ ...bookingProfile, notice_minutes: 50 }),
+    "PUT /scheduling/profile": (body) => {
+      writes.push(body);
+      return jsonResponse(body);
+    },
+  });
+  expect(
+    await screen.findByLabelText("Minimum notice in hours"),
+  ).toHaveProperty("value", "0.83");
+  const title = screen.getByLabelText("Meeting title");
+  await user.clear(title);
+  await user.type(title, "Updated title");
+  await user.click(screen.getByRole("button", { name: "Save settings" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({ notice_minutes: 50 });
 });

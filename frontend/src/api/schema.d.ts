@@ -4779,6 +4779,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/booking/company-logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the anchor company's public booking logo. */
+        get: operations["getPublicBookingCompanyLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/booking/{host_slug}/profile": {
         parameters: {
             query?: never;
@@ -25545,6 +25562,7 @@ export interface components {
         PublicSchedulingProfile: {
             host_name: string;
             company_name: string;
+            /** @description Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. */
             logo_url?: string;
             title: string;
             location: string;
@@ -25564,7 +25582,9 @@ export interface components {
             title: string;
             location: string;
             host_name?: string;
+            /** @description Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             company_name?: string;
+            /** @description Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. */
             logo_url?: string;
             readonly slug?: string;
             readonly public_url?: string;
@@ -45601,6 +45621,36 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getPublicBookingCompanyLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The anchor company's normalized PNG logo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description The logo could not be read. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getPublicSchedulingProfile: {

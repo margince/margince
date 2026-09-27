@@ -146,6 +146,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 	s.activitiesHandlers = s.activitiesHandlers.
 		WithPublicBaseURL(send.PublicBaseURL).
 		WithSchedulingCalendar(send.Calendar).
+		WithSchedulingBrand(contacts.NewStore(InstallationDB(pool))).
 		WithMeetingVault(send.MeetingVault).
 		WithRuntimeEnvironment(send.Environment).
 		// Wired on BOTH transports, which is what this file is for: without
@@ -313,6 +314,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 			// exists to end, arriving through the wiring instead.
 			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
 		WithPublicBaseURL(send.PublicBaseURL).WithSchedulingCalendar(send.Calendar).WithMeetingVault(send.MeetingVault).
+		WithSchedulingBrand(contacts.NewStore(InstallationDB(pool))).
 		WithRuntimeEnvironment(send.Environment).
 		WithSendAuthority(send.SendAuthority).
 		WithChannelReachability(send.ChannelRecipients).

@@ -22,8 +22,9 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
-	calendar     SchedulingCalendar
-	meetingVault keyvault.Vault
+	calendar        SchedulingCalendar
+	schedulingBrand SchedulingBrand
+	meetingVault    keyvault.Vault
 
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB

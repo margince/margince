@@ -101,6 +101,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "oauthApp.tenant",
   "oauthApp.tenantPlaceholder",
   // A URL, which is the same string in every language.
+  "scheduling.locationExample",
   "aiRouting.baseUrl.placeholder",
   "aiRouting.baseUrl.placeholder.jev",
   "aiRouting.baseUrl.placeholder.jevCompatible",

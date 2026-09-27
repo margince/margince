@@ -137,12 +137,20 @@ export const vi = {
   "scheduling.connectionHelp":
     "Cần quyền ghi lịch để gửi lời mời. Kết nối lại lịch chỉ đọc để cấp quyền.",
   "scheduling.hostName": "Tên công khai của bạn",
-  "scheduling.companyName": "Tên công ty",
-  "scheduling.logo": "URL logo công khai của công ty",
   "scheduling.subject": "Tiêu đề cuộc họp",
   "scheduling.location": "Địa điểm hoặc liên kết cuộc họp",
   "scheduling.duration": "Thời lượng tính bằng phút",
-  "scheduling.notice": "Thời gian báo trước tính bằng phút",
+  "scheduling.noticeHelp":
+    "24 giờ nghĩa là đặt trước ít nhất một ngày trọn vẹn.",
+  "scheduling.anchorBrand": "Tên và logo công ty được lấy từ hồ sơ công ty.",
+  "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
+  "scheduling.locationHelp":
+    "Dán liên kết Google Meet, Zoom hoặc Teams, hoặc nhập địa chỉ họp. Đây là nơi diễn ra cuộc họp, không phải trang đặt lịch.",
+  "scheduling.previewActive":
+    "Chỉ xem trước. Trang đặt lịch đang hoạt động; chế độ xem trước không gửi lời mời.",
+  "scheduling.previewPaused":
+    "Chỉ xem trước. Đặt lịch công khai đang tạm dừng. Bật liên kết trong cài đặt Cuộc họp để khách có thể đặt lịch.",
+  "scheduling.notice": "Thời gian báo trước tính bằng giờ",
   "scheduling.buffer": "Thời gian đệm tính bằng phút",
   "scheduling.horizon": "Khoảng thời gian đặt lịch tính bằng ngày",
 

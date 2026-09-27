@@ -27,7 +27,8 @@ export const PUBLIC_BOOKING_CONSENT = { policy_version: "2026-07" };
 export function BookingGuestScreen({
   hostSlug,
   proposalToken,
-}: Readonly<{ hostSlug: string; proposalToken?: string }>) {
+  preview = false,
+}: Readonly<{ hostSlug: string; proposalToken?: string; preview?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const [zone, setZone] = useState(viewerZone);
@@ -42,8 +43,21 @@ export function BookingGuestScreen({
   const [topic, setTopic] = useState("");
   const [consent, setConsent] = useState(false);
   const profile = useQuery({
-    queryKey: ["public-booking-profile", hostSlug, proposalToken],
+    queryKey: preview
+      ? ["scheduling-profile"]
+      : ["public-booking-profile", hostSlug, proposalToken],
+    select: (value) => ({
+      ...value,
+      host_name: value.host_name ?? "",
+      company_name: value.company_name ?? "",
+      proposal: "proposal" in value ? value.proposal : null,
+    }),
     queryFn: async () => {
+      if (preview) {
+        const { data, error } = await api.GET("/scheduling/profile");
+        if (error) throwProblem(error);
+        return data;
+      }
       if (proposalToken) {
         const { data, error } = await api.GET("/public/proposal/{token}", {
           params: { path: { token: proposalToken } },
@@ -61,7 +75,7 @@ export function BookingGuestScreen({
   });
   const slots = useQuery({
     queryKey: ["public-booking-slots", hostSlug, proposalToken, from, locale],
-    enabled: profile.data?.enabled === true,
+    enabled: !preview && profile.data?.enabled === true,
     queryFn: async () => {
       if (proposalToken) {
         const { data, error } = await api.GET(
@@ -154,12 +168,17 @@ export function BookingGuestScreen({
       void profile.refetch();
     },
   });
+  const previewNotice = t(
+    profile.data?.enabled
+      ? "scheduling.previewActive"
+      : "scheduling.previewPaused",
+  );
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
         <QueryGate pendingLabel={t("common.loading")} query={profile}>
           {(host) =>
-            !host.enabled ? (
+            !host.enabled && !preview ? (
               <Panel>
                 <PanelBody>
                   {host.proposal?.meeting?.management_token ? (
@@ -196,17 +215,29 @@ export function BookingGuestScreen({
               </Panel>
             ) : (
               <>
-                <header className="book-brand">
-                  <CompanyLogo
-                    name={host.company_name}
-                    src={host.logo_url}
-                    fallback={
-                      <Heading as="div" size="medium">
-                        {host.company_name}
-                      </Heading>
-                    }
-                  />
-                </header>
+                {preview && (
+                  <Panel title={t("scheduling.preview")} tone="accent">
+                    <PanelBody>
+                      <p>{previewNotice}</p>
+                      <a href="#/settings/meetings">
+                        {t("scheduling.openSettings")}
+                      </a>
+                    </PanelBody>
+                  </Panel>
+                )}
+                {host.company_name && (
+                  <header className="book-brand">
+                    <CompanyLogo
+                      name={host.company_name}
+                      src={host.logo_url}
+                      fallback={
+                        <Heading as="div" size="medium">
+                          {host.company_name}
+                        </Heading>
+                      }
+                    />
+                  </header>
+                )}
                 <Panel>
                   <PanelBody>
                     <div className="book-guest-grid">
@@ -275,51 +306,53 @@ export function BookingGuestScreen({
                             />
                           )}
                         </Field>
-                        <QueryGate
-                          pendingLabel={t("common.loading")}
-                          query={slots}
-                        >
-                          {(value) => (
-                            <>
-                              <MeetingSlots
-                                slots={value.slots.map((slot) => ({
-                                  ...slot,
-                                  label: formatDateTime(
-                                    slot.start,
-                                    locale,
-                                    zone,
-                                  ),
-                                }))}
-                                selected={selected?.start}
-                                onSelect={setSelected}
-                                empty={t("scheduling.noTimes")}
-                              />
-                              {value.truncated && (
-                                <Button
-                                  onClick={() => {
-                                    const last = value.slots.at(-1);
-                                    if (last) {
-                                      setFrom(
-                                        new Date(
-                                          new Date(last.start).getTime() +
-                                            15 * 60000,
-                                        ).toISOString(),
-                                      );
-                                      setSelected(null);
-                                    }
-                                  }}
-                                >
-                                  {t("scheduling.next")}
-                                </Button>
-                              )}
-                            </>
-                          )}
-                        </QueryGate>
+                        {!preview && (
+                          <QueryGate
+                            pendingLabel={t("common.loading")}
+                            query={slots}
+                          >
+                            {(value) => (
+                              <>
+                                <MeetingSlots
+                                  slots={value.slots.map((slot) => ({
+                                    ...slot,
+                                    label: formatDateTime(
+                                      slot.start,
+                                      locale,
+                                      zone,
+                                    ),
+                                  }))}
+                                  selected={selected?.start}
+                                  onSelect={setSelected}
+                                  empty={t("scheduling.noTimes")}
+                                />
+                                {value.truncated && (
+                                  <Button
+                                    onClick={() => {
+                                      const last = value.slots.at(-1);
+                                      if (last) {
+                                        setFrom(
+                                          new Date(
+                                            new Date(last.start).getTime() +
+                                              15 * 60000,
+                                          ).toISOString(),
+                                        );
+                                        setSelected(null);
+                                      }
+                                    }}
+                                  >
+                                    {t("scheduling.next")}
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </QueryGate>
+                        )}
                         <form
                           className="book-form"
                           onSubmit={(e) => {
                             e.preventDefault();
-                            if (selected && consent)
+                            if (!preview && selected && consent)
                               book.mutate({
                                 slug: hostSlug,
                                 name,
@@ -376,7 +409,9 @@ export function BookingGuestScreen({
                           <Button
                             type="submit"
                             variant="primary"
-                            disabled={!selected || !consent || book.isPending}
+                            disabled={
+                              preview || !selected || !consent || book.isPending
+                            }
                           >
                             {t("scheduling.book")}
                           </Button>

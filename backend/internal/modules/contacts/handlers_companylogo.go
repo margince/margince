@@ -75,6 +75,11 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 		writeStoreErr(w, r, err)
 		return
 	}
+	h.streamLogoKey(w, r, id, slot, key, operation, logoCacheControl, true)
+}
+
+func (h Handlers) streamLogoKey(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, slot LogoSlot, key, operation, cacheControl string, writeBack bool) {
+	companyID := pathID[ids.CompanyKind](id)
 	if h.blob == nil {
 		httperr.NotImplemented(w, r, operation)
 		return
@@ -88,7 +93,7 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	etag := `"` + logoRevisionDigest(key) + `"`
 	if httperr.IfNoneMatchHit(r, etag) {
 		w.Header().Set("ETag", etag)
-		w.Header().Set("Cache-Control", logoCacheControl)
+		w.Header().Set("Cache-Control", cacheControl)
 		w.WriteHeader(http.StatusNotModified)
 		return
 	}
@@ -111,16 +116,16 @@ func (h Handlers) streamLogo(w http.ResponseWriter, r *http.Request, id crmcontr
 	// decode, no pixel scan. That is every mark stored since PutLogo, and a
 	// legacy one once this process has checked it.
 	if tight {
-		writeLogo(w, r, id, etag, rc, object.Size)
+		writeLogo(w, r, id, etag, rc, object.Size, cacheControl)
 		return
 	}
-	h.streamLegacyLogo(w, r, companyID, id, slot, key, etag, rc)
+	h.streamLegacyLogo(w, r, companyID, id, slot, key, etag, rc, cacheControl, writeBack)
 }
 
 // streamLegacyLogo serves a mark stored before PutLogo trimmed at write time:
 // such an object may still carry the transparent square canvas older uploads
 // were given, so it is cropped here and the crop written back.
-func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, companyID ids.CompanyID, id crmcontracts.Id, slot LogoSlot, key, etag string, rc io.ReadCloser) {
+func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, companyID ids.CompanyID, id crmcontracts.Id, slot LogoSlot, key, etag string, rc io.ReadCloser, cacheControl string, writeBack bool) {
 	source, readErr := io.ReadAll(rc)
 	closeErr := rc.Close()
 	if closeErr != nil {
@@ -135,7 +140,11 @@ func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, compa
 		httperr.Write(w, r, err)
 		return
 	}
-	writeLogo(w, r, id, etag, io.NopCloser(bytes.NewReader(logo)), int64(len(logo)))
+	writeLogo(w, r, id, etag, io.NopCloser(bytes.NewReader(logo)), int64(len(logo)), cacheControl)
+	// Anonymous logo reads do not grant authority to rewrite stored objects.
+	if !writeBack {
+		return
+	}
 	// A body this small can sit in net/http's own write buffer until the
 	// handler returns, so without an explicit flush here the reader would
 	// wait on the write-back below before receiving anything they asked for
@@ -166,7 +175,7 @@ func (h Handlers) streamLegacyLogo(w http.ResponseWriter, r *http.Request, compa
 
 // writeLogo sends one mark's bytes under the headers every logo response
 // carries, whichever path produced them.
-func writeLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, etag string, body io.ReadCloser, size int64) {
+func writeLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, etag string, body io.ReadCloser, size int64, cacheControl string) {
 	// These bytes were normalized from a third-party website's asset, and three
 	// things keep that from mattering at the response. The media type is fixed
 	// rather than read back from the object's metadata — the contract declares
@@ -176,7 +185,7 @@ func writeLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, etag 
 	// the document that renders can reach nothing.
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	w.Header().Set("Cache-Control", logoCacheControl)
+	w.Header().Set("Cache-Control", cacheControl)
 	w.Header().Set("ETag", etag)
 	httperr.StreamObject(w, r, httperr.StreamedObject{
 		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: size},

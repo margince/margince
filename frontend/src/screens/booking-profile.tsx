@@ -18,34 +18,45 @@ import { useSchedulingProfile } from "./scheduling-profile-query";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
-export function BookingProfileScreen() {
+export function BookingProfileScreen({
+  embedded = false,
+}: Readonly<{ embedded?: boolean }>) {
   const t = useT();
   const query = useSchedulingProfile();
   return (
-    <div className="book-page">
-      <BookingBack />
-      <header className="book-heading">
-        <div>
-          <Heading as="h1" size="large">
-            {t("scheduling.myLink")}
-          </Heading>
-          <p className="t-caption">{t("scheduling.linkIntro")}</p>
-        </div>
-        <Button onClick={() => navigate({ screen: "book", id: "contact" })}>
-          <CalendarDays aria-hidden />
-          {t("scheduling.new")}
-        </Button>
-      </header>
+    <div className={embedded ? "book-form" : "book-page"}>
+      {!embedded && <BookingBack />}
+      {!embedded && (
+        <header className="book-heading">
+          <div>
+            <Heading as="h1" size="large">
+              {t("scheduling.myLink")}
+            </Heading>
+            <p className="t-caption">{t("scheduling.linkIntro")}</p>
+          </div>
+          <Button onClick={() => navigate({ screen: "book", id: "contact" })}>
+            <CalendarDays aria-hidden />
+            {t("scheduling.new")}
+          </Button>
+        </header>
+      )}
       <QueryGate pendingLabel={t("common.loading")} query={query}>
         {(profile) => (
-          <ProfileForm key={JSON.stringify(profile)} profile={profile} />
+          <ProfileForm
+            key={JSON.stringify(profile)}
+            profile={profile}
+            embedded={embedded}
+          />
         )}
       </QueryGate>
     </div>
   );
 }
 
-function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
+function ProfileForm({
+  profile,
+  embedded,
+}: Readonly<{ profile: Profile; embedded: boolean }>) {
   const t = useT();
   const client = useQueryClient();
   const calendar = useBookingCalendar(profile.provider, false);
@@ -89,6 +100,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
     <div className="book-form">
       <Panel title={t("scheduling.myLink")} tone="accent">
         <PanelBody>
+          <p className="t-caption">{t("scheduling.linkIntro")}</p>
           <Badge tone={profile.enabled ? "success" : "default"}>
             {t(profile.enabled ? "scheduling.active" : "scheduling.paused")}
           </Badge>
@@ -116,24 +128,21 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
               <Copy aria-hidden />
               {copy.label}
             </Button>
-            <Button
-              disabled={!profile.slug}
-              onClick={() => navigate({ screen: "book", id: profile.slug })}
-            >
+            <Button onClick={() => navigate({ screen: "book", id: "preview" })}>
               <ExternalLink aria-hidden />
               {t("scheduling.preview")}
             </Button>
           </div>
           {copy.notice}
-          <Button disabled={!profile.public_url} onClick={copySignature.copy}>
-            {copySignature.label}
-          </Button>
-          {copySignature.notice}
-          {profile.public_url && (
-            <p>
+          <div className="book-actions">
+            <Button disabled={!profile.public_url} onClick={copySignature.copy}>
+              {copySignature.label}
+            </Button>
+            {profile.public_url && (
               <a href={profile.public_url}>{t("scheduling.signature")}</a>
-            </p>
-          )}
+            )}
+          </div>
+          {copySignature.notice}
           <div className="book-actions">
             <Button
               disabled={save.isPending}
@@ -167,7 +176,9 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
           <ErrorLine error={save.error} />
         </PanelBody>
       </Panel>
-      <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
+      {!embedded && (
+        <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
+      )}
     </div>
   );
 }

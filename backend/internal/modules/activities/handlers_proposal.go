@@ -65,6 +65,7 @@ func (h Handlers) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Reques
 		writeStoreErr(w, r, err)
 		return
 	}
+	profile = h.store.brandSchedulingProfile(r.Context(), profile)
 	out := crmcontracts.PublicMeetingProposal{Profile: publicProfile(profile), Description: row.Request.Description, ExpiresAt: row.Expires, Used: row.Used != nil, Options: row.Request.Options}
 	out.Profile.Title = row.Request.Subject
 	out.Profile.Location = row.Request.Location

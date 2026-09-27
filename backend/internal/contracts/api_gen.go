@@ -35458,13 +35458,15 @@ type PublicOriginStatus struct {
 
 // PublicSchedulingProfile defines model for PublicSchedulingProfile.
 type PublicSchedulingProfile struct {
-	CompanyName     string  `json:"company_name"`
-	DurationMinutes int     `json:"duration_minutes"`
-	Enabled         bool    `json:"enabled"`
-	HostName        string  `json:"host_name"`
-	Location        string  `json:"location"`
-	LogoUrl         *string `json:"logo_url,omitempty"`
-	Title           string  `json:"title"`
+	CompanyName     string `json:"company_name"`
+	DurationMinutes int    `json:"duration_minutes"`
+	Enabled         bool   `json:"enabled"`
+	HostName        string `json:"host_name"`
+	Location        string `json:"location"`
+
+	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
+	LogoUrl *string `json:"logo_url,omitempty"`
+	Title   string  `json:"title"`
 }
 
 // PutOnboardingStateRequest defines model for PutOnboardingStateRequest.
@@ -36967,15 +36969,19 @@ type SchedulingProfile struct {
 	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int       `json:"buffer_minutes"`
 	CalendarId        string    `json:"calendar_id"`
-	CompanyName       *string   `json:"company_name,omitempty"`
-	DurationMinutes   int       `json:"duration_minutes"`
+
+	// CompanyName Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
+	CompanyName     *string `json:"company_name,omitempty"`
+	DurationMinutes int     `json:"duration_minutes"`
 
 	// EmailReminder Send one operational email reminder one hour before future meetings.
-	EmailReminder *bool                     `json:"email_reminder,omitempty"`
-	Enabled       bool                      `json:"enabled"`
-	HorizonDays   int                       `json:"horizon_days"`
-	HostName      *string                   `json:"host_name,omitempty"`
-	Location      string                    `json:"location"`
+	EmailReminder *bool   `json:"email_reminder,omitempty"`
+	Enabled       bool    `json:"enabled"`
+	HorizonDays   int     `json:"horizon_days"`
+	HostName      *string `json:"host_name,omitempty"`
+	Location      string  `json:"location"`
+
+	// LogoUrl Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl       *string                   `json:"logo_url,omitempty"`
 	NoticeMinutes int                       `json:"notice_minutes"`
 	Provider      SchedulingProfileProvider `json:"provider"`
@@ -60060,6 +60066,9 @@ type ServerInterface interface {
 	// Delete retained provider claims and identifying run metadata.
 	// (DELETE /provider-connections/{provider}/data)
 	DeleteProviderData(w http.ResponseWriter, r *http.Request, provider Provider)
+	// Read the anchor company's public booking logo.
+	// (GET /public/booking/company-logo)
+	GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request)
 	// Book a meeting from the public page (anonymous) — captures the booker + mandatory consent.
 	// (POST /public/booking/{host_slug})
 	BookPublicMeeting(w http.ResponseWriter, r *http.Request, hostSlug string, params BookPublicMeetingParams)
@@ -63669,6 +63678,12 @@ func (_ Unimplemented) ConnectProvider(w http.ResponseWriter, r *http.Request, p
 // Delete retained provider claims and identifying run metadata.
 // (DELETE /provider-connections/{provider}/data)
 func (_ Unimplemented) DeleteProviderData(w http.ResponseWriter, r *http.Request, provider Provider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the anchor company's public booking logo.
+// (GET /public/booking/company-logo)
+func (_ Unimplemented) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -86267,6 +86282,20 @@ func (siw *ServerInterfaceWrapper) DeleteProviderData(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicBookingCompanyLogo operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicBookingCompanyLogo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // BookPublicMeeting operation middleware
 func (siw *ServerInterfaceWrapper) BookPublicMeeting(w http.ResponseWriter, r *http.Request) {
 
@@ -95311,6 +95340,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/provider-connections/{provider}/data", wrapper.DeleteProviderData)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/booking/company-logo", wrapper.GetPublicBookingCompanyLogo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/public/booking/{host_slug}", wrapper.BookPublicMeeting)

@@ -130,12 +130,20 @@ export const en = {
   "scheduling.connectionHelp":
     "Calendar write access is required to send invitations. Reconnect an existing read-only calendar to grant access.",
   "scheduling.hostName": "Your public name",
-  "scheduling.companyName": "Company name",
-  "scheduling.logo": "Public company logo URL",
   "scheduling.subject": "Meeting title",
   "scheduling.location": "Location or meeting link",
   "scheduling.duration": "Duration in minutes",
-  "scheduling.notice": "Minimum notice in minutes",
+  "scheduling.noticeHelp": "24 hours means at least one full day ahead.",
+  "scheduling.anchorBrand":
+    "Company name and logo are taken from your company profile.",
+  "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
+  "scheduling.locationHelp":
+    "Paste your Google Meet, Zoom or Teams link, or enter a meeting address. This is where the meeting takes place, not your booking page.",
+  "scheduling.previewActive":
+    "Preview only. Your booking page is live; no invitations are sent from this preview.",
+  "scheduling.previewPaused":
+    "Preview only. Public booking is paused. Visitors cannot book until you enable your link in Meetings settings.",
+  "scheduling.notice": "Minimum notice in hours",
   "scheduling.buffer": "Buffer in minutes",
   "scheduling.horizon": "Booking horizon in days",
 

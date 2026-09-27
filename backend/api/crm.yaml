@@ -7131,6 +7131,24 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /public/booking/company-logo:
+    get:
+      tags: [Public]
+      operationId: getPublicBookingCompanyLogo
+      security: []
+      summary: Read the anchor company's public booking logo.
+      responses:
+        '200':
+          description: The anchor company's normalized PNG logo.
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+        default:
+          description: The logo could not be read.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /public/booking/{host_slug}/profile:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
@@ -35402,7 +35420,7 @@ components:
       properties:
         host_name: { type: string }
         company_name: { type: string }
-        logo_url: { type: string }
+        logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
         title: { type: string }
         location: { type: string }
         duration_minutes: { type: integer }
@@ -35422,8 +35440,8 @@ components:
         title: { type: string, maxLength: 200 }
         location: { type: string, maxLength: 1000 }
         host_name: { type: string, maxLength: 200 }
-        company_name: { type: string, maxLength: 200 }
-        logo_url: { type: string, maxLength: 2000 }
+        company_name: { type: string, maxLength: 200, description: Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
+        logo_url: { type: string, maxLength: 2000, description: Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. }
         slug: { type: string, readOnly: true }
         public_url: { type: string, readOnly: true }
         replace_link: { type: boolean, writeOnly: true }
