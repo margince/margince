@@ -229,6 +229,9 @@ func fullRegistry(t *testing.T) *Registry {
 	// verifies is the tool's own, which restates nothing about the document.
 	RegisterAnalyticsVocabularyTool(r, &fakeAnalyticsVocabulary{doc: "pipeline-current\n"})
 	RegisterContextSearchTool(r, nil, inertRetriever{})
+	RegisterReportEvidenceTool(r, nil, func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
+		return ReportEvidence{}, nil
+	})
 	RegisterResolveTool(r, nil, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
 		return nil, nil
 	})

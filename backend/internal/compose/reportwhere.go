@@ -190,8 +190,8 @@ func specNarrowings(
 	// "my records" must not answer for the installation. A spec with no owner
 	// column (activities-by-kind) has nothing to narrow it on, and resolving
 	// it there is not a narrower answer, it is a crash.
-	namedScope := requested.Kind != "" && measuresOwners(spec)
-	if spec.population == measureCallersOwn || namedScope {
+	namedScope := namedPopulation(spec, requested)
+	if populationApplies(spec, requested) {
 		_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg, unownedIsPartOfDefault)
 		if err != nil {
 			return nil, "", err
@@ -222,6 +222,18 @@ func specNarrowings(
 		return nil, "", err
 	}
 	return append(append(out, masks...), refs...), narrowed, nil
+}
+
+// populationApplies says whether specNarrowings narrows this question to a
+// population at all. wholeCohort (reportevidence.go) asks the same helper
+// before it re-asks a run's question with the population the reader got.
+func populationApplies(spec reportSpec, requested RequestedScope) bool {
+	return spec.population == measureCallersOwn || namedPopulation(spec, requested)
+}
+
+// namedPopulation says the caller named a scope on a spec that can narrow by one.
+func namedPopulation(spec reportSpec, requested RequestedScope) bool {
+	return requested.Kind != "" && measuresOwners(spec)
 }
 
 // referencedColumns is the set of SQL expressions one query SELECTS BY — the

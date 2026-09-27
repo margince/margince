@@ -68,9 +68,10 @@ const clientToolCeiling = 100
 //
 // It comes DOWN when the verb reconciliation lands, and a ceiling that did not
 // follow it down would quietly re-bank the room it freed.
-// Calendar sending is separately approved from recording a meeting; this costs
-// one additional tool, leaving 23 of the client’s 100 slots for other servers.
-const publishedToolCeiling = 77
+// search_report_evidence is the one surface that may state what share of a
+// saved run's records support a claim; it costs one more tool, leaving 22 of a
+// client's 100 slots for other servers.
+const publishedToolCeiling = 78
 
 type mcpInfoFile struct {
 	Totals struct {

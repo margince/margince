@@ -209,6 +209,11 @@ var composedIntents = map[string]bool{
 	// document is composed from the contract shapes, so it names nothing about
 	// a workspace at all.
 	"describe_record_fields": true,
+	// search_report_evidence composes explainReportRunCell's drill-through
+	// with the search module's bounded ranking and classification, so no one
+	// operation declares it. Read-only; every listed record is read back
+	// through the provider under the caller's own grants.
+	"search_report_evidence": true,
 	// search_context ranks across record types through the retrieval index,
 	// which no single list operation is: `GET /search` is the lexical half
 	// alone and answers no vector lane, and the records the sweep names are

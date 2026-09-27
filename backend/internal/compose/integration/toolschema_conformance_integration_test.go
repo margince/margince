@@ -118,6 +118,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// deal write as a side effect of checking a schema.
 	waiting := stageOneProposal(ctx, t, e, deal)
 
+	// A saved run for search_report_evidence to search, saved through the tool
+	// that hands a caller one.
+	run := savedRunThroughTheToolSurface(ctx, t, registry,
+		`{"entity":"activities-by-kind","group_by":["kind"],"measures":[{"fn":"count"}],"save":true}`)
+
 	calls := []struct{ tool, args string }{
 		{"list_pipelines", `{}`},
 		{"read_brief", `{}`},
@@ -191,6 +196,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// report" on a page that was in fact degraded.
 		{"search_context", `{"query":"Conformance","record_types":["contact"]}`},
 		{"search_context", `{"query":"nothing here matches this"}`},
+		// The whole run and one cell of it. Too few activities clear the floor
+		// here, so the withheld answer, with its refused prevalence, is the
+		// shape this pins; the evidence suite holds the populated one.
+		{"search_report_evidence", `{"run_id":"` + run.String() + `","query":"relinked"}`},
+		{"search_report_evidence", `{"run_id":"` + run.String() + `","cell":["note"],"query":"relinked"}`},
 		// A payload that resolves and one that resolves to nothing. The second is
 		// the answer a caller acts on by CREATING a record, so its shape is the
 		// one a mis-read costs the most.
@@ -517,6 +527,25 @@ func createThroughTheToolSurface(ctx context.Context, t *testing.T, registry *ag
 		t.Fatalf("unreadable create_record answer %s: %v", out, err)
 	}
 	return created.Data.ID
+}
+
+// savedRunThroughTheToolSurface saves one analytics answer through
+// run_analytics_query and returns the run id it answered with.
+func savedRunThroughTheToolSurface(ctx context.Context, t *testing.T, registry *agents.Registry, args string) ids.UUID {
+	t.Helper()
+	out, err := registry.Invoke(ctx, "run_analytics_query", json.RawMessage(args))
+	if err != nil {
+		t.Fatalf("run_analytics_query(%s): %v", args, err)
+	}
+	var saved struct {
+		Data struct {
+			RunID ids.UUID `json:"run_id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &saved); err != nil || saved.Data.RunID == (ids.UUID{}) {
+		t.Fatalf("run_analytics_query answered no run id: %s (%v)", out, err)
+	}
+	return saved.Data.RunID
 }
 
 // coinTagThroughTheToolSurface creates one tag through create_tag and returns

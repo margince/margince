@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 77 |
+| Tools | 78 |
 | Resources | 12 |
-| Tool catalog | 221.9 KB |
+| Tool catalog | 225.9 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 57958 |
+| Approx. wire tokens | 58964 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 100.8 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 57.6 KB | 25% | Yes, every step |
-| Input schemas | 47.3 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.2 KB | 7% | Partly |
-| **Description + input schema** | **104.9 KB** | **47%** | **the recurring cost** |
+| Output schemas | 103.2 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 58.4 KB | 25% | Yes, every step |
+| Input schemas | 47.8 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.5 KB | 7% | Partly |
+| **Description + input schema** | **106.2 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -60,7 +60,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (77)
+### Tools (78)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -133,6 +133,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
 | [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
 | [`search_records`](#search_records) | Search records | yes |  | 2.8 KB |
+| [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 3.9 KB |
 | [`send_company_email`](#send_company_email) | Start an email conversation from a record |  |  | 4.6 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 4.2 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
@@ -13803,6 +13804,320 @@ Find contacts, companies, deals, leads and projects when you know roughly what t
       },
       "required": [
         "records"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### search_report_evidence
+
+**Search the evidence behind a saved run**
+
+Check a claim against the records behind a saved analytics run — or one cell of it — by searching their text: records that carry the words are citations, records that do not are counterexamples, and records with no text to judge are abstentions. It searches only the run's own records, re-derived under this seat's current access. It states a prevalence — the share of the set that matched — only when coverage is complete_exact; otherwise prevalence is null and the notes name the part not searched. search_context sweeps the whole workspace by meaning; run_analytics_query counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "cell": {
+      "description": "One cell's group key values, in the run's group_by order. Omit to search every record the run measured.",
+      "items": {},
+      "type": "array"
+    },
+    "limit": {
+      "description": "How many citations and how many counterexamples to return.",
+      "maximum": 25,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "query": {
+      "description": "The words the evidence would carry.",
+      "maxLength": 1000,
+      "type": "string"
+    },
+    "run_id": {
+      "description": "A saved run: run_analytics_query with save answers one.",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "query"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "abstentions": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "record_type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "record_type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "citations": {
+          "items": {
+            "properties": {
+              "excerpts": {
+                "items": {
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "snippet",
+                    "source"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "record": {
+                "properties": {
+                  "fields": {
+                    "type": "object"
+                  },
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "record_type": {
+                    "type": "string"
+                  },
+                  "trust_tier": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "fields",
+                  "id",
+                  "record_type"
+                ],
+                "type": "object"
+              },
+              "score": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "excerpts",
+              "record",
+              "score"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "counterexamples": {
+          "items": {
+            "properties": {
+              "fields": {
+                "type": "object"
+              },
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "record_type": {
+                "type": "string"
+              },
+              "trust_tier": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "fields",
+              "id",
+              "record_type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "coverage": {
+          "type": "string"
+        },
+        "notes": {
+          "items": {
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "detail"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "prevalence": {
+          "properties": {
+            "matched": {
+              "type": "integer"
+            },
+            "of": {
+              "type": "integer"
+            },
+            "share": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "matched",
+            "of",
+            "share"
+          ],
+          "type": "object"
+        },
+        "tally": {
+          "properties": {
+            "matched": {
+              "type": "integer"
+            },
+            "unjudged": {
+              "type": "integer"
+            },
+            "unmatched": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "matched",
+            "unjudged",
+            "unmatched"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "abstentions",
+        "citations",
+        "counterexamples",
+        "coverage",
+        "notes",
+        "tally"
       ],
       "type": "object"
     },

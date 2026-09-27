@@ -209,10 +209,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// The comms tools ride the same store paths as the HTTP transport. The risk
 	// decorator adds the coverage findings a deal anchor would otherwise
 	// assemble without.
-	retriever := riskAwareRetriever{
-		pool:  pool,
-		inner: search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder),
-	}
+	searchRetriever := search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder)
+	retriever := riskAwareRetriever{pool: pool, inner: searchRetriever}
 	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
 	// The transport directory, read from this package's boot snapshot — the
 	// composed set is the composition root's fact, so the module takes it as a
@@ -224,6 +222,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// stamped, the caller's own row scope is re-applied, and the record is
 	// charged against their read bound.
 	agents.RegisterContextSearchTool(registry, provider, retriever)
+	// The evidence behind a saved run: the report drawer's own drill-through
+	// names the records, the same retriever searches only those, and each
+	// listed record is read back through the provider as search_context's are.
+	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
+		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
+		ranker: searchRetriever, classifier: searchRetriever,
+	}.SearchReportEvidence)
 	// Identity resolution. The ladder is workspace-wide by design — a duplicate
 	// is a duplicate whoever is looking — so the provider is not decoration
 	// here: it is the ONLY thing that applies this caller's row scope to a
