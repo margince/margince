@@ -41,7 +41,7 @@ function panel(routes: RouteMap) {
     stubWithSession(routes, {});
     return (
       <StoryProviders>
-        <TeamWeeklyPanel offered />
+        <TeamWeeklyPanel reach="every_team" />
       </StoryProviders>
     );
   };

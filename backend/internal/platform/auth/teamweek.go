@@ -37,8 +37,8 @@ const (
 
 // TeamWeekReachOf answers which teams' weeks this caller may open.
 //
-// The ONE answer for both the store that serves a team's week and the worklist
-// that offers the team picker, so the control cannot offer a door the store
+// The ONE answer for both the store that serves a team's week and the field
+// Home offers the week on, so the control cannot offer a door the store
 // refuses.
 //
 // A lead is a coaching seat, the same one RequireCoach admits: team_membership
@@ -47,11 +47,20 @@ const (
 // own-scoped seat is refused whatever it holds, because the page it would get
 // is about colleagues whose rows it cannot read.
 //
+// Home offers the week on this answer, carried as the worklist's `team_week`;
+// the worklist's own `team` scope is the team's live work and stays on row
+// scope.
+//
 // The system principal reaches every team, as it passes every object grant. A
 // buyer reaches none: Allows refuses it and it is not a human seat.
 func TeamWeekReachOf(ctx context.Context) TeamWeekReach {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.Permissions.RowScope == principal.RowScopeOwn {
+		return ReachesNoTeam
+	}
+	// The week carries each member's won deals and pipeline totals, so a seat
+	// whose deal read was revoked reads none of them, on either arm.
+	if !Allows(ctx, "deal", principal.ActionRead) {
 		return ReachesNoTeam
 	}
 	if Allows(ctx, objTeamOversight, principal.ActionRead) {

@@ -25,14 +25,20 @@ import { OvernightPanel } from "./brief.rail.overnight";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefTeamBoard } from "./brief.teamboard";
-import { BriefTeamSelect } from "./brief.teamselect";
+import { BriefTeamSelect, morningTeams } from "./brief.teamselect";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
-import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
+import {
+  addressFrom,
+  type BriefAddress,
+  paramsFor,
+  type TeamOffers,
+} from "./brief.view";
 import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { MagicPanel } from "./magic";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
+import type { TeamWeekReach } from "./teamweekly.queries";
 import { drawerScope } from "./worklist.address";
 import { WorklistPane } from "./worklist.pane";
 import { useWorklist, worklistKey } from "./worklist.queries";
@@ -44,8 +50,14 @@ export function BriefScreen() {
   const nowMs = useNow(60_000);
   const me = useMe();
   const own = useWorklist("mine", "all");
-  const teamOffered =
-    own.data?.pages[0]?.scope_options?.includes("team") ?? false;
+  // Each view's team surface on its own server rule: the team's live work on
+  // row scope, the team's frozen week on who leads or oversees. An older
+  // server without `team_week` offers no week, which is the safe reading.
+  const teamWeek = own.data?.pages[0]?.team_week ?? "none";
+  const teamOffered: TeamOffers = {
+    morning: own.data?.pages[0]?.scope_options?.includes("team") ?? false,
+    weekly: teamWeek !== "none",
+  };
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params, teamOffered);
   const query = own;
@@ -127,7 +139,12 @@ export function BriefScreen() {
           />
         </div>
       </div>
-      <BriefBody address={address} teamOffered={teamOffered} query={query} />
+      <BriefBody
+        address={address}
+        teamOffered={teamOffered}
+        teamWeek={teamWeek}
+        query={query}
+      />
       <BriefQueue />
     </div>
   );
@@ -138,15 +155,18 @@ export { deckItems } from "./brief.decisions.items";
 function BriefBody({
   address,
   teamOffered,
+  teamWeek,
   query,
 }: Readonly<{
   address: BriefAddress;
-  teamOffered: boolean;
+  teamOffered: TeamOffers;
+  teamWeek: TeamWeekReach;
   query: ReturnType<typeof useWorklist>;
 }>) {
+  const me = useMe();
   if (address.view === "weekly")
     return address.scope === "team" ? (
-      <TeamWeeklyPanel offered={teamOffered} />
+      <TeamWeeklyPanel reach={teamWeek} />
     ) : (
       <>
         <WeeklySection />
@@ -155,8 +175,10 @@ function BriefBody({
     );
   if (address.scope === "team")
     return (
-      <BriefTeamSelect>
-        {(teamId) => <BriefTeamBoard offered={teamOffered} teamId={teamId} />}
+      <BriefTeamSelect lists={morningTeams(me.data?.authorization?.row_scope)}>
+        {(teamId) => (
+          <BriefTeamBoard offered={teamOffered.morning} teamId={teamId} />
+        )}
       </BriefTeamSelect>
     );
   return <PersonalMorning query={query} />;

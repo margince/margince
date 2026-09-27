@@ -45,24 +45,20 @@ const (
 // reader's own queue, so it has to be reachable from every one of them or the
 // change would have hidden it. Nothing in it is a colleague's — that is what
 // unassigned means — so no tier gates it.
-//
-// Team is offered on auth.TeamWeekReachOf, the predicate the team's week is
-// served on, because Home draws its team picker from this list. Offering it on
-// row scope put a read-only seat in front of a picker for pages the store
-// refuses.
 func scopeOptionsFor(ctx context.Context) []string {
 	options := []string{scopeMine, scopeUnassigned}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return options
 	}
-	if auth.TeamWeekReachOf(ctx) != auth.ReachesNoTeam {
-		options = append(options, scopeTeam)
+	switch actor.Permissions.RowScope {
+	case principal.RowScopeAll:
+		return append(options, scopeTeam, scopeAll)
+	case principal.RowScopeTeam:
+		return append(options, scopeTeam)
+	default:
+		return options
 	}
-	if actor.Permissions.RowScope == principal.RowScopeAll {
-		options = append(options, scopeAll)
-	}
-	return options
 }
 
 // resolveScope answers which scope this read runs at, or refuses.
@@ -456,6 +452,21 @@ func answersTo(row ranked) (ids.UUID, bool) {
 		return ids.UUID(*row.item.Deal.OwnerId), true
 	}
 	return ids.UUID{}, false
+}
+
+// teamWeekFor answers which teams' frozen weeks this reader may open, on the
+// predicate the week is served on. Not a scope: the `team` scope is the team's
+// live work and follows row scope, while the week is a lead's verdict on named
+// colleagues, which a read-only seat reaching every row does not get.
+func teamWeekFor(ctx context.Context) crmcontracts.WorklistTeamWeek {
+	switch auth.TeamWeekReachOf(ctx) {
+	case auth.ReachesEveryTeam:
+		return crmcontracts.WorklistTeamWeekEveryTeam
+	case auth.ReachesTeamsLed:
+		return crmcontracts.WorklistTeamWeekTeamsLed
+	default:
+		return crmcontracts.WorklistTeamWeekNone
+	}
 }
 
 // scopeOptions puts the resolver's answer on the wire.

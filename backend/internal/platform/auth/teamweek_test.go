@@ -13,13 +13,28 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// seatReading is a seat that reads deals, as every seeded role does.
 func seatReading(kind principal.PrincipalType, scope principal.RowScope, role string, oversees bool) context.Context {
+	return seatHolding(kind, scope, role, map[string]principal.ObjectGrant{
+		objTeamOversight: {Read: oversees},
+		"deal":           {Read: true},
+	})
+}
+
+// seatWithoutDeals is seatReading with its deal read revoked.
+func seatWithoutDeals(scope principal.RowScope, role string, oversees bool) context.Context {
+	return seatHolding(principal.PrincipalHuman, scope, role, map[string]principal.ObjectGrant{
+		objTeamOversight: {Read: oversees},
+	})
+}
+
+func seatHolding(kind principal.PrincipalType, scope principal.RowScope, role string, objects map[string]principal.ObjectGrant) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
 		Type: kind,
 		ID:   "seat:test",
 		Permissions: principal.Permissions{
 			RoleKeys: []string{role},
-			Objects:  map[string]principal.ObjectGrant{objTeamOversight: {Read: oversees}},
+			Objects:  objects,
 			RowScope: scope,
 		},
 	})
@@ -43,6 +58,9 @@ func TestEachSeatReachesTheTeamWeeksItLeadsOrOversees(t *testing.T) {
 		{"read_only granted oversight", seatReading(human, principal.RowScopeAll, "read_only", true), ReachesEveryTeam},
 		// Management with its grant removed by an operator leads only its teams.
 		{"management without the grant", seatReading(human, principal.RowScopeAll, "management", false), ReachesTeamsLed},
+		// The week carries deal totals, so a revoked deal read closes both arms.
+		{"manager without deal read", seatWithoutDeals(principal.RowScopeTeam, "manager", false), ReachesNoTeam},
+		{"management without deal read", seatWithoutDeals(principal.RowScopeAll, "management", true), ReachesNoTeam},
 		// An own-scoped seat would read about colleagues whose rows it cannot.
 		{"own-scoped with the grant", seatReading(human, principal.RowScopeOwn, "admin", true), ReachesNoTeam},
 		// Coaching is a human's act; an agent holding a lead's key leads nobody.

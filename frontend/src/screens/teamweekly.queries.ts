@@ -10,6 +10,10 @@ export type Team = components["schemas"]["Team"];
 export type TeamWeeklyReview = components["schemas"]["TeamWeeklyReview"];
 export type TeamWeeklyRep = components["schemas"]["TeamWeeklyRep"];
 export type TeamWeeklyFocusKind = TeamWeeklyRep["focus_kind"];
+/** Which teams' weeks the server opens for this reader, off the worklist read. */
+export type TeamWeekReach = NonNullable<
+  components["schemas"]["Worklist"]["team_week"]
+>;
 
 /**
  * How a read of a team's frozen week can come back with nothing to draw.
@@ -65,9 +69,8 @@ export function useTeamWeeklyReview(
  * The workspace's teams, for the picker.
  *
  * There is no "my teams" read: `/teams` lists every unarchived team any member
- * may see. The picker narrows it with what /me already says — the teams the
- * reader is on, and whether they hold `team_oversight.read` — which is the
- * rule the team-weekly endpoint serves on.
+ * may see. Each view's picker narrows it to the teams its own server rule
+ * serves — see `morningTeams` and `weekTeams` beside the picker.
  */
 export function useTeams(): UseQueryResult<readonly Team[]> {
   return useQuery({

@@ -1,10 +1,15 @@
 -- SPDX-License-Identifier: BUSL-1.1
 -- SPDX-FileCopyrightText: 2026 Gradion
 
-SET LOCAL lock_timeout = '5s';
-
--- The grant goes with the object it names: policy.Parse refuses a document
--- naming an object outside the closed set, so a leftover key would fail every
--- login. A hand-set grant on a CUSTOM role goes too, for the same reason.
-UPDATE role SET permissions = permissions #- '{objects,team_oversight}'
-    WHERE permissions ? 'objects' AND (permissions -> 'objects') ? 'team_oversight';
+-- Nothing to undo, and nothing that COULD be undone honestly.
+--
+-- The up migration ADDS objects.team_oversight where a role has none. The row
+-- keeps no record of which documents it wrote, so a rollback cannot tell a key
+-- this migration added from one an operator has since set by hand, and
+-- removing it wholesale would erase a decision the operator made — a denial on
+-- management included, which the next up would then turn back into a grant.
+--
+-- Leaving the key is safe for the previous code: policy.Parse drops an object
+-- outside the grantable vocabulary with a log line rather than refusing the
+-- document, so a login under the older build reads the role as it always did.
+SELECT 1;

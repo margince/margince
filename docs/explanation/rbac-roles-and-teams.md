@@ -238,13 +238,14 @@ scoped to a team, but the grants still come from the role.)
 4. **They answer "may I read this team's coaching week?"** — the frozen week that names each
    member with a verdict their lead is meant to raise. Row scope does not answer it: a `read_only`
    seat reaches every record and leads nobody. `auth.TeamWeekReachOf` answers it once, for both
-   `GET /weekly-reviews/team` and the `team` entry in the Worklist's `scope_options`, so Home never
-   offers a team picker the server refuses. A seat holding `team_oversight.read` (seeded to
-   `admin` and `management`) opens every team. A coaching seat, as `auth.RequireCoach` defines it,
-   opens a team it is a live member of — `team_membership` records who is on a team, not who
-   leads it, so the coaching role is what says "lead". Every other seat, and every own-scoped
-   seat, is refused with 403. A lead asking about a team they are not on gets 404, so a team id
-   cannot be probed for existence.
+   `GET /weekly-reviews/team` and the Worklist's `team_week` field, which is what Home offers the
+   week on, so Home never offers a week the server refuses. The Worklist's `team` scope is the
+   team's live work and stays on row scope. Every arm needs `deal.read`, because the week carries
+   deal totals. A seat holding `team_oversight.read` (seeded to `admin` and `management`) opens
+   every team. A coaching seat, as `auth.RequireCoach` defines it, opens a team it is a live
+   member of — `team_membership` records who is on a team, not who leads it, so the coaching role
+   is what says "lead". Every other seat, and every own-scoped seat, is refused with 403. A lead
+   asking about a team they are not on gets 404, so a team id cannot be probed for existence.
 
 ## A user with no role sees nothing
 

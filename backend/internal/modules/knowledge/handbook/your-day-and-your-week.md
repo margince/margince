@@ -349,9 +349,9 @@ Two honest notes carried on the page itself:
 
 A team's week is for the team's lead, and for a role that oversees every team —
 Admin and Management out of the box. Reaching every record is not enough: a
-read-only seat sees the whole workspace and is still not offered the team view.
-The picker lists the teams you lead, or every team if your role oversees them
-all. A seat that may open no team's week is told plainly that this is not
+read-only seat sees the whole workspace and its team's live work on Morning, and
+is still not offered the team's week. The week's picker lists the teams you
+lead, or every team if your role oversees them all. A seat that may open no team's week is told plainly that this is not
 theirs. A lead asking about a team they are not on gets **not found** — exactly
 what a team that does not exist returns, so who leads what cannot be mapped by
 trying.

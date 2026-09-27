@@ -177,6 +177,8 @@ func (s *Service) worklistIn(
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
+	teamWeek := teamWeekFor(ctx)
+	out.TeamWeek = &teamWeek
 	if err := reader.nameWorklistRows(ctx, out.Queue, night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}

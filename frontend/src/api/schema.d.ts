@@ -36162,14 +36162,22 @@ export interface components {
              */
             scope: "mine" | "unassigned" | "team" | "all";
             /**
-             * @description The scopes this reader may ask for, narrowest first. `all` is derived from their
-             *     row scope. `team` is offered on the rule `GET /weekly-reviews/team` is served on —
-             *     a lead, or a seat holding `team_oversight.read` — so a read-only seat is not
-             *     offered a team view whose week it would be refused. A client draws a control only
-             *     when there is more than one, so a rep who can only see their own work is never
-             *     offered a switch that would 403.
+             * @description The scopes this reader may ask for, narrowest first — derived from their own
+             *     row scope. A client draws a control only when there is more than one, so a
+             *     rep who can only see their own work is never offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
+            /**
+             * @description Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
+             *     answered by the rule that endpoint is served on. `every_team` for a seat holding
+             *     `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
+             *     `none` for everyone else, a read-only seat included. Separate from
+             *     `scope_options`, because the `team` worklist is the team's live work and the
+             *     week is a lead's verdict on named colleagues. Absent from an older server, which
+             *     a client reads as `none`.
+             * @enum {string}
+             */
+            team_week?: "none" | "teams_led" | "every_team";
             /**
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
@@ -51946,7 +51954,7 @@ export interface operations {
                  *     queue that showed all of them would hand a rep several hundred rows belonging
                  *     to colleagues and call it their day.
                  *
-                 *     A scope not listed in the response's `scope_options` is refused with 403 rather
+                 *     A scope the reader's own row scope does not reach is refused with 403 rather
                  *     than quietly narrowed — answering a question about the team with facts about
                  *     one contact, with no way for the reader to tell, is the worse failure.
                  *

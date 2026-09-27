@@ -393,16 +393,15 @@ const leadOfNord = () => ({
   teams: ["t1"],
 });
 
-// A seat that oversees every team and is on none of them.
-const overseer = () =>
-  meFixture({ rowScope: "all", allow: { team_oversight: ["read"] } });
+// A seat on no team, which the server says oversees every team.
+const overseer = () => meFixture({ rowScope: "all" });
 
 describe("the team picker", () => {
   // Offered on the rule the week is served on. A picker shown to a reader who
   // will be refused every team is a control that exists to fail.
   it("draws nothing at all for a reader who may open no team's week", () => {
     const calls = stubApi({});
-    const { container } = render(<TeamWeeklyPanel offered={false} />);
+    const { container } = render(<TeamWeeklyPanel reach="none" />);
 
     expect(container.firstChild).toBeNull();
     expect(calls.filter((call) => call.path === "/teams")).toHaveLength(0);
@@ -416,7 +415,7 @@ describe("the team picker", () => {
       "GET /teams": twoTeams,
       "GET /weekly-reviews/team": () => jsonResponse(review()),
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="teams_led" />);
 
     await screen.findByText(en["teamweekly.movement.title"]);
     expect(screen.getByLabelText(en["teamweekly.pickTeam"])).toBeTruthy();
@@ -430,7 +429,7 @@ describe("the team picker", () => {
       "GET /teams": twoTeams,
       "GET /weekly-reviews/team": () => jsonResponse(review()),
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="teams_led" />);
 
     await screen.findByText(en["teamweekly.movement.title"]);
     const picker = screen.getByLabelText(en["teamweekly.pickTeam"]);
@@ -439,13 +438,13 @@ describe("the team picker", () => {
     expect(screen.queryByRole("option", { name: "Sued" })).toBeNull();
   });
 
-  // The oversight grant, not the row scope, is what lists every team.
-  it("lists every team to a seat holding the oversight grant", async () => {
+  // The server's `every_team` answer, not the row scope, lists every team.
+  it("lists every team to a seat the server says oversees them", async () => {
     stubApi({
       "GET /me": () => jsonResponse(overseer()),
       "GET /teams": twoTeams,
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="every_team" />);
 
     const picker = await screen.findByLabelText(en["teamweekly.pickTeam"]);
     await userEvent.setup().click(picker);
@@ -463,7 +462,7 @@ describe("the page before a team is chosen", () => {
       "GET /me": () => jsonResponse(overseer()),
       "GET /teams": twoTeams,
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="every_team" />);
 
     // The picker is a real choice with two teams, so it is drawn — and the
     // pane under it is drawn WITH it rather than after the reader answers.
@@ -484,7 +483,7 @@ describe("the page before a team is chosen", () => {
           page: { next_cursor: null, has_more: false },
         }),
     });
-    const { container } = render(<TeamWeeklyPanel offered />);
+    const { container } = render(<TeamWeeklyPanel reach="every_team" />);
 
     await waitFor(() =>
       expect(screen.queryByLabelText(en["teamweekly.pickTeam"])).toBeNull(),
@@ -499,7 +498,7 @@ describe("the page before a team is chosen", () => {
       "GET /me": () => jsonResponse(overseer()),
       "GET /teams": twoTeams,
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="every_team" />);
 
     await screen.findByLabelText(en["teamweekly.pickTeam"]);
     expect(
@@ -531,7 +530,7 @@ describe("the team's landing", () => {
       "GET /teams": twoTeams,
       "GET /weekly-reviews/team": () => jsonResponse(review()),
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="teams_led" />);
 
     // Said in WORDS, not drawn as an absence: a team nobody forecast and a
     // team that landed on nothing are different facts, and only the panel can
@@ -548,7 +547,7 @@ describe("the team's landing", () => {
           review({}, { outlook: [horizon] } as Partial<TeamWeeklyReview>),
         ),
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="teams_led" />);
 
     // The panel is the rep's own, so finding its heading proves the team page
     // reuses it rather than having grown a second one.

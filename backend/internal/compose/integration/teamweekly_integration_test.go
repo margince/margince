@@ -277,6 +277,24 @@ func TestARepIsRefusedTheirOwnTeamsWeek(t *testing.T) {
 	}
 }
 
+// A lead whose deal read was revoked reads no team's week. The week carries
+// each member's won deals and pipeline totals, so the grant that hides deals
+// hides them here too — refused, not "no week has closed".
+func TestALeadWithoutDealReadIsRefusedTheirTeamsWeek(t *testing.T) {
+	e := setupTeamWeekly(t)
+	perms := withoutOversight(integration.AdminPerms)
+	perms.RoleKeys = []string{"manager"}
+	perms.RowScope = principal.RowScopeTeam
+	perms.Objects["deal"] = principal.ObjectGrant{}
+	lead := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+
+	_, err := e.engine.LatestTeamReview(lead, e.Team1, nil)
+
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a lead without deal read got %v, wanted a refusal", err)
+	}
+}
+
 // The NAMED week takes the same gate as the newest one. They are separate entry
 // points, and a gate written into one alone leaves "?week=2026-06-01" open.
 func TestNamingTheWeekDoesNotBypassTheTeamGate(t *testing.T) {
