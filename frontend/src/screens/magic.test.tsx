@@ -408,9 +408,7 @@ describe("the reader chooses how far back the page looks", () => {
     const fetched = vi.mocked(fetch);
     const magicReads = () =>
       fetched.mock.calls
-        .map(([input]) =>
-          String(input instanceof Request ? input.url : input),
-        )
+        .map(([input]) => String(input instanceof Request ? input.url : input))
         .filter((url) => url.split("?")[0].endsWith("/magic"));
     await waitFor(() => expect(magicReads().length).toBe(1));
     expect(magicReads()[0]).not.toContain("since=");

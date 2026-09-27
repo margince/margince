@@ -10665,7 +10665,8 @@ export const de = {
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
   "magic.why.site_read": "Gelesen auf {site}.",
   "magic.why.site_read_unnamed": "Auf der Website des Unternehmens gelesen.",
-  "magic.why.site_read_each": "Auf der jeweiligen Website des Unternehmens gelesen.",
+  "magic.why.site_read_each":
+    "Auf der jeweiligen Website des Unternehmens gelesen.",
   "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
   "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",
   "magic.by.retention": "Aufbewahrung",

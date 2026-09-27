@@ -42,11 +42,11 @@ import {
   magicWhyKey,
 } from "./magic.keys";
 import {
+  MAGIC_WINDOWS,
   type MagicLane,
   type MagicLine,
   type MagicNotShown,
   type MagicReceipt,
-  MAGIC_WINDOWS,
   type MagicWindow,
   useMagic,
 } from "./magic.queries";

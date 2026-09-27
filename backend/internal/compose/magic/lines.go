@@ -51,8 +51,13 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 			records[at][e.EntityID] = true
 			count := len(records[at])
 			out[at].Count = &count
-			if count > 1 {
+			switch {
+			case count > 1:
 				out[at].Reason = reasonForMany(out[at].Reason)
+			case isSiteReason(out[at].Reason) && !sameReason(out[at].Reason, line.Reason):
+				// One record, read from two sites: naming the newer one would
+				// hide the other, so the line names neither.
+				out[at].Reason = &crmcontracts.MagicSentence{Key: "magic.why.site_read_unnamed"}
 			}
 			continue
 		}
@@ -150,6 +155,23 @@ func reasonForMany(r *crmcontracts.MagicSentence) *crmcontracts.MagicSentence {
 		return &crmcontracts.MagicSentence{Key: many}
 	}
 	return r
+}
+
+// isSiteReason reports a reason naming the website one record was read on.
+func isSiteReason(r *crmcontracts.MagicSentence) bool {
+	if r == nil {
+		return false
+	}
+	_, perRecord := manyReasons[r.Key]
+	return perRecord
+}
+
+// sameReason reports two reasons saying the same thing, values included.
+func sameReason(a, b *crmcontracts.MagicSentence) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return sentenceKey(*a) == sentenceKey(*b)
 }
 
 func sentenceKey(s crmcontracts.MagicSentence) string {

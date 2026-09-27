@@ -120,6 +120,21 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 	}
 }
 
+// One record read from two sites names neither, rather than the newer alone.
+func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
+	now := time.Now()
+	first := auditRow("agent:deepread", `{"industry": null}`, `{"industry": "Software"}`,
+		`{"source": "site_read", "source_url": "https://a.example/about"}`, now)
+	second := first
+	second.ID = ids.NewV7()
+	second.OccurredAt = now.Add(-time.Minute)
+	second.Evidence = []byte(`{"source": "site_read", "source_url": "https://b.example/about"}`)
+	lines, _ := linesOf([]entry{first, second}, 100)
+	if len(lines) != 1 || lines[0].Reason == nil || lines[0].Reason.Key != "magic.why.site_read_unnamed" {
+		t.Fatalf("got %d lines, reason %v; want one line naming no single site", len(lines), lines[0].Reason)
+	}
+}
+
 // The mail reader's reply sorting is bookkeeping, not a change to report.
 func TestTheMailReadersReplySortingIsNotShown(t *testing.T) {
 	e := auditRow("system:owed_verdict", `{"owed_verdict": null, "owed_verdict_ruleset": null}`,
