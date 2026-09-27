@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -114,14 +115,7 @@ func TestWithdrawingOnDeactivationLeavesAnAuditRowPerConnection(t *testing.T) {
 
 func deactivate(t *testing.T, e *integration.Env, seat ids.UUID) {
 	t.Helper()
-	admin := identity.Identity{
-		UserID:      ids.From[ids.UserKind](e.AdminUser),
-		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
-		SeatType:    "full",
-		Roles:       []string{"admin"},
-		Permissions: integration.AdminPerms,
-	}
-	if err := identity.NewService(e.Pool).DeactivateUser(e.Admin(), admin,
+	if err := identity.NewService(e.Pool).DeactivateUser(e.Admin(), adminIdentity(e),
 		identity.DeactivateUserInput{UserID: ids.From[ids.UserKind](seat)}); err != nil {
 		t.Fatalf("deactivating the seat: %v", err)
 	}
@@ -204,7 +198,7 @@ func TestReapingClearsTheCredentialPointerOfAWithdrawnConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sealing the credential: %v", err)
 	}
-	seedVaultedConnection(t, e, e.Rep1, "gmail", string(ref))
+	seedVaultedConnection(t, e, e.Rep1, string(ref))
 
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, vault)
 	// Withdrawn first, exactly as the deactivation transaction leaves it.
@@ -220,7 +214,7 @@ func TestReapingClearsTheCredentialPointerOfAWithdrawnConnection(t *testing.T) {
 		ids.From[ids.UserKind](e.Rep1)); err != nil {
 		t.Fatalf("ReapWithdrawnCredentials: %v", err)
 	}
-	if got := credentialRef(t, e, e.Rep1, "gmail"); got != nil {
+	if got := credentialRef(t, e, e.Rep1); got != nil {
 		t.Fatalf("credential_ref = %q, want it cleared once the secret is destroyed", *got)
 	}
 	// And the secret itself is gone, which is the point — the pointer being
@@ -235,20 +229,23 @@ func TestReapingClearsTheCredentialPointerOfAWithdrawnConnection(t *testing.T) {
 // that reached a connected row would strand a secret it still needs.
 func TestReapingLeavesALiveConnectionAlone(t *testing.T) {
 	e := integration.Setup(t)
-	seedVaultedConnection(t, e, e.Rep1, "gmail", "ref-still-in-use")
+	seedVaultedConnection(t, e, e.Rep1, "ref-still-in-use")
 
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, keyvault.NewMemory())
 	if err := r.ReapWithdrawnCredentials(e.As(e.Rep1, nil, integration.AccountRepPerms),
 		ids.From[ids.UserKind](e.Rep1)); err != nil {
 		t.Fatalf("ReapWithdrawnCredentials: %v", err)
 	}
-	ref := credentialRef(t, e, e.Rep1, "gmail")
+	ref := credentialRef(t, e, e.Rep1)
 	if ref == nil || *ref != "ref-still-in-use" {
 		t.Fatalf("a connected connection lost its credential pointer: %v", ref)
 	}
 }
 
-func seedVaultedConnection(t *testing.T, e *integration.Env, owner ids.UUID, provider, ref string) {
+// Always gmail: what the vaulted path does is the same whichever mailbox
+// holds the credential, and the provider only has to be one the reap can find.
+func seedVaultedConnection(t *testing.T, e *integration.Env, owner ids.UUID, ref string) {
+	const provider = "gmail"
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
@@ -260,7 +257,8 @@ func seedVaultedConnection(t *testing.T, e *integration.Env, owner ids.UUID, pro
 	}
 }
 
-func credentialRef(t *testing.T, e *integration.Env, owner ids.UUID, provider string) *string {
+func credentialRef(t *testing.T, e *integration.Env, owner ids.UUID) *string {
+	const provider = "gmail"
 	t.Helper()
 	var ref *string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -271,4 +269,88 @@ func credentialRef(t *testing.T, e *integration.Env, owner ids.UUID, provider st
 		t.Fatalf("reading the credential ref: %v", err)
 	}
 	return ref
+}
+
+// The two halves wired together, which is the thing that would silently not
+// work: a reaper nobody bound leaves the secret exactly where a reaper that
+// was never written would.
+func TestAWiredDeactivationDestroysTheVaultedCredential(t *testing.T) {
+	e := integration.Setup(t)
+	vault := keyvault.NewMemory()
+	ref, err := vault.Put(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), []byte(`{"token":"secret"}`))
+	if err != nil {
+		t.Fatalf("sealing the credential: %v", err)
+	}
+	seedVaultedConnection(t, e, e.Rep1, string(ref))
+
+	// Bound through the real seam: the port binds on the SERVICE, so the
+	// handlers and the writer below are the same installation.
+	svc := identity.NewService(e.Pool)
+	registry := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, vault)
+	identity.NewHandlers(svc).WithCaptureCredentialReaper(
+		reapWithdrawnCredentials(registry, slog.New(slog.DiscardHandler)))
+
+	if err := svc.DeactivateUser(e.Admin(), adminIdentity(e),
+		identity.DeactivateUserInput{UserID: ids.From[ids.UserKind](e.Rep1)}); err != nil {
+		t.Fatalf("deactivating the seat: %v", err)
+	}
+
+	if got := credentialRef(t, e, e.Rep1); got != nil {
+		t.Errorf("credential_ref = %q, want it cleared by the wired reap", *got)
+	}
+	if _, err := vault.Get(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), ref); !errors.Is(err, keyvault.ErrNotFound) {
+		t.Fatalf("the departing seat's vaulted credential survived: %v", err)
+	}
+}
+
+// A role that composed no capture registry binds nothing and says so by not
+// panicking: deactivation still withdraws, and the secret waits for the sweep.
+func TestInstallingTheReaperWithoutACaptureRegistryBindsNothing(t *testing.T) {
+	e := integration.Setup(t)
+	srv := Server{authHandlers: identity.NewHandlers(identity.NewService(e.Pool))}
+
+	installCaptureCredentialReaper(&srv, slog.New(slog.DiscardHandler))
+
+	// Deactivation still works, and still withdraws.
+	seedCaptureConnection(t, e, e.Rep1, "gmail", []byte(`{"token":"live"}`))
+	deactivate(t, e, e.Rep1)
+	if status, _ := connectionState(t, e, e.Rep1, "gmail"); status != "disconnected" {
+		t.Fatalf("status = %q, want the withdrawal to happen with no reaper wired", status)
+	}
+}
+
+// A reap that cannot reach a vault is logged and swallowed rather than failing
+// a departure that already committed.
+func TestTheReaperAdapterDoesNotFailADepartureItCannotFinish(t *testing.T) {
+	e := integration.Setup(t)
+	seedVaultedConnection(t, e, e.Rep1, "ref-with-no-vault")
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_connection SET status = 'disconnected' WHERE user_id = $1`, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("withdrawing: %v", err)
+	}
+
+	// No vault on the registry: the reap reports a wiring fault, and the
+	// adapter must absorb it.
+	reap := reapWithdrawnCredentials(
+		capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil), slog.New(slog.DiscardHandler))
+	reap(e.As(e.Rep1, nil, integration.AccountRepPerms), ids.From[ids.UserKind](e.Rep1))
+
+	// The pointer is deliberately still there: clearing it would leave the only
+	// name for a secret nobody deleted.
+	if got := credentialRef(t, e, e.Rep1); got == nil {
+		t.Fatal("the credential pointer was cleared without the secret being destroyed")
+	}
+}
+
+func adminIdentity(e *integration.Env) identity.Identity {
+	return identity.Identity{
+		UserID:      ids.From[ids.UserKind](e.AdminUser),
+		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		SeatType:    "full",
+		Roles:       []string{"admin"},
+		Permissions: integration.AdminPerms,
+	}
 }
