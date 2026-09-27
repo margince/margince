@@ -46,10 +46,10 @@ import {
 } from "./contactpage.address";
 import { ContactRail, contactStanding, standingSentences } from "./contactrail";
 import { ContactResearchTab } from "./contactresearch";
+import { ContactSubtitle } from "./contactsubtitle";
 import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
-import { currentEmployer } from "./employmentcurrency";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
@@ -765,35 +765,6 @@ function useBriefedMeeting(): [
     setParams(out);
   };
   return [params.get(BRIEF_PARAM) ?? null, setBriefed];
-}
-
-// The header's second line: what this contact does, and where. The company is a
-// link because it is a record of its own, not a label.
-function ContactSubtitle({ view }: Readonly<{ view: Contact360 }>): ReactNode {
-  const contact = view.contact;
-  const employment = currentEmployer(view.employments?.data);
-  return (
-    <div className="record-sub record-sub-inline">
-      {contact.title}
-      {employment?.company_name && (
-        <>
-          {contact.title ? " · " : ""}
-          <button
-            type="button"
-            className="pe-meta-link"
-            onClick={() =>
-              navigate({
-                screen: "companies",
-                id: employment.company_id,
-              })
-            }
-          >
-            {employment.company_name}
-          </button>
-        </>
-      )}
-    </div>
-  );
 }
 
 // The marks under the name: the relationship's standing (verdict and trend as

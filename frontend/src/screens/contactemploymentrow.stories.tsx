@@ -113,3 +113,25 @@ export const ReadOnly: Story = {
     <Rows data={{ ...view, contact: { ...contact, writable: false } }} />
   ),
 };
+
+// The held job was bought: its mark sits beside the company button, never
+// inside it, so the company still opens on a press and the receipt on its own.
+export const BoughtEmployer: Story = {
+  render: () => (
+    <Rows
+      data={{
+        ...view,
+        contact: {
+          ...contact,
+          bought_fields: [
+            {
+              target: "employment:held",
+              provider: "surfe",
+              applied_at: "2026-06-02T12:00:00Z",
+            },
+          ],
+        },
+      }}
+    />
+  ),
+};

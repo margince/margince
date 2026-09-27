@@ -25,7 +25,7 @@
 1160 frontend/src/screens/onboarding-conversation/company-act.tsx
 1120 frontend/src/design-system/conformance.test.ts
 1183 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-1046 frontend/src/screens/contactpage.tsx
+1016 frontend/src/screens/contactpage.tsx
 1200 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
 1004 frontend/src/screens/worklist.row.tsx
@@ -107,10 +107,10 @@
 895 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 854 frontend/src/screens/settingscatalog.ts
 894 frontend/src/screens/customfields.tsx
-935 frontend/src/screens/contactprovider.tsx
+926 frontend/src/screens/contactprovider.tsx
 939 frontend/src/screens/share.tsx
 793 frontend/src/screens/automations.tsx
-958 frontend/src/screens/integrations-provider.tsx
+859 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
 712 frontend/src/screens/ai-routing.tsx
 855 frontend/src/screens/create.tsx

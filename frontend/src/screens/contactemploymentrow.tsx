@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
@@ -30,9 +31,12 @@ export function EmploymentRow({
   onEdit,
   showCompany = true,
   fallbackRole,
+  mark,
 }: Readonly<{
   employment: Employment;
   showCompany?: boolean;
+  // The row's provenance mark, drawn beside the company button, never inside it.
+  mark?: ReactNode;
   fallbackRole?: string;
   canEdit: boolean;
   readOnlyReason: string | undefined;
@@ -82,6 +86,7 @@ export function EmploymentRow({
             ) : (
               <span className="inlinetext">{t("field.unset")}</span>
             ))}
+          {mark}
           {stillHeld(employment) && (
             <span className="pe-rail-value-good">{t("rel.current")}</span>
           )}

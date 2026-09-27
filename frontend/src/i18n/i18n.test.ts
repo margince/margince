@@ -199,7 +199,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "restricted.kind.email",
   "timeline.filters.kind.email",
   "auth.email",
-  "contact.identity.email",
   "contact.action.email",
   "contact.memory.email",
   "contact.memory.channelEmail",

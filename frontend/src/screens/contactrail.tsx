@@ -93,7 +93,10 @@ export function ContactRail({
   // column.
   return (
     <div className="pe-rail" data-testid="contact-rail">
-      <ContactDetails contact={view.contact} />
+      <ContactDetails
+        contact={view.contact}
+        profiles={view.provider_profiles}
+      />
       {/* Under the fields it is about: what the enrichment pass read into
           them and a reader has not yet confirmed, with the way to Data &
           tools where each value can be judged. */}

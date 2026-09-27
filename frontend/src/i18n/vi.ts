@@ -3609,6 +3609,8 @@ export const vi = {
   "today.workQueue": "Danh sách công việc",
 
   "evidence.mark": "đã đọc",
+
+  "evidence.bought": "đã mua",
   "evidence.confirm": "Xác nhận",
   "evidence.correct": "Sửa",
   "evidence.save": "Lưu",
@@ -9045,19 +9047,7 @@ export const vi = {
   "contact.bandBadge.weak": "Yếu",
   "contact.bandBadge.moderate": "Vừa",
   "contact.bandBadge.strong": "Mạnh",
-  "contact.identity.title": "Danh tính",
-  "contact.identity.emailDead":
-    "Bị trả lại — thư gửi tới địa chỉ này không đến nơi",
-  "contact.identity.email": "Email",
-  "contact.identity.phone": "Điện thoại",
-  "contact.identity.currentRole": "Vai trò hiện tại",
-  "contact.identity.buyingRole": "Vai trò mua hàng",
-  "contact.career.title": "Vai trò trước đây",
-  "contact.consent.title": "Chốt kiểm gửi ra",
-  "contact.consent.allowed": "Được phép: {purposes}",
-  "contact.consent.noneGranted":
-    "Chưa mục đích nào được cấp phép, nên việc gửi ra vẫn bị chặn.",
-  "contact.consent.blocked": "Bị chặn: {purposes}",
+  "contact.bought.from": "Đã mua từ {provider}",
   "contact.network.title": "Ai bên mình quen họ",
 
   "contact.page.loading": "Đang tải…",

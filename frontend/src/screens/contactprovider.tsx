@@ -17,6 +17,7 @@ import {
 } from "../design-system/provider-mark";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { useBoughtSource } from "./boughtmarks";
 import { throwProblem, WriteRefused } from "./common";
 import { useContact360 } from "./contact360";
 import { LookupRunning } from "./contactprovider.notices";
@@ -48,19 +49,6 @@ type EnrichRun = {
   // run spends.
   categories?: string[];
 };
-
-/** The mark every value in this section carries: bought from a named third
- *  party, on a date. `connector` rather than `agent` — nothing inferred this,
- *  somebody sold it to us. */
-function boughtFrom(profile: Profile) {
-  return {
-    provenance: {
-      kind: "connector" as const,
-      connector: profile.provider ?? "provider",
-    },
-    at: profile.retrieved_at ?? null,
-  };
-}
 
 /**
  * One panel per connected provider, each named and marked with its own logo.
@@ -598,7 +586,10 @@ function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
 function useProviderFacts(profile: Profile): Fact[] {
   const t = useT();
   const { locale } = useLocale();
-  const source = boughtFrom(profile);
+  const source = useBoughtSource()(
+    profile.provider ?? "provider",
+    profile.retrieved_at,
+  );
   const mark = (value: string) => (
     <EvidenceMark value={value} source={source} />
   );

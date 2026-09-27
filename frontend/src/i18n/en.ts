@@ -3751,6 +3751,8 @@ export const en = {
   "today.workQueue": "Worklist",
 
   "evidence.mark": "read",
+
+  "evidence.bought": "bought",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
   "evidence.save": "Save",
@@ -9268,19 +9270,7 @@ export const en = {
   "contact.bandBadge.weak": "Weak",
   "contact.bandBadge.moderate": "Moderate",
   "contact.bandBadge.strong": "Strong",
-  "contact.identity.title": "Identity",
-  "contact.identity.emailDead":
-    "Bouncing. Mail to this address is not delivered.",
-  "contact.identity.email": "Email",
-  "contact.identity.phone": "Phone",
-  "contact.identity.currentRole": "Current role",
-  "contact.identity.buyingRole": "Buying role",
-  "contact.career.title": "Former roles",
-  "contact.consent.title": "Outbound consent",
-  "contact.consent.allowed": "Allowed: {purposes}",
-  "contact.consent.noneGranted":
-    "No purpose granted, so outbound messages are blocked.",
-  "contact.consent.blocked": "Blocked: {purposes}",
+  "contact.bought.from": "Bought from {provider}",
   "contact.network.title": "Colleagues who know this contact",
 
   // The contact record page V2 (ADR-0096). The strip, rail and card words are

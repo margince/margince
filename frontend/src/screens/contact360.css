@@ -937,14 +937,3 @@
 .pe-thin-remediation {
   margin: var(--space-2) 0 0;
 }
-.pe-consent-blocked {
-  margin: var(--space-1) 0 0;
-}
-
-.pe-career {
-  margin: 0;
-  padding-left: var(--space-4);
-}
-.pe-career-item {
-  margin-top: var(--space-1);
-}
