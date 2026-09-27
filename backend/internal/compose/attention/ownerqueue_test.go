@@ -52,7 +52,7 @@ func (w waitingOwnedBy) Unanswered(context.Context, time.Time) ([]WaitingCustome
 // Nothing measured: these tests are about which rows the queue carries, and a
 // fake answering a response time would let a projection defect read as a
 // timing figure.
-func (w waitingOwnedBy) Answered(context.Context, time.Time, time.Time) (AnsweredWork, error) {
+func (w waitingOwnedBy) Answered(context.Context, time.Time, time.Time, LocalDays) (AnsweredWork, error) {
 	return AnsweredWork{}, nil
 }
 

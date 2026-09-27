@@ -132,6 +132,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `regionalformats_test.go` | H3 | The store validates through the generated read enum. |
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |
+| `riskverdictretention_test.go` | H1 | The queue's recorded verdicts live exactly as long as the figure that reads them. |
 | `rowscopetables_test.go` | H2 | WHICH table a row-scope call bounds, and which column names a reference to one. |
 | `runneractivityparity_test.go` | H3 | The runner's own status vocabulary must be TOTAL over the column it reads. |
 | `seamfilters_test.go` | H2 | A filter the contract declares and the store can bind is OFFERED to an agent. |

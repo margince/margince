@@ -51,7 +51,7 @@ func (w waitingSaying) Unanswered(context.Context, time.Time) ([]WaitingCustomer
 // Nothing measured: these tests are about which rows the queue carries, and a
 // fake answering a response time would let a projection defect read as a
 // timing figure.
-func (w waitingSaying) Answered(context.Context, time.Time, time.Time) (AnsweredWork, error) {
+func (w waitingSaying) Answered(context.Context, time.Time, time.Time, LocalDays) (AnsweredWork, error) {
 	return AnsweredWork{}, nil
 }
 

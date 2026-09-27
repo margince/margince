@@ -57,6 +57,11 @@ import (
 // spells no address is reached by neither, and for those this window is the
 // guaranteed end. config/margince.example.yaml says the same beside the switch
 // that turns capture on, because that is where an operator is deciding.
+//
+// `deal_risk_verdict` is the queue's record of which deals it judged material
+// and at risk on which day. 90 days is the widest window GET /worklist/response
+// reads, and the row answers nothing past it; the gate
+// TestTheVerdictWindowIsTheFiguresWidestWindow keeps the two numbers one.
 func SeedDefaultRetentionTx(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO retention_policy (object_type, category, retain_days, action, lawful_basis)
@@ -68,7 +73,8 @@ func SeedDefaultRetentionTx(ctx context.Context, tx pgx.Tx) error {
 		  ('contact',   'no_consent_no_deal', 730,  'anonymize'),
 		  ('deal',     'lost',               1825, 'archive'),
 		  ('ai_call_payload', 'content',     365,  'erase'),
-		  ('raw_capture', NULL,              730,  'erase')
+		  ('raw_capture', NULL,              730,  'erase'),
+		  ('deal_risk_verdict', NULL,        90,   'erase')
 		) AS v(object_type, category, retain_days, action)`)
 	return err
 }

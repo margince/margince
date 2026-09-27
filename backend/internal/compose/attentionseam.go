@@ -245,7 +245,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	).WithWaiting(attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
-		now: now,
+		deals: deals.NewStore(db, DealsInstallation()),
+		now:   now,
 	}).
 		// The reader's own override. The ranking has carried a pin level since
 		// it was written and nothing could set it, so the one control that says

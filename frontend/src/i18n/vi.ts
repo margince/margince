@@ -5254,6 +5254,8 @@ export const vi = {
   "retention.scopeAiCallPayloadContent": "Nội dung lời gọi AI",
 
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
+  "retention.scopeDealRiskVerdict":
+    "Ghi nhận hằng ngày các deal quan trọng có rủi ro",
   "settings.pipelines": "Pipeline",
   "settings.pipelinesReadOnly":
     "Chế độ chỉ đọc — bạn không thể thay đổi pipeline hay các giai đoạn.",

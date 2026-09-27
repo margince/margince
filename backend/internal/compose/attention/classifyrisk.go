@@ -18,9 +18,8 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 	if item.Kind != nil && *item.Kind == "close_overdue" {
 		consequence = "deal_slips_past_close"
 	}
-	expected, known := expectedRevenue(item, money)
+	expected, known, material := materialOf(item, bar, money)
 	level := levelAgreed
-	material := known && bar.material(expected)
 	if material || recoveryDue(item, asOf) {
 		level = levelMaterialRisk
 	}
@@ -68,6 +67,14 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		waitingRank:      orderingAge(quiet),
 		occurredAt:       occurredOf(item, asOf),
 	}
+}
+
+// materialOf is the material verdict on one at-risk row: the figure it was
+// weighed at, whether there was one, and whether it clears the bar. The queue
+// ranks by it and the daily record (MaterialAtRisk) stores it.
+func materialOf(item crmcontracts.AttentionItem, bar materialBar, money dayMoney) (expected int64, known, material bool) {
+	expected, known = expectedRevenue(item, money)
+	return expected, known, known && bar.material(expected)
 }
 
 // recoveryDue is a dated recovery decision, independent of portfolio size.

@@ -3190,6 +3190,16 @@ public.deal_forecast_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_forecast_history.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_forecast_history_pkey CREATE UNIQUE INDEX deal_forecast_history_pkey ON public.deal_forecast_history USING btree (id)
 public.deal_pkey CREATE UNIQUE INDEX deal_pkey ON public.deal USING btree (id)
+public.deal_risk_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_risk_verdict.captured_by text NOT NULL gen=- def=-
+public.deal_risk_verdict.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_risk_verdict.deal_id uuid NOT NULL gen=- def=-
+public.deal_risk_verdict.deal_risk_verdict_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_risk_verdict.deal_risk_verdict_pkey PRIMARY KEY (id)
+public.deal_risk_verdict.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_risk_verdict.local_day date NOT NULL gen=- def=-
+public.deal_risk_verdict.uq_deal_risk_verdict_day UNIQUE (deal_id, local_day)
+public.deal_risk_verdict_pkey CREATE UNIQUE INDEX deal_risk_verdict_pkey ON public.deal_risk_verdict USING btree (id)
 public.deal_room acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_room.archived_at timestamp with time zone gen=- def=-
 public.deal_room.captured_by text NOT NULL gen=- def=-
@@ -4031,6 +4041,8 @@ public.idx_deal_partner_attribution CREATE INDEX idx_deal_partner_attribution ON
 public.idx_deal_pipeline CREATE INDEX idx_deal_pipeline ON public.deal USING btree (pipeline_id, stage_id) WHERE (archived_at IS NULL)
 public.idx_deal_priority_rank CREATE INDEX idx_deal_priority_rank ON public.deal USING btree (priority_rank DESC NULLS LAST) WHERE (archived_at IS NULL)
 public.idx_deal_project CREATE INDEX idx_deal_project ON public.deal USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_deal_risk_verdict_created CREATE INDEX idx_deal_risk_verdict_created ON public.deal_risk_verdict USING btree (created_at)
+public.idx_deal_risk_verdict_day CREATE INDEX idx_deal_risk_verdict_day ON public.deal_risk_verdict USING btree (local_day)
 public.idx_deal_room_comment_room CREATE INDEX idx_deal_room_comment_room ON public.deal_room_comment USING btree (room_id)
 public.idx_deal_room_comment_thread CREATE INDEX idx_deal_room_comment_thread ON public.deal_room_comment USING btree (thread_id, created_at)
 public.idx_deal_room_deal CREATE INDEX idx_deal_room_deal ON public.deal_room USING btree (deal_id)
@@ -6297,6 +6309,7 @@ public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON 
 public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field, value_key)
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
+public.uq_deal_risk_verdict_day CREATE UNIQUE INDEX uq_deal_risk_verdict_day ON public.deal_risk_verdict USING btree (deal_id, local_day)
 public.uq_deal_room_active CREATE UNIQUE INDEX uq_deal_room_active ON public.deal_room USING btree (deal_id) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))
 public.uq_deal_room_document_in_room CREATE UNIQUE INDEX uq_deal_room_document_in_room ON public.deal_room_document USING btree (id, room_id)
 public.uq_deal_room_document_live CREATE UNIQUE INDEX uq_deal_room_document_live ON public.deal_room_document USING btree (room_id, attachment_id) WHERE (archived_at IS NULL)

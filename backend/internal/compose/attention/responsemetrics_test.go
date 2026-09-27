@@ -33,7 +33,7 @@ func (a *answering) HiddenRows(context.Context, time.Time, string) ([]WaitingCus
 }
 
 func (a *answering) Answered(
-	_ context.Context, from, to time.Time,
+	_ context.Context, from, to time.Time, _ LocalDays,
 ) (AnsweredWork, error) {
 	a.from, a.to = &from, &to
 	return a.work, nil

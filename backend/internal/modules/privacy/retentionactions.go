@@ -44,15 +44,16 @@ type retentionExecutor func(s *RetentionService, ctx context.Context, tx pgx.Tx,
 // dispatches it before opening one. Nil means "runs outside the transaction",
 // never "unsupported" — membership is the key, not the value.
 var retentionActions = map[string]retentionExecutor{
-	"contact/erase":         nil,
-	"activity/archive":      (*RetentionService).archiveActivity,
-	"activity/erase":        (*RetentionService).eraseActivityContent,
-	"deal/archive":          (*RetentionService).archiveDeal,
-	"ai_call_payload/erase": (*RetentionService).erasePayload,
-	"raw_capture/erase":     (*RetentionService).eraseRawCapture,
-	"lead/anonymize":        (*RetentionService).anonymizeLead,
-	"lead/archive":          (*RetentionService).archiveLead,
-	"contact/anonymize":     (*RetentionService).anonymizeContact,
+	"contact/erase":           nil,
+	"activity/archive":        (*RetentionService).archiveActivity,
+	"activity/erase":          (*RetentionService).eraseActivityContent,
+	"deal/archive":            (*RetentionService).archiveDeal,
+	"ai_call_payload/erase":   (*RetentionService).erasePayload,
+	"raw_capture/erase":       (*RetentionService).eraseRawCapture,
+	"deal_risk_verdict/erase": (*RetentionService).eraseRiskVerdict,
+	"lead/anonymize":          (*RetentionService).anonymizeLead,
+	"lead/archive":            (*RetentionService).archiveLead,
+	"contact/anonymize":       (*RetentionService).anonymizeContact,
 }
 
 // The executors. Named methods rather than closures in the table above, because

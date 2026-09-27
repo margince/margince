@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -27,18 +28,26 @@ import (
 // live there; nothing about who may see what is decided here.
 type attentionWaiting struct {
 	store *activities.Store
+	// deals answers the same-day next-step figure /worklist/response carries
+	// beside the waiting work's own two.
+	deals *deals.Store
 	now   attention.Clock
 }
 
 // The instant comes from the caller so the whole read is one snapshot. Asking
 // the clock again here would let the anti-joins judge against a moment the rest
 // of the day was not read at.
-// Answered asks the module how fast it replied over a window. A pass-through,
-// like Hidden: the median and the counts are SQL and belong beside the query.
+// Answered asks the modules how fast the workspace replied over a window, and
+// how often an at-risk deal got its next step the same day. Pass-throughs, like
+// Hidden: every figure is SQL and belongs beside its query.
 func (w attentionWaiting) Answered(
-	ctx context.Context, from, to time.Time,
+	ctx context.Context, from, to time.Time, days attention.LocalDays,
 ) (attention.AnsweredWork, error) {
 	got, err := w.store.ResponseWindow(ctx, from, to)
+	if err != nil {
+		return attention.AnsweredWork{}, err
+	}
+	steps, err := w.deals.SameDayNextSteps(ctx, days.First, days.End, days.Zone)
 	if err != nil {
 		return attention.AnsweredWork{}, err
 	}
@@ -47,6 +56,9 @@ func (w attentionWaiting) Answered(
 		MedianMinutes:    got.MedianMinutes,
 		Disposed:         got.Disposed,
 		DisposedNotSales: got.DisposedNotSales,
+		AtRiskJudged:     steps.Judged,
+		AtRiskBooked:     steps.Booked,
+		RecordedSince:    steps.RecordedSince,
 	}, nil
 }
 

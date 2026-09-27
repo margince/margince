@@ -12481,6 +12481,7 @@ const (
 	RetentionScopeActivitytranscript     RetentionScope = "activity/transcript"
 	RetentionScopeAiCallPayloadcontent   RetentionScope = "ai_call_payload/content"
 	RetentionScopeContactnoConsentNoDeal RetentionScope = "contact/no_consent_no_deal"
+	RetentionScopeDealRiskVerdict        RetentionScope = "deal_risk_verdict"
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
@@ -12497,6 +12498,8 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeAiCallPayloadcontent:
 		return true
 	case RetentionScopeContactnoConsentNoDeal:
+		return true
+	case RetentionScopeDealRiskVerdict:
 		return true
 	case RetentionScopeDeallost:
 		return true
@@ -36563,14 +36566,52 @@ type ResolveInputCheck struct {
 // ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
 type ResolveInputCheckOutcome string
 
-// ResponseMetrics What the workspace did with its waiting work over one window. Two questions: how
-// fast it answered what it answered, and how much it put down instead.
+// ResponseMetrics What the workspace did with its work over one window. Three questions: how fast it
+// answered what it answered, how much it put down instead, and how often a deal the
+// queue called material and at risk got a next step booked the same day.
+//
+// These are the worklist's success metrics. A fourth was once named beside them —
+// finite-queue completion, how much of the queue a rep's day started with was
+// finished by its end — and it is DROPPED, not pending: answering it would mean
+// recording what each rep was shown each day, which the product does not keep.
 type ResponseMetrics struct {
 	// Answered How many inbound sales messages got a reply in the window. It is the
 	// denominator `median_minutes` is worth reading against: a fast median over three
 	// answered messages says less about the workspace than a slower one over three
 	// hundred.
 	Answered int `json:"answered"`
+
+	// AtRiskBookedSameDay How many of those deal-days got a next step booked the same day: a task on the
+	// deal created on that day in the installation's timezone, done or not. A meeting
+	// does not count, because its record is created when the calendar sync sees it
+	// rather than when somebody booked it.
+	AtRiskBookedSameDay int `json:"at_risk_booked_same_day"`
+
+	// AtRiskFromDay The first day the two figures above count: the first whole day inside the
+	// window, in the installation's timezone.
+	AtRiskFromDay openapi_types.Date `json:"at_risk_from_day"`
+
+	// AtRiskJudged How many deal-days in the window the queue judged a deal material and at risk —
+	// one per deal per day, over the deals THIS caller may see. The denominator of the
+	// same-day next-step rate.
+	//
+	// The verdict is recorded when it is made, by an hourly pass using the queue's own
+	// bar (the median of the at-risk pipeline). It cannot be recomputed for a past day,
+	// so nothing before `at_risk_recorded_since` exists to count.
+	AtRiskJudged int `json:"at_risk_judged"`
+
+	// AtRiskRecordedSince The first day any verdict is on record in this installation. Absent when there is
+	// none yet.
+	//
+	// Read the figures against it rather than as a rate over the whole window: days
+	// before it were never measured, so a window reaching back past it holds no data
+	// for those days, not zeros. When it is absent, both figures are zero because
+	// nothing has been recorded — say "no data yet", never 0%.
+	AtRiskRecordedSince *openapi_types.Date `json:"at_risk_recorded_since,omitempty"`
+
+	// AtRiskToDay The day the two figures stop BEFORE — today, in the installation's timezone. A
+	// day still running is left out, because its next step can still be booked.
+	AtRiskToDay openapi_types.Date `json:"at_risk_to_day"`
 
 	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
 	// judged not sales.
@@ -60647,7 +60688,7 @@ type ServerInterface interface {
 	// Put a row at the top of your own day, above what the ranking chose.
 	// (PUT /worklist/pins)
 	PinWorklistRow(w http.ResponseWriter, r *http.Request)
-	// How fast the workspace answers, and how much of the queue it puts down.
+	// How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
@@ -64781,7 +64822,7 @@ func (_ Unimplemented) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// How fast the workspace answers, and how much of the queue it puts down.
+// How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 // (GET /worklist/response)
 func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
 	w.WriteHeader(http.StatusNotImplemented)

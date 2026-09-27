@@ -839,6 +839,25 @@ kinds:
       the sooner the first one exists the sooner the second is worth taking.
 
 
+  risk_verdict_sweep:
+    role: worker
+    fleet: true
+    go_type: RiskVerdictSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Hourly, because the verdict has to be written before the day's work
+      changes it. A task booked on a quiet deal can take it off the at-risk
+      lane, so a pass that ran once late in the day would miss exactly the
+      deals that were acted on. The first pass after local midnight records
+      the morning's set; later passes add a deal that turned at risk during
+      the day, and the per-day arbiter makes every repeat a no-op. Five
+      minutes for the forecast snapshot's reason: two bounded deal reads and
+      one pricing pass per workspace.
+
+
   follow_up_reconcile:
     role: worker
     fleet: true
@@ -1217,7 +1236,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 6h11m40s
+      value: 6h45m0s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
