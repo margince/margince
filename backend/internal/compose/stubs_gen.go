@@ -495,6 +495,10 @@ func (stubs) RemoveConsumerMailDomain(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "RemoveConsumerMailDomain")
 }
 
+func (stubs) ListCaptureContactsAwaitingDecision(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListCaptureContactsAwaitingDecision")
+}
+
 func (stubs) ListCaptureCounterpartyHolds(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListCaptureCounterpartyHolds")
 }

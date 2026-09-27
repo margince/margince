@@ -31,8 +31,9 @@ const (
 	SweepFiledMeetingHolds     Sweep = "filed_meeting_holds"
 )
 
-// Sweeps lists every pass that writes a receipt. The table's CHECK spells the
-// same set; TestEverySweepIsAcceptedByTheTable holds the two together.
+// Sweeps lists every pass that writes a receipt. The table's CHECK and the
+// contract's enum spell the same set; held by
+// TestEverySweepAndOutcomeIsAcceptedByTheTable (compose).
 func Sweeps() []Sweep {
 	return []Sweep{SweepSettledThreadVerdicts, SweepStrandedContacts, SweepFiledMeetingHolds}
 }
@@ -68,9 +69,9 @@ type SweepReceipt struct {
 	ErrorClass string
 }
 
-// sweepReceiptsKept bounds the history per pass. Enough for a day of the
+// SweepReceiptsKept bounds the history per pass. Enough for a day of the
 // ten-minute pass; the newest success is kept beyond it.
-const sweepReceiptsKept = 200
+const SweepReceiptsKept = 200
 
 // SweepLedger writes and reads the receipts.
 type SweepLedger struct{ db *database.DB }
@@ -108,7 +109,7 @@ func (l *SweepLedger) RecordSweep(ctx context.Context, r SweepReceipt) error {
 			                               WHERE s.sweep = $1 AND s.outcome IN ('ok', 'partial')
 			                               ORDER BY s.finished_at DESC, s.id DESC
 			                               LIMIT 1)`,
-			string(r.Sweep), sweepReceiptsKept)
+			string(r.Sweep), SweepReceiptsKept)
 		return err
 	})
 	if err != nil {

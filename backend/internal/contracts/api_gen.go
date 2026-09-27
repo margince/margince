@@ -2971,6 +2971,51 @@ func (e CaptureSenderDecisionDecision) Valid() bool {
 	}
 }
 
+// Defines values for CaptureSweepHealthSweep.
+const (
+	CaptureSweepHealthSweepFiledMeetingHolds     CaptureSweepHealthSweep = "filed_meeting_holds"
+	CaptureSweepHealthSweepSettledThreadVerdicts CaptureSweepHealthSweep = "settled_thread_verdicts"
+	CaptureSweepHealthSweepStrandedContacts      CaptureSweepHealthSweep = "stranded_contacts"
+)
+
+// Valid indicates whether the value is a known member of the CaptureSweepHealthSweep enum.
+func (e CaptureSweepHealthSweep) Valid() bool {
+	switch e {
+	case CaptureSweepHealthSweepFiledMeetingHolds:
+		return true
+	case CaptureSweepHealthSweepSettledThreadVerdicts:
+		return true
+	case CaptureSweepHealthSweepStrandedContacts:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureSweepRunOutcome.
+const (
+	CaptureSweepRunOutcomeFailed  CaptureSweepRunOutcome = "failed"
+	CaptureSweepRunOutcomeOk      CaptureSweepRunOutcome = "ok"
+	CaptureSweepRunOutcomePartial CaptureSweepRunOutcome = "partial"
+	CaptureSweepRunOutcomeSkipped CaptureSweepRunOutcome = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the CaptureSweepRunOutcome enum.
+func (e CaptureSweepRunOutcome) Valid() bool {
+	switch e {
+	case CaptureSweepRunOutcomeFailed:
+		return true
+	case CaptureSweepRunOutcomeOk:
+		return true
+	case CaptureSweepRunOutcomePartial:
+		return true
+	case CaptureSweepRunOutcomeSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceEntryOutcome.
 const (
 	CaptureTraceEntryOutcomeCaptured   CaptureTraceEntryOutcome = "captured"
@@ -22416,6 +22461,24 @@ type CaptureActivityResponse struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// CaptureAwaitingContact One of your captured contacts waiting on a sender decision.
+type CaptureAwaitingContact struct {
+	// CapturedAt When the contact was created, which is how long it has been waiting.
+	CapturedAt time.Time          `json:"captured_at"`
+	ContactId  openapi_types.UUID `json:"contact_id"`
+
+	// DisplayName Absent when the contact has no name.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// Emails The contact's live addresses. The decision is made about these senders.
+	Emails []string `json:"emails"`
+}
+
+// CaptureAwaitingContactListResponse defines model for CaptureAwaitingContactListResponse.
+type CaptureAwaitingContactListResponse struct {
+	Data []CaptureAwaitingContact `json:"data"`
+}
+
 // CaptureClassifierHealth The sender queue as a whole, across every mailbox.
 type CaptureClassifierHealth struct {
 	// Exhausted Out of attempts, so nothing will ask again without a human.
@@ -22663,8 +22726,29 @@ type CaptureHealth struct {
 	Classifier  CaptureClassifierHealth `json:"classifier"`
 	GeneratedAt time.Time               `json:"generated_at"`
 
+	// HeldMeetings Captured records already filed under a contact that are still held to their
+	// participants because, when they arrived, they named nobody the workspace knew. The
+	// nightly link reconcile lifts every one of them, so anything counted here is backlog.
+	// Counted with the pass's own selector and without its per-tick bound.
+	HeldMeetings CaptureHeldMeetings `json:"held_meetings"`
+
 	// Mailboxes One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
 	Mailboxes []CaptureMailboxHealth `json:"mailboxes"`
+
+	// Sweeps One row per repair pass, always all of them, in a fixed order. A pass that has
+	// never run is listed with no `last_run`, not left out.
+	Sweeps []CaptureSweepHealth `json:"sweeps"`
+}
+
+// CaptureHeldMeetings Captured records already filed under a contact that are still held to their
+// participants because, when they arrived, they named nobody the workspace knew. The
+// nightly link reconcile lifts every one of them, so anything counted here is backlog.
+// Counted with the pass's own selector and without its per-tick bound.
+type CaptureHeldMeetings struct {
+	Count int `json:"count"`
+
+	// OldestAgeSeconds How long ago the oldest of them was captured. Null when none are held.
+	OldestAgeSeconds *int `json:"oldest_age_seconds,omitempty"`
 }
 
 // CaptureMailboxHealth defines model for CaptureMailboxHealth.
@@ -22887,6 +22971,52 @@ type CaptureSourceEntry struct {
 	// provenance.
 	Source string `json:"source"`
 }
+
+// CaptureSweepHealth When one repair pass last ran and last succeeded, from the receipt each pass writes
+// per workspace turn. Never names what the pass worked on.
+type CaptureSweepHealth struct {
+	// CadenceSeconds How often the job that runs this pass is scheduled. Null when it has no fixed cadence.
+	CadenceSeconds *int `json:"cadence_seconds,omitempty"`
+
+	// LastRun The pass's most recent receipt.
+	LastRun *CaptureSweepRun `json:"last_run,omitempty"`
+
+	// LastSucceededAt When the pass last finished without an error, `partial` included. Null when no
+	// receipt on record succeeded.
+	LastSucceededAt *time.Time `json:"last_succeeded_at,omitempty"`
+
+	// Sweep `settled_thread_verdicts` applies a settled thread's answer to its remaining
+	// messages; `stranded_contacts` asks about captured contacts nobody was asked
+	// about; `filed_meeting_holds` lifts the hold on filed meetings.
+	Sweep CaptureSweepHealthSweep `json:"sweep"`
+}
+
+// CaptureSweepHealthSweep `settled_thread_verdicts` applies a settled thread's answer to its remaining
+// messages; `stranded_contacts` asks about captured contacts nobody was asked
+// about; `filed_meeting_holds` lifts the hold on filed meetings.
+type CaptureSweepHealthSweep string
+
+// CaptureSweepRun The pass's most recent receipt.
+type CaptureSweepRun struct {
+	// CapHit Whether it stopped at its per-tick bound.
+	CapHit bool `json:"cap_hit"`
+
+	// ErrorClass Set only when `outcome` is `failed`: a class token from the job failure
+	// vocabulary, or `unclassified`. Never the error's text, which stays in the log.
+	ErrorClass *string   `json:"error_class,omitempty"`
+	FinishedAt time.Time `json:"finished_at"`
+
+	// Outcome `partial` ran cleanly and stopped at its per-tick bound, so a backlog remains.
+	// `skipped` never ran because an earlier stage of the same job failed.
+	Outcome CaptureSweepRunOutcome `json:"outcome"`
+
+	// Processed What the pass committed before it returned.
+	Processed int `json:"processed"`
+}
+
+// CaptureSweepRunOutcome `partial` ran cleanly and stopped at its per-tick bound, so a backlog remains.
+// `skipped` never ran because an earlier stage of the same job failed.
+type CaptureSweepRunOutcome string
 
 // CaptureTraceEntry defines model for CaptureTraceEntry.
 type CaptureTraceEntry struct {
@@ -31754,7 +31884,7 @@ type JobHealth struct {
 
 // JobKindHealth defines model for JobKindHealth.
 type JobKindHealth struct {
-	// Dead Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a terminal row for seven days, so this is a week's history and a report figure, not a call to action.
+	// Dead Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a discarded row for seven days and a cancelled one for a day, so this is up to a week's history and a report figure, not a call to action.
 	Dead int `json:"dead"`
 
 	// DeadRecent The same count inside `dead_window_hours`. This is the one to alarm on: an outage that ended an hour ago and one still running are indistinguishable in `dead`, and that is the distinction a maintenance banner exists to draw.
@@ -58504,6 +58634,9 @@ type ServerInterface interface {
 	// Withdraw a consumer-mail list entry (admin/ops).
 	// (DELETE /capture/consumer-mail-domains/{id})
 	RemoveConsumerMailDomain(w http.ResponseWriter, r *http.Request, id Id)
+	// Your captured contacts still waiting on a sender decision.
+	// (GET /capture/contacts-awaiting-decision)
+	ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request)
 	// Whose mail the caller keeps out of the shared timeline.
 	// (GET /capture/counterparty-holds)
 	ListCaptureCounterpartyHolds(w http.ResponseWriter, r *http.Request)
@@ -60913,6 +61046,12 @@ func (_ Unimplemented) AddConsumerMailDomain(w http.ResponseWriter, r *http.Requ
 // Withdraw a consumer-mail list entry (admin/ops).
 // (DELETE /capture/consumer-mail-domains/{id})
 func (_ Unimplemented) RemoveConsumerMailDomain(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your captured contacts still waiting on a sender decision.
+// (GET /capture/contacts-awaiting-decision)
+func (_ Unimplemented) ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68759,6 +68898,26 @@ func (siw *ServerInterfaceWrapper) RemoveConsumerMailDomain(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RemoveConsumerMailDomain(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCaptureContactsAwaitingDecision operation middleware
+func (siw *ServerInterfaceWrapper) ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCaptureContactsAwaitingDecision(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -93569,6 +93728,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/consumer-mail-domains/{id}", wrapper.RemoveConsumerMailDomain)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/contacts-awaiting-decision", wrapper.ListCaptureContactsAwaitingDecision)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/counterparty-holds", wrapper.ListCaptureCounterpartyHolds)

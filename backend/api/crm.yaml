@@ -11737,6 +11737,30 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /capture/contacts-awaiting-decision:
+    get:
+      tags: [Capture]
+      operationId: listCaptureContactsAwaitingDecision
+      summary: Your captured contacts still waiting on a sender decision.
+      description: |
+        Contacts your mailbox created that stay visible to you alone, because nothing has yet
+        decided whether their sender is business. A contact is listed even when its address has
+        no entry on your senders list yet. Oldest first.
+
+        This is the same set the admin capture-health page counts for your mailbox; that page
+        shows only the number, and you are the one reader who may see which contacts they are.
+        Your own contacts and nobody else's.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The caller's contacts awaiting a decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureAwaitingContactListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /capture/senders/{address}/decision:
     parameters:
       - name: address
@@ -25805,6 +25829,31 @@ components:
           description: |
             How many times a verdict has been asked for. This is the outage signal: a pending row
             whose attempts stop climbing is a model that stopped answering.
+
+    CaptureAwaitingContactListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureAwaitingContact' }
+
+    CaptureAwaitingContact:
+      type: object
+      additionalProperties: false
+      description: One of your captured contacts waiting on a sender decision.
+      required: [contact_id, emails, captured_at]
+      properties:
+        contact_id: { type: string, format: uuid }
+        display_name: { type: string, description: Absent when the contact has no name. }
+        emails:
+          type: array
+          items: { type: string }
+          description: The contact's live addresses. The decision is made about these senders.
+        captured_at:
+          type: string
+          format: date-time
+          description: When the contact was created, which is how long it has been waiting.
 
     CaptureSenderListResponse:
       type: object
@@ -40739,7 +40788,7 @@ components:
         exists to protect, and an operational page is not an exemption from it. A mailbox
         is named because an administrator cannot act on "somewhere in the installation";
         what is waiting inside it is not named at all.
-      required: [generated_at, mailboxes, classifier]
+      required: [generated_at, mailboxes, classifier, held_meetings, sweeps]
       properties:
         generated_at: { type: string, format: date-time }
         mailboxes:
@@ -40748,6 +40797,77 @@ components:
           items: { $ref: '#/components/schemas/CaptureMailboxHealth' }
         classifier:
           $ref: '#/components/schemas/CaptureClassifierHealth'
+        held_meetings:
+          $ref: '#/components/schemas/CaptureHeldMeetings'
+        sweeps:
+          type: array
+          description: |
+            One row per repair pass, always all of them, in a fixed order. A pass that has
+            never run is listed with no `last_run`, not left out.
+          items: { $ref: '#/components/schemas/CaptureSweepHealth' }
+
+    CaptureHeldMeetings:
+      type: object
+      additionalProperties: false
+      description: |
+        Captured records already filed under a contact that are still held to their
+        participants because, when they arrived, they named nobody the workspace knew. The
+        nightly link reconcile lifts every one of them, so anything counted here is backlog.
+        Counted with the pass's own selector and without its per-tick bound.
+      required: [count]
+      properties:
+        count: { type: integer }
+        oldest_age_seconds:
+          type: [integer, 'null']
+          description: How long ago the oldest of them was captured. Null when none are held.
+
+    CaptureSweepHealth:
+      type: object
+      additionalProperties: false
+      description: |
+        When one repair pass last ran and last succeeded, from the receipt each pass writes
+        per workspace turn. Never names what the pass worked on.
+      required: [sweep]
+      properties:
+        sweep:
+          type: string
+          enum: [settled_thread_verdicts, stranded_contacts, filed_meeting_holds]
+          description: |
+            `settled_thread_verdicts` applies a settled thread's answer to its remaining
+            messages; `stranded_contacts` asks about captured contacts nobody was asked
+            about; `filed_meeting_holds` lifts the hold on filed meetings.
+        cadence_seconds:
+          type: [integer, 'null']
+          description: How often the job that runs this pass is scheduled. Null when it has no fixed cadence.
+        last_succeeded_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the pass last finished without an error, `partial` included. Null when no
+            receipt on record succeeded.
+        last_run:
+          $ref: '#/components/schemas/CaptureSweepRun'
+
+    CaptureSweepRun:
+      type: object
+      additionalProperties: false
+      description: The pass's most recent receipt.
+      required: [outcome, finished_at, processed, cap_hit]
+      properties:
+        outcome:
+          type: string
+          enum: [ok, partial, failed, skipped]
+          description: |
+            `partial` ran cleanly and stopped at its per-tick bound, so a backlog remains.
+            `skipped` never ran because an earlier stage of the same job failed.
+        finished_at: { type: string, format: date-time }
+        processed: { type: integer, description: What the pass committed before it returned. }
+        cap_hit: { type: boolean, description: Whether it stopped at its per-tick bound. }
+        error_class:
+          type: string
+          description: |
+            Set only when `outcome` is `failed`: a class token from the job failure
+            vocabulary, or `unclassified`. Never the error's text, which stays in the log.
 
     CaptureMailboxHealth:
       type: object
@@ -40883,8 +41003,8 @@ components:
           description: >
             Discarded or cancelled: this work will not happen without intervention. A discarded
             job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE —
-            River retains a terminal row for seven days, so this is a week's history and a report
-            figure, not a call to action.
+            River retains a discarded row for seven days and a cancelled one for a day, so this
+            is up to a week's history and a report figure, not a call to action.
         dead_recent:
           type: integer
           description: >
