@@ -499,7 +499,8 @@
   inset: 0;
 }
 .pe-employment-role,
-.pe-employment-actions {
+.pe-employment-actions,
+.pe-employment-company > .evmark {
   position: relative;
   z-index: 1;
 }
@@ -529,8 +530,12 @@
 
 .pe-employment-company {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+.pe-employment-company > .pe-meta-link {
+  text-align: start;
 }
 
 /* Contacts and open deals, under the company name: a fact about the
