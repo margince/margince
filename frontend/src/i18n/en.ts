@@ -5306,6 +5306,8 @@ export const en = {
     "You filled in a form or registered for something.",
   "privacynotice.source.publicSource":
     "We found your details in a public or business source, such as a directory or a company website.",
+  "privacynotice.source.crmMigration":
+    "Your details were already in the customer system we used before, and moved here with it.",
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",

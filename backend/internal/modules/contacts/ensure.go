@@ -261,6 +261,10 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		return fillMissingContactName(ctx, tx, match.ContactID, parsed, res)
 	}
 
+	acquired, acqErr := acquiredFromCaptureTx(ctx, tx, in.Replied, in.Email)
+	if acqErr != nil {
+		return acqErr
+	}
 	id, err := createContact(ctx, tx, match, ContactSpec{
 		FullName:    name,
 		FirstName:   nameColumn(parsed.First),
@@ -272,17 +276,16 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		Emails:      []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
-		// Only a REPLY is the contact initiating contact. Capture also mints a
-		// record for somebody we wrote to twice who never answered, and
-		// recording that as subject_initiated would put the vocabulary's
-		// strongest claim on a cold prospect's file — the exact confusion this
-		// table exists to prevent, manufactured by the table itself.
+		// Only a message FROM them is the contact initiating contact: a reply,
+		// or any captured mail they sent us (acquiredFromCaptureTx). Capture
+		// also mints a record for somebody we wrote to twice who never
+		// answered, and recording that as subject_initiated would put the
+		// vocabulary's strongest claim on a cold prospect's file.
 		//
 		// The TIME comes from the earliest message this counterparty is a party
 		// to, not from this write: the sink runs after the capture commits and
 		// the verdict path can run days later. See acquiredwhen.go.
-		Acquisition: acquisitionFromCapture(ctx, tx,
-			acquiredFromCapture(in.Replied), in.Email, in.ActivityID),
+		Acquisition: acquisitionFromCapture(ctx, tx, acquired, in.Email, in.ActivityID),
 	})
 	if err != nil {
 		return err

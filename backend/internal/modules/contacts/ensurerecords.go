@@ -201,3 +201,27 @@ func acquiredFromCapture(replied bool) string {
 	}
 	return AcquiredUnknownLegacy
 }
+
+// acquiredFromCaptureTx widens acquiredFromCapture by the mail itself: an
+// address that SENT us a captured message gave us its data by writing, whether
+// or not we had written first. A first mail from a stranger is them contacting
+// us, and a disclosure duty for it would be owed to nobody. Only the reverse —
+// an address we wrote to, or saw on a Cc, that never wrote — stays unknown.
+func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email string) (string, error) {
+	if kind := acquiredFromCapture(replied); kind == AcquiredSubjectInitiated {
+		return kind, nil
+	}
+	var wrote bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM activity_participant p
+		    JOIN activity a ON a.id = p.activity_id
+		   WHERE p.role = 'from' AND p.address = lower($1)
+		     AND a.direction = 'inbound' AND a.archived_at IS NULL)`, email).Scan(&wrote); err != nil {
+		return "", fmt.Errorf("contacts: did this address write to us: %w", err)
+	}
+	if wrote {
+		return AcquiredSubjectInitiated, nil
+	}
+	return AcquiredUnknownLegacy, nil
+}

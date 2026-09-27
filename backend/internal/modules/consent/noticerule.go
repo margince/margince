@@ -76,6 +76,14 @@ func DutyFor(acquisitionKind string) (NoticeDuty, bool) {
 		"requested_quote_or_meeting", "in_person_permission":
 		return NoticeDuty{}, false
 
+	// Carried over from the CRM the installation used before. The contact did
+	// not arrive from a new source: that system held it, under its own notice
+	// duty, and moving the records between two systems of one controller is
+	// not a new acquisition. Opening a case per migrated contact put a whole
+	// portal on the Focus list as overdue disclosures nobody owed.
+	case "crm_migration":
+		return NoticeDuty{}, false
+
 	// A form or event registration IS from the subject, but unlike the four
 	// above it is a surface the installation controls and can be wrong about:
 	// a booking widget embedded by a customer may disclose nothing. The case is

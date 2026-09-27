@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -145,6 +146,19 @@ func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (
 	return storekit.CapturedBy(ctx)
 }
 
+// acquisitionForCreate is the acquisition a typed create records: what the
+// caller declared, or — for a create stamped with the reserved import namespace,
+// which only a declared importer may write — a contact carried over from the
+// CRM used before.
+func acquisitionForCreate(in CreateContactInput) Acquisition {
+	if in.Acquisition.Kind == "" && in.SourceSystem != nil && provenance.ReservedSourceSystem(*in.SourceSystem) {
+		out := in.Acquisition
+		out.Kind = AcquiredCRMMigration
+		return out
+	}
+	return in.Acquisition
+}
+
 // createContactInTx is CreateContact's transactional body, shared by the
 // store-opened and caller-opened entry points.
 func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
@@ -164,7 +178,7 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 		// which is the honest answer for a contact somebody typed in without
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
-		Acquisition: in.Acquisition,
+		Acquisition: acquisitionForCreate(in),
 		// A typed create publishes to the workspace, whoever typed it. An agent
 		// creating a contact on a rep's behalf is doing the rep's filing, and a
 		// contact only its creator can see is not in the CRM in any useful

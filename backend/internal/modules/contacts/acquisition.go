@@ -52,6 +52,12 @@ const (
 	// looked", which is exactly what this one says out loud, and it keeps the
 	// census over creation doors complete.
 	AcquiredUnknownLegacy = "unknown_legacy"
+	// AcquiredCRMMigration is a contact carried over from the CRM the
+	// installation used before. That system held it under its own notice duty,
+	// so the move opens none here. Recorded by every create stamped with the
+	// reserved import namespace (provenance.ReservedSourceSystem), which only a
+	// declared importer may write.
+	AcquiredCRMMigration = "crm_migration"
 )
 
 // Acquisition is what a creation door says about why this contact exists, and
