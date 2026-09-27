@@ -11779,6 +11779,99 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	}
 }
 
+// Defines values for RecordAccessVisibility.
+const (
+	RecordAccessVisibilityOwner     RecordAccessVisibility = "owner"
+	RecordAccessVisibilityWorkspace RecordAccessVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessVisibility enum.
+func (e RecordAccessVisibility) Valid() bool {
+	switch e {
+	case RecordAccessVisibilityOwner:
+		return true
+	case RecordAccessVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordAccessMemberGroup.
+const (
+	RecordAccessMemberGroupEveryone   RecordAccessMemberGroup = "everyone"
+	RecordAccessMemberGroupOwner      RecordAccessMemberGroup = "owner"
+	RecordAccessMemberGroupShared     RecordAccessMemberGroup = "shared"
+	RecordAccessMemberGroupTeamShared RecordAccessMemberGroup = "team_shared"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessMemberGroup enum.
+func (e RecordAccessMemberGroup) Valid() bool {
+	switch e {
+	case RecordAccessMemberGroupEveryone:
+		return true
+	case RecordAccessMemberGroupOwner:
+		return true
+	case RecordAccessMemberGroupShared:
+		return true
+	case RecordAccessMemberGroupTeamShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordAccessReasonAccess.
+const (
+	RecordAccessReasonAccessRead  RecordAccessReasonAccess = "read"
+	RecordAccessReasonAccessWrite RecordAccessReasonAccess = "write"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessReasonAccess enum.
+func (e RecordAccessReasonAccess) Valid() bool {
+	switch e {
+	case RecordAccessReasonAccessRead:
+		return true
+	case RecordAccessReasonAccessWrite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordAccessReasonCode.
+const (
+	RecordAccessReasonCodeAllRecords       RecordAccessReasonCode = "all_records"
+	RecordAccessReasonCodeOwner            RecordAccessReasonCode = "owner"
+	RecordAccessReasonCodeSameTeamAsOwner  RecordAccessReasonCode = "same_team_as_owner"
+	RecordAccessReasonCodeTeamShare        RecordAccessReasonCode = "team_share"
+	RecordAccessReasonCodeUserShare        RecordAccessReasonCode = "user_share"
+	RecordAccessReasonCodeWorkspaceVisible RecordAccessReasonCode = "workspace_visible"
+	RecordAccessReasonCodeWriteShare       RecordAccessReasonCode = "write_share"
+)
+
+// Valid indicates whether the value is a known member of the RecordAccessReasonCode enum.
+func (e RecordAccessReasonCode) Valid() bool {
+	switch e {
+	case RecordAccessReasonCodeAllRecords:
+		return true
+	case RecordAccessReasonCodeOwner:
+		return true
+	case RecordAccessReasonCodeSameTeamAsOwner:
+		return true
+	case RecordAccessReasonCodeTeamShare:
+		return true
+	case RecordAccessReasonCodeUserShare:
+		return true
+	case RecordAccessReasonCodeWorkspaceVisible:
+		return true
+	case RecordAccessReasonCodeWriteShare:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordClaimRecordType.
 const (
 	RecordClaimRecordTypeCompany RecordClaimRecordType = "company"
@@ -35522,6 +35615,103 @@ type Receipt struct {
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
 
+// RecordAccess Who can open one contact or company and who can change it. `data` is one page of the
+// members who can open it; `group_counts` and `page.total` count all of them.
+type RecordAccess struct {
+	// Archived An archived record still opens; nobody can change it until it is restored.
+	Archived bool `json:"archived"`
+
+	// CanChangeCount How many of the members who can open the record can also change it.
+	CanChangeCount int                  `json:"can_change_count"`
+	Data           []RecordAccessMember `json:"data"`
+
+	// Detail True when role keys and team names ride the rows, which only a caller holding the `user_admin` read grant gets.
+	Detail bool `json:"detail"`
+
+	// GroupCounts How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
+	GroupCounts RecordAccessGroupCounts `json:"group_counts"`
+
+	// OwnerId The owner, or null when nobody owns the record.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+	Page    PageInfo            `json:"page"`
+
+	// RefreshAt When the earliest share on this record lapses and this answer changes; null when no share expires.
+	RefreshAt *time.Time `json:"refresh_at,omitempty"`
+
+	// Visibility `workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.
+	Visibility RecordAccessVisibility `json:"visibility"`
+
+	// You One member's access to the record and the reasons for it.
+	You RecordAccessVerdict `json:"you"`
+}
+
+// RecordAccessVisibility `workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.
+type RecordAccessVisibility string
+
+// RecordAccessGroupCounts How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
+type RecordAccessGroupCounts struct {
+	Everyone   int `json:"everyone"`
+	Owner      int `json:"owner"`
+	Shared     int `json:"shared"`
+	TeamShared int `json:"team_shared"`
+}
+
+// RecordAccessMember A member who can open the record.
+type RecordAccessMember struct {
+	CanChange     bool                 `json:"can_change"`
+	ChangeReasons []RecordAccessReason `json:"change_reasons"`
+	DisplayName   string               `json:"display_name"`
+
+	// Group The group the panel lists this member under, from their first reason.
+	Group       RecordAccessMemberGroup `json:"group"`
+	ReadReasons []RecordAccessReason    `json:"read_reasons"`
+
+	// Roles The member's role keys. Present only when `detail` is true.
+	Roles  *[]string          `json:"roles,omitempty"`
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// RecordAccessMemberGroup The group the panel lists this member under, from their first reason.
+type RecordAccessMemberGroup string
+
+// RecordAccessReason One reason a member can open or change the record. `workspace_visible` means the record is
+// open to everyone whose role reads this record type. `owner` means they own it.
+// `user_share` and `team_share` are live shares. `same_team_as_owner` and `all_records` come
+// from the member's role scope and apply only to changing. `write_share` is a share that allows
+// changing.
+type RecordAccessReason struct {
+	// Access The share's access level, on the three share codes.
+	Access *RecordAccessReasonAccess `json:"access,omitempty"`
+	Code   RecordAccessReasonCode    `json:"code"`
+
+	// ExpiresAt When the share lapses, on the three share codes; null when it does not.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// TeamId The team behind a team share. Present only when `detail` is true.
+	TeamId *openapi_types.UUID `json:"team_id,omitempty"`
+
+	// TeamName The team's name. Present only when `detail` is true.
+	TeamName *string `json:"team_name,omitempty"`
+}
+
+// RecordAccessReasonAccess The share's access level, on the three share codes.
+type RecordAccessReasonAccess string
+
+// RecordAccessReasonCode defines model for RecordAccessReason.Code.
+type RecordAccessReasonCode string
+
+// RecordAccessVerdict One member's access to the record and the reasons for it.
+type RecordAccessVerdict struct {
+	// CanChange Whether the record's edit path admits this member.
+	CanChange bool `json:"can_change"`
+
+	// ChangeReasons Why this member can change it; empty when they cannot.
+	ChangeReasons []RecordAccessReason `json:"change_reasons"`
+
+	// ReadReasons Why the record opens for this member.
+	ReadReasons []RecordAccessReason `json:"read_reasons"`
+}
+
 // RecordAssignment One responsibility held on one record. It records WHO is responsible, never who may see the record: visibility stays with ownership and record grants, and adding an assignment changes nobody's access.
 type RecordAssignment struct {
 	CreatedAt *time.Time         `json:"created_at,omitempty"`
@@ -43219,6 +43409,22 @@ type GetCompany360Params struct {
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
 }
 
+// GetCompanyAccessParams defines parameters for GetCompanyAccess.
+type GetCompanyAccessParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // AskAboutCompanyJSONBody defines parameters for AskAboutCompany.
 type AskAboutCompanyJSONBody struct {
 	// ProjectId Which body of work the question is about. When set, the answer is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the answer's `scope` says so. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
@@ -43991,6 +44197,22 @@ type UpdateContactParams struct {
 type GetContact360Params struct {
 	// ProjectId Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
+}
+
+// GetContactAccessParams defines parameters for GetContactAccess.
+type GetContactAccessParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // RecordConsentParams defines parameters for RecordConsent.
@@ -58776,6 +58998,9 @@ type ServerInterface interface {
 	// The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps.
 	// (GET /companies/{id}/360)
 	GetCompany360(w http.ResponseWriter, r *http.Request, id Id, params GetCompany360Params)
+	// Who can open this company and who can change it, and why.
+	// (GET /companies/{id}/access)
+	GetCompanyAccess(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyAccessParams)
 	// Ask one of the prepared questions about this account.
 	// (POST /companies/{id}/ask)
 	AskAboutCompany(w http.ResponseWriter, r *http.Request, id Id)
@@ -59019,6 +59244,9 @@ type ServerInterface interface {
 	// The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
 	// (GET /contacts/{id}/360)
 	GetContact360(w http.ResponseWriter, r *http.Request, id Id, params GetContact360Params)
+	// Who can open this contact and who can change it, and why.
+	// (GET /contacts/{id}/access)
+	GetContactAccess(w http.ResponseWriter, r *http.Request, id Id, params GetContactAccessParams)
 	// The standing relationship brief — who this contact is commercially, what they care about, what changed.
 	// (GET /contacts/{id}/brief)
 	GetContactBrief(w http.ResponseWriter, r *http.Request, id Id)
@@ -61332,6 +61560,12 @@ func (_ Unimplemented) GetCompany360(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Who can open this company and who can change it, and why.
+// (GET /companies/{id}/access)
+func (_ Unimplemented) GetCompanyAccess(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Ask one of the prepared questions about this account.
 // (POST /companies/{id}/ask)
 func (_ Unimplemented) AskAboutCompany(w http.ResponseWriter, r *http.Request, id Id) {
@@ -61815,6 +62049,12 @@ func (_ Unimplemented) UpdateContact(w http.ResponseWriter, r *http.Request, id 
 // The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
 // (GET /contacts/{id}/360)
 func (_ Unimplemented) GetContact360(w http.ResponseWriter, r *http.Request, id Id, params GetContact360Params) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Who can open this contact and who can change it, and why.
+// (GET /contacts/{id}/access)
+func (_ Unimplemented) GetContactAccess(w http.ResponseWriter, r *http.Request, id Id, params GetContactAccessParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -70637,6 +70877,69 @@ func (siw *ServerInterfaceWrapper) GetCompany360(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetCompanyAccess operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanyAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyAccessParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanyAccess(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AskAboutCompany operation middleware
 func (siw *ServerInterfaceWrapper) AskAboutCompany(w http.ResponseWriter, r *http.Request) {
 
@@ -74356,6 +74659,69 @@ func (siw *ServerInterfaceWrapper) GetContact360(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContact360(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetContactAccess operation middleware
+func (siw *ServerInterfaceWrapper) GetContactAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetContactAccessParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetContactAccess(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -93872,6 +94238,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/companies/{id}/360", wrapper.GetCompany360)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/access", wrapper.GetCompanyAccess)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/ask", wrapper.AskAboutCompany)
 	})
 	r.Group(func(r chi.Router) {
@@ -94113,6 +94482,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/360", wrapper.GetContact360)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/access", wrapper.GetContactAccess)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/brief", wrapper.GetContactBrief)

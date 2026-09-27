@@ -683,6 +683,10 @@ func (stubs) GetCompany360(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "GetCompany360")
 }
 
+func (stubs) GetCompanyAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetCompanyAccessParams) {
+	httperr.NotImplemented(w, r, "GetCompanyAccess")
+}
+
 func (stubs) AskAboutCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "AskAboutCompany")
 }
@@ -1005,6 +1009,10 @@ func (stubs) UpdateContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 
 func (stubs) GetContact360(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetContact360Params) {
 	httperr.NotImplemented(w, r, "GetContact360")
+}
+
+func (stubs) GetContactAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetContactAccessParams) {
+	httperr.NotImplemented(w, r, "GetContactAccess")
 }
 
 func (stubs) GetContactBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

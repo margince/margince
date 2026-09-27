@@ -1380,6 +1380,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Who can open this contact and who can change it, and why.
+         * @description Every live member who can open this contact, with whether they can also change it and the
+         *     reasons for both. Each member is judged by the same admission the contact read and edit
+         *     paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
+         *     live authority, all in one snapshot.
+         *
+         *     The caller must be able to open the contact; anybody else gets 404. Role keys and the team
+         *     behind a team share ride the rows only for a caller holding the `user_admin` read grant,
+         *     the same boundary `GET /users` applies; everybody else reads "via a team share".
+         *     Emails on the record carry their own audience and are not part of this answer.
+         *     Being listed means the record opens, not that every field shows: field masks still apply.
+         */
+        get: operations["getContactAccess"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/strength": {
         parameters: {
             query?: never;
@@ -2704,6 +2736,38 @@ export interface paths {
         };
         /** One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged. */
         get: operations["getSiteRead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Who can open this company and who can change it, and why.
+         * @description Every live member who can open this company, with whether they can also change it and the
+         *     reasons for both. Each member is judged by the same admission the company read and edit
+         *     paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
+         *     live authority, all in one snapshot.
+         *
+         *     The caller must be able to open the company; anybody else gets 404. Role keys and the team
+         *     behind a team share ride the rows only for a caller holding the `user_admin` read grant,
+         *     the same boundary `GET /users` applies; everybody else reads "via a team share".
+         *     Emails on the record carry their own audience and are not part of this answer.
+         *     Being listed means the record opens, not that every field shows: field masks still apply.
+         */
+        get: operations["getCompanyAccess"];
         put?: never;
         post?: never;
         delete?: never;
@@ -32291,6 +32355,97 @@ export interface components {
             /** Format: date-time */
             expires_at?: string | null;
         };
+        /**
+         * @description Who can open one contact or company and who can change it. `data` is one page of the
+         *     members who can open it; `group_counts` and `page.total` count all of them.
+         */
+        RecordAccess: {
+            /**
+             * @description `workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.
+             * @enum {string}
+             */
+            visibility: "workspace" | "owner";
+            /**
+             * Format: uuid
+             * @description The owner, or null when nobody owns the record.
+             */
+            owner_id?: string | null;
+            /** @description An archived record still opens; nobody can change it until it is restored. */
+            archived: boolean;
+            /** @description True when role keys and team names ride the rows, which only a caller holding the `user_admin` read grant gets. */
+            detail: boolean;
+            you: components["schemas"]["RecordAccessVerdict"];
+            data: components["schemas"]["RecordAccessMember"][];
+            page: components["schemas"]["PageInfo"];
+            group_counts: components["schemas"]["RecordAccessGroupCounts"];
+            /** @description How many of the members who can open the record can also change it. */
+            can_change_count: number;
+            /**
+             * Format: date-time
+             * @description When the earliest share on this record lapses and this answer changes; null when no share expires.
+             */
+            refresh_at?: string | null;
+        };
+        /** @description How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone. */
+        RecordAccessGroupCounts: {
+            owner: number;
+            shared: number;
+            team_shared: number;
+            everyone: number;
+        };
+        /** @description One member's access to the record and the reasons for it. */
+        RecordAccessVerdict: {
+            /** @description Whether the record's edit path admits this member. */
+            can_change: boolean;
+            /** @description Why the record opens for this member. */
+            read_reasons: components["schemas"]["RecordAccessReason"][];
+            /** @description Why this member can change it; empty when they cannot. */
+            change_reasons: components["schemas"]["RecordAccessReason"][];
+        };
+        /** @description A member who can open the record. */
+        RecordAccessMember: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /**
+             * @description The group the panel lists this member under, from their first reason.
+             * @enum {string}
+             */
+            group: "owner" | "shared" | "team_shared" | "everyone";
+            can_change: boolean;
+            read_reasons: components["schemas"]["RecordAccessReason"][];
+            change_reasons: components["schemas"]["RecordAccessReason"][];
+            /** @description The member's role keys. Present only when `detail` is true. */
+            roles?: string[];
+        };
+        /**
+         * @description One reason a member can open or change the record. `workspace_visible` means the record is
+         *     open to everyone whose role reads this record type. `owner` means they own it.
+         *     `user_share` and `team_share` are live shares. `same_team_as_owner` and `all_records` come
+         *     from the member's role scope and apply only to changing. `write_share` is a share that allows
+         *     changing.
+         */
+        RecordAccessReason: {
+            /** @enum {string} */
+            code: "workspace_visible" | "owner" | "user_share" | "team_share" | "same_team_as_owner" | "all_records" | "write_share";
+            /**
+             * @description The share's access level, on the three share codes.
+             * @enum {string}
+             */
+            access?: "read" | "write";
+            /**
+             * Format: date-time
+             * @description When the share lapses, on the three share codes; null when it does not.
+             */
+            expires_at?: string | null;
+            /**
+             * Format: uuid
+             * @description The team behind a team share. Present only when `detail` is true.
+             */
+            team_id?: string;
+            /** @description The team's name. Present only when `detail` is true. */
+            team_name?: string;
+        };
         UserListResponse: {
             data: components["schemas"]["User"][];
             page: components["schemas"]["PageInfo"];
@@ -39822,6 +39977,47 @@ export interface operations {
             409: components["responses"]["VersionConflict"];
         };
     };
+    getContactAccess: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The members who can open the contact, one page at a time. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordAccess"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getContactStrength: {
         parameters: {
             query?: never;
@@ -41662,6 +41858,47 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getCompanyAccess: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The members who can open the company, one page at a time. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordAccess"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCompanyStrength: {

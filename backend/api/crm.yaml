@@ -2197,6 +2197,38 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }
 
+  /contacts/{id}/access:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: getContactAccess
+      summary: Who can open this contact and who can change it, and why.
+      description: |
+        Every live member who can open this contact, with whether they can also change it and the
+        reasons for both. Each member is judged by the same admission the contact read and edit
+        paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
+        live authority, all in one snapshot.
+
+        The caller must be able to open the contact; anybody else gets 404. Role keys and the team
+        behind a team share ride the rows only for a caller holding the `user_admin` read grant,
+        the same boundary `GET /users` applies; everybody else reads "via a team share".
+        Emails on the record carry their own audience and are not part of this answer.
+        Being listed means the record opens, not that every field shows: field masks still apply.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: The members who can open the contact, one page at a time.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordAccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/strength:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4063,6 +4095,38 @@ paths:
               schema: { $ref: '#/components/schemas/SiteReadReport' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /companies/{id}/access:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Companies]
+      operationId: getCompanyAccess
+      summary: Who can open this company and who can change it, and why.
+      description: |
+        Every live member who can open this company, with whether they can also change it and the
+        reasons for both. Each member is judged by the same admission the company read and edit
+        paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
+        live authority, all in one snapshot.
+
+        The caller must be able to open the company; anybody else gets 404. Role keys and the team
+        behind a team share ride the rows only for a caller holding the `user_admin` read grant,
+        the same boundary `GET /users` applies; everybody else reads "via a team share".
+        Emails on the record carry their own audience and are not part of this answer.
+        Being listed means the record opens, not that every field shows: field masks still apply.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: The members who can open the company, one page at a time.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordAccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/strength:
     parameters:
@@ -43756,6 +43820,116 @@ components:
         reason: { type: [string, 'null'] }
         expires_at: { type: [string, 'null'], format: date-time }
 
+    RecordAccess:
+      type: object
+      description: |
+        Who can open one contact or company and who can change it. `data` is one page of the
+        members who can open it; `group_counts` and `page.total` count all of them.
+      required: [visibility, archived, detail, you, data, page, group_counts, can_change_count]
+      properties:
+        visibility:
+          type: string
+          enum: [workspace, owner]
+          description: '`workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.'
+        owner_id:
+          type: [string, 'null']
+          format: uuid
+          description: The owner, or null when nobody owns the record.
+        archived:
+          type: boolean
+          description: An archived record still opens; nobody can change it until it is restored.
+        detail:
+          type: boolean
+          description: True when role keys and team names ride the rows, which only a caller holding the `user_admin` read grant gets.
+        you: { $ref: '#/components/schemas/RecordAccessVerdict' }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RecordAccessMember' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+        group_counts: { $ref: '#/components/schemas/RecordAccessGroupCounts' }
+        can_change_count:
+          type: integer
+          minimum: 0
+          description: How many of the members who can open the record can also change it.
+        refresh_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the earliest share on this record lapses and this answer changes; null when no share expires.
+    RecordAccessGroupCounts:
+      type: object
+      description: How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
+      required: [owner, shared, team_shared, everyone]
+      properties:
+        owner: { type: integer, minimum: 0 }
+        shared: { type: integer, minimum: 0 }
+        team_shared: { type: integer, minimum: 0 }
+        everyone: { type: integer, minimum: 0 }
+    RecordAccessVerdict:
+      type: object
+      description: One member's access to the record and the reasons for it.
+      required: [can_change, read_reasons, change_reasons]
+      properties:
+        can_change:
+          type: boolean
+          description: Whether the record's edit path admits this member.
+        read_reasons:
+          type: array
+          items: { $ref: '#/components/schemas/RecordAccessReason' }
+          description: Why the record opens for this member.
+        change_reasons:
+          type: array
+          items: { $ref: '#/components/schemas/RecordAccessReason' }
+          description: Why this member can change it; empty when they cannot.
+    RecordAccessMember:
+      type: object
+      description: A member who can open the record.
+      required: [user_id, display_name, group, can_change, read_reasons, change_reasons]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        group:
+          type: string
+          enum: [owner, shared, team_shared, everyone]
+          description: The group the panel lists this member under, from their first reason.
+        can_change: { type: boolean }
+        read_reasons:
+          type: array
+          items: { $ref: '#/components/schemas/RecordAccessReason' }
+        change_reasons:
+          type: array
+          items: { $ref: '#/components/schemas/RecordAccessReason' }
+        roles:
+          type: array
+          items: { type: string }
+          description: The member's role keys. Present only when `detail` is true.
+    RecordAccessReason:
+      type: object
+      description: |
+        One reason a member can open or change the record. `workspace_visible` means the record is
+        open to everyone whose role reads this record type. `owner` means they own it.
+        `user_share` and `team_share` are live shares. `same_team_as_owner` and `all_records` come
+        from the member's role scope and apply only to changing. `write_share` is a share that allows
+        changing.
+      required: [code]
+      properties:
+        code:
+          type: string
+          enum: [workspace_visible, owner, user_share, team_share, same_team_as_owner, all_records, write_share]
+        access:
+          type: string
+          enum: [read, write]
+          description: The share's access level, on the three share codes.
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the share lapses, on the three share codes; null when it does not.
+        team_id:
+          type: string
+          format: uuid
+          description: The team behind a team share. Present only when `detail` is true.
+        team_name:
+          type: string
+          description: The team's name. Present only when `detail` is true.
     UserListResponse:
       type: object
       required: [data, page]

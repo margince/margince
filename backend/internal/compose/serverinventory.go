@@ -129,6 +129,7 @@ type Server struct {
 	exportBundleHandlers
 	companyRollupHandlers
 	strengthHandlers
+	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
 	outcomeReviewHandlers
