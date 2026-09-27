@@ -785,3 +785,59 @@ it("names an open request as the reason mail was kept", async () => {
     await screen.findByText(/data-protection request is still being answered/),
   ).toBeTruthy();
 });
+
+// Confirming is the irreversible half, and it only becomes available after a
+// look. The receipt then reports what WAS destroyed rather than what would be.
+it("destroys only after the preview, and reports it in the past tense", async () => {
+  const user = userEvent.setup();
+  const { fetchMock } = backend(CAPTURE_EDITOR);
+  const purgeCalls: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (request.url.includes("/purge")) {
+        const preview = request.url.includes("preview=true");
+        purgeCalls.push(request.url);
+        return new Response(
+          JSON.stringify({
+            destroyed: 2,
+            released: 1,
+            skipped: 0,
+            anonymised: 1,
+            preview,
+            kept: { held: 0, under_statute: 0, under_request: 0 },
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return fetchMock(input, init);
+    },
+  );
+  render(
+    <Providers>
+      <CaptureExclusionsCard />
+    </Providers>,
+  );
+
+  await waitFor(() => expect(screen.getByText("ex@partner.test")).toBeTruthy());
+  await user.click(
+    screen.getAllByRole("button", { name: /Delete mail already captured/ })[0],
+  );
+
+  // Nothing to confirm until a look has been taken.
+  expect(
+    screen.queryByRole("button", { name: "Delete permanently" }),
+  ).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Check first" }));
+  expect(await screen.findByText(/2 messages would be destroyed/)).toBeTruthy();
+
+  await user.click(screen.getByRole("button", { name: "Delete permanently" }));
+  expect(await screen.findByText(/2 messages destroyed/)).toBeTruthy();
+  // The colleague's copy and the stripped contact are reported too.
+  expect(screen.getByText(/Your access to it has ended/)).toBeTruthy();
+  expect(screen.getByText(/stripped of identifying details/)).toBeTruthy();
+  expect(purgeCalls.some((url) => url.includes("preview=false"))).toBe(true);
+});
