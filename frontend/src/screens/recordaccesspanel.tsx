@@ -149,7 +149,7 @@ function YouLine({
   );
   return (
     <p data-testid="who-can-see-you">
-      <b>{verdict}</b> {why}
+      {verdict} <span className="t-caption">{why}</span>
     </p>
   );
 }
