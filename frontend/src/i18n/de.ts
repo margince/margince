@@ -10739,8 +10739,17 @@ export const de = {
   "magic.failingSince": "Fehlerhaft seit {when}",
   "magic.col.wayBack": "Weg zurück",
   "magic.noRecord": "Kein Datensatz genannt",
-  "magic.undo.fromHistory":
-    "Lässt sich über den Verlauf des Datensatzes zurücknehmen",
+  "magic.undo.action": "Rückgängig",
+  "magic.undo.done": "Rückgängig gemacht",
+  "magic.undo.perRecord": "Jeden Datensatz einzeln rückgängig machen",
+  "magic.records.title": "Was sich geändert hat, Datensatz für Datensatz",
+  "magic.records.show": "Was sich geändert hat",
+  "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
+  "magic.records.more": "Mehr anzeigen",
+  "magic.records.fromTo": "{from} → {to}",
+  "magic.records.empty_value": "leer",
+  "magic.records.count_one": "{count} Datensatz",
+  "magic.records.count_other": "{count} Datensätze",
   "magic.undoReason.noCompletedChange":
     "Es hat sich nichts geändert, also gibt es nichts zurückzunehmen.",
   "magic.undoReason.notEvaluated":

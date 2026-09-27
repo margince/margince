@@ -10626,7 +10626,17 @@ export const vi = {
   "magic.failingSince": "Lỗi từ {when}",
   "magic.col.wayBack": "Cách hoàn tác",
   "magic.noRecord": "Không nêu bản ghi nào",
-  "magic.undo.fromHistory": "Có thể hoàn tác từ lịch sử của bản ghi",
+  "magic.undo.action": "Hoàn tác",
+  "magic.undo.done": "Đã hoàn tác",
+  "magic.undo.perRecord": "Hoàn tác từng bản ghi bên trong",
+  "magic.records.title": "Những gì đã thay đổi, theo từng bản ghi",
+  "magic.records.show": "Những gì đã thay đổi",
+  "magic.records.empty": "Không còn bản ghi nào trong số này hiển thị.",
+  "magic.records.more": "Xem thêm",
+  "magic.records.fromTo": "từ {from} thành {to}",
+  "magic.records.empty_value": "trống",
+  "magic.records.count_one": "{count} bản ghi",
+  "magic.records.count_other": "{count} bản ghi",
   "magic.undoReason.noCompletedChange":
     "Không có gì thay đổi nên không có gì để hoàn tác.",
   "magic.undoReason.notEvaluated":

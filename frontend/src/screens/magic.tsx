@@ -38,7 +38,6 @@ import {
   magicByKey,
   magicConsequenceKey,
   magicSentenceKey,
-  magicUndoReasonKey,
   magicWhyKey,
 } from "./magic.keys";
 import {
@@ -50,6 +49,8 @@ import {
   type MagicWindow,
   useMagic,
 } from "./magic.queries";
+import { LineRecordsOpener } from "./magic.records";
+import { MagicUndoButton } from "./magic.undo";
 import { sourceUnavailableText } from "./worklist.copy";
 import { listReadState } from "./worklist.listread";
 import "./brief.css";
@@ -268,7 +269,9 @@ function MagicLaneSection({
               {
                 key: "about",
                 header: t("magic.col.about"),
-                render: (row: MagicLine) => <LineSubject line={row} />,
+                render: (row: MagicLine) => (
+                  <LineSubject line={row} since={receipt?.since} />
+                ),
               },
               {
                 key: "by",
@@ -357,55 +360,75 @@ function LineWhen({ line, zone }: Readonly<{ line: MagicLine; zone: string }>) {
   return formatDateTime(line.occurred_at, locale, zone);
 }
 
-function LineSubject({ line }: Readonly<{ line: MagicLine }>) {
+function LineSubject({
+  line,
+  since,
+}: Readonly<{ line: MagicLine; since: string | undefined }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const label = subjectLabel(line);
   const count = line.count ?? 1;
+  // A done line about records OPENS: to every record it stands for, what
+  // changed on each, and an undo per record. Retention names no record, and a
+  // line from another lane is not a change to inspect.
+  const opens = line.lane === "done" && line.entity !== undefined && since;
   // ONE line for a job that touched many records: the most recent one by
   // name, and how many more.
   if (count > 1 || (!line.entity && line.count !== undefined)) {
-    return label && count > 1
-      ? plural("magic.aboutMany", count - 1, {
-          label,
-          others: formatNumber(count - 1, locale),
-        })
-      : plural("magic.aboutCount", count, {
-          count: formatNumber(count, locale),
-        });
+    const summary =
+      label && count > 1
+        ? plural("magic.aboutMany", count - 1, {
+            label,
+            others: formatNumber(count - 1, locale),
+          })
+        : plural("magic.aboutCount", count, {
+            count: formatNumber(count, locale),
+          });
+    return opens ? (
+      <LineRecordsOpener line={line} since={since} summary={summary} />
+    ) : (
+      summary
+    );
   }
   if (!label) {
     return t("magic.noRecord");
   }
   const href = recordHref(line);
-  return href ? <a href={href}>{label}</a> : label;
+  return (
+    <>
+      {href ? <a href={href}>{label}</a> : label}
+      {opens && (
+        <LineRecordsOpener
+          line={line}
+          since={since}
+          summary={t("magic.records.show")}
+        />
+      )}
+    </>
+  );
 }
 
 /**
- * The way back, or why there is none.
- *
- * NO VERB, on this surface as on every other row here. Where a change can be
- * put back, the row says so and points at the record whose history owns the
- * restore; where it cannot, the reason stands in the control's place, because a
- * greyed button with nothing beside it is the shape this field exists to
- * replace.
+ * The way back: an undo for a change to one record, done here with one press.
+ * A line standing for many records offers its undos inside, one per record —
+ * one button that put back 150 changes nobody had looked at would be the same
+ * unasked bulk write this page exists to report.
  */
 function LineWayBack({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
-  const undo = line.undo;
-  if (!undo) {
-    return null;
+  if ((line.count ?? 1) > 1 && line.entity) {
+    return <span className="t-caption">{t("magic.undo.perRecord")}</span>;
   }
-  if (undo.undoable) {
-    const href = recordHref(line);
-    const label = t("magic.undo.fromHistory");
-    return href ? <a href={href}>{label}</a> : <span>{label}</span>;
-  }
-  const reason = magicUndoReasonKey(undo.reason);
-  // A reason this build has no words for says nothing rather than printing the
-  // server's own token: `no_before_image` is not a sentence a reader can act on.
-  return reason ? <span className="t-caption">{t(reason)}</span> : null;
+  // A line naming no record still says why it cannot be taken back; it offers
+  // no press, because the restore route needs a record to name.
+  return (
+    <MagicUndoButton
+      undo={line.undo}
+      entityType={line.entity?.type ?? ""}
+      entityId={line.entity?.id ?? ""}
+    />
+  );
 }
 
 /**

@@ -94,8 +94,8 @@ export function netPhaseMoves(changes: readonly PhaseChange[]): PhaseChange[] {
   }
   const out: PhaseChange[] = [];
   for (const list of byProject.values()) {
-    const ordered = [...list].sort((a, b) =>
-      a.occurred_at.localeCompare(b.occurred_at),
+    const ordered = [...list].sort(
+      (a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at),
     );
     const first = ordered.find((change) => change.from_phase != null);
     const last = ordered[ordered.length - 1];

@@ -503,6 +503,46 @@
   margin: var(--space-4) 0 0;
 }
 
+/* An opened line: one row per record, its name and its undo on one line, the
+   fields it moved under it as label and old → new. */
+.magic-records {
+  list-style: none;
+  margin: var(--space-3) 0;
+  padding: 0;
+}
+
+.magic-record + .magic-record {
+  margin-top: var(--space-3);
+}
+
+.magic-record-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.magic-changes {
+  margin: var(--space-2) 0 0;
+}
+
+.magic-changes > div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.magic-changes dd {
+  margin: 0;
+}
+
+/* The three ways to discharge a privacy-notice duty, side by side. */
+.notice-duty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  margin-top: var(--space-3);
+}
+
 /* ── Folds ────────────────────────────────────────────────────────────────
  * `PageZones` folds the columns; what folds here is the briefing's own scale.
  * A display-size greeting on a phone costs three lines before a reader has

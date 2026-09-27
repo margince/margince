@@ -10915,7 +10915,17 @@ export const en = {
   "magic.failingSince": "Failing since {when}",
   "magic.col.wayBack": "Way back",
   "magic.noRecord": "No record named",
-  "magic.undo.fromHistory": "Can be put back from the record’s history",
+  "magic.undo.action": "Undo",
+  "magic.undo.done": "Undone",
+  "magic.undo.perRecord": "Undo each record inside",
+  "magic.records.title": "What changed, record by record",
+  "magic.records.show": "What changed",
+  "magic.records.empty": "None of these records is in view any more.",
+  "magic.records.more": "Show more",
+  "magic.records.fromTo": "{from} → {to}",
+  "magic.records.empty_value": "empty",
+  "magic.records.count_one": "{count} record",
+  "magic.records.count_other": "{count} records",
   "magic.undoReason.noCompletedChange":
     "Nothing changed, so there is nothing to put back.",
   "magic.undoReason.notEvaluated":

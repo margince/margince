@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -278,7 +279,7 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.getByText("1,200 records")).toBeTruthy();
   });
 
-  it("points an undoable change at the record whose history owns the way back", async () => {
+  it("puts an undoable change back with one press, sending the record's version", async () => {
     stub(
       receipt({
         done: [
@@ -291,6 +292,7 @@ describe("the receipt draws every lane it promises", () => {
             undo: {
               undoable: true,
               audit_id: "00000000-0000-7000-8000-0000000000bb",
+              version: 7,
             },
           }),
         ],
@@ -298,12 +300,19 @@ describe("the receipt draws every lane it promises", () => {
       }),
     );
     renderMagic();
-    const wayBack = await screen.findByRole("link", {
-      name: "Can be put back from the record’s history",
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() => {
+      const restore = vi
+        .mocked(fetch)
+        .mock.calls.map(([input]) => input as Request)
+        .find((request) =>
+          request.url.endsWith(
+            "/records/deal/00000000-0000-7000-8000-0000000000aa/history/00000000-0000-7000-8000-0000000000bb/restore",
+          ),
+        );
+      expect(restore?.method).toBe("POST");
+      expect(restore?.headers.get("If-Match")).toContain("7");
     });
-    expect(wayBack.getAttribute("href")).toBe(
-      "#/deals/00000000-0000-7000-8000-0000000000aa",
-    );
   });
 
   it("says it is reading while the read is in flight", () => {
