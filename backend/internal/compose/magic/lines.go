@@ -51,6 +51,9 @@ func linesOf(entries []entry, limit int) (lines []crmcontracts.MagicLine, housek
 			records[at][e.EntityID] = true
 			count := len(records[at])
 			out[at].Count = &count
+			if count > 1 {
+				out[at].Reason = reasonForMany(out[at].Reason)
+			}
 			continue
 		}
 		group[key] = len(out)
@@ -115,6 +118,9 @@ func groupKey(e entry, d description) string {
 	parts := []string{e.ActorID, e.Action, e.EntityType, sentenceKey(d.summary), "", ""}
 	if d.reason != nil {
 		parts[4] = sentenceKey(*d.reason)
+		if many, perRecord := manyReasons[d.reason.Key]; perRecord {
+			parts[4] = many
+		}
 	}
 	// Whose authority it ran under: the auto-apply sweep acts for each rep on
 	// their own standing decision, and folding two reps' actions into one line
@@ -123,6 +129,27 @@ func groupKey(e entry, d description) string {
 		parts[5] = e.OnBehalfOf.String()
 	}
 	return strings.Join(parts, "\x00")
+}
+
+// manyReasons are the reasons whose values belong to ONE record — the website a
+// company's details were read on — mapped to what a line standing for many
+// records says instead. Grouped on the per-record values, a website reader run
+// over 234 companies would be 234 lines again; grouped without them, one line
+// would name one company's site as the source for all of them.
+var manyReasons = map[string]string{
+	"magic.why.site_read":         "magic.why.site_read_each",
+	"magic.why.site_read_unnamed": "magic.why.site_read_each",
+}
+
+// reasonForMany is the reason a line says once it stands for more than one record.
+func reasonForMany(r *crmcontracts.MagicSentence) *crmcontracts.MagicSentence {
+	if r == nil {
+		return nil
+	}
+	if many, perRecord := manyReasons[r.Key]; perRecord {
+		return &crmcontracts.MagicSentence{Key: many}
+	}
+	return r
 }
 
 func sentenceKey(s crmcontracts.MagicSentence) string {

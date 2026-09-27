@@ -62,6 +62,74 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 	}
 }
 
+// The website reader records the page it read as source_url, which is the
+// shape every live row carries.
+func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {
+	line, _, ok := lineOf(auditRow("agent:deepread",
+		`{"industry": null}`, `{"industry": "Legal services"}`,
+		`{"source": "site_read", "source_url": "https://www.studiolegal.de/de/about"}`, time.Now()))
+	if !ok {
+		t.Fatal("a site read was not shown")
+	}
+	if line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {
+		t.Fatalf("reason %v, want the site it was read on", line.Reason)
+	}
+}
+
+// A logo row records the IMAGE's address, often on a CDN; naming that host as
+// the site would be wrong, so the reason says the company's website instead.
+func TestALogoReadDoesNotNameTheImageHostAsTheSite(t *testing.T) {
+	logo := "https://cdn.prod.website-files.com/66ded54b/webclip.png"
+	line, _, ok := lineOf(auditRow("agent:deepread",
+		`{"logo": null}`, `{"logo": "`+logo+`"}`,
+		`{"source": "site_read", "source_url": "`+logo+`"}`, time.Now()))
+	if !ok {
+		t.Fatal("a logo read was not shown")
+	}
+	if line.Reason == nil || line.Reason.Key != "magic.why.site_read_unnamed" || line.Reason.Values != nil {
+		t.Fatalf("reason %v, want the unnamed website reason", line.Reason)
+	}
+}
+
+// One website reader run over many companies is one line, and that line does
+// not name one company's site as the source for all of them.
+func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
+	now := time.Now()
+	var entries []entry
+	for i, site := range []string{"https://a.example/about", "https://b.example/about", "https://c.example/logo.png"} {
+		after := `{"industry": "Software"}`
+		if i == 2 {
+			after = `{"industry": "Software", "logo": "` + site + `"}`
+		}
+		entries = append(entries, auditRow("agent:deepread", `{"industry": null}`, after,
+			`{"source": "site_read", "source_url": "`+site+`"}`, now.Add(-time.Duration(i)*time.Second)))
+	}
+	lines, _ := linesOf(entries, 100)
+	var industry []int
+	for i, l := range lines {
+		if (*l.Summary.Values)["fields"] == "industry" {
+			industry = append(industry, i)
+		}
+	}
+	if len(industry) != 1 {
+		t.Fatalf("got %d industry lines, want the two page reads folded into one", len(industry))
+	}
+	l := lines[industry[0]]
+	if l.Count == nil || *l.Count != 2 || l.Reason == nil || l.Reason.Key != "magic.why.site_read_each" {
+		t.Fatalf("count %v reason %v, want 2 records read on each company's own website", l.Count, l.Reason)
+	}
+}
+
+// The mail reader's reply sorting is bookkeeping, not a change to report.
+func TestTheMailReadersReplySortingIsNotShown(t *testing.T) {
+	e := auditRow("system:owed_verdict", `{"owed_verdict": null, "owed_verdict_ruleset": null}`,
+		`{"owed_verdict": "informs_us", "owed_verdict_ruleset": "prompts-82e2"}`, "", time.Now())
+	e.EntityType = "activity"
+	if _, _, ok := lineOf(e); ok {
+		t.Fatal(`the mail reader's reply sorting was shown as "Changed owed verdict"`)
+	}
+}
+
 // An update that moved nothing a reader cares about is not a line.
 func TestAnUpdateThatSaysNothingIsNotShown(t *testing.T) {
 	for _, e := range []entry{

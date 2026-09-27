@@ -10510,6 +10510,10 @@ export const vi = {
 
   "magic.title": "Margince đã làm gì",
   "magic.since": "Kể từ {when}",
+  "magic.window.label": "Hiển thị",
+  "magic.window.brief": "Từ bản tóm tắt gần nhất",
+  "magic.window.week": "7 ngày qua",
+  "magic.window.month": "30 ngày qua",
   "magic.loading": "Đang đọc những gì hệ thống đã làm",
   "magic.lane.done": "Đã làm giúp bạn",
   "magic.lane.needsYou": "Đang chờ bạn",
@@ -10549,6 +10553,8 @@ export const vi = {
   "magic.why.public_records":
     "Từ trang web công khai và bản ghi DNS của công ty.",
   "magic.why.site_read": "Đọc trên {site}.",
+  "magic.why.site_read_unnamed": "Đọc trên trang web của công ty.",
+  "magic.why.site_read_each": "Đọc trên trang web riêng của từng công ty.",
   "magic.why.signature": "Lấy từ chữ ký email.",
   "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
   "magic.by.retention": "Lưu trữ dữ liệu",

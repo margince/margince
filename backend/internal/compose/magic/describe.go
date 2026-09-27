@@ -46,6 +46,10 @@ var cohortKeys = []string{"cohort_linked", "cohort_promoted"}
 var bookkeepingFields = map[string]bool{
 	"updated_at": true, "version": true, "chunk_count": true, "checksum": true,
 	"audience_reason": true, "owed_verdict_ruleset": true, "reply_verdict_by": true,
+	// The mail reader's sorting of one message into "needs a reply or not". It
+	// feeds the reply lists; as a line it read "Changed owed verdict" once per
+	// email, which named an internal column and told the reader nothing.
+	"owed_verdict": true,
 }
 
 // describe answers what an admitted audit row means to a reader, and whether it
@@ -79,7 +83,7 @@ func describe(e entry) (description, bool) {
 	values := map[string]string{"fields": strings.Join(fields, ", ")}
 	return description{
 		summary: crmcontracts.MagicSentence{Key: "magic.action.fields_changed", Values: &values},
-		reason:  reasonFromEvidence(evidence),
+		reason:  reasonFromEvidence(evidence, after),
 	}, true
 }
 
@@ -101,25 +105,47 @@ func changedFields(before, after map[string]any) []string {
 }
 
 // reasonFromEvidence turns the source an enrichment recorded into a why.
-func reasonFromEvidence(evidence map[string]any) *crmcontracts.MagicSentence {
+func reasonFromEvidence(evidence, after map[string]any) *crmcontracts.MagicSentence {
 	switch evidence["source"] {
 	case "site_read":
-		ref, _ := evidence["source_ref"].(string)
-		values := map[string]string{"site": siteOf(ref)}
-		return &crmcontracts.MagicSentence{Key: "magic.why.site_read", Values: &values}
+		if site := siteOf(evidence, after); site != "" {
+			values := map[string]string{"site": site}
+			return &crmcontracts.MagicSentence{Key: "magic.why.site_read", Values: &values}
+		}
+		return &crmcontracts.MagicSentence{Key: "magic.why.site_read_unnamed"}
 	case "capture_enrich":
 		return &crmcontracts.MagicSentence{Key: "magic.why.signature"}
 	}
 	return nil
 }
 
-// siteOf reduces a recorded source (`site_read:https://host/path`) to its host.
-func siteOf(ref string) string {
-	raw := strings.TrimPrefix(ref, "site_read:")
-	if u, err := url.Parse(raw); err == nil && u.Host != "" {
-		return strings.TrimPrefix(u.Host, "www.")
+// siteOf names the website a site read took its values from, or "" when the
+// row does not say.
+//
+// The website reader records the page it read as `source_url`; older rows
+// carry `source_ref` (`site_read:https://host/path`). A logo row records the
+// IMAGE's address instead, which is often a CDN host — naming that as the
+// site would send the reader to the wrong place, so an address that is the
+// written value itself names nothing.
+func siteOf(evidence, after map[string]any) string {
+	raw, _ := evidence["source_url"].(string)
+	if raw == "" {
+		ref, _ := evidence["source_ref"].(string)
+		raw = strings.TrimPrefix(ref, "site_read:")
 	}
-	return raw
+	if raw == "" {
+		return ""
+	}
+	for _, v := range after {
+		if s, ok := v.(string); ok && s == raw {
+			return ""
+		}
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	return strings.TrimPrefix(u.Host, "www.")
 }
 
 // actorLabel names who acted, as a reader would call them.

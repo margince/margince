@@ -10800,6 +10800,10 @@ export const en = {
   // the contract rather than one screen's copy (src/screens/magic.keys.ts).
   "magic.title": "What Margince did",
   "magic.since": "Since {when}",
+  "magic.window.label": "Show",
+  "magic.window.brief": "Since my last brief",
+  "magic.window.week": "Last 7 days",
+  "magic.window.month": "Last 30 days",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
   "magic.lane.needsYou": "Waiting on you",
@@ -10839,6 +10843,8 @@ export const en = {
   "magic.why.public_records":
     "From the company’s public website and DNS records.",
   "magic.why.site_read": "Read on {site}.",
+  "magic.why.site_read_unnamed": "Read on the company’s website.",
+  "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",

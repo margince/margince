@@ -55,6 +55,8 @@ export const MAGIC_WHY_KEYS = [
   "magic.why.mail_filed",
   "magic.why.public_records",
   "magic.why.site_read",
+  "magic.why.site_read_unnamed",
+  "magic.why.site_read_each",
   "magic.why.signature",
   "magic.why.retention",
 ] as const satisfies readonly MessageKey[];

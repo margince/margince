@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -389,5 +395,33 @@ describe("the receipt draws every lane it promises", () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Some data did not load/)).toHaveLength(4);
     });
+  });
+});
+
+describe("the reader chooses how far back the page looks", () => {
+  // The default window is the server's own: since the last brief. A reader
+  // back from a weekend, or looking at what an import set off, needs more,
+  // and without a choice the page reported "nothing" about work it had done.
+  it("leaves since to the server by default and asks for 7 days when chosen", async () => {
+    stub(receipt());
+    renderMagic();
+    const fetched = vi.mocked(fetch);
+    const magicReads = () =>
+      fetched.mock.calls
+        .map(([input]) =>
+          String(input instanceof Request ? input.url : input),
+        )
+        .filter((url) => url.split("?")[0].endsWith("/magic"));
+    await waitFor(() => expect(magicReads().length).toBe(1));
+    expect(magicReads()[0]).not.toContain("since=");
+
+    fireEvent.click(screen.getByRole("button", { name: "Last 7 days" }));
+    await waitFor(() => expect(magicReads().length).toBe(2));
+    const since = new URL(magicReads()[1], "http://x").searchParams.get(
+      "since",
+    );
+    expect(since).toBeTruthy();
+    const days = (Date.now() - Date.parse(since ?? "")) / 86_400_000;
+    expect(Math.round(days)).toBe(7);
   });
 });

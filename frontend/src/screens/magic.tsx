@@ -22,8 +22,10 @@
 // already finished answers a different question, one worth having and not worth
 // leading with.
 
+import { useState } from "react";
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
+import { SegmentedControl } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -44,6 +46,8 @@ import {
   type MagicLine,
   type MagicNotShown,
   type MagicReceipt,
+  MAGIC_WINDOWS,
+  type MagicWindow,
   useMagic,
 } from "./magic.queries";
 import { sourceUnavailableText } from "./worklist.copy";
@@ -89,12 +93,29 @@ export function MagicPanel() {
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
   const zone = viewerZone();
-  const magic = useMagic();
+  // How far back, chosen by the reader. The default is the server's own answer
+  // — since the last brief — and the longer windows are for the reader who was
+  // away, or who wants to see what an import set off.
+  const [span, setSpan] = useState<MagicWindow>("brief");
+  const magic = useMagic(span);
   const receipt = magic.data;
   const withheld = receipt?.sources_unavailable ?? [];
   return (
     <Panel
       title={t("magic.title")}
+      titleAction={
+        <SegmentedControl
+          options={MAGIC_WINDOWS}
+          value={span}
+          onChange={setSpan}
+          label={t("magic.window.label")}
+          labels={{
+            brief: t("magic.window.brief"),
+            week: t("magic.window.week"),
+            month: t("magic.window.month"),
+          }}
+        />
+      }
       // WHICH WINDOW, in the band that belongs to the whole panel: "nothing
       // happened" over an hour and over a day are different claims, and only
       // the server knows which one this page is making.
