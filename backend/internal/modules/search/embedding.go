@@ -165,12 +165,12 @@ type VectorHit struct {
 // identity. Object RBAC and row scope gate every branch, exactly like
 // the lexical union — a vector hit is a read too.
 func (s *Store) SimilarEntities(ctx context.Context, queryVec []float32, identity string, limit int, types ...string) ([]VectorHit, error) {
-	return s.similarEntities(ctx, queryVec, identity, limit, nil, types...)
+	return s.similarEntitiesWithin(ctx, queryVec, identity, limit, nil, types...)
 }
 
-// similarEntities is SimilarEntities bounded to the records in within, with
+// similarEntitiesWithin is SimilarEntities bounded to the records in within, with
 // withinClause's reading of nil and of an empty set.
-func (s *Store) similarEntities(ctx context.Context, queryVec []float32, identity string, limit int, within []ids.UUID, types ...string) ([]VectorHit, error) {
+func (s *Store) similarEntitiesWithin(ctx context.Context, queryVec []float32, identity string, limit int, within []ids.UUID, types ...string) ([]VectorHit, error) {
 	// A zero query vector makes every cosine distance 0/0 = NaN, and a
 	// naive ORDER BY sim DESC sorts NaN FIRST — the same trap the write
 	// path guards. There is nothing to rank against it, so return no vector
