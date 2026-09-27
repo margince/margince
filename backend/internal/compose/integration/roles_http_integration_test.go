@@ -110,3 +110,90 @@ func hasRole(directory roleDirectoryWire, key string) bool {
 	}
 	return false
 }
+
+// Each refusal the role editor's transport can answer, through the real
+// handlers: a body it cannot read, an If-Match it cannot parse, and the codes
+// the service's refusals map onto.
+func TestTheRoleEditorsRefusalsOverHTTP(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+
+	var created roleWire
+	if status := e.Call(t, "POST", "/v1/roles", map[string]any{"copy_from": "rep", "name": "Field sales"}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("create -> %d, want 201", status)
+	}
+	base := "/v1/roles/" + created.Key
+
+	for _, tc := range []struct {
+		name    string
+		method  string
+		path    string
+		body    any
+		headers map[string]string
+		status  int
+		code    string
+	}{
+		{"a create body of the wrong shape", "POST", "/v1/roles", map[string]any{"copy_from": 7, "name": "X"}, nil, http.StatusBadRequest, ""},
+		{"a copy of an unknown role", "POST", "/v1/roles", map[string]any{"copy_from": "custom_nobody", "name": "Ghost"}, nil, http.StatusNotFound, "unknown_role"},
+		{"an If-Match that is not a version", "PATCH", base, map[string]any{"name": "Y"}, map[string]string{"If-Match": "soon"}, http.StatusBadRequest, ""},
+		{"an update body of the wrong shape", "PATCH", base, map[string]any{"name": 7}, nil, http.StatusBadRequest, ""},
+		{"an update of an unknown role", "PATCH", "/v1/roles/custom_nobody", map[string]any{"name": "Y"}, nil, http.StatusNotFound, "unknown_role"},
+		{"an archive of an unknown role", "POST", "/v1/roles/custom_nobody/archive", nil, nil, http.StatusNotFound, "unknown_role"},
+		{"a restore of an unknown role", "POST", "/v1/roles/custom_nobody/restore", nil, nil, http.StatusNotFound, "unknown_role"},
+		{
+			"narrowing the admin role's administration", "PATCH", "/v1/roles/admin/objects/role_admin",
+			map[string]any{"create": false, "read": true, "update": false, "delete": false},
+			nil, http.StatusConflict, "admin_role_floor",
+		},
+	} {
+		var refusal refusalWire
+		status := e.Call(t, tc.method, tc.path, tc.body, tc.headers, &refusal)
+		// A body the decoder cannot read is 400 or 422 depending on where it
+		// fails; either is a refusal of the input, which is the claim.
+		if status != tc.status && (tc.status != http.StatusBadRequest || status != http.StatusUnprocessableEntity) {
+			t.Errorf("%s -> %d, want %d", tc.name, status, tc.status)
+			continue
+		}
+		if tc.code != "" {
+			assertActionableRefusal(t, tc.name, refusal, tc.code)
+		}
+	}
+
+	var restored roleWire
+	if status := e.Call(t, "POST", base+"/restore", nil, nil, &restored); status != http.StatusOK || restored.ArchivedAt != nil {
+		t.Errorf("restoring a live role -> %d %+v, want 200 and still live", status, restored)
+	}
+}
+
+// The pickers' read over HTTP: the admin is offered every live role, and the
+// answer is never cached by a shared proxy.
+func TestTheAssignableRolesOverHTTP(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+	if status := e.Call(t, "POST", "/v1/roles", map[string]any{"copy_from": "rep", "name": "Field sales"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("create -> %d, want 201", status)
+	}
+	var directory struct {
+		Roles []struct {
+			Key      string `json:"key"`
+			IsSystem bool   `json:"is_system"`
+		} `json:"roles"`
+	}
+	if status := e.Call(t, "GET", "/v1/users/assignable-roles", nil, nil, &directory); status != http.StatusOK {
+		t.Fatalf("assignable roles -> %d, want 200", status)
+	}
+	keys := map[string]bool{}
+	for _, role := range directory.Roles {
+		keys[role.Key] = role.IsSystem
+	}
+	for _, key := range []string{"admin", "management", "manager", "ops", "read_only", "rep"} {
+		if system, ok := keys[key]; !ok || !system {
+			t.Errorf("the admin is not offered the seeded role %q (listed %v)", key, ok)
+		}
+	}
+	if system, ok := keys["custom_field_sales"]; !ok || system {
+		t.Errorf("the custom role is listed %v with is_system %v, want listed and not system", ok, system)
+	}
+}
