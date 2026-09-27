@@ -7,13 +7,9 @@ package gates
 
 // Only the answer predicate walks a thread for our reply.
 //
-// "Was this mail answered" had several spellings: the needs-reply badge, the
-// waiting lane, request review and the response metric each walked the thread
-// for a later outbound of their own. They drifted until the badge and the lane
-// disagreed about the same message. activities/answered.go is now the one
-// answer, and this census finds every other SQL statement that joins an
-// outbound row to a thread, so a new walk has to either call answeredSQL or
-// say here why it asks a different question.
+// Every other SQL statement that joins an outbound row to a thread either calls
+// activities/answered.go's answeredSQL or is named below with the different
+// question it asks.
 
 import (
 	"go/ast"

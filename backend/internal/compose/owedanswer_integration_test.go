@@ -489,7 +489,7 @@ func TestTheBadgeAndTheLaneAgreeOnEveryOwedMail(t *testing.T) {
 
 // A reply sent from Margince itself records its recipient on the outbound
 // row only, with no recipient rows. It still answers a mail whose thread it
-// lost.
+// lost, whatever casing the caller gave the recipient.
 func TestAReplySentFromMarginceAnswersThroughItsCounterparty(t *testing.T) {
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -499,7 +499,7 @@ func TestAReplySentFromMarginceAnswersThroughItsCounterparty(t *testing.T) {
 	sent, _, err := o.e.Activities.LogActivity(o.reader(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction, OccurredAt: &at,
 		Source: "manual", SourceSystem: &system, SourceID: &messageID, ThreadKey: messageID,
-		CounterpartyEmail: "pat@customer.example", CounterpartyOutboundAttested: true,
+		CounterpartyEmail: "Pat@Customer.EXAMPLE", CounterpartyOutboundAttested: true,
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: pat}},
 	})
 	if err != nil {
