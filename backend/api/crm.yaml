@@ -17200,7 +17200,7 @@ paths:
           in: query
           schema: { type: boolean, default: false }
           description: |
-            Also list invited seats — members who have not signed in yet. For NAMING the people records
+            Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
             already point at (an imported record's owner is often an invited colleague); any member may ask.
             Pickers leave it off, so nobody is offered work they cannot open.
       responses:

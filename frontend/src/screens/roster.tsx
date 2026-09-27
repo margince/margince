@@ -9,7 +9,7 @@ import { throwProblem } from "./common";
 
 // The workspace roster as the frontend reads it: one walk over `/users` or
 // `/teams`, cached once, and the hooks that read it. Split out of entityref.tsx,
-// which names people with it.
+// which names colleagues with it.
 
 // user/team are EntityRef-only: they have no 360 to route to, so they resolve
 // off the shared roster list and render as plain text.
@@ -53,7 +53,7 @@ async function readRosterPage(
   // The two endpoints answer differently-typed rows, so each arm reads its own
   // — a shared call would have to assert one shape onto the other.
   if (kind === "user") {
-    // WITH the invited seats: this walk also NAMES people, and an imported
+    // WITH the invited seats: this walk also NAMES colleagues, and an imported
     // record's owner is often a colleague who has not signed in yet — left off,
     // their owner column showed a raw id. `useRoster`, which the pickers read,
     // filters them back out, so nobody is offered work they cannot open.

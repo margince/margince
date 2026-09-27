@@ -55811,7 +55811,7 @@ export interface operations {
                 /** @description Admin management view — include deactivated/suspended members. Honored only for an admin caller. */
                 include_inactive?: boolean;
                 /**
-                 * @description Also list invited seats — members who have not signed in yet. For NAMING the people records
+                 * @description Also list invited seats — members who have not signed in yet. For NAMING the colleagues records
                  *     already point at (an imported record's owner is often an invited colleague); any member may ask.
                  *     Pickers leave it off, so nobody is offered work they cannot open.
                  */

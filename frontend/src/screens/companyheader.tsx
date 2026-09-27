@@ -222,7 +222,7 @@ export function CompanyOwnerControl({
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
-  const allMembers = useRosterNames("user", Boolean(company.owner_id));
+  const allMembers = useRosterNames("user", true);
   const rosterPartial = useRosterPartial("user", true);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry

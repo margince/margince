@@ -46,7 +46,7 @@ type ListUsersInput struct {
 	// for naming the owners records already point at — an import assigns the
 	// portal to colleagues before anyone is let in, and an owner left off the
 	// roster showed as a raw id. The pickers leave it off, so the default stays
-	// the list of people who can open what they are given.
+	// the list of members who can open what they are given.
 	IncludeInvited bool
 }
 
