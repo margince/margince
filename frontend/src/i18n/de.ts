@@ -10621,7 +10621,7 @@ export const de = {
   "magic.title": "Was Margince erledigt hat",
   "magic.since": "Seit {when}",
   "magic.window.label": "Zeitraum",
-  "magic.window.brief": "Seit meinem letzten Briefing",
+  "magic.window.brief": "Seit meinem letzten Morgenbericht",
   "magic.window.week": "Letzte 7 Tage",
   "magic.window.month": "Letzte 30 Tage",
   "magic.loading": "Wird gelesen, was die Maschinerie getan hat",
