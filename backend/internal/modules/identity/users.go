@@ -275,8 +275,20 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 // endCredentialAuthority: a password reset or an operator recovery ends the
 // same credentials without the human leaving, and must not cost them their
 // address book.
+//
+// Their capture connections go for the same reason and on the same rule. The
+// credential a connector holds is the provider's, not this product's, so the
+// cascade above never touches it and the mailbox goes on being polled after
+// the seat is deactivated — "this colleague has left" and "we have stopped
+// reading their mail" stay two separate facts, only one of which anybody is
+// prompted to act on. It belongs HERE rather than in endCredentialAuthority
+// on exactly the address book's argument: a password reset must not cost
+// somebody a mailbox connection they then have to re-consent at the provider.
 func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID) error {
 	if err := endCredentialAuthority(ctx, tx, userID, deactivatedUserRevokeReason); err != nil {
+		return err
+	}
+	if err := withdrawCaptureConnections(ctx, tx, userID); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx, `DELETE FROM linkedin_connection WHERE owner_user_id = $1`, userID)
