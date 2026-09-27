@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -212,9 +213,46 @@ func TestAHeldReplyDoesNotPublishOnALaterUnheldMessage(t *testing.T) {
 func TestTheVerdictPassPublishesWhatTheLiveHookFailedToPublish(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@lostpromotion.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-lost"))
-	// The owner's grant without contact update: the capture lands and the
-	// live promotion is refused by its own object gate.
+	loseTheLivePromotion(t, e, email, "thr-lost")
+
+	publishAnswered(t, e)
+
+	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
+		t.Errorf("the verdict pass left an answered contact %q, want workspace", visibility)
+	}
+}
+
+// One contact whose publication fails must not hold back the others on every
+// tick; the pass still reports the failure.
+func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const stuck, fine = "buyer@stuckpromotion.example", "buyer@finepromotion.example"
+	loseTheLivePromotion(t, e, stuck, "thr-stuck")
+	loseTheLivePromotion(t, e, fine, "thr-fine")
+	e.WsExec(t, fmt.Sprintf(`
+		CREATE FUNCTION refuse_stuck_contact() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN RAISE EXCEPTION 'refused for the test'; END $$;
+		CREATE TRIGGER refuse_stuck_contact BEFORE UPDATE ON contact
+		FOR EACH ROW WHEN (OLD.id = '%s') EXECUTE FUNCTION refuse_stuck_contact();`,
+		contactIDFor(t, e, stuck)))
+
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	if err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err == nil {
+		t.Error("the pass swallowed the failed publication")
+	}
+
+	if visibility, _ := contactVisibility(t, e, fine); visibility != "workspace" {
+		t.Errorf("a failing contact held back an answered one: visibility %q, want workspace", visibility)
+	}
+	requireNarrowed(t, e, stuck, contacts.NarrowedOutboundNoAnswer)
+}
+
+// loseTheLivePromotion captures the address's reply under the owner's grant
+// without contact update, so the live promotion is refused by its own object
+// gate and the contact is left owed publication.
+func loseTheLivePromotion(t *testing.T, e *integration.Env, email, thread string) {
+	t.Helper()
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", thread))
 	ctx := mailboxOwnerCtx(e, e.Rep1)
 	actor, _ := principal.Actor(ctx)
 	actor.Permissions.Objects = map[string]principal.ObjectGrant{
@@ -222,14 +260,8 @@ func TestTheVerdictPassPublishesWhatTheLiveHookFailedToPublish(t *testing.T) {
 		"contact":  {Create: true, Read: true},
 		"company":  {Create: true, Read: true, Update: true},
 	}
-	captureInboundThroughRealSinkAs(principal.WithActor(ctx, actor), t, e, "a@authz.test", "reply-lost", email, "thr-lost")
+	captureInboundThroughRealSinkAs(principal.WithActor(ctx, actor), t, e, "a@authz.test", "reply-"+thread, email, thread)
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
-
-	publishAnswered(t, e)
-
-	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
-		t.Errorf("the verdict pass left an answered contact %q, want workspace", visibility)
-	}
 }
 
 // Upgrade state: a row narrowed before reasons existed. A later verdict judging

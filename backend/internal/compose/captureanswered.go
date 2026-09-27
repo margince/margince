@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -59,14 +60,17 @@ func (e *CounterpartyVerdictEngine) PublishAnsweredContactsWorkspace(ctx context
 		}); err != nil {
 			return fmt.Errorf("verdict: reading the contacts owed publication on an answer: %w", err)
 		}
+		// One contact that fails must not starve the ones behind it on every tick,
+		// so the pass carries on and reports every failure together.
+		var failed []error
 		for _, c := range owed {
 			if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 				return publishAnsweredTx(wsCtx, tx, e.contacts,
 					ids.From[ids.ContactKind](c.ContactID), c.OwnerID, c.Email)
 			}); err != nil {
-				return fmt.Errorf("verdict: publishing a contact whose owner was answered: %w", err)
+				failed = append(failed, fmt.Errorf("verdict: publishing answered contact %s: %w", c.ContactID, err))
 			}
 		}
-		return nil
+		return errors.Join(failed...)
 	})
 }

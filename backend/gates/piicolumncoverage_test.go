@@ -216,7 +216,7 @@ var erasureColumnBaseline = map[string][]string{
 		// same column and the same reading, a few entries up.
 		"source_system",
 		"visibility",
-		// Why an owner-scoped contact is its owner's: one of four values the
+		// Why an owner-scoped contact is its owner's: one of five values the
 		// column's CHECK closes, none of them anything about the subject.
 		"narrowing_reason",
 	},
