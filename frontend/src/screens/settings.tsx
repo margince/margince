@@ -369,13 +369,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
               page. */}
           <EmbedReindexCard />
           <JobHealthCard />
-          {/* Beside the queue reading: whether mail capture's own repair
-              passes keep up, told in counts an administrator may see. */}
+          {/* Beside the queue reading, not under Capture or Extensions: each
+              answers "is something broken in the background". */}
           <CaptureHealthCard />
-          {/* Beside the queue reading rather than under Extensions: both
-              answer "is something broken in the background", and an operator
-              chasing a quiet feed should not have to know that a connector is
-              an extension to find out. */}
           <ExtensionIngestHealthCard />
         </>
       );
