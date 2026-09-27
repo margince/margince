@@ -195,20 +195,6 @@ func profileFieldValueKey(field, value string) string {
 	return strings.TrimSpace(value)
 }
 
-// answeredGuard keeps a machine fill off a field that already has an answer.
-//
-// The conflict target alone no longer says that for a phone: a second number
-// is a different key, so a derived fill would land beside the signature's
-// number rather than deferring to it. A derived fill claims an UNANSWERED
-// field, whatever it holds.
-func (p contactProfileFieldPrecedence) answeredGuard() string {
-	if p != claimUnanswered {
-		return ""
-	}
-	return `WHERE NOT EXISTS (SELECT 1 FROM contact_profile_field
-	                        WHERE contact_id = $1::uuid AND field = $2::text)`
-}
-
 // writeContactProfileField writes one evidence row and reports whether it landed.
 //
 // false carries two meanings and the callers separate them: the field was
@@ -263,7 +249,6 @@ func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		       $8::text, COALESCE($9::timestamptz, now()),
 		       COALESCE(r.value, NULLIF($10::text, ''), NULLIF($12::text, '')), r.captured_by, r.observed_at
 		  FROM (SELECT 1) AS one LEFT JOIN replaced r ON true
-		`+precedence.answeredGuard()+`
 		ON CONFLICT (contact_id, field, value_key) `+precedence.conflictClause(replaces != ""),
 		contactID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
 		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded,
