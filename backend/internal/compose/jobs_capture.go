@@ -180,11 +180,10 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		log:           log,
 	})
 	// The confidentiality verdict, registered unconditionally for a related but
-	// distinct reason: a deployment with no model bound holds every thread, and
-	// the RETIRING stage is what moves a thread that spent its attempts to a
-	// terminal `unsure` instead of leaving it claimable forever. Gating the
-	// worker on a brain would leave exactly that deployment with a backlog
-	// nothing ever ends.
+	// distinct reason: a deployment with no model bound holds every thread, and the
+	// RETIRING stage is what moves a thread that spent its attempts to a terminal
+	// `unsure` instead of leaving it claimable forever. Gating the worker on a
+	// brain would leave exactly that deployment with a backlog nothing ends.
 	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{
 		pool:     pool,
 		engine:   NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
