@@ -458,6 +458,48 @@ func TestTheAnswerPagesWithAnExactTotal(t *testing.T) {
 	}
 }
 
+// More members than one admission statement judges: each keeps their own
+// verdict across the statement boundary, and the newest member, who owns the
+// contact, is on a later page and still in the owner group.
+func TestEveryMemberKeepsTheirOwnVerdictPastOneStatement(t *testing.T) {
+	w := setupAccessWorld(t)
+	e := w.e
+	e.WsExec(t, `INSERT INTO app_user (id, email, display_name, seat_type, created_at)
+		SELECT gen_random_uuid(), 'm' || g || '@many.test', 'Member ' || g, 'full', now() + g * interval '1 second'
+		  FROM generate_series(1, 150) g`)
+	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)
+		SELECT r.id, u.id FROM app_user u JOIN role r ON r.key = 'rep' WHERE u.email LIKE '%@many.test'`)
+	newest, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM app_user WHERE email = 'm150@many.test'`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := e.SeedContact(t, "Newest Owns It", &newest)
+
+	limit := 50
+	first, err := w.reads.Read(w.as(t, e.AdminUser), "contact", contact, nil, &limit)
+	if err != nil {
+		t.Fatalf("reading: %v", err)
+	}
+	if slices.ContainsFunc(first.Data, func(m crmcontracts.RecordAccessMember) bool { return ids.UUID(m.UserId) == newest }) {
+		t.Fatal("the newest member is on the first page, so this does not reach a later one")
+	}
+	listed := w.everyone(t, e.AdminUser, "contact", contact)
+	owner := listed[newest]
+	if owner.Group != crmcontracts.RecordAccessMemberGroupOwner || !owner.CanChange {
+		t.Errorf("the newest member owns the contact and is grouped %q can_change=%v", owner.Group, owner.CanChange)
+	}
+	changers := 0
+	for _, m := range listed {
+		if m.CanChange {
+			changers++
+		}
+	}
+	// Only the owner and the admin can change it; every other member reads it.
+	if changers != 2 || first.CanChangeCount != 2 {
+		t.Errorf("%d listed can change and %d counted, want 2: a verdict crossed a statement boundary", changers, first.CanChangeCount)
+	}
+}
+
 func hasCode(reasons []crmcontracts.RecordAccessReason, code crmcontracts.RecordAccessReasonCode) bool {
 	return slices.ContainsFunc(reasons, func(r crmcontracts.RecordAccessReason) bool { return r.Code == code })
 }
