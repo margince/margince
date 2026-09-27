@@ -3794,6 +3794,48 @@ export const de = {
   "recordAccess.company.makePrivate": "Privat machen",
   "recordAccess.company.madePrivate":
     "Dieses Unternehmen ist jetzt privat für das zuständige Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
+  "recordAccess.whoHasAccess": "Wer Zugriff hat",
+  "whoCanSee.title": "Wer diesen Datensatz sehen kann",
+  "whoCanSee.group.owner": "Zuständig",
+  "whoCanSee.group.shared": "Direkt geteilt",
+  "whoCanSee.group.teamShared": "Mit einem Team geteilt",
+  "whoCanSee.everyone.contact_one":
+    "{count} Teammitglied mit Zugriff auf Kontakte",
+  "whoCanSee.everyone.contact_other":
+    "{count} Teammitglieder mit Zugriff auf Kontakte",
+  "whoCanSee.everyone.company_one":
+    "{count} Teammitglied mit Zugriff auf Unternehmen",
+  "whoCanSee.everyone.company_other":
+    "{count} Teammitglieder mit Zugriff auf Unternehmen",
+  "whoCanSee.unlisted_one":
+    "{count} weiteres Teammitglied ist nicht aufgeführt.",
+  "whoCanSee.unlisted_other":
+    "{count} weitere Teammitglieder sind nicht aufgeführt.",
+  "whoCanSee.canChange": "Kann bearbeiten",
+  "whoCanSee.canOpen": "Kann ansehen",
+  "whoCanSee.until": "bis {date}",
+  "whoCanSee.reason.workspace": "Für alle Nutzenden offen",
+  "whoCanSee.reason.owner": "Zuständig",
+  "whoCanSee.reason.userShare": "Direkt geteilt",
+  "whoCanSee.reason.teamShare": "Über eine Teamfreigabe",
+  "whoCanSee.reason.teamShareNamed": "Über das Team {team}",
+  "whoCanSee.reason.sameTeam": "Im Team der zuständigen Person",
+  "whoCanSee.reason.allRecords": "Rolle umfasst alle Datensätze",
+  "whoCanSee.reason.writeShare": "Freigabe erlaubt Bearbeiten",
+  "whoCanSee.you.change.contact":
+    "Du kannst diesen Kontakt ansehen und bearbeiten.",
+  "whoCanSee.you.open.contact":
+    "Du kannst diesen Kontakt ansehen, aber nicht bearbeiten.",
+  "whoCanSee.you.change.company":
+    "Du kannst dieses Unternehmen ansehen und bearbeiten.",
+  "whoCanSee.you.open.company":
+    "Du kannst dieses Unternehmen ansehen, aber nicht bearbeiten.",
+  "whoCanSee.archived":
+    "Archiviert. Niemand kann den Datensatz bearbeiten, bis er wiederhergestellt ist.",
+  "whoCanSee.emails.contact":
+    "E-Mails mit diesem Kontakt haben ihre eigene Zielgruppe. Öffne eine E-Mail im Verlauf, um zu sehen, wer sie lesen kann.",
+  "whoCanSee.emails.company":
+    "E-Mails zu diesem Unternehmen haben ihre eigene Zielgruppe. Öffne eine E-Mail im Verlauf, um zu sehen, wer sie lesen kann.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",

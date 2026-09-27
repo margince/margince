@@ -1,0 +1,16 @@
+/* The "who can see this record" panel on the share screen. Layout only: the
+   avatar, badges and disclosure draw themselves. */
+
+.who-can-see-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* The name and its reason stack, and take the room the badges leave. */
+.who-can-see-who {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}

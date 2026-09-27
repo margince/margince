@@ -248,3 +248,23 @@ describe("the history a reader is looking at", () => {
     expect(client.getQueryState(key)?.isInvalidated).toBe(false);
   });
 });
+
+describe("who can see a record", () => {
+  // A share granted or revoked, a record made private, an owner changed: each
+  // is a different write, and the panel listing who can see the record must
+  // not keep naming the colleagues it named before any of them.
+  it("is read again after any successful write", async () => {
+    const client = createQueryClient();
+    const key = ["record-access", "contact", "c-1"];
+    await client.fetchQuery({
+      queryKey: key,
+      queryFn: () => Promise.resolve({ data: [] }),
+    });
+
+    await new MutationObserver(client, {
+      mutationFn: () => Promise.resolve("shared"),
+    }).mutate();
+
+    expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  });
+});
