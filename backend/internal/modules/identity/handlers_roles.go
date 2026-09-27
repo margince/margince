@@ -69,6 +69,25 @@ func (h Handlers) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key
 	httperr.WriteJSON(w, http.StatusOK, wireRole(row))
 }
 
+// ListAssignableRoles (GET /users/assignable-roles).
+func (h Handlers) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	rows, err := h.svc.ListAssignableRoles(r.Context(), actor)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	roles := make([]crmcontracts.AssignableRole, 0, len(rows))
+	for _, row := range rows {
+		roles = append(roles, crmcontracts.AssignableRole{Key: row.Key, Name: row.Name, IsSystem: row.IsSystem})
+	}
+	w.Header().Set("Cache-Control", "private, no-store")
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AssignableRoleDirectory{Roles: roles})
+}
+
 // CreateRole (POST /roles).
 func (h Handlers) CreateRole(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.actor(w, r)

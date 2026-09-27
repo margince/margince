@@ -18,7 +18,6 @@
 1088 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1096 frontend/src/screens/worklist.test.tsx
 1100 frontend/src/screens/contactpage.test.tsx
-1107 frontend/src/screens/users-admin.test.tsx
 1073 frontend/src/design-system/listsurface.tsx
 1133 frontend/src/screens/companyrail.test.tsx
 1136 frontend/src/screens/record360/spine.test.tsx
@@ -86,7 +85,7 @@
 628 frontend/src/screens/partners.tsx
 661 frontend/src/screens/record360/citations.tsx
 529 frontend/src/screens/contractform.tsx
-671 frontend/src/screens/users-admin.tsx
+599 frontend/src/screens/users-admin.tsx
 662 frontend/src/screens/worklist.dispositions.tsx
 676 frontend/src/format/format.ts
 652 frontend/src/screens/settingsnav.tsx

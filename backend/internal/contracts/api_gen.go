@@ -3199,36 +3199,6 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for ChangeUserRoleRequestRole.
-const (
-	ChangeUserRoleRequestRoleAdmin      ChangeUserRoleRequestRole = "admin"
-	ChangeUserRoleRequestRoleManagement ChangeUserRoleRequestRole = "management"
-	ChangeUserRoleRequestRoleManager    ChangeUserRoleRequestRole = "manager"
-	ChangeUserRoleRequestRoleOps        ChangeUserRoleRequestRole = "ops"
-	ChangeUserRoleRequestRoleReadOnly   ChangeUserRoleRequestRole = "read_only"
-	ChangeUserRoleRequestRoleRep        ChangeUserRoleRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the ChangeUserRoleRequestRole enum.
-func (e ChangeUserRoleRequestRole) Valid() bool {
-	switch e {
-	case ChangeUserRoleRequestRoleAdmin:
-		return true
-	case ChangeUserRoleRequestRoleManagement:
-		return true
-	case ChangeUserRoleRequestRoleManager:
-		return true
-	case ChangeUserRoleRequestRoleOps:
-		return true
-	case ChangeUserRoleRequestRoleReadOnly:
-		return true
-	case ChangeUserRoleRequestRoleRep:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ChannelConnectionProvider.
 const (
 	ChannelConnectionProviderTelegram ChannelConnectionProvider = "telegram"
@@ -9196,36 +9166,6 @@ func (e ForecastSufficiencyBasis) Valid() bool {
 	}
 }
 
-// Defines values for FormerMemberRequestRole.
-const (
-	FormerMemberRequestRoleAdmin      FormerMemberRequestRole = "admin"
-	FormerMemberRequestRoleManagement FormerMemberRequestRole = "management"
-	FormerMemberRequestRoleManager    FormerMemberRequestRole = "manager"
-	FormerMemberRequestRoleOps        FormerMemberRequestRole = "ops"
-	FormerMemberRequestRoleReadOnly   FormerMemberRequestRole = "read_only"
-	FormerMemberRequestRoleRep        FormerMemberRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the FormerMemberRequestRole enum.
-func (e FormerMemberRequestRole) Valid() bool {
-	switch e {
-	case FormerMemberRequestRoleAdmin:
-		return true
-	case FormerMemberRequestRoleManagement:
-		return true
-	case FormerMemberRequestRoleManager:
-		return true
-	case FormerMemberRequestRoleOps:
-		return true
-	case FormerMemberRequestRoleReadOnly:
-		return true
-	case FormerMemberRequestRoleRep:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -9817,36 +9757,6 @@ func (e IntroRequestStatus) Valid() bool {
 	case IntroRequestStatusIntroRequestStatusRequested:
 		return true
 	case IntroRequestStatusIntroRequestStatusSuggestOther:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for InviteUserRequestRole.
-const (
-	InviteUserRequestRoleAdmin      InviteUserRequestRole = "admin"
-	InviteUserRequestRoleManagement InviteUserRequestRole = "management"
-	InviteUserRequestRoleManager    InviteUserRequestRole = "manager"
-	InviteUserRequestRoleOps        InviteUserRequestRole = "ops"
-	InviteUserRequestRoleReadOnly   InviteUserRequestRole = "read_only"
-	InviteUserRequestRoleRep        InviteUserRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the InviteUserRequestRole enum.
-func (e InviteUserRequestRole) Valid() bool {
-	switch e {
-	case InviteUserRequestRoleAdmin:
-		return true
-	case InviteUserRequestRoleManagement:
-		return true
-	case InviteUserRequestRoleManager:
-		return true
-	case InviteUserRequestRoleOps:
-		return true
-	case InviteUserRequestRoleReadOnly:
-		return true
-	case InviteUserRequestRoleRep:
 		return true
 	default:
 		return false
@@ -19030,36 +18940,6 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	}
 }
 
-// Defines values for PreviewAccessParamsRole.
-const (
-	PreviewAccessParamsRoleAdmin      PreviewAccessParamsRole = "admin"
-	PreviewAccessParamsRoleManagement PreviewAccessParamsRole = "management"
-	PreviewAccessParamsRoleManager    PreviewAccessParamsRole = "manager"
-	PreviewAccessParamsRoleOps        PreviewAccessParamsRole = "ops"
-	PreviewAccessParamsRoleReadOnly   PreviewAccessParamsRole = "read_only"
-	PreviewAccessParamsRoleRep        PreviewAccessParamsRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the PreviewAccessParamsRole enum.
-func (e PreviewAccessParamsRole) Valid() bool {
-	switch e {
-	case PreviewAccessParamsRoleAdmin:
-		return true
-	case PreviewAccessParamsRoleManagement:
-		return true
-	case PreviewAccessParamsRoleManager:
-		return true
-	case PreviewAccessParamsRoleOps:
-		return true
-	case PreviewAccessParamsRoleReadOnly:
-		return true
-	case PreviewAccessParamsRoleRep:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
 	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
@@ -20979,6 +20859,23 @@ type AssignLeadsResult struct {
 // AssignNoticeCase defines model for AssignNoticeCase.
 type AssignNoticeCase struct {
 	OwnerUserId openapi_types.UUID `json:"owner_user_id"`
+}
+
+// AssignableRole defines model for AssignableRole.
+type AssignableRole struct {
+	// IsSystem True for a role the product ships.
+	IsSystem bool `json:"is_system"`
+
+	// Key The role key an invite or a role change sends.
+	Key string `json:"key"`
+
+	// Name The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this.
+	Name string `json:"name"`
+}
+
+// AssignableRoleDirectory defines model for AssignableRoleDirectory.
+type AssignableRoleDirectory struct {
+	Roles []AssignableRole `json:"roles"`
 }
 
 // AssignmentRecordType The kind of record an assignment hangs on.
@@ -23535,11 +23432,9 @@ type ChangeContractStatusRequestStatus string
 
 // ChangeUserRoleRequest defines model for ChangeUserRoleRequest.
 type ChangeUserRoleRequest struct {
-	Role ChangeUserRoleRequestRole `json:"role"`
+	// Role A live role's key; see `InviteUserRequest.role`.
+	Role string `json:"role"`
 }
-
-// ChangeUserRoleRequestRole defines model for ChangeUserRoleRequest.Role.
-type ChangeUserRoleRequestRole string
 
 // ChannelConnection One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds.
 type ChannelConnection struct {
@@ -31120,15 +31015,12 @@ type FormerMemberRequest struct {
 	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
 	LeftAt *time.Time `json:"left_at,omitempty"`
 
-	// Role Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
-	Role *FormerMemberRequestRole `json:"role,omitempty"`
+	// Role A live role's key. Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
+	Role *string `json:"role,omitempty"`
 
 	// Source Where this record came from, for an operator reading the audit trail later ("hubspot-mirror-2026-09-17").
 	Source *string `json:"source,omitempty"`
 }
-
-// FormerMemberRequestRole Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
-type FormerMemberRequestRole string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
@@ -32270,15 +32162,12 @@ type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
-	// Role System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
-	Role InviteUserRequestRole `json:"role"`
+	// Role A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. `listAssignableRoles` names the roles this caller may hand out.
+	Role string `json:"role"`
 
 	// TeamIds The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 }
-
-// InviteUserRequestRole System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
-type InviteUserRequestRole string
 
 // IssuePassportRequest defines model for IssuePassportRequest.
 type IssuePassportRequest struct {
@@ -47808,12 +47697,10 @@ type ListUsersParams struct {
 
 // PreviewAccessParams defines parameters for PreviewAccess.
 type PreviewAccessParams struct {
-	Role    PreviewAccessParamsRole `form:"role" json:"role"`
-	TeamIds *[]openapi_types.UUID   `form:"team_ids,omitempty" json:"team_ids,omitempty"`
+	// Role A live role's key — a seeded one or one made with `createRole`.
+	Role    string                `form:"role" json:"role"`
+	TeamIds *[]openapi_types.UUID `form:"team_ids,omitempty" json:"team_ids,omitempty"`
 }
-
-// PreviewAccessParamsRole defines parameters for PreviewAccess.
-type PreviewAccessParamsRole string
 
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
@@ -61038,6 +60925,9 @@ type ServerInterface interface {
 	// What a seat with this role and these teams will see and may do.
 	// (GET /users/access-preview)
 	PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams)
+	// The live roles this caller may hand out when inviting or re-roling a member.
+	// (GET /users/assignable-roles)
+	ListAssignableRoles(w http.ResponseWriter, r *http.Request)
 	// Record a colleague who has already left. Admin-only, human-only.
 	// (POST /users/former)
 	CreateFormerMember(w http.ResponseWriter, r *http.Request)
@@ -65037,6 +64927,12 @@ func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
 // What a seat with this role and these teams will see and may do.
 // (GET /users/access-preview)
 func (_ Unimplemented) PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The live roles this caller may hand out when inviting or re-roling a member.
+// (GET /users/assignable-roles)
+func (_ Unimplemented) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92224,6 +92120,26 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListAssignableRoles operation middleware
+func (siw *ServerInterfaceWrapper) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAssignableRoles(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateFormerMember operation middleware
 func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 
@@ -96749,6 +96665,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/access-preview", wrapper.PreviewAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/assignable-roles", wrapper.ListAssignableRoles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/former", wrapper.CreateFormerMember)

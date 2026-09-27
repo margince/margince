@@ -12091,6 +12091,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/assignable-roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The live roles this caller may hand out when inviting or re-roling a member.
+         * @description The invite form's and the role picker's list. Gated on `user_admin` create or update,
+         *     not on `role_admin`: a member administrator hands roles out without editing them.
+         *
+         *     Each role listed is one the assignment ceiling admits for this caller — the same
+         *     check `inviteUser` and `changeUserRole` run. It is an offer, not a promise: those
+         *     writes also check the member being re-roled, and still refuse a target this caller
+         *     does not contain. Ordered by key.
+         */
+        get: operations["listAssignableRoles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/access-preview": {
         parameters: {
             query?: never;
@@ -29200,11 +29226,10 @@ export interface components {
             email: string;
             display_name: string;
             /**
-             * @description Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
+             * @description A live role's key. Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
              * @default rep
-             * @enum {string}
              */
-            role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
+            role: string;
             /**
              * Format: date-time
              * @description When they left, when the source system knows it. Recorded on the audit row.
@@ -29218,11 +29243,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            /**
-             * @description System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
-             * @enum {string}
-             */
-            role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
+            /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. `listAssignableRoles` names the roles this caller may hand out. */
+            role: string;
             /** @description The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent. */
             team_ids?: string[];
         };
@@ -29280,8 +29302,8 @@ export interface components {
             expires_at: string;
         };
         ChangeUserRoleRequest: {
-            /** @enum {string} */
-            role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
+            /** @description A live role's key; see `InviteUserRequest.role`. */
+            role: string;
         };
         DeactivateUserRequest: {
             /** @description Optional operator note that rides the user.deactivated event. */
@@ -30331,6 +30353,17 @@ export interface components {
         /** @description Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer. */
         RoleDirectory: {
             roles: components["schemas"]["Role"][];
+        };
+        AssignableRoleDirectory: {
+            roles: components["schemas"]["AssignableRole"][];
+        };
+        AssignableRole: {
+            /** @description The role key an invite or a role change sends. */
+            key: string;
+            /** @description The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this. */
+            name: string;
+            /** @description True for a role the product ships. */
+            is_system: boolean;
         };
         CreateRoleRequest: {
             /** @description The key of the live role the new one starts as a copy of. */
@@ -56675,7 +56708,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Not found, with the reason distinguished by the problem `code`: `unknown_role` — this company defines no role with the requested key. The `role` enum is documentation, not binding validation, so a mistyped key reaches the server and must say which of the two things was not found. */
+            /** @description Not found, with the reason distinguished by the problem `code`: `unknown_role` — this company defines no live role with the requested key. An archived role answers the same: it cannot be given to anybody. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -56696,10 +56729,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listAssignableRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The roles this caller may assign. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignableRoleDirectory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     previewAccess: {
         parameters: {
             query: {
-                role: "admin" | "management" | "manager" | "rep" | "read_only" | "ops";
+                /** @description A live role's key — a seeded one or one made with `createRole`. */
+                role: string;
                 team_ids?: string[];
             };
             header?: never;
@@ -56780,7 +56836,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `unknown_role` — this company defines no role with the requested key. The enum is documentation rather than binding validation, so a mistyped key reaches the server. */
+            /** @description `unknown_role` — this company defines no live role with the requested key. */
             404: {
                 headers: {
                     [name: string]: unknown;

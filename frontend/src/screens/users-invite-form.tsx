@@ -6,15 +6,14 @@ import { UserPlus } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { isOption } from "../app/options";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Select, type SelectOption } from "../design-system/select";
+import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
+import { roleOptions, useAssignableRoles } from "./roles.queries";
 import { AccessPreviewPanel } from "./users-access";
 import "./users-admin.css";
 
@@ -27,42 +26,9 @@ import "./users-admin.css";
 
 export type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
 
-// Wire keys, not product names: `manager` shows as Team Lead, `rep` as User
-// (ADR-0110). The catalog carries the display names.
-export const ROLES: readonly Role[] = [
-  "admin",
-  "management",
-  "manager",
-  "rep",
-  "read_only",
-  "ops",
-];
-
-// The catalog key each wire key reads under. `role.*` is the ONE role catalog —
-// this screen used to carry a second, `users.role.*`, whose English was
-// identical and therefore drifted silently the moment either was edited. The
-// map is written out rather than templated because one key is not its wire key:
-// `read_only` reads under `role.readOnly`, and a template would compile to a key
-// the catalog does not answer.
-const ROLE_LABEL_KEY = {
-  admin: "role.admin",
-  management: "role.management",
-  manager: "role.manager",
-  rep: "role.rep",
-  read_only: "role.readOnly",
-  ops: "role.ops",
-} as const satisfies Record<Role, MessageKey>;
-
-// roleLabel names a held role key. The catalog covers the six system roles;
-// a workspace-defined key has no translation, so it reads as itself rather
-// than as a missing-translation marker — the admin still learns what is held.
-export const roleLabel = (t: ReturnType<typeof useT>) => (key: string) =>
-  isOption(key, ROLES) ? t(ROLE_LABEL_KEY[key]) : key;
-
-// The six system roles as pickable options — shared by the invite form and
-// every roster row so the two lists cannot drift apart.
-export const roleOptions = (t: ReturnType<typeof useT>): SelectOption[] =>
-  ROLES.map((role) => ({ value: role, label: t(ROLE_LABEL_KEY[role]) }));
+// The role an invite starts on when the reader may hand it out: the ordinary
+// seat most colleagues hold.
+const DEFAULT_ROLE = "rep";
 
 export type InvitedMember = Readonly<{ id: string; name: string }>;
 
@@ -105,25 +71,36 @@ export function InviteUserForm({
   const t = useT();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<Role>("rep");
+  const assignable = useAssignableRoles(true);
+  const offered = assignable.data ?? [];
+  const [picked, setPicked] = useState<Role | null>(null);
+  // Until the reader picks, the form sits on the ordinary seat when they may
+  // hand it out, and on the first role they may otherwise.
+  const role =
+    picked ??
+    (offered.some((one) => one.key === DEFAULT_ROLE)
+      ? DEFAULT_ROLE
+      : (offered[0]?.key ?? ""));
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const teams = useRoster("team", true);
   const teamsPartial = useRosterPartial("team", true);
 
-  // The team set rides as the mutation's variable rather than through the
-  // closure: react-query re-arms a mutation's options in a passive effect,
+  // The role and the team set ride as the mutation's variable rather than
+  // through the closure: react-query re-arms a mutation's options in a passive effect,
   // so a click in that window would otherwise invite with the PREVIOUS
   // selection — granting or omitting authority the admin did not choose.
   const displayName = askName ? name.trim() : nameFromEmail(email);
   const invite = useMutation({
-    mutationFn: async (teams: string[]): Promise<string> => {
+    mutationFn: async (
+      choice: Readonly<{ role: Role; teams: string[] }>,
+    ): Promise<string> => {
       const { data, error: err } = await api.POST("/users", {
         body: {
           email: email.trim(),
           display_name: displayName,
-          role,
-          team_ids: teams,
+          role: choice.role,
+          team_ids: choice.teams,
         },
       });
       if (err) {
@@ -135,7 +112,7 @@ export function InviteUserForm({
       const invitedName = displayName;
       setEmail("");
       setName("");
-      setRole("rep");
+      setPicked(null);
       setTeamIds([]);
       setError(null);
       onInvited({ id: newUserId, name: invitedName });
@@ -144,7 +121,10 @@ export function InviteUserForm({
   });
 
   const canInvite =
-    email.trim().length > 0 && displayName.length > 0 && !invite.isPending;
+    email.trim().length > 0 &&
+    displayName.length > 0 &&
+    role !== "" &&
+    !invite.isPending;
 
   return (
     // A real <form>, so Enter submits it — and the house dialog stack, so the
@@ -154,7 +134,7 @@ export function InviteUserForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (canInvite) {
-          invite.mutate(teamIds);
+          invite.mutate({ role, teams: teamIds });
         }
       }}
     >
@@ -194,10 +174,9 @@ export function InviteUserForm({
           <Select
             {...control}
             value={role}
-            onChange={(value) => {
-              if (isOption(value, ROLES)) setRole(value);
-            }}
-            options={roleOptions(t)}
+            disabled={assignable.isPending}
+            onChange={setPicked}
+            options={roleOptions(t, offered)}
           />
         )}
       </Field>
@@ -234,7 +213,7 @@ export function InviteUserForm({
         )}
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>
-      <AccessPreviewPanel role={role} teamIds={teamIds} />
+      {role !== "" && <AccessPreviewPanel role={role} teamIds={teamIds} />}
       {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}

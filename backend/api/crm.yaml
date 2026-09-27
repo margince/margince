@@ -17474,9 +17474,8 @@ paths:
         '404':
           description: >-
             Not found, with the reason distinguished by the problem `code`:
-            `unknown_role` — this company defines no role with the requested key.
-            The `role` enum is documentation, not binding validation, so a mistyped key
-            reaches the server and must say which of the two things was not found.
+            `unknown_role` — this company defines no live role with the requested key.
+            An archived role answers the same: it cannot be given to anybody.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -17497,6 +17496,30 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /users/assignable-roles:
+    get:
+      tags: [Identity]
+      operationId: listAssignableRoles
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: The live roles this caller may hand out when inviting or re-roling a member.
+      description: |
+        The invite form's and the role picker's list. Gated on `user_admin` create or update,
+        not on `role_admin`: a member administrator hands roles out without editing them.
+
+        Each role listed is one the assignment ceiling admits for this caller — the same
+        check `inviteUser` and `changeUserRole` run. It is an offer, not a promise: those
+        writes also check the member being re-roled, and still refuse a target this caller
+        does not contain. Ordered by key.
+      responses:
+        '200':
+          description: The roles this caller may assign.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssignableRoleDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /users/access-preview:
     get:
       tags: [Identity]
@@ -17516,9 +17539,11 @@ paths:
         - name: role
           in: query
           required: true
+          description: A live role's key — a seeded one or one made with `createRole`.
           schema:
             type: string
-            enum: [admin, management, manager, rep, read_only, ops]
+            minLength: 1
+            maxLength: 64
         - name: team_ids
           in: query
           required: false
@@ -17607,9 +17632,7 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '404':
           description: >-
-            `unknown_role` — this company defines no role with the requested key. The
-            enum is documentation rather than binding validation, so a mistyped key
-            reaches the server.
+            `unknown_role` — this company defines no live role with the requested key.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -39571,10 +39594,11 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 255 }
         role:
           type: string
-          enum: [admin, management, manager, rep, read_only, ops]
+          minLength: 1
+          maxLength: 64
           default: rep
           description: >-
-            Defaults to `rep`. A deactivated seat exercises no authority whatever its role,
+            A live role's key. Defaults to `rep`. A deactivated seat exercises no authority whatever its role,
             so this records what they were rather than granting anything — but the caller
             may still not name a role they could not assign themselves.
         left_at:
@@ -39596,12 +39620,14 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 255 }
         role:
           type: string
-          enum: [admin, management, manager, rep, read_only, ops]
+          minLength: 1
+          maxLength: 64
           description: >-
-            System role key (ADR-0110). Keys are wire vocabulary and diverge from
-            the product names on purpose — `manager` displays as "Team Lead",
-            `rep` as "User"; `management` is the whole-company seat that
-            holds no admin power.
+            A live role's key: one of the seeded system roles or one made with
+            `createRole`. Seeded keys are wire vocabulary and diverge from the
+            product names on purpose — `manager` displays as "Team Lead", `rep` as
+            "User"; `management` is the whole-company seat that holds no admin
+            power. `listAssignableRoles` names the roles this caller may hand out.
         team_ids:
           type: array
           maxItems: 20
@@ -39697,7 +39723,11 @@ components:
       type: object
       required: [role]
       properties:
-        role: { type: string, enum: [admin, management, manager, rep, read_only, ops] }
+        role:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: A live role's key; see `InviteUserRequest.role`.
 
     DeactivateUserRequest:
       type: object
@@ -41399,6 +41429,24 @@ components:
         roles:
           type: array
           items: { $ref: '#/components/schemas/Role' }
+
+    AssignableRoleDirectory:
+      type: object
+      additionalProperties: false
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/AssignableRole' }
+
+    AssignableRole:
+      type: object
+      additionalProperties: false
+      required: [key, name, is_system]
+      properties:
+        key: { type: string, description: The role key an invite or a role change sends. }
+        name: { type: string, description: The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this. }
+        is_system: { type: boolean, description: True for a role the product ships. }
 
     CreateRoleRequest:
       type: object

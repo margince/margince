@@ -156,3 +156,43 @@ func TestAnAdminCopyNeverActsOnTheAdmin(t *testing.T) {
 		t.Errorf("an admin copy deactivating the admin: %v, want permission denied", err)
 	}
 }
+
+// The pickers' list and the invite agree: every role offered is accepted, and
+// every live role withheld is refused.
+func TestTheAssignableRolesAreExactlyTheRolesAnInviteAccepts(t *testing.T) {
+	e := setupRevocationEnv(t, "assignable")
+	caller := e.seat(t, "delegate", e.customRole(t, "Member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant}))
+	e.customRole(t, "Field sales", "rep", nil)
+	e.customRole(t, "Role editor", "rep", map[string]storedGrant{objectRoleAdmin: fullGrant})
+
+	offered, err := e.svc.ListAssignableRoles(e.wsCtx(caller), caller)
+	if err != nil {
+		t.Fatal(err)
+	}
+	every, err := e.svc.ListRoles(e.wsCtx(e.admin), e.admin, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	isOffered := map[string]bool{}
+	for _, role := range offered {
+		isOffered[role.Key] = true
+	}
+	if !isOffered["rep"] || !isOffered["custom_field_sales"] || isOffered[roleAdmin] || isOffered["custom_role_editor"] {
+		t.Errorf("offered %v; want rep and custom_field_sales, and neither admin nor custom_role_editor", isOffered)
+	}
+	for i, role := range every {
+		_, _, err := e.svc.InviteUser(e.wsCtx(caller), caller, InviteUserInput{
+			Email: "agree-" + strconv.Itoa(i) + "@" + e.slug + ".test", DisplayName: "Agree", Role: role.Key,
+		})
+		if isOffered[role.Key] && err != nil {
+			t.Errorf("%s was offered and the invite refused it: %v", role.Key, err)
+		}
+		if !isOffered[role.Key] && !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s was withheld and the invite answered %v, want permission denied", role.Key, err)
+		}
+	}
+
+	if _, err := e.svc.ListAssignableRoles(e.wsCtx(e.member), e.member); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a member without user_admin reading the assignable roles: %v, want permission denied", err)
+	}
+}

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // extObject is an extension-shaped object registered for the duration of one
@@ -180,11 +181,13 @@ func TestSettingAGrantWritesAnAuditRowNamingTheActorAndBothImages(t *testing.T) 
 	}
 }
 
-// The read: every seeded role, sorted, with is_system set and the grant map
-// populated. Admin-only, and a non-admin is refused before any row is read.
+// The read: every seeded role and a custom one, sorted, with is_system set and
+// the grant map populated. A seat without role_admin is refused before any row
+// is read.
 func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 	e := setupRevocationEnv(t, "role-list")
 	ctx := e.wsCtx(e.admin)
+	custom := e.customRole(t, "Account managers", "rep", nil)
 
 	rows, err := e.svc.ListRoles(ctx, e.admin, false)
 	if err != nil {
@@ -206,6 +209,9 @@ func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 		if len(row.Objects) == 0 {
 			t.Errorf("role %q came back with no grants; the seeded document lists every core object", key)
 		}
+	}
+	if row, ok := byKey[custom]; !ok || row.IsSystem || row.RowScope != principal.RowScopeOwn {
+		t.Errorf("the custom role reads %+v (listed %v), want listed, not system, at rep's own scope", row, ok)
 	}
 	// Sorted by key so a re-render never reshuffles the editor.
 	for i := 1; i < len(rows); i++ {

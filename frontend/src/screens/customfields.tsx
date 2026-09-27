@@ -12,7 +12,7 @@ import {
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite, useHoldsAdminRole } from "../app/capability";
+import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -462,12 +462,12 @@ export function AuditRail({
 // reader whose role cannot see the trail would be shown a skeleton forever
 // instead of being told the answer is already settled.
 function auditState(
-  isAdmin: boolean,
+  readsTrail: boolean,
   isPending: boolean,
   isError: boolean,
   count: number,
 ): SectionState {
-  if (!isAdmin) {
+  if (!readsTrail) {
     return "withheld";
   }
   if (isError) {
@@ -565,11 +565,10 @@ export function CustomFieldsAdmin() {
   // while rename and retire change one that already exists.
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
-  // The trail is the ADMIN's, not this screen's: /audit-log is gated
-  // server-side on the role (privacy.ListAuditLog), while this page opens for
-  // anyone holding custom_field:read. So the rail below is gated on the role
-  // too, exactly as the settings audit card is.
-  const isAdmin = useHoldsAdminRole();
+  // The trail is not this screen's: /audit-log asks for `audit_log:read`
+  // (privacy.ListAuditLog), while this page opens for anyone holding
+  // custom_field:read. So the rail below asks for the trail's own grant.
+  const readsAuditTrail = useCan("audit_log", "read");
   const meUserId = me.data?.user?.id;
 
   const [object, setObject] = useState<CfObject>("deal");
@@ -601,10 +600,10 @@ export function CustomFieldsAdmin() {
   const audit = useQuery({
     queryKey: ["cf-audit"],
     // A denial that is already known is not worth a request. Without this a
-    // non-admin on this tab fired a call that could only 403 and got the
+    // reader without the grant fired a call that could only 403 and got the
     // rail's red role="alert" back — a failure with a retry that can never
     // succeed, over a refusal they cannot act on.
-    enabled: isAdmin,
+    enabled: readsAuditTrail,
     queryFn: async () => {
       const { data, error } = await api.GET("/audit-log", {
         params: { query: { entity_type: "custom_field" } },
@@ -799,7 +798,7 @@ export function CustomFieldsAdmin() {
             <AuditRail
               entries={audit.data?.data ?? []}
               state={auditState(
-                isAdmin,
+                readsAuditTrail,
                 audit.isPending,
                 audit.isError,
                 audit.data?.data.length ?? 0,

@@ -340,6 +340,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/tags/{id}":                                                     {Op: "getTag", Access: "tool", Tool: "get_tag", RecordType: "tag", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/users":                                                         {Op: "listUsers", Access: "tool", Tool: "list_colleagues", RecordType: "app_user", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/users/access-preview":                                          {Op: "previewAccess", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/users/assignable-roles":                                        {Op: "listAssignableRoles", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/users/{id}/access":                                             {Op: "getUserAccess", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/voice-profiles":                                                {Op: "listVoiceProfiles", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/voice-profiles/{id}":                                           {Op: "getVoiceProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

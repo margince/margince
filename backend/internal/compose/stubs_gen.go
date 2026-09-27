@@ -2567,6 +2567,10 @@ func (stubs) PreviewAccess(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "PreviewAccess")
 }
 
+func (stubs) ListAssignableRoles(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListAssignableRoles")
+}
+
 func (stubs) CreateFormerMember(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "CreateFormerMember")
 }

@@ -30,7 +30,7 @@ import {
   Webhook,
   Wrench,
 } from "lucide-react";
-import { useCan, useHoldsAdminRole } from "../app/capability";
+import { useCan } from "../app/capability";
 import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
 import type { Route } from "../app/router";
@@ -254,12 +254,13 @@ export function useSettingsEntryVisibility(): Readonly<
   // The consent registry's server gate, which is not a role and not "any member":
   // consent/store.go's ListPurposes calls auth.Require(ctx, "contact", read).
   const contact = useCan("contact", "read");
-  // The one predicate below that is a ROLE rather than a grant. `GET /admin/reset-data`
-  // and the job-health read are gated on the literal admin role server-side and no
-  // RBAC object describes them — a `role` object would encode a constant, and an
-  // admin who revoked their own grant on it could never restore it (capability.ts).
-  // Everything else above is a `read`, because opening a page is reading it.
-  const isAdmin = useHoldsAdminRole();
+  // The maintenance cards' own grants: job health reads on `job_health:read`
+  // (compose/adminhealth.go) and the reset deletes on `system_reset:delete`
+  // (compose/datareset.go). The reset is the one non-read here, because it is
+  // the only thing that card does.
+  const jobHealth = useCan("job_health", "read");
+  const systemReset = useCan("system_reset", "delete");
+  const extensionAccess = useCan("extension_access", "read");
   // Each entry's own read predicate, and the whole answer. There is no second
   // gate above these: a reader reaches an entry when they hold what it asks
   // for, which is the same question the SERVER answers on every route behind
@@ -284,11 +285,9 @@ export function useSettingsEntryVisibility(): Readonly<
     // on company writes, and the flag says whether the surface exists on
     // this installation at all.
     general: installation || (company && companyContext) || fxRate,
-    // The member roster, the roles on it, and what a role may reach. No RBAC
-    // object describes identity administration and none can — a `role` object
-    // would encode a constant, and an admin who revoked their own grant on it
-    // could never restore it (capability.ts) — so the server gates the VERBS on
-    // the role directly and serves the roster itself to anyone signed in.
+    // The member roster, the roles on it, and what a role may reach. The server
+    // gates each verb on its own `user_admin` grant and serves the roster itself
+    // to anyone signed in.
     //
     // `true` matches that: `GET /users` answers 200 to any authenticated
     // principal, and "who is on my team" is not an admin's private question.
@@ -300,10 +299,9 @@ export function useSettingsEntryVisibility(): Readonly<
     // own authority, so a reader without them sees the roster and none of the
     // controls.
     users: true,
-    // `GET /extensions` is admin-only server-side, so the entry follows the
-    // role rather than a grant: any reader who is not an admin would open a
-    // page whose only read answers 403.
-    extensions: isAdmin,
+    // `GET /extensions` asks for `extension_access:read` (handlers_extensions.go),
+    // which admin and ops hold and an edited role may.
+    extensions: extensionAccess,
     capture: captureSettings,
     // The installation's own outside wiring — the shared provider credential
     // and the outbound subscriptions. The webhook read opens it, and the
@@ -349,12 +347,6 @@ export function useSettingsEntryVisibility(): Readonly<
     // what a reader may ask is not an administrator's page merely because
     // creating one is.
     knowledge: knowledgeCorpus,
-    // The operational verbs, and the one entry that genuinely narrows. The reindex
-    // read is admin/ops; job health and the danger zone are admin-ONLY (the server
-    // spells both with RequireAdmin), so an ops seat reaches this page for the
-    // reindex and finds the other two withheld. Nobody below ops has anything to
-    // read here at all. The reindex is an ordinary grant an edited role can hold, so
-    // the entry opens on either and the cards inside decide.
     // What the license grants and how much of it is used. Admin/ops-only, read
     // included — the narrowest predicate on the rail beside Maintenance's,
     // because a seat meter is the installation's commercial standing and a rep
@@ -363,7 +355,11 @@ export function useSettingsEntryVisibility(): Readonly<
     // was removed by an edited role loses the row, which is the difference
     // between asking the grant and asking who somebody is.
     license: licenseRead,
-    maintenance: isAdmin || embeddingReindex,
+    // The operational verbs, and the one entry that genuinely narrows: the
+    // reindex, job health and the danger zone each ask their own grant, the
+    // entry opens on any of them, and the cards inside decide. Nobody below ops
+    // holds any of the three.
+    maintenance: jobHealth || systemReset || embeddingReindex,
   } satisfies Readonly<Record<AdminTabId, boolean>>;
   return granted;
 }
