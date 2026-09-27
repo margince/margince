@@ -13,6 +13,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,6 +43,10 @@ type AccessDirectory struct {
 	// and team memberships; TeamNames is filled only when it is true.
 	Management bool
 	TeamNames  map[ids.UUID]string
+	// OwnerTeams are the teams the record's owner is a member of, whatever
+	// the owner's own status: the team-scope write arm reads the membership
+	// rows and not whether the owner can still sign in.
+	OwnerTeams []ids.UUID
 }
 
 // directoryPage is the largest page the roster reads serve, so the walk takes
@@ -50,7 +56,9 @@ const directoryPage = 200
 // RecordAccessDirectory reads the directory for one record. The caller must be
 // able to read the record for its shares to be listed; ListRecordGrants drops
 // the ones it could not.
-func (s *Service) RecordAccessDirectory(ctx context.Context, recordType string, recordID ids.UUID) (AccessDirectory, error) {
+func (s *Service) RecordAccessDirectory(
+	ctx context.Context, recordType string, recordID ids.UUID, owner *ids.UUID,
+) (AccessDirectory, error) {
 	var out AccessDirectory
 	if err := s.walkRoster(ctx, &out); err != nil {
 		return AccessDirectory{}, err
@@ -67,7 +75,25 @@ func (s *Service) RecordAccessDirectory(ctx context.Context, recordType string, 
 		return AccessDirectory{}, err
 	}
 	out.Shares = shares
+	if owner != nil {
+		if out.OwnerTeams, err = s.membershipTeams(ctx, *owner); err != nil {
+			return AccessDirectory{}, err
+		}
+	}
 	return out, nil
+}
+
+func (s *Service) membershipTeams(ctx context.Context, user ids.UUID) ([]ids.UUID, error) {
+	var out []ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT team_id FROM team_membership WHERE user_id = $1`, user)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		return err
+	})
+	return out, err
 }
 
 func (s *Service) walkRoster(ctx context.Context, out *AccessDirectory) error {

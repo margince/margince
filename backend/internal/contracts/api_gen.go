@@ -35625,7 +35625,11 @@ type RecordAccess struct {
 	CanChangeCount int                  `json:"can_change_count"`
 	Data           []RecordAccessMember `json:"data"`
 
-	// Detail True when role keys and team names ride the rows, which only a caller holding the `user_admin` read grant gets.
+	// Detail True for a caller holding the `user_admin` read grant, the boundary `GET /users` applies to
+	// who is in which team. Then every member is judged with their teams, and role keys and team
+	// names ride the rows. When false, every member other than the caller is judged without their
+	// teams, so no row tells the caller who belongs to a team; `team_access_count` counts the
+	// members whose access or edit rights that leaves out.
 	Detail bool `json:"detail"`
 
 	// GroupCounts How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
@@ -35637,6 +35641,9 @@ type RecordAccess struct {
 
 	// RefreshAt When the earliest share on this record lapses and this answer changes; null when no share expires.
 	RefreshAt *time.Time `json:"refresh_at,omitempty"`
+
+	// TeamAccessCount How many members have access or edit rights only through a team and are not shown as such, because `detail` is false. Always 0 when `detail` is true.
+	TeamAccessCount int `json:"team_access_count"`
 
 	// Visibility `workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.
 	Visibility RecordAccessVisibility `json:"visibility"`

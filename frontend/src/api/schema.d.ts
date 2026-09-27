@@ -1397,9 +1397,9 @@ export interface paths {
          *     paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
          *     live authority, all in one snapshot.
          *
-         *     The caller must be able to open the contact; anybody else gets 404. Role keys and the team
-         *     behind a team share ride the rows only for a caller holding the `user_admin` read grant,
-         *     the same boundary `GET /users` applies; everybody else reads "via a team share".
+         *     The caller must be able to open the contact; anybody else gets 404. Who belongs to which
+         *     team is shown only to a caller holding the `user_admin` read grant, the boundary `GET /users`
+         *     applies: for anybody else, members are judged without their teams (see `detail`).
          *     Emails on the record carry their own audience and are not part of this answer.
          *     Being listed means the record opens, not that every field shows: field masks still apply.
          */
@@ -2761,9 +2761,9 @@ export interface paths {
          *     paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
          *     live authority, all in one snapshot.
          *
-         *     The caller must be able to open the company; anybody else gets 404. Role keys and the team
-         *     behind a team share ride the rows only for a caller holding the `user_admin` read grant,
-         *     the same boundary `GET /users` applies; everybody else reads "via a team share".
+         *     The caller must be able to open the company; anybody else gets 404. Who belongs to which
+         *     team is shown only to a caller holding the `user_admin` read grant, the boundary `GET /users`
+         *     applies: for anybody else, members are judged without their teams (see `detail`).
          *     Emails on the record carry their own audience and are not part of this answer.
          *     Being listed means the record opens, not that every field shows: field masks still apply.
          */
@@ -32372,7 +32372,13 @@ export interface components {
             owner_id?: string | null;
             /** @description An archived record still opens; nobody can change it until it is restored. */
             archived: boolean;
-            /** @description True when role keys and team names ride the rows, which only a caller holding the `user_admin` read grant gets. */
+            /**
+             * @description True for a caller holding the `user_admin` read grant, the boundary `GET /users` applies to
+             *     who is in which team. Then every member is judged with their teams, and role keys and team
+             *     names ride the rows. When false, every member other than the caller is judged without their
+             *     teams, so no row tells the caller who belongs to a team; `team_access_count` counts the
+             *     members whose access or edit rights that leaves out.
+             */
             detail: boolean;
             you: components["schemas"]["RecordAccessVerdict"];
             data: components["schemas"]["RecordAccessMember"][];
@@ -32380,6 +32386,8 @@ export interface components {
             group_counts: components["schemas"]["RecordAccessGroupCounts"];
             /** @description How many of the members who can open the record can also change it. */
             can_change_count: number;
+            /** @description How many members have access or edit rights only through a team and are not shown as such, because `detail` is false. Always 0 when `detail` is true. */
+            team_access_count: number;
             /**
              * Format: date-time
              * @description When the earliest share on this record lapses and this answer changes; null when no share expires.

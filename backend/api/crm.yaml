@@ -2210,9 +2210,9 @@ paths:
         paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
         live authority, all in one snapshot.
 
-        The caller must be able to open the contact; anybody else gets 404. Role keys and the team
-        behind a team share ride the rows only for a caller holding the `user_admin` read grant,
-        the same boundary `GET /users` applies; everybody else reads "via a team share".
+        The caller must be able to open the contact; anybody else gets 404. Who belongs to which
+        team is shown only to a caller holding the `user_admin` read grant, the boundary `GET /users`
+        applies: for anybody else, members are judged without their teams (see `detail`).
         Emails on the record carry their own audience and are not part of this answer.
         Being listed means the record opens, not that every field shows: field masks still apply.
       parameters:
@@ -4109,9 +4109,9 @@ paths:
         paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
         live authority, all in one snapshot.
 
-        The caller must be able to open the company; anybody else gets 404. Role keys and the team
-        behind a team share ride the rows only for a caller holding the `user_admin` read grant,
-        the same boundary `GET /users` applies; everybody else reads "via a team share".
+        The caller must be able to open the company; anybody else gets 404. Who belongs to which
+        team is shown only to a caller holding the `user_admin` read grant, the boundary `GET /users`
+        applies: for anybody else, members are judged without their teams (see `detail`).
         Emails on the record carry their own audience and are not part of this answer.
         Being listed means the record opens, not that every field shows: field masks still apply.
       parameters:
@@ -43825,7 +43825,7 @@ components:
       description: |
         Who can open one contact or company and who can change it. `data` is one page of the
         members who can open it; `group_counts` and `page.total` count all of them.
-      required: [visibility, archived, detail, you, data, page, group_counts, can_change_count]
+      required: [visibility, archived, detail, you, data, page, group_counts, can_change_count, team_access_count]
       properties:
         visibility:
           type: string
@@ -43840,7 +43840,12 @@ components:
           description: An archived record still opens; nobody can change it until it is restored.
         detail:
           type: boolean
-          description: True when role keys and team names ride the rows, which only a caller holding the `user_admin` read grant gets.
+          description: |
+            True for a caller holding the `user_admin` read grant, the boundary `GET /users` applies to
+            who is in which team. Then every member is judged with their teams, and role keys and team
+            names ride the rows. When false, every member other than the caller is judged without their
+            teams, so no row tells the caller who belongs to a team; `team_access_count` counts the
+            members whose access or edit rights that leaves out.
         you: { $ref: '#/components/schemas/RecordAccessVerdict' }
         data:
           type: array
@@ -43851,6 +43856,10 @@ components:
           type: integer
           minimum: 0
           description: How many of the members who can open the record can also change it.
+        team_access_count:
+          type: integer
+          minimum: 0
+          description: How many members have access or edit rights only through a team and are not shown as such, because `detail` is false. Always 0 when `detail` is true.
         refresh_at:
           type: [string, 'null']
           format: date-time

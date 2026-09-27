@@ -93,23 +93,24 @@ func (r RecordAccessReads) Read(
 		if err != nil {
 			return err
 		}
-		dir, err := r.directory.RecordAccessDirectory(ctx, table, id)
+		dir, err := r.directory.RecordAccessDirectory(ctx, table, id, subject.ownerID)
 		if err != nil {
 			return err
 		}
-		facts, err := r.facts(ctx, subject, dir)
+		facts := accessFacts{
+			subject: subject, shares: dir.Shares, ownerTeams: dir.OwnerTeams,
+			detail: dir.Management, teamNames: dir.TeamNames,
+		}
+		judged, teamAccess, err := r.judgeMembers(ctx, subject, dir, caller.UserID)
 		if err != nil {
 			return err
 		}
-		judged, err := r.judgeMembers(ctx, subject, dir.Members)
+		you, err := r.judge(ctx, subject, []principal.Principal{caller})
 		if err != nil {
 			return err
 		}
-		you, err := r.judge(ctx, subject)
-		if err != nil {
-			return err
-		}
-		out, err = assembleRecordAccess(facts, judged, verdictWire(facts, caller, you), cursor, limit)
+		out, err = assembleRecordAccess(facts, judged, verdictWire(facts, caller, you[0]), cursor, limit)
+		out.TeamAccessCount = teamAccess
 		return err
 	})
 	return out, err
@@ -155,46 +156,103 @@ func (r RecordAccessReads) subject(ctx context.Context, table string, id ids.UUI
 	return out, nil
 }
 
-// judgeMembers judges every member and keeps the ones who can open the record.
-// A member who stops resolving between the roster read and their own is
-// skipped: they hold no authority.
+// judgeMembers judges every live member and keeps the ones who can open the
+// record, in roster order.
+//
+// A caller outside member administration is not told who belongs to which
+// team, and a verdict that only a team explains would tell them: a colleague
+// who can edit through a team share is, by that fact, in the team. So for that
+// caller every member is judged a second time with their teams taken away, and
+// the listed verdict and reasons are that one. The members whose verdict the
+// teams change are counted, not named. The caller's own row is theirs to know.
 func (r RecordAccessReads) judgeMembers(
-	ctx context.Context, subject accessSubject, members []identity.AccessMember,
-) ([]judgedMember, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, database.ErrNoWorkspace
+	ctx context.Context, subject accessSubject, dir identity.AccessDirectory, caller ids.UUID,
+) ([]judgedMember, int, error) {
+	memberIDs := make([]ids.UUID, len(dir.Members))
+	for i, m := range dir.Members {
+		memberIDs[i] = m.ID
+	}
+	authorities, err := r.directory.LiveMemberAuthorities(ctx, memberIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	var (
+		members    []identity.AccessMember
+		principals []principal.Principal
+	)
+	for _, m := range dir.Members {
+		if a, live := authorities[m.ID]; live {
+			members = append(members, m)
+			principals = append(principals, authz.HumanPrincipal(m.ID, a.RBAC, a.Seat))
+		}
+	}
+	verdicts, err := r.judge(ctx, subject, principals)
+	if err != nil {
+		return nil, 0, err
+	}
+	shown, shownVerdicts := principals, verdicts
+	if !dir.Management {
+		shown = withoutTeams(principals, caller)
+		if shownVerdicts, err = r.judge(ctx, subject, shown); err != nil {
+			return nil, 0, err
+		}
 	}
 	var out []judgedMember
-	for _, m := range members {
-		p, err := authz.MemberPrincipal(ctx, r.directory, ws, m.ID)
-		if errors.Is(err, apperrors.ErrNotFound) {
-			continue
+	teamAccess := 0
+	for i, m := range members {
+		if shownVerdicts[i] != verdicts[i] {
+			teamAccess++
 		}
-		if err != nil {
-			return nil, err
-		}
-		verdict, err := r.judge(principal.WithActor(ctx, p), subject)
-		if err != nil {
-			return nil, err
-		}
-		if verdict.canRead {
-			out = append(out, judgedMember{member: m, principal: p, verdict: verdict})
+		if shownVerdicts[i].canRead {
+			out = append(out, judgedMember{member: m, principal: shown[i], verdict: shownVerdicts[i]})
 		}
 	}
-	return out, nil
+	return out, teamAccess, nil
 }
 
-// judge asks the two admissions for the principal on ctx.
-func (r RecordAccessReads) judge(ctx context.Context, subject accessSubject) (accessVerdict, error) {
-	var out accessVerdict
+// withoutTeams is each principal with its teams taken away, except the
+// caller's own.
+func withoutTeams(ps []principal.Principal, caller ids.UUID) []principal.Principal {
+	out := make([]principal.Principal, len(ps))
+	for i, p := range ps {
+		if p.UserID != caller {
+			p.TeamIDs = nil
+		}
+		out[i] = p
+	}
+	return out
+}
+
+// judge asks the two admissions for each principal, in one transaction on the
+// snapshot. Only a principal who can open the record is asked about changing
+// it.
+func (r RecordAccessReads) judge(ctx context.Context, subject accessSubject, ps []principal.Principal) ([]accessVerdict, error) {
+	out := make([]accessVerdict, len(ps))
 	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
-		var err error
-		if out.canRead, err = admissionAnswer(auth.EnsureReadable(ctx, tx, subject.table, subject.id)); err != nil || !out.canRead {
+		reads, err := auth.AdmitReaders(ctx, tx, subject.table, subject.id, ps)
+		if err != nil {
 			return err
 		}
-		out.canChange, err = admissionAnswer(auth.EnsureChangeable(ctx, tx, subject.table, subject.id))
-		return err
+		var readers []principal.Principal
+		var at []int
+		for i, refusal := range reads {
+			if out[i].canRead, err = admissionAnswer(refusal); err != nil {
+				return err
+			}
+			if out[i].canRead {
+				readers, at = append(readers, ps[i]), append(at, i)
+			}
+		}
+		changes, err := auth.AdmitChangers(ctx, tx, subject.table, subject.id, readers)
+		if err != nil {
+			return err
+		}
+		for k, refusal := range changes {
+			if out[at[k]].canChange, err = admissionAnswer(refusal); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	return out, err
 }
@@ -211,30 +269,6 @@ func admissionAnswer(err error) (bool, error) {
 	default:
 		return false, err
 	}
-}
-
-// facts gathers what the reasons are read from. The owner's teams come from
-// the owner's own authority; an owner who no longer resolves has none.
-func (r RecordAccessReads) facts(
-	ctx context.Context, subject accessSubject, dir identity.AccessDirectory,
-) (accessFacts, error) {
-	out := accessFacts{subject: subject, shares: dir.Shares, detail: dir.Management, teamNames: dir.TeamNames}
-	if subject.ownerID == nil {
-		return out, nil
-	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return accessFacts{}, database.ErrNoWorkspace
-	}
-	owner, err := authz.MemberPrincipal(ctx, r.directory, ws, *subject.ownerID)
-	switch {
-	case errors.Is(err, apperrors.ErrNotFound):
-		return out, nil
-	case err != nil:
-		return accessFacts{}, err
-	}
-	out.ownerTeams = owner.TeamIDs
-	return out, nil
 }
 
 func optionalUUID(v *crmcontracts.Id) *ids.UUID {

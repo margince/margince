@@ -25,6 +25,13 @@ func MemberPrincipal(ctx context.Context, r Resolver, workspaceID, userID ids.UU
 	if err != nil {
 		return principal.Principal{}, err
 	}
+	return HumanPrincipal(userID, rbac, seat), nil
+}
+
+// HumanPrincipal is the principal a member's resolved authority makes, for a
+// caller that resolved many members in one read rather than through
+// MemberPrincipal one at a time.
+func HumanPrincipal(userID ids.UUID, rbac RBAC, seat principal.SeatType) principal.Principal {
 	return principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + userID.String(),
@@ -32,5 +39,5 @@ func MemberPrincipal(ctx context.Context, r Resolver, workspaceID, userID ids.UU
 		TeamIDs:     rbac.TeamIDs,
 		SeatType:    seat,
 		Permissions: rbac.Permissions,
-	}, nil
+	}
 }
