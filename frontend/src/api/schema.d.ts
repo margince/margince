@@ -8818,7 +8818,9 @@ export interface paths {
          *
          *     The same-day next-step figure counts the deals the caller may see — every deal, for
          *     any seat, since no row scope narrows a deal read — and a caller without `deal.read`
-         *     is refused. It reads a record that starts on the day it was first written:
+         *     is refused. A caller whose field masks withhold deal money gets no at-risk figures at
+         *     all: the deals were chosen by the workspace-wide material bar over amounts they may
+         *     not read. It reads a record that starts on the day it was first written:
          *     `at_risk_recorded_since` says when, and nothing before it can be counted.
          *
          *     Read by a LEAD, and refused below a row scope of `team`, the same tier
@@ -32197,7 +32199,7 @@ export interface components {
          *     Extending this enum means adding a selector in the same change.
          * @enum {string}
          */
-        RetentionScope: "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_verdict";
+        RetentionScope: "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_day";
         /**
          * @description What happens to a record past its window. One action per policy row — a ladder is separate
          *     rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
@@ -37018,38 +37020,49 @@ export interface components {
              */
             disposed_not_sales: number;
             /**
-             * @description How many deal-days in the window the queue judged a deal material and at risk —
-             *     one per deal per day, over the deals THIS caller may see. The denominator of the
-             *     same-day next-step rate.
+             * @description How many deal-days in the window BEGAN material and at risk — one per deal per
+             *     day, over the deals THIS caller may see. The denominator of the same-day
+             *     next-step rate: of the material at-risk deals a day started with, how many got a
+             *     next step that day.
              *
-             *     The verdict is recorded when it is made, by an hourly pass using the queue's own
-             *     bar (the median of the at-risk pipeline). It cannot be recomputed for a past day,
-             *     so nothing before `at_risk_recorded_since` exists to count.
+             *     The set is the one the day's FIRST pass judged: a pass runs hourly, the first one
+             *     after local midnight records the day, and later passes that day add nothing — so a
+             *     deal turning at risk in the afternoon waits for tomorrow. The bar is the
+             *     workspace's own, the median of the whole at-risk pipeline over every amount,
+             *     judged once for everybody; it cannot be recomputed for a past day, so nothing
+             *     before `at_risk_recorded_since` exists to count.
+             *
+             *     The five `at_risk_*` fields are one group, and the whole group is ABSENT — not
+             *     zero — for a caller whose field masks withhold a deal's amount or currency on any
+             *     row. The deals were chosen by amounts that caller may not read, so a rate over
+             *     them would say something about those amounts.
              */
-            at_risk_judged: number;
+            at_risk_judged?: number;
             /**
              * @description How many of those deal-days got a next step booked the same day: a task on the
-             *     deal created on that day in the installation's timezone, done or not. A meeting
+             *     deal created within that day, done or not. The day's bounds are the ones in force
+             *     when it was recorded, so moving the installation to another timezone later does
+             *     not move which tasks fell on it. A meeting
              *     does not count, because its record is created when the calendar sync sees it
              *     rather than when somebody booked it.
              */
-            at_risk_booked_same_day: number;
+            at_risk_booked_same_day?: number;
             /**
              * Format: date
              * @description The first day the two figures above count: the first whole day inside the
              *     window, in the installation's timezone.
              */
-            at_risk_from_day: string;
+            at_risk_from_day?: string;
             /**
              * Format: date
              * @description The day the two figures stop BEFORE — today, in the installation's timezone. A
              *     day still running is left out, because its next step can still be booked.
              */
-            at_risk_to_day: string;
+            at_risk_to_day?: string;
             /**
              * Format: date
-             * @description The first day any verdict is on record in this installation. Absent when there is
-             *     none yet.
+             * @description The first day on record in this installation. Absent when there is none yet, and
+             *     absent with the rest of the group when the figure is withheld.
              *
              *     Read the figures against it rather than as a rate over the whole window: days
              *     before it were never measured, so a window reaching back past it holds no data

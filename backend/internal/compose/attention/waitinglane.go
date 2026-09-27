@@ -72,9 +72,6 @@ type Waiting interface {
 // [First, End), each a date at UTC midnight.
 type LocalDays struct {
 	First, End time.Time
-	// Zone is where those days begin and end — what "the same day" means for
-	// an instant compared against them.
-	Zone *time.Location
 }
 
 // wholeDaysWithin answers the local days lying wholly inside [from, to).
@@ -92,7 +89,7 @@ func wholeDaysWithin(from, to time.Time, zone *time.Location) LocalDays {
 	if end.Before(first) {
 		end = first
 	}
-	return LocalDays{First: first, End: end, Zone: zone}
+	return LocalDays{First: first, End: end}
 }
 
 // AnsweredWork is what the workspace did with its work over a window.
@@ -102,8 +99,11 @@ type AnsweredWork struct {
 	Disposed         int
 	DisposedNotSales int
 	// The same-day next-step figure over the LocalDays the seam was asked for.
-	AtRiskJudged int
-	AtRiskBooked int
+	// AtRiskWithheld says the caller may not read the money it was judged by,
+	// and the figure is not stated at all.
+	AtRiskWithheld bool
+	AtRiskJudged   int
+	AtRiskBooked   int
 	// RecordedSince is the first day a verdict is on record; nil for none.
 	RecordedSince *time.Time
 }
@@ -400,11 +400,7 @@ func (s *Service) ResponseMetrics(
 		return crmcontracts.ResponseMetrics{}, err
 	}
 	whole := wholeDaysWithin(from, to, zone)
-	out := crmcontracts.ResponseMetrics{
-		From: from, To: to,
-		AtRiskFromDay: openapi_types.Date{Time: whole.First},
-		AtRiskToDay:   openapi_types.Date{Time: whole.End},
-	}
+	out := crmcontracts.ResponseMetrics{From: from, To: to}
 	if s.waiting == nil {
 		return out, nil
 	}
@@ -416,10 +412,20 @@ func (s *Service) ResponseMetrics(
 	out.MedianMinutes = work.MedianMinutes
 	out.Disposed = work.Disposed
 	out.DisposedNotSales = work.DisposedNotSales
-	out.AtRiskJudged = work.AtRiskJudged
-	out.AtRiskBookedSameDay = work.AtRiskBooked
+	if !work.AtRiskWithheld {
+		stateAtRisk(&out, whole, work)
+	}
+	return out, nil
+}
+
+// stateAtRisk writes the same-day next-step group. All of it or none of it:
+// a withheld figure leaves every field absent rather than zero.
+func stateAtRisk(out *crmcontracts.ResponseMetrics, whole LocalDays, work AnsweredWork) {
+	judged, booked := work.AtRiskJudged, work.AtRiskBooked
+	out.AtRiskJudged, out.AtRiskBookedSameDay = &judged, &booked
+	out.AtRiskFromDay = &openapi_types.Date{Time: whole.First}
+	out.AtRiskToDay = &openapi_types.Date{Time: whole.End}
 	if work.RecordedSince != nil {
 		out.AtRiskRecordedSince = &openapi_types.Date{Time: *work.RecordedSince}
 	}
-	return out, nil
 }

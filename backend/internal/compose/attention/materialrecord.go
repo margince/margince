@@ -15,10 +15,11 @@ import (
 //
 // The same lane read, the same pricing and the same bar the queue ranks by
 // (materialOf), so the recorded verdict is the one a reader was shown rather
-// than a second opinion of it. The bar is taken over the deals THIS caller can
-// see; the pass runs as the system principal, which sees the whole pipeline —
-// the same pipeline every human seat reads, since no row scope narrows a deal
-// read.
+// than a second opinion of it. The bar is taken over the amounts THIS caller
+// can read. The pass runs as the system principal, so the recorded verdict is
+// the WORKSPACE's judgement over every amount: a reader whose field masks hide
+// some amounts ranks against a different median, which is why the figure built
+// on this record is withheld from such a reader (deals.SameDayNextSteps).
 //
 // An installation with no at-risk lane bound has nothing to judge.
 func (s *Service) MaterialAtRisk(ctx context.Context) ([]ids.UUID, error) {

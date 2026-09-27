@@ -848,14 +848,13 @@ kinds:
     opts_owner: caller
     cadence: 1h
     reason: >-
-      Hourly, because the verdict has to be written before the day's work
-      changes it. A task booked on a quiet deal can take it off the at-risk
-      lane, so a pass that ran once late in the day would miss exactly the
-      deals that were acted on. The first pass after local midnight records
-      the morning's set; later passes add a deal that turned at risk during
-      the day, and the per-day arbiter makes every repeat a no-op. Five
-      minutes for the forecast snapshot's reason: two bounded deal reads and
-      one pricing pass per workspace.
+      The first successful pass after local midnight records the set of
+      deals the day starts with, and every later pass that day finds the day
+      taken and writes nothing — the figure's denominator is that morning
+      set, not a sample. Hourly only so a pass missed early in the day is
+      taken by the next one rather than tomorrow's. Five minutes for the
+      forecast snapshot's reason: two bounded deal reads and one pricing pass
+      per workspace.
 
 
   follow_up_reconcile:

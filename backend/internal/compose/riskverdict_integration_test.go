@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -47,6 +48,8 @@ type verdictEnv struct {
 	booked, other ids.UUID
 	// The three the verdict must leave out.
 	small, mid, calm ids.UUID
+	pipeline         ids.PipelineID
+	open             ids.StageID
 	// taskAt is when the task on the booked deal was created, read back
 	// from the row the activities store wrote.
 	taskAt time.Time
@@ -70,7 +73,7 @@ func setupVerdicts(t *testing.T) *verdictEnv {
 		}
 		return ids.UUID(created.Id)
 	}
-	env := &verdictEnv{Env: e}
+	env := &verdictEnv{Env: e, pipeline: pipeline, open: open}
 	env.small = deal("Small renewal", 100, e.Rep1, nextWeek)
 	env.mid = deal("Mid renewal", 200, e.Rep1, nextWeek)
 	env.booked = deal("Visible expansion", 5_000, e.Rep1, nextWeek)
@@ -109,9 +112,13 @@ func (e *verdictEnv) verdicts(t *testing.T, deal ids.UUID) int {
 	return e.WsCount(t, `SELECT count(*) FROM deal_risk_verdict WHERE deal_id = $1`, deal)
 }
 
-// teamLead is Rep2 reading at team scope: Team1's deals, not Team2's.
+// teamLead is Rep2 reading at team scope.
 func (e *verdictEnv) teamLead() context.Context {
-	return e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
+	return e.As(e.Rep2, []ids.UUID{e.Team1}, e.teamLeadPerms())
+}
+
+func (e *verdictEnv) teamLeadPerms() principal.Permissions {
+	return principal.Permissions{
 		RoleKeys: []string{"manager"},
 		Objects: map[string]principal.ObjectGrant{
 			"deal": {Read: true}, "activity": {Read: true}, "contact": {Read: true},
@@ -120,23 +127,38 @@ func (e *verdictEnv) teamLead() context.Context {
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
-	})
+	}
 }
 
 // figureAt reads GET /worklist/response's projection over its default
 // fortnight with the clock at `at`.
-func (e *verdictEnv) figureAt(ctx context.Context, t *testing.T, at time.Time) crmcontracts.ResponseMetrics {
+func (e *verdictEnv) figureAt(ctx context.Context, t *testing.T, at time.Time) atRiskFigure {
 	t.Helper()
 	return e.figureOver(ctx, t, at, 14)
 }
 
-func (e *verdictEnv) figureOver(ctx context.Context, t *testing.T, at time.Time, days int) crmcontracts.ResponseMetrics {
+func (e *verdictEnv) figureOver(ctx context.Context, t *testing.T, at time.Time, days int) atRiskFigure {
 	t.Helper()
 	got, err := newAttentionService(e.Pool, nil, func() time.Time { return at }).ResponseMetrics(ctx, days)
 	if err != nil {
 		t.Fatalf("reading the response figures: %v", err)
 	}
-	return got
+	return figureOf(got)
+}
+
+// atRiskFigure is the at-risk group of one response, with Stated false when
+// the group was absent.
+type atRiskFigure struct {
+	Stated         bool
+	Judged, Booked int
+	RecordedSince  *openapi_types.Date
+}
+
+func figureOf(m crmcontracts.ResponseMetrics) atRiskFigure {
+	if m.AtRiskJudged == nil || m.AtRiskBookedSameDay == nil {
+		return atRiskFigure{}
+	}
+	return atRiskFigure{Stated: true, Judged: *m.AtRiskJudged, Booked: *m.AtRiskBookedSameDay, RecordedSince: m.AtRiskRecordedSince}
 }
 
 // The pass on three days, the task booked on the middle one: that day is a
@@ -161,20 +183,20 @@ func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 
 	later := e.taskAt.Add(48 * time.Hour)
 	whole := e.figureAt(e.Admin(), t, later)
-	if whole.AtRiskJudged != 6 || whole.AtRiskBookedSameDay != 1 {
+	if whole.Judged != 6 || whole.Booked != 1 {
 		t.Errorf("an unbounded reader sees %d judged and %d booked, want 6 and 1 — the task counts on the day it was "+
-			"created, not on the day before it and not on the day after", whole.AtRiskJudged, whole.AtRiskBookedSameDay)
+			"created, not on the day before it and not on the day after", whole.Judged, whole.Booked)
 	}
 	// Two days back from `later` hold one whole day, the one after the task.
-	if short := e.figureOver(e.Admin(), t, later, 2); short.AtRiskJudged != 2 || short.AtRiskBookedSameDay != 0 {
+	if short := e.figureOver(e.Admin(), t, later, 2); short.Judged != 2 || short.Booked != 0 {
 		t.Errorf("a two-day window counts %d judged and %d booked, want 2 and 0 — only the day after the task "+
-			"lies wholly inside it", short.AtRiskJudged, short.AtRiskBookedSameDay)
+			"lies wholly inside it", short.Judged, short.Booked)
 	}
 	team := e.figureAt(e.teamLead(), t, later)
-	if team.AtRiskJudged != whole.AtRiskJudged || team.AtRiskBookedSameDay != whole.AtRiskBookedSameDay {
+	if team.Judged != whole.Judged || team.Booked != whole.Booked {
 		t.Errorf("Team1's lead sees %d judged and %d booked where an unbounded reader sees %d and %d — "+
 			"every seat reads every deal, so the figure is the same for both",
-			team.AtRiskJudged, team.AtRiskBookedSameDay, whole.AtRiskJudged, whole.AtRiskBookedSameDay)
+			team.Judged, team.Booked, whole.Judged, whole.Booked)
 	}
 }
 
@@ -237,9 +259,9 @@ func TestOnlyALiveTaskIsANextStep(t *testing.T) {
 		want = 1
 	}
 	got := e.figureAt(e.Admin(), t, meeting.CreatedAt.Add(48*time.Hour))
-	if got.AtRiskJudged != 2 || got.AtRiskBookedSameDay != want {
+	if got.Judged != 2 || got.Booked != want {
 		t.Errorf("%d judged and %d booked, want 2 and %d — a meeting or an archived task on the other deal "+
-			"must not count as its next step", got.AtRiskJudged, got.AtRiskBookedSameDay, want)
+			"must not count as its next step", got.Judged, got.Booked, want)
 	}
 }
 
@@ -249,9 +271,9 @@ func TestTodayIsNotCountedUntilItEnds(t *testing.T) {
 	e.passAt(t, e.taskAt)
 
 	sameDay := e.figureAt(e.Admin(), t, e.taskAt.Add(time.Minute))
-	if sameDay.AtRiskJudged != 0 {
+	if sameDay.Judged != 0 {
 		t.Errorf("read on the verdict's own day, the figure counts %d judged, want 0 until the day ends",
-			sameDay.AtRiskJudged)
+			sameDay.Judged)
 	}
 }
 
@@ -262,8 +284,8 @@ func TestTheFigureSaysWhenRecordingBegan(t *testing.T) {
 	later := e.taskAt.Add(48 * time.Hour)
 
 	before := e.figureAt(e.Admin(), t, later)
-	if before.AtRiskRecordedSince != nil {
-		t.Fatalf("no verdict is on record and the figure names %s as its first day", before.AtRiskRecordedSince)
+	if before.RecordedSince != nil {
+		t.Fatalf("no verdict is on record and the figure names %s as its first day", before.RecordedSince)
 	}
 
 	dayBefore := e.taskAt.Add(-24 * time.Hour)
@@ -275,24 +297,105 @@ func TestTheFigureSaysWhenRecordingBegan(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := dayBefore.In(zone).Format(time.DateOnly)
-	if after.AtRiskRecordedSince == nil || after.AtRiskRecordedSince.Format(time.DateOnly) != want {
-		t.Fatalf("recording began on %s and the figure says %v", want, after.AtRiskRecordedSince)
+	if after.RecordedSince == nil || after.RecordedSince.Format(time.DateOnly) != want {
+		t.Fatalf("recording began on %s and the figure says %v", want, after.RecordedSince)
 	}
 }
 
-// The pass runs hourly; a second pass on one day adds nothing.
-func TestASecondPassOnOneDayWritesNothing(t *testing.T) {
+// The day's first pass records the morning set; a later pass that day adds
+// nothing, even for a deal that has turned material and at risk since.
+func TestTheDayCountsTheSetItBeganWith(t *testing.T) {
 	e := setupVerdicts(t)
 	e.passAt(t, e.taskAt)
+	// The €50,000 deal slips past its close date after the morning pass: it is
+	// now at risk and clears the bar, and it is not the day's to count.
+	e.WsExec(t, `UPDATE deal SET expected_close_date = current_date - 7 WHERE id = $1`, e.calm)
 	e.passAt(t, e.taskAt.Add(time.Minute))
 
 	if got := e.verdicts(t, e.booked); got != 1 {
-		t.Fatalf("two passes on one day left %d verdicts on the deal, want 1", got)
+		t.Errorf("two passes on one day left %d verdicts on the deal, want 1", got)
 	}
-	audits := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_risk_verdict' AND action = 'create'`)
-	if rows := e.WsCount(t, `SELECT count(*) FROM deal_risk_verdict`); audits != rows {
-		t.Fatalf("%d verdicts and %d audit rows — every verdict is written with its audit row and a repeat with none",
-			rows, audits)
+	if got := e.verdicts(t, e.calm); got != 0 {
+		t.Errorf("a deal that turned at risk after the day's first pass was added %d times — the day counts the set it began with", got)
+	}
+	if days := e.WsCount(t, `SELECT count(*) FROM deal_risk_day`); days != 1 {
+		t.Errorf("%d recorded days after two passes on one, want 1", days)
+	}
+	audits := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_risk_day' AND action = 'create'`)
+	if audits != 1 {
+		t.Errorf("%d audit rows for one recorded day — the first pass writes one and a repeat none", audits)
+	}
+
+	// The next day starts with it.
+	e.passAt(t, e.taskAt.Add(24*time.Hour))
+	if got := e.verdicts(t, e.calm); got != 1 {
+		t.Errorf("the next day's first pass judged the slipped deal %d times, want 1", got)
+	}
+}
+
+// The pass takes the at-risk set, the prices and the day from ONE instant.
+// A deal closing in three days is not at risk now and is at risk five days
+// on; judged at an instant five days on, it is in that day's set.
+func TestThePassJudgesAtTheInstantItFilesUnder(t *testing.T) {
+	e := setupVerdicts(t)
+	minor, currency, who, closes := int64(60_000_00), "EUR", ids.From[ids.UserKind](e.Rep1), time.Now().AddDate(0, 0, 3)
+	soon, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Closing this week", PipelineID: e.pipeline, StageID: e.open, Source: "manual",
+		AmountMinor: &minor, Currency: &currency, OwnerID: &who, ExpectedClose: &closes,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ahead := time.Now().AddDate(0, 0, 5).Truncate(time.Microsecond)
+	e.passAt(t, ahead)
+
+	zone, err := installationZone(e.Admin(), e.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	day := ahead.In(zone).Format(time.DateOnly)
+	got := e.WsCount(t, `SELECT count(*) FROM deal_risk_verdict v JOIN deal_risk_day rd ON rd.id = v.day_id
+		WHERE v.deal_id = $1 AND rd.local_day = $2::date AND rd.judged_at = $3`, ids.UUID(soon.Id), day, ahead)
+	if got != 1 {
+		t.Fatalf("a pass judging at %s did not file the deal overdue by then under %s — the selection and the day "+
+			"read different clocks", ahead, day)
+	}
+}
+
+// Moving the installation to another zone does not move which tasks fell on
+// a day already recorded: the day's bounds were fixed when it was judged.
+func TestAZoneChangeDoesNotRewriteARecordedDay(t *testing.T) {
+	e := setupVerdicts(t)
+	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
+	e.passAt(t, e.taskAt)
+	later := e.taskAt.Add(72 * time.Hour)
+	before := e.figureAt(e.Admin(), t, later)
+
+	e.WsExec(t, `UPDATE setting SET value = '"Etc/GMT+12"'::jsonb WHERE key = 'installation.timezone'`)
+	after := e.figureAt(e.Admin(), t, later)
+	if before.Booked != 1 || after.Booked != before.Booked || after.Judged != before.Judged {
+		t.Fatalf("recorded at UTC+14: %d judged, %d booked; read after moving to UTC-12: %d judged, %d booked — "+
+			"want 2 and 1 both times", before.Judged, before.Booked, after.Judged, after.Booked)
+	}
+}
+
+// The verdict is the workspace's, taken over every amount. A reader whose
+// masks withhold deal money is not shown a rate over deals chosen by amounts
+// they may not read — the whole group is absent, not zero.
+func TestAReaderWithDealMoneyMaskedGetsNoAtRiskFigure(t *testing.T) {
+	e := setupVerdicts(t)
+	e.passAt(t, e.taskAt)
+	later := e.taskAt.Add(48 * time.Hour)
+
+	perms := e.teamLeadPerms()
+	perms.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority}}
+	masked := e.figureAt(e.As(e.Rep2, []ids.UUID{e.Team1}, perms), t, later)
+	if masked.Stated {
+		t.Errorf("a reader with deal money masked was shown %d judged and %d booked, want the group absent",
+			masked.Judged, masked.Booked)
+	}
+	if open := e.figureAt(e.teamLead(), t, later); !open.Stated || open.Judged != 2 {
+		t.Errorf("an unmasked lead was shown %+v, want the figure over 2 judged deal-days", open)
 	}
 }
 
@@ -300,7 +403,10 @@ func TestASecondPassOnOneDayWritesNothing(t *testing.T) {
 // that reports on what the product judged.
 func TestASeatCannotRecordAVerdict(t *testing.T) {
 	e := setupVerdicts(t)
-	_, err := e.Deals.RecordRiskVerdicts(e.Admin(), time.Now(), []ids.UUID{e.booked})
+	now := time.Now()
+	_, err := e.Deals.RecordRiskDay(e.Admin(), deals.RiskDay{
+		LocalDay: now, Start: now.Add(-time.Hour), End: now.Add(time.Hour), JudgedAt: now,
+	}, []ids.UUID{e.booked})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an admin seat recorded a verdict (err %v), want a permission refusal", err)
 	}
@@ -316,9 +422,10 @@ func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("planting the default retention ladder: %v", err)
 	}
-	// One verdict per deal written ninety-one days ago; the other stays fresh.
-	e.WsExec(t, `UPDATE deal_risk_verdict SET created_at = now() - interval '91 days'
-		WHERE local_day = (SELECT min(local_day) FROM deal_risk_verdict)`)
+	// The earlier day moved ninety-one days back; the later one stays fresh.
+	e.WsExec(t, `UPDATE deal_risk_day SET day_start = day_start - interval '91 days',
+		day_end = day_end - interval '91 days', judged_at = judged_at - interval '91 days'
+		WHERE local_day = (SELECT min(local_day) FROM deal_risk_day)`)
 
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
@@ -326,16 +433,16 @@ func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 	}
 	// Asked of the row that should SURVIVE, because a count alone reads the
 	// same when the sweep takes the fresh verdict and leaves the aged one.
-	fresh := e.WsCount(t, `SELECT count(*) FROM deal_risk_verdict WHERE deal_id = $1
-		AND created_at > now() - interval '1 day'`, e.booked)
+	fresh := e.WsCount(t, `SELECT count(*) FROM deal_risk_verdict v JOIN deal_risk_day rd ON rd.id = v.day_id
+		WHERE v.deal_id = $1 AND rd.day_start > now() - interval '3 days'`, e.booked)
 	if got := e.verdicts(t, e.booked); got != 1 || fresh != 1 {
 		t.Errorf("the booked deal holds %d verdicts after the sweep (%d fresh), want the fresh one alone", got, fresh)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1`, e.booked); got != 1 {
 		t.Error("the sweep took the deal with its verdict — only the record of the judgement ages out")
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_risk_verdict' AND action = 'erase'`); got != 2 {
-		t.Errorf("%d erase audit rows, want one per aged verdict (2)", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_risk_day' AND action = 'erase'`); got != 1 {
+		t.Errorf("%d erase audit rows, want one for the aged day", got)
 	}
 
 	e.WsExec(t, `DELETE FROM deal WHERE id = $1`, e.other)

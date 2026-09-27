@@ -53,10 +53,10 @@ func (*RetentionService) eraseRawCapture(ctx context.Context, tx pgx.Tx, id ids.
 	return err
 }
 
-// eraseRiskVerdict deletes one recorded verdict. The deal it names survives:
-// what ages out is the record that the queue judged it on one day, which
-// deals owns and the same-day next-step figure reads.
-func (*RetentionService) eraseRiskVerdict(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM deal_risk_verdict WHERE id = $1`, id)
+// eraseRiskDay deletes one recorded risk day, and its verdicts go with it by
+// ON DELETE CASCADE. The deals they name survive: what ages out is the record
+// of what the queue judged on that day.
+func (*RetentionService) eraseRiskDay(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	_, err := tx.Exec(ctx, `DELETE FROM deal_risk_day WHERE id = $1`, id)
 	return err
 }

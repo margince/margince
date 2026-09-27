@@ -47,7 +47,7 @@ func (w attentionWaiting) Answered(
 	if err != nil {
 		return attention.AnsweredWork{}, err
 	}
-	steps, err := w.deals.SameDayNextSteps(ctx, days.First, days.End, days.Zone)
+	steps, err := w.deals.SameDayNextSteps(ctx, days.First, days.End)
 	if err != nil {
 		return attention.AnsweredWork{}, err
 	}
@@ -56,6 +56,7 @@ func (w attentionWaiting) Answered(
 		MedianMinutes:    got.MedianMinutes,
 		Disposed:         got.Disposed,
 		DisposedNotSales: got.DisposedNotSales,
+		AtRiskWithheld:   steps.Withheld,
 		AtRiskJudged:     steps.Judged,
 		AtRiskBooked:     steps.Booked,
 		RecordedSince:    steps.RecordedSince,

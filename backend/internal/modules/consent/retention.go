@@ -58,8 +58,8 @@ import (
 // guaranteed end. config/margince.example.yaml says the same beside the switch
 // that turns capture on, because that is where an operator is deciding.
 //
-// `deal_risk_verdict` is the queue's record of which deals it judged material
-// and at risk on which day. 90 days is the widest window GET /worklist/response
+// `deal_risk_day` is the queue's record of which deals each day began material
+// and at risk; its verdict rows go with it. 90 days is the widest window GET /worklist/response
 // reads, and the row answers nothing past it; the gate
 // TestTheVerdictWindowIsTheFiguresWidestWindow keeps the two numbers one.
 func SeedDefaultRetentionTx(ctx context.Context, tx pgx.Tx) error {
@@ -74,7 +74,7 @@ func SeedDefaultRetentionTx(ctx context.Context, tx pgx.Tx) error {
 		  ('deal',     'lost',               1825, 'archive'),
 		  ('ai_call_payload', 'content',     365,  'erase'),
 		  ('raw_capture', NULL,              730,  'erase'),
-		  ('deal_risk_verdict', NULL,        90,   'erase')
+		  ('deal_risk_day', NULL,            90,   'erase')
 		) AS v(object_type, category, retain_days, action)`)
 	return err
 }

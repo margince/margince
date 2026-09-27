@@ -7,7 +7,7 @@ package gates
 
 // The queue's recorded verdicts live exactly as long as the figure that reads them.
 //
-// A deal_risk_verdict row exists to answer the same-day next-step figure on
+// A deal_risk_day row, with the verdicts under it, exists to answer the same-day next-step figure on
 // GET /worklist/response, which reads at most responseWindowMaxDays back. The
 // seeded retention window is that number spelled a second time, in SQL, in
 // another module. Kept shorter, the widest window counts days whose verdicts
@@ -52,7 +52,7 @@ func seededVerdictWindow(t *testing.T) int {
 		t.Fatalf("reading the seed: %v", err)
 	}
 	for _, m := range seedRowRE.FindAllStringSubmatch(string(src), -1) {
-		if m[1] != "deal_risk_verdict" || m[2] != "" {
+		if m[1] != "deal_risk_day" || m[2] != "" {
 			continue
 		}
 		days, err := strconv.Atoi(m[3])
@@ -61,7 +61,7 @@ func seededVerdictWindow(t *testing.T) int {
 		}
 		return days
 	}
-	t.Fatal("SeedDefaultRetentionTx plants no ('deal_risk_verdict', NULL, …) row — the verdicts would age on nobody's clock")
+	t.Fatal("SeedDefaultRetentionTx plants no ('deal_risk_day', NULL, …) row — the verdicts would age on nobody's clock")
 	return 0
 }
 
@@ -69,7 +69,7 @@ func TestTheVerdictWindowIsTheFiguresWidestWindow(t *testing.T) {
 	t.Parallel()
 	widest, seeded := widestResponseWindow(t), seededVerdictWindow(t)
 	if widest != seeded {
-		t.Errorf("deal_risk_verdict is seeded to age out after %d days, and GET /worklist/response reads up to %d days back.\n"+
+		t.Errorf("deal_risk_day is seeded to age out after %d days, and GET /worklist/response reads up to %d days back.\n"+
 			"The row exists only to answer that figure, so the two are one number: move the seed in "+
 			"consent/retention.go to %d, or the ceiling in attention/waitinglane.go to %d.", seeded, widest, widest, seeded)
 	}

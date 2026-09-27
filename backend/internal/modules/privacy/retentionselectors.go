@@ -122,11 +122,11 @@ var retentionSelectors = map[string]string{
 		          AND (coalesce(p.legal_hold, false) OR coalesce(o.legal_hold, false) OR coalesce(d.legal_hold, false)
 		               OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))
 		LIMIT $2`,
-	// The queue's recorded verdicts, aged on the day they were written. A
-	// verdict names a deal and a day and exists to answer the same-day
-	// next-step figure over its window; past the widest window that figure
-	// reads, it answers nothing. No legal-hold test: the row carries nothing
-	// a hold protects, and the deal it names is untouched.
-	"deal_risk_verdict/": `SELECT id FROM deal_risk_verdict
-		WHERE created_at < now() - make_interval(days => $1) LIMIT $2`,
+	// The queue's recorded risk days, aged on the day they describe. A day and
+	// its verdicts exist to answer the same-day next-step figure over its
+	// window, which counts only days starting inside it; a day starting
+	// before the widest window answers nothing. No legal-hold test: the rows
+	// carry nothing a hold protects, and the deals they name are untouched.
+	"deal_risk_day/": `SELECT id FROM deal_risk_day
+		WHERE day_start < now() - make_interval(days => $1) LIMIT $2`,
 }

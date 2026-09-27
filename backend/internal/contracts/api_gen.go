@@ -12481,7 +12481,7 @@ const (
 	RetentionScopeActivitytranscript     RetentionScope = "activity/transcript"
 	RetentionScopeAiCallPayloadcontent   RetentionScope = "ai_call_payload/content"
 	RetentionScopeContactnoConsentNoDeal RetentionScope = "contact/no_consent_no_deal"
-	RetentionScopeDealRiskVerdict        RetentionScope = "deal_risk_verdict"
+	RetentionScopeDealRiskDay            RetentionScope = "deal_risk_day"
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
@@ -12499,7 +12499,7 @@ func (e RetentionScope) Valid() bool {
 		return true
 	case RetentionScopeContactnoConsentNoDeal:
 		return true
-	case RetentionScopeDealRiskVerdict:
+	case RetentionScopeDealRiskDay:
 		return true
 	case RetentionScopeDeallost:
 		return true
@@ -36582,26 +36582,37 @@ type ResponseMetrics struct {
 	Answered int `json:"answered"`
 
 	// AtRiskBookedSameDay How many of those deal-days got a next step booked the same day: a task on the
-	// deal created on that day in the installation's timezone, done or not. A meeting
+	// deal created within that day, done or not. The day's bounds are the ones in force
+	// when it was recorded, so moving the installation to another timezone later does
+	// not move which tasks fell on it. A meeting
 	// does not count, because its record is created when the calendar sync sees it
 	// rather than when somebody booked it.
-	AtRiskBookedSameDay int `json:"at_risk_booked_same_day"`
+	AtRiskBookedSameDay *int `json:"at_risk_booked_same_day,omitempty"`
 
 	// AtRiskFromDay The first day the two figures above count: the first whole day inside the
 	// window, in the installation's timezone.
-	AtRiskFromDay openapi_types.Date `json:"at_risk_from_day"`
+	AtRiskFromDay *openapi_types.Date `json:"at_risk_from_day,omitempty"`
 
-	// AtRiskJudged How many deal-days in the window the queue judged a deal material and at risk —
-	// one per deal per day, over the deals THIS caller may see. The denominator of the
-	// same-day next-step rate.
+	// AtRiskJudged How many deal-days in the window BEGAN material and at risk — one per deal per
+	// day, over the deals THIS caller may see. The denominator of the same-day
+	// next-step rate: of the material at-risk deals a day started with, how many got a
+	// next step that day.
 	//
-	// The verdict is recorded when it is made, by an hourly pass using the queue's own
-	// bar (the median of the at-risk pipeline). It cannot be recomputed for a past day,
-	// so nothing before `at_risk_recorded_since` exists to count.
-	AtRiskJudged int `json:"at_risk_judged"`
+	// The set is the one the day's FIRST pass judged: a pass runs hourly, the first one
+	// after local midnight records the day, and later passes that day add nothing — so a
+	// deal turning at risk in the afternoon waits for tomorrow. The bar is the
+	// workspace's own, the median of the whole at-risk pipeline over every amount,
+	// judged once for everybody; it cannot be recomputed for a past day, so nothing
+	// before `at_risk_recorded_since` exists to count.
+	//
+	// The five `at_risk_*` fields are one group, and the whole group is ABSENT — not
+	// zero — for a caller whose field masks withhold a deal's amount or currency on any
+	// row. The deals were chosen by amounts that caller may not read, so a rate over
+	// them would say something about those amounts.
+	AtRiskJudged *int `json:"at_risk_judged,omitempty"`
 
-	// AtRiskRecordedSince The first day any verdict is on record in this installation. Absent when there is
-	// none yet.
+	// AtRiskRecordedSince The first day on record in this installation. Absent when there is none yet, and
+	// absent with the rest of the group when the figure is withheld.
 	//
 	// Read the figures against it rather than as a rate over the whole window: days
 	// before it were never measured, so a window reaching back past it holds no data
@@ -36611,7 +36622,7 @@ type ResponseMetrics struct {
 
 	// AtRiskToDay The day the two figures stop BEFORE — today, in the installation's timezone. A
 	// day still running is left out, because its next step can still be booked.
-	AtRiskToDay openapi_types.Date `json:"at_risk_to_day"`
+	AtRiskToDay *openapi_types.Date `json:"at_risk_to_day,omitempty"`
 
 	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
 	// judged not sales.

@@ -45,7 +45,7 @@ func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
 		"deal/lost/archive",
 		// The queue's recorded verdicts, aged with the widest window the
 		// same-day next-step figure reads.
-		"deal_risk_verdict//erase",
+		"deal_risk_day//erase",
 		"lead/unconverted/archive",
 		// The provider original, aged on its own clock. Seeded because a scope
 		// shipping with no row reads on the settings page exactly like one whose
@@ -54,7 +54,7 @@ func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
 		"raw_capture//erase",
 	}
 	if len(got) != len(want) {
-		t.Fatalf("seeded %d policies %v, want the §3.4 five plus ai_call_payload/content/erase, deal_risk_verdict//erase and raw_capture//erase", len(got), got)
+		t.Fatalf("seeded %d policies %v, want the §3.4 five plus ai_call_payload/content/erase, deal_risk_day//erase and raw_capture//erase", len(got), got)
 	}
 	for i := range want {
 		if got[i] != want[i] {
