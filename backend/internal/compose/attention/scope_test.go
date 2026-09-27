@@ -9,6 +9,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -50,26 +51,42 @@ func TestEveryReaderDefaultsToTheirOwnWork(t *testing.T) {
 	}
 }
 
-// A reader is offered exactly the scopes their row scope reaches, so a client
-// never draws a control that would 403 when pressed.
+// seat is a reader shaped like a seeded role: its row scope, its role key and
+// whether it holds the team oversight grant.
+func seat(tier principal.RowScope, role string, oversees bool) context.Context {
+	return principal.WithActor(context.Background(), principal.Principal{
+		Type:   principal.PrincipalHuman,
+		UserID: ids.MustParse("01a05500-0000-7000-8000-000000000001"),
+		Permissions: principal.Permissions{
+			RoleKeys: []string{role},
+			Objects:  map[string]principal.ObjectGrant{"team_oversight": {Read: oversees}},
+			RowScope: tier,
+		},
+	})
+}
+
+// A reader is offered exactly the scopes they can open, so a client never draws
+// a control that would 403 when pressed. `team` follows the team week's own
+// gate rather than row scope: Home's team picker is drawn from it.
 func TestTheOfferedScopesMatchTheReadersOwnReach(t *testing.T) {
 	// Unassigned is offered at EVERY tier: nothing in it belongs to a
 	// colleague, and it is where ownerless work lives now that "mine" no longer
 	// folds it into each reader's own queue.
-	cases := map[principal.RowScope][]string{
-		principal.RowScopeOwn:  {scopeMine, scopeUnassigned},
-		principal.RowScopeTeam: {scopeMine, scopeUnassigned, scopeTeam},
-		principal.RowScopeAll:  {scopeMine, scopeUnassigned, scopeTeam, scopeAll},
+	cases := []struct {
+		name   string
+		reader context.Context
+		want   []string
+	}{
+		{"rep", seat(principal.RowScopeOwn, "rep", false), []string{scopeMine, scopeUnassigned}},
+		{"manager", seat(principal.RowScopeTeam, "manager", false), []string{scopeMine, scopeUnassigned, scopeTeam}},
+		{"management", seat(principal.RowScopeAll, "management", true), []string{scopeMine, scopeUnassigned, scopeTeam, scopeAll}},
+		{"read_only", seat(principal.RowScopeAll, "read_only", false), []string{scopeMine, scopeUnassigned, scopeAll}},
+		{"read_only granted oversight", seat(principal.RowScopeAll, "read_only", true), []string{scopeMine, scopeUnassigned, scopeTeam, scopeAll}},
 	}
-	for tier, want := range cases {
-		got := scopeOptionsFor(readerAt(tier))
-		if len(got) != len(want) {
-			t.Fatalf("row scope %q was offered %v, wanted %v", tier, got, want)
-		}
-		for i, option := range want {
-			if got[i] != option {
-				t.Fatalf("row scope %q was offered %v, wanted %v", tier, got, want)
-			}
+	for _, tc := range cases {
+		got := scopeOptionsFor(tc.reader)
+		if !slices.Equal(got, tc.want) {
+			t.Errorf("%s was offered %v, wanted %v", tc.name, got, tc.want)
 		}
 	}
 }
@@ -78,21 +95,24 @@ func TestTheOfferedScopesMatchTheReadersOwnReach(t *testing.T) {
 // Quietly answering a question about the team with facts about one contact
 // would leave the reader believing they had seen the team.
 func TestAWiderScopeThanTheReaderHoldsIsRefusedNotNarrowed(t *testing.T) {
-	if _, err := resolveScope(readerAt(principal.RowScopeOwn), scopeTeam); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := resolveScope(seat(principal.RowScopeOwn, "rep", false), scopeTeam); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an own-scope reader asking for the team got %v, wanted a refusal", err)
 	}
-	if _, err := resolveScope(readerAt(principal.RowScopeTeam), scopeAll); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := resolveScope(seat(principal.RowScopeTeam, "manager", false), scopeAll); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a team-scope reader asking for everything got %v, wanted a refusal", err)
+	}
+	if _, err := resolveScope(seat(principal.RowScopeAll, "read_only", false), scopeTeam); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a read-only seat asking for the team got %v, wanted a refusal", err)
 	}
 }
 
-// A team-scoped reader may ask for the team, and an all-scoped reader for
-// everything. The refusal above must not be a refusal of everyone.
+// A lead may ask for the team, and an all-scoped reader for everything. The
+// refusal above must not be a refusal of everyone.
 func TestAReaderMayAskForAScopeTheyDoHold(t *testing.T) {
-	if _, err := resolveScope(readerAt(principal.RowScopeTeam), scopeTeam); err != nil {
-		t.Fatalf("a team-scope reader was refused the team: %v", err)
+	if _, err := resolveScope(seat(principal.RowScopeTeam, "manager", false), scopeTeam); err != nil {
+		t.Fatalf("a team lead was refused the team: %v", err)
 	}
-	if _, err := resolveScope(readerAt(principal.RowScopeAll), scopeAll); err != nil {
+	if _, err := resolveScope(seat(principal.RowScopeAll, "read_only", false), scopeAll); err != nil {
 		t.Fatalf("an all-scope reader was refused everything: %v", err)
 	}
 }

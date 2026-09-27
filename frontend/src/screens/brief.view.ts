@@ -44,8 +44,8 @@ const SCOPE_PARAM = "scope";
  * Which scopes this view can actually answer.
  *
  * BOTH views have a team surface today — the team board on Morning, the frozen
- * team week on Weekly — but only for a reader whose row scope reaches a team,
- * which is `offered`. A rep gets one scope and therefore no dial at all: a
+ * team week on Weekly — but only for a reader who leads a team or holds the
+ * oversight grant, which is `offered`. A rep gets one scope and therefore no dial at all: a
  * control with one option asks a reader to confirm what they cannot change.
  */
 export function scopesFor(

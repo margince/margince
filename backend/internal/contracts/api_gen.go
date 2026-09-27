@@ -41147,9 +41147,12 @@ type Worklist struct {
 	// Scope Whose work this read answered for.
 	Scope WorklistScope `json:"scope"`
 
-	// ScopeOptions The scopes this reader may ask for, narrowest first — derived from their own
-	// row scope. A client draws a control only when there is more than one, so a
-	// rep who can only see their own work is never offered a switch that would 403.
+	// ScopeOptions The scopes this reader may ask for, narrowest first. `all` is derived from their
+	// row scope. `team` is offered on the rule `GET /weekly-reviews/team` is served on —
+	// a lead, or a seat holding `team_oversight.read` — so a read-only seat is not
+	// offered a team view whose week it would be refused. A client draws a control only
+	// when there is more than one, so a rep who can only see their own work is never
+	// offered a switch that would 403.
 	ScopeOptions []WorklistScopeOptions `json:"scope_options"`
 
 	// SourcesUnavailable Sources that could not be included, and why. Empty is the honest common case.
@@ -47715,7 +47718,7 @@ type GetWorklistParams struct {
 	// queue that showed all of them would hand a rep several hundred rows belonging
 	// to colleagues and call it their day.
 	//
-	// A scope the reader's own row scope does not reach is refused with 403 rather
+	// A scope not listed in the response's `scope_options` is refused with 403 rather
 	// than quietly narrowed — answering a question about the team with facts about
 	// one contact, with no way for the reader to tell, is the worse failure.
 	//

@@ -13863,8 +13863,14 @@ export interface paths {
          *     claim that every member's week was counted; a snapshot silently covering four of six
          *     reps reads exactly like a team of four.
          *
-         *     403 for a reader whose row scope reaches only their own rows: a team snapshot is a
-         *     team question. 404 before the first Monday the team's week closed on.
+         *     Read by the team's lead — a coaching seat that is a member of the team — or by a seat
+         *     holding `team_oversight.read`, which opens every team. Row scope admits nobody here:
+         *     a read-only seat reaches every record and leads no team.
+         *
+         *     403 for a seat that may open no team's week: a rep, a read-only seat, or any seat
+         *     whose row scope reaches only its own rows. 404 for a lead asking about a team they
+         *     are not on, so a team id cannot be probed for existence, and before the first Monday
+         *     the team's week closed on.
          */
         get: operations["getTeamWeeklyReview"];
         put?: never;
@@ -29844,7 +29850,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage" | "team_oversight";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -36156,9 +36162,12 @@ export interface components {
              */
             scope: "mine" | "unassigned" | "team" | "all";
             /**
-             * @description The scopes this reader may ask for, narrowest first — derived from their own
-             *     row scope. A client draws a control only when there is more than one, so a
-             *     rep who can only see their own work is never offered a switch that would 403.
+             * @description The scopes this reader may ask for, narrowest first. `all` is derived from their
+             *     row scope. `team` is offered on the rule `GET /weekly-reviews/team` is served on —
+             *     a lead, or a seat holding `team_oversight.read` — so a read-only seat is not
+             *     offered a team view whose week it would be refused. A client draws a control only
+             *     when there is more than one, so a rep who can only see their own work is never
+             *     offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
             /**
@@ -51937,7 +51946,7 @@ export interface operations {
                  *     queue that showed all of them would hand a rep several hundred rows belonging
                  *     to colleagues and call it their day.
                  *
-                 *     A scope the reader's own row scope does not reach is refused with 403 rather
+                 *     A scope not listed in the response's `scope_options` is refused with 403 rather
                  *     than quietly narrowed — answering a question about the team with facts about
                  *     one contact, with no way for the reader to tell, is the worse failure.
                  *

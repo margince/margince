@@ -3263,7 +3263,7 @@ export const en = {
   "teamweekly.loading": "Loading team week…",
   "teamweekly.empty": "Nothing to show for this week.",
   "teamweekly.forbidden":
-    "Team reviews need team access. Your access covers your own records only.",
+    "Team reviews are available to the team’s lead and to roles that oversee every team.",
   "teamweekly.noSnapshot":
     "No saved review is available for this team and week. Choose another week or review the team’s current work.",
   "teamweekly.pickTeam": "Choose a team",

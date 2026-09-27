@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { useCan } from "../app/capability";
 import { useUrlParams } from "../app/urlstate";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -15,13 +16,12 @@ export function BriefTeamSelect({
   const t = useT();
   const teams = useTeams();
   const me = useMe();
+  // The teams whose week the server will open: every team for a seat holding
+  // the oversight grant, and the teams a lead is on for everyone else.
+  const oversees = useCan("team_oversight", "read");
   const [params, setParams] = useUrlParams();
   const options = (teams.data ?? [])
-    .filter(
-      (team) =>
-        me.data?.authorization?.row_scope !== "team" ||
-        me.data.teams.includes(team.id),
-    )
+    .filter((team) => oversees || (me.data?.teams.includes(team.id) ?? false))
     .map((team) => ({
       value: team.id,
       label: team.name,

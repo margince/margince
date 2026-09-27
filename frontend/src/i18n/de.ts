@@ -3182,7 +3182,7 @@ export const de = {
   "teamweekly.loading": "Teamwoche wird geladen…",
   "teamweekly.empty": "Für diese Woche gibt es nichts anzuzeigen.",
   "teamweekly.forbidden":
-    "Teamrückblicke erfordern Teamzugriff. Dein Zugriff umfasst nur deine eigenen Datensätze.",
+    "Teamrückblicke stehen der Teamleitung und Rollen zur Verfügung, die alle Teams überblicken.",
   "teamweekly.noSnapshot":
     "Für dieses Team und diese Woche ist kein gespeicherter Rückblick verfügbar. Wähle eine andere Woche oder prüfe die aktuelle Arbeit des Teams.",
   "teamweekly.pickTeam": "Team auswählen",

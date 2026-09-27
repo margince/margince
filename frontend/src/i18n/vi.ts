@@ -3159,7 +3159,7 @@ export const vi = {
   "teamweekly.loading": "Đang đọc tuần của nhóm",
   "teamweekly.empty": "Không có gì để hiển thị cho tuần này.",
   "teamweekly.forbidden":
-    "Tuần của nhóm là câu hỏi cấp nhóm, còn quyền của bạn chỉ tới các bản ghi của chính bạn.",
+    "Tuần của nhóm chỉ dành cho trưởng nhóm và các vai trò giám sát mọi nhóm.",
   "teamweekly.noSnapshot":
     "Chưa có tổng kết được lưu cho nhóm và tuần này. Chọn tuần khác hoặc xem công việc hiện tại của nhóm.",
   "teamweekly.pickTeam": "Chọn một nhóm",

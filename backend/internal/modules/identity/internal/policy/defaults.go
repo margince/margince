@@ -109,13 +109,14 @@ var managerObjects = grid(crud, map[string]grant{
 	objAuthenticationPolicy:   none,
 	objOauthApplication:       none,
 	objSeatUsage:              none,
+	objTeamOversight:          none,
 })
 
-// managementObjects is managerObjects with the five administration reads a
+// managementObjects is managerObjects with the administration reads a
 // sales leader answers for: the AI spend, the consent vocabulary their team is
 // bound by, the sign-in posture, which OAuth applications the workspace issued,
-// and how many seats are used. Every one is a READ — management sees what it is
-// accountable for and changes none of it.
+// and how many seats are used, plus every team's coaching week. Every one is a
+// READ — management sees what it is accountable for and changes none of it.
 //
 // Derived from managerObjects by copy rather than by aliasing it: the two grids
 // now differ, and one variable serving both is how a later edit to a team lead's
@@ -129,6 +130,7 @@ var managementObjects = func() map[string]grant {
 		objAuthenticationPolicy,
 		objOauthApplication,
 		objSeatUsage,
+		objTeamOversight,
 	} {
 		out[object] = readOnly
 	}
@@ -174,6 +176,7 @@ var defaults = map[string]Document{
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readUpdate,
 			objSeatUsage:            readOnly,
+			objTeamOversight:        readOnly,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -291,6 +294,7 @@ var defaults = map[string]Document{
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
 			objSeatUsage:              none,
+			objTeamOversight:          none,
 		}),
 		RowScope: principal.RowScopeOwn,
 	},
@@ -331,6 +335,7 @@ var defaults = map[string]Document{
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
 			objSeatUsage:              none,
+			objTeamOversight:          none,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -373,6 +378,9 @@ var defaults = map[string]Document{
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readOnly,
 			objSeatUsage:            readOnly,
+			// Ops runs the installation and leads nobody, so it reads no
+			// team's coaching week.
+			objTeamOversight: none,
 			// Ops configures the rules and does not send under them. Directing
 			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has

@@ -258,6 +258,7 @@ var (
 			"authentication_policy": {Read: true, Update: true},
 			"oauth_application":     {Create: true, Read: true, Update: true, Delete: true},
 			"seat_usage":            {Read: true},
+			"team_oversight":        {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
@@ -293,6 +294,9 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 		"privacy_request",
 		"audit_log",
 		"system_reset",
+		// Not governance, but authority all the same: ops leads nobody, so it
+		// reads no team's coaching week.
+		"team_oversight",
 	} {
 		delete(out, object)
 	}

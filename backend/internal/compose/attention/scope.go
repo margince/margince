@@ -16,6 +16,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -44,20 +45,24 @@ const (
 // reader's own queue, so it has to be reachable from every one of them or the
 // change would have hidden it. Nothing in it is a colleague's — that is what
 // unassigned means — so no tier gates it.
+//
+// Team is offered on auth.TeamWeekReachOf, the predicate the team's week is
+// served on, because Home draws its team picker from this list. Offering it on
+// row scope put a read-only seat in front of a picker for pages the store
+// refuses.
 func scopeOptionsFor(ctx context.Context) []string {
 	options := []string{scopeMine, scopeUnassigned}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return options
 	}
-	switch actor.Permissions.RowScope {
-	case principal.RowScopeAll:
-		return append(options, scopeTeam, scopeAll)
-	case principal.RowScopeTeam:
-		return append(options, scopeTeam)
-	default:
-		return options
+	if auth.TeamWeekReachOf(ctx) != auth.ReachesNoTeam {
+		options = append(options, scopeTeam)
 	}
+	if actor.Permissions.RowScope == principal.RowScopeAll {
+		options = append(options, scopeAll)
+	}
+	return options
 }
 
 // resolveScope answers which scope this read runs at, or refuses.

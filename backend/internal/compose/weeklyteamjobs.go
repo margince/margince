@@ -29,8 +29,9 @@ import (
 // snapshotTeams freezes each live team's week, once the member reviews are in.
 //
 // One snapshot per team, assembled under the authority of a member who leads
-// it: the read is of frozen rows the team's own contacts wrote, and the tier gate
-// on TeamReview is what stops an own-scoped seat asking for one.
+// it: the read is of frozen rows the team's own contacts wrote, and the gate on
+// TeamReview refuses every member who does not lead it, so the loop below
+// moves on to the next candidate.
 func (w *weeklyGenerateWorker) snapshotTeams(
 	ctx context.Context, wsID ids.UUID, now time.Time, failedMembers map[ids.UUID]bool,
 ) []error {

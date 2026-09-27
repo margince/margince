@@ -214,8 +214,8 @@ A **team** (`team` table) is a named group; **`team_membership`** joins users to
 1. **They are a share target**, and this is now the primary job. A record grant can name a team
    instead of a contact, so everyone in it — present and future members — gets the widened access.
    Sharing with a group is one act rather than one per member.
-2. **They resolve `row_scope: team`** for a role that carries it. No seeded role does any more:
-   putting a rep in a team does not by itself let them edit that team's records. An operator who
+2. **They resolve `row_scope: team`** for a role that carries it. Of the seeded roles only
+   `manager` does: putting a rep in a team does not by itself let them edit that team's records. An operator who
    wants standing write access among colleagues authors a custom role at `team` scope, and the
    predicate still renders the arm for it.
 
@@ -234,6 +234,17 @@ scoped to a team, but the grants still come from the role.)
    Neither surface WIDENS what the asker may read. The coaching layer on a meeting brief attaches
    to the brief that lead would have got anyway — a lead and their rep still see two differently
    scoped briefs of one meeting, because every read here is caller-scoped.
+
+4. **They answer "may I read this team's coaching week?"** — the frozen week that names each
+   member with a verdict their lead is meant to raise. Row scope does not answer it: a `read_only`
+   seat reaches every record and leads nobody. `auth.TeamWeekReachOf` answers it once, for both
+   `GET /weekly-reviews/team` and the `team` entry in the Worklist's `scope_options`, so Home never
+   offers a team picker the server refuses. A seat holding `team_oversight.read` (seeded to
+   `admin` and `management`) opens every team. A coaching seat, as `auth.RequireCoach` defines it,
+   opens a team it is a live member of — `team_membership` records who is on a team, not who
+   leads it, so the coaching role is what says "lead". Every other seat, and every own-scoped
+   seat, is refused with 403. A lead asking about a team they are not on gets 404, so a team id
+   cannot be probed for existence.
 
 ## A user with no role sees nothing
 

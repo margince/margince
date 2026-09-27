@@ -385,7 +385,8 @@ const ruleDealRoomSession = "deal_room_session"
 const roleAdmin = "admin"
 
 // coachingRoles are the seats that may raise a coaching notice for somebody
-// else: the two leadership seats and the Team Lead.
+// else: the two leadership seats and the Team Lead. The same list says who
+// leads the team they are on, for TeamWeekReachOf.
 //
 // A role list rather than an object grant, for the reason RequireAdmin is one:
 // what is being authorized is speaking to a colleague, which is not a CRUD verb
@@ -421,15 +422,20 @@ func RequireCoach(ctx context.Context) error {
 	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
 		return err
 	}
-	if p.Type != principal.PrincipalHuman {
+	if p.Type != principal.PrincipalHuman || !coaches(p) {
 		return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
 	}
+	return nil
+}
+
+// coaches reports whether this seat holds a coaching role.
+func coaches(p principal.Principal) bool {
 	for _, role := range coachingRoles {
 		if slices.Contains(p.Permissions.RoleKeys, role) {
-			return nil
+			return true
 		}
 	}
-	return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
+	return false
 }
 
 // RequireAdmin admits only a principal carrying the workspace "admin" role.

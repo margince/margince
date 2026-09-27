@@ -282,6 +282,11 @@ const (
 	// construction: the licensee, the entitlement and the contract terms stay
 	// on objLicense, so Management can plan headcount without reading them.
 	objSeatUsage = "seat_usage"
+	// Every team's coaching week, read by a seat that leads none of them. A
+	// lead reads their own team's week without it. Admin and management hold
+	// read; read_only holds nothing, because reaching every record is not a
+	// claim to read a manager's verdict on a named colleague.
+	objTeamOversight = "team_oversight"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do

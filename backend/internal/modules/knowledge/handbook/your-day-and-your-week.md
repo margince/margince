@@ -347,8 +347,11 @@ Two honest notes carried on the page itself:
 - Where nobody was measured: "No member snapshots are available for this week.
   Performance is not measured." — rather than a page of zeroes.
 
-A team's week needs a grant that reaches past your own rows, and the two ways of
-lacking one answer differently. A seat that reaches only its own records is told
-plainly that this is not theirs. A seat that *could* read a team, asking about
-one it does not lead, gets **not found** — exactly what a team that does not
-exist returns, so who leads what cannot be mapped by trying.
+A team's week is for the team's lead, and for a role that oversees every team —
+Admin and Management out of the box. Reaching every record is not enough: a
+read-only seat sees the whole workspace and is still not offered the team view.
+The picker lists the teams you lead, or every team if your role oversees them
+all. A seat that may open no team's week is told plainly that this is not
+theirs. A lead asking about a team they are not on gets **not found** — exactly
+what a team that does not exist returns, so who leads what cannot be mapped by
+trying.
