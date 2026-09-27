@@ -204,6 +204,9 @@ var writeAuthorityProbes = map[string]bool{
 	// before that vocabulary is consulted — a probe missing from this map
 	// produces no site at all, and its callers then read as ungated.
 	"HoldWritableLive": true,
+	// EnsureChangeable is the object grant and the seat ceiling in front of
+	// EnsureWritableLive, recorded here for the same reason.
+	"EnsureChangeable": true,
 }
 
 // recordAuthorityProbes are the single-row probes that answer "may this caller
@@ -212,7 +215,7 @@ var writeAuthorityProbes = map[string]bool{
 // stays in the census rather than dropping out of the gate's sight.
 var recordAuthorityProbes = map[string]bool{
 	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleForSubjectRights": true,
-	"VisibleTo": true,
+	"VisibleTo": true, "EnsureReadable": true,
 	// The rendered list predicates. They name their table in a different
 	// argument, which tableArgIndex accounts for.
 	"ScopeClauseFor": true, "VisiblePredicate": true,

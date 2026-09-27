@@ -226,6 +226,9 @@ var rowScopeSpellings = map[string]bool{
 	// unscoped, and the fix a reader would reach for from that message is a
 	// second, weaker call over the same row.
 	"EnsureWritable": true, "EnsureWritableLive": true, "HoldWritableLive": true,
+	// The whole-record admissions open with the object grant and then call
+	// EnsureVisible and EnsureWritableLive, so they bound the row the same way.
+	"EnsureReadable": true, "EnsureChangeable": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a

@@ -213,7 +213,9 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 }
 
 // GetContact returns one contact with child rows; archived rows resolve
-// only under IncludeArchived (they stay fetchable by id after merge).
+// only under IncludeArchived (they stay fetchable by id after merge). The
+// object grant is asked before the transaction as well as inside
+// EnsureReadable, so a caller holding none costs no connection.
 func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived storekit.ArchivedFilter) (crmcontracts.Contact, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return crmcontracts.Contact{}, err
@@ -224,7 +226,7 @@ func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived store
 	}
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
-		if err := auth.EnsureVisible(ctx, tx, "contact", id.UUID); err != nil {
+		if err := auth.EnsureReadable(ctx, tx, "contact", id.UUID); err != nil {
 			return err
 		}
 		out, err = readContact(ctx, tx, id, archived, active)
@@ -245,10 +247,7 @@ func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived store
 func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 	archived storekit.ArchivedFilter, active CustomColumns,
 ) (crmcontracts.Contact, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return crmcontracts.Contact{}, err
-	}
-	if err := auth.EnsureVisible(ctx, tx, "contact", id.UUID); err != nil {
+	if err := auth.EnsureReadable(ctx, tx, "contact", id.UUID); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	return readContact(ctx, tx, id, archived, active.cols)
@@ -309,7 +308,7 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 	}
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
+		if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
 			return err
 		}
 		current, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
