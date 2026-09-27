@@ -424,7 +424,7 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// value alone would tell the subject their title is X while the row
 		// also holds that it used to say Y until a message dated Z replaced it,
 		// which is precisely the sort of held-but-unstated fact Art. 15 owes.
-		{&pkg.EnrichedFields, `SELECT ppf.field, ppf.value, ppf.evidence_snippet, ppf.source_ref,
+		{&pkg.EnrichedFields, `SELECT ppf.field, ppf.value, ppf.value_key, ppf.evidence_snippet, ppf.source_ref,
 		          ppf.confidence, ppf.source, ppf.captured_by, ppf.updated_at,
 		          ppf.observed_at, ppf.superseded_value, ppf.superseded_captured_by,
 		          ppf.superseded_observed_at
