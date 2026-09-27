@@ -424,12 +424,20 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 // called off at the moment we noticed, and every question about when bookings
 // fell through would answer with the sync schedule instead of the calendar.
 func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connectorName string) error {
-	canceller, ok := sink.(connector.MeetingCanceller)
-	if !ok {
+	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
+	var err error
+	// The identity travels too where the sink can use it: an event matched onto
+	// an imported meeting left no row under its own key, and the identity is
+	// the only thing that still names that meeting.
+	if identified, ok := sink.(connector.IdentifiedMeetingCanceller); ok {
+		identity := connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay}
+		err = identified.CancelIdentifiedMeeting(ctx, key, identity, m.occurredAt)
+	} else if canceller, ok := sink.(connector.MeetingCanceller); ok {
+		err = canceller.CancelMeeting(ctx, key, m.occurredAt)
+	} else {
 		return nil
 	}
-	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
-	if err := canceller.CancelMeeting(ctx, key, m.occurredAt); err != nil {
+	if err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			return nil
 		}

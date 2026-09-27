@@ -52,7 +52,7 @@ var meetingStart = time.Date(2026, 3, 4, 9, 0, 0, 0, time.UTC)
 // calendarSink is the Sink as compose builds it for a calendar connector: the
 // cancel seam wired to the module that owns the activity table.
 func calendarSink(e *integration.Env) *capture.Sink {
-	return capture.NewSink(e.DB()).WithMeetingCloser(activities.CancelCapturedMeetingTx)
+	return capture.NewSink(e.DB()).WithMeetingCloser(activities.CancelCapturedMeetingTx, activities.CancelMeetingByIDTx)
 }
 
 // captureMeeting lands one meeting activity through the real Sink, exactly as a

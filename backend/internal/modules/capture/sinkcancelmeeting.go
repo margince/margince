@@ -42,11 +42,21 @@ type MeetingCloser func(
 	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, at time.Time,
 ) (ids.ActivityID, bool, error)
 
+// MeetingCloserByID marks one known meeting cancelled: the row a calendar event
+// resolved to through its cross-door identity. activities owns the write, as it
+// owns MeetingCloser's; `key` is the calendar event's own natural key, carried
+// as the transition's idempotency key.
+type MeetingCloserByID func(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, key connector.NaturalKey, at time.Time,
+) (bool, error)
+
 // WithMeetingCloser returns a copy that closes a captured meeting when the
-// calendar says it is off.
-func (s *Sink) WithMeetingCloser(closeMeeting MeetingCloser) *Sink {
+// calendar says it is off — by its natural key, and, when nothing was captured
+// under that key, by the row its cross-door identity resolves to.
+func (s *Sink) WithMeetingCloser(closeMeeting MeetingCloser, closeByID MeetingCloserByID) *Sink {
 	c := *s
 	c.cancelMeeting = closeMeeting
+	c.cancelMeetingByID = closeByID
 	return &c
 }
 
@@ -62,6 +72,21 @@ func (s *Sink) WithMeetingCloser(closeMeeting MeetingCloser) *Sink {
 // connector's alternative is to fail a whole calendar pull over a verb this
 // deployment never wired.
 func (s *Sink) CancelMeeting(ctx context.Context, key connector.NaturalKey, at time.Time) error {
+	return s.CancelIdentifiedMeeting(ctx, key, connector.CrossDoorIdentity{}, at)
+}
+
+// CancelIdentifiedMeeting is CancelMeeting for an event that also states its
+// cross-door identity, satisfying connector.IdentifiedMeetingCanceller.
+//
+// The natural key answers first, exactly as CancelMeeting does. Only when
+// nothing was captured under it — the event was matched onto a meeting another
+// door filed, so capture wrote no row of its own — does the identity resolve
+// the row, through the SAME bindable resolver capture matched it with: a row
+// held by another seat, or no longer live, answers not-found here as it did
+// there, so this cancels only the meeting this calendar's own capture joined.
+func (s *Sink) CancelIdentifiedMeeting(
+	ctx context.Context, key connector.NaturalKey, identity connector.CrossDoorIdentity, at time.Time,
+) error {
 	if s.cancelMeeting == nil {
 		return nil
 	}
@@ -91,7 +116,19 @@ func (s *Sink) CancelMeeting(ctx context.Context, key connector.NaturalKey, at t
 			actor.ID, want)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, _, err := s.cancelMeeting(ctx, tx, key, at)
+		id, _, err := s.cancelMeeting(ctx, tx, key, at)
+		if err != nil || !id.IsZero() || s.cancelMeetingByID == nil {
+			// An error, a row found under the key (cancelled or already
+			// answered), or no by-identity seam: the natural key had the word.
+			return err
+		}
+		matched, found, err := s.activityHoldingIdentity(ctx, tx, connector.NormalizedRecord{
+			NaturalKey: key, CrossDoorIdentity: identity,
+		})
+		if err != nil || !found {
+			return err
+		}
+		_, err = s.cancelMeetingByID(ctx, tx, matched, key, at)
 		return err
 	})
 }

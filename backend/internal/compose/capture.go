@@ -317,7 +317,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// Without it a cancelled meeting stays on the timeline as booked: the
 		// provider stops listing an event once it is off, so the pull that
 		// carries the cancellation is the only one that will ever mention it.
-		WithMeetingCloser(activities.CancelCapturedMeetingTx).
+		WithMeetingCloser(activities.CancelCapturedMeetingTx, activities.CancelMeetingByIDTx).
 		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every

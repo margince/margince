@@ -167,6 +167,16 @@ type MeetingCanceller interface {
 	CancelMeeting(ctx context.Context, key NaturalKey, at time.Time) error
 }
 
+// IdentifiedMeetingCanceller is MeetingCanceller for an event that also states
+// its cross-door identity. A cancelled event that was matched onto a meeting
+// another door filed (an import, a colleague's calendar) has no row under its
+// own natural key; the identity is what still finds it. Optional, for
+// MeetingCanceller's reason: a sink that implements only CancelMeeting cancels
+// by natural key alone, as before.
+type IdentifiedMeetingCanceller interface {
+	CancelIdentifiedMeeting(ctx context.Context, key NaturalKey, identity CrossDoorIdentity, at time.Time) error
+}
+
 // MessageRemover is the mail connectors' equivalent: the provider reports that
 // a message this workspace captured is gone from the mailbox it came from.
 //

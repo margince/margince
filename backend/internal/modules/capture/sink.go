@@ -59,7 +59,11 @@ type Sink struct {
 	// cancelMeeting closes a captured meeting the calendar says is off — called
 	// off by its organizer, or declined by the seat whose calendar it is. Nil
 	// captures meetings and cancels none.
-	cancelMeeting     MeetingCloser
+	cancelMeeting MeetingCloser
+	// cancelMeetingByID closes the meeting a cancelled event's cross-door
+	// identity resolved to, when nothing was captured under its natural key.
+	// Nil cancels by natural key alone.
+	cancelMeetingByID MeetingCloserByID
 	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
