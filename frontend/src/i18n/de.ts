@@ -8243,6 +8243,10 @@ export const de = {
   "captureExclusions.containerLabel": "Ordner oder Label",
   "captureExclusions.noContainers":
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
+  "captureExclusions.containersUnreadable":
+    "Deine Ordner konnten nicht gelesen werden",
+  "captureExclusions.containersUnreadableBody":
+    "Der Mail-Anbieter hat nicht geantwortet, daher fehlen in dieser Liste möglicherweise Ordner. Versuche es gleich noch einmal, oder schließe Absender nach Adresse oder Domain aus.",
   "captureExclusions.kindLabel": "Art",
   "captureExclusions.addLabel": "Adresse oder Domain ausschließen",
   "captureExclusions.placeholder.address": "name@beispiel.example",

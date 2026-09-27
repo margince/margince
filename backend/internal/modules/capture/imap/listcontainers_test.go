@@ -85,6 +85,58 @@ func TestListContainersSurfacesADialFailure(t *testing.T) {
 	}
 }
 
+// A LIST the server does not answer is the server not answering. It surfaces
+// as ErrUnreachable so the transport above tells "we could not ask your
+// mailbox" apart from "your mailbox has no folders" — different facts, and a
+// reader acts on them differently.
+func TestListContainersMarksAFailedListAsUnreachable(t *testing.T) {
+	addr := listenRefusingList(t)
+	c := NewStanding().withDialer(plainDialer(addr))
+
+	_, err := c.ListContainers(context.Background(), standingAuth(t))
+	if !errors.Is(err, connector.ErrUnreachable) {
+		t.Fatalf("err = %v, want it marked unreachable", err)
+	}
+}
+
+// listenRefusingList serves a store whose LIST always fails.
+func listenRefusingList(t *testing.T) string {
+	t.Helper()
+	mem := imapmemserver.New()
+	user := imapmemserver.NewUser(memUser, memPass)
+	if err := user.Create("INBOX", nil); err != nil {
+		t.Fatal(err)
+	}
+	mem.AddUser(user)
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := imapserver.New(&imapserver.Options{
+		NewSession: func(*imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
+			return &refusingListSession{Session: mem.NewSession()}, nil, nil
+		},
+		InsecureAuth: true,
+	})
+	go func() {
+		//craft:ignore swallowed-errors the listener closes at test end; Serve's shutdown error is the expected exit
+		_ = srv.Serve(ln)
+	}()
+	t.Cleanup(func() {
+		//craft:ignore swallowed-errors test-server shutdown; the assertions already ran
+		_ = srv.Close()
+	})
+	return ln.Addr().String()
+}
+
+// refusingListSession answers every LIST with a failure.
+type refusingListSession struct{ imapserver.Session }
+
+func (s *refusingListSession) List(*imapserver.ListWriter, string, []string, *imapv2.ListOptions) error {
+	return errors.New("LIST unavailable")
+}
+
 func containerNames(got []connector.NamedContainer) []string {
 	out := make([]string, 0, len(got))
 	for _, m := range got {

@@ -8191,6 +8191,9 @@ export const vi = {
   "captureExclusions.containerLabel": "Thư mục hoặc nhãn",
   "captureExclusions.noContainers":
     "Hộp thư này không báo cáo thư mục nào. Hãy kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hoặc tên miền.",
+  "captureExclusions.containersUnreadable": "Không đọc được thư mục của bạn",
+  "captureExclusions.containersUnreadableBody":
+    "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Hãy thử lại sau giây lát, hoặc loại trừ theo địa chỉ hoặc tên miền.",
   "captureExclusions.kindLabel": "Loại",
   "captureExclusions.addLabel": "Loại trừ một địa chỉ hoặc tên miền",
   "captureExclusions.placeholder.address": "ten@vidu.com",

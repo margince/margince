@@ -105,3 +105,98 @@ func TestListContainersRefusesMalformedAuth(t *testing.T) {
 		t.Fatal("a malformed auth bundle listed containers instead of failing")
 	}
 }
+
+// The folder somebody wants kept out of capture is usually NOT at the root: it
+// is under Inbox, where a mail client puts a folder you make while reading. A
+// listing of the root alone offers everything except the folders somebody
+// actually wants, so the walk descends — and a child carries its parents' names
+// so the owner recognises it and two "Archive"s stay apart.
+func TestListFoldersDescendsIntoChildFolders(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/me/mailFolders", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value": []map[string]any{
+				{"id": "inbox", "displayName": "Posteingang", "childFolderCount": 1},
+				{"id": "sent", "displayName": "Gesendet", "childFolderCount": 0},
+			},
+		})
+	})
+	mux.HandleFunc("/me/mailFolders/inbox/childFolders", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value": []map[string]any{
+				{"id": "privat", "displayName": "Privat", "childFolderCount": 0},
+			},
+		})
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	got, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	if err != nil {
+		t.Fatalf("ListFolders: %v", err)
+	}
+	byID := map[string]string{}
+	for _, f := range got {
+		byID[f.ID] = f.Name
+	}
+	if byID["privat"] != "Posteingang/Privat" {
+		t.Fatalf("nested folder = %q, want it qualified by its parent", byID["privat"])
+	}
+	if byID["inbox"] != "Posteingang" || byID["sent"] != "Gesendet" {
+		t.Fatalf("root folders = %+v, want them offered unqualified", byID)
+	}
+}
+
+// A folder that reports no children is not asked for them: the walk spends one
+// request per folder that has something below it, not per folder.
+func TestListFoldersDoesNotAskLeavesForChildren(t *testing.T) {
+	asked := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("/me/mailFolders", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value": []map[string]any{
+				{"id": "sent", "displayName": "Gesendet", "childFolderCount": 0},
+			},
+		})
+	})
+	mux.HandleFunc("/me/mailFolders/sent/childFolders", func(w http.ResponseWriter, _ *http.Request) {
+		asked = true
+		writeJSON(w, map[string]any{"value": []map[string]any{}})
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	if _, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1"); err != nil {
+		t.Fatalf("ListFolders: %v", err)
+	}
+	if asked {
+		t.Error("a folder with no children was asked for its children")
+	}
+}
+
+// A tree that never bottoms out cannot turn one listing into an unbounded
+// crawl: the walk stops and returns what it read, because a long list that
+// stops is more useful to a picker than no list at all.
+func TestListFoldersStopsOnAnEndlesslyNestedMailbox(t *testing.T) {
+	mux := http.NewServeMux()
+	// Every folder claims one child, and every child claims another.
+	endless := func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{
+			"value": []map[string]any{
+				{"id": "deeper", "displayName": "Tiefer", "childFolderCount": 1},
+			},
+		})
+	}
+	mux.HandleFunc("/me/mailFolders", endless)
+	mux.HandleFunc("/me/mailFolders/deeper/childFolders", endless)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	got, err := NewAPI(srv.Client(), srv.URL).ListFolders(context.Background(), "access-1")
+	if err != nil {
+		t.Fatalf("ListFolders: %v", err)
+	}
+	if len(got) == 0 || len(got) > folderListMaxPages {
+		t.Fatalf("got %d folders, want a bounded non-empty listing", len(got))
+	}
+}

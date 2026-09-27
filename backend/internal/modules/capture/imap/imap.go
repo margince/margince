@@ -383,7 +383,11 @@ func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]
 
 	mailboxes, err := client.List("", "*", nil).Collect()
 	if err != nil {
-		return nil, fmt.Errorf("imap: listing the account's mailboxes: %w", err)
+		// Joined with ErrUnreachable like every other failed command on this
+		// transport: a LIST that did not answer is the server not answering,
+		// and the caller tells "we could not ask" apart from "no folders".
+		return nil, fmt.Errorf("imap: listing the account's mailboxes: %w",
+			errors.Join(ErrUnreachable, err))
 	}
 	out := make([]connector.NamedContainer, 0, len(mailboxes))
 	for _, m := range mailboxes {

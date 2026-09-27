@@ -8406,6 +8406,9 @@ export const en = {
   "captureExclusions.containerLabel": "Folder or label",
   "captureExclusions.noContainers":
     "This mailbox reported no folders. Connect a mailbox that has them, or keep senders out by address or domain instead.",
+  "captureExclusions.containersUnreadable": "Your folders could not be read",
+  "captureExclusions.containersUnreadableBody":
+    "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",
   "captureExclusions.kindLabel": "Kind",
   "captureExclusions.addLabel": "Exclude address or domain",
   "captureExclusions.placeholder.address": "name@example.com",

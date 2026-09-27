@@ -23,7 +23,11 @@ const RULES = [
 
 type Call = { method: string; url: string; body: unknown };
 
-function backend(allow: GrantSpec, rules: unknown[] = RULES) {
+function backend(
+  allow: GrantSpec,
+  rules: unknown[] = RULES,
+  connectedProvider = "gmail",
+) {
   const calls: Call[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -44,10 +48,30 @@ function backend(allow: GrantSpec, rules: unknown[] = RULES) {
           headers: { "Content-Type": "application/json" },
         });
       }
+      // The seat's own connections: the picker asks WHICH mailbox's folders
+      // it is offering, so a fixture without one offers nothing.
+      if (url.includes("/connectors") && !url.includes("/containers")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "conn-1",
+                provider: connectedProvider,
+                status: "connected",
+                scopes: [],
+              },
+            ],
+            providers: [],
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
       if (url.includes("/containers")) {
         return new Response(
           JSON.stringify({
-            containers: [{ id: "Label_7", name: "Privat" }],
+            containers: url.includes("/graph/")
+              ? [{ id: "AAMk-privat", name: "Posteingang/Privat" }]
+              : [{ id: "Label_7", name: "Privat" }],
           }),
           { headers: { "Content-Type": "application/json" } },
         );
@@ -374,5 +398,175 @@ describe("the container kind", () => {
         name: en["captureExclusions.scope.workspace"],
       }),
     ).toBeNull();
+  });
+});
+
+describe("the picker follows the seat's own mailbox", () => {
+  // The picker used to ask Gmail whatever the reader had connected, so an
+  // Outlook or IMAP seat opened it, was answered 404, and saw "no folders" —
+  // the one kind that exists to save them typing a provider token.
+  it("asks the connected provider, not a fixed one", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend(CAPTURE_EDITOR, RULES, "graph");
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(
+      await screen.findByRole("option", { name: "Posteingang/Privat" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.add"] }),
+    );
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "POST")).toBe(true),
+    );
+    expect(
+      calls.some((call) => call.url.includes("/connectors/graph/containers")),
+    ).toBe(true);
+    expect(
+      calls.some((call) => call.url.includes("/connectors/gmail/containers")),
+    ).toBe(false);
+    // Qualified by the provider that actually answered.
+    expect(calls.find((call) => call.method === "POST")?.body).toMatchObject({
+      kind: "container",
+      value: "graph:AAMk-privat",
+    });
+  });
+
+  // A provider that did not answer is not a mailbox with no folders, and the
+  // two sentences send a reader somewhere different.
+  it("says a failed read is a failure, not an empty mailbox", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backend(CAPTURE_EDITOR);
+    vi.stubGlobal(
+      "fetch",
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (request.url.includes("/containers")) {
+          return new Response(
+            JSON.stringify({
+              code: "provider_unreachable",
+              title: "no answer",
+            }),
+            { status: 502, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return fetchMock(input, init);
+      },
+    );
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(en["captureExclusions.containersUnreadable"]),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText(en["captureExclusions.noContainers"])).toBeNull();
+  });
+
+  // The text box and the picker share one draft. An address typed and then
+  // left behind by a switch to the container kind used to pass the submit
+  // guard and fail at the store.
+  it("drops a draft that the new kind cannot mean", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend(CAPTURE_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: en["captureExclusions.addLabel"] }),
+      "someone@example.com",
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.add"] }),
+    );
+    // Nothing was carried across, so nothing was submitted.
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+  });
+
+  // A container rule is forced to the reader's own scope, so the company-scope
+  // refusal must not follow them into it. Choosing "whole company" for an
+  // address and then switching to the folder picker used to leave the picker
+  // disabled for a rule that binds nobody but the reader.
+  it("does not carry the company-scope refusal into the folder picker", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backend(READER, [RULES[0]]);
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.scope.workspace"],
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    const picker = (await screen.findByRole("combobox")) as HTMLSelectElement;
+    expect(picker.disabled).toBe(false);
   });
 });
