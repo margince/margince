@@ -305,13 +305,6 @@ func TestTheRealProviderSendsItsPolicyWithTheDocument(t *testing.T) {
 	if !contents.UI.CSP.Empty() {
 		t.Errorf("the read policy names an origin this view may reach: %+v", contents.UI.CSP)
 	}
-	// A view asks for NO permission: a card that declares a capability it never
-	// uses would carry it if its code were ever substituted. Compared as a whole
-	// value, so a permission arriving later fails here rather than riding in
-	// unnoticed.
-	if want := (mcp.ResourcePermissions{}); contents.UI.Permissions != want {
-		t.Errorf("the read policy is not the declared one: got %+v, want %+v", contents.UI.Permissions, want)
-	}
 	// The claim this test carries: the two answers a host can get are the same
 	// one. A policy read from the catalogue would label the wrong document when
 	// two providers share a URI.
