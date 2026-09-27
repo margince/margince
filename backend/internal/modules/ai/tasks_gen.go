@@ -30,7 +30,8 @@ const (
 	TaskDocumentExtract Task = "document_extract"
 	// TaskDraftReply is Six sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them.
 	TaskDraftReply Task = "draft_reply"
-	TaskEnrich     Task = "enrich"
+	// TaskEnrich is Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number.
+	TaskEnrich Task = "enrich"
 	// TaskGrowthFit is How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it.
 	TaskGrowthFit Task = "growth_fit"
 	// TaskNlSearch is Declared, not built (ADR-0074).
@@ -138,7 +139,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "67b952d196c6d1ba60804f72c6aeaca5d482d9035c6ae7eab60eb963f41fcd7f"
+const TaskContractHash = "525a7cf89af46e7516e6d8194cd25a1eafa9b62360f2df49c789c4acdee4c31a"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

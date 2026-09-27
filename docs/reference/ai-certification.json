@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 45,
+    "sites_best_current": 44,
     "sites_best_partial": 0,
-    "sites_best_stale": 2,
+    "sites_best_stale": 3,
     "sites_absent": 0,
-    "scenarios": 156,
+    "scenarios": 157,
     "records": 177,
     "bindings": 17,
     "self_judged_records": 4
@@ -241,7 +241,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "cases_failing_often": 0,
@@ -744,7 +744,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "cases_failing_often": 0,
@@ -1748,7 +1748,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 8,
           "cases_failing_often": 0,
@@ -2251,7 +2251,7 @@
             "env": "eu_hosted"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 6,
           "passed": 5,
           "cases_failing_often": 0,
@@ -3034,9 +3034,9 @@
         "env": "cloud_frontier"
       },
       "sites": 41,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 579,
       "passed": 571,
       "reliability": 0.9861830742659758,
@@ -3134,9 +3134,9 @@
         "env": "cloud_frontier"
       },
       "sites": 6,
-      "sites_current": 4,
+      "sites_current": 3,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 3,
       "runs": 177,
       "passed": 154,
       "reliability": 0.8700564971751412,
@@ -3234,9 +3234,9 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 4,
+      "sites_current": 3,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 3,
       "runs": 159,
       "passed": 139,
       "reliability": 0.8742138364779874,
@@ -3314,9 +3314,9 @@
         "env": "cloud_frontier"
       },
       "sites": 41,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 723,
       "passed": 647,
       "reliability": 0.8948824343015215,
@@ -8463,23 +8463,20 @@
       "key": "enrich/signature",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "google/gemma-4-26b-a4b-it",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "contact_fields_from_a_mail_signature",
           "expects": "accepted",
           "graded_by": "mechanical",
           "file": "backend/internal/compose/aicert/corpus/enrich/basic_01.yaml"
+        },
+        {
+          "name": "every_number_a_signature_lists",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/enrich/every_number_of_a_signature_01.yaml"
         }
       ],
       "records": [
@@ -8489,10 +8486,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -8504,7 +8501,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_fields_from_a_mail_signature"
+            ]
+          }
         },
         {
           "binding": {
@@ -8515,7 +8517,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 1,
+          "scenarios_total": 2,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -8527,9 +8529,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "contact_fields_from_a_mail_signature"
+            ],
+            "prompt_changed": [
               "contact_fields_from_a_mail_signature"
             ],
             "grader_changed": [
@@ -8543,10 +8548,10 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -8558,7 +8563,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_fields_from_a_mail_signature"
+            ]
+          }
         },
         {
           "binding": {
@@ -8569,7 +8579,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": null,
-          "scenarios_total": 1,
+          "scenarios_total": 2,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -8589,10 +8599,10 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
           "runs": 6,
           "passed": 5,
           "reliability": 0.8333333333333334,
@@ -8604,7 +8614,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_fields_from_a_mail_signature"
+            ]
+          }
         },
         {
           "binding": {
@@ -8612,10 +8627,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
+          "scenarios_measured": 0,
+          "scenarios_total": 2,
           "runs": 9,
           "passed": 8,
           "reliability": 0.8888888888888888,
@@ -8627,7 +8642,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_fields_from_a_mail_signature"
+            ]
+          }
         },
         {
           "binding": {
@@ -8638,7 +8658,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 1,
+          "scenarios_total": 2,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -8650,9 +8670,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the case and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it",
+          "stale_reason": "the case and the prompt this build sends and how a run is graded changed under scenario contact_fields_from_a_mail_signature since the record scored it",
           "stale_cause": {
             "case_changed": [
+              "contact_fields_from_a_mail_signature"
+            ],
+            "prompt_changed": [
               "contact_fields_from_a_mail_signature"
             ],
             "grader_changed": [

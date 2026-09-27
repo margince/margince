@@ -300,6 +300,19 @@ func signatureFields(phone, phoneSnippet string) func([]string) string {
 	return literal(mustJSON(map[string]any{"fields": fields}))
 }
 
+// signatureNumbers answers the several-numbers scenario with its title, its
+// employer and one phone entry per number given, each quoting itself.
+func signatureNumbers(numbers ...string) func([]string) string {
+	fields := []map[string]any{
+		{"field": "title", "value": "Regional Director, Asia-Europe Lanes", "evidence_snippet": "Regional Director, Asia-Europe Lanes", "confidence": 0.9},
+		{"field": "company_name", "value": "Kestrel Freight GmbH", "evidence_snippet": "Kestrel Freight GmbH", "confidence": 0.9},
+	}
+	for _, number := range numbers {
+		fields = append(fields, map[string]any{"field": "phone", "value": number, "evidence_snippet": number, "confidence": 0.9})
+	}
+	return literal(mustJSON(map[string]any{"fields": fields}))
+}
+
 // extractionProofs covers the sites whose answer is values read off a page.
 func extractionProofs() map[string]judgelessProof {
 	return map[string]judgelessProof{
@@ -324,6 +337,16 @@ func extractionProofs() map[string]judgelessProof {
 			alsoWrong: []func([]string) string{pricedModels([6]string{"aurora-large", "5", "25", "0.5", "6.25", "s0"},
 				[6]string{"aurora-mini", "0.25", "1.5", "0", "0", "s1"},
 				[6]string{"aurora-ultra", "5", "25", "0.5", "6.25", "s0"})},
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		// The defect this scenario exists for: one number of four, and four
+		// numbers merged into one entry whose snippet is on no line.
+		"every_number_a_signature_lists": {
+			correct: signatureNumbers("+49 175 5550142", "+84 35 555 0143", "+65 9555 0144", "+66 97 555 0145"),
+			wrong:   signatureNumbers("+49 175 5550142"),
+			alsoWrong: []func([]string) string{
+				signatureNumbers("+49 175 5550142, +84 35 555 0143, +65 9555 0144, +66 97 555 0145"),
+			},
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		// The quoted reply's mobile is somebody else's, outside the signature.

@@ -217,6 +217,7 @@ tasks:
     sites: [signature]
     company_context: none
     cost_unit: per_contact
+    doc: "Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number."
 
   summarize:
     display_name: "Record summary"
