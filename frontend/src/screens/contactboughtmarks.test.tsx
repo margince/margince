@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
@@ -174,6 +174,10 @@ describe("bought values on the contact page", () => {
   it("never puts a mark inside another control", async () => {
     mount();
     await screen.findByRole("button", { name: mark("dana@bought.example") });
+    // The Employers rows mount after their own reads: wait for the row's text.
+    await waitFor(() =>
+      expect(screen.getAllByText("Bought Employer").length).toBeGreaterThan(1),
+    );
     const nested = document.querySelectorAll(
       "button button, a button, button a, a a, [role='button'] button",
     );
