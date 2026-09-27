@@ -78,7 +78,7 @@ func setupAccessWorld(t *testing.T) *accessWorld {
 		t.Fatalf("releasing the company's owner: %v", err)
 	}
 	w.archivedContact = e.SeedContact(t, "Gone Contact", &e.Rep1)
-	if _, err := e.Contacts.ArchiveContact(w.as(t, e.Rep1), ids.From[ids.ContactKind](w.archivedContact), nil); err != nil {
+	if _, err := e.Contacts.ArchiveContact(w.as(t, e.AdminUser), ids.From[ids.ContactKind](w.archivedContact), nil); err != nil {
 		t.Fatalf("archiving the contact: %v", err)
 	}
 	return w

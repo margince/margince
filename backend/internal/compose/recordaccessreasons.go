@@ -157,7 +157,9 @@ func memberWire(f accessFacts, j judgedMember) crmcontracts.RecordAccessMember {
 		ReadReasons:   v.ReadReasons,
 		ChangeReasons: v.ChangeReasons,
 	}
-	if f.detail && j.member.Roles != nil {
+	// The roster fills roles only in its management view, so a caller outside
+	// it gets none here without a second copy of that decision.
+	if j.member.Roles != nil {
 		roles := slices.Clone(j.member.Roles)
 		out.Roles = &roles
 	}
