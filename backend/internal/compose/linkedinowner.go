@@ -89,20 +89,16 @@ func ghostOwners(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
 // real own/team/all clause and auth.UnboundedFor applies capture privacy to
 // them. A member who has since been archived, suspended or removed resolves to
 // ErrNotFound and their ghosts are simply not swept — absence of authority is
-// denial, never empty permission.
+// denial, never empty permission. The seat rides along, so a read seat's
+// standing write shares confirm nothing on their behalf.
 func asGhostOwner(ctx context.Context, resolver authz.Resolver, workspace, owner ids.UUID) (context.Context, error) {
-	rbac, err := resolver.EffectiveRBAC(ctx, workspace, owner)
+	member, err := authz.MemberPrincipal(ctx, resolver, workspace, owner)
 	if err != nil {
 		return nil, err
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "user:" + owner.String(),
-		UserID:      owner,
-		OnBehalfOf:  owner,
-		Permissions: rbac.Permissions,
-		TeamIDs:     rbac.TeamIDs,
-	}), nil
+	member.ID = "user:" + owner.String()
+	member.OnBehalfOf = owner
+	return principal.WithActor(ctx, member), nil
 }
 
 // forEachGhostOwner runs one pass per member with undecided ghosts.
