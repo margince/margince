@@ -135,6 +135,17 @@ func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 	}
 }
 
+// A website field whose value IS the page read still names that site: only
+// the logo's address is an image rather than a page.
+func TestAWebsiteReadThatWritesTheWebsiteNamesTheSite(t *testing.T) {
+	site := "https://www.studiolegal.de"
+	line, _, ok := lineOf(auditRow("agent:deepread", `{"website": null}`, `{"website": "`+site+`"}`,
+		`{"source": "site_read", "source_url": "`+site+`"}`, time.Now()))
+	if !ok || line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {
+		t.Fatalf("reason %v, want the site it was read on", line.Reason)
+	}
+}
+
 // The mail reader's reply sorting is bookkeeping, not a change to report.
 func TestTheMailReadersReplySortingIsNotShown(t *testing.T) {
 	e := auditRow("system:owed_verdict", `{"owed_verdict": null, "owed_verdict_ruleset": null}`,

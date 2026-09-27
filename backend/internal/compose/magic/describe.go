@@ -128,7 +128,7 @@ func reasonFromEvidence(evidence, after map[string]any) *crmcontracts.MagicSente
 // carry `source_ref` (`site_read:https://host/path`). A logo row records the
 // IMAGE's address instead, which is often a CDN host — naming that as the
 // site would send the reader to the wrong place, so an address that is the
-// written value itself names nothing.
+// written logo itself names nothing.
 func siteOf(evidence, after map[string]any) string {
 	raw, _ := evidence["source_url"].(string)
 	if raw == "" {
@@ -138,10 +138,8 @@ func siteOf(evidence, after map[string]any) string {
 	if raw == "" {
 		return ""
 	}
-	for _, v := range after {
-		if s, ok := v.(string); ok && s == raw {
-			return ""
-		}
+	if logo, ok := after["logo"].(string); ok && logo == raw {
+		return ""
 	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
