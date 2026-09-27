@@ -345,6 +345,13 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 		if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
 			return err
 		}
+		renamed := renamesAContact(current.FullName, in)
+		if renamed {
+			// Before the row lock, in the order every name-lane writer takes it.
+			if err := lockNameLane(ctx, tx, *in.FullName); err != nil {
+				return err
+			}
+		}
 		if err := p.ApplyGuarded(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
 			if constraint, ok := storekit.CheckViolation(err); ok && constraint == "contact_owner_private_names_its_owner" {
 				return &RequiredFieldError{Field: filterOwnerID}
@@ -384,6 +391,15 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
 			return fmt.Errorf("emit contact.updated: %w", err)
+		}
+		if renamed {
+			by, err := storekit.CapturedBy(ctx)
+			if err != nil {
+				return err
+			}
+			if err := recheckContactNameForDuplicates(ctx, tx, id, by); err != nil {
+				return err
+			}
 		}
 		if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read updated contact: %w", err)
