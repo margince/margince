@@ -275,7 +275,7 @@ func (s *Service) revokePassportTx(
 		// could cut off every agent acting for an administrator has reach over
 		// that administrator's work, and one grant should not buy both the
 		// widened list and power over the contacts it lists.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf, reachDenial); err != nil {
 			return apperrors.ErrNotFound
 		}
 	}

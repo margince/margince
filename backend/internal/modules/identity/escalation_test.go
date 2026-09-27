@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -117,5 +118,79 @@ func TestTheRoleEditorRefusesAVerbTheCallerDoesNotHold(t *testing.T) {
 				t.Errorf("writing %+v on %q = %v, want admitted", tt.grant, tt.object, err)
 			}
 		})
+	}
+}
+
+// Containment of a whole seat, one axis at a time. Each case differs from a
+// contained target in exactly one way, so a check that stopped reading that
+// axis fails its own case.
+func TestWholeAccessContainmentReadsEveryAxis(t *testing.T) {
+	teamA, teamB := ids.New[ids.TeamKind](), ids.New[ids.TeamKind]()
+	mask := principal.FieldMask{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}
+	caller := Identity{
+		Teams: []ids.TeamID{teamA},
+		Permissions: principal.Permissions{
+			Objects:    map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+			RowScope:   principal.RowScopeTeam,
+			FieldMasks: []principal.FieldMask{mask},
+		},
+	}
+	contained := func() seatGrants {
+		return seatGrants{
+			teams: []ids.TeamID{teamA},
+			perms: principal.Permissions{
+				Objects:    map[string]principal.ObjectGrant{"deal": {Read: true}},
+				RowScope:   principal.RowScopeTeam,
+				FieldMasks: []principal.FieldMask{mask},
+			},
+		}
+	}
+	if !containsWholeAccess(caller, contained()) {
+		t.Fatal("a target narrower on every axis is not contained — every refusal below would pass for the wrong reason")
+	}
+	for name, widen := range map[string]func(*seatGrants){
+		"a grant the caller lacks": func(g *seatGrants) { g.perms.Objects["deal"] = principal.ObjectGrant{Delete: true} },
+		"a wider row scope":        func(g *seatGrants) { g.perms.RowScope = principal.RowScopeAll },
+		"a team the caller is not on": func(g *seatGrants) {
+			g.teams = []ids.TeamID{teamB}
+		},
+		"a mask the caller carries and the target lacks": func(g *seatGrants) { g.perms.FieldMasks = nil },
+		"leading a team the caller is not on": func(g *seatGrants) {
+			g.teams = []ids.TeamID{teamB}
+			g.perms.RowScope = principal.RowScopeOwn
+			g.perms.Objects[objectTeamLead] = principal.ObjectGrant{Read: true}
+		},
+	} {
+		target := contained()
+		widen(&target)
+		if containsWholeAccess(caller, target) {
+			t.Errorf("%s: contained, want refused", name)
+		}
+	}
+	// A team outside the caller's is harmless when nothing the target holds
+	// follows its teams.
+	ownScoped := contained()
+	ownScoped.teams = []ids.TeamID{teamB}
+	ownScoped.perms.RowScope = principal.RowScopeOwn
+	if !containsWholeAccess(caller, ownScoped) {
+		t.Error("an own-scoped target on another team was refused; its team gives it nothing")
+	}
+}
+
+// A caller holding two roles could widen one by a verb the other gives them,
+// and hold it twice over; the rule refuses that for everybody but an admin.
+func TestNobodyButAnAdminWidensARoleTheyHold(t *testing.T) {
+	twoRoles := Identity{Roles: []string{"custom_a", "custom_b"}}
+	if err := refuseWideningOwnRole(twoRoles, "custom_a", true); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("widening a held role: %v, want permission denied", err)
+	}
+	if err := refuseWideningOwnRole(twoRoles, "custom_a", false); err != nil {
+		t.Errorf("narrowing a held role: %v, want allowed", err)
+	}
+	if err := refuseWideningOwnRole(twoRoles, "custom_c", true); err != nil {
+		t.Errorf("widening a role the caller does not hold: %v, want allowed", err)
+	}
+	if err := refuseWideningOwnRole(Identity{Roles: []string{roleAdmin}}, roleAdmin, true); err != nil {
+		t.Errorf("an admin widening the admin role: %v, want allowed", err)
 	}
 }

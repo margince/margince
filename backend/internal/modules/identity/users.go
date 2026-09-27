@@ -72,6 +72,7 @@ var (
 	// DIFFERENT 404: the admin mistyped a role, not a colleague. Wrapping keeps
 	// the status while letting the handler say which of the two happened.
 	errUnknownRole = fmt.Errorf("%w: no role with this key is defined", apperrors.ErrNotFound)
+	errOwnRole     = fmt.Errorf("%w: a member may not change their own role", apperrors.ErrPermissionDenied)
 )
 
 // ReactivateUser returns a deactivated member to 'active' so they may sign in
@@ -85,7 +86,7 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Restoring an admin somebody removed is the mirror of removing one, so
 		// it carries the same ceiling.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachDenial); err != nil {
 			return err
 		}
 		var status, seat string
@@ -217,7 +218,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		// A delegated holder must not lock out an administrator. The last-admin
 		// invariant below is a different question — it stops the LAST one going
 		// whoever asks — and neither substitutes for the other.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, in.UserID); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, in.UserID, reachDenial); err != nil {
 			return err
 		}
 		var status string
@@ -395,15 +396,23 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A delegated caller re-roling themselves passes every containment
+		// check trivially, since everybody contains themselves, and would hand
+		// themselves record work they lack. The literal admin already holds the
+		// ceiling, so their own change can only narrow them.
+		if userID == actor.UserID && !actor.hasRole(roleAdmin) {
+			return errOwnRole
+		}
 		// Both halves of the ceiling. Who the target IS bounds whether this
 		// caller may touch them at all; what the new role CONFERS bounds what
 		// they may hand out. A caller passing the first and not the second would
 		// promote an ordinary member into authority the caller lacks, and then
 		// hold it by proxy.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachTakeover); err != nil {
 			return err
 		}
-		if err := refuseUnlessCallerMayAssign(ctx, tx, actor, toRole); err != nil {
+		roleID, err := roleForAssignment(ctx, tx, actor, toRole)
+		if err != nil {
 			return err
 		}
 		// The target is read rather than merely proved to exist, because what it
@@ -420,14 +429,6 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 		}
 		if isAgent {
 			return errAgentSeatHoldsNoRole
-		}
-		var roleID ids.UUID
-		err := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, toRole).Scan(&roleID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errUnknownRole
-		}
-		if err != nil {
-			return err
 		}
 
 		rows, err := tx.Query(ctx,

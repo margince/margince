@@ -186,7 +186,7 @@ func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 	e := setupRevocationEnv(t, "role-list")
 	ctx := e.wsCtx(e.admin)
 
-	rows, err := e.svc.ListRoles(ctx, e.admin)
+	rows, err := e.svc.ListRoles(ctx, e.admin, false)
 	if err != nil {
 		t.Fatalf("ListRoles: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 
 	// e.member holds no admin role: the refusal is the caller's standing, taken
 	// before the query runs.
-	if _, err := e.svc.ListRoles(e.wsCtx(e.member), e.member); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.svc.ListRoles(e.wsCtx(e.member), e.member, false); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a non-admin read the role directory: err = %v", err)
 	}
 }
@@ -311,7 +311,7 @@ func TestASecondAdminWritingFromAStaleReadIsRefusedRatherThanClobbering(t *testi
 	ctx := e.wsCtx(e.admin)
 
 	// Both admins load the screen.
-	roles, err := e.svc.ListRoles(ctx, e.admin)
+	roles, err := e.svc.ListRoles(ctx, e.admin, false)
 	if err != nil {
 		t.Fatalf("ListRoles: %v", err)
 	}
@@ -343,7 +343,7 @@ func TestASecondAdminWritingFromAStaleReadIsRefusedRatherThanClobbering(t *testi
 
 	// And it wrote nothing: the object the stale write named is untouched, and
 	// the first admin's grant survives.
-	after, err := e.svc.ListRoles(ctx, e.admin)
+	after, err := e.svc.ListRoles(ctx, e.admin, false)
 	if err != nil {
 		t.Fatalf("ListRoles after: %v", err)
 	}

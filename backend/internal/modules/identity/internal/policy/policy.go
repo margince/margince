@@ -108,15 +108,36 @@ func Parse(raw []byte) (Document, error) {
 				"most likely its unit was removed, or the name is a typo. The grant is ignored — it "+
 				"authorizes nothing — and the rest of the document still applies.")
 	}
-	switch doc.RowScope {
+	scope, err := readRowScope(doc.RowScope)
+	if err != nil {
+		return Document{}, err
+	}
+	doc.RowScope = scope
+	return doc, nil
+}
+
+// RowScopeOf reads only the row scope of a stored document, by Parse's rule,
+// for a reader that shows the document rather than authorizing with it.
+func RowScopeOf(raw []byte) (principal.RowScope, error) {
+	var doc struct {
+		RowScope principal.RowScope `json:"row_scope"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return "", fmt.Errorf("policy: malformed permissions document: %w", err)
+	}
+	return readRowScope(doc.RowScope)
+}
+
+func readRowScope(scope principal.RowScope) (principal.RowScope, error) {
+	switch scope {
 	case principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll:
+		return scope, nil
 	case "":
 		// An unset scope means the narrowest, never a silent widest.
-		doc.RowScope = principal.RowScopeOwn
+		return principal.RowScopeOwn, nil
 	default:
-		return Document{}, fmt.Errorf("policy: invalid row_scope %q (want own|team|all)", doc.RowScope)
+		return "", fmt.Errorf("policy: invalid row_scope %q (want own|team|all)", scope)
 	}
-	return doc, nil
 }
 
 // Merge resolves a user's assigned roles into the effective permission

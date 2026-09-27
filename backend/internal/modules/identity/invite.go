@@ -11,7 +11,6 @@ package identity
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -69,16 +68,7 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		if err := s.refuseWhenNoSeatIsLeft(ctx, tx); err != nil {
 			return err
 		}
-		var roleID ids.UUID
-		roleErr := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, in.Role).Scan(&roleID)
-		if errors.Is(roleErr, pgx.ErrNoRows) {
-			return errUnknownRole
-		}
-		if roleErr != nil {
-			return roleErr
-		}
-		// After the lookup, so an unknown key still answers errUnknownRole, and
-		// before the insert, so no row exists if the ceiling refuses.
+		// Before the insert, so no row exists if the ceiling refuses.
 		//
 		// Without this an invite IS an account takeover in one call: it creates
 		// the user, assigns whatever role the caller named, and returns the raw
@@ -86,7 +76,8 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		// themselves an admin and walk in with the token in the response body.
 		// ChangeUserRole carries the same ceiling for the same reason; handing
 		// out a role is handing out a role whichever verb spells it.
-		if err := refuseUnlessCallerMayAssign(ctx, tx, actor, in.Role); err != nil {
+		roleID, err := roleForAssignment(ctx, tx, actor, in.Role)
+		if err != nil {
 			return err
 		}
 		insErr := tx.QueryRow(ctx,

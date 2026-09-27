@@ -453,7 +453,6 @@ internal/modules/identity/passport.go#func mintPassport
 internal/modules/identity/passport.go#var passportScopeVocabulary
 internal/modules/identity/passwordlink.go#func passwordLink
 internal/modules/identity/rbacobjects.go#func RegisterRbacObjects
-internal/modules/identity/roles.go#method Service.ListRoles
 internal/modules/identity/seatusage.go#const fullSeatsInUseQuery
 internal/modules/identity/service.go#func passwordLengthError
 internal/modules/identity/settingsentry.go#func BaseCurrencyOf
