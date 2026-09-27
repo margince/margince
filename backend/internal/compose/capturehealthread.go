@@ -159,7 +159,9 @@ func captureMailboxHealth(
 	}
 	defer rows.Close()
 
-	var out []crmcontracts.CaptureMailboxHealth
+	// Empty rather than nil: the wire field is a required array, and null
+	// would make a client refuse the whole report on a calm installation.
+	out := []crmcontracts.CaptureMailboxHealth{}
 	for rows.Next() {
 		var (
 			userID                 ids.UUID

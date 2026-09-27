@@ -146,7 +146,7 @@ func SweepStatesTx(ctx context.Context, tx pgx.Tx) ([]SweepState, error) {
 		return nil, fmt.Errorf("capture: reading when each repair pass last ran: %w", err)
 	}
 	defer rows.Close()
-	var out []SweepState
+	out := []SweepState{}
 	for rows.Next() {
 		var (
 			state             SweepState

@@ -214,15 +214,7 @@ func TestCaptureHealthCarriesNoCorrespondence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/admin/capture-health", nil)
-	req = req.WithContext(e.As(e.AdminUser, nil, principal.Permissions{
-		Objects: map[string]principal.ObjectGrant{"job_health": {Read: true}},
-	}))
-	rec := httptest.NewRecorder()
-	captureHealthHandlers{pool: e.Pool, now: time.Now}.GetCaptureHealth(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
-	}
+	rec := serveCaptureHealth(t, e)
 	body := rec.Body.String()
 	for _, planted := range []string{
 		"Planted", "planted", "private.test", "Board review",
@@ -268,4 +260,36 @@ func jsonKeys(raw json.RawMessage) []string {
 		return out
 	}
 	return nil
+}
+
+func serveCaptureHealth(t *testing.T, e *integration.Env) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/v1/admin/capture-health", nil)
+	req = req.WithContext(e.As(e.AdminUser, nil, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{"job_health": {Read: true}},
+	}))
+	rec := httptest.NewRecorder()
+	captureHealthHandlers{pool: e.Pool, now: time.Now}.GetCaptureHealth(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+	return rec
+}
+
+// A calm installation is the common case, and the card refuses a report whose
+// required lists are null — so an empty backlog must travel as an empty list.
+func TestACalmInstallationReportsEmptyListsNotNull(t *testing.T) {
+	e := integration.Setup(t)
+
+	var report map[string]json.RawMessage
+	if err := json.Unmarshal(serveCaptureHealth(t, e).Body.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(report["mailboxes"]); got != "[]" {
+		t.Errorf("mailboxes = %s, want [] — null makes the card refuse the whole report", got)
+	}
+	var sweeps []json.RawMessage
+	if err := json.Unmarshal(report["sweeps"], &sweeps); err != nil || len(sweeps) != len(capture.Sweeps()) {
+		t.Errorf("sweeps = %s, want one entry per pass even before any has run", report["sweeps"])
+	}
 }

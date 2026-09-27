@@ -144,6 +144,27 @@ it("says which pass keeps up, which failed and which left a backlog", async () =
   ).toBeInTheDocument();
 });
 
+it("reads a calm installation as calm, and still shows how each pass stands", async () => {
+  stubRoutes({
+    "GET /admin/capture-health": () =>
+      jsonResponse({
+        ...HEALTH,
+        mailboxes: [],
+        held_meetings: { count: 0 },
+      }),
+  });
+
+  render(<CaptureHealthCard />);
+
+  expect(
+    await screen.findByText("No mailbox has anything waiting."),
+  ).toBeInTheDocument();
+  expect(screen.getByText("0 meetings held")).toBeInTheDocument();
+  expect(
+    within(sweepRow(/Unasked contacts/)).getByText("Last run failed"),
+  ).toBeInTheDocument();
+});
+
 it("says a pass that never ran has never run, rather than drawing it clean", async () => {
   stubRoutes({
     "GET /admin/capture-health": () =>
