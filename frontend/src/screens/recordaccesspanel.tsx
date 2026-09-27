@@ -23,7 +23,7 @@ import {
   PanelRow,
 } from "../design-system/panel";
 import { RoleBadge } from "../design-system/rbac";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -161,6 +161,8 @@ function AccessBody({
 }: Readonly<{ answer: RecordAccessAnswer; kind: AccessKind; words: Words }>) {
   const { t } = words;
   const plural = usePlural();
+  const { locale } = useLocale();
+  const count = (n: number) => ({ count: formatNumber(n, locale) });
   const byGroup = (group: Group) =>
     answer.data.filter((m) => m.group === group);
   const everyone = byGroup("everyone");
@@ -195,6 +197,7 @@ function AccessBody({
             summary={plural(
               `whoCanSee.everyone.${kind}`,
               answer.group_counts.everyone,
+              count(answer.group_counts.everyone),
             )}
           >
             <div data-testid="who-can-see-everyone">
@@ -207,7 +210,9 @@ function AccessBody({
       )}
       <PanelBody>
         {unlisted > 0 && (
-          <p className="t-caption">{plural("whoCanSee.unlisted", unlisted)}</p>
+          <p className="t-caption">
+            {plural("whoCanSee.unlisted", unlisted, count(unlisted))}
+          </p>
         )}
         <p className="t-caption">{t(`whoCanSee.emails.${kind}`)}</p>
       </PanelBody>
