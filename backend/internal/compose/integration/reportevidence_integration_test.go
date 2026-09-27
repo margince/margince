@@ -341,6 +341,32 @@ func TestTheProviderMarksAnUnreadableActivityWithheld(t *testing.T) {
 	}
 }
 
+// Without a cell, a cell the privacy floor withholds stays closed: its
+// records are never evidence, and the answer says cells were left out.
+func TestTheWholeRunNeverOpensAWithheldCell(t *testing.T) {
+	e := SetupSearch(t)
+	seedEvidenceFixture(t, e)
+	var small []ids.UUID
+	for range 2 {
+		small = append(small, e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
+			VALUES ($1, 'email', 'Site visit', 'Pricing came up on site', now() - interval '1 hour', 'manual', 'human:x')`))
+	}
+	ctx := e.evidenceReader()
+	runID := saveActivitiesByKind(ctx, t, e)
+
+	answer := mustSearchEvidence(ctx, t, e, `{"run_id":"`+runID.String()+`","query":"pricing"}`)
+
+	cited := citedIDs(answer)
+	for _, id := range small {
+		if cited[id] {
+			t.Fatalf("a record of a withheld cell was cited: %s", id)
+		}
+	}
+	if !evidenceNoted(answer, agents.CodeCellsWithheld) || answer.Prevalence != nil {
+		t.Errorf("notes %+v, prevalence %+v: the withheld cells are not said", answer.Notes, answer.Prevalence)
+	}
+}
+
 // Searching a whole run keeps the grouping's own narrowing. A rep who may
 // measure only themselves asks projects-by-phase by owner and is answered
 // about their own projects; the whole run must not reach a colleague's.

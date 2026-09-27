@@ -88,3 +88,29 @@ func TestASearchContextHitWithheldAtReadBackIsDropped(t *testing.T) {
 		t.Errorf("hits %d, coverage %q: want the readable hit alone, the drop reported", len(result.Hits), result.Coverage)
 	}
 }
+
+// An abstention is read back like a citation: one the caller can no longer
+// read is not served, and is not counted.
+func TestAnAbstentionUnreadableAtReadBackIsNotServed(t *testing.T) {
+	readable, gone := ids.NewV7(), ids.NewV7()
+	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
+		readable: activityWithContent("available"),
+	}}
+	tool := searchReportEvidence{
+		hydrator: searchContext{p: provider},
+		search: func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
+			return ReportEvidence{Entity: datasource.EntityActivity, Abstentions: []ids.UUID{readable, gone}}, nil
+		},
+	}
+	raw, err := tool.Handle(t.Context(), json.RawMessage(`{"run_id":"`+ids.NewV7().String()+`","query":"pricing"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result SearchReportEvidenceResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Abstentions) != 1 || result.Abstentions[0].ID != readable || result.Tally.Unjudged != 1 {
+		t.Errorf("abstentions %+v, tally %+v: want the readable one alone", result.Abstentions, result.Tally)
+	}
+}
