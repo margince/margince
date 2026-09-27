@@ -7691,6 +7691,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/contacts-awaiting-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your captured contacts still waiting on a sender decision.
+         * @description Contacts your mailbox created that stay visible to you alone, because nothing has yet
+         *     decided whether their sender is business. A contact is listed even when its address has
+         *     no entry on your senders list yet. Oldest first.
+         *
+         *     This is the same set the admin capture-health page counts for your mailbox; that page
+         *     shows only the number, and you are the one reader who may see which contacts they are.
+         *     Your own contacts and nobody else's.
+         */
+        get: operations["listCaptureContactsAwaitingDecision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/senders/{address}/decision": {
         parameters: {
             query?: never;
@@ -17698,6 +17724,23 @@ export interface components {
              *     whose attempts stop climbing is a model that stopped answering.
              */
             attempts: number;
+        };
+        CaptureAwaitingContactListResponse: {
+            data: components["schemas"]["CaptureAwaitingContact"][];
+        };
+        /** @description One of your captured contacts waiting on a sender decision. */
+        CaptureAwaitingContact: {
+            /** Format: uuid */
+            contact_id: string;
+            /** @description Absent when the contact has no name. */
+            display_name?: string;
+            /** @description The contact's live addresses. The decision is made about these senders. */
+            emails: string[];
+            /**
+             * Format: date-time
+             * @description When the contact was created, which is how long it has been waiting.
+             */
+            captured_at: string;
         };
         CaptureSenderListResponse: {
             data: components["schemas"]["CaptureSenderDecision"][];
@@ -29788,6 +29831,65 @@ export interface components {
             /** @description One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent. */
             mailboxes: components["schemas"]["CaptureMailboxHealth"][];
             classifier: components["schemas"]["CaptureClassifierHealth"];
+            held_meetings: components["schemas"]["CaptureHeldMeetings"];
+            /**
+             * @description One row per repair pass, always all of them, in a fixed order. A pass that has
+             *     never run is listed with no `last_run`, not left out.
+             */
+            sweeps: components["schemas"]["CaptureSweepHealth"][];
+        };
+        /**
+         * @description Captured records already filed under a contact that are still held to their
+         *     participants because, when they arrived, they named nobody the workspace knew. The
+         *     nightly link reconcile lifts every one of them, so anything counted here is backlog.
+         *     Counted with the pass's own selector and without its per-tick bound.
+         */
+        CaptureHeldMeetings: {
+            count: number;
+            /** @description How long ago the oldest of them was captured. Null when none are held. */
+            oldest_age_seconds?: number | null;
+        };
+        /**
+         * @description When one repair pass last ran and last succeeded, from the receipt each pass writes
+         *     per workspace turn. Never names what the pass worked on.
+         */
+        CaptureSweepHealth: {
+            /**
+             * @description `settled_thread_verdicts` applies a settled thread's answer to its remaining
+             *     messages; `stranded_contacts` asks about captured contacts nobody was asked
+             *     about; `filed_meeting_holds` lifts the hold on filed meetings.
+             * @enum {string}
+             */
+            sweep: "settled_thread_verdicts" | "stranded_contacts" | "filed_meeting_holds";
+            /** @description How often the job that runs this pass is scheduled. Null when it has no fixed cadence. */
+            cadence_seconds?: number | null;
+            /**
+             * Format: date-time
+             * @description When the pass last finished without an error, `partial` included. Null when no
+             *     receipt on record succeeded.
+             */
+            last_succeeded_at?: string | null;
+            last_run?: components["schemas"]["CaptureSweepRun"];
+        };
+        /** @description The pass's most recent receipt. */
+        CaptureSweepRun: {
+            /**
+             * @description `partial` ran cleanly and stopped at its per-tick bound, so a backlog remains.
+             *     `skipped` never ran because an earlier stage of the same job failed.
+             * @enum {string}
+             */
+            outcome: "ok" | "partial" | "failed" | "skipped";
+            /** Format: date-time */
+            finished_at: string;
+            /** @description What the pass committed before it returned. */
+            processed: number;
+            /** @description Whether it stopped at its per-tick bound. */
+            cap_hit: boolean;
+            /**
+             * @description Set only when `outcome` is `failed`: a class token from the job failure
+             *     vocabulary, or `unclassified`. Never the error's text, which stays in the log.
+             */
+            error_class?: string;
         };
         CaptureMailboxHealth: {
             /**
@@ -29885,7 +29987,7 @@ export interface components {
             running: number;
             /** @description Failed at least once and backing off toward another attempt. */
             retrying: number;
-            /** @description Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a terminal row for seven days, so this is a week's history and a report figure, not a call to action. */
+            /** @description Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a discarded row for seven days and a cancelled one for a day, so this is up to a week's history and a report figure, not a call to action. */
             dead: number;
             /** @description The same count inside `dead_window_hours`. This is the one to alarm on: an outage that ended an hour ago and one still running are indistinguishable in `dead`, and that is the distinction a maintenance banner exists to draw. */
             dead_recent: number;
@@ -50631,6 +50733,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaptureSenderListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listCaptureContactsAwaitingDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's contacts awaiting a decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureAwaitingContactListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
