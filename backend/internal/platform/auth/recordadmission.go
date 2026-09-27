@@ -143,6 +143,7 @@ func newAdmissionStatement(id ids.UUID) *admissionStatement {
 	return st
 }
 
+//craft:ignore naked-any the argument registrar the scope clauses bind through takes a value of whatever type each clause registers
 func (st *admissionStatement) arg(v any) int {
 	st.args = append(st.args, v)
 	return len(st.args)
