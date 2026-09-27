@@ -44,15 +44,12 @@ function stubDuty() {
       }
       if (method === "POST") {
         writes.push(path);
-        return jsonResponse(
-          {
-            delivered_to: "steve@kps.test",
-            expires_at: "2026-10-27T00:00:00Z",
-            queued: true,
-            sendable: true,
-          },
-          201,
-        );
+        return jsonResponse({
+          delivered_to: "steve@kps.test",
+          expires_at: "2026-10-27T00:00:00Z",
+          queued: true,
+          sendable: true,
+        });
       }
       return jsonResponse({ data: [] });
     }),
