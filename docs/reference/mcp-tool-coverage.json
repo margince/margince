@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 41,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 13511,
+    "tokens_served_but_never_driven": 13512,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 0,
@@ -1422,7 +1422,7 @@
     },
     {
       "name": "search_report_evidence",
-      "tokens": 334,
+      "tokens": 335,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

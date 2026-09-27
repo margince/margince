@@ -9,9 +9,9 @@ package agents
 // The run is the cohort handle. Its id names one question, and the question
 // names one set of records; the engine re-derives that set under this caller's
 // live grants, exactly as the report drawer does, and searches nothing else.
-// So "how many of these mention X" has a denominator, and this tool is the
-// one surface that may state a share of it — only when every record of the set
-// was reached and judged.
+// Every figure in the answer is over the records this caller can read — never
+// over rows they cannot, whose presence the answer must not betray — and a
+// share is stated only when every one of those was judged.
 
 import (
 	"context"
@@ -30,8 +30,8 @@ import (
 // ReportEvidenceQuery is one search over a saved run's records.
 type ReportEvidenceQuery struct {
 	RunID ids.UUID
-	// Cell is one cell's group key values; nil searches the whole population
-	// the run measured.
+	// Cell is one cell's group key values; nil searches every cell the run's
+	// answer serves.
 	Cell  *[]any
 	Text  string
 	Limit int
@@ -49,15 +49,10 @@ type ReportEvidence struct {
 	SemanticRanking bool
 	// Withheld: the privacy floor withholds the cell, so nothing was searched.
 	Withheld bool
-	// Truncated: the set is larger than one drill-through reads.
+	// PartlyWithheld: without a cell, the cells the floor withheld were left out.
+	PartlyWithheld bool
+	// Truncated: the readable set is larger than one drill-through reads.
 	Truncated bool
-	// Unreached: part of the set the run names is outside this caller's
-	// access today. A flag and never a count: how much is hidden is the
-	// disclosure existence-hiding exists to prevent.
-	Unreached bool
-	// Unestablished: the set the run names could not be determined whole, so
-	// nothing can be said about what was reached of it.
-	Unestablished bool
 }
 
 // ReportEvidenceSearcher answers one search over a saved run's records.
@@ -65,12 +60,14 @@ type ReportEvidenceSearcher func(ctx context.Context, q ReportEvidenceQuery) (Re
 
 // The notes this tool's coverage can carry, beside the shared ones.
 const (
-	CodeCellWithheld        = "cell_withheld"
-	CodeCohortTruncated     = "cohort_truncated"
-	CodeRecordsOutOfReach   = "records_outside_your_access"
-	CodeCohortUnestablished = "cohort_unestablished"
-	CodeRecordsUnjudged     = "records_unjudged"
-	CodePrevalenceRefused   = "prevalence_refused"
+	CodeCellWithheld      = "cell_withheld"
+	CodeCellsWithheld     = "cells_withheld"
+	CodeCohortTruncated   = "cohort_truncated"
+	CodeRecordsUnjudged   = "records_unjudged"
+	CodePrevalenceRefused = "prevalence_refused"
+	// CodeOverReadableRecords is on every answer: its figures count the
+	// records this caller can read, which may be fewer than the run counted.
+	CodeOverReadableRecords = "prevalence_over_readable_records"
 )
 
 // RegisterReportEvidenceTool adds search_report_evidence once a searcher
@@ -99,7 +96,7 @@ func (t searchReportEvidence) Spec() mcp.ToolSpec {
 			"run_id":{"type":"string","format":"uuid","description":"A saved run: run_analytics_query with save answers one."},
 			"cell":{"type":"array","items":{},"description":"One cell's group key values, in the run's group_by order. Omit to search every record the run measured."},
 			"query":{"type":"string","maxLength":1000,"description":"The words the evidence would carry."},
-			"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many citations and how many counterexamples to return."}},
+			"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many citations, counterexamples and abstentions to return, each."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SearchReportEvidenceResult](),
 	}
@@ -119,8 +116,8 @@ type SearchReportEvidenceResult struct {
 	// Abstentions name records the text could not be judged against.
 	Abstentions []EvidenceAbstention `json:"abstentions"`
 	Tally       EvidenceTally        `json:"tally"`
-	// Coverage is complete_exact only when every record of the set was
-	// reached and judged. Not omitempty, for search_context's reason.
+	// Coverage is complete_exact only when every readable record of the set
+	// was judged. Not omitempty, for search_context's reason.
 	Coverage string `json:"coverage"`
 	// Prevalence is null unless coverage is complete_exact; a note says why.
 	Prevalence *EvidencePrevalence `json:"prevalence"`
@@ -133,14 +130,15 @@ type EvidenceAbstention struct {
 	ID         ids.UUID `json:"id"`
 }
 
-// EvidenceTally counts the records reached, by verdict.
+// EvidenceTally counts the readable records, by verdict.
 type EvidenceTally struct {
 	Matched   int `json:"matched"`
 	Unmatched int `json:"unmatched"`
 	Unjudged  int `json:"unjudged"`
 }
 
-// EvidencePrevalence is the share of the whole set the text matched.
+// EvidencePrevalence is the share of the readable records the text matched;
+// Of counts those records.
 type EvidencePrevalence struct {
 	Matched int     `json:"matched"`
 	Of      int     `json:"of"`
@@ -180,12 +178,16 @@ func (t searchReportEvidence) Handle(ctx context.Context, in json.RawMessage) (j
 	return json.Marshal(result)
 }
 
-// answer hydrates the listed records and decides coverage and prevalence.
+// answer reads the listed records back and decides coverage and prevalence.
+//
+// Each listed record is read again because the world moves between the search
+// and the read: one whose content this caller may no longer read is dropped
+// with its verdict and its excerpt, and the tally loses it too.
 func (t searchReportEvidence) answer(ctx context.Context, found ReportEvidence, limit int) (SearchReportEvidenceResult, error) {
 	result := SearchReportEvidenceResult{
 		Citations:       make([]SearchContextHit, 0, min(limit, len(found.Citations))),
 		Counterexamples: make([]wireRecord, 0, min(limit, len(found.Counterexamples))),
-		Abstentions:     make([]EvidenceAbstention, 0, len(found.Abstentions)),
+		Abstentions:     make([]EvidenceAbstention, 0, min(limit, len(found.Abstentions))),
 		Tally: EvidenceTally{
 			Matched: len(found.Citations), Unmatched: len(found.Counterexamples), Unjudged: len(found.Abstentions),
 		},
@@ -198,7 +200,7 @@ func (t searchReportEvidence) answer(ctx context.Context, found ReportEvidence, 
 			return SearchReportEvidenceResult{}, err
 		}
 		if !readable {
-			dropped = true
+			dropped, result.Tally.Matched = true, result.Tally.Matched-1
 			continue
 		}
 		result.Citations = append(result.Citations, SearchContextHit{
@@ -211,33 +213,49 @@ func (t searchReportEvidence) answer(ctx context.Context, found ReportEvidence, 
 			return SearchReportEvidenceResult{}, err
 		}
 		if !readable {
-			dropped = true
+			dropped, result.Tally.Unmatched = true, result.Tally.Unmatched-1
 			continue
 		}
 		result.Counterexamples = append(result.Counterexamples, newWireRecord(ctx, record))
 	}
-	for _, id := range found.Abstentions {
+	for _, id := range found.Abstentions[:min(limit, len(found.Abstentions))] {
+		record, readable, err := t.hydrator.read(ctx, datasource.EntityRef{Type: found.Entity, ID: id})
+		if err != nil {
+			return SearchReportEvidenceResult{}, err
+		}
+		if !readable {
+			dropped, result.Tally.Unjudged = true, result.Tally.Unjudged-1
+			continue
+		}
+		// Only the id is served, but it is a read like any other and is
+		// charged and sourced as one.
+		noteRecord(ctx, record)
 		result.Abstentions = append(result.Abstentions, EvidenceAbstention{RecordType: string(found.Entity), ID: id})
 	}
 	if dropped {
 		result.Notes = append(result.Notes, QueryNote{
 			Code:   CodeRowUnreadable,
-			Detail: "at least one listed record could not be read back and is missing from the lists",
+			Detail: "at least one record could not be read back when the answer was assembled and is not counted",
 		})
 	}
 	return withPrevalence(result, searchedWhole(found, dropped)), nil
 }
 
-// searchedWhole says every record of the set the run names was reached and
-// judged — the one condition under which a share of it may be stated.
+// searchedWhole says every readable record of the set was judged — the one
+// condition under which a share of them may be stated.
 func searchedWhole(found ReportEvidence, dropped bool) bool {
-	return !found.Withheld && !found.Truncated && !found.Unreached && !found.Unestablished &&
+	return !found.Withheld && !found.PartlyWithheld && !found.Truncated &&
 		len(found.Abstentions) == 0 && !dropped
 }
 
-// gapNotes names every reason the set was not searched whole.
+// gapNotes names what the answer counts over, and every reason the readable
+// set was not searched whole.
 func gapNotes(found ReportEvidence) []QueryNote {
-	notes := []QueryNote{}
+	notes := []QueryNote{{
+		Code: CodeOverReadableRecords,
+		Detail: "every figure here counts the records you can read today; the run may have " +
+			"counted records you cannot, and nothing here says whether it did",
+	}}
 	add := func(on bool, code, detail string) {
 		if on {
 			notes = append(notes, QueryNote{Code: code, Detail: detail})
@@ -245,12 +263,10 @@ func gapNotes(found ReportEvidence) []QueryNote {
 	}
 	add(found.Withheld, CodeCellWithheld,
 		"the privacy floor withholds this cell, so none of its records were searched")
+	add(found.PartlyWithheld, CodeCellsWithheld,
+		"the privacy floor withholds some of this run's cells, and their records were not searched")
 	add(found.Truncated, CodeCohortTruncated,
 		"the set is larger than one search reads, and only its first records were searched")
-	add(found.Unreached, CodeRecordsOutOfReach,
-		"part of the set this run names is outside what you may read today, and was not searched")
-	add(found.Unestablished, CodeCohortUnestablished,
-		"the whole set this run names could not be determined, so what was searched may be part of it")
 	add(len(found.Abstentions) > 0, CodeRecordsUnjudged,
 		"some records carry no text the search can judge; they are listed as abstentions")
 	add(!found.SemanticRanking && len(found.Citations) > 0, CodeSemanticRankingDegraded,
@@ -258,15 +274,15 @@ func gapNotes(found ReportEvidence) []QueryNote {
 	return notes
 }
 
-// withPrevalence states the share only over a set searched whole.
+// withPrevalence states the share only over a readable set searched whole.
 func withPrevalence(result SearchReportEvidenceResult, whole bool) SearchReportEvidenceResult {
 	judged := result.Tally.Matched + result.Tally.Unmatched
 	if !whole || judged == 0 {
 		result.Coverage = CoveragePartialDegraded
 		result.Notes = append(result.Notes, QueryNote{
 			Code: CodePrevalenceRefused,
-			Detail: "no share of the set is stated: the notes above name the part that was not " +
-				"searched, and a share of a part is not a share of the whole",
+			Detail: "no share is stated: the notes above name the readable records that were not " +
+				"judged, and a share of part of them is not a share of all of them",
 		})
 		return result
 	}

@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
@@ -102,34 +103,45 @@ func saveActivitiesByKind(ctx context.Context, t *testing.T, e *SearchEnv) ids.U
 	return runID
 }
 
-func searchEvidence(ctx context.Context, e *SearchEnv, args string) (agents.SearchReportEvidenceResult, error) {
+func searchEvidence(ctx context.Context, e *SearchEnv, args string) (agents.SearchReportEvidenceResult, sealedResult, error) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	out, err := registry.Invoke(ctx, "search_report_evidence", json.RawMessage(args))
 	if err != nil {
-		return agents.SearchReportEvidenceResult{}, err
+		return agents.SearchReportEvidenceResult{}, sealedResult{}, err
 	}
 	spec, _ := registry.Spec("search_report_evidence")
 	if defect := agents.ResultDefect(spec.OutputSchema, out); defect != "" {
-		return agents.SearchReportEvidenceResult{}, fmt.Errorf("the answer breaks its own schema: %s", defect)
+		return agents.SearchReportEvidenceResult{}, sealedResult{}, fmt.Errorf("the answer breaks its own schema: %s", defect)
 	}
 	var sealed sealedResult
 	if err := json.Unmarshal(out, &sealed); err != nil {
-		return agents.SearchReportEvidenceResult{}, fmt.Errorf("the result is not an envelope: %w (%s)", err, out)
+		return agents.SearchReportEvidenceResult{}, sealedResult{}, fmt.Errorf("the result is not an envelope: %w (%s)", err, out)
 	}
 	var answer agents.SearchReportEvidenceResult
 	if err := json.Unmarshal(sealed.Data, &answer); err != nil {
-		return agents.SearchReportEvidenceResult{}, fmt.Errorf("unreadable payload %s: %w", sealed.Data, err)
+		return agents.SearchReportEvidenceResult{}, sealedResult{}, fmt.Errorf("unreadable payload %s: %w", sealed.Data, err)
 	}
-	return answer, nil
+	return answer, sealed, nil
 }
 
 func mustSearchEvidence(ctx context.Context, t *testing.T, e *SearchEnv, args string) agents.SearchReportEvidenceResult {
 	t.Helper()
-	answer, err := searchEvidence(ctx, e, args)
+	answer, _, err := searchEvidence(ctx, e, args)
 	if err != nil {
 		t.Fatalf("search_report_evidence %s\n  → %v", args, err)
 	}
 	return answer
+}
+
+// hideFromTheReader limits an activity's audience to a colleague, so the
+// reader may no longer read it.
+func hideFromTheReader(t *testing.T, e *SearchEnv, id ids.UUID) {
+	t.Helper()
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants', captured_by = $2 WHERE id = $1`,
+		id, "human:"+e.Rep3.String()); err != nil {
+		t.Fatalf("limiting the activity's audience: %v", err)
+	}
 }
 
 func citedIDs(answer agents.SearchReportEvidenceResult) map[ids.UUID]bool {
@@ -190,8 +202,8 @@ func TestReportEvidenceSearchesOnlyTheCellsRecords(t *testing.T) {
 	}
 }
 
-// Without a cell the search covers every record the run measured, so the
-// note's mention of pricing becomes evidence; the cell above narrowed it away.
+// Without a cell the search covers every cell the run served, so the note's
+// mention of pricing becomes evidence; the cell above narrowed it away.
 func TestReportEvidenceWithoutACellSearchesTheWholeRun(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
@@ -213,20 +225,15 @@ func TestReportEvidenceWithoutACellSearchesTheWholeRun(t *testing.T) {
 }
 
 // A record the reader lost access to after the run was saved is not served,
-// and the answer says part of the set was out of reach instead of stating a
-// share of what was left.
-func TestReportEvidenceSaysWhenPartOfTheRunIsOutOfReach(t *testing.T) {
+// and every figure is over what they can still read — which the answer says
+// on every call, not only on this one.
+func TestReportEvidenceCountsOnlyWhatTheReaderCanRead(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
 	ctx := e.evidenceReader()
 	runID := saveActivitiesByKind(ctx, t, e)
-
 	hidden := f.pricingCalls[0]
-	if _, err := e.Owner.Exec(context.Background(),
-		`UPDATE activity SET audience = 'participants', captured_by = $2 WHERE id = $1`,
-		hidden, "human:"+e.Rep3.String()); err != nil {
-		t.Fatalf("limiting the call's audience: %v", err)
-	}
+	hideFromTheReader(t, e, hidden)
 
 	answer := mustSearchEvidence(ctx, t, e,
 		`{"run_id":"`+runID.String()+`","cell":["call"],"query":"pricing"}`)
@@ -234,15 +241,36 @@ func TestReportEvidenceSaysWhenPartOfTheRunIsOutOfReach(t *testing.T) {
 	if citedIDs(answer)[hidden] {
 		t.Fatalf("a call the reader may no longer read was cited: %+v", answer.Citations)
 	}
-	if !evidenceNoted(answer, agents.CodeRecordsOutOfReach) {
-		t.Errorf("notes = %+v, want the unreached part named", answer.Notes)
+	if !evidenceNoted(answer, agents.CodeOverReadableRecords) {
+		t.Errorf("notes = %+v, want the readable-records basis said", answer.Notes)
 	}
-	if answer.Coverage != agents.CoveragePartialDegraded || answer.Prevalence != nil {
-		t.Errorf("coverage %q, prevalence %+v: a share of a partly readable set was stated",
-			answer.Coverage, answer.Prevalence)
+	if answer.Prevalence == nil || answer.Prevalence.Matched != 3 || answer.Prevalence.Of != 6 {
+		t.Errorf("prevalence = %+v, want 3 of the 6 calls the reader can read", answer.Prevalence)
 	}
-	if !evidenceNoted(answer, agents.CodePrevalenceRefused) {
-		t.Errorf("notes = %+v, want the refused prevalence said", answer.Notes)
+}
+
+// A record the reader cannot read changes nothing in the answer, however well
+// it matches: its presence must not be learnable from any field.
+func TestAHiddenRecordChangesNothingInTheAnswer(t *testing.T) {
+	e := SetupSearch(t)
+	seedEvidenceFixture(t, e)
+	ctx := e.evidenceReader()
+	runID := saveActivitiesByKind(ctx, t, e)
+	args := `{"run_id":"` + runID.String() + `","cell":["call"],"query":"pricing"}`
+	_, before, err := searchEvidence(ctx, e, args)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hidden := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
+		VALUES ($1, 'call', 'Weekly check-in', 'Pricing was the only topic', now() - interval '1 hour', 'manual', 'human:x')`)
+	hideFromTheReader(t, e, hidden)
+	_, after, err := searchEvidence(ctx, e, args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before.Data) != string(after.Data) {
+		t.Errorf("a record hidden from the reader changed the answer:\nbefore %s\nafter  %s", before.Data, after.Data)
 	}
 }
 
@@ -270,11 +298,106 @@ func TestReportEvidenceReportsAbstentions(t *testing.T) {
 	}
 }
 
+// An abstention serves an id, and a served id is a read: the envelope sources
+// it, which is what the passport's read bound charges.
+func TestAnAbstentionIsChargedAsARead(t *testing.T) {
+	e := SetupSearch(t)
+	seedEvidenceFixture(t, e)
+	silent := e.SeedID(t, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
+		VALUES ($1, 'call', now() - interval '1 hour', 'manual', 'human:x')`)
+	ctx := e.evidenceReader()
+	runID := saveActivitiesByKind(ctx, t, e)
+
+	_, sealed, err := searchEvidence(ctx, e, `{"run_id":"`+runID.String()+`","cell":["call"],"query":"pricing"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sealedNames(sealed, silent) {
+		t.Errorf("the abstention %s was served and not charged: evidence %+v", silent, sealed.Evidence)
+	}
+}
+
+// The provider the tool reads back through marks an activity the reader may
+// know of but not read as content_state "withheld" — the value the read-back
+// drops a record on.
+func TestTheProviderMarksAnUnreadableActivityWithheld(t *testing.T) {
+	e := SetupSearch(t)
+	f := seedEvidenceFixture(t, e)
+	hideFromTheReader(t, e, f.pricingCalls[0])
+	record, err := compose.NewProvider(e.Pool).Read(e.evidenceReader(),
+		datasource.EntityRef{Type: datasource.EntityActivity, ID: f.pricingCalls[0]})
+	if err != nil {
+		t.Fatalf("reading the activity back: %v", err)
+	}
+	var fields struct {
+		ContentState string  `json:"content_state"`
+		Body         *string `json:"body"`
+	}
+	if err := json.Unmarshal(record.Fields, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if fields.ContentState != "withheld" || fields.Body != nil {
+		t.Errorf("content_state %q, body %v: want the content withheld", fields.ContentState, fields.Body)
+	}
+}
+
+// Searching a whole run keeps the grouping's own narrowing. A rep who may
+// measure only themselves asks projects-by-phase by owner and is answered
+// about their own projects; the whole run must not reach a colleague's.
+func TestTheWholeRunKeepsTheNarrowingItsGroupingBrought(t *testing.T) {
+	e := SetupSearch(t)
+	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Sunworks', 'manual', 'human:x')`)
+	project := func(owner ids.UUID, name string) ids.UUID {
+		return e.SeedID(t, `INSERT INTO project (id, owner_id, name, company_id, source, captured_by)
+			VALUES ($1, $2, $3, $4, 'manual', 'human:x')`, owner, name, company)
+	}
+	var own, colleagues []ids.UUID
+	for i := range 6 {
+		own = append(own, project(e.Rep1, fmt.Sprintf("Solar rollout %d", i)))
+		colleagues = append(colleagues, project(e.Rep3, fmt.Sprintf("Solar retrofit %d", i)))
+	}
+	grants := searchReadGrants()
+	for _, object := range []string{"project", "forecast"} {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeOwn},
+	})
+	q := analyticsquery.Query{
+		Entity: "projects-by-phase", GroupBy: []string{"owner_id"},
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "projects"}},
+	}
+	var runID ids.UUID
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		answer, err := compose.RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
+		if err != nil {
+			return err
+		}
+		runID, err = compose.SaveReportRun(ctx, tx, q, answer, analyticsquery.DefaultFloor)
+		return err
+	}); err != nil {
+		t.Fatalf("saving the run: %v", err)
+	}
+
+	answer := mustSearchEvidence(ctx, t, e, `{"run_id":"`+runID.String()+`","query":"solar"}`)
+
+	cited := citedIDs(answer)
+	for _, id := range colleagues {
+		if cited[id] {
+			t.Fatalf("the whole run reached a colleague's project %s the rep may not measure", id)
+		}
+	}
+	if answer.Tally.Matched != len(own) {
+		t.Errorf("tally %+v, want the rep's own %d projects matched", answer.Tally, len(own))
+	}
+}
+
 // A run id nothing was saved under is not found, the same answer the report
 // drawer gives.
 func TestReportEvidenceForAnUnknownRunIsNotFound(t *testing.T) {
 	e := SetupSearch(t)
-	_, err := searchEvidence(e.evidenceReader(), e,
+	_, _, err := searchEvidence(e.evidenceReader(), e,
 		`{"run_id":"`+ids.NewV7().String()+`","query":"pricing"}`)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an unknown run answered %v, want not found", err)

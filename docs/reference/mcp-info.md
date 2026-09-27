@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 12 |
 | Tool catalog | 225.9 KB |
 | Resource catalog | 4.5 KB |
-| Approx. wire tokens | 58964 |
+| Approx. wire tokens | 58965 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,7 +31,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 103.2 KB | 45% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 58.4 KB | 25% | Yes, every step |
-| Input schemas | 47.8 KB | 21% | Yes, every step |
+| Input schemas | 47.9 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.5 KB | 7% | Partly |
 | **Description + input schema** | **106.2 KB** | **47%** | **the recurring cost** |
 
@@ -13893,7 +13893,7 @@ Find contacts, companies, deals, leads and projects when you know roughly what t
 
 **Search the evidence behind a saved run**
 
-Check a claim against the records behind a saved analytics run — or one cell of it — by searching their text: records that carry the words are citations, records that do not are counterexamples, and records with no text to judge are abstentions. It searches only the run's own records, re-derived under this seat's current access. It states a prevalence — the share of the set that matched — only when coverage is complete_exact; otherwise prevalence is null and the notes name the part not searched. search_context sweeps the whole workspace by meaning; run_analytics_query counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires passport scope "read".)
+Check a claim against the records behind a saved analytics run — or one cell of it — by searching their text: records that carry the words are citations, records that do not are counterexamples, and records with no text to judge are abstentions. It searches only the run's own records that this seat can read today, and every figure counts those — never records hidden from this seat. It states a prevalence only when coverage is complete_exact; otherwise prevalence is null and the notes say why. search_context sweeps the whole workspace by meaning; run_analytics_query counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -13907,7 +13907,7 @@ Check a claim against the records behind a saved analytics run — or one cell o
       "type": "array"
     },
     "limit": {
-      "description": "How many citations and how many counterexamples to return.",
+      "description": "How many citations, counterexamples and abstentions to return, each.",
       "maximum": 25,
       "minimum": 1,
       "type": "integer"

@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 78,
     "system_frame_tokens": 516,
-    "tokens": 25112,
+    "tokens": 25113,
     "median_tool_tokens": 272,
     "mean_tool_tokens": 321
   },
@@ -204,7 +204,7 @@
     },
     {
       "name": "search_report_evidence",
-      "tokens": 334
+      "tokens": 335
     },
     {
       "name": "forecast_input_checks",

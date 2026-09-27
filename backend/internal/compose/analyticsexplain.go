@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -35,6 +36,9 @@ type AnalyticsExplanation struct {
 	// Truncated says the cell covers more records than were returned. A reader
 	// who sums the rows and finds less than the cell needs to know why.
 	Truncated bool
+	// PartlyWithheld says an every-cell explanation left out the records of
+	// cells the answer withheld or did not serve.
+	PartlyWithheld bool
 	// PopulationNarrowed is the answer's, said again for its records.
 	PopulationNarrowed string
 	// Entity is the record type each row's id names, and Question the question
@@ -62,11 +66,11 @@ func ExplainAnalyticsCell(
 	// The cell's own size, judged before anything is opened. Asked by RUNNING
 	// the question again rather than trusting a size the caller sent: a caller
 	// who could assert their cell was large would have turned the floor off.
-	withheld, err := cellIsWithheld(ctx, tx, in, floor)
+	served, err := servedCellsFor(ctx, tx, in, floor)
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}
-	if withheld {
+	if served.none {
 		return AnalyticsExplanation{Withheld: true}, nil
 	}
 
@@ -98,13 +102,72 @@ func ExplainAnalyticsCell(
 	if err != nil {
 		return AnalyticsExplanation{}, fmt.Errorf("compose: reading an explanation: %w", err)
 	}
+	opened, dropped := served.open(rows)
 	return AnalyticsExplanation{
-		Columns: plan.Columns, Rows: rows,
+		Columns: plan.Columns, Rows: opened,
 		Truncated:          len(rows) == analyticsquery.ExplainRowLimit,
+		PartlyWithheld:     served.partly || dropped,
 		PopulationNarrowed: narrowed,
 		Entity:             spec.entity,
 		Question:           in.Query,
 	}, nil
+}
+
+// servedCells is what the floor lets an explanation open.
+type servedCells struct {
+	// none: nothing may be opened.
+	none bool
+	// partly: some cells of an every-cell explanation were withheld.
+	partly bool
+	// cells are the answer rows an every-cell explanation may open; nil for a
+	// one-cell explanation, which the floor judged whole.
+	cells []analyticsquery.Explain
+}
+
+// servedCellsFor asks the floor about the cell explained, or with AllCells
+// about every cell of the answer, which is re-run for the reason
+// cellIsWithheld gives.
+func servedCellsFor(
+	ctx context.Context, tx pgx.Tx, in analyticsquery.Explain, floor analyticsquery.Floor,
+) (servedCells, error) {
+	if !in.AllCells {
+		withheld, err := cellIsWithheld(ctx, tx, in, floor)
+		return servedCells{none: withheld}, err
+	}
+	answer, err := RunAnalyticsQuery(ctx, tx, in.Query, floor)
+	if err != nil {
+		return servedCells{}, err
+	}
+	out := servedCells{partly: answer.Withheld, cells: []analyticsquery.Explain{}}
+	for _, row := range answer.Rows {
+		if row[withheldColumn] == true {
+			continue
+		}
+		cell := analyticsquery.Explain{Query: in.Query}
+		for _, name := range in.Query.GroupBy {
+			cell.Group = append(cell.Group, row[name])
+		}
+		out.cells = append(out.cells, cell)
+	}
+	out.none = len(out.cells) == 0
+	return out, nil
+}
+
+// open keeps the explained rows that fall in a served cell, and says whether
+// any fell outside one. A one-cell explanation keeps every row.
+func (s servedCells) open(rows []map[string]any) ([]map[string]any, bool) {
+	if s.cells == nil {
+		return rows, false
+	}
+	kept := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		if slices.ContainsFunc(s.cells, func(cell analyticsquery.Explain) bool {
+			return cellMatchesRow(cell, row)
+		}) {
+			kept = append(kept, row)
+		}
+	}
+	return kept, len(kept) < len(rows)
 }
 
 // cellIsWithheld re-runs the question and asks the floor about THIS cell.

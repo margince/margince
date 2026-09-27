@@ -10,16 +10,16 @@
   "totals": {
     "tools": 78,
     "resources": 12,
-    "tool_catalog_bytes": 231273,
+    "tool_catalog_bytes": 231278,
     "resource_catalog_bytes": 4584,
-    "approx_wire_tokens_total": 58964,
+    "approx_wire_tokens_total": 58965,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 59760,
-      "input_schema_bytes": 48998,
+      "description_bytes": 59755,
+      "input_schema_bytes": 49008,
       "output_schema_bytes": 105636,
-      "description_plus_input_schema_bytes": 108758
+      "description_plus_input_schema_bytes": 108763
     }
   },
   "tools": {
@@ -12907,7 +12907,7 @@
           "readOnlyHint": true,
           "title": "Search the evidence behind a saved run"
         },
-        "description": "Check a claim against the records behind a saved analytics run — or one cell of it — by searching their text: records that carry the words are citations, records that do not are counterexamples, and records with no text to judge are abstentions. It searches only the run's own records, re-derived under this seat's current access. It states a prevalence — the share of the set that matched — only when coverage is complete_exact; otherwise prevalence is null and the notes name the part not searched. search_context sweeps the whole workspace by meaning; run_analytics_query counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Check a claim against the records behind a saved analytics run — or one cell of it — by searching their text: records that carry the words are citations, records that do not are counterexamples, and records with no text to judge are abstentions. It searches only the run's own records that this seat can read today, and every figure counts those — never records hidden from this seat. It states a prevalence only when coverage is complete_exact; otherwise prevalence is null and the notes say why. search_context sweeps the whole workspace by meaning; run_analytics_query counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a share only from prevalence, never by dividing the lists. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -12917,7 +12917,7 @@
               "type": "array"
             },
             "limit": {
-              "description": "How many citations and how many counterexamples to return.",
+              "description": "How many citations, counterexamples and abstentions to return, each.",
               "maximum": 25,
               "minimum": 1,
               "type": "integer"

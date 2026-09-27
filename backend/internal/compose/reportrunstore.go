@@ -216,8 +216,8 @@ func ExplainReportRunCell(
 }
 
 // reportRunExplain is the drill-through a saved run names: the cell given, or,
-// with a nil cell, the whole population the run measured — its question with
-// the grouping taken off, which is a question the reader could ask directly.
+// with a nil cell, every cell the run's answer serves — its grouping kept, so
+// every narrowing the grouping brings still applies.
 func reportRunExplain(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, cell *[]any,
 ) (analyticsquery.Explain, error) {
@@ -235,8 +235,7 @@ func reportRunExplain(
 		return analyticsquery.Explain{}, fmt.Errorf("compose: decoding a report run's question: %w", err)
 	}
 	if cell == nil {
-		q.GroupBy = nil
-		return analyticsquery.Explain{Query: q}, nil
+		return analyticsquery.Explain{Query: q, AllCells: true}, nil
 	}
 	return analyticsquery.Explain{Query: q, Group: *cell}, nil
 }

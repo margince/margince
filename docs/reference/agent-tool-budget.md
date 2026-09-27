@@ -55,7 +55,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 78 | 1746 | 1288 | 3551 | 10% | 19659 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 78 | 2585 | 1807 | 4908 | 14% | 18302 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 78 | — | 25112 | — | — | 76% | — | — | — |
+| _whole served catalog's listing, for scale — no run is offered it_ | 78 | — | 25113 | — | — | 76% | — | — | — |
 
 ### `morning_brief`
 
@@ -167,7 +167,7 @@ a term in an addition.
 | `search_context` | 344 | — |
 | `check_availability` | 342 | — |
 | `advance_project_phase` | 340 | — |
-| `search_report_evidence` | 334 | — |
+| `search_report_evidence` | 335 | — |
 | `forecast_input_checks` | 324 | — |
 | `demote_lead` | 317 | — |
 | `promote_lead` | 304 | — |

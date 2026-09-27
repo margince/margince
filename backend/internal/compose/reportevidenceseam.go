@@ -3,14 +3,17 @@
 
 package compose
 
-// search_report_evidence's engine seam: the run's record set from the report
-// drawer's drill-through (reportevidence.go), searched through the search
+// search_report_evidence's engine seam: a saved run's records as this reader
+// reaches them, through the drill-through the report drawer opens
+// (reportRunExplain, ExplainAnalyticsCell), searched through the search
 // module's retrieval seam and nothing else. Every search call is bounded to
-// the records the reader reached, so a record outside the run cannot be found
-// however well it matches.
+// those records, so a record outside the run cannot be found however well it
+// matches. Nothing here reads a row the reader cannot, so nothing in the
+// answer can depend on one.
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -37,23 +40,30 @@ type reportEvidenceSeam struct {
 func (s reportEvidenceSeam) SearchReportEvidence(
 	ctx context.Context, q agents.ReportEvidenceQuery,
 ) (agents.ReportEvidence, error) {
-	var cohort reportRunCohort
+	var cohort AnalyticsExplanation
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		cohort, err = readReportRunCohort(ctx, tx, q.RunID, q.Cell, s.floor)
+		explain, err := reportRunExplain(ctx, tx, q.RunID, q.Cell)
+		if err != nil {
+			return err
+		}
+		cohort, err = ExplainAnalyticsCell(ctx, tx, explain, s.floor)
 		return err
 	}); err != nil {
 		return agents.ReportEvidence{}, err
 	}
 	out := agents.ReportEvidence{
-		Entity: cohort.Entity, Withheld: cohort.Withheld, Truncated: cohort.Truncated,
-		Unreached: cohort.Unreached, Unestablished: cohort.Unestablished,
+		Entity: cohort.Entity, Withheld: cohort.Withheld,
+		PartlyWithheld: cohort.PartlyWithheld, Truncated: cohort.Truncated,
 	}
-	if cohort.Withheld || len(cohort.Reached) == 0 {
+	reached, err := explainedIDs(cohort)
+	if err != nil {
+		return agents.ReportEvidence{}, err
+	}
+	if cohort.Withheld || len(reached) == 0 {
 		return out, nil
 	}
 	verdicts, err := s.classifier.Classify(ctx, retrieval.ClassifyQuery{
-		Text: q.Text, EntityType: cohort.Entity, Within: cohort.Reached,
+		Text: q.Text, EntityType: cohort.Entity, Within: reached,
 	})
 	if err != nil {
 		return agents.ReportEvidence{}, err
@@ -96,4 +106,22 @@ func rankedFirst(entity datasource.EntityType, matched []ids.UUID, ranked []retr
 		}
 	}
 	return out
+}
+
+// explainedIDs reads the record id off each explained row: the drill-through's
+// first column, rendered as a uuid string.
+func explainedIDs(out AnalyticsExplanation) ([]ids.UUID, error) {
+	found := make([]ids.UUID, 0, len(out.Rows))
+	for _, row := range out.Rows {
+		raw, ok := row["id"].(string)
+		if !ok {
+			return nil, fmt.Errorf("compose: an explained row carries no record id")
+		}
+		id, err := ids.Parse(raw)
+		if err != nil {
+			return nil, fmt.Errorf("compose: an explained row's record id: %w", err)
+		}
+		found = append(found, id)
+	}
+	return found, nil
 }
