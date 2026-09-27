@@ -96,7 +96,7 @@ func TestAPasswordLinkNeedsEveryFieldTheTargetReads(t *testing.T) {
 }
 
 // A team-scoped target on a team the caller is not on reads records the caller
-// cannot, and a lead on such a team coaches people the caller cannot.
+// cannot, and a lead on such a team coaches colleagues the caller cannot.
 func TestAPasswordLinkNeedsTheTeamsTheTargetReaches(t *testing.T) {
 	e := setupRevocationEnv(t, "contain-team")
 	ctx := e.wsCtx(e.admin)

@@ -23,7 +23,7 @@ function member(roles: string[]): components["schemas"]["User"] {
     id: "u-1",
     email: "dana@brandt.example",
     display_name: "Dana Kessler",
-    timezone: "Europe/Berlin",
+    timezone: "",
     status: "active",
     is_agent: false,
     roles,

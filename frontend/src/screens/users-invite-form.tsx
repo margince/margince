@@ -26,10 +26,6 @@ import "./users-admin.css";
 
 export type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
 
-// The role an invite starts on when the reader may hand it out: the ordinary
-// seat most colleagues hold.
-const DEFAULT_ROLE = "rep";
-
 export type InvitedMember = Readonly<{ id: string; name: string }>;
 
 /**
@@ -73,14 +69,9 @@ export function InviteUserForm({
   const [name, setName] = useState("");
   const assignable = useAssignableRoles(true);
   const offered = assignable.data ?? [];
-  const [picked, setPicked] = useState<Role | null>(null);
-  // Until the reader picks, the form sits on the ordinary seat when they may
-  // hand it out, and on the first role they may otherwise.
-  const role =
-    picked ??
-    (offered.some((one) => one.key === DEFAULT_ROLE)
-      ? DEFAULT_ROLE
-      : (offered[0]?.key ?? ""));
+  // The ordinary seat most colleagues hold. Every member administrator may hand
+  // it out: it confers no administration grant and the narrowest row scope.
+  const [role, setRole] = useState<Role>("rep");
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const teams = useRoster("team", true);
@@ -112,7 +103,7 @@ export function InviteUserForm({
       const invitedName = displayName;
       setEmail("");
       setName("");
-      setPicked(null);
+      setRole("rep");
       setTeamIds([]);
       setError(null);
       onInvited({ id: newUserId, name: invitedName });
@@ -121,10 +112,7 @@ export function InviteUserForm({
   });
 
   const canInvite =
-    email.trim().length > 0 &&
-    displayName.length > 0 &&
-    role !== "" &&
-    !invite.isPending;
+    email.trim().length > 0 && displayName.length > 0 && !invite.isPending;
 
   return (
     // A real <form>, so Enter submits it — and the house dialog stack, so the
@@ -175,7 +163,7 @@ export function InviteUserForm({
             {...control}
             value={role}
             disabled={assignable.isPending}
-            onChange={setPicked}
+            onChange={setRole}
             options={roleOptions(t, offered)}
           />
         )}
@@ -213,7 +201,7 @@ export function InviteUserForm({
         )}
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>
-      {role !== "" && <AccessPreviewPanel role={role} teamIds={teamIds} />}
+      <AccessPreviewPanel role={role} teamIds={teamIds} />
       {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}

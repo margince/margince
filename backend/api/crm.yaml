@@ -17542,7 +17542,6 @@ paths:
           description: A live role's key — a seeded one or one made with `createRole`.
           schema:
             type: string
-            minLength: 1
             maxLength: 64
         - name: team_ids
           in: query
@@ -39594,7 +39593,6 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 255 }
         role:
           type: string
-          minLength: 1
           maxLength: 64
           default: rep
           description: >-
@@ -39620,7 +39618,6 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 255 }
         role:
           type: string
-          minLength: 1
           maxLength: 64
           description: >-
             A live role's key: one of the seeded system roles or one made with
@@ -39725,7 +39722,6 @@ components:
       properties:
         role:
           type: string
-          minLength: 1
           maxLength: 64
           description: A live role's key; see `InviteUserRequest.role`.
 

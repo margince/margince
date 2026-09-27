@@ -152,10 +152,10 @@ export function backend(
   calls: { method: string; url: string; body?: unknown }[],
   me: { roles: string[]; allow?: Record<string, string[]> } = {
     roles: ["admin"],
+    allow: ADMIN_USER_ADMIN,
   },
 ) {
-  const allow =
-    me.allow ?? (me.roles.includes("admin") ? ADMIN_USER_ADMIN : {});
+  const allow = me.allow ?? {};
   const objects: Record<string, Record<string, boolean>> = {};
   for (const [object, verbs] of Object.entries(allow)) {
     objects[object] = {
