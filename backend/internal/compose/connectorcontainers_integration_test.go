@@ -10,12 +10,16 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -123,4 +127,46 @@ func seedListableConnection(t *testing.T, e *integration.Env, owner ids.UUID, au
 	}); err != nil {
 		t.Fatalf("seeding the connection: %v", err)
 	}
+}
+
+// The transport over the same read: a listing the caller owns comes back as
+// the contract's shape, and a mailbox they have not connected answers absent.
+// These are the two arms that need a database to reach, which is why they sit
+// here rather than beside the refusals.
+func TestListConnectorContainersOverHTTP(t *testing.T) {
+	e := integration.Setup(t)
+	seedListableConnection(t, e, e.Rep1, []byte(`{"mailbox":"INBOX"}`))
+
+	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
+	r.Register(&listingConnector{})
+	h := connectorHandlers{registry: r}
+
+	t.Run("the caller's own folders", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/connectors/imap/containers", nil)
+		h.ListConnectorContainers(rec,
+			req.WithContext(e.As(e.Rep1, nil, integration.AccountRepPerms)), "imap")
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body %s", rec.Code, rec.Body)
+		}
+		var got crmcontracts.ConnectorContainers
+		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			t.Fatalf("body is not the contract's shape: %v", err)
+		}
+		if len(got.Containers) != 1 || got.Containers[0].Id != "INBOX/Privat" {
+			t.Fatalf("containers = %+v, want the mailbox's folder carried through", got.Containers)
+		}
+	})
+
+	t.Run("a mailbox this caller has not connected", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/connectors/imap/containers", nil)
+		h.ListConnectorContainers(rec,
+			req.WithContext(e.As(e.Rep2, nil, integration.AccountRepPerms)), "imap")
+
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want 404 rather than a refusal that confirms the connection exists", rec.Code)
+		}
+	})
 }
