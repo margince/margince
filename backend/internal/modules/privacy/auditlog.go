@@ -38,11 +38,13 @@ type AuditFilter struct {
 	// EntityID stays ids.UUID: it filters the audit envelope's polymorphic
 	// (entity_type, entity_id) pair, which addresses any entity kind.
 	EntityID *ids.UUID
-	Action   *string
-	From     *time.Time
-	To       *time.Time
-	Cursor   *string
-	Limit    *int
+	// BatchID narrows the page to the rows one bulk change wrote.
+	BatchID *ids.UUID
+	Action  *string
+	From    *time.Time
+	To      *time.Time
+	Cursor  *string
+	Limit   *int
 }
 
 // AuditEntry mirrors one audit_log row (contract AuditLogEntry). ID
@@ -70,6 +72,9 @@ type AuditEntry struct {
 	AuthorizationRule *string
 	Evidence          []byte
 	OccurredAt        time.Time
+	// BatchID names the bulk change that wrote this row, nil for a row
+	// written on its own.
+	BatchID *ids.UUID
 }
 
 // AuditPage is one newest-first keyset page.
@@ -157,7 +162,7 @@ func scanAuditEntry(rows pgx.Rows) (AuditEntry, error) {
 	var contentReadable, imagesReadable bool
 	if err := rows.Scan(&e.ID, &e.ActorType, &e.ActorID,
 		&passportID, &onBehalfOf, &e.Action, &e.EntityType, &e.EntityID,
-		&e.Before, &e.After, &e.AuthorizationRule, &e.Evidence, &e.OccurredAt,
+		&e.Before, &e.After, &e.AuthorizationRule, &e.Evidence, &e.OccurredAt, &e.BatchID,
 		&e.ActorName, &e.OnBehalfOfName, &contentReadable, &imagesReadable); err != nil {
 		return AuditEntry{}, err
 	}
@@ -327,7 +332,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 		rows, err := tx.Query(ctx,
 			`SELECT a.id, a.actor_type, a.actor_id, a.passport_id, a.on_behalf_of,
 			        a.action, a.entity_type, a.entity_id, a.before, a.after, a.authorization_rule,
-			        a.evidence, a.occurred_at,
+			        a.evidence, a.occurred_at, a.batch_id,
 			        `+auditActorNameColumn+`, obo.display_name,
 			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
 			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
@@ -389,6 +394,9 @@ func buildAuditWhere(f AuditFilter) (string, []any, error) {
 	}
 	if f.EntityID != nil {
 		where += " AND a.entity_id = " + arg(*f.EntityID)
+	}
+	if f.BatchID != nil {
+		where += " AND a.batch_id = " + arg(*f.BatchID)
 	}
 	if f.Action != nil {
 		where += " AND a.action = " + arg(*f.Action)

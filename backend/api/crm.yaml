@@ -163,6 +163,8 @@ tags:
       built only from what was filed, or a refusal that says which of the two it is.
   - name: Assignments
     description: Who is responsible for a record — administered roles, and the colleagues or teams holding them. Responsibility, never access.
+  - name: Bulk
+    description: One change over a selection of contacts, companies or deals — previewed, confirmed by whoever asked for it, and applied record by record.
 
 # =============================================================================
 paths:
@@ -4808,6 +4810,92 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /bulk/preview:
+    post:
+      tags: [Bulk]
+      operationId: previewBulkChange
+      summary: Say what one change over a selection of records would do, without doing it.
+      description: |
+        The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
+        each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`) or
+        `archive`. The answer says which records the change would alter (`affected`), which it
+        would leave alone and why (`excluded`), and up to three before/after rows to show the user.
+
+        Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
+        inside a transaction that is rolled back, so a record excluded here is excluded for the same
+        reason there. A record the caller cannot see answers `not_found`, one they may read but not
+        change answers `not_writable`, and one whose version moved since the caller read it answers
+        `changed_since_preview`.
+
+        A selection of more than 10 records needs the user's confirmation before it runs: the
+        answer then carries a `confirm_token`, which `executeBulkChange` requires. The token is good
+        for one execution of exactly this selection, verb and owner, by the same caller, until
+        `expires_at`. A selection of 10 or fewer runs without one.
+      x-mcp-tool: { verb: bulk_update_records, tier: auto_execute, scope: write }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BulkChangePreviewRequest' }
+      responses:
+        '200':
+          description: What the change would do.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BulkChangePreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /bulk/execute:
+    post:
+      tags: [Bulk]
+      operationId: executeBulkChange
+      summary: Apply one change to a selection of records, in one transaction.
+      description: |
+        The second half of a bulk change. Each record is changed exactly as the single-record
+        operation would change it (`updateContact`, `updateCompany`, `updateDeal` for an owner;
+        `archiveContact`, `archiveCompany`, `archiveDeal` for an archive), with its own `audit_log`
+        row and its own event. Every audit row the change writes carries the same `batch_id`, which
+        the answer returns.
+
+        A record is skipped, not overwritten, when its version is no longer the one the caller
+        sent (`changed_since_preview`), and skipped when the caller may not change it or a
+        single-record rule refuses it (the installation's own company cannot be archived). One
+        skipped record never stops the others. `owner_id` must name a colleague the caller may hand
+        work to, or nothing runs (`422`).
+
+        More than 10 records need the `confirm_token` a preview of exactly this selection returned;
+        a missing, expired, used or mismatched token answers `422` and nothing runs. The token is
+        spent in the same transaction as the change, so a retry under the same `Idempotency-Key`
+        answers the first result rather than a spent token.
+
+        An agent's change counts every record it changed against the agent's write budget. A change
+        that would take the agent past that budget is refused (`429`) before anything runs; it is
+        not put in an approval inbox.
+      x-mcp-tool: { verb: bulk_update_records, tier: auto_execute, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BulkChangeExecuteRequest' }
+      responses:
+        '200':
+          description: What changed and what was skipped.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BulkChangeResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: The change would take this agent past its write budget for the window.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /projects/transfer-ownership:
     post:
@@ -15640,6 +15728,7 @@ paths:
         - { name: actor, in: query, schema: { type: string }, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.' }
         - { name: entity_type, in: query, schema: { type: string } }
         - { name: entity_id, in: query, schema: { type: string, format: uuid } }
+        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).' }
         - { name: action, in: query, schema: { type: string }, description: 'One of the AuditLogEntry.action values.' }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
@@ -34958,6 +35047,123 @@ components:
         from_owner_id: { type: string, format: uuid }
         to_owner_id: { type: string, format: uuid, description: 'An active user of the workspace (422 otherwise).' }
 
+    BulkRecordType:
+      type: string
+      description: The kind of record a bulk change acts on. One change acts on one kind.
+      enum: [contact, company, deal]
+
+    BulkVerb:
+      type: string
+      description: |
+        What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+        `archive` retires it exactly as the single-record archive does.
+      enum: [reassign_owner, archive]
+
+    BulkItem:
+      type: object
+      description: One selected record and the version the caller was shown.
+      required: [id, version]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer, format: int64, description: 'The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.' }
+
+    BulkChangePreviewRequest:
+      type: object
+      required: [record_type, verb, items]
+      properties:
+        record_type: { $ref: '#/components/schemas/BulkRecordType' }
+        verb: { $ref: '#/components/schemas/BulkVerb' }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/BulkItem' }
+        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for `archive`.' }
+
+    BulkChangeExecuteRequest:
+      type: object
+      required: [record_type, verb, items]
+      properties:
+        record_type: { $ref: '#/components/schemas/BulkRecordType' }
+        verb: { $ref: '#/components/schemas/BulkVerb' }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/BulkItem' }
+        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for `archive`.' }
+        confirm_token: { type: string, description: 'The token a preview of exactly this selection returned. Required above 10 records.' }
+
+    BulkSkipReason:
+      type: string
+      description: |
+        Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+        archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+        its version moved since the caller read it. `no_change`: it already has this owner.
+        `anchor_company`: it is the installation's own company, which is never archived.
+        `refused`: a single-record rule refuses it, and `message` says which.
+      enum: [not_found, not_writable, changed_since_preview, no_change, anchor_company, refused]
+
+    BulkSkip:
+      type: object
+      required: [id, reason]
+      properties:
+        id: { type: string, format: uuid }
+        reason: { $ref: '#/components/schemas/BulkSkipReason' }
+        message: { type: string, description: 'What refused the record, when the reason is `refused`.' }
+
+    BulkRecordState:
+      type: object
+      description: The two facts a bulk change can move on a record.
+      required: [owner_id, archived]
+      properties:
+        owner_id: { type: [string, 'null'], format: uuid }
+        archived: { type: boolean }
+
+    BulkSampleRow:
+      type: object
+      description: One record the change would alter, as it is and as it would be.
+      required: [id, label, before, after]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string, description: The record's name as its list shows it. }
+        before: { $ref: '#/components/schemas/BulkRecordState' }
+        after: { $ref: '#/components/schemas/BulkRecordState' }
+
+    BulkChangePreview:
+      type: object
+      required: [record_type, verb, count, affected, excluded, sample, requires_confirmation]
+      properties:
+        record_type: { $ref: '#/components/schemas/BulkRecordType' }
+        verb: { $ref: '#/components/schemas/BulkVerb' }
+        count: { type: integer, description: The number of records the change would alter. }
+        affected:
+          type: array
+          description: The records the change would alter.
+          items: { type: string, format: uuid }
+        excluded:
+          type: array
+          description: The records the change would leave alone, each with its reason.
+          items: { $ref: '#/components/schemas/BulkSkip' }
+        sample:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/BulkSampleRow' }
+        requires_confirmation: { type: boolean, description: 'True above 10 records: executing needs `confirm_token`.' }
+        confirm_token: { type: string, description: 'Present when `requires_confirmation` is true and the change would alter at least one record.' }
+        expires_at: { type: string, format: date-time, description: When `confirm_token` stops being accepted. }
+
+    BulkChangeResult:
+      type: object
+      required: [batch_id, changed, skipped]
+      properties:
+        batch_id: { type: string, format: uuid, description: 'The id every audit row of this change carries as `batch_id`.' }
+        changed: { type: integer, description: The number of records changed. }
+        skipped:
+          type: array
+          description: The records left alone, each with its reason.
+          items: { $ref: '#/components/schemas/BulkSkip' }
+
     TransferProjectOwnershipResult:
       type: object
       required: [transferred]
@@ -41372,6 +41578,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
+        batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
         action:
           type: string
           # Every mutation is attributable (P12). connector captures audit as actor_type=connector.

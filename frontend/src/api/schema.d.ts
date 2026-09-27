@@ -3154,6 +3154,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bulk/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say what one change over a selection of records would do, without doing it.
+         * @description The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
+         *     each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`) or
+         *     `archive`. The answer says which records the change would alter (`affected`), which it
+         *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
+         *
+         *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
+         *     inside a transaction that is rolled back, so a record excluded here is excluded for the same
+         *     reason there. A record the caller cannot see answers `not_found`, one they may read but not
+         *     change answers `not_writable`, and one whose version moved since the caller read it answers
+         *     `changed_since_preview`.
+         *
+         *     A selection of more than 10 records needs the user's confirmation before it runs: the
+         *     answer then carries a `confirm_token`, which `executeBulkChange` requires. The token is good
+         *     for one execution of exactly this selection, verb and owner, by the same caller, until
+         *     `expires_at`. A selection of 10 or fewer runs without one.
+         */
+        post: operations["previewBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bulk/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply one change to a selection of records, in one transaction.
+         * @description The second half of a bulk change. Each record is changed exactly as the single-record
+         *     operation would change it (`updateContact`, `updateCompany`, `updateDeal` for an owner;
+         *     `archiveContact`, `archiveCompany`, `archiveDeal` for an archive), with its own `audit_log`
+         *     row and its own event. Every audit row the change writes carries the same `batch_id`, which
+         *     the answer returns.
+         *
+         *     A record is skipped, not overwritten, when its version is no longer the one the caller
+         *     sent (`changed_since_preview`), and skipped when the caller may not change it or a
+         *     single-record rule refuses it (the installation's own company cannot be archived). One
+         *     skipped record never stops the others. `owner_id` must name a colleague the caller may hand
+         *     work to, or nothing runs (`422`).
+         *
+         *     More than 10 records need the `confirm_token` a preview of exactly this selection returned;
+         *     a missing, expired, used or mismatched token answers `422` and nothing runs. The token is
+         *     spent in the same transaction as the change, so a retry under the same `Idempotency-Key`
+         *     answers the first result rather than a spent token.
+         *
+         *     An agent's change counts every record it changed against the agent's write budget. A change
+         *     that would take the agent past that budget is refused (`429`) before anything runs; it is
+         *     not put in an approval inbox.
+         */
+        post: operations["executeBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/transfer-ownership": {
         parameters: {
             query?: never;
@@ -25120,6 +25193,111 @@ export interface components {
              */
             to_owner_id: string;
         };
+        /**
+         * @description The kind of record a bulk change acts on. One change acts on one kind.
+         * @enum {string}
+         */
+        BulkRecordType: "contact" | "company" | "deal";
+        /**
+         * @description What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+         *     `archive` retires it exactly as the single-record archive does.
+         * @enum {string}
+         */
+        BulkVerb: "reassign_owner" | "archive";
+        /** @description One selected record and the version the caller was shown. */
+        BulkItem: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.
+             */
+            version: number;
+        };
+        BulkChangePreviewRequest: {
+            record_type: components["schemas"]["BulkRecordType"];
+            verb: components["schemas"]["BulkVerb"];
+            items: components["schemas"]["BulkItem"][];
+            /**
+             * Format: uuid
+             * @description The new owner. Required for `reassign_owner` and refused for `archive`.
+             */
+            owner_id?: string;
+        };
+        BulkChangeExecuteRequest: {
+            record_type: components["schemas"]["BulkRecordType"];
+            verb: components["schemas"]["BulkVerb"];
+            items: components["schemas"]["BulkItem"][];
+            /**
+             * Format: uuid
+             * @description The new owner. Required for `reassign_owner` and refused for `archive`.
+             */
+            owner_id?: string;
+            /** @description The token a preview of exactly this selection returned. Required above 10 records. */
+            confirm_token?: string;
+        };
+        /**
+         * @description Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+         *     archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+         *     its version moved since the caller read it. `no_change`: it already has this owner.
+         *     `anchor_company`: it is the installation's own company, which is never archived.
+         *     `refused`: a single-record rule refuses it, and `message` says which.
+         * @enum {string}
+         */
+        BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "refused";
+        BulkSkip: {
+            /** Format: uuid */
+            id: string;
+            reason: components["schemas"]["BulkSkipReason"];
+            /** @description What refused the record, when the reason is `refused`. */
+            message?: string;
+        };
+        /** @description The two facts a bulk change can move on a record. */
+        BulkRecordState: {
+            /** Format: uuid */
+            owner_id: string | null;
+            archived: boolean;
+        };
+        /** @description One record the change would alter, as it is and as it would be. */
+        BulkSampleRow: {
+            /** Format: uuid */
+            id: string;
+            /** @description The record's name as its list shows it. */
+            label: string;
+            before: components["schemas"]["BulkRecordState"];
+            after: components["schemas"]["BulkRecordState"];
+        };
+        BulkChangePreview: {
+            record_type: components["schemas"]["BulkRecordType"];
+            verb: components["schemas"]["BulkVerb"];
+            /** @description The number of records the change would alter. */
+            count: number;
+            /** @description The records the change would alter. */
+            affected: string[];
+            /** @description The records the change would leave alone, each with its reason. */
+            excluded: components["schemas"]["BulkSkip"][];
+            sample: components["schemas"]["BulkSampleRow"][];
+            /** @description True above 10 records: executing needs `confirm_token`. */
+            requires_confirmation: boolean;
+            /** @description Present when `requires_confirmation` is true and the change would alter at least one record. */
+            confirm_token?: string;
+            /**
+             * Format: date-time
+             * @description When `confirm_token` stops being accepted.
+             */
+            expires_at?: string;
+        };
+        BulkChangeResult: {
+            /**
+             * Format: uuid
+             * @description The id every audit row of this change carries as `batch_id`.
+             */
+            batch_id: string;
+            /** @description The number of records changed. */
+            changed: number;
+            /** @description The records left alone, each with its reason. */
+            skipped: components["schemas"]["BulkSkip"][];
+        };
         TransferProjectOwnershipResult: {
             /** @description Live projects the caller could write that moved; archived and unwritable ones are not counted. */
             transferred: number;
@@ -30273,6 +30451,11 @@ export interface components {
             actor_name?: string | null;
             /** @description Resolved display name for on_behalf_of. */
             on_behalf_of_name?: string | null;
+            /**
+             * Format: uuid
+             * @description The bulk change that wrote this row; null for a change made on its own.
+             */
+            batch_id?: string | null;
             /** @enum {string} */
             action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold";
             entity_type: string;
@@ -43067,6 +43250,87 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    previewBulkChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description What the change would do. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkChangePreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    executeBulkChange: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkChangeExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description What changed and what was skipped. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkChangeResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            /** @description The change would take this agent past its write budget for the window. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     transferProjectOwnership: {
         parameters: {
             query?: never;
@@ -54575,6 +54839,8 @@ export interface operations {
                 actor?: string;
                 entity_type?: string;
                 entity_id?: string;
+                /** @description Only the rows one bulk change wrote (`executeBulkChange` answers the id). */
+                batch_id?: string;
                 /** @description One of the AuditLogEntry.action values. */
                 action?: string;
                 from?: string;

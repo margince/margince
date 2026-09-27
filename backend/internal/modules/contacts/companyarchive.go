@@ -87,6 +87,21 @@ func (s *Store) ArchiveCompany(
 	return out, err
 }
 
+// ArchiveCompanyTx is ArchiveCompany on the caller's transaction, for a bulk
+// change that archives many companies in one commit. It asks every gate
+// ArchiveCompany asks and answers nothing: the caller already knows which row
+// it archived.
+func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "company", principal.ActionDelete); err != nil {
+		return err
+	}
+	if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+		return err
+	}
+	_, err := archiveCompanyTx(ctx, tx, id, ifVersion, nil)
+	return err
+}
+
 // archiveCompanyTx is the archive itself, on the caller's transaction: the
 // refusals, the guarded patch, the cascade, the audit and the event.
 //

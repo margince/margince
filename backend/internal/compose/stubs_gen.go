@@ -459,6 +459,14 @@ func (stubs) UnsnoozeBriefItem(w nethttp.ResponseWriter, r *nethttp.Request, ite
 	httperr.NotImplemented(w, r, "UnsnoozeBriefItem")
 }
 
+func (stubs) ExecuteBulkChange(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ExecuteBulkChangeParams) {
+	httperr.NotImplemented(w, r, "ExecuteBulkChange")
+}
+
+func (stubs) PreviewBulkChange(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewBulkChange")
+}
+
 func (stubs) ListMyCaptureActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMyCaptureActivityParams) {
 	httperr.NotImplemented(w, r, "ListMyCaptureActivity")
 }

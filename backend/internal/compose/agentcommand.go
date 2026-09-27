@@ -99,6 +99,8 @@ func (d restCommandDeps) summaryCopy(ctx context.Context) approvalSummaryCopy {
 // own comment.
 var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error){
 	"approveImportRun":     commitImportCommand,
+	"previewBulkChange":    bulkChangeCommand,
+	"executeBulkChange":    bulkChangeCommand,
 	"archiveActivity":      archiveCommand,
 	"archiveDeal":          archiveCommand,
 	"archiveTag":           archiveCommand,

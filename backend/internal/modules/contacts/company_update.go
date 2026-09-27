@@ -107,6 +107,9 @@ func (s *Store) updateCompanyInTx(
 	if err := refuseUnreadableCompany(current, in); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := ensureHandedOnOwnerAssignable(ctx, tx, current.OwnerId, in.OwnerID); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := buildCompanyPatch(ctx, tx, current, in)
 	if err != nil {

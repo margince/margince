@@ -172,6 +172,18 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
 }
 
+// wireSurfaces binds the handler sets built after the literal, each over a
+// dependency the literal had to build first.
+func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
+	s.wireStagedSurfaces(pool)
+	s.wireAnalyticsSurface(pool)
+	s.wireCaptureSettingsSurface(pool)
+	s.wireExportSurface(pool, log)
+	s.wireOnboardingSurface(pool)
+	s.wireSystemOfRecordReads(pool)
+	s.wireBulkSurface(pool)
+}
+
 // wireStagedSurfaces binds the two surfaces that read the staged queue. They
 // share ONE approvals engine, so the day's card and the receipt's line are one
 // queue rather than two readings of it; a second engine here is how the two

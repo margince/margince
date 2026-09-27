@@ -68,8 +68,13 @@ const clientToolCeiling = 100
 //
 // It comes DOWN when the verb reconciliation lands, and a ceiling that did not
 // follow it down would quietly re-bank the room it freed.
-// At 77 it leaves 23 of a client's 100 slots for other servers.
-const publishedToolCeiling = 77
+//
+// bulk_update_records is the agent's door onto a bulk change, which the website
+// offers and an agent must reach through the same engine and the same
+// confirmation. It is one tool for three record types, two verbs and both the
+// preview and the execution, where one tool per verb and step would cost four.
+// At 78 it leaves 22 of a client's 100 slots for other servers.
+const publishedToolCeiling = 78
 
 type mcpInfoFile struct {
 	Totals struct {

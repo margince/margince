@@ -50,7 +50,7 @@ type summaryCopy struct {
 
 	// The agent's own work: decisions, reports, the morning brief and a volume
 	// step-up.
-	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport,
+	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport, bulkChange,
 	analyticsQuery, annotateNothing, annotateNarrative, annotateBoth, annotateFindings,
 	stepUpRecords, stepUpChanges string
 
@@ -130,6 +130,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s every waiting proposal of act %s",
 		runReport:           "Run report %s",
 		composeReport:       "Compose a report of %d block(s)",
+		bulkChange:          "Change %d records at once",
 		analyticsQuery:      "Run an analytics query over %s",
 		annotateNothing:     "Record that tonight's pass ran and found nothing to say",
 		annotateNarrative:   "Write a summary of the night onto your morning brief",
@@ -204,6 +205,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s: alle wartenden Vorschläge des Vorgangs %s",
 		runReport:           "Bericht %s ausführen",
 		composeReport:       "Bericht aus %d Baustein(en) erstellen",
+		bulkChange:          "%d Datensätze auf einmal ändern",
 		analyticsQuery:      "Analyseabfrage über %s ausführen",
 		annotateNothing:     "Festhalten, dass der nächtliche Durchlauf lief und nichts zu berichten hatte",
 		annotateNarrative:   "Eine Zusammenfassung der Nacht in deinen Morgenbericht schreiben",
@@ -278,6 +280,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s mọi đề xuất đang chờ của lượt %s",
 		runReport:           "Chạy báo cáo %s",
 		composeReport:       "Soạn một báo cáo gồm %d khối",
+		bulkChange:          "Thay đổi %d bản ghi cùng lúc",
 		analyticsQuery:      "Chạy truy vấn phân tích trên %s",
 		annotateNothing:     "Ghi nhận rằng lượt chạy đêm nay đã chạy và không có gì để báo cáo",
 		annotateNarrative:   "Viết bản tóm tắt đêm qua vào bản tin buổi sáng của bạn",

@@ -55,27 +55,43 @@ func (s *Store) ArchiveContact(
 	}
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
-			return err
-		}
-		// The precondition, under the row lock the write takes: a caller that
-		// asked for this write only while nobody had touched the record gets
-		// that answered HERE rather than in a read that already committed.
-		if err := refuseIfHumanTouched(ctx, tx, "contact", id.UUID, options); err != nil {
-			return err
-		}
-		// A liveness probe, not a wire read — no custom columns needed.
-		if _, err := readContact(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
-			return err
-		}
-
-		if err := archiveContactRows(ctx, tx, id, time.Now().UTC(), ifVersion); err != nil {
+		if err := archiveContactInTx(ctx, tx, id, ifVersion, options); err != nil {
 			return err
 		}
 		out, err = readContact(ctx, tx, id, storekit.IncludeArchived, active)
 		return err
 	})
 	return out, err
+}
+
+// ArchiveContactTx is ArchiveContact on the caller's transaction, for a bulk
+// change that archives many contacts in one commit. It asks every gate
+// ArchiveContact asks and answers nothing: the caller already knows which row
+// it archived.
+func (s *Store) ArchiveContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+		return err
+	}
+	return archiveContactInTx(ctx, tx, id, ifVersion, writeOptions{})
+}
+
+// archiveContactInTx is the archive itself, behind the object gate its callers
+// ask: the row's write check, the caller's precondition, and the cascade.
+func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, options writeOptions) error {
+	if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
+		return err
+	}
+	// The precondition, under the row lock the write takes: a caller that
+	// asked for this write only while nobody had touched the record gets
+	// that answered HERE rather than in a read that already committed.
+	if err := refuseIfHumanTouched(ctx, tx, "contact", id.UUID, options); err != nil {
+		return err
+	}
+	// A liveness probe, not a wire read — no custom columns needed.
+	if _, err := readContact(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
+		return err
+	}
+	return archiveContactRows(ctx, tx, id, time.Now().UTC(), ifVersion)
 }
 
 // archiveContactRows retires a contact and its satellites and lands the write

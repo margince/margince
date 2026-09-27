@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -134,6 +135,48 @@ func (g *Gate) refuseOnVolume(ctx context.Context, spec mcp.ToolSpec) error {
 		if reading.Exceeded {
 			return &VolumeExceededError{Tool: spec.Name, Reading: reading}
 		}
+	}
+	return nil
+}
+
+// RecordWritesOverBudgetError refuses a bulk change an agent may make, at a size
+// that would carry it past its write budget for the window. It unwraps to the
+// same sentinel a volume refusal does, and it is never staged for a release:
+// the change is refused outright, and the agent can ask for fewer records.
+type RecordWritesOverBudgetError struct {
+	Tool    string
+	Records int
+	Reading agentvolume.Reading
+}
+
+// Unwrap makes every existing budget check see this as what it is.
+func (e *RecordWritesOverBudgetError) Unwrap() error { return apperrors.ErrBudgetExceeded }
+
+func (e *RecordWritesOverBudgetError) Error() string {
+	left := max(e.Reading.Limit-e.Reading.Observed, 0)
+	return fmt.Sprintf(
+		"%s would change %d records, and this agent has %d of its %d %s left for this window; "+
+			"select fewer records, or wait for the window to roll",
+		e.Tool, e.Records, left, e.Reading.Limit, e.Reading.Counter)
+}
+
+// AdmitRecordWrites refuses an agent's bulk change that would take its write
+// counter past the limit once the n records it is about to change are charged.
+//
+// Admit cannot ask this: it runs before the call and sees one act, while a bulk
+// change knows how many records it changes only once it has tried each of them.
+// So the change asks here, inside its own transaction and before it commits,
+// which is still before anything has happened. A human is outside the control.
+func (g *Gate) AdmitRecordWrites(ctx context.Context, tool string, n int) error {
+	if g == nil || g.volume == nil || n <= 0 {
+		return nil
+	}
+	if p, ok := principal.Actor(ctx); !ok || p.Type != principal.PrincipalAgent {
+		return nil
+	}
+	reading := g.volume.Read(ctx, agentvolume.Writes)
+	if reading.Exceeded || reading.Observed+n > reading.Limit {
+		return &RecordWritesOverBudgetError{Tool: tool, Records: n, Reading: reading}
 	}
 	return nil
 }

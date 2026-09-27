@@ -2737,6 +2737,75 @@ func (e BriefDeliveryWeeklyDelivery) Valid() bool {
 	}
 }
 
+// Defines values for BulkRecordType.
+const (
+	BulkRecordTypeCompany BulkRecordType = "company"
+	BulkRecordTypeContact BulkRecordType = "contact"
+	BulkRecordTypeDeal    BulkRecordType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the BulkRecordType enum.
+func (e BulkRecordType) Valid() bool {
+	switch e {
+	case BulkRecordTypeCompany:
+		return true
+	case BulkRecordTypeContact:
+		return true
+	case BulkRecordTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkSkipReason.
+const (
+	BulkSkipReasonAnchorCompany       BulkSkipReason = "anchor_company"
+	BulkSkipReasonChangedSincePreview BulkSkipReason = "changed_since_preview"
+	BulkSkipReasonNoChange            BulkSkipReason = "no_change"
+	BulkSkipReasonNotFound            BulkSkipReason = "not_found"
+	BulkSkipReasonNotWritable         BulkSkipReason = "not_writable"
+	BulkSkipReasonRefused             BulkSkipReason = "refused"
+)
+
+// Valid indicates whether the value is a known member of the BulkSkipReason enum.
+func (e BulkSkipReason) Valid() bool {
+	switch e {
+	case BulkSkipReasonAnchorCompany:
+		return true
+	case BulkSkipReasonChangedSincePreview:
+		return true
+	case BulkSkipReasonNoChange:
+		return true
+	case BulkSkipReasonNotFound:
+		return true
+	case BulkSkipReasonNotWritable:
+		return true
+	case BulkSkipReasonRefused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkVerb.
+const (
+	BulkVerbArchive       BulkVerb = "archive"
+	BulkVerbReassignOwner BulkVerb = "reassign_owner"
+)
+
+// Valid indicates whether the value is a known member of the BulkVerb enum.
+func (e BulkVerb) Valid() bool {
+	switch e {
+	case BulkVerbArchive:
+		return true
+	case BulkVerbReassignOwner:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureConnectionMailPosture.
 const (
 	CaptureConnectionMailPostureClassified CaptureConnectionMailPosture = "classified"
@@ -21932,6 +22001,9 @@ type AuditLogEntry struct {
 	// AuthorizationRule Which RBAC/scope rule allowed it.
 	AuthorizationRule *string `json:"authorization_rule,omitempty"`
 
+	// BatchId The bulk change that wrote this row; null for a change made on its own.
+	BatchId *openapi_types.UUID `json:"batch_id,omitempty"`
+
 	// Before The record image before the change. For an `activity` row this read
 	// REDACTS content the caller's audience does not admit. What survives
 	// is what the activity READ surface answers on a withheld row — the
@@ -22483,6 +22555,135 @@ type BriefSnoozeRequest struct {
 	// the future.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
+
+// BulkChangeExecuteRequest defines model for BulkChangeExecuteRequest.
+type BulkChangeExecuteRequest struct {
+	// ConfirmToken The token a preview of exactly this selection returned. Required above 10 records.
+	ConfirmToken *string    `json:"confirm_token,omitempty"`
+	Items        []BulkItem `json:"items"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangePreview defines model for BulkChangePreview.
+type BulkChangePreview struct {
+	// Affected The records the change would alter.
+	Affected []openapi_types.UUID `json:"affected"`
+
+	// ConfirmToken Present when `requires_confirmation` is true and the change would alter at least one record.
+	ConfirmToken *string `json:"confirm_token,omitempty"`
+
+	// Count The number of records the change would alter.
+	Count int `json:"count"`
+
+	// Excluded The records the change would leave alone, each with its reason.
+	Excluded []BulkSkip `json:"excluded"`
+
+	// ExpiresAt When `confirm_token` stops being accepted.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// RequiresConfirmation True above 10 records: executing needs `confirm_token`.
+	RequiresConfirmation bool            `json:"requires_confirmation"`
+	Sample               []BulkSampleRow `json:"sample"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangePreviewRequest defines model for BulkChangePreviewRequest.
+type BulkChangePreviewRequest struct {
+	Items []BulkItem `json:"items"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangeResult defines model for BulkChangeResult.
+type BulkChangeResult struct {
+	// BatchId The id every audit row of this change carries as `batch_id`.
+	BatchId openapi_types.UUID `json:"batch_id"`
+
+	// Changed The number of records changed.
+	Changed int `json:"changed"`
+
+	// Skipped The records left alone, each with its reason.
+	Skipped []BulkSkip `json:"skipped"`
+}
+
+// BulkItem One selected record and the version the caller was shown.
+type BulkItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.
+	Version int64 `json:"version"`
+}
+
+// BulkRecordState The two facts a bulk change can move on a record.
+type BulkRecordState struct {
+	Archived bool                `json:"archived"`
+	OwnerId  *openapi_types.UUID `json:"owner_id"`
+}
+
+// BulkRecordType The kind of record a bulk change acts on. One change acts on one kind.
+type BulkRecordType string
+
+// BulkSampleRow One record the change would alter, as it is and as it would be.
+type BulkSampleRow struct {
+	// After The two facts a bulk change can move on a record.
+	After BulkRecordState `json:"after"`
+
+	// Before The two facts a bulk change can move on a record.
+	Before BulkRecordState    `json:"before"`
+	Id     openapi_types.UUID `json:"id"`
+
+	// Label The record's name as its list shows it.
+	Label string `json:"label"`
+}
+
+// BulkSkip defines model for BulkSkip.
+type BulkSkip struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Message What refused the record, when the reason is `refused`.
+	Message *string `json:"message,omitempty"`
+
+	// Reason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+	// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+	// its version moved since the caller read it. `no_change`: it already has this owner.
+	// `anchor_company`: it is the installation's own company, which is never archived.
+	// `refused`: a single-record rule refuses it, and `message` says which.
+	Reason BulkSkipReason `json:"reason"`
+}
+
+// BulkSkipReason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+// its version moved since the caller read it. `no_change`: it already has this owner.
+// `anchor_company`: it is the installation's own company, which is never archived.
+// `refused`: a single-record rule refuses it, and `message` says which.
+type BulkSkipReason string
+
+// BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+// `archive` retires it exactly as the single-record archive does.
+type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
 // is open and the list can be worked. `closed` — the deal is done; everything
@@ -43168,6 +43369,9 @@ type ListAuditLogParams struct {
 	EntityType *string             `form:"entity_type,omitempty" json:"entity_type,omitempty"`
 	EntityId   *openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 
+	// BatchId Only the rows one bulk change wrote (`executeBulkChange` answers the id).
+	BatchId *openapi_types.UUID `form:"batch_id,omitempty" json:"batch_id,omitempty"`
+
 	// Action One of the AuditLogEntry.action values.
 	Action *string    `form:"action,omitempty" json:"action,omitempty"`
 	From   *time.Time `form:"from,omitempty" json:"from,omitempty"`
@@ -43324,6 +43528,25 @@ type BookMeetingParams struct {
 
 // BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
 type BookMeetingJSONBodyLinksEntityType string
+
+// ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
+type ExecuteBulkChangeParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
 
 // ListMyCaptureActivityParams defines parameters for ListMyCaptureActivity.
 type ListMyCaptureActivityParams struct {
@@ -48145,6 +48368,12 @@ type AnnotateMorningBriefJSONRequestBody = AnnotateBriefRequest
 
 // SnoozeBriefItemJSONRequestBody defines body for SnoozeBriefItem for application/json ContentType.
 type SnoozeBriefItemJSONRequestBody = BriefSnoozeRequest
+
+// ExecuteBulkChangeJSONRequestBody defines body for ExecuteBulkChange for application/json ContentType.
+type ExecuteBulkChangeJSONRequestBody = BulkChangeExecuteRequest
+
+// PreviewBulkChangeJSONRequestBody defines body for PreviewBulkChange for application/json ContentType.
+type PreviewBulkChangeJSONRequestBody = BulkChangePreviewRequest
 
 // SetBlockedDomainJSONRequestBody defines body for SetBlockedDomain for application/json ContentType.
 type SetBlockedDomainJSONRequestBody = SetBlockedDomainRequest
@@ -59092,6 +59321,12 @@ type ServerInterface interface {
 	// Take back a snooze — the item returns to the queue immediately.
 	// (POST /brief/items/{itemId}/unsnooze)
 	UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
+	// Apply one change to a selection of records, in one transaction.
+	// (POST /bulk/execute)
+	ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams)
+	// Say what one change over a selection of records would do, without doing it.
+	// (POST /bulk/preview)
+	PreviewBulkChange(w http.ResponseWriter, r *http.Request)
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
@@ -61492,6 +61727,18 @@ func (_ Unimplemented) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, i
 // Take back a snooze — the item returns to the queue immediately.
 // (POST /brief/items/{itemId}/unsnooze)
 func (_ Unimplemented) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply one change to a selection of records, in one transaction.
+// (POST /bulk/execute)
+func (_ Unimplemented) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what one change over a selection of records would do, without doing it.
+// (POST /bulk/preview)
+func (_ Unimplemented) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68161,6 +68408,19 @@ func (siw *ServerInterfaceWrapper) ListAuditLog(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "batch_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "batch_id", r.URL.Query(), &params.BatchId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "batch_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "batch_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "action" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "action", r.URL.Query(), &params.Action, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -69141,6 +69401,77 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnsnoozeBriefItem(w, r, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExecuteBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) ExecuteBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExecuteBulkChangeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExecuteBulkChange(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBulkChange(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -94506,6 +94837,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/brief/items/{itemId}/unsnooze", wrapper.UnsnoozeBriefItem)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/execute", wrapper.ExecuteBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/preview", wrapper.PreviewBulkChange)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/activity", wrapper.ListMyCaptureActivity)
