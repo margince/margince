@@ -3176,10 +3176,11 @@ export interface paths {
          *     change answers `not_writable`, and one whose version moved since the caller read it answers
          *     `changed_since_preview`.
          *
-         *     A selection of more than 10 records needs the user's confirmation before it runs: the
-         *     answer then carries a `confirm_token`, which `executeBulkChange` requires. The token is good
-         *     for one execution of exactly this selection, verb and owner, by the same caller, until
-         *     `expires_at`. A selection of 10 or fewer runs without one.
+         *     A preview that would change at least one record answers a `confirm_token`. It is good for
+         *     one execution of exactly this selection, verb and owner, by the same caller, until
+         *     `expires_at`, and that execution changes no record outside `affected`. A selection of more
+         *     than 10 records needs the user's confirmation, so `executeBulkChange` requires the token
+         *     there; a selection of 10 or fewer may run without one.
          */
         post: operations["previewBulkChange"];
         delete?: never;
@@ -3212,13 +3213,17 @@ export interface paths {
          *     work to, or nothing runs (`422`).
          *
          *     More than 10 records need the `confirm_token` a preview of exactly this selection returned;
-         *     a missing, expired, used or mismatched token answers `422` and nothing runs. The token is
-         *     spent in the same transaction as the change, so a retry under the same `Idempotency-Key`
-         *     answers the first result rather than a spent token.
+         *     a missing, expired, used or mismatched token answers `422` and nothing runs. With a token,
+         *     a record the preview did not list in `affected` is skipped as `not_previewed`, so the
+         *     change never reaches further than what the user was shown. Without one, the change is its
+         *     own preview: it changes exactly the records a preview at that moment would list. The token
+         *     is spent in the same transaction as the change, so a retry under the same
+         *     `Idempotency-Key` answers the first result rather than a spent token.
          *
-         *     An agent's change counts every record it changed against the agent's write budget. A change
-         *     that would take the agent past that budget is refused (`429`) before anything runs; it is
-         *     not put in an approval inbox.
+         *     An agent's change counts every record it changed against the agent's write budget, reserved
+         *     before the change commits, so two changes running at once cannot both spend the same
+         *     remainder. A change that would take the agent past that budget is refused (`429`) and
+         *     nothing runs; it is not put in an approval inbox.
          */
         post: operations["executeBulkChange"];
         delete?: never;
@@ -25241,15 +25246,25 @@ export interface components {
          *     archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
          *     its version moved since the caller read it. `no_change`: it already has this owner.
          *     `anchor_company`: it is the installation's own company, which is never archived.
-         *     `refused`: a single-record rule refuses it, and `message` says which.
+         *     `not_previewed`: the preview whose token this execution presents did not list it.
+         *     `refused`: a single-record rule refuses it; `code` says which.
          * @enum {string}
          */
-        BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "refused";
+        BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused";
         BulkSkip: {
             /** Format: uuid */
             id: string;
             reason: components["schemas"]["BulkSkipReason"];
-            /** @description What refused the record, when the reason is `refused`. */
+            /**
+             * @description Which single-record rule refused the record, when the reason is `refused` — the same
+             *     code the single-record operation answers, for example `sole_project_company`.
+             */
+            code?: string;
+            /** @description The values the rule named, when it named any. */
+            params?: {
+                [key: string]: unknown;
+            };
+            /** @description The refusal in English, for a code the client does not know. */
             message?: string;
         };
         /** @description The two facts a bulk change can move on a record. */
@@ -25279,7 +25294,7 @@ export interface components {
             sample: components["schemas"]["BulkSampleRow"][];
             /** @description True above 10 records: executing needs `confirm_token`. */
             requires_confirmation: boolean;
-            /** @description Present when `requires_confirmation` is true and the change would alter at least one record. */
+            /** @description Present when the change would alter at least one record. Required above 10 records; below that, presenting it holds the execution to `affected`. */
             confirm_token?: string;
             /**
              * Format: date-time

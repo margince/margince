@@ -5,11 +5,13 @@ package compose
 
 // The user's confirmation of one previewed bulk change.
 //
-// A preview of more than bulkConfirmAbove records mints a token and stores only
-// its hash, beside a hash of exactly what was previewed. The execution presents
-// the token and spends the row in its own transaction: an execution of anything
-// else does not match, a second execution finds the row spent, and a change
-// that rolls back leaves the token unspent for the retry.
+// A preview that would change anything mints a token and stores only its hash,
+// beside a hash of exactly what was previewed and the records it said would
+// change. The execution presents the token and spends the row in its own
+// transaction: an execution of anything else does not match, a second
+// execution finds the row spent, a change that rolls back leaves the token
+// unspent for the retry, and the records the execution may change are the ones
+// the preview listed. Above bulkConfirmAbove records the token is required.
 //
 // The token is a random secret rather than a signed claim. The stored row is
 // what makes it single-use, and a signature would add nothing the row does not
@@ -28,6 +30,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -35,7 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// bulkConfirmAbove is the largest selection that runs without a confirmation.
+// bulkConfirmAbove is the largest selection that may run without a confirmation.
 const bulkConfirmAbove = 10
 
 // bulkConfirmFor is how long the user has between seeing a preview and
@@ -77,9 +80,12 @@ func bulkBinding(requestedBy string, change bulkChange) ([]byte, error) {
 	return sum[:], nil
 }
 
-// mintBulkConfirmation stores a confirmation for change and answers the token
-// and when it stops being accepted.
-func mintBulkConfirmation(ctx context.Context, tx pgx.Tx, change bulkChange, now time.Time) (string, time.Time, error) {
+// mintBulkConfirmation stores a confirmation for change, covering the records
+// its preview listed as affected, and answers the token and when it stops being
+// accepted.
+func mintBulkConfirmation(
+	ctx context.Context, tx pgx.Tx, change bulkChange, affected []openapi_types.UUID, now time.Time,
+) (string, time.Time, error) {
 	requestedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return "", time.Time{}, err
@@ -94,45 +100,58 @@ func mintBulkConfirmation(ctx context.Context, tx pgx.Tx, change bulkChange, now
 	}
 	token := base64.RawURLEncoding.EncodeToString(secret)
 	expires := now.Add(bulkConfirmFor)
-	// A lapsed confirmation opens nothing, so each new one clears them away
-	// rather than a sweep of its own doing it.
-	if _, err := tx.Exec(ctx, `DELETE FROM bulk_confirmation WHERE expires_at <= $1`, now); err != nil {
-		return "", time.Time{}, fmt.Errorf("clear lapsed confirmations: %w", err)
-	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO bulk_confirmation (token_hash, requested_by, binding, expires_at, created_at)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		tokenHash(token), requestedBy, binding, expires, now); err != nil {
+		`INSERT INTO bulk_confirmation (token_hash, requested_by, binding, affected, expires_at, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		tokenHash(token), requestedBy, binding, affected, expires, now); err != nil {
 		return "", time.Time{}, fmt.Errorf("store the confirmation: %w", err)
 	}
 	return token, expires, nil
 }
 
 // spendBulkConfirmation consumes the confirmation token names, refusing one
-// that does not confirm exactly change for this caller.
-func spendBulkConfirmation(ctx context.Context, tx pgx.Tx, change bulkChange, token string, now time.Time) error {
+// that does not confirm exactly change for this caller, and answers the records
+// its preview listed as affected.
+func spendBulkConfirmation(
+	ctx context.Context, tx pgx.Tx, change bulkChange, token string, now time.Time,
+) (map[openapi_types.UUID]bool, error) {
 	requestedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	binding, err := bulkBinding(requestedBy, change)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	var spent bool
+	var affected []openapi_types.UUID
 	err = tx.QueryRow(ctx,
 		`UPDATE bulk_confirmation SET consumed_at = $4
 		  WHERE token_hash = $1 AND requested_by = $2 AND binding = $3
 		    AND consumed_at IS NULL AND expires_at > $4
-		 RETURNING true`,
-		tokenHash(token), requestedBy, binding, now).Scan(&spent)
+		 RETURNING affected`,
+		tokenHash(token), requestedBy, binding, now).Scan(&affected)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return errConfirmTokenRefused
+		return nil, errConfirmTokenRefused
 	}
 	if err != nil {
-		return fmt.Errorf("spend the confirmation: %w", err)
+		return nil, fmt.Errorf("spend the confirmation: %w", err)
 	}
-	return nil
+	previewed := make(map[openapi_types.UUID]bool, len(affected))
+	for _, id := range affected {
+		previewed[id] = true
+	}
+	return previewed, nil
+}
+
+// purgeLapsedBulkConfirmations deletes every confirmation past its expiry: a
+// lapsed one opens nothing, and keeping it keeps the requester's id for no
+// purpose. The transport retention sweep runs it (idempotencyretention.go).
+func purgeLapsedBulkConfirmations(ctx context.Context, tx pgx.Tx) (int64, error) {
+	tag, err := tx.Exec(ctx, `DELETE FROM bulk_confirmation WHERE expires_at <= now()`)
+	if err != nil {
+		return 0, fmt.Errorf("compose: purging lapsed bulk confirmations: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 func tokenHash(token string) []byte {

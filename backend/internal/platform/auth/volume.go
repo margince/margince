@@ -13,13 +13,14 @@ package auth
 // why an in-scope, correctly-tiered, read-only Passport reading the whole
 // workspace is a gated event rather than a Tuesday.
 //
-// This half only ever REFUSES. Nothing here charges a counter: the surface pays
-// where records and effects leave it (modules/agents), and a gate that could
-// both admit and charge could admit itself.
+// This half REFUSES. The surface pays where records and effects leave it
+// (modules/agents), and a gate that could both admit and charge could admit
+// itself; the one exception is ReserveRecordWrites, which says why.
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -160,23 +161,65 @@ func (e *RecordWritesOverBudgetError) Error() string {
 		e.Tool, e.Records, left, e.Reading.Limit, e.Reading.Counter)
 }
 
-// AdmitRecordWrites refuses an agent's bulk change that would take its write
-// counter past the limit once the n records it is about to change are charged.
+// VolumeReserver charges a count only when the window can pay for all of it,
+// in one step, and gives it back when the change it paid for did not commit.
+type VolumeReserver interface {
+	Reserve(ctx context.Context, c agentvolume.Counter, n int) (agentvolume.Reading, bool, error)
+	Refund(ctx context.Context, c agentvolume.Counter, n int, bucket int64) error
+}
+
+// WriteReservation is n records' worth of an agent's write budget, charged
+// before the change that spends it commits.
+type WriteReservation struct {
+	meter  VolumeReserver
+	n      int
+	bucket int64
+}
+
+// Refund gives the reservation back. It is for a change that did not commit,
+// and is safe to call on a nil or already refunded reservation.
+func (r *WriteReservation) Refund(ctx context.Context) {
+	if r == nil || r.n == 0 {
+		return
+	}
+	if err := r.meter.Refund(ctx, agentvolume.Writes, r.n, r.bucket); err != nil {
+		// The change did not commit; a refund that could not land leaves the
+		// agent's window short by n, which is the conservative direction.
+		slog.ErrorContext(ctx, "refunding a bulk change's write reservation failed", "records", r.n, "err", err)
+	}
+	r.n = 0
+}
+
+// ReserveRecordWrites charges an agent's bulk change of n records to its write
+// counter, or refuses it when the window cannot pay for all n.
 //
-// Admit cannot ask this: it runs before the call and sees one act, while a bulk
-// change knows how many records it changes only once it has tried each of them.
-// So the change asks here, inside its own transaction and before it commits,
-// which is still before anything has happened. A human is outside the control.
-func (g *Gate) AdmitRecordWrites(ctx context.Context, tool string, n int) error {
+// This is the one place admission CHARGES, and it has to: Admit sees one act
+// before the call, and a bulk change knows its size only once it has tried
+// every record. Checking the balance and charging it later would let two
+// changes running at once both spend the same remainder, so the check and the
+// charge are one step in the meter. The change asks inside its own
+// transaction, before it commits, and refunds the reservation if the commit
+// does not happen. A human is outside the control.
+func (g *Gate) ReserveRecordWrites(ctx context.Context, tool string, n int) (*WriteReservation, error) {
 	if g == nil || g.volume == nil || n <= 0 {
-		return nil
+		return nil, nil
 	}
 	if p, ok := principal.Actor(ctx); !ok || p.Type != principal.PrincipalAgent {
-		return nil
+		return nil, nil
 	}
-	reading := g.volume.Read(ctx, agentvolume.Writes)
-	if reading.Exceeded || reading.Observed+n > reading.Limit {
-		return &RecordWritesOverBudgetError{Tool: tool, Records: n, Reading: reading}
+	reserver, ok := g.volume.(VolumeReserver)
+	if !ok {
+		return nil, fmt.Errorf("gate: %s cannot reserve a bulk change on a volume meter that cannot reserve: %w",
+			tool, apperrors.ErrBudgetExceeded)
 	}
-	return nil
+	reading, admitted, err := reserver.Reserve(ctx, agentvolume.Writes, n)
+	if err != nil {
+		slog.ErrorContext(ctx, "reserving a bulk change against the write budget failed", "tool", tool, "err", err)
+		return nil, fmt.Errorf("gate: %s could not be counted against this agent's write budget, so it was not run: %w",
+			tool, apperrors.ErrBudgetExceeded)
+	}
+	if !admitted {
+		return nil, &RecordWritesOverBudgetError{Tool: tool, Records: n, Reading: reading}
+	}
+	return &WriteReservation{meter: reserver, n: n, bucket: reading.Bucket}, nil
 }

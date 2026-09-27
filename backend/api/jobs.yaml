@@ -1134,7 +1134,9 @@ kinds:
     reason: >-
       Hourly rather than daily: the rows hold verbatim record snapshots and the
       replay window they serve is only 24h, so a daily pass would leave a day of
-      expired personal data sitting past its purpose.
+      expired personal data sitting past its purpose. The same pass deletes
+      lapsed bulk-change confirmations, which name who previewed and live 15
+      minutes.
 
 
   stored_object_reap:

@@ -36,8 +36,8 @@ CREATE TABLE bulk_operation (
 CREATE INDEX idx_bulk_operation_requested_by ON bulk_operation (requested_by, created_at);
 CREATE INDEX idx_bulk_operation_created ON bulk_operation (created_at);
 
--- The user's confirmation of one previewed bulk change. A preview of more
--- than ten records mints a token; the table keeps only its hash, and the
+-- The user's confirmation of one previewed bulk change. A preview that would
+-- change anything mints a token; the table keeps only its hash, and the
 -- execution that presents it spends the row in its own transaction, so one
 -- confirmation opens exactly one execution.
 CREATE TABLE bulk_confirmation (
@@ -47,6 +47,9 @@ CREATE TABLE bulk_confirmation (
     -- The hash of what was previewed: record type, verb, parameters and every
     -- item with its version. An execution of anything else does not match.
     binding bytea NOT NULL,
+    -- The records the preview said would change. The execution changes no
+    -- record outside them, whatever has moved since.
+    affected uuid[] NOT NULL,
     expires_at timestamptz NOT NULL,
     consumed_at timestamptz,
     created_at timestamptz DEFAULT now() NOT NULL,

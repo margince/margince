@@ -462,7 +462,6 @@ internal/modules/integrations/poll.go#func pollFrom
 internal/modules/integrations/store.go#const block at const auditKeyProvider
 internal/modules/integrations/surfe/surfe.go#const baseURL
 internal/modules/integrations/surfe/surfe.go#const block at const poolEmail
-internal/modules/privacy/auditfilter_test.go#func TestEveryPublishedAuditFilterReachesTheStore
 internal/modules/privacy/auditlog.go#const auditContentStateKey
 internal/modules/privacy/auditlog.go#func ScrubNewerThanRowSQL
 internal/modules/privacy/erasure.go#const block at const evidenceKeyCause

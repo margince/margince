@@ -1326,6 +1326,7 @@ public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
 public.brief_run.user_id uuid NOT NULL gen=- def=-
 public.brief_run_pkey CREATE UNIQUE INDEX brief_run_pkey ON public.brief_run USING btree (id)
 public.bulk_confirmation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.bulk_confirmation.affected uuid[] NOT NULL gen=- def=-
 public.bulk_confirmation.binding bytea NOT NULL gen=- def=-
 public.bulk_confirmation.bulk_confirmation_expiry_after_creation CHECK ((expires_at > created_at))
 public.bulk_confirmation.bulk_confirmation_pkey PRIMARY KEY (token_hash)

@@ -2764,6 +2764,7 @@ const (
 	BulkSkipReasonChangedSincePreview BulkSkipReason = "changed_since_preview"
 	BulkSkipReasonNoChange            BulkSkipReason = "no_change"
 	BulkSkipReasonNotFound            BulkSkipReason = "not_found"
+	BulkSkipReasonNotPreviewed        BulkSkipReason = "not_previewed"
 	BulkSkipReasonNotWritable         BulkSkipReason = "not_writable"
 	BulkSkipReasonRefused             BulkSkipReason = "refused"
 )
@@ -2778,6 +2779,8 @@ func (e BulkSkipReason) Valid() bool {
 	case BulkSkipReasonNoChange:
 		return true
 	case BulkSkipReasonNotFound:
+		return true
+	case BulkSkipReasonNotPreviewed:
 		return true
 	case BulkSkipReasonNotWritable:
 		return true
@@ -22578,7 +22581,7 @@ type BulkChangePreview struct {
 	// Affected The records the change would alter.
 	Affected []openapi_types.UUID `json:"affected"`
 
-	// ConfirmToken Present when `requires_confirmation` is true and the change would alter at least one record.
+	// ConfirmToken Present when the change would alter at least one record. Required above 10 records; below that, presenting it holds the execution to `affected`.
 	ConfirmToken *string `json:"confirm_token,omitempty"`
 
 	// Count The number of records the change would alter.
@@ -22661,16 +22664,23 @@ type BulkSampleRow struct {
 
 // BulkSkip defines model for BulkSkip.
 type BulkSkip struct {
-	Id openapi_types.UUID `json:"id"`
+	// Code Which single-record rule refused the record, when the reason is `refused` — the same
+	// code the single-record operation answers, for example `sole_project_company`.
+	Code *string            `json:"code,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
 
-	// Message What refused the record, when the reason is `refused`.
+	// Message The refusal in English, for a code the client does not know.
 	Message *string `json:"message,omitempty"`
+
+	// Params The values the rule named, when it named any.
+	Params *map[string]interface{} `json:"params,omitempty"`
 
 	// Reason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
 	// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
 	// its version moved since the caller read it. `no_change`: it already has this owner.
 	// `anchor_company`: it is the installation's own company, which is never archived.
-	// `refused`: a single-record rule refuses it, and `message` says which.
+	// `not_previewed`: the preview whose token this execution presents did not list it.
+	// `refused`: a single-record rule refuses it; `code` says which.
 	Reason BulkSkipReason `json:"reason"`
 }
 
@@ -22678,7 +22688,8 @@ type BulkSkip struct {
 // archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
 // its version moved since the caller read it. `no_change`: it already has this owner.
 // `anchor_company`: it is the installation's own company, which is never archived.
-// `refused`: a single-record rule refuses it, and `message` says which.
+// `not_previewed`: the preview whose token this execution presents did not list it.
+// `refused`: a single-record rule refuses it; `code` says which.
 type BulkSkipReason string
 
 // BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;

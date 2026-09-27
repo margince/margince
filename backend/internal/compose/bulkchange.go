@@ -57,6 +57,10 @@ type bulkChange struct {
 	items        []crmcontracts.BulkItem
 	ownerID      *ids.UUID
 	confirmToken string
+	// previewed is the set the spent confirmation's preview listed as
+	// affected; nil when the change presented none. A record outside it is
+	// left alone, so a change never reaches further than the user was shown.
+	previewed map[openapi_types.UUID]bool
 }
 
 // bulkEngine runs bulk changes over the three record types.
@@ -74,7 +78,7 @@ type bulkRun struct {
 }
 
 // Preview answers what change would do, and writes nothing but the
-// confirmation a large change needs.
+// confirmation that holds an execution to what it showed.
 func (e *bulkEngine) Preview(ctx context.Context, change bulkChange) (crmcontracts.BulkChangePreview, error) {
 	records, err := e.admit(ctx, change)
 	if err != nil {
@@ -91,10 +95,10 @@ func (e *bulkEngine) Preview(ctx context.Context, change bulkChange) (crmcontrac
 		}
 		out.Count, out.Affected, out.Excluded = len(run.changed), affectedIDs(run.changed), run.skipped
 		out.Sample = run.changed[:min(len(run.changed), bulkSampleSize)]
-		if !out.RequiresConfirmation || out.Count == 0 {
+		if out.Count == 0 {
 			return nil
 		}
-		token, expires, err := mintBulkConfirmation(ctx, tx, change, e.now())
+		token, expires, err := mintBulkConfirmation(ctx, tx, change, out.Affected, e.now())
 		out.ConfirmToken, out.ExpiresAt = &token, &expires
 		return err
 	})
@@ -115,27 +119,48 @@ func (e *bulkEngine) Execute(ctx context.Context, change bulkChange) (crmcontrac
 	batchID := ids.NewV7()
 	ctx = storekit.WithBatch(ctx, batchID)
 	var run bulkRun
+	var reserved *auth.WriteReservation
 	err = e.transact(ctx, func(tx pgx.Tx) error {
-		if change.confirmToken != "" {
-			if err := spendBulkConfirmation(ctx, tx, change, change.confirmToken, e.now()); err != nil {
-				return err
-			}
-		}
+		// An attempt a deadlock aborted committed nothing, so what it reserved
+		// goes back before this one reserves again.
+		reserved.Refund(ctx)
 		var err error
-		if run, err = e.apply(ctx, tx, records.target, change); err != nil {
-			return err
-		}
-		// Asked before the commit, while refusing still costs nothing.
-		if err := e.gate.AdmitRecordWrites(ctx, bulkToolName, len(run.changed)); err != nil {
+		if run, reserved, err = e.applyAndReserve(ctx, tx, records.target, change); err != nil {
 			return err
 		}
 		return recordBulkOperation(ctx, tx, batchID, change, run)
 	})
 	if err != nil {
+		reserved.Refund(ctx)
 		return crmcontracts.BulkChangeResult{}, err
 	}
-	agentvolume.NoteEffects(ctx, len(run.changed))
+	// The reservation already charged every changed record, so the door that
+	// charges a call's effects afterwards charges nothing more.
+	agentvolume.NoteEffects(ctx, 0)
 	return crmcontracts.BulkChangeResult{BatchId: openapi_types.UUID(batchID), Changed: len(run.changed), Skipped: run.skipped}, nil
+}
+
+// applyAndReserve spends the confirmation, changes the rows it covers, and
+// reserves the changed count against an agent's write budget before the
+// commit, while refusing still costs nothing.
+func (e *bulkEngine) applyAndReserve(
+	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange,
+) (bulkRun, *auth.WriteReservation, error) {
+	var previewed map[openapi_types.UUID]bool
+	if change.confirmToken != "" {
+		affected, err := spendBulkConfirmation(ctx, tx, change, change.confirmToken, e.now())
+		if err != nil {
+			return bulkRun{}, nil, err
+		}
+		previewed = affected
+	}
+	change.previewed = previewed
+	run, err := e.apply(ctx, tx, target, change)
+	if err != nil {
+		return bulkRun{}, nil, err
+	}
+	reserved, err := e.gate.ReserveRecordWrites(ctx, bulkToolName, len(run.changed))
+	return run, reserved, err
 }
 
 // admit refuses a malformed change and a caller who may not make this change
@@ -220,8 +245,8 @@ func applyOneInSavepoint(
 	if err != nil {
 		return crmcontracts.BulkSampleRow{}, nil, fmt.Errorf("open a savepoint for %s: %w", item.Id, err)
 	}
-	row, reason, message, err := applyOne(ctx, savepoint, target, change, item)
-	if err == nil && reason == "" {
+	row, skip, err := applyOne(ctx, savepoint, target, change, item)
+	if err == nil && skip.Reason == "" {
 		if err := savepoint.Commit(ctx); err != nil {
 			return crmcontracts.BulkSampleRow{}, nil, fmt.Errorf("release the savepoint for %s: %w", item.Id, err)
 		}
@@ -233,22 +258,31 @@ func applyOneInSavepoint(
 	if err != nil {
 		return crmcontracts.BulkSampleRow{}, nil, err
 	}
-	return crmcontracts.BulkSampleRow{}, &crmcontracts.BulkSkip{Id: item.Id, Reason: reason, Message: message}, nil
+	skip.Id = item.Id
+	return crmcontracts.BulkSampleRow{}, &skip, nil
 }
 
-// applyOne is one row's change. A row a rule refuses answers the reason; an
-// error nobody classified aborts the whole change.
+// skipped is a row left alone for reason, with nothing further to say.
+func skipped(reason crmcontracts.BulkSkipReason) crmcontracts.BulkSkip {
+	return crmcontracts.BulkSkip{Reason: reason}
+}
+
+// applyOne is one row's change. A row a rule refuses answers why it was left
+// alone; an error nobody classified aborts the whole change.
 func applyOne(
 	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem,
-) (crmcontracts.BulkSampleRow, crmcontracts.BulkSkipReason, *string, error) {
+) (crmcontracts.BulkSampleRow, crmcontracts.BulkSkip, error) {
+	if change.previewed != nil && !change.previewed[item.Id] {
+		return crmcontracts.BulkSampleRow{}, skipped(crmcontracts.BulkSkipReasonNotPreviewed), nil
+	}
 	id := ids.UUID(item.Id)
 	row, err := target.lock(ctx, tx, id)
 	if err != nil {
-		reason, message, classifyErr := bulkSkipReason(err)
-		return crmcontracts.BulkSampleRow{}, reason, message, classifyErr
+		skip, classifyErr := bulkSkipFor(err)
+		return crmcontracts.BulkSampleRow{}, skip, classifyErr
 	}
 	if row.version != item.Version {
-		return crmcontracts.BulkSampleRow{}, crmcontracts.BulkSkipReasonChangedSincePreview, nil, nil
+		return crmcontracts.BulkSampleRow{}, skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
 	}
 	sample := crmcontracts.BulkSampleRow{
 		Id: item.Id, Label: row.label,
@@ -258,7 +292,7 @@ func applyOne(
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:
 		if row.ownerID != nil && *row.ownerID == *change.ownerID {
-			return crmcontracts.BulkSampleRow{}, crmcontracts.BulkSkipReasonNoChange, nil, nil
+			return crmcontracts.BulkSampleRow{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
 		}
 		sample.After.OwnerId = wireOwner(change.ownerID)
 		err = target.reassign(ctx, tx, id, ids.From[ids.UserKind](*change.ownerID), item.Version)
@@ -267,33 +301,43 @@ func applyOne(
 		err = target.archive(ctx, tx, id, item.Version)
 	}
 	if err != nil {
-		reason, message, classifyErr := bulkSkipReason(err)
-		return crmcontracts.BulkSampleRow{}, reason, message, classifyErr
+		skip, classifyErr := bulkSkipFor(err)
+		return crmcontracts.BulkSampleRow{}, skip, classifyErr
 	}
-	return sample, "", nil, nil
+	return sample, crmcontracts.BulkSkip{}, nil
 }
 
-// bulkSkipReason turns a row's refusal into the reason it is left alone. An
-// error that is no refusal — a lost connection, a bug — is answered as itself,
-// and aborts the change rather than being reported as one row's fault.
-func bulkSkipReason(err error) (crmcontracts.BulkSkipReason, *string, error) {
+// bulkSkipFor turns a row's refusal into why it is left alone. A refusal a
+// single-record rule answers carries that rule's own code, so a client can say
+// it in the reader's language; the English message stays beside it for a code
+// the client does not know. An error that is no refusal — a lost connection, a
+// bug — is answered as itself, and aborts the change rather than being
+// reported as one row's fault.
+func bulkSkipFor(err error) (crmcontracts.BulkSkip, error) {
 	var anchor *contacts.AnchorProtectedError
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound):
-		return crmcontracts.BulkSkipReasonNotFound, nil, nil
+		return skipped(crmcontracts.BulkSkipReasonNotFound), nil
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return crmcontracts.BulkSkipReasonNotWritable, nil, nil
+		return skipped(crmcontracts.BulkSkipReasonNotWritable), nil
 	case errors.Is(err, apperrors.ErrVersionSkew):
-		return crmcontracts.BulkSkipReasonChangedSincePreview, nil, nil
+		return skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
 	case errors.As(err, &anchor):
-		return crmcontracts.BulkSkipReasonAnchorCompany, nil, nil
+		return skipped(crmcontracts.BulkSkipReasonAnchorCompany), nil
 	}
 	fault, classified := httperr.Classify(err)
 	if !classified || fault.Transient() || fault.Status < http.StatusBadRequest || fault.Status >= http.StatusInternalServerError {
-		return "", nil, err
+		return crmcontracts.BulkSkip{}, err
 	}
-	message := fault.Detail
-	return crmcontracts.BulkSkipReasonRefused, &message, nil
+	code := fault.Code
+	if len(fault.Fields) > 0 {
+		code = fault.Fields[0].Code
+	}
+	skip := crmcontracts.BulkSkip{Reason: crmcontracts.BulkSkipReasonRefused, Code: &code, Message: &fault.Detail}
+	if len(fault.Details) > 0 {
+		skip.Params = &fault.Details
+	}
+	return skip, nil
 }
 
 // recordBulkOperation writes the change's own row: who asked, for what, and how
