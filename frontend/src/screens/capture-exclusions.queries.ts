@@ -2,7 +2,7 @@
 // them. Separate from the card because they are the one part that talks to a
 // provider rather than to the exclusion store.
 
-import { useQueries } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
@@ -108,4 +108,47 @@ export function useFolderOptions(enabled: boolean) {
     // neither is a list of connections that could not be read at all.
     isError: mailboxesFailed || containers.some((query) => query.isError),
   };
+}
+
+type PurgeOutcome = components["schemas"]["CapturePurgeOutcome"];
+
+/**
+ * Destroying the mail a rule already matched.
+ *
+ * Two calls behind one hook, because the act is two questions: a PREVIEW says
+ * what would go, and the purge itself does it. The preview is what makes this
+ * safe to offer at all — the destruction is irreversible, and somebody is
+ * entitled to see the size of it before they agree.
+ *
+ * Both answer with the same receipt, so the confirmation and the outcome are
+ * read the same way and cannot drift into two vocabularies.
+ */
+export function usePurgeExclusion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      preview: boolean;
+    }): Promise<PurgeOutcome> => {
+      const { data, error } = await api.POST("/capture/exclusions/{id}/purge", {
+        params: {
+          path: { id: input.id },
+          query: { preview: input.preview },
+        },
+      });
+      if (error || !data) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: (_outcome, input) => {
+      // Only a real purge moved anything. A preview that invalidated the
+      // timeline would redraw the screen to say nothing changed, which is
+      // true and still reads as something having happened.
+      if (!input.preview) {
+        queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
+        queryClient.invalidateQueries({ queryKey: ["activities"] });
+      }
+    },
+  });
 }

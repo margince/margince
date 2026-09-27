@@ -8663,6 +8663,26 @@ export const vi = {
   "captureExclusions.kind.domain": "Tên miền",
   "captureExclusions.kind.container": "Nhãn, thư mục hoặc hộp thư",
   "captureExclusions.scopeLabel": "Áp dụng cho",
+  "capturePurge.open": "Xóa thư đã thu thập từ {value}",
+  "capturePurge.title": "Xóa thư đã thu thập từ {value}",
+  "capturePurge.intro":
+    "Thao tác này hủy các thư mà quy tắc này đã khớp — nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
+  "capturePurge.preview": "Xem trước",
+  "capturePurge.confirm": "Xóa vĩnh viễn",
+  "capturePurge.done": "Đóng",
+  "capturePurge.failed": "Việc xóa không chạy",
+  "capturePurge.wouldDestroy": "{count} thư sẽ bị hủy.",
+  "capturePurge.destroyed": "Đã hủy {count} thư.",
+  "capturePurge.released":
+    "{count} thư cũng được đồng nghiệp thu thập. Quyền truy cập của bạn kết thúc; bản của họ vẫn còn.",
+  "capturePurge.anonymised":
+    "{count} liên hệ đã được gỡ bỏ thông tin nhận dạng — những liên hệ mà chúng tôi chỉ biết nhờ thư của bạn.",
+  "capturePurge.keptHeld":
+    "{count} thư được giữ lại: chúng đang bị ghim, và còn cho đến khi được gỡ.",
+  "capturePurge.keptStatute":
+    "{count} thư được giữ lại như thư tín thương mại. Luật yêu cầu lưu giữ trong {period} — cả chúng tôi lẫn bạn đều không được xóa.",
+  "capturePurge.keptRequest":
+    "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần chúng.",
   "captureExclusions.containerLabel": "Thư mục hoặc nhãn",
   "captureExclusions.noContainers":
     "Hộp thư này không báo cáo thư mục nào. Hãy kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hoặc tên miền.",

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Flame, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -20,6 +20,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useFolderOptions } from "./capture-exclusions.queries";
+import { PurgeDialog } from "./capture-purge-dialog";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
@@ -120,6 +121,11 @@ export function CaptureExclusionsCard() {
   const query = useExclusions();
   const remove = useRemoveExclusion();
   const [excluding, setExcluding] = useState(false);
+  // The rule whose already-captured mail is being destroyed, held by id AND
+  // value so the dialog can name what it is about to act on.
+  const [purging, setPurging] = useState<{ id: string; value: string } | null>(
+    null,
+  );
   // Said once and pointed at (see own-domains.tsx): a company-wide rule
   // is admin/ops work, and `Button`'s `reasonId` refuses the verb AND names
   // the sentence, so every refused row points at one line rather than
@@ -176,6 +182,7 @@ export function CaptureExclusionsCard() {
                     denialId={denialId}
                     pending={remove.isPending}
                     onRemove={(id) => remove.mutate(id)}
+                    onPurge={(id, value) => setPurging({ id, value })}
                   />
                 )}
               </QueryGate>
@@ -196,6 +203,13 @@ export function CaptureExclusionsCard() {
           <ExcludeDialog
             canManageWorkspace={canManageWorkspace}
             onClose={() => setExcluding(false)}
+          />
+        )}
+        {purging && (
+          <PurgeDialog
+            ruleId={purging.id}
+            ruleValue={purging.value}
+            onClose={() => setPurging(null)}
           />
         )}
       </PanelBody>
@@ -221,6 +235,7 @@ function ExclusionRows({
   denialId,
   pending,
   onRemove,
+  onPurge,
 }: Readonly<{
   list: CaptureExclusion[];
   canManageWorkspace: boolean;
@@ -228,6 +243,7 @@ function ExclusionRows({
   denialId: string;
   pending: boolean;
   onRemove: (id: string) => void;
+  onPurge: (id: string, value: string) => void;
 }>) {
   const t = useT();
   const words = useRuleWords();
@@ -251,19 +267,39 @@ function ExclusionRows({
           label={rule.value}
           value={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
           control={
-            <Button
-              variant="ghost"
-              aria-label={t("captureExclusions.remove", { value: rule.value })}
-              disabled={pending}
-              reasonId={
-                bindsEveryone(rule) && !canManageWorkspace
-                  ? denialId
-                  : undefined
-              }
-              onClick={() => onRemove(rule.id)}
-            >
-              <Trash2 aria-hidden />
-            </Button>
+            <>
+              {/* Removing the RULE stops future capture; the other destroys
+                  what it already matched. Two different acts, and only one of
+                  them is irreversible, so they are two controls. */}
+              <Button
+                variant="ghost"
+                aria-label={t("capturePurge.open", { value: rule.value })}
+                disabled={pending}
+                reasonId={
+                  bindsEveryone(rule) && !canManageWorkspace
+                    ? denialId
+                    : undefined
+                }
+                onClick={() => onPurge(rule.id, rule.value)}
+              >
+                <Flame aria-hidden />
+              </Button>
+              <Button
+                variant="ghost"
+                aria-label={t("captureExclusions.remove", {
+                  value: rule.value,
+                })}
+                disabled={pending}
+                reasonId={
+                  bindsEveryone(rule) && !canManageWorkspace
+                    ? denialId
+                    : undefined
+                }
+                onClick={() => onRemove(rule.id)}
+              >
+                <Trash2 aria-hidden />
+              </Button>
+            </>
           }
         />
       ))}

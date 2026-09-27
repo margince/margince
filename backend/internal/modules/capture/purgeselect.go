@@ -68,8 +68,29 @@ type PurgeSubject struct {
 	// window, or named by a data-subject request nobody has finished yet. They
 	// survive both arms and are reported, because a purge that silently skipped
 	// them would tell an owner their mail is gone when it is not.
+	//
+	// It is the union of the three below, kept as one list because most callers
+	// only need "what did this purge leave standing".
 	Restricted []ids.UUID
+	// Held are the activities an erasure or a controller pinned by hand.
+	Held []ids.UUID
+	// UnderStatute are the activities inside their commercial-retention window
+	// — a Handelsbrief the law still requires keeping. Counted apart from the
+	// other two because it is the one an owner is most owed an explanation of:
+	// a deletion that correctly leaves them standing looks, from the owner's
+	// side, exactly like one that silently failed.
+	UnderStatute []ids.UUID
+	// UnderRequest are the activities a data-subject request is still about.
+	UnderRequest []ids.UUID
 }
+
+// Purge reasons, as the selectors report them. Spelled once so the three
+// selectors and the collector cannot drift into different vocabularies.
+const (
+	withheldByHold    = "hold"
+	withheldByStatute = "statute"
+	withheldByRequest = "request"
+)
 
 // Total is how many messages the rule matched at all.
 func (s PurgeSubject) Total() int {
@@ -134,8 +155,7 @@ func SelectPurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       (a.restricted_at IS NOT NULL OR (`+shielded+`)
-		        OR (`+underAnOpenRequest+`)) AS withheld,
+		       `+withheldReason(shielded, true)+` AS withheld,
 		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
@@ -177,14 +197,17 @@ func collectPurgeRows(rows pgx.Rows, subject *PurgeSubject, what string) error {
 	defer rows.Close()
 	for rows.Next() {
 		var id ids.UUID
-		var withheld bool
+		var withheld string
 		var importers int
 		if err := rows.Scan(&id, &withheld, &importers); err != nil {
 			return fmt.Errorf("capture: %s: %w", what, err)
 		}
 		switch {
-		case withheld:
+		case withheld != "":
+			// Restricted stays the union so a caller that only wants "what was
+			// left standing" reads one list, and the reason rides beside it.
 			subject.Restricted = append(subject.Restricted, id)
+			subject.noteWithheld(withheld, id)
 		case importers > 1:
 			subject.SharedImports = append(subject.SharedImports, id)
 		default:
@@ -195,6 +218,42 @@ func collectPurgeRows(rows pgx.Rows, subject *PurgeSubject, what string) error {
 		return fmt.Errorf("capture: %s: %w", what, err)
 	}
 	return nil
+}
+
+// noteWithheld files one kept activity under the reason the selector gave.
+//
+// An unrecognized reason is filed nowhere rather than guessed at: the union
+// above already counts it, so the total still balances, and inventing a
+// category would tell an owner something the query never said.
+func (s *PurgeSubject) noteWithheld(reason string, id ids.UUID) {
+	switch reason {
+	case withheldByHold:
+		s.Held = append(s.Held, id)
+	case withheldByStatute:
+		s.UnderStatute = append(s.UnderStatute, id)
+	case withheldByRequest:
+		s.UnderRequest = append(s.UnderRequest, id)
+	}
+}
+
+// withheldReason renders the reason a row was kept, in precedence order: the
+// most specific act about THIS record first.
+//
+// A row can satisfy several at once — a pinned Handelsbrief named by an open
+// request is all three — and the owner is owed one answer rather than a list,
+// so the order decides. A hand-placed hold outranks the statutory window
+// because somebody decided it about this record; the window outranks an open
+// request because it outlives the request's resolution.
+func withheldReason(shielded string, underRequest bool) string {
+	clause := `CASE
+		WHEN a.restricted_at IS NOT NULL THEN '` + withheldByHold + `'
+		WHEN (` + shielded + `) THEN '` + withheldByStatute + `'`
+	if underRequest {
+		clause += `
+		WHEN (` + underAnOpenRequest + `) THEN '` + withheldByRequest + `'`
+	}
+	return clause + `
+		ELSE '' END`
 }
 
 // purgeMatchClause builds the address-or-domain match, in the shape every other
@@ -441,7 +500,7 @@ func SelectWorkspacePurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       (a.restricted_at IS NOT NULL OR (`+shielded+`)) AS withheld
+		       `+withheldReason(shielded, false)+` AS withheld
 		  FROM activity a
 		 WHERE `+match+`
 		   AND EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = a.id)

@@ -8876,6 +8876,26 @@ export const en = {
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, folder or mailbox",
   "captureExclusions.scopeLabel": "Applies to",
+  "capturePurge.open": "Delete mail already captured from {value}",
+  "capturePurge.title": "Delete mail already captured from {value}",
+  "capturePurge.intro":
+    "This destroys the messages this rule already matched — text, original, attachments and everything derived from them. It cannot be undone. Check first what it would remove.",
+  "capturePurge.preview": "Check first",
+  "capturePurge.confirm": "Delete permanently",
+  "capturePurge.done": "Close",
+  "capturePurge.failed": "The deletion did not run",
+  "capturePurge.wouldDestroy": "{count} messages would be destroyed.",
+  "capturePurge.destroyed": "{count} messages destroyed.",
+  "capturePurge.released":
+    "{count} were also captured by a colleague. Your access to them has ended; their copy stays.",
+  "capturePurge.anonymised":
+    "{count} contacts were stripped of their identifying details — those your mail was the only reason we knew.",
+  "capturePurge.keptHeld":
+    "{count} were kept: they are pinned, and stay until whoever pinned them lifts it.",
+  "capturePurge.keptStatute":
+    "{count} were kept as commercial correspondence. The law requires keeping these for {period} — not ours to delete, and not yours.",
+  "capturePurge.keptRequest":
+    "{count} were kept: a data-protection request is still being answered and needs them.",
   "captureExclusions.containerLabel": "Folder or label",
   "captureExclusions.noContainers":
     "This mailbox reported no folders. Connect a mailbox that has them, or keep senders out by address or domain instead.",

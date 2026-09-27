@@ -8730,6 +8730,26 @@ export const de = {
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, Ordner oder Postfach",
   "captureExclusions.scopeLabel": "Gilt für",
+  "capturePurge.open": "Bereits erfasste Post von {value} löschen",
+  "capturePurge.title": "Bereits erfasste Post von {value} löschen",
+  "capturePurge.intro":
+    "Das vernichtet die Nachrichten, auf die diese Regel bereits zugetroffen hat — Text, Original, Anhänge und alles daraus Abgeleitete. Das lässt sich nicht rückgängig machen. Sieh dir zuerst an, was wegfiele.",
+  "capturePurge.preview": "Erst prüfen",
+  "capturePurge.confirm": "Endgültig löschen",
+  "capturePurge.done": "Schließen",
+  "capturePurge.failed": "Die Löschung lief nicht",
+  "capturePurge.wouldDestroy": "{count} Nachrichten würden vernichtet.",
+  "capturePurge.destroyed": "{count} Nachrichten vernichtet.",
+  "capturePurge.released":
+    "{count} hat auch eine Kollegin erfasst. Dein Zugriff darauf endet; ihre Kopie bleibt.",
+  "capturePurge.anonymised":
+    "Bei {count} Kontakten wurden die identifizierenden Angaben entfernt — bei jenen, die wir nur wegen deiner Post kannten.",
+  "capturePurge.keptHeld":
+    "{count} bleiben erhalten: sie sind festgesetzt und bleiben, bis das aufgehoben wird.",
+  "capturePurge.keptStatute":
+    "{count} bleiben als Handelsbriefe erhalten. Das Gesetz verlangt, sie {period} aufzubewahren — weder wir noch du dürfen sie löschen.",
+  "capturePurge.keptRequest":
+    "{count} bleiben erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
   "captureExclusions.containerLabel": "Ordner oder Label",
   "captureExclusions.noContainers":
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",

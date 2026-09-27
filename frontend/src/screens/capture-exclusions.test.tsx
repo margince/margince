@@ -616,3 +616,128 @@ it("says so when the connections themselves cannot be read", async () => {
   );
   expect(screen.queryByText(en["captureExclusions.noContainers"])).toBeNull();
 });
+
+describe("the deletion receipt", () => {
+  function backendWithPurge(outcome: Record<string, unknown>) {
+    const { fetchMock, calls } = backend(CAPTURE_EDITOR);
+    const wrapped = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (request.url.includes("/purge")) {
+        calls.push({
+          method: request.method,
+          url: request.url,
+          body: undefined,
+        });
+        return new Response(JSON.stringify(outcome), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return fetchMock(input, init);
+    };
+    return { wrapped, calls };
+  }
+
+  async function openPurge(user: ReturnType<typeof userEvent.setup>) {
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getAllByRole("button", {
+        name: /Delete mail already captured/,
+      })[0],
+    );
+  }
+
+  // The promise the information sheet makes is about the owner's own data, so
+  // the owner has to be able to check it. Nothing destroys without a look
+  // first: the act is irreversible.
+  it("shows what would go before anything goes", async () => {
+    const user = userEvent.setup();
+    const { wrapped, calls } = backendWithPurge({
+      destroyed: 3,
+      released: 0,
+      skipped: 0,
+      anonymised: 0,
+      preview: true,
+      kept: { held: 0, under_statute: 0, under_request: 0 },
+    });
+    vi.stubGlobal("fetch", wrapped);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await openPurge(user);
+    await user.click(screen.getByRole("button", { name: "Check first" }));
+
+    expect(
+      await screen.findByText(/3 messages would be destroyed/),
+    ).toBeTruthy();
+    // The preview asked for a preview, and destroyed nothing.
+    expect(calls.some((call) => call.url.includes("preview=true"))).toBe(true);
+    expect(calls.some((call) => call.url.includes("preview=false"))).toBe(
+      false,
+    );
+  });
+
+  // The half that matters most. A deletion that correctly leaves a Handelsbrief
+  // standing looks, from the owner's side, exactly like one that silently
+  // failed — so the reason and the period are named.
+  it("says what the law kept, and for how long", async () => {
+    const user = userEvent.setup();
+    const { wrapped } = backendWithPurge({
+      destroyed: 1,
+      released: 0,
+      skipped: 2,
+      anonymised: 0,
+      preview: true,
+      kept: {
+        held: 0,
+        under_statute: 2,
+        under_request: 0,
+        statutory_class: "commercial_correspondence",
+        statutory_period: "P6Y",
+        statutory_from_year_end: true,
+      },
+    });
+    vi.stubGlobal("fetch", wrapped);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await openPurge(user);
+    await user.click(screen.getByRole("button", { name: "Check first" }));
+
+    const kept = await screen.findByText(/kept as commercial correspondence/);
+    expect(kept.textContent).toContain("P6Y");
+  });
+
+  // The three reasons lift on different days, so they are different sentences.
+  it("does not report a hold as a statutory period", async () => {
+    const user = userEvent.setup();
+    const { wrapped } = backendWithPurge({
+      destroyed: 0,
+      released: 0,
+      skipped: 1,
+      anonymised: 0,
+      preview: true,
+      kept: { held: 1, under_statute: 0, under_request: 0 },
+    });
+    vi.stubGlobal("fetch", wrapped);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await openPurge(user);
+    await user.click(screen.getByRole("button", { name: "Check first" }));
+
+    expect(await screen.findByText(/they are pinned/)).toBeTruthy();
+    expect(screen.queryByText(/commercial correspondence/)).toBeNull();
+  });
+});
