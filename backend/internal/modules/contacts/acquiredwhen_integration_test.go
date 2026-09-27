@@ -232,3 +232,24 @@ func TestAnAddressWeOnlyWroteToStaysUnknown(t *testing.T) {
 		t.Errorf("an address we only wrote to is recorded as %q, want %q", kind, AcquiredUnknownLegacy)
 	}
 }
+
+// A newsletter is a list writing to everyone, not the sender writing to us.
+func TestABulkSenderStaysUnknown(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	in := e.datedEnsureInput(ctx, t, "news@list.test", "list.test", time.Now().Add(-time.Hour))
+	in.Replied = false
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE activity SET bulk_mail_attested = true WHERE id = $1`, in.ActivityID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := e.store.EnsureCounterparty(ctx, in)
+	if err != nil || !res.ContactCreated {
+		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
+	}
+	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredUnknownLegacy {
+		t.Errorf("a bulk sender is recorded as %q, want %q", kind, AcquiredUnknownLegacy)
+	}
+}

@@ -27,6 +27,12 @@ import (
 // update that set its next step — one job's work over many records.
 func seedEnrichedDeals(t *testing.T, e *Env, owner ids.UUID, n int) []ids.UUID {
 	t.Helper()
+	return seedDealUpdates(t, e, owner, n, `{"next_step": "Call the buyer"}`)
+}
+
+// seedDealUpdates is seedEnrichedDeals with the update's after-image named.
+func seedDealUpdates(t *testing.T, e *Env, owner ids.UUID, n int, after string) []ids.UUID {
+	t.Helper()
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	deals := make([]ids.UUID, n)
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -49,8 +55,8 @@ func seedEnrichedDeals(t *testing.T, e *Env, owner ids.UUID, n int) []ids.UUID {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
 				VALUES ('agent', 'agent:enrich', 'update', 'deal', $1,
-				        '{"next_step": null}', '{"next_step": "Call the buyer"}', now() - make_interval(secs => $2))`,
-				deals[i], i); err != nil {
+				        '{"next_step": null}', $3::jsonb, now() - make_interval(secs => $2))`,
+				deals[i], i, after); err != nil {
 				return err
 			}
 		}
@@ -136,5 +142,34 @@ func TestAnOpenedLineHoldsOnlyRecordsTheReaderMaySee(t *testing.T) {
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, noDeals)
 	if _, err := svc.LineRecords(blind, ids.UUID(receipt.Done[0].Id), since, nil, 0); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a seat that cannot read deals opened a line of deals: %v, want ErrNotFound", err)
+	}
+}
+
+// A field the reader's role withholds on the deal page is withheld in the opened
+// line too, with the money fields that travel with it.
+func TestAnOpenedLineWithholdsWhatTheReadersRoleMasks(t *testing.T) {
+	e := Setup(t)
+	since := time.Now().Add(-time.Hour)
+	seedDealUpdates(t, e, e.Rep1, 1,
+		`{"next_step": "Call the buyer", "amount_minor": 500000, "currency": "EUR"}`)
+	masked := RepPerms
+	masked.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "amount_minor"}}
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, masked)
+	svc := magic.NewService(e.Pool, nil, time.Now)
+	receipt, err := svc.Read(ctx, &since, 20)
+	if err != nil || len(receipt.Done) == 0 {
+		t.Fatalf("receipt = %+v (err %v)", receipt, err)
+	}
+	opened, err := svc.LineRecords(ctx, ids.UUID(receipt.Done[0].Id), since, nil, 0)
+	if err != nil || len(opened.Data) != 1 {
+		t.Fatalf("opened = %+v (err %v)", opened, err)
+	}
+	for _, c := range opened.Data[0].Changes {
+		if c.Field == "amount_minor" || c.Field == "currency" {
+			t.Errorf("the opened line shows %s to a role that masks the deal amount", c.Field)
+		}
+	}
+	if len(opened.Data[0].Changes) != 1 {
+		t.Errorf("changes %+v, want only next_step", opened.Data[0].Changes)
 	}
 }

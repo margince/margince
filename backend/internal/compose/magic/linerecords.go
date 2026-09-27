@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -51,17 +52,18 @@ func (s *Service) LineRecords(
 		limit = recordsPageDefault
 	}
 	limit = min(limit, maxLimit)
-	offset, err := decodeOffset(cursor)
+	pos, err := decodeRecordsCursor(cursor, s.now().UTC())
 	if err != nil {
 		return crmcontracts.MagicLineRecords{}, err
 	}
+	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		entries, _, err := doneSince(ctx, tx, from, maxLimit)
 		if err != nil {
 			return err
 		}
-		members, found := lineMembers(entries, lineID)
+		members, found := lineMembers(asOf(entries, pos.asOf), lineID)
 		if !found {
 			return apperrors.ErrNotFound
 		}
@@ -73,7 +75,7 @@ func (s *Service) LineRecords(
 			}
 		}
 		if end < len(members) {
-			next := strconv.Itoa(end)
+			next := recordsCursor{offset: end, asOf: pos.asOf}.encode()
 			out.Page = crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
 		}
 		total := len(members)
@@ -130,13 +132,17 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 	out := make([]crmcontracts.MagicLineRecord, 0, len(members))
 	subjects := make([]UndoSubject, 0, len(members))
 	for _, e := range members {
+		changes, err := visibleChanges(ctx, e.EntityType, fieldChanges(e.Before, e.After))
+		if err != nil {
+			return nil, err
+		}
 		out = append(out, crmcontracts.MagicLineRecord{
 			AuditId:    openapi_types.UUID(e.ID),
 			OccurredAt: e.OccurredAt,
 			Entity: crmcontracts.MagicEntityRef{
 				Type: e.EntityType, Id: openapi_types.UUID(e.EntityID), Label: e.Label,
 			},
-			Changes: fieldChanges(e.Before, e.After),
+			Changes: changes,
 		})
 		subjects = append(subjects, UndoSubject{AuditID: e.ID, EntityType: e.EntityType})
 	}
@@ -188,14 +194,45 @@ var evidenceKeys = map[string]bool{
 	"cohort_linked": true, "cohort_promoted": true,
 }
 
-// decodeOffset reads the page position a previous page handed out.
-func decodeOffset(cursor *string) (int, error) {
+// maxRecordsOffset bounds how far into a line a cursor may point: far past any
+// line readCap can draw, and small enough that offset+limit cannot overflow.
+const maxRecordsOffset = 1_000_000
+
+// recordsCursor is a page position in an opened line: how many records came
+// before, and the instant the first page was read. Later pages drop anything
+// newer than that instant, so a change landing between two pages cannot shift
+// the list under the reader and skip or repeat a record.
+type recordsCursor struct {
+	offset int
+	asOf   time.Time
+}
+
+func (c recordsCursor) encode() string {
+	return strconv.Itoa(c.offset) + ":" + strconv.FormatInt(c.asOf.UnixNano(), 10)
+}
+
+// decodeRecordsCursor reads a position a previous page handed out; no cursor
+// is the first page, read as of now.
+func decodeRecordsCursor(cursor *string, now time.Time) (recordsCursor, error) {
 	if cursor == nil || *cursor == "" {
-		return 0, nil
+		return recordsCursor{asOf: now}, nil
 	}
-	n, err := strconv.Atoi(*cursor)
-	if err != nil || n < 0 {
-		return 0, fmt.Errorf("%w: cursor", apperrors.ErrInvalidArgument)
+	offsetText, asOfText, ok := strings.Cut(*cursor, ":")
+	offset, errOffset := strconv.Atoi(offsetText)
+	nanos, errAsOf := strconv.ParseInt(asOfText, 10, 64)
+	if !ok || errOffset != nil || errAsOf != nil || offset < 0 || offset > maxRecordsOffset {
+		return recordsCursor{}, fmt.Errorf("%w: cursor", apperrors.ErrInvalidArgument)
 	}
-	return n, nil
+	return recordsCursor{offset: offset, asOf: time.Unix(0, nanos).UTC()}, nil
+}
+
+// asOf keeps the entries that had happened by the instant a line was opened.
+func asOf(entries []entry, at time.Time) []entry {
+	out := entries[:0:0]
+	for _, e := range entries {
+		if !e.OccurredAt.After(at) {
+			out = append(out, e)
+		}
+	}
+	return out
 }
