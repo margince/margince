@@ -181,6 +181,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		if err := s.reclaimMeetingIdentity(ctx, tx, id, rec); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
+		if err := s.moveOnReplay(ctx, tx, id, rec); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 		return ref, false, counterpartyDecision{}, nil
 	}
 	// Everything a NEW row still needs: its links, its files, its contacts, its

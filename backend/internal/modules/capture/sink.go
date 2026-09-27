@@ -64,6 +64,9 @@ type Sink struct {
 	// identity resolved to, when nothing was captured under its natural key.
 	// Nil cancels by natural key alone.
 	cancelMeetingByID MeetingCloserByID
+	// moveMeeting moves a captured meeting the calendar rescheduled. Nil never
+	// moves one.
+	moveMeeting       MeetingMover
 	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is

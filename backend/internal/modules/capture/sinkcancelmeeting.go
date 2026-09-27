@@ -14,14 +14,12 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -90,30 +88,8 @@ func (s *Sink) CancelIdentifiedMeeting(
 	if s.cancelMeeting == nil {
 		return nil
 	}
-	if key.SourceSystem == "" || key.SourceID == "" {
-		return fmt.Errorf("capture: cancelling a meeting needs a natural key")
-	}
-	// Both halves of the door admitRecord holds for a write, asked directly:
-	// this verb carries no record to admit, and the two rules it needs are the
-	// ones about who is calling.
-	//
-	// First, a connector principal, which the registry mints and nothing else
-	// does — that is what keeps the verb off every other caller.
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalConnector {
-		return errors.New("capture: cancelling a meeting requires a connector principal — the registry builds it, nothing else may")
-	}
-	// Second, the provenance, which is the same rule admitRecord states as
-	// "a connector cannot claim to be another one" — and the reason it binds
-	// HERE too is that this verb takes the source system as an argument. The
-	// natural key is what finds the row, so without this check a connector
-	// principal for one provider could close meetings captured by another: a
-	// Telegram or IMAP sync naming SourceSystem "gcal" would cancel Google
-	// Calendar meetings it has no standing to touch.
-	if want := connectorPrincipalID(key.SourceSystem); want != actor.ID {
-		return fmt.Errorf(
-			"capture: %q cannot cancel a meeting captured by %q — a connector acts for its own provider and no other",
-			actor.ID, want)
+	if err := admitCalendarVerb(ctx, key, "cancel"); err != nil {
+		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		id, _, err := s.cancelMeeting(ctx, tx, key, at)

@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 var horizonNow = time.Date(2026, 9, 27, 10, 0, 0, 0, time.UTC)
@@ -129,5 +131,39 @@ func TestACancellationPastTheEdgeIsNotHeldBack(t *testing.T) {
 	booked := eventJSON(t, "far", "confirmed", "Offsite", far.Format(time.RFC3339), gcalOwner, "client@acme.com")
 	if !beyondHorizon(booked, gcalOwner, horizonNow.Add(captureForwards)) {
 		t.Fatal("a booked meeting past the edge was not held back")
+	}
+}
+
+// movingSink records the moves a pull hands it, beside the captures.
+type movingSink struct {
+	recordingSink
+	moves []string
+}
+
+func (s *movingSink) MoveMeeting(_ context.Context, key connector.NaturalKey, start time.Time, _ *int) error {
+	s.moves = append(s.moves, key.SourceID+"@"+start.Format(time.RFC3339))
+	return nil
+}
+
+// An event past the edge is not captured, but it is handed over as a MOVE: a
+// meeting captured while it was nearer, and pushed out since, must not stay on
+// the schedule at its old date.
+func TestAnEventPastTheEdgeIsHandedOverAsAMove(t *testing.T) {
+	api := &fakeAPI{
+		owner:        gcalOwner,
+		initialToken: "sync-abc",
+		initial: [][]byte{
+			eventJSON(t, "pushed-out", "confirmed", "Offsite", "2028-06-01T10:00:00Z", gcalOwner, "client@acme.com"),
+		},
+	}
+	sink := &movingSink{}
+	if _, err := pinnedConnector(api).Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 0 {
+		t.Fatalf("captured %d records past the edge, want none", len(sink.recs))
+	}
+	if len(sink.moves) != 1 || sink.moves[0] != "pushed-out@2028-06-01T10:00:00Z" {
+		t.Fatalf("moves = %v, want the event handed over at its new start", sink.moves)
 	}
 }

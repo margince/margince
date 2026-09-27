@@ -177,6 +177,15 @@ type IdentifiedMeetingCanceller interface {
 	CancelIdentifiedMeeting(ctx context.Context, key NaturalKey, identity CrossDoorIdentity, at time.Time) error
 }
 
+// MeetingMover is the calendar's third verb: a meeting already captured was
+// rescheduled. A key naming no captured meeting writes nothing, so a connector
+// may call it for an event it will not capture — one moved past its horizon —
+// and only a meeting it captured earlier moves. Optional, for
+// MeetingCanceller's reason.
+type MeetingMover interface {
+	MoveMeeting(ctx context.Context, key NaturalKey, start time.Time, duration *int) error
+}
+
 // MessageRemover is the mail connectors' equivalent: the provider reports that
 // a message this workspace captured is gone from the mailbox it came from.
 //

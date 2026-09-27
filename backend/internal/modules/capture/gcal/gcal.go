@@ -129,7 +129,12 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 
 	edge := c.now().Add(captureForwards)
 	for _, raw := range events {
+		// Past the horizon the event is not captured, but a meeting captured
+		// while it was nearer and moved out since still moves with it.
 		if beyondHorizon(raw, owner, edge) {
+			if err := meetingmap.MoveOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
+				return nil, err
+			}
 			continue
 		}
 		if err := meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
