@@ -186,8 +186,9 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// worker on a brain would leave exactly that deployment with a backlog
 	// nothing ever ends.
 	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{
-		pool:   pool,
-		engine: NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
+		pool:     pool,
+		engine:   NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
+		receipts: newSweepRecorder(pool),
 	})
 	// The trace sweep, registered unconditionally and deliberately so: it is
 	// what makes the 24-hour retention true, and under the trace_payloads

@@ -1554,6 +1554,26 @@ public.capture_sender_override.user_id uuid NOT NULL gen=- def=-
 public.capture_sender_override_pkey CREATE UNIQUE INDEX capture_sender_override_pkey ON public.capture_sender_override USING btree (id)
 public.capture_sender_override_user_address_key CREATE UNIQUE INDEX capture_sender_override_user_address_key ON public.capture_sender_override USING btree (user_id, address)
 public.capture_sender_override_user_idx CREATE INDEX capture_sender_override_user_idx ON public.capture_sender_override USING btree (user_id, created_at DESC)
+public.capture_sweep_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_sweep_run.cap_hit boolean NOT NULL gen=- def=false
+public.capture_sweep_run.capture_sweep_run_cap_names_the_outcome CHECK (((outcome <> ALL (ARRAY['ok'::text, 'partial'::text])) OR ((outcome = 'partial'::text) = cap_hit)))
+public.capture_sweep_run.capture_sweep_run_error_class_is_a_token CHECK ((error_class ~ '^[a-z][a-z_]{0,63}$'::text))
+public.capture_sweep_run.capture_sweep_run_failure_carries_a_class CHECK (((outcome = 'failed'::text) = (error_class IS NOT NULL)))
+public.capture_sweep_run.capture_sweep_run_finish_after_start CHECK ((finished_at >= started_at))
+public.capture_sweep_run.capture_sweep_run_outcome_check CHECK ((outcome = ANY (ARRAY['ok'::text, 'partial'::text, 'failed'::text, 'skipped'::text])))
+public.capture_sweep_run.capture_sweep_run_pkey PRIMARY KEY (id)
+public.capture_sweep_run.capture_sweep_run_processed_is_a_tally CHECK ((processed >= 0))
+public.capture_sweep_run.capture_sweep_run_skipped_did_nothing CHECK (((outcome <> 'skipped'::text) OR ((processed = 0) AND (NOT cap_hit))))
+public.capture_sweep_run.capture_sweep_run_sweep_check CHECK ((sweep = ANY (ARRAY['settled_thread_verdicts'::text, 'stranded_contacts'::text, 'filed_meeting_holds'::text])))
+public.capture_sweep_run.error_class text gen=- def=-
+public.capture_sweep_run.finished_at timestamp with time zone NOT NULL gen=- def=-
+public.capture_sweep_run.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_sweep_run.outcome text NOT NULL gen=- def=-
+public.capture_sweep_run.processed integer NOT NULL gen=- def=0
+public.capture_sweep_run.started_at timestamp with time zone NOT NULL gen=- def=-
+public.capture_sweep_run.sweep text NOT NULL gen=- def=-
+public.capture_sweep_run_latest CREATE INDEX capture_sweep_run_latest ON public.capture_sweep_run USING btree (sweep, finished_at DESC, id DESC)
+public.capture_sweep_run_pkey CREATE UNIQUE INDEX capture_sweep_run_pkey ON public.capture_sweep_run USING btree (id)
 public.capture_sync_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sync_state.backfill_active boolean NOT NULL gen=- def=false
 public.capture_sync_state.capture_sync_state_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE

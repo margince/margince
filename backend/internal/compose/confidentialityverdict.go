@@ -403,26 +403,26 @@ const confidentialityStragglerBatch = 200
 // could not: a thread retired without an apply, a thread judged before that
 // pass existed, and an apply that lost the claim race after the ledger was
 // written. Its subject is a query, so a workspace with none does nothing.
-func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (int, error) {
+func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (sweepTally, error) {
 	// The pass's own provenance, taken once for the listing and again per
 	// thread below, so each repair's stamps and audience events trace together
 	// under a correlation id of their own.
 	settled, err := e.threads.ThreadsWithUndecidedMessages(
 		e.workspaceCtx(ctx), confidentialityStragglerBatch)
 	if err != nil {
-		return 0, fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
+		return sweepTally{}, fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
 	}
-	finished := 0
+	tally := sweepTally{capHit: len(settled) >= confidentialityStragglerBatch}
 	for _, t := range settled {
 		done, err := e.finishOneSettledThread(ctx, t)
 		if err != nil {
-			return finished, err
+			return tally, err
 		}
 		if done {
-			finished++
+			tally.processed++
 		}
 	}
-	return finished, nil
+	return tally, nil
 }
 
 // finishOneSettledThread is one thread's repair, in one transaction.
