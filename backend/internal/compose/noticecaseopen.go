@@ -33,6 +33,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -64,14 +65,24 @@ func NewNoticeCaseOpen(pool *pgxpool.Pool, now func() time.Time, log *slog.Logge
 //
 // Anything else answers nil so the consumer group keeps flowing rather than
 // wedging on traffic this consumer ignores.
+//
+// It also answers activity.captured: a captured mail FROM a contact settles the
+// duties they were only owed because nobody knew where their address came from
+// (settleWhenSubjectWrote).
 func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil || env.Entity.Type != noticeCaseContactEntity {
+	if env.Entity.ID == ids.Nil {
 		return nil
 	}
-	// The generated constant, not a typed literal: a hand-written event name
+	// The generated constants, not typed literals: a hand-written event name
 	// that drifts from the contract makes this consumer silently never fire,
 	// and nothing fails when a consumer does nothing.
-	if env.Type != string(crmcontracts.ContactCreated) {
+	var run func(context.Context, pgx.Tx, ids.UUID) error
+	switch {
+	case env.Type == string(crmcontracts.ContactCreated) && env.Entity.Type == noticeCaseContactEntity:
+		run = n.openFor
+	case env.Type == string(crmcontracts.ActivityCaptured) && env.Entity.Type == entityActivity:
+		run = n.settleWhenSubjectWrote
+	default:
 		return nil
 	}
 	db := InstallationDB(n.pool)
@@ -90,7 +101,7 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 		ID:   systemNoticeCaseActor,
 	})
 	return db.Tx(ctx, func(tx pgx.Tx) error {
-		return n.openFor(ctx, tx, env.Entity.ID)
+		return run(ctx, tx, env.Entity.ID)
 	})
 }
 
@@ -148,9 +159,19 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		return nil
 	}
 
+	wrote, err := contactWroteToUsTx(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
 	for _, o := range pending {
 		duty, isOwed := consent.DutyFor(o.kind)
 		if !isOwed {
+			continue
+		}
+		// Their own mail was captured before this ran: the unknown source is
+		// known after all, and the duty it would open is one nobody owes. The
+		// other order — case first, mail second — is settleWhenSubjectWrote.
+		if wrote && o.kind == contacts.AcquiredUnknownLegacy {
 			continue
 		}
 		// The clock runs from the ACQUISITION, not from now: an import landing

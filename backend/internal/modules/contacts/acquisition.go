@@ -111,6 +111,29 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	return nil
 }
 
+// RecordSubjectWroteTx records, once, that an existing contact has written to
+// us — evidence that arrived after the contact was created.
+//
+// A mailbox backfill can mint a contact from our own reply and capture their
+// first mail minutes later, so the acquisition written at creation says the
+// source was unknown when it was the contact themselves. This adds the
+// subject_initiated row the creation would have written had the mails been read
+// in order; the earlier row stays, because it is a true record of what was
+// known then. A contact that already holds one gets no second.
+func RecordSubjectWroteTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sent time.Time, capturedBy string) error {
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM contact_acquisition_evidence
+		                WHERE contact_id = $1 AND kind = $2)`,
+		contactID, AcquiredSubjectInitiated).Scan(&held); err != nil {
+		return fmt.Errorf("contacts: does this contact already hold a subject acquisition: %w", err)
+	}
+	if held {
+		return nil
+	}
+	return recordAcquisition(ctx, tx, contactID, Acquisition{Kind: AcquiredSubjectInitiated, OccurredAt: &sent}, capturedBy)
+}
+
 // acquisitionForCreate is the acquisition a typed create records: what the
 // caller declared, or — for a create stamped with the reserved import namespace,
 // which only a declared importer may write — a contact carried over from the
