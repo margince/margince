@@ -109,13 +109,11 @@ func stageSiteLead(t *testing.T, e *Env, companyID ids.CompanyID, page sitePage)
 	return id
 }
 
-// newEnricher builds the consumer with no search provider — the sovereign
-// posture of ADR-0081, and the arm this suite exercises. Discovery has its own
-// unit tests against a fake client; what is under test here is the fill from
-// what the employer already published.
+// newEnricher builds the consumer this suite drives: the fill from what the
+// employer already published.
 func newEnricher(e *Env) *compose.ContactAutoEnrich {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return compose.NewContactAutoEnrich(e.Pool, contacts.NewStore(e.DB()), approvals.NewService(e.DB()), nil, quiet)
+	return compose.NewContactAutoEnrich(e.Pool, contacts.NewStore(e.DB()), approvals.NewService(e.DB()), quiet)
 }
 
 // contactCreated is the envelope a newly created contact reaches the consumer on.

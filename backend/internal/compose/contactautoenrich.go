@@ -48,7 +48,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/websearch"
 )
 
 // autoEnrichActor is the provenance a fill from this pass carries. It is
@@ -62,16 +61,12 @@ type ContactAutoEnrich struct {
 	pool      *pgxpool.Pool
 	contacts  *contacts.Store
 	approvals *approvals.Service
-	// search is the ADR-0081 seam, and nil is a supported deployment rather
-	// than a broken one: without a bound provider the pass fills from the
-	// employer's staged pages alone and skips discovery silently.
-	search websearch.Client
-	log    *slog.Logger
+	log       *slog.Logger
 }
 
 // NewContactAutoEnrich builds the consumer over the stores it composes.
-func NewContactAutoEnrich(pool *pgxpool.Pool, store *contacts.Store, approvalsSvc *approvals.Service, search websearch.Client, log *slog.Logger) *ContactAutoEnrich {
-	return &ContactAutoEnrich{pool: pool, contacts: store, approvals: approvalsSvc, search: search, log: log}
+func NewContactAutoEnrich(pool *pgxpool.Pool, store *contacts.Store, approvalsSvc *approvals.Service, log *slog.Logger) *ContactAutoEnrich {
+	return &ContactAutoEnrich{pool: pool, contacts: store, approvals: approvalsSvc, log: log}
 }
 
 // HandleEvent routes one envelope. An event this consumer does not care about
@@ -149,12 +144,7 @@ func (g *ContactAutoEnrich) systemContext(ctx context.Context, env events.Envelo
 // published, and fill the contact from the one entry that is unmistakably
 // them.
 func (g *ContactAutoEnrich) enrich(ctx context.Context, contactID ids.ContactID) error {
-	// Locals, not fields: one consumer instance serves concurrent events, so
-	// carrying per-event state on the struct would race.
-	var needsDiscovery bool
-	var discoverName, discoverEmployer string
-
-	if err := database.WithWorkspaceTx(ctx, g.pool, func(tx pgx.Tx) error {
+	return database.WithWorkspaceTx(ctx, g.pool, func(tx pgx.Tx) error {
 		companyID, ok, err := g.employerOf(ctx, tx, contactID)
 		if err != nil || !ok {
 			// No employer means nothing to match against. That is the common
@@ -165,59 +155,8 @@ func (g *ContactAutoEnrich) enrich(ctx context.Context, contactID ids.ContactID)
 		if err != nil {
 			return err
 		}
-		filled, err := g.fillFromStagedPages(ctx, tx, companyID, contactID, staged)
-		if err != nil {
-			return err
-		}
-		if filled {
-			// The employer's own pages answered. Search is the fallback for
-			// what they did not say, not a second opinion on what they did.
-			return nil
-		}
-		name, employer, err := g.searchTerms(ctx, tx, contactID, companyID)
-		if err != nil {
-			// Not swallowed: a failed query has already aborted this
-			// transaction, so continuing past it turns a readable error into
-			// "commit unexpectedly resulted in rollback" somewhere else.
-			return err
-		}
-		// Already discovered. The write downstream is ON CONFLICT DO NOTHING,
-		// so a repeat costs nothing in the database — but the search runs
-		// BEFORE it, and that is a paid third-party request carrying this
-		// contact's real name and employer. Without this check a rep editing
-		// one contact in a loop, or capture updating a contact on every inbound
-		// mail, spends one API unit per event re-discovering a URL already
-		// stored.
-		var already bool
-		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (SELECT 1 FROM contact_profile_field
-			                WHERE contact_id = $1 AND field = 'linkedin')`,
-			contactID).Scan(&already); err != nil {
-			return err
-		}
-		if already {
-			return nil
-		}
-		needsDiscovery, discoverName, discoverEmployer = true, name, employer
-		return nil
-	}); err != nil {
-		return err
-	}
-	if !needsDiscovery {
-		return nil
-	}
-	return g.discoverFromSearch(ctx, contactID, discoverName, discoverEmployer)
-}
-
-// searchTerms reads the two facts a discovery query is anchored on: the
-// contact's name and their employer's. A query without both is not run —
-// a bare name returns somebody else.
-func (g *ContactAutoEnrich) searchTerms(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID) (name, employer string, err error) {
-	err = tx.QueryRow(ctx, `
-		SELECT p.full_name, coalesce(o.display_name, '')
-		FROM contact p LEFT JOIN company o ON o.id = $2
-		WHERE p.id = $1`, contactID, companyID).Scan(&name, &employer)
-	return name, employer, err
+		return g.fillFromStagedPages(ctx, tx, companyID, contactID, staged)
+	})
 }
 
 // employerOf resolves the contact's current primary employer — the only
@@ -311,18 +250,14 @@ func (g *ContactAutoEnrich) stagedSiteContacts(ctx context.Context, tx pgx.Tx, c
 }
 
 // fillFromStagedPages applies whatever the employer's own site already
-// published about this contact, and reports whether anything landed.
-//
-// Split out because it is the half that needs no network: the staged proposals
-// are already on file, and only their absence justifies paying for a search.
+// published about this contact.
 func (g *ContactAutoEnrich) fillFromStagedPages(
 	ctx context.Context,
 	tx pgx.Tx,
 	companyID ids.CompanyID,
 	contactID ids.ContactID,
 	staged []stagedSiteContact,
-) (bool, error) {
-	filled := false
+) error {
 	for _, sp := range staged {
 		// ApplySiteContactFields owns the match rule and keeps it narrow:
 		// an exact live email among that company's own employees, or
@@ -337,7 +272,7 @@ func (g *ContactAutoEnrich) fillFromStagedPages(
 			SourceURL:       sp.proposal.SourceURL,
 		})
 		if err != nil {
-			return false, err
+			return err
 		}
 		if !matched {
 			continue
@@ -348,12 +283,11 @@ func (g *ContactAutoEnrich) fillFromStagedPages(
 		withdrawn, err := g.approvals.WithdrawInTx(ctx, tx, sp.approvalID,
 			"the published contact is already a contact in this workspace")
 		if err != nil {
-			return false, err
+			return err
 		}
-		filled = true
 		g.log.InfoContext(ctx, "contact auto-enriched from the employer's site",
 			string(recordTypeContact), contactID.String(), "company", companyID.String(),
 			"source", sp.proposal.SourceURL, "proposal_withdrawn", withdrawn)
 	}
-	return filled, nil
+	return nil
 }

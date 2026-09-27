@@ -77,17 +77,10 @@ const (
 	KeySetProduct = "margince-keyset"
 	KeySetHeader  = KeySetProduct + "/" + version
 
-	// SearchProduct identifies web-search queries. The key names the ACCOUNT,
-	// which is one customer's contract with the provider; the agent names the
-	// software making the calls under it. An operator diagnosing a spike can
-	// act on the second without cancelling the first.
-	SearchProduct = "margince-search"
-	SearchHeader  = SearchProduct + "/" + version
-
-	// EnrichProduct identifies contact-enrichment lookups, for the same reason
-	// as the search token and separately from it: the two run at different
-	// rates against different vendors, and one being throttled must not be the
-	// other's problem.
+	// EnrichProduct identifies contact-enrichment lookups. The key names the
+	// ACCOUNT, which is one customer's contract with the provider; the agent
+	// names the software making the calls under it. An operator diagnosing a
+	// spike can act on the second without cancelling the first.
 	EnrichProduct = "margince-enrich"
 	EnrichHeader  = EnrichProduct + "/" + version
 

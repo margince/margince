@@ -10,11 +10,9 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/ports/websearch"
 )
 
-// The deny-list is the seam's load-bearing promise, so it is asserted rather
+// The deny-list is the fetcher's load-bearing promise, so it is asserted rather
 // than trusted: a regression here is the difference between a product that
 // cites LinkedIn and one that scrapes it.
 func TestMayFetchRefusesTheAuthWalledPlatforms(t *testing.T) {
@@ -74,24 +72,6 @@ func TestMayFetchRefusesWhatItCannotParse(t *testing.T) {
 		if d := MayFetch(raw); d.Allowed {
 			t.Errorf("MayFetch(%q) allowed an address it could not apply policy to", raw)
 		}
-	}
-}
-
-// Denied for fetching and citable are different questions. A LinkedIn URL in
-// a search result is where the claim lives, and saying so costs nobody
-// anything — throwing it away would discard the metadata that makes
-// discovery useful without a fetch.
-// Here rather than in the websearch port because the two halves now live in
-// two packages, and only this one may reach both: platform may import shared,
-// not the other way round. The assertion is the same one — losing it to the
-// move would have left the distinction stated in prose and held by nothing.
-func TestADeniedHostIsStillCitable(t *testing.T) {
-	r := websearch.Result{URL: "https://www.linkedin.com/in/anna-weber", Title: "Anna Weber — Head of Procurement"}
-	if MayFetch(r.URL).Allowed {
-		t.Fatal("the fixture is wrong: this host must be deny-listed for fetching")
-	}
-	if !websearch.Citable(r) {
-		t.Error("a deny-listed host must still be citable — the URL is evidence of where the claim appears")
 	}
 }
 

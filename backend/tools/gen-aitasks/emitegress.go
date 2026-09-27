@@ -174,8 +174,8 @@ func emitDisclosures(b *bytes.Buffer) {
 
 The table above is the AI routing table and answers for model and embedding
 providers. It is not the whole answer: a deployment can also be configured to
-send a contact's name to a search index, a postal address to a geocoder, and a
-URL to whatever host it names.
+send a contact's name to an enrichment provider, a postal address to a
+geocoder, and a URL to whatever host it names.
 
 Those calls are listed here, one row per identity this product advertises when
 it makes them. **Personal** says whether the request can carry personal data, so
@@ -198,8 +198,7 @@ a processing record can be written from the rows marked yes.
 	b.WriteString(`
 A row here is what the installation CAN do, not what it does: most of these are
 inert until an administrator supplies a credential or turns a setting on, and
-the last column says which. Web search is the one worth naming twice — it sends
-a contact's name to a third party, and it is off until somebody sets a key.
+the last column says which.
 `)
 }
 

@@ -94,33 +94,6 @@ func TestAChangedNumberListedFirstDoesNotRetireAnUnchangedOneOfItsCountry(t *tes
 	}
 }
 
-// A search result is somebody else's description of the contact, so it claims
-// only an unanswered field. A second number is a different row, and without
-// the guard it would land beside the number the contact stated themselves.
-func TestADiscoveredNumberDefersToAStatedOne(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	contactID, _ := e.seedEmployedContact(ctx, t,
-		"Ida Stated", "ida@stated.example", "Stated AS", "stated.example")
-	if !fillFromSignature(ctx, t, e, contactID, SignatureField{
-		Name: fieldPhone, Value: "+49 30 5550101", Evidence: "+49 30 5550101", Confidence: 0.9,
-	}) {
-		t.Fatal("the signature wrote no number, so this test proves nothing about the search fill")
-	}
-	applied, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field: fieldPhone, Value: "+65 9555 0102", EvidenceSnippet: "Ida Stated, +65 9555 0102", SourceRef: "search:test",
-	}})
-	if err != nil {
-		t.Fatalf("applying the discovered number: %v", err)
-	}
-	if len(applied) != 0 {
-		t.Errorf("applied = %v, want nothing: the phone field is already answered", applied)
-	}
-	if got := phoneEvidence(ctx, t, e, contactID); !maps.Equal(got, map[string]string{"+49305550101": ""}) {
-		t.Errorf("phone evidence = %v, want only the stated number", got)
-	}
-}
-
 // Research already put evidence for number B on the record — without adding B
 // to the number list — and then a newer signature replaces the live number A
 // with B. B's row already exists, so the replacement lands as an update of it;

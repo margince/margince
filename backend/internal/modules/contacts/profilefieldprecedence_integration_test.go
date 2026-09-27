@@ -82,7 +82,7 @@ func fillFromSignatureObserved(ctx context.Context, t *testing.T, e *dedupeEnv, 
 func TestAMachineFillNeverReplacesWhatAHumanAccepted(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	contactID, _ := e.seedEmployedContact(ctx, t,
+	contactID, companyID := e.seedEmployedContact(ctx, t,
 		"Ola Brekke", "ola@precedence.test", "Brekke AS", "precedence.test")
 
 	accepted := ResearchClaimInput{
@@ -95,17 +95,17 @@ func TestAMachineFillNeverReplacesWhatAHumanAccepted(t *testing.T) {
 		t.Fatalf("accept the claim: %v", err)
 	}
 
-	applied, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field:           "linkedin",
-		Value:           "https://www.linkedin.com/in/someone-else",
-		EvidenceSnippet: "Someone Else — Brekke AS",
-		SourceRef:       "search:precedence",
-	}})
+	matched, err := e.store.ApplySiteContactFields(ctx, companyID, SiteContactFields{
+		Name:            "Ola Brekke",
+		LinkedinURL:     "https://www.linkedin.com/in/someone-else",
+		EvidenceSnippet: "Ola Brekke — Brekke AS",
+		SourceURL:       "https://precedence.test/about",
+	})
 	if err != nil {
-		t.Fatalf("ApplyDiscoveredFields: %v", err)
+		t.Fatalf("ApplySiteContactFields: %v", err)
 	}
-	if len(applied) != 0 {
-		t.Errorf("the search fill reported %v applied, want nothing: the field was already answered", applied)
+	if !matched {
+		t.Fatal("the site did not match the contact, so this test proves nothing about the fill")
 	}
 
 	got := readStoredClaim(ctx, t, e, contactID, "linkedin")

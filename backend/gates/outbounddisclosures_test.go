@@ -44,7 +44,7 @@ import (
 func TestEveryOutboundIdentitySaysWhatItDiscloses(t *testing.T) {
 	t.Parallel()
 
-	// Joined on the constant's VALUE ("margince-search"), not its Go name: the
+	// Joined on the constant's VALUE ("margince-enrich"), not its Go name: the
 	// value is what a remote operator reads in a log or matches in robots.txt,
 	// and it is what Disclosures() carries by referencing the constant itself.
 	identities := identityValues(t)

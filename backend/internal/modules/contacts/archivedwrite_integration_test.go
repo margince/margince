@@ -111,17 +111,6 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 			},
 		},
 		{
-			name: "approved discovered fields for the contact",
-			why:  "ApplyDiscoveredFields (searchcontactfields.go) — contact_profile_field is declared PII and erasure had cleared it",
-			call: func() error {
-				_, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-					Field: "linkedin", Value: "https://www.linkedin.com/in/mira-halvorsen",
-					EvidenceSnippet: "Mira Halvorsen — Voltaq Systems GmbH",
-				}})
-				return err
-			},
-		},
-		{
 			name: "signature fields read out of the contact's own mail",
 			why: "ApplySignatureFields (enrichsignature.go) — the same declared-PII table as the row above, " +
 				"and the path that asked for nothing at all rather than for too little",
