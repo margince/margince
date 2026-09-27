@@ -246,16 +246,31 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 // found in old mail and owed an Art. 14 notice, though the person came over from
 // the old CRM like every other migrated record (DutyFor, "crm_migration").
 //
-// Archived leads count too: a lead promoted or retired after the import was
-// still obtained by the old system. An erased lead has had its address
-// scrubbed, so it matches nothing.
+// The address must be the one the lead was IMPORTED with, read from its create
+// audit row. Only an importer may write the mirror: prefix, but anyone who may
+// edit leads may change a lead's email — and an imported lead retargeted at a
+// stranger's address would otherwise excuse that stranger's notice. An email
+// changed after the import therefore counts for nothing; changed back, it is
+// the imported address again.
+//
+// Only a LIVE lead counts. A promoted lead already has its contact, so capture
+// never mints one beside it; a retired lead leaves the duty owed, which is the
+// safe direction. It also keeps the read on the lead email index, which covers
+// live rows only. An erased lead has had its address scrubbed and matches
+// nothing.
 func heldByMigratedLeadTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	var held bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
-		  SELECT 1 FROM lead
-		   WHERE email = lower($1)
-		     AND starts_with(source_system, $2))`,
+		  SELECT 1 FROM lead l
+		   WHERE l.email = lower($1)
+		     AND l.archived_at IS NULL
+		     AND starts_with(l.source_system, $2)
+		     AND EXISTS (
+		           SELECT 1 FROM audit_log a
+		            WHERE a.entity_type = 'lead' AND a.entity_id = l.id
+		              AND a.action = 'create'
+		              AND lower(a.after->>'email') = l.email))`,
 		email, provenance.ReservedSourceSystemPrefix).Scan(&held); err != nil {
 		return false, fmt.Errorf("contacts: did a migrated lead hold this address: %w", err)
 	}
