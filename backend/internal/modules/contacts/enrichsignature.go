@@ -251,8 +251,8 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 	return appliedFields, nil
 }
 
-// signatureImages is every field this pass landed, as it found it and as it
-// left it — keyed by the field name, whether it is a column of the contact or
+// signatureImages builds the audit images for the fields this pass landed, as
+// it found them and as it left them — keyed by the field name, whether it is a column of the contact or
 // a row of contact_profile_field. The site and search fills record the sidecar
 // fields the same way, and a field that projected as a change from one writer
 // and as nothing from another would give one field two histories.

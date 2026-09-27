@@ -221,8 +221,10 @@ func readUndo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field, va
 	case 1:
 		return found[0], nil
 	}
-	return profileFieldUndo{}, &values.ParseError{Field: "value_key", Code: "value_key_required",
-		Message: "several numbers of this field can be restored; name the one to restore by its value_key"}
+	return profileFieldUndo{}, &values.ParseError{
+		Field: "value_key", Code: "value_key_required",
+		Message: "several numbers of this field can be restored; name the one to restore by its value_key",
+	}
 }
 
 // RestoreContactProfileField implements POST /contacts/{id}/profile-fields/{field}/restore.

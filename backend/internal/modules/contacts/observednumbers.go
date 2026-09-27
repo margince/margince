@@ -7,7 +7,7 @@ package contacts
 //
 // A phone is a list, so a signature or a card states a SET of numbers and the
 // set is applied as one. A number that a newer statement leaves out is kept:
-// people trim signatures for length, and deleting a working number costs a
+// signatures get trimmed for length, and deleting a working number costs a
 // contact the product can no longer reach, where a stale one costs a wasted
 // call. A newer statement replaces a number only by stating a different number
 // of the same country and type — the German number that changed replaces the
