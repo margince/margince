@@ -9,11 +9,14 @@ package compose
 // The passes do not run in one transaction — each repair commits on its own —
 // so the receipt is a separate small write after the pass returns, carrying
 // what was committed so far. A receipt that cannot be written is reported
-// beside the pass's own error and undoes nothing.
+// beside the pass's own error and undoes nothing. A pass that panics still
+// leaves a failed receipt; a process that dies mid-pass leaves none, and the
+// card's overdue warning is what reports that.
 
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -43,6 +46,10 @@ const sweepReceiptTimeout = 5 * time.Second
 // cannot name. The cause itself goes to the job's log, never to the receipt.
 const unclassifiedSweepFailure = "unclassified"
 
+// panickedSweepFailure is the class of a pass that panicked rather than
+// returning an error.
+const panickedSweepFailure = "panicked"
+
 type sweepRecorder struct {
 	ledger sweepLedger
 	now    func() time.Time
@@ -52,12 +59,27 @@ func newSweepRecorder(pool *pgxpool.Pool) sweepRecorder {
 	return sweepRecorder{ledger: capture.NewSweepLedger(InstallationDB(pool)), now: time.Now}
 }
 
-// run times one pass and records how it ended.
+// run times one pass and records how it ended. The pass counts into tally as
+// it commits, so a panic partway still reports what it had done; the panic is
+// recorded and then re-raised, never absorbed.
 func (r sweepRecorder) run(
-	ctx context.Context, sweep capture.Sweep, pass func() (sweepTally, error),
-) (sweepTally, error) {
+	ctx context.Context, sweep capture.Sweep, pass func(tally *sweepTally) error,
+) (tally sweepTally, err error) {
 	started := r.now()
-	tally, err := pass()
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			return
+		}
+		receipt := sweepReceiptFor(sweep, started, r.now(), tally, errors.New("the pass panicked"))
+		receipt.ErrorClass = panickedSweepFailure
+		if recordErr := r.record(ctx, receipt); recordErr != nil {
+			slog.ErrorContext(ctx, "capture: the receipt of a panicked pass was not written",
+				"sweep", string(sweep), "err", recordErr)
+		}
+		panic(recovered)
+	}()
+	err = pass(&tally)
 	receipt := sweepReceiptFor(sweep, started, r.now(), tally, err)
 	return tally, errors.Join(err, r.record(ctx, receipt))
 }
@@ -103,7 +125,7 @@ func sweepReceiptFor(
 // vocabulary owns. The column's CHECK admits any token; the page promises one
 // an operator can look up.
 func vettedSweepClass(stored string) string {
-	if stored == "" || stored == unclassifiedSweepFailure ||
+	if stored == "" || stored == unclassifiedSweepFailure || stored == panickedSweepFailure ||
 		slices.Contains(jobs.CoreFailureClasses(), stored) {
 		return stored
 	}

@@ -29887,7 +29887,8 @@ export interface components {
             cap_hit: boolean;
             /**
              * @description Set only when `outcome` is `failed`: a class token from the job failure
-             *     vocabulary, or `unclassified`. Never the error's text, which stays in the log.
+             *     vocabulary, `panicked` when the pass panicked, or `unclassified`. Never the
+             *     error's text, which stays in the log.
              */
             error_class?: string;
         };

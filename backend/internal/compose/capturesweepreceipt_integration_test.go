@@ -389,3 +389,29 @@ func TestEverySweepAndOutcomeIsAcceptedByTheTable(t *testing.T) {
 		}
 	}
 }
+
+// A pass that panics has committed what it committed. The receipt says it
+// failed and how far it got, and the panic still reaches River.
+func TestAPanickingPassLeavesAFailedReceiptAndStillPanics(t *testing.T) {
+	e := integration.Setup(t)
+	recorder := newSweepRecorder(e.Pool)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("the panic was absorbed; River must still see it")
+			}
+		}()
+		_, _ = recorder.run(ctx, capture.SweepFiledMeetingHolds, func(tally *sweepTally) error {
+			tally.processed = 2
+			panic("a pass fell over")
+		})
+	}()
+
+	got := latestReceipt(t, e, capture.SweepFiledMeetingHolds)
+	if got.outcome != string(capture.SweepFailed) || got.errorClass != panickedSweepFailure ||
+		got.processed != 2 {
+		t.Errorf("receipt = %+v, want failed/panicked with the 2 committed before the panic", got)
+	}
+}

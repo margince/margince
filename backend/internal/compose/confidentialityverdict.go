@@ -404,25 +404,33 @@ const confidentialityStragglerBatch = 200
 // pass existed, and an apply that lost the claim race after the ledger was
 // written. Its subject is a query, so a workspace with none does nothing.
 func (e *ConfidentialityVerdictEngine) FinishSettledThreads(ctx context.Context) (sweepTally, error) {
+	var tally sweepTally
+	err := e.finishSettledThreads(ctx, &tally)
+	return tally, err
+}
+
+// finishSettledThreads is the pass, counting into tally as each repair
+// commits.
+func (e *ConfidentialityVerdictEngine) finishSettledThreads(ctx context.Context, tally *sweepTally) error {
 	// The pass's own provenance, taken once for the listing and again per
 	// thread below, so each repair's stamps and audience events trace together
 	// under a correlation id of their own.
 	settled, err := e.threads.ThreadsWithUndecidedMessages(
 		e.workspaceCtx(ctx), confidentialityStragglerBatch)
 	if err != nil {
-		return sweepTally{}, fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
+		return fmt.Errorf("confidentiality: listing settled threads with undecided messages: %w", err)
 	}
-	tally := sweepTally{capHit: len(settled) >= confidentialityStragglerBatch}
+	tally.capHit = len(settled) >= confidentialityStragglerBatch
 	for _, t := range settled {
 		done, err := e.finishOneSettledThread(ctx, t)
 		if err != nil {
-			return tally, err
+			return err
 		}
 		if done {
 			tally.processed++
 		}
 	}
-	return tally, nil
+	return nil
 }
 
 // finishOneSettledThread is one thread's repair, in one transaction.

@@ -52,6 +52,7 @@ func TestOnlyAVocabularyClassReachesThePage(t *testing.T) {
 		"":                       "",
 		"write_conflict":         "write_conflict",
 		unclassifiedSweepFailure: unclassifiedSweepFailure,
+		panickedSweepFailure:     panickedSweepFailure,
 		"someone_example_test":   unclassifiedSweepFailure,
 	} {
 		if got := vettedSweepClass(stored); got != want {

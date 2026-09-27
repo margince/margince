@@ -127,8 +127,8 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 			"workspace", workspace.String(),
 			"contacts", len(owed), "linked", linked, "promoted", promoted)
 	}
-	lifted, err := w.receipts.run(sweepCtx, capture.SweepFiledMeetingHolds, func() (sweepTally, error) {
-		return w.liftFiledMeetingHolds(sweepCtx)
+	lifted, err := w.receipts.run(sweepCtx, capture.SweepFiledMeetingHolds, func(tally *sweepTally) error {
+		return w.liftFiledMeetingHolds(sweepCtx, tally)
 	})
 	if err != nil {
 		failed = errors.Join(failed, err)
@@ -137,8 +137,8 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 		w.log.InfoContext(ctx, "link reconcile: filed meetings are no longer held to their attendees",
 			"workspace", workspace.String(), "meetings", lifted.processed)
 	}
-	asked, err := w.receipts.run(sweepCtx, capture.SweepStrandedContacts, func() (sweepTally, error) {
-		return w.askAboutStrandedContacts(sweepCtx)
+	asked, err := w.receipts.run(sweepCtx, capture.SweepStrandedContacts, func(tally *sweepTally) error {
+		return w.askAboutStrandedContacts(sweepCtx, tally)
 	})
 	if err != nil {
 		failed = errors.Join(failed, err)
@@ -196,12 +196,12 @@ const askAboutStrandedContactsPerTick = 200
 // A contact whose question the ceiling refuses again is simply offered again
 // next tick. That is the bound doing its job rather than a failure: the queue
 // drains, and the room appears.
-func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context) (sweepTally, error) {
+func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context, asked *sweepTally) error {
 	stranded, err := w.pending.StrandedContacts(ctx, askAboutStrandedContactsPerTick)
 	if err != nil {
-		return sweepTally{}, err
+		return err
 	}
-	asked := sweepTally{capHit: len(stranded) >= askAboutStrandedContactsPerTick}
+	asked.capHit = len(stranded) >= askAboutStrandedContactsPerTick
 	var failed error
 	for _, c := range stranded {
 		opened, err := w.pending.AskWhoseRecord(ctx, c)
@@ -215,7 +215,7 @@ func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context) (swe
 			asked.processed++
 		}
 	}
-	return asked, failed
+	return failed
 }
 
 // liftFiledMeetingHoldsPerTick bounds the drain. The population is finite and
@@ -239,7 +239,7 @@ const liftFiledMeetingHoldsPerTick = 200
 // It drains permanently: the recompute rewrites the reason on every row it
 // selects, so a row worked once cannot match again, and afterwards the same
 // predicate guards the invariant for the price of one probe.
-func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context) (sweepTally, error) {
+func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted *sweepTally) error {
 	var held []ids.ActivityID
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var args []any
@@ -264,20 +264,20 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context) (sweepT
 		}
 		return rows.Err()
 	}); err != nil {
-		return sweepTally{}, err
+		return err
 	}
-	lifted := sweepTally{capHit: len(held) >= liftFiledMeetingHoldsPerTick}
+	lifted.capHit = len(held) >= liftFiledMeetingHoldsPerTick
 	for _, id := range held {
 		// One transaction per meeting, like the repair above: a row another
 		// writer holds a lock on costs that row and not the whole drain.
 		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 			return activities.RecomputeAudienceTx(ctx, tx, id)
 		}); err != nil {
-			return lifted, fmt.Errorf("re-deriving the audience of %s: %w", id, err)
+			return fmt.Errorf("re-deriving the audience of %s: %w", id, err)
 		}
 		lifted.processed++
 	}
-	return lifted, nil
+	return nil
 }
 
 // filedMeetingHeldClause selects the filed records still carrying the "named

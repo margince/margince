@@ -66,8 +66,8 @@ func (w *confidentialityVerdictWorker) judgeWorkspace(ctx context.Context, works
 	// And the answers that never reached their messages. After retiring, so a
 	// thread that just became `unsure` has its messages settled in the same
 	// tick rather than waiting for the next one.
-	_, err := w.receipts.run(wsCtx, capture.SweepSettledThreadVerdicts, func() (sweepTally, error) {
-		return w.engine.FinishSettledThreads(wsCtx)
+	_, err := w.receipts.run(wsCtx, capture.SweepSettledThreadVerdicts, func(tally *sweepTally) error {
+		return w.engine.finishSettledThreads(wsCtx, tally)
 	})
 	return err
 }

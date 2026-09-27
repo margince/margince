@@ -23002,7 +23002,8 @@ type CaptureSweepRun struct {
 	CapHit bool `json:"cap_hit"`
 
 	// ErrorClass Set only when `outcome` is `failed`: a class token from the job failure
-	// vocabulary, or `unclassified`. Never the error's text, which stays in the log.
+	// vocabulary, `panicked` when the pass panicked, or `unclassified`. Never the
+	// error's text, which stays in the log.
 	ErrorClass *string   `json:"error_class,omitempty"`
 	FinishedAt time.Time `json:"finished_at"`
 
