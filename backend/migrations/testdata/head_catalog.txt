@@ -2825,6 +2825,7 @@ public.contact_profile_field.contact_profile_field_confidence_check CHECK (((con
 public.contact_profile_field.contact_profile_field_contact_fk FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_profile_field.contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text])))
 public.contact_profile_field.contact_profile_field_pkey PRIMARY KEY (id)
+public.contact_profile_field.contact_profile_field_value_key_cardinality CHECK (((field = 'phone'::text) = (value_key <> ''::text)))
 public.contact_profile_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_profile_field.evidence_snippet text NOT NULL gen=- def=-
 public.contact_profile_field.field text NOT NULL gen=- def=-
@@ -2837,8 +2838,9 @@ public.contact_profile_field.superseded_observed_at timestamp with time zone gen
 public.contact_profile_field.superseded_value text gen=- def=-
 public.contact_profile_field.trg_contact_profile_field_updated CREATE TRIGGER trg_contact_profile_field_updated BEFORE UPDATE ON public.contact_profile_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.contact_profile_field.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.contact_profile_field.uq_contact_profile_field UNIQUE (contact_id, field)
+public.contact_profile_field.uq_contact_profile_field UNIQUE (contact_id, field, value_key)
 public.contact_profile_field.value text NOT NULL gen=- def=-
+public.contact_profile_field.value_key text NOT NULL gen=- def=''::text
 public.contact_profile_field.version bigint NOT NULL gen=- def=1
 public.contact_profile_field_pkey CREATE UNIQUE INDEX contact_profile_field_pkey ON public.contact_profile_field USING btree (id)
 public.contact_provider_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -6292,7 +6294,7 @@ public.uq_contact_channel_identity CREATE UNIQUE INDEX uq_contact_channel_identi
 public.uq_contact_email_dedupe CREATE UNIQUE INDEX uq_contact_email_dedupe ON public.contact_email USING btree (email) WHERE (archived_at IS NULL)
 public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))
-public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field)
+public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field, value_key)
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
 public.uq_deal_room_active CREATE UNIQUE INDEX uq_deal_room_active ON public.deal_room USING btree (deal_id) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))

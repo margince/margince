@@ -27271,7 +27271,9 @@ type ContactPhoneInput struct {
 type ContactPhoneInputPhoneType string
 
 // ContactProfileField One enriched field with the evidence it was read from. Evidence-or-omit: a row
-// exists only where a verbatim snippet was captured.
+// exists only where a verbatim snippet was captured. A phone is a list, so a contact
+// has one `phone` row per number, told apart by `value_key`; every other field has at
+// most one row.
 type ContactProfileField struct {
 	CapturedAt time.Time `json:"captured_at"`
 
@@ -27303,10 +27305,16 @@ type ContactProfileField struct {
 	// SupersededValue What this field held before a newer statement replaced it. The contact's own
 	// signature or business card, carrying a later date than the value on record,
 	// replaces what is older than it — including a value a colleague typed, because a
-	// number stated last week outranks one typed in March. Present only where
-	// something was actually replaced, and it is what the undo control restores.
+	// number stated last week outranks one typed in March. For a phone it is the older
+	// number of the same country this number replaced; a number a newer statement
+	// simply leaves out is kept, not replaced. Present only where something was
+	// actually replaced, and it is what the undo control restores.
 	SupersededValue *string `json:"superseded_value,omitempty"`
 	Value           string  `json:"value"`
+
+	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, empty
+	// for every other field. Pass it to the restore to name which number to undo.
+	ValueKey *string `json:"value_key,omitempty"`
 
 	// Verdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
 	Verdict *ContactProfileFieldVerdict `json:"verdict,omitempty"`
@@ -44348,6 +44356,14 @@ type MergeContactParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// RestoreContactProfileFieldParams defines parameters for RestoreContactProfileField.
+type RestoreContactProfileFieldParams struct {
+	// ValueKey Which row of a field that holds several — a phone number, as the row's
+	// `value_key`. May be omitted while only one row of the field has something to
+	// restore; answers 422 when several do.
+	ValueKey *string `form:"value_key,omitempty" json:"value_key,omitempty"`
+}
+
 // CreateContractParams defines parameters for CreateContract.
 type CreateContractParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -59342,7 +59358,7 @@ type ServerInterface interface {
 	GetContactProfileFields(w http.ResponseWriter, r *http.Request, id Id)
 	// Put back the value a newer statement replaced.
 	// (POST /contacts/{id}/profile-fields/{field}/restore)
-	RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey)
+	RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey, params RestoreContactProfileFieldParams)
 	// Share a contact your mailbox created with the rest of the company.
 	// (POST /contacts/{id}/publish)
 	PublishCapturedContact(w http.ResponseWriter, r *http.Request, id Id)
@@ -62234,7 +62250,7 @@ func (_ Unimplemented) GetContactProfileFields(w http.ResponseWriter, r *http.Re
 
 // Put back the value a newer statement replaced.
 // (POST /contacts/{id}/profile-fields/{field}/restore)
-func (_ Unimplemented) RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey) {
+func (_ Unimplemented) RestoreContactProfileField(w http.ResponseWriter, r *http.Request, id Id, field ContactProfileFieldKey, params RestoreContactProfileFieldParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -75756,8 +75772,24 @@ func (siw *ServerInterfaceWrapper) RestoreContactProfileField(w http.ResponseWri
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreContactProfileFieldParams
+
+	// ------------- Optional query parameter "value_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_key", r.URL.Query(), &params.ValueKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_key", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RestoreContactProfileField(w, r, id, field)
+		siw.Handler.RestoreContactProfileField(w, r, id, field, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

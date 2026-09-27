@@ -2170,10 +2170,20 @@ paths:
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
       summary: Put back the value a newer statement replaced.
+      parameters:
+        - name: value_key
+          in: query
+          required: false
+          description: |
+            Which row of a field that holds several — a phone number, as the row's
+            `value_key`. May be omitted while only one row of the field has something to
+            restore; answers 422 when several do.
+          schema: { type: string, maxLength: 64 }
       description: |
         Undo for one enriched field. A signature or a business card stating something newer
         replaces what the record holds and keeps the replaced value in `superseded_value`;
-        this puts that value back and clears the buffer.
+        this puts that value back and clears the buffer. For a phone the undo is per
+        number: the replaced number comes back and the number that replaced it is retired.
 
         Human-only, and deliberately: the machine is what wrote the replacement, so an agent
         undoing it would be one authority arguing with itself.
@@ -2196,6 +2206,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/access:
     parameters:
@@ -30865,19 +30876,28 @@ components:
       type: object
       description: |
         One enriched field with the evidence it was read from. Evidence-or-omit: a row
-        exists only where a verbatim snippet was captured.
+        exists only where a verbatim snippet was captured. A phone is a list, so a contact
+        has one `phone` row per number, told apart by `value_key`; every other field has at
+        most one row.
       required: [field, value, evidence_snippet, source, captured_by, captured_at]
       properties:
         field: { type: string, enum: [title, phone, role, linkedin, company_name, address, website] }
         value: { type: string }
+        value_key:
+          type: string
+          description: |
+            What tells two rows of one field apart: the E.164 number for a `phone` row, empty
+            for every other field. Pass it to the restore to name which number to undo.
         superseded_value:
           type: [string, 'null']
           description: |
             What this field held before a newer statement replaced it. The contact's own
             signature or business card, carrying a later date than the value on record,
             replaces what is older than it — including a value a colleague typed, because a
-            number stated last week outranks one typed in March. Present only where
-            something was actually replaced, and it is what the undo control restores.
+            number stated last week outranks one typed in March. For a phone it is the older
+            number of the same country this number replaced; a number a newer statement
+            simply leaves out is kept, not replaced. Present only where something was
+            actually replaced, and it is what the undo control restores.
         superseded_observed_at:
           type: [string, 'null']
           format: date-time

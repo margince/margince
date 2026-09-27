@@ -35,6 +35,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // contactProfileFieldPrecedence is who is writing, and therefore what happens to a
@@ -146,6 +148,43 @@ type contactProfileFieldRow struct {
 	// leaves no row here to read the old value from. Empty otherwise, and the
 	// conflict clause then keeps what the row itself carried.
 	Superseded string
+	// Replaces is the value this row takes the place of within its field: the
+	// older phone number of its country. That number's own row is removed and
+	// its value, author and date become this row's superseded_*; a number
+	// typed by hand has no row, and the number itself is the buffer. Either
+	// way the undo names the number that was actually replaced and no other.
+	Replaces string
+}
+
+// profileFieldValueKey is what tells two rows of one field apart.
+//
+// A phone is a list, so each number is its own row keyed by its E.164 form —
+// the spelling contact_phone stores, so a number restated in another format
+// lands on its own row rather than beside it. Every other field holds one
+// answer and keys on the empty string, which the table's cardinality check
+// holds.
+func profileFieldValueKey(field, value string) string {
+	if field != fieldPhone {
+		return ""
+	}
+	if parsed, err := values.ParsePhone(value); err == nil {
+		return parsed.String()
+	}
+	return strings.TrimSpace(value)
+}
+
+// answeredGuard keeps a machine fill off a field that already has an answer.
+//
+// The conflict target alone no longer says that for a phone: a second number
+// is a different key, so a search result would land beside the signature's
+// number rather than deferring to it. A derived fill claims an UNANSWERED
+// field, whatever it holds.
+func (p contactProfileFieldPrecedence) answeredGuard() string {
+	if p != claimUnanswered {
+		return ""
+	}
+	return `WHERE NOT EXISTS (SELECT 1 FROM contact_profile_field
+	                        WHERE contact_id = $1::uuid AND field = $2::text)`
 }
 
 // writeContactProfileField writes one evidence row and reports whether it landed.
@@ -184,14 +223,29 @@ func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		}
 		return false, err
 	}
+	valueKey := profileFieldValueKey(row.Field, row.Value)
+	replaces := ""
+	if row.Replaces != "" {
+		replaces = profileFieldValueKey(row.Field, row.Replaces)
+	}
 	tag, err := tx.Exec(ctx, `
+		WITH replaced AS (
+		    DELETE FROM contact_profile_field
+		     WHERE contact_id = $1::uuid AND field = $2::text
+		       AND $12::text <> '' AND value_key = $12::text AND value_key <> $11::text
+		    RETURNING value, captured_by, observed_at)
 		INSERT INTO contact_profile_field
-		  (contact_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by,
-		   observed_at, superseded_value)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, now()), NULLIF($10, ''))
-		ON CONFLICT (contact_id, field) `+precedence.conflictClause(),
+		  (contact_id, field, value_key, value, evidence_snippet, source_ref, confidence, source,
+		   captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
+		SELECT $1::uuid, $2::text, $11::text, $3::text, $4::text, $5::text, $6::numeric, $7::text,
+		       $8::text, COALESCE($9::timestamptz, now()),
+		       COALESCE(r.value, NULLIF($10::text, ''), NULLIF($12::text, '')), r.captured_by, r.observed_at
+		  FROM (SELECT 1) AS one LEFT JOIN replaced r ON true
+		`+precedence.answeredGuard()+`
+		ON CONFLICT (contact_id, field, value_key) `+precedence.conflictClause(),
 		contactID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
-		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded)
+		row.Confidence, row.Source, row.CapturedBy, row.ObservedAt, row.Superseded,
+		valueKey, replaces)
 	if err != nil {
 		return false, fmt.Errorf("contacts: profile field evidence row (%s): %w", row.Field, err)
 	}

@@ -1123,7 +1123,7 @@ func (stubs) GetContactProfileFields(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetContactProfileFields")
 }
 
-func (stubs) RestoreContactProfileField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, field crmcontracts.ContactProfileFieldKey) {
+func (stubs) RestoreContactProfileField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, field crmcontracts.ContactProfileFieldKey, params crmcontracts.RestoreContactProfileFieldParams) {
 	httperr.NotImplemented(w, r, "RestoreContactProfileField")
 }
 

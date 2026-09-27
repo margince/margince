@@ -60,15 +60,20 @@ func fillFromSignature(ctx context.Context, t *testing.T, e *dedupeEnv, contactI
 // which is what the supersede rule compares.
 func fillFromSignatureObserved(ctx context.Context, t *testing.T, e *dedupeEnv, contactID ids.ContactID, observedAt time.Time, f SignatureField) bool {
 	t.Helper()
-	var verdict signatureVerdict
+	var applied bool
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if f.Name == fieldPhone {
+			landed, err := applySignatureNumbers(ctx, tx, contactID, "mailto:signature", observedAt, []SignatureField{f})
+			applied = landed > 0
+			return err
+		}
 		var err error
-		verdict, err = e.store.applySignatureField(ctx, tx, contactID, "mailto:signature", observedAt, f)
+		applied, err = e.store.applySignatureField(ctx, tx, contactID, "mailto:signature", observedAt, f)
 		return err
 	}); err != nil {
 		t.Fatalf("apply the signature field %s: %v", f.Name, err)
 	}
-	return verdict.applied
+	return applied
 }
 
 // A machine read a page or a footer; the human read the evidence and chose.
