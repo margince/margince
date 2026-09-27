@@ -39,14 +39,20 @@ func (s *Store) brandSchedulingProfile(ctx context.Context, profile crmcontracts
 		slog.WarnContext(ctx, "booking company branding unavailable", "err", err)
 		return profile
 	}
-	// The profile's published name limit still applies to an unbounded anchor name.
-	if characters := []rune(name); len(characters) > 200 {
-		name = string(characters[:199]) + "…"
-	}
+	name = schedulingDisplayName(name)
 	if logo != nil && s.publicOriginUsable() == nil {
 		absolute := strings.TrimRight(s.publicBaseURL, "/") + *logo
 		logo = &absolute
 	}
 	profile.CompanyName, profile.LogoUrl = &name, logo
 	return profile
+}
+
+// Public profiles keep their contract bound while account and company names may be longer.
+func schedulingDisplayName(name string) string {
+	name = strings.TrimSpace(name)
+	if characters := []rune(name); len(characters) > 200 {
+		return string(characters[:199]) + "…"
+	}
+	return name
 }

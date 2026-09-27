@@ -96,14 +96,13 @@ from a booking draft opens another tab; returning refreshes the saved setup.
 
 ### How do I share a booking link?
 Open **Settings → Meetings**. Connect or reconnect Google Calendar or Outlook
-Calendar with permission to create invitations. Set your public name, company
-logo, meeting details and availability limits, then save. Open the account menu
+Calendar with permission to create invitations. Your name comes from **Settings → Account**, and company branding comes from
+**Settings → Company**. Set the meeting details and availability limits, then save. Open the account menu
 → **My booking link** and choose **Enable bookings**.
 A calendar marked **Read-only calendar** is connected for reading events but
 cannot send invitations. In Settings → Connections, choose **Reconnect** and
 allow invitation access. Choose the event calendar in Settings → Meetings.
-Copy the link to share it anywhere, or choose **Copy signature link** to paste a
-clickable booking link into your email signature. Guests choose a time and enter
+Choose **Copy link** to share it anywhere, including your email signature. Guests choose a time and enter
 their own details; you do not need to select a contact first.
 
 **Preview public page** shows what guests will see. **Pause bookings** stops new

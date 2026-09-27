@@ -192,14 +192,15 @@ function MeetingSettingsForm({ profile }: Readonly<{ profile: Profile }>) {
               {(control) => (
                 <TextInput
                   {...control}
-                  required={profile.enabled}
-                  value={form.host_name ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, host_name: e.target.value })
-                  }
+                  readOnly
+                  value={profile.host_name ?? ""}
                 />
               )}
             </Field>
+            <p className="t-caption">
+              {t("scheduling.accountName")}{" "}
+              <a href="#/settings/account">{t("settings.tab.account")}</a>
+            </p>
             <p className="t-caption">
               {t("scheduling.anchorBrand")}{" "}
               <a href="#/settings/company">{t("settings.companyTitle")}</a>
@@ -341,7 +342,6 @@ function changedMeetingPreferences(
     "provider",
     "calendar_id",
     "blocking_calendars",
-    "host_name",
     "title",
     "location",
     "email_reminder",

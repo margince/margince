@@ -920,11 +920,9 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data;
     },
     onSuccess: (saved) => {
-      // The DRAFT holds the saved answer until `/me` catches up. Clearing it
-      // here would fall back to the cached snapshot, which still carries the
-      // old name — the field would visibly revert for as long as the refetch
-      // takes, and stay reverted if the refetch itself fails.
+      // Keep the saved name visible if the account refetch is delayed or fails.
       setDraft(saved?.display_name ?? null);
+      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
       toast.show(t("settings.saved"));
       void queryClient.invalidateQueries({ queryKey: ["me"] });
     },

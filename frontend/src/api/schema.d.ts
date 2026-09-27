@@ -25622,6 +25622,7 @@ export interface components {
             buffer_minutes: number;
             title: string;
             location: string;
+            /** @description Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             host_name?: string;
             /** @description Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             company_name?: string;

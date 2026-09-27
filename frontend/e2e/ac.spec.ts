@@ -998,7 +998,7 @@ test("AC-book: the reusable booking link is available for sharing and signatures
   await page.goto("/#/book");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: de["scheduling.myLink"] })).toHaveValue("https://crm.example.test/#/book/host-1");
-  await expect(page.getByRole("button", { name: de["scheduling.copySignature"] })).toBeEnabled();
+  await expect(page.getByRole("button", { name: de["scheduling.copyLink"] })).toBeEnabled();
 });
 
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({

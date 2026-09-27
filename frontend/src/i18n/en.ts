@@ -6,7 +6,6 @@ export const en = {
   "scheduling.back": "Back to Margince",
   "scheduling.prepare": "Prepare for this meeting",
   "scheduling.timezone": "Time zone",
-  "scheduling.copySignature": "Copy signature link",
   "scheduling.replace": "Replace booking link",
   "scheduling.replaceHelp":
     "The old link will stop accepting bookings. Update your email signature and anywhere else you have shared it. Existing meetings keep their private change links.",
@@ -61,7 +60,6 @@ export const en = {
   "scheduling.copied": "Copied",
   "scheduling.copyFallback": "Select and copy the link below.",
   "scheduling.preview": "Preview public page",
-  "scheduling.signature": "Book a meeting with me",
   "scheduling.active": "Accepting bookings",
   "scheduling.paused": "Public bookings paused",
   "scheduling.pause": "Pause bookings",
@@ -131,6 +129,12 @@ export const en = {
   "scheduling.connect": "Connect or reconnect calendar",
   "scheduling.connectionHelp":
     "Calendar write access is required to send invitations. Reconnect an existing read-only calendar to grant access.",
+  "scheduling.accountName":
+    "The name on your booking page comes from Account settings.",
+  "scheduling.linkNotCreated":
+    "Save meeting settings to create your booking link.",
+  "scheduling.calendarSetupNeeded":
+    "Choose and save a calendar in meeting settings before enabling bookings.",
   "scheduling.hostName": "Your public name",
   "scheduling.subject": "Meeting title",
   "scheduling.location": "Location or meeting link",

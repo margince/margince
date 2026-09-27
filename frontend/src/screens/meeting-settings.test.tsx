@@ -194,7 +194,7 @@ it("does not offer disconnected providers or retain their old calendar ids", asy
   });
 });
 
-it("edits the host name while company branding comes from the anchor", async () => {
+it("uses the Account name while company branding comes from the anchor", async () => {
   const user = userEvent.setup();
   const writes: unknown[] = [];
   mount({
@@ -204,8 +204,11 @@ it("edits the host name while company branding comes from the anchor", async () 
     },
   });
   const name = await screen.findByLabelText("Your public name");
-  await user.clear(name);
-  await user.type(name, "Ada Example");
+  expect(name).toHaveProperty("readOnly", true);
+  expect(name).toHaveProperty("value", bookingProfile.host_name);
+  expect(
+    screen.getByRole("link", { name: "Account" }).getAttribute("href"),
+  ).toBe("#/settings/account");
   expect(screen.queryByLabelText("Company name")).toBeNull();
   expect(screen.queryByLabelText("Public company logo URL")).toBeNull();
   expect(
@@ -219,7 +222,7 @@ it("edits the host name while company branding comes from the anchor", async () 
   await user.click(screen.getByRole("button", { name: "Save settings" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({
-    host_name: "Ada Example",
+    host_name: bookingProfile.host_name,
   });
 });
 
@@ -306,11 +309,11 @@ it("explains expired authorization without hiding the settings draft", async () 
   expect(screen.getByLabelText("Meeting title")).toBeTruthy();
 });
 
-it("sets a public name during setup and then enables the reusable booking link", async () => {
+it("saves calendar setup and enables the reusable link using the Account name", async () => {
   const user = userEvent.setup();
   let latest: unknown = {
     ...bookingProfile,
-    host_name: null,
+    host_name: bookingProfile.host_name,
     provider: "",
     enabled: false,
   };
@@ -332,10 +335,18 @@ it("sets a public name during setup and then enables the reusable booking link",
       <MeetingSettings />
     </StoryProviders>,
   );
-  await user.type(
-    await screen.findByLabelText("Your public name"),
-    "Ada Example",
+  expect(await screen.findByLabelText("Your public name")).toHaveProperty(
+    "readOnly",
+    true,
   );
+  expect(
+    screen.getByRole("button", { name: "Enable bookings" }),
+  ).toHaveProperty("disabled", true);
+  expect(
+    screen.getByText(
+      "Choose and save a calendar in meeting settings before enabling bookings.",
+    ),
+  ).toBeDefined();
   const save = screen.getByRole("button", { name: "Save settings" });
   await waitFor(() => expect(save).toHaveProperty("disabled", false));
   await user.click(save);
@@ -343,7 +354,7 @@ it("sets a public name during setup and then enables the reusable booking link",
   await user.click(screen.getByRole("button", { name: "Enable bookings" }));
   await waitFor(() => expect(writes).toHaveLength(2));
   expect(writes[1]).toMatchObject({
-    host_name: "Ada Example",
+    host_name: bookingProfile.host_name,
     provider: "gcal",
     calendar_id: "work",
     enabled: true,
@@ -402,12 +413,12 @@ it("uses the link's current enabled state without losing an edited title", async
   await user.clear(title);
   await user.type(title, "Keep this draft");
   const name = screen.getByLabelText("Your public name");
-  expect(name).toHaveProperty("required", false);
+  expect(name).toHaveProperty("readOnly", true);
   await user.click(screen.getByRole("button", { name: "Enable bookings" }));
-  await waitFor(() => expect(name).toHaveProperty("required", true));
+  await screen.findByRole("button", { name: "Pause bookings" });
   expect(title).toHaveProperty("value", "Keep this draft");
   await user.click(screen.getByRole("button", { name: "Pause bookings" }));
-  await waitFor(() => expect(name).toHaveProperty("required", false));
+  await screen.findByRole("button", { name: "Enable bookings" });
   expect(title).toHaveProperty("value", "Keep this draft");
 });
 it("displays an old minute value concisely without changing it on unrelated saves", async () => {
@@ -431,3 +442,34 @@ it("displays an old minute value concisely without changing it on unrelated save
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({ notice_minutes: 50 });
 });
+
+it.each([false, true])(
+  "distinguishes an uncreated link from a missing public address (created=%s)",
+  async (created) => {
+    mount({
+      "GET /scheduling/profile": () =>
+        jsonResponse({
+          ...bookingProfile,
+          enabled: false,
+          provider: "",
+          slug: created ? "ada" : undefined,
+          public_url: undefined,
+        }),
+    });
+    expect(
+      await screen.findByText(
+        created ? /Set a public address/ : /Save meeting settings to create/,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("textbox", { name: "My booking link" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy link" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(
+      screen.getByRole("button", { name: "Enable bookings" }),
+    ).toHaveProperty("disabled", true);
+  },
+);

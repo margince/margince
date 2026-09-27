@@ -35507,7 +35507,7 @@ components:
         buffer_minutes: { type: integer, minimum: 0, maximum: 120 }
         title: { type: string, maxLength: 200 }
         location: { type: string, maxLength: 1000 }
-        host_name: { type: string, maxLength: 200 }
+        host_name: { type: string, maxLength: 200, description: Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
         company_name: { type: string, maxLength: 200, description: Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
         logo_url: { type: string, maxLength: 2000, description: Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. }
         slug: { type: string, readOnly: true }

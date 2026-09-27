@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Copy, ExternalLink } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
@@ -61,22 +61,6 @@ function ProfileForm({
   const client = useQueryClient();
   const calendar = useBookingCalendar(profile.provider, false);
   const [replace, setReplace] = useState(false);
-  const signature = useMemo(() => {
-    const anchor = document.createElement("a");
-    anchor.href = profile.public_url ?? "";
-    anchor.textContent = t("scheduling.signature");
-    return anchor.outerHTML;
-  }, [profile.public_url, t]);
-  const copySignature = useClipboardCopy(
-    `${t("scheduling.signature")} — ${profile.public_url ?? ""}`,
-    {
-      copy: t("scheduling.copySignature"),
-      copied: t("scheduling.copied"),
-      remedy: t("scheduling.copyFallback"),
-    },
-    undefined,
-    signature,
-  );
   const copy = useClipboardCopy(profile.public_url ?? "", {
     copy: t("scheduling.copyLink"),
     copied: t("scheduling.copied"),
@@ -109,15 +93,23 @@ function ProfileForm({
             !calendar.ready && (
               <ErrorLine>{t("scheduling.publicCalendarUnavailable")}</ErrorLine>
             )}
-          <div className="book-link">
-            <TextInput
-              aria-label={t("scheduling.myLink")}
-              readOnly
-              value={profile.public_url ?? ""}
-            />
-          </div>
+          {profile.public_url && (
+            <div className="book-link">
+              <TextInput
+                aria-label={t("scheduling.myLink")}
+                readOnly
+                value={profile.public_url ?? ""}
+              />
+            </div>
+          )}
           {!profile.public_url && (
-            <p className="t-caption">{t("scheduling.publicUrlMissing")}</p>
+            <p className="t-caption">
+              {t(
+                profile.slug
+                  ? "scheduling.publicUrlMissing"
+                  : "scheduling.linkNotCreated",
+              )}
+            </p>
           )}
           <div className="book-actions">
             <Button
@@ -135,17 +127,10 @@ function ProfileForm({
           </div>
           {copy.notice}
           <div className="book-actions">
-            <Button disabled={!profile.public_url} onClick={copySignature.copy}>
-              {copySignature.label}
-            </Button>
-            {profile.public_url && (
-              <a href={profile.public_url}>{t("scheduling.signature")}</a>
-            )}
-          </div>
-          {copySignature.notice}
-          <div className="book-actions">
             <Button
-              disabled={save.isPending}
+              disabled={
+                save.isPending || (!profile.enabled && !profile.provider)
+              }
               onClick={() => save.mutate({ enabled: !profile.enabled })}
             >
               {t(profile.enabled ? "scheduling.pause" : "scheduling.resume")}
@@ -157,6 +142,9 @@ function ProfileForm({
               {t("scheduling.replace")}
             </Button>
           </div>
+          {!profile.enabled && !profile.provider && (
+            <p className="t-caption">{t("scheduling.calendarSetupNeeded")}</p>
+          )}
           <ConfirmModal
             open={replace}
             onClose={() => setReplace(false)}

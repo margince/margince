@@ -67,11 +67,17 @@ func defaultSchedulingProfile() crmcontracts.SchedulingProfile {
 
 func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crmcontracts.SchedulingProfile, error) {
 	profile := defaultSchedulingProfile()
+	var name string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		args := []any{host}
+		var err error
+		name, err = schedulingAccountName(ctx, tx, host)
+		if err != nil {
+			return err
+		}
 		var stored *crmcontracts.SchedulingProfile
 		var slug string
-		err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT slug, scheduling_policy FROM booking_page
+		err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT slug, scheduling_policy FROM booking_page
    WHERE host_user_id = $%d AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`, len(args)), args...).Scan(&slug, &stored)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -85,6 +91,8 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 		profile.Slug = &slug
 		return nil
 	})
+	profile.HostName = &name
+
 	if err == nil && profile.Slug != nil && s.publicOriginUsable() == nil {
 		link := strings.TrimRight(s.publicBaseURL, "/") + "/#/book/" + url.PathEscape(*profile.Slug)
 		profile.PublicUrl = &link
@@ -107,7 +115,7 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 		return err
 	}
 	if p.Enabled && (p.HostName == nil || strings.TrimSpace(*p.HostName) == "") {
-		return &SchedulingArgumentError{Field: "host_name", Code: "required", Message: "Add your public name before enabling bookings"}
+		return &SchedulingArgumentError{Field: "host_name", Code: "required", Message: "Set your name in Settings → Account before enabling bookings"}
 	}
 	if p.Enabled && p.Provider != "gcal" && p.Provider != "graphcal" {
 		return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar before enabling bookings"}
@@ -115,10 +123,8 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	if p.BlockingCalendars != nil && len(*p.BlockingCalendars) > 10 {
 		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "too_many", Message: "Choose at most ten calendars"}
 	}
-	return validateSchedulingBrand(p)
+	return nil
 }
-
-var errBookingProfileBrand = &SchedulingArgumentError{Field: "profile", Code: "invalid_brand", Message: "Use a public name of at most 200 characters"}
 
 // SaveSchedulingProfile validates live calendar authority before publishing a booking link.
 func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.SchedulingProfile) (crmcontracts.SchedulingProfile, error) {
@@ -126,6 +132,16 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	if err != nil {
 		return profile, err
 	}
+	var name string
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		name, err = schedulingAccountName(ctx, tx, host)
+		return err
+	})
+	if err != nil {
+		return profile, err
+	}
+	profile.HostName = &name
 	profile.CompanyName, profile.LogoUrl = nil, nil
 	if err := validateSchedulingProfile(profile); err != nil {
 		return profile, err
@@ -193,11 +209,15 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 	return nil
 }
 
-func validateSchedulingBrand(p crmcontracts.SchedulingProfile) error {
-	if p.HostName != nil && len(*p.HostName) > 200 {
-		return errBookingProfileBrand
+func schedulingAccountName(ctx context.Context, tx pgx.Tx, host ids.UserID) (string, error) {
+	// A host has an Account name before their first booking page exists.
+	args := []any{host}
+	var name string
+	err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT display_name FROM app_user WHERE id = $%d`, len(args)), args...).Scan(&name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", apperrors.ErrNotFound
 	}
-	return nil
+	return schedulingDisplayName(name), err
 }
 
 func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) error {
@@ -219,6 +239,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 			}
 		}
 		profile.Slug, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil
+		profile.HostName = nil
 		args = []any{profile, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
 			return err

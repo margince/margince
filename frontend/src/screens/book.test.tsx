@@ -86,7 +86,7 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-it("offers the reusable link and signature without requiring a contact", async () => {
+it("offers one reusable copy action without requiring a contact", async () => {
   const calls = serve();
   mount();
   expect(
@@ -94,8 +94,8 @@ it("offers the reusable link and signature without requiring a contact", async (
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Copy signature link" }),
-  ).toBeTruthy();
+    screen.queryByRole("button", { name: "Copy signature link" }),
+  ).toBeNull();
   expect(calls.some((call) => call.path.includes("/contacts"))).toBe(false);
 });
 it("submits a real invitation only after the visitor confirms their details and consent", async () => {

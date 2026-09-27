@@ -37022,11 +37022,13 @@ type SchedulingProfile struct {
 	DurationMinutes int     `json:"duration_minutes"`
 
 	// EmailReminder Send one operational email reminder one hour before future meetings.
-	EmailReminder *bool   `json:"email_reminder,omitempty"`
-	Enabled       bool    `json:"enabled"`
-	HorizonDays   int     `json:"horizon_days"`
-	HostName      *string `json:"host_name,omitempty"`
-	Location      string  `json:"location"`
+	EmailReminder *bool `json:"email_reminder,omitempty"`
+	Enabled       bool  `json:"enabled"`
+	HorizonDays   int   `json:"horizon_days"`
+
+	// HostName Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
+	HostName *string `json:"host_name,omitempty"`
+	Location string  `json:"location"`
 
 	// LogoUrl Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl       *string                   `json:"logo_url,omitempty"`

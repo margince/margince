@@ -17,7 +17,6 @@ export const vi = {
   "scheduling.back": "Quay lại Margince",
   "scheduling.prepare": "Chuẩn bị cho cuộc họp",
   "scheduling.timezone": "Múi giờ",
-  "scheduling.copySignature": "Sao chép liên kết chữ ký",
   "scheduling.replace": "Thay liên kết đặt lịch",
   "scheduling.replaceHelp":
     "Liên kết cũ sẽ ngừng nhận lịch hẹn. Hãy cập nhật chữ ký email và mọi nơi đã chia sẻ. Cuộc hẹn hiện có vẫn giữ liên kết thay đổi riêng.",
@@ -69,7 +68,6 @@ export const vi = {
   "scheduling.copied": "Đã sao chép",
   "scheduling.copyFallback": "Chọn và sao chép liên kết bên dưới.",
   "scheduling.preview": "Xem trước trang công khai",
-  "scheduling.signature": "Đặt lịch họp với tôi",
   "scheduling.active": "Đang nhận lịch hẹn",
   "scheduling.paused": "Đã tạm dừng đặt lịch công khai",
   "scheduling.pause": "Tạm dừng đặt lịch",
@@ -138,6 +136,11 @@ export const vi = {
   "scheduling.connect": "Kết nối hoặc kết nối lại lịch",
   "scheduling.connectionHelp":
     "Cần quyền ghi lịch để gửi lời mời. Kết nối lại lịch chỉ đọc để cấp quyền.",
+  "scheduling.accountName":
+    "Tên trên trang đặt lịch được lấy từ cài đặt Tài khoản.",
+  "scheduling.linkNotCreated": "Lưu cài đặt cuộc họp để tạo liên kết đặt lịch.",
+  "scheduling.calendarSetupNeeded":
+    "Chọn và lưu lịch trong cài đặt Cuộc họp trước khi bật đặt lịch.",
   "scheduling.hostName": "Tên công khai của bạn",
   "scheduling.subject": "Tiêu đề cuộc họp",
   "scheduling.location": "Địa điểm hoặc liên kết cuộc họp",

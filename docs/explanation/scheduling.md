@@ -85,6 +85,10 @@ availability endpoint, using the saved duration, hours and calendar policy.
 Times can be selected and browsed, but confirmation is disabled and the preview
 makes no booking requests. Visitors still cannot book a paused page.
 
+The host name is read from the current Account display name on every profile read,
+including anonymous pages and personal proposals. Legacy name overrides and incoming
+`host_name` values are ignored. Names exceeding the published 200-character bound are abbreviated.
+
 Company name and logo come from the current anchor company, including on personal
 proposals. Old per-host company overrides are ignored. The logo remains public even if all booking pages are paused. The anonymous
 logo route serves only that company's normalized PNG; it cannot address other companies or
@@ -182,3 +186,5 @@ instants are authoritative, including all-day boundaries. A response that ignore
 the timezone request is refused rather than guessed in the host's timezone.
 Provider-account certification should include all-day events in a non-UTC
 calendar and both daylight-saving transitions.
+
+Booking-page holders see the current Account name, including while bookings are paused.

@@ -186,3 +186,32 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
  await expect(page.getByRole("button",{pressed:true})).toHaveCount(0);
  expect(writes).toHaveLength(1);
 });
+
+
+test("calendar setup enables booking with the existing Account name", async ({page, context}) => {
+ let profile = {...bookingProfile, provider:"", enabled:false};
+ const writes: unknown[] = [];
+ await context.route("**/v1/connectors", route => route.fulfill({json:{data:[bookingConnection]}}));
+ await context.route("**/v1/scheduling/calendars?*", route => route.fulfill({json:[{id:"primary",name:"Work",primary:true,writable:true}]}));
+ await context.route("**/v1/scheduling/profile", async route => {
+  if(route.request().method()==="PUT") {
+   const input = route.request().postDataJSON();
+   writes.push(input);
+   profile = {...profile, ...input, host_name:bookingProfile.host_name};
+  }
+  await route.fulfill({json:profile});
+ });
+ await page.goto("/#/settings/meetings");
+ const name = page.getByLabel(de["scheduling.hostName"]);
+ await expect(name).toHaveValue(bookingProfile.host_name ?? "");
+ await expect(name).toHaveAttribute("readonly", "");
+ await expect(page.getByRole("main").getByRole("link",{name:de["settings.tab.account"],exact:true})).toHaveAttribute("href","#/settings/account");
+ await expect(page.getByRole("button",{name:de["scheduling.resume"],exact:true})).toBeDisabled();
+ await page.getByRole("button",{name:de["scheduling.save"],exact:true}).click();
+ await expect(page.getByText(de["settings.saved"],{exact:true})).toBeVisible();
+ await page.getByRole("button",{name:de["scheduling.resume"],exact:true}).click();
+ await expect(page.getByText(de["scheduling.active"],{exact:true})).toBeVisible();
+ expect(writes).toHaveLength(2);
+ expect(writes[1]).toMatchObject({provider:"gcal",enabled:true,host_name:bookingProfile.host_name});
+ await expect(page.getByRole("button",{name:"Signaturlink kopieren"})).toHaveCount(0);
+});

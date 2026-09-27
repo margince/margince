@@ -8,7 +8,6 @@ export const de = {
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
-  "scheduling.copySignature": "Signaturlink kopieren",
   "scheduling.replace": "Buchungslink ersetzen",
   "scheduling.replaceHelp":
     "Der alte Link nimmt keine Buchungen mehr an. Aktualisiere deine E-Mail-Signatur und alle anderen Stellen. Bestehende Termine behalten ihre privaten Änderungslinks.",
@@ -64,7 +63,6 @@ export const de = {
   "scheduling.copied": "Kopiert",
   "scheduling.copyFallback": "Markiere und kopiere den Link unten.",
   "scheduling.preview": "Öffentliche Seite ansehen",
-  "scheduling.signature": "Buche einen Termin mit mir",
   "scheduling.active": "Buchungen aktiv",
   "scheduling.paused": "Öffentliche Buchungen pausiert",
   "scheduling.pause": "Buchungen pausieren",
@@ -134,6 +132,12 @@ export const de = {
   "scheduling.connect": "Kalender verbinden oder erneut verbinden",
   "scheduling.connectionHelp":
     "Zum Senden von Einladungen ist Schreibzugriff nötig. Verbinde einen nur lesbaren Kalender erneut.",
+  "scheduling.accountName":
+    "Der Name auf deiner Buchungsseite stammt aus den Kontoeinstellungen.",
+  "scheduling.linkNotCreated":
+    "Speichere die Termineinstellungen, um deinen Buchungslink zu erstellen.",
+  "scheduling.calendarSetupNeeded":
+    "Wähle und speichere in den Termineinstellungen einen Kalender, bevor du Buchungen aktivierst.",
   "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
   "scheduling.location": "Ort oder Besprechungslink",
