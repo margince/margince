@@ -3034,6 +3034,12 @@ export const de = {
   "bulk.reason.no_change": "Zuständigkeit bereits gesetzt",
   "bulk.reason.anchor_company": "Das eigene Unternehmen wird nie archiviert",
   "bulk.reason.refused": "Für diesen Datensatz nicht erlaubt",
+  "bulk.reason.not_previewed": "Nicht in der bestätigten Vorschau",
+  "bulk.refusal.sole_project_company":
+    "Einziges Unternehmen eines laufenden Projekts",
+  "bulk.refusal.locked": "Legal Hold oder Aufbewahrung aktiv",
+  "bulk.refusal.anchor_protected": "Das eigene Unternehmen ist geschützt",
+  "bulk.refusal.required": "Ein privater Kontakt braucht eine Zuständigkeit",
   "bulk.confirmReassign": "Zuständigkeit ändern",
   "bulk.confirmArchive": "{unit} archivieren",
   "bulk.doneContacts_one": "{count} Kontakt geändert.",

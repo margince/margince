@@ -45,8 +45,13 @@ function json(body: unknown, status = 200) {
 type Sent = { path: string; body: unknown; idempotencyKey: string | null };
 
 /** Answers the two bulk calls and the user roster; records every POST. */
-function stubBulk(preview: BulkChangePreview, result?: BulkChangeResult) {
+function stubBulk(
+  preview: BulkChangePreview,
+  result?: BulkChangeResult,
+  executeFailures = 0,
+) {
   const sent: Sent[] = [];
+  let failuresLeft = executeFailures;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: Request) => {
@@ -62,6 +67,10 @@ function stubBulk(preview: BulkChangePreview, result?: BulkChangeResult) {
         return json(preview);
       }
       if (path === "/v1/bulk/execute") {
+        if (failuresLeft > 0) {
+          failuresLeft -= 1;
+          throw new TypeError("network connection lost");
+        }
         return json(result);
       }
       return json({
@@ -149,11 +158,21 @@ describe("the bulk change preview", () => {
     expect(within(sample).getByText("Jonas Weber")).toBeInTheDocument();
   });
 
-  it("shows a refusal in the server's own words", async () => {
+  it("names each refusal by its rule's code, falling back to the server's words", async () => {
     stubBulk({
       ...REASSIGN_PREVIEW,
+      count: 0,
+      affected: [],
+      sample: [],
       excluded: [
-        { id: "c-3", reason: "refused", message: "Held by a legal hold." },
+        { id: "c-1", reason: "refused", code: "locked", message: "on hold" },
+        {
+          id: "c-2",
+          reason: "refused",
+          code: "a_rule_this_client_does_not_know",
+          message: "Held by a rule not listed here.",
+        },
+        { id: "c-3", reason: "not_previewed" },
       ],
     });
     render(
@@ -164,9 +183,13 @@ describe("the bulk change preview", () => {
       />,
     );
 
-    expect(
-      await screen.findByText("Held by a legal hold."),
-    ).toBeInTheDocument();
+    const reasonOf = async (name: string) =>
+      within(
+        (await screen.findByText(name)).closest("tr") as HTMLElement,
+      ).getAllByRole("cell")[1].textContent;
+    expect(await reasonOf("Anna Weber")).toBe(en["bulk.refusal.locked"]);
+    expect(await reasonOf("Ben Ott")).toBe("Held by a rule not listed here.");
+    expect(await reasonOf("Clara Ruiz")).toBe(en["bulk.reason.not_previewed"]);
   });
 
   it("draws an archive sample as active going to archived", async () => {
@@ -314,6 +337,36 @@ describe("confirming a bulk change", () => {
     expect(
       await screen.findByText("2 contacts changed. 1 was left unchanged."),
     ).toBeInTheDocument();
+  });
+
+  it("retries a lost answer under the same idempotency key, so the change runs once", async () => {
+    const sent = stubBulk(
+      REASSIGN_PREVIEW,
+      { batch_id: "b-1", changed: 2, skipped: [] },
+      1,
+    );
+    const onDone = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <BulkChangeDialog
+        request={REASSIGN}
+        onClose={() => {}}
+        onDone={onDone}
+      />,
+    );
+
+    const confirm = await screen.findByRole("button", {
+      name: en["bulk.confirmReassign"],
+    });
+    await user.click(confirm);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await user.click(confirm);
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    const executes = sent.filter((call) => call.path === "/v1/bulk/execute");
+    expect(executes).toHaveLength(2);
+    expect(executes[0].idempotencyKey).toBeTruthy();
+    expect(executes[1].idempotencyKey).toBe(executes[0].idempotencyKey);
   });
 
   it("sends no owner with an archive", async () => {

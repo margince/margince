@@ -37,7 +37,9 @@ export type BulkRow = Readonly<{ id: string; version?: number; label: string }>;
 
 /**
  * One press of a bulk verb. `openId` is minted per press, so a second press over
- * the same rows asks the server again: a confirm token is good for one run.
+ * the same rows asks the server again: a confirm token is good for one run. It
+ * is also the execution's Idempotency-Key, so every retry of Confirm for this
+ * preview replays the first answer instead of running the change twice.
  */
 export type BulkChangeRequest = Readonly<{
   recordType: BulkRecordType;
@@ -83,7 +85,17 @@ const SKIP_REASONS: Readonly<Record<BulkSkipReason, MessageKey>> = {
   changed_since_preview: "bulk.reason.changed_since_preview",
   no_change: "bulk.reason.no_change",
   anchor_company: "bulk.reason.anchor_company",
+  not_previewed: "bulk.reason.not_previewed",
   refused: "bulk.reason.refused",
+};
+
+// The single-record rules a `refused` skip names by code. A code missing here
+// falls back to the server's English `message`.
+const REFUSAL_CODES: Readonly<Record<string, MessageKey>> = {
+  sole_project_company: "bulk.refusal.sole_project_company",
+  locked: "bulk.refusal.locked",
+  anchor_protected: "bulk.refusal.anchor_protected",
+  required: "bulk.refusal.required",
 };
 
 // The one request body both halves send. The preview and the execute must name
@@ -141,10 +153,17 @@ function recordKeysOf(kind: RecordKind, id: string) {
 
 function SkipReason({ skip }: Readonly<{ skip: BulkSkip }>) {
   const t = useT();
-  if (skip.reason === "refused" && skip.message) {
-    return <span>{skip.message}</span>;
+  if (skip.reason !== "refused") {
+    return <span>{t(SKIP_REASONS[skip.reason])}</span>;
   }
-  return <span>{t(SKIP_REASONS[skip.reason])}</span>;
+  const known =
+    skip.code && Object.hasOwn(REFUSAL_CODES, skip.code)
+      ? REFUSAL_CODES[skip.code]
+      : undefined;
+  if (known) {
+    return <span>{t(known)}</span>;
+  }
+  return <span>{skip.message ?? t(SKIP_REASONS.refused)}</span>;
 }
 
 function SampleState({
@@ -362,9 +381,7 @@ export function BulkChangeDialog({
                 execute.mutate({
                   request: shown,
                   confirmToken: answer.confirm_token,
-                  // A fresh key per press: a retry of this press is the only
-                  // request that may replay its answer.
-                  idempotencyKey: crypto.randomUUID(),
+                  idempotencyKey: shown.openId,
                 })
               }
             >

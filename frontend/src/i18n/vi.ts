@@ -3012,6 +3012,12 @@ export const vi = {
   "bulk.reason.no_change": "Đã có người phụ trách này",
   "bulk.reason.anchor_company": "Công ty của bạn không bao giờ bị lưu trữ",
   "bulk.reason.refused": "Không được phép với bản ghi này",
+  "bulk.reason.not_previewed": "Không có trong bản xem trước đã xác nhận",
+  "bulk.refusal.sole_project_company":
+    "Công ty duy nhất của một dự án đang chạy",
+  "bulk.refusal.locked": "Đang bị giữ theo yêu cầu pháp lý hoặc lưu giữ",
+  "bulk.refusal.anchor_protected": "Công ty của bạn được bảo vệ",
+  "bulk.refusal.required": "Liên hệ riêng tư phải có người phụ trách",
   "bulk.confirmReassign": "Đổi người phụ trách",
   "bulk.confirmArchive": "Lưu trữ {unit}",
   "bulk.doneContacts_one": "Đã thay đổi {count} liên hệ.",
