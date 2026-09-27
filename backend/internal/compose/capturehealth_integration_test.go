@@ -181,7 +181,8 @@ func TestTheOwnersWaitingListIsWhatTheAdminCountCounts(t *testing.T) {
 func TestTheOwnersWaitingListRefusesAnAgent(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:reader",
+		// Bound to the owner's seat, so only the human rung can refuse it.
+		Type: principal.PrincipalAgent, ID: "agent:reader", UserID: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{"contact": {Read: true}}, RowScope: principal.RowScopeAll,
 		},

@@ -235,6 +235,24 @@ func TestAPassBehindAFailedStageIsRecordedSkipped(t *testing.T) {
 	}
 }
 
+// A turn cut off before its first stage records both passes behind it as
+// skipped — written after the cancellation, because a pass that ran out of
+// time is the one an administrator most needs to see.
+func TestATurnCancelledBeforeItsFirstStageRecordsItsPassesSkipped(t *testing.T) {
+	e := integration.Setup(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := newTestLinkReconcileWorker(e).reconcileLinksForWorkspace(ctx, e.WS); err == nil {
+		t.Fatal("a cancelled turn reported success")
+	}
+	for _, sweep := range []capture.Sweep{capture.SweepFiledMeetingHolds, capture.SweepStrandedContacts} {
+		if got := latestReceipt(t, e, sweep); got.outcome != string(capture.SweepSkipped) {
+			t.Errorf("%s receipt = %+v, want skipped", sweep, got)
+		}
+	}
+}
+
 func TestAPassStoppedAtItsBoundIsPartialAndTheCountSeesPastIt(t *testing.T) {
 	e := integration.Setup(t)
 	seedFiledHeldMeetings(t, e, liftFiledMeetingHoldsPerTick+1)
