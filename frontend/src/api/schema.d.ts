@@ -3199,7 +3199,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Apply one change to a selection of records, in one transaction.
+         * Apply one change to a selection of records, record by record.
          * @description The second half of a bulk change. Each record is changed exactly as the single-record
          *     operation would change it (`updateContact`, `updateCompany`, `updateDeal` for an owner;
          *     `archiveContact`, `archiveCompany`, `archiveDeal` for an archive), with its own `audit_log`

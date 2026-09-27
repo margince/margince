@@ -35,14 +35,9 @@ type UpdateContactInput struct {
 	Title     *string
 	OwnerID   *ids.UserID
 	// Visibility moves a contact between 'workspace' and 'owner', in either
-	// direction, for anybody the write gate admits.
-	//
-	// It was one-way until now — POST /contacts/{id}/publish only widened — on
-	// the reasoning that a colleague may already have acted on seeing the
-	// contact. That reasoning assumed a human made the disclosure, and the
-	// common case is not a human: the sender classifier publishes a contact it
-	// judges a real counterparty with nobody approving it, so a machine made a
-	// decision no human could undo, the row's own owner included.
+	// direction, for anybody the write gate admits. Narrowing stays open because
+	// the sender classifier publishes contacts with no human approving it, and
+	// its owner must be able to take that back.
 	Visibility *string
 	Social     map[string]any
 	Address    *crmcontracts.Address
@@ -84,7 +79,7 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 // updateContactInTx is the edit itself, on the caller's transaction: the write
 // check, the patch, the child rows it replaces, and the record of what it did.
 //
-//nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
+//nolint:cyclop // one edit applies each optional field in turn; splitting it would scatter the single write it records.
 func (s *Store) updateContactInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {

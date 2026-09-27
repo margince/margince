@@ -59332,7 +59332,7 @@ type ServerInterface interface {
 	// Take back a snooze — the item returns to the queue immediately.
 	// (POST /brief/items/{itemId}/unsnooze)
 	UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
-	// Apply one change to a selection of records, in one transaction.
+	// Apply one change to a selection of records, record by record.
 	// (POST /bulk/execute)
 	ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams)
 	// Say what one change over a selection of records would do, without doing it.
@@ -61741,7 +61741,7 @@ func (_ Unimplemented) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Apply one change to a selection of records, in one transaction.
+// Apply one change to a selection of records, record by record.
 // (POST /bulk/execute)
 func (_ Unimplemented) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams) {
 	w.WriteHeader(http.StatusNotImplemented)
