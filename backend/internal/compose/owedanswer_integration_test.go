@@ -37,6 +37,9 @@ import (
 type owedMail struct {
 	from, to, cc, bcc, subject, messageID, inReplyTo string
 	at                                               time.Time
+	// spoofed leaves out the provider's word that the seat sent it: a message
+	// whose From merely names the seat's own address.
+	spoofed bool
 }
 
 func (m owedMail) raw() []byte {
@@ -83,12 +86,20 @@ func setupOwed(t *testing.T) *owedEnv {
 // capture files one message through the production sink and returns its row.
 func (o *owedEnv) capture(t *testing.T, m owedMail) ids.UUID {
 	t.Helper()
-	parsed, err := mailmap.Parse(m.raw(), o.seat)
+	return o.captureFor(t, o.owner, o.seat, m)
+}
+
+// captureFor files the message into another seat's mailbox. A message from
+// that seat carries the provider's sent attestation unless it is spoofed.
+func (o *owedEnv) captureFor(t *testing.T, owner ids.UUID, seat string, m owedMail) ids.UUID {
+	t.Helper()
+	parsed, err := mailmap.Parse(m.raw(), seat)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", m.messageID, err)
 	}
+	parsed = parsed.AttestSentByOwner(m.from == seat && !m.spoofed)
 	ref, err := newCaptureSink(o.e.Pool, CaptureConfig{}).Upsert(
-		threadConnectorCtx(o.e, o.owner), parsed.ToRecord("gmail", m.raw()))
+		threadConnectorCtx(o.e, owner), parsed.ToRecord("gmail", m.raw()))
 	if err != nil {
 		t.Fatalf("capturing %s: %v", m.messageID, err)
 	}
@@ -97,10 +108,16 @@ func (o *owedEnv) capture(t *testing.T, m owedMail) ids.UUID {
 
 // contact creates a contact who writes from the address, so capture files
 // their mail under them and names them on the sender row.
-func (o *owedEnv) contact(t *testing.T, name, address string) ids.UUID {
+func (o *owedEnv) contact(t *testing.T, name string, addresses ...string) ids.UUID {
 	t.Helper()
+	emails := make([]contacts.ContactEmailInput, 0, len(addresses))
+	for i, address := range addresses {
+		emails = append(emails, contacts.ContactEmailInput{
+			Email: address, EmailType: "work", IsPrimary: i == 0, Position: i,
+		})
+	}
 	created, err := o.e.Contacts.CreateContact(o.e.Admin(), contacts.CreateContactInput{
-		FullName: name, Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+		FullName: name, Source: "manual", Emails: emails,
 	})
 	if err != nil {
 		t.Fatalf("creating %s: %v", name, err)
@@ -516,5 +533,107 @@ func TestTheResponseTimeCountsAReplyThatLostItsThread(t *testing.T) {
 	}
 	if got := after.Answered - before.Answered; got != 1 {
 		t.Fatalf("the window counted %d more answered, want the one answered by a reply that lost its thread", got)
+	}
+}
+
+// A colleague's private reply, and a private meeting, answer nothing for
+// another seat: the row going quiet would disclose that they exist. The same
+// evidence the whole workspace can read does answer.
+func TestPrivateEvidenceDoesNotAnswerAnotherSeatsMail(t *testing.T) {
+	o := setupOwed(t)
+	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
+	asked := o.customerWrites(t, "pat@customer.example", "Invoice June", o.now.Add(-4*time.Hour))
+	colleague := o.e.Rep2
+	colleagueSeat := seatAddress(t, o.e, colleague)
+	private := o.captureFor(t, colleague, colleagueSeat, owedMail{
+		from: colleagueSeat, to: "pat@customer.example", subject: "Re: Invoice June",
+		messageID: "private-" + ids.NewV7().String() + "@ws.example", at: o.now.Add(-3 * time.Hour),
+	})
+	if n := o.count(t, `SELECT count(*) FROM activity WHERE id = $1 AND audience = 'workspace'`, private); n != 0 {
+		t.Fatal("the colleague's mailbox shares its mail; the case needs a private reply")
+	}
+	if !o.owed(t, asked) {
+		t.Fatal("a colleague's private reply answered another seat's mail")
+	}
+
+	subject, held := "Met Pat", string(crmcontracts.ActivityMeetingStatusHeld)
+	at, author := o.now.Add(-2*time.Hour), o.e.As(colleague, nil, integration.AdminPerms)
+	meeting, _, err := o.e.Activities.LogActivity(author, activities.LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: &at, Source: "manual",
+		MeetingStatus: &held, Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: pat}},
+	})
+	if err != nil {
+		t.Fatalf("logging the meeting: %v", err)
+	}
+	if _, err := o.e.Activities.SetAudience(author, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("making the meeting private: %v", err)
+	}
+	if !o.owed(t, asked) {
+		t.Fatal("a colleague's private meeting answered another seat's mail")
+	}
+
+	o.weLog(t, string(crmcontracts.ActivityKindCall), pat, o.now.Add(-time.Hour))
+	if o.owed(t, asked) {
+		t.Fatal("a call the whole workspace can read did not answer the mail")
+	}
+}
+
+// A message whose From names our mailbox but that the provider never filed as
+// sent answers nothing. The attested reply does.
+func TestASpoofedReplyAnswersNothing(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	asked := o.customerWrites(t, "pat@customer.example", "Bank details", o.now.Add(-3*time.Hour))
+
+	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Bank details", at: o.now.Add(-2 * time.Hour), spoofed: true})
+	if !o.owed(t, asked) {
+		t.Fatal("a spoofed reply answered the mail")
+	}
+	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Bank details", at: o.now.Add(-time.Hour)})
+	if o.owed(t, asked) {
+		t.Fatal("the attested reply did not answer the mail")
+	}
+}
+
+// The sender is their contact, not one address: a reply to another address
+// of the same contact answers. Capture still files the two on two threads.
+func TestAReplyToAnotherAddressOfTheSenderAnswers(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example", "pat.private@home.example")
+	asked := o.customerWrites(t, "pat@customer.example", "Offer", o.now.Add(-3*time.Hour))
+	reply := o.weWrite(t, owedMail{to: "pat.private@home.example", subject: "Re: Offer", at: o.now.Add(-time.Hour)})
+	if o.threadKey(t, reply) == o.threadKey(t, asked) {
+		t.Fatal("capture joined the two on their subject; the fixture no longer loses its thread")
+	}
+	if o.owed(t, asked) {
+		t.Fatal("a reply to another address of the same contact did not answer them")
+	}
+}
+
+// A reply in the same second as the mail is no evidence of an answer, in
+// either capture order: an id says when a row was captured, not which message
+// came first.
+func TestASameSecondReplyIsNotAnAnswer(t *testing.T) {
+	for _, replyFirst := range []bool{false, true} {
+		name := map[bool]string{false: "mail captured first", true: "reply captured first"}[replyFirst]
+		t.Run(name, func(t *testing.T) {
+			o := setupOwed(t)
+			o.contact(t, "Pat Buyer", "pat@customer.example")
+			second := o.now.Add(-time.Hour).Truncate(time.Second)
+			reply := func() {
+				o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Samples", at: second})
+			}
+			if replyFirst {
+				reply()
+			}
+			asked := o.customerWrites(t, "pat@customer.example", "Samples", second)
+			if !replyFirst {
+				reply()
+			}
+			if !o.owed(t, asked) {
+				t.Fatal("a reply in the same second counted as an answer")
+			}
+		})
 	}
 }

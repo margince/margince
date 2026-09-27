@@ -261,15 +261,21 @@ func TestTheWaitingQueryReturnsOneRowPerMessage(t *testing.T) {
 	}
 }
 
-// Ties are broken by id. Mail carries second precision, so two messages in one
-// thread sharing a timestamp are ordinary — and without the tie-break both
-// halves of "newest inbound, no later answer" are wrong at once.
+// Mail carries second precision, so two messages in one thread sharing a
+// timestamp are ordinary. The newest-inbound walk breaks the tie by id, or two
+// equal-second inbounds would both be the wait. An answer never does: an id
+// says when a row was captured, not which message came first, so an answer
+// must be strictly later and a tie stays owed.
 func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
-	if strings.Count(waitingRepliesSQL, ".id) > (a.occurred_at, a.id)") == 0 {
-		t.Fatal("no later-row comparison found — this gate is reading the wrong query")
+	if strings.Count(waitingRepliesSQL, "newer.id) > (a.occurred_at, a.id)") == 0 {
+		t.Fatal("the newest-inbound walk no longer breaks equal-second ties by id")
 	}
-	if regexp.MustCompile(`occurred_at\s*>=?\s*a\.occurred_at`).MatchString(waitingRepliesSQL) {
-		t.Fatal("the waiting query compares timestamps alone, so equal-second messages answer wrongly")
+	answers := answeredSQL("a", "$1")
+	if strings.Contains(answers, ".id) > (a.occurred_at, a.id)") {
+		t.Fatal("an answer is ordered by id, so capture order decides whether a same-second reply answered")
+	}
+	if regexp.MustCompile(`occurred_at\s*>=\s*a\.occurred_at`).MatchString(answers) {
+		t.Fatal("an answer at the same second as the message counts as later")
 	}
 }
 
@@ -277,9 +283,10 @@ func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 // is a snapshot. Mail carries the sender's own Date header: a message dated in
 // the future must not suppress a thread that is genuinely waiting now.
 func TestTheWaitingQueryIsBoundedByTheReadInstant(t *testing.T) {
-	later := strings.Count(waitingRepliesSQL, ".id) > (a.occurred_at, a.id)")
+	later := strings.Count(waitingRepliesSQL, ".id) > (a.occurred_at, a.id)") +
+		strings.Count(waitingRepliesSQL, ".occurred_at > a.occurred_at")
 	bounded := strings.Count(waitingRepliesSQL, "occurred_at <= $%[1]d")
-	if bounded <= later {
+	if later == 0 || bounded <= later {
 		t.Fatalf("%d later-row comparisons but only %d bounds beyond the message's own: "+
 			"a future-dated message can suppress a thread that is waiting now", later, bounded)
 	}
