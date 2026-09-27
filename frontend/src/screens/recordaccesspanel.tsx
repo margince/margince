@@ -115,7 +115,7 @@ function MemberRow({
     <PanelRow className="who-can-see-row">
       <Avatar name={member.display_name} identity={member.user_id} />
       <div className="who-can-see-who">
-        <span className="who-can-see-name">{member.display_name}</span>
+        <span>{member.display_name}</span>
         <span className="t-caption">
           {phrases(
             member.can_change ? member.change_reasons : member.read_reasons,
@@ -148,7 +148,7 @@ function YouLine({
     words,
   );
   return (
-    <p className="who-can-see-you" data-testid="who-can-see-you">
+    <p data-testid="who-can-see-you">
       <b>{verdict}</b> {why}
     </p>
   );
