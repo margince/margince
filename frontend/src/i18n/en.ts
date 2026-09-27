@@ -10409,7 +10409,20 @@ export const en = {
   "worklist.untitled.relationship_decay": "Relationship going quiet",
   "worklist.untitled.failed_approval": "Approved action did not run",
   "worklist.untitled.dsr": "Open privacy request",
-  "worklist.untitled.notice_case": "Disclosure owed to contact",
+  "noticeDuty.title": "Privacy notice owed (GDPR Art. 14)",
+  "noticeDuty.what":
+    "Margince holds this contact’s details, but did not get them from the contact: you wrote to them, or they were on a Cc, and they never wrote to you. The GDPR requires telling them within one month who holds their data and why.",
+  "noticeDuty.how":
+    "Send the privacy notice, ask them to confirm their details (which tells them too), or end the duty if they already know or an exemption applies.",
+  "noticeDuty.sendNotice": "Send privacy notice",
+  "noticeDuty.askConfirm": "Ask them to confirm their details",
+  "noticeDuty.end": "End the duty…",
+  "noticeDuty.sent":
+    "Sent to {address}. The duty is discharged once it goes out.",
+  "noticeDuty.notSent":
+    "Not sent: this installation cannot send mail to {address}.",
+  "noticeDuty.ended": "The duty is ended, with your ground on record.",
+  "worklist.untitled.notice_case": "Privacy notice owed",
   "worklist.untitled.capture_health": "Mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs review",
   "worklist.untitled.bounce": "Email bounced",

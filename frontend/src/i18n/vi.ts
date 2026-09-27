@@ -10148,7 +10148,20 @@ export const vi = {
   "worklist.untitled.relationship_decay": "Một mối quan hệ đang nguội",
   "worklist.untitled.failed_approval": "Điều bạn duyệt đã không chạy",
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
-  "worklist.untitled.notice_case": "Một thông báo cần gửi cho liên hệ này",
+  "noticeDuty.title": "Cần gửi thông báo quyền riêng tư (GDPR Điều 14)",
+  "noticeDuty.what":
+    "Margince lưu thông tin của liên hệ này nhưng không nhận từ chính họ: bạn đã viết cho họ, hoặc họ ở dòng Cc, và họ chưa từng viết cho bạn. GDPR yêu cầu thông báo cho họ trong vòng một tháng ai đang giữ dữ liệu của họ và vì sao.",
+  "noticeDuty.how":
+    "Gửi thông báo quyền riêng tư, đề nghị họ xác nhận thông tin (việc này cũng thông báo cho họ), hoặc kết thúc nghĩa vụ nếu họ đã biết hoặc có ngoại lệ.",
+  "noticeDuty.sendNotice": "Gửi thông báo quyền riêng tư",
+  "noticeDuty.askConfirm": "Đề nghị họ xác nhận thông tin",
+  "noticeDuty.end": "Kết thúc nghĩa vụ…",
+  "noticeDuty.sent":
+    "Đã gửi tới {address}. Nghĩa vụ hoàn tất khi thư được gửi đi.",
+  "noticeDuty.notSent":
+    "Chưa gửi: hệ thống này không thể gửi thư tới {address}.",
+  "noticeDuty.ended": "Nghĩa vụ đã kết thúc, lý do của bạn đã được lưu.",
+  "worklist.untitled.notice_case": "Cần gửi thông báo quyền riêng tư",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Công việc AI cần xem lại",
   "worklist.untitled.bounce": "Một email không đến nơi",

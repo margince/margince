@@ -23,6 +23,7 @@ import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useContact360 } from "./contact360";
 import { EntityRef } from "./entityref";
+import { NoticeDuty } from "./noticeduty";
 import type { WorklistItem } from "./worklist.queries";
 
 // The pane, for whichever record the selected row is about.
@@ -36,6 +37,16 @@ export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
   const subject = item.subject;
   if (subject?.type !== "contact") {
     return null;
+  }
+  // A privacy-notice duty draws what it IS and how to discharge it above the
+  // contact: the row alone says a deadline and nothing a reader can act on.
+  if (item.source === "notice_case") {
+    return (
+      <>
+        <NoticeDuty caseId={item.id} contactId={subject.id} />
+        <ContactContext id={subject.id} label={subject.label} />
+      </>
+    );
   }
   return <ContactContext id={subject.id} label={subject.label} />;
 }

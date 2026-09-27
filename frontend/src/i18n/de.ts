@@ -10245,7 +10245,21 @@ export const de = {
   "worklist.untitled.relationship_decay": "Beziehung wird still",
   "worklist.untitled.failed_approval": "Freigegebene Aktion nicht ausgeführt",
   "worklist.untitled.dsr": "Offene Datenschutzanfrage",
-  "worklist.untitled.notice_case": "Dem Kontakt geschuldete Information",
+  "noticeDuty.title": "Datenschutzhinweis geschuldet (DSGVO Art. 14)",
+  "noticeDuty.what":
+    "Margince speichert Daten dieses Kontakts, hat sie aber nicht von ihm selbst: Du hast ihm geschrieben oder er stand in Kopie, und er hat dir nie geschrieben. Die DSGVO verlangt, ihn innerhalb eines Monats zu informieren, wer seine Daten hat und wozu.",
+  "noticeDuty.how":
+    "Sende den Datenschutzhinweis, frag nach einer Bestätigung der Daten (das informiert ebenfalls) oder beende die Pflicht, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
+  "noticeDuty.sendNotice": "Datenschutzhinweis senden",
+  "noticeDuty.askConfirm": "Bestätigung der Daten anfragen",
+  "noticeDuty.end": "Pflicht beenden…",
+  "noticeDuty.sent":
+    "An {address} gesendet. Die Pflicht ist erfüllt, sobald die Nachricht verschickt ist.",
+  "noticeDuty.notSent":
+    "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
+  "noticeDuty.ended":
+    "Die Pflicht ist beendet, deine Begründung ist gespeichert.",
+  "worklist.untitled.notice_case": "Datenschutzhinweis geschuldet",
   "worklist.untitled.capture_health":
     "Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit muss geprüft werden",
