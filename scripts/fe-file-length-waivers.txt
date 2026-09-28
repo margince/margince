@@ -89,7 +89,6 @@
 671 frontend/src/screens/users-admin.tsx
 662 frontend/src/screens/worklist.dispositions.tsx
 676 frontend/src/format/format.ts
-652 frontend/src/screens/settingsnav.tsx
 736 frontend/src/screens/companytoday.tsx
 716 frontend/src/screens/installation-settings.tsx
 760 frontend/src/screens/extension-access.tsx

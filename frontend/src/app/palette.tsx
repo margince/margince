@@ -144,8 +144,8 @@ export function useBuiltinCommands(): Command[] {
     // shelving can open, where deriving brings a new tab here for free.
     //
     // Gated on the SAME predicate the settings level uses, because that level
-    // falls back to Account for an entry the principal may not open — so an
-    // ungated command would be a shortcut that silently goes somewhere else.
+    // answers an entry the principal may not open with the access boundary — so
+    // an ungated command would be a shortcut to a refusal.
     // Only the admin half has a predicate; the `you` half is every reader's.
     const settingsScreens: Command[] = visible.map((page) => ({
       id: `screen:settings-${page.id}`,

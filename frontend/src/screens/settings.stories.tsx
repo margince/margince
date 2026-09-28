@@ -18,10 +18,10 @@ import {
 // fetch stub those cards read through, so the render is deterministic and
 // network-free — the same fixture shapes the settings.test.tsx cases use.
 //
-// A company entry is only reachable when the principal holds what its
-// cards ask for, and SettingsScreen falls back to Account for anything else. So
-// a story about such an entry has to name its grants: `me({...})` builds the
-// /me body that opens the entry the story is capturing.
+// A company entry is only reachable when the principal holds what its cards
+// ask for, and SettingsScreen shows the access boundary for anything else. So a
+// story about such an entry has to name its grants: `me({...})` builds the /me
+// body that opens the entry the story is capturing.
 
 const me =
   (allow: GrantSpec = {}) =>
@@ -388,7 +388,7 @@ export const AgentToolConsoleDark: Story = {
 //
 // The custom_field READ is what opens the entry — opening a page is reading it,
 // and `meFixture` grants only the verbs named here. A write-only fixture reaches
-// no entry at all and the story silently captures the Account fallback instead,
+// no entry at all and the story silently captures the access boundary instead,
 // which is exactly what it did: nothing asserts on a story, so the gates stayed
 // green while the picture was of the wrong page. The writes stay so the builder
 // and the row actions render.
@@ -401,20 +401,19 @@ export const DataModelTab: Story = {
 // The consent registry and the audit trail on one page: the trail is what proves
 // the surfaces above it were honoured, so it moved here from a tab of its own.
 export const PrivacyTab: Story = {
-  // `contact:read` is what opens this entry — the consent registry is gated on it
-  // server-side (consent/store.go), not on a role. Without it the entry is not
-  // visible, useVisibleSettingsTabs falls back to Account, and this story
-  // captured the Account tab: byte-identical to AccountTab, under the name of a
-  // page it never rendered. The comment two stories up describes this exact
-  // failure; it happened again here.
+  // `contact` AND `consent_config` open this entry: the registry reads through
+  // `contact` server-side (consent/store.go), and every seat holds that alone.
+  // Without the pair `SettingsScreen` answers the address with the access
+  // boundary, and the story captures the refusal under the name of a page it
+  // never rendered — the failure the comment two stories up describes.
   render: tab("privacy", {
-    "GET /me": me({ contact: ["read"] }),
+    "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
     "GET /audit-log": auditLog,
   }),
 };
 
 const privacyRoutes = {
-  "GET /me": me({ contact: ["read"] }),
+  "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
   "GET /audit-log": auditLog,
 };
 

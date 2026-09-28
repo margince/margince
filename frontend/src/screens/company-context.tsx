@@ -302,9 +302,9 @@ export function CompanyContextCard() {
   const canEdit = useCanUpsert("company");
   // The installation's own profile is administered, not read on a grant:
   // useCompany asks only from an admin seat, and for any other this card draws
-  // nothing (below). The settings tab it sits on opens on
-  // installation_settings:read, which four roles hold, and the two cards beside
-  // this one are theirs to see; this one simply is not.
+  // nothing (below). The settings page it sits on opens on
+  // installation_settings:update or fx_rate:read, which ops holds too, and the
+  // two cards beside this one are ops's to use; this one simply is not.
   const isAdmin = useHoldsAdminRole();
   const company = useCompany(true);
   const [form, setForm] = useState<CompanyInput | null>(null);

@@ -183,10 +183,9 @@ const SEEDED_READS: GrantSpec = {
   knowledge_corpus: ["read"],
   offer_template: ["read"],
   // The write, because the seeded roles really hold it: rep carries
-  // `company` create+update and manager carries all four. It is what keeps
-  // Company profile open for them — the company profile the AI reads is a thing
-  // a rep legitimately edits, which is why that page did not follow the other
-  // three out of her rail.
+  // `company` create+update and manager carries all four. It opens no page
+  // here — the company profile is administered — and BlockedDomainsCard on
+  // Capture rules is the card it writes.
   company: ["read", "create", "update"],
   pipeline: ["read"],
   product: ["read"],
@@ -231,9 +230,8 @@ const SEEDED_READ_PAGES = pagesNamed(
   "agents",
   "connections",
   "capture-activity",
-  // `company` is NOT here: its requirement ANDs the company write with the
-  // `company_context` deployment flag, and this fixture leaves that flag off.
-  // The page's own availability cases are the ones that turn it on.
+  // `company` is NOT here: it opens on the installation write or the rate
+  // read, and no seeded role below ops holds either.
   //
   // Nor `members`/`teams`: only the `admin` role is seeded `user_admin` or
   // `team_admin`, so no seeded role below it reaches either page.
@@ -450,6 +448,16 @@ describe("SettingsScreen page visibility", () => {
     },
   );
 
+  // THE LICENSING SEAT, which is a THIRD axis and gates none of this: the server
+  // clamps a read seat on the HTTP method, so it still READS every page behind
+  // these rows. A principal on a read seat therefore reaches the level
+  // undiminished, and the withheld things inside are the write controls.
+  //
+  // Named as its own case because folding it into the requirements is the
+  // regression this rule exists to prevent: measured against the live API, the
+  // write-shaped predicates hid a read seat from eight of the eleven entries the
+  // server answers 200 on — three of which (products, offer templates, custom
+  // fields) were ungated routes of their own before the merge.
   it("narrows nothing for a read seat", async () => {
     vi.stubGlobal(
       "fetch",
