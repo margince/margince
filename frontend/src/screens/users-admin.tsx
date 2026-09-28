@@ -88,6 +88,8 @@ export function UsersAdminCard() {
   const canInvite = administersRoster && mayInvite;
   const canChangeRole = administersRoster && mayChangeRole;
   const canSetStatus = administersRoster && maySetStatus;
+  // These decide the card. Each ROW offers only what the server lists in that
+  // member's `allowed_actions`, which also knows the member.
   const members = useMembers();
   // The server answers whether THIS caller can mint set-password links: admin,
   // on an installation with no email channel and a configured base URL. Where
@@ -120,6 +122,17 @@ export function UsersAdminCard() {
       canSetStatus={canSetStatus}
     />
   );
+}
+
+type MemberAction = NonNullable<User["allowed_actions"]>[number];
+
+// Whether the server offers this reader `action` on `member`. The roster
+// computes it with the checks the verb itself runs — the grant, the seat, the
+// ceiling over the member, their status, the last admin, the deployment's
+// link posture — so a row offers what the write accepts. An absent list is a
+// roster that computed none, and offers nothing.
+function offers(member: User, action: MemberAction): boolean {
+  return member.allowed_actions?.includes(action) ?? false;
 }
 
 function MembersCard({
@@ -196,14 +209,7 @@ function MembersCard({
               // 1300px wall.
               <SettingList>
                 {list.map((u) => (
-                  <MemberRow
-                    key={u.id}
-                    member={u}
-                    roles={roles}
-                    canIssueLink={canIssueLink}
-                    canChangeRole={canChangeRole}
-                    canSetStatus={canSetStatus}
-                  />
+                  <MemberRow key={u.id} member={u} roles={roles} />
                 ))}
               </SettingList>
             )
@@ -352,15 +358,9 @@ function statusTone(
 function MemberRow({
   member,
   roles,
-  canIssueLink,
-  canChangeRole,
-  canSetStatus,
 }: Readonly<{
   member: User;
   roles: readonly AssignableRole[];
-  canIssueLink: boolean;
-  canChangeRole: boolean;
-  canSetStatus: boolean;
 }>) {
   const t = useT();
   const qc = useQueryClient();
@@ -460,34 +460,14 @@ function MemberRow({
 
   const pending =
     setRole.isPending || deactivate.isPending || reactivate.isPending;
-  const drawsPicker = drawsRolePicker(member, roles, canChangeRole);
-
-  // Issuance admits exactly whom redemption admits — an active member, and an
-  // invited one who has not redeemed yet — so a deactivated row is excluded
-  // because the link would be dead on arrival. The agent seat is excluded for a
-  // different reason: it holds no password by construction, which is what makes
-  // it a thing that signs in nowhere, and the server refuses to mint it one.
-  //
-  // Invited matters most here: an invitation whose link expired leaves a member
-  // with no password, so the self-service reset refuses them and this is the
-  // only route back into the account. Withholding it would strand them.
-  // A set-password link is a credential for somebody else's account, so it
-  // rides the role-change verb rather than the status one: `admin_password_link`
-  // already folds the deployment posture and the seat, and userpasswordlink.go
-  // asks `user_admin:update`.
-  const canMintLink =
-    canChangeRole &&
-    canIssueLink &&
-    !member.is_agent &&
-    (member.status === "active" || member.status === "invited");
-  // Offered on an invitation too, and that is not cosmetic: an unredeemed
-  // invitation holds a licensed seat, so without this an invitation sent to the
-  // wrong address consumes a seat with no way to release it.
-  // Both on DELETE, which is the verb both endpoints take (users.go): turning a
-  // seat off and turning it back on are one authority over one thing.
-  const canDeactivate =
-    canSetStatus && (member.status === "active" || member.status === "invited");
-  const canReactivate = canSetStatus && member.status === "deactivated";
+  const drawsPicker = drawsRolePicker(
+    member,
+    roles,
+    offers(member, "change_role"),
+  );
+  const canMintLink = offers(member, "issue_password_link");
+  const canDeactivate = offers(member, "deactivate");
+  const canReactivate = offers(member, "reactivate");
 
   return (
     // The row's own wrapper, so a refusal reads UNDER the member it belongs to

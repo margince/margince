@@ -35,8 +35,8 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 		// check trivially, since everybody contains themselves, and would hand
 		// themselves record work they lack. The literal admin already holds the
 		// ceiling, so their own change can only narrow them.
-		if userID == actor.UserID && !actor.hasRole(roleAdmin) {
-			return errOwnRole
+		if err := refuseOwnRoleChange(actor, userID); err != nil {
+			return err
 		}
 		// Both halves of the ceiling. Who the target IS bounds whether this
 		// caller may touch them at all; what the new role CONFERS bounds what
@@ -66,8 +66,8 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 		if targetErr != nil {
 			return targetErr
 		}
-		if isAgent {
-			return errAgentSeatHoldsNoRole
+		if err := refuseRoleForAgentSeat(isAgent); err != nil {
+			return err
 		}
 
 		rows, err := tx.Query(ctx,

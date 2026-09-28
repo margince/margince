@@ -15175,6 +15175,30 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 	}
 }
 
+// Defines values for UserAllowedActions.
+const (
+	UserAllowedActionsChangeRole        UserAllowedActions = "change_role"
+	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
+	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
+	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
+)
+
+// Valid indicates whether the value is a known member of the UserAllowedActions enum.
+func (e UserAllowedActions) Valid() bool {
+	switch e {
+	case UserAllowedActionsChangeRole:
+		return true
+	case UserAllowedActionsDeactivate:
+		return true
+	case UserAllowedActionsIssuePasswordLink:
+		return true
+	case UserAllowedActionsReactivate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UserLocale.
 const (
 	UserLocaleDe UserLocale = "de"
@@ -40361,11 +40385,13 @@ type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	ArchivedAt  *time.Time          `json:"archived_at,omitempty"`
-	CreatedAt   *time.Time          `json:"created_at,omitempty"`
-	DisplayName string              `json:"display_name"`
-	Email       openapi_types.Email `json:"email"`
-	Id          openapi_types.UUID  `json:"id"`
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
+	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
+	CreatedAt      *time.Time            `json:"created_at,omitempty"`
+	DisplayName    string                `json:"display_name"`
+	Email          openapi_types.Email   `json:"email"`
+	Id             openapi_types.UUID    `json:"id"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -40388,6 +40414,9 @@ type User struct {
 	Timezone  *string    `json:"timezone,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
+
+// UserAllowedActions defines model for User.AllowedActions.
+type UserAllowedActions string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 // Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.

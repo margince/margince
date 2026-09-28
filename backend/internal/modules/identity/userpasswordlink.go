@@ -188,23 +188,8 @@ func supersedeSetPasswordTokens(ctx context.Context, tx pgx.Tx, userID ids.UserI
 	if err != nil {
 		return 0, err
 	}
-	// Before the status check, because it is the more fundamental refusal: an
-	// inactive member can be reactivated and then issued a link, while nothing
-	// an admin can do makes the agent seat a thing that signs in.
-	if isAgent {
-		return 0, errAgentSeatHasNoPassword
-	}
-	// Invited is admitted, and this is the case the surface exists for: a member
-	// whose invitation expired has no password, so RequestPasswordReset refuses
-	// them, and this link is the only route back into the account. Refusing it
-	// here would strand them permanently.
-	//
-	// Issuance admits exactly whom RedeemPasswordReset admits — both take
-	// ActivatableMemberSQL's set. A link minted for someone redemption refuses
-	// is dead on arrival; a link refused to someone redemption would accept is
-	// an account nobody can enter. The two sides are one rule.
-	if status != userStatusActive && status != userStatusInvited {
-		return 0, errMemberNotActive
+	if err := refusePasswordLinkTarget(status, isAgent); err != nil {
+		return 0, err
 	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE auth_token SET used_at = now()
@@ -224,4 +209,28 @@ func passwordLinkIssuedPayload(userID, by ids.UserID, expiresAt time.Time) crmco
 		By:        openapi_types.UUID(by.UUID),
 		ExpiresAt: expiresAt,
 	}
+}
+
+// refusePasswordLinkTarget refuses a member no link may be minted for.
+//
+// The agent seat is refused before the status, because it is the more
+// fundamental refusal: an inactive member can be reactivated and then issued a
+// link, while nothing an admin can do makes the agent seat a thing that signs in.
+//
+// Invited is admitted, and this is the case the surface exists for: a member
+// whose invitation expired has no password, so RequestPasswordReset refuses
+// them, and this link is the only route back into the account.
+//
+// Issuance admits exactly whom RedeemPasswordReset admits — both take
+// ActivatableMemberSQL's set. A link minted for someone redemption refuses is
+// dead on arrival; a link refused to someone redemption would accept is an
+// account nobody can enter. The two sides are one rule.
+func refusePasswordLinkTarget(status string, isAgent bool) error {
+	if isAgent {
+		return errAgentSeatHasNoPassword
+	}
+	if status != userStatusActive && status != userStatusInvited {
+		return errMemberNotActive
+	}
+	return nil
 }

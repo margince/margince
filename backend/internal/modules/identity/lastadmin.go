@@ -32,6 +32,13 @@ func lastActiveAdmin(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, e
 		`SELECT pg_advisory_xact_lock(hashtext('margince:admin-guard')::bigint)`); err != nil {
 		return false, fmt.Errorf("identity: serializing the last-admin guard: %w", err)
 	}
+	return soleActiveAdmin(ctx, tx, userID)
+}
+
+// soleActiveAdmin is lastActiveAdmin's question without its lock, which the
+// roster's offer asks too: an offer promises nothing, and the write re-asks
+// under the lock.
+func soleActiveAdmin(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, error) {
 	var targetIsAdmin bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
