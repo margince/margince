@@ -1141,9 +1141,10 @@ components:
       description: >-
         Payload for pipeline.updated — an OPEN envelope: its emit sites
         carry divergent shapes (a flat name/is_default/position patch from
-        UpdatePipeline, or a stage_positions reorder map from UpdateStage
-        when a stage's position changes), so the honest shape is a
-        change-set map rather than a fixed field list.
+        UpdatePipeline or reorderPipelines, or a stage_positions reorder map
+        from UpdateStage, reorderStages or a stage removal when stage
+        positions change), so the honest shape is a change-set map rather
+        than a fixed field list.
       required:
         - changed_fields
       properties:

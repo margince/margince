@@ -5518,11 +5518,9 @@ export const en = {
   "settings.pipelinesSub":
     "Stages a deal moves through, one sequence per pipeline.",
   "pipeline.new": "New pipeline",
-  "pipeline.edit": "Edit pipeline",
   "pipeline.name": "Name",
   "pipeline.default": "Default",
   "pipeline.notDefault": "Not default",
-  "pipeline.position": "Position",
   "pipeline.retired": "Retired",
   "pipeline.retire": "Retire",
   "pipeline.retireConfirm":
@@ -5532,6 +5530,28 @@ export const en = {
   "pipeline.retired.done": "{name} retired",
   "pipeline.restore": "Restore",
   "pipeline.restored": "{name} restored",
+  "pipeline.rename": "Rename",
+  "pipeline.makeDefault": "Make default",
+  "pipeline.defaultSet": "{name} set as default",
+  "pipeline.inUse": "Pipelines in use",
+  "pipeline.orderHint":
+    "Drag a pipeline by its handle, or focus the handle and press the up or down arrow.",
+  "pipeline.handle": "Move {name}, {position} of {total}",
+  "pipeline.moved": "{name} moved to {position} of {total}",
+  "pipeline.openStageCount_one": "{count} open stage",
+  "pipeline.openStageCount_other": "{count} open stages",
+  "pipeline.retiredGroup_one": "{count} retired pipeline",
+  "pipeline.retiredGroup_other": "{count} retired pipelines",
+  "pipeline.retiredNote":
+    "Retired. New deals cannot start in this pipeline, and its stages cannot change until it is restored.",
+  "pipeline.retireNote":
+    "It leaves pickers and new-deal forms. Deals on it keep their stage.",
+  "pipeline.flow": "How a deal moves",
+  "pipeline.orderSaved": "Order saved",
+  "pipeline.orderRestored": "Previous order restored",
+  "pipeline.orderStale":
+    "Order not saved. Someone else changed it first, so the latest order is shown.",
+  "pipeline.orderNotSaved": "Order not saved. Retry, or reload the page.",
   "stage.new": "New stage",
   "stage.edit": "Edit stage",
   "stage.name": "Name",
@@ -5545,6 +5565,22 @@ export const en = {
   "stage.removeTitle": "Remove this stage?",
   "stage.removeBody":
     "“{name}” leaves the pipeline and later stages move up. Past stage changes stay readable. Move its deals before removing it.",
+  "stage.openGroup": "Open stages",
+  "stage.closingGroup": "Closing stages",
+  "stage.closingNote":
+    "Every deal ends in one of these, so they stay after the open stages.",
+  "stage.closingMissing":
+    "No won or lost stage yet. Add one as a new stage of that type.",
+  "stage.orderHint":
+    "Drag a stage by its handle, or focus the handle and press the up or down arrow.",
+  "stage.handle": "Move {name}, step {position} of {total}",
+  "stage.moved": "{name} is now step {position} of {total}",
+  "stage.lowerThanAbove": "Lower than {name} ({reading}) above it",
+  "stage.oddsOf": "{name} win probability",
+  "stage.noneOpen": "No open stages yet",
+  "stage.noneOpenNote":
+    "Add the first step a deal takes. It goes before the closing stages.",
+  "stage.added": "Stage added",
   "stage.criteria.title": "Exit criteria",
   "stage.criteria.sub": "What must be true before a deal leaves this stage.",
   "stage.criteria.buyerCalloutTitle": "Evidence must come from the buyer",

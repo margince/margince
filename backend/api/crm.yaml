@@ -5421,6 +5421,88 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /pipelines/order:
+    put:
+      tags: [Pipelines]
+      operationId: reorderPipelines
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Put the live pipelines in a new order.
+      description: |
+        Names the whole order at once: `pipeline_ids` lists every live pipeline exactly once,
+        first to last, and each takes the position of its place in the list. `listPipelines`
+        and every pipeline picker answer in this order.
+
+        `409` with the code `order_stale` when the list does not name exactly the live
+        pipelines — one was created, retired or restored since the caller read them — so read
+        again and resend. `422` when the list names a pipeline twice.
+
+        Publishes one `pipeline.updated` per pipeline whose position changed; an order that
+        moves nothing writes nothing.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PipelineOrderRequest' }
+      responses:
+        '200':
+          description: The live pipelines, in their new order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /pipelines/{id}/stage-order:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Pipelines]
+      operationId: reorderStages
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Put a pipeline's stages in a new order.
+      description: |
+        Names the whole ladder at once: `stage_ids` lists every live stage of the pipeline
+        exactly once, first to last, and the stages take positions 1..n in that order. One
+        write rather than a `position` per stage, because `position` is unique within the
+        pipeline and a run of single moves passes through states that uniqueness refuses.
+
+        Won and lost stages close a deal, so they come after every open stage. An order that
+        puts one earlier is refused `422` with the code `closing_stage_before_open`.
+
+        The pipeline's `version` is its ladder's version: this operation moves it, and so
+        does every write that adds, removes or repositions one of its stages. Send it as
+        `If-Match` so an order drawn from a ladder somebody has since changed answers
+        `409 version_skew` instead of landing on top of their change.
+
+        `409` with the code `order_stale` when the list does not name exactly the live
+        stages; `422` when it names one twice. Publishes ONE `pipeline.updated` carrying the
+        `stage_positions` delta; an order that moves nothing writes nothing.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StageOrderRequest' }
+      responses:
+        '200':
+          description: The pipeline, its stages in their new order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pipeline' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ------------------------------ /stages -----------------------------------
   /stages:
     get:
@@ -5446,8 +5528,12 @@ paths:
       x-agent-access: human-only
       summary: Create a stage in a pipeline.
       description: |
-        `position` is unique within the pipeline. Terminal stages enforce probability:
-        won=100, lost=0 (features/01 §4.1).
+        `position` is unique within the pipeline, from 0 to 1048576. A won stage is always at
+        100 and a lost stage at 0, whatever `win_probability` says.
+
+        Won and lost stages come after every open stage. An open stage created past them is
+        placed in front of them, and that shift rides one `pipeline.updated` with the
+        `stage_positions` delta. Creating a stage moves the pipeline's `version`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -5485,6 +5571,12 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Update a stage (rename / reorder / probability).
+      description: |
+        A `position` change that would leave a won or lost stage above an open one is refused
+        `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
+        instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
+        behind the open ones, published as the same `pipeline.updated` position delta. A change
+        to either moves the pipeline's `version`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -35921,7 +36013,29 @@ components:
         stages:
           type: array
           description: Optional initial stages.
-          items: { $ref: '#/components/schemas/CreateStageRequest' }
+          items: { $ref: '#/components/schemas/CreatePipelineStage' }
+
+    CreatePipelineStage:
+      type: object
+      description: |
+        One initial stage of a pipeline being created. It joins the pipeline this same request
+        creates, so unlike `CreateStageRequest` it needs no `pipeline_id`. A won stage without a
+        `win_probability` takes 100, as `createStage` fills it.
+      required: [name]
+      properties:
+        pipeline_id:
+          type: string
+          format: uuid
+          deprecated: true
+          description: |
+            Accepted and ignored. The stage joins the pipeline this request creates; the field
+            stays so a client written when nested stages reused `CreateStageRequest` is not refused.
+        name: { type: string }
+        position:
+          type: integer
+          description: Omitted or 0, the stage takes its place in the list (1-based).
+        semantic: { type: string, enum: [open, won, lost], default: open }
+        win_probability: { type: integer, minimum: 0, maximum: 100 }
 
     UpdatePipelineRequest:
       type: object
@@ -35929,6 +36043,26 @@ components:
         name: { type: string }
         is_default: { type: boolean }
         position: { type: integer }
+
+    PipelineOrderRequest:
+      type: object
+      description: The live pipelines, first to last.
+      required: [pipeline_ids]
+      properties:
+        pipeline_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Every live pipeline, each exactly once, in the new order.
+
+    StageOrderRequest:
+      type: object
+      description: One pipeline's stage ladder, first to last.
+      required: [stage_ids]
+      properties:
+        stage_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Every live stage of the pipeline, each exactly once, in the new order.
 
     PipelineListResponse:
       type: object

@@ -139,3 +139,41 @@ func TestDealStakeholdersView(t *testing.T) {
 		t.Fatalf("unknown deal stakeholders → %d, want 404", status)
 	}
 }
+
+// A pipeline created with its closing pair needs no pipeline_id for them (the
+// pipeline does not exist yet) and still accepts one from an older client, and a
+// won stage sent without odds takes 100 as createStage fills it, rather than
+// tripping the terminal-odds CHECK.
+func TestANewPipelinesClosingPairTakesItsPinnedOddsAndToleratesAPipelineID(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Pipeline Close", "pipeline-close@fable.test", "Admin")
+	var created struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/pipelines", AnyMap{
+		"name": "Partnerships",
+		"stages": []AnyMap{
+			{"name": "Won", "semantic": "won"},
+			{"name": "Lost", "semantic": "lost", "pipeline_id": "00000000-0000-4000-8000-000000000000"},
+		},
+	}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("create a pipeline with its closing pair → %d, want 201", status)
+	}
+	var listed struct {
+		Data []struct {
+			Semantic       string `json:"semantic"`
+			WinProbability int    `json:"win_probability"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/stages?pipeline_id="+created.ID, nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("listing the new pipeline's stages → %d", status)
+	}
+	stages := listed.Data
+	odds := map[string]int{}
+	for _, s := range stages {
+		odds[s.Semantic] = s.WinProbability
+	}
+	if len(stages) != 2 || odds["won"] != 100 || odds["lost"] != 0 {
+		t.Fatalf("the closing pair reads %+v, want won at 100 and lost at 0", stages)
+	}
+}

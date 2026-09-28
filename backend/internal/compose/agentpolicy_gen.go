@@ -705,6 +705,8 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/me/working-hours":                                              {Op: "saveMyWorkingHours", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/offer-templates/{id}":                                          {Op: "updateOfferTemplate", Access: "tool", Tool: "update_record", RecordType: "offer_template", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/onboarding/state":                                              {Op: "putOnboardingState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/pipelines/order":                                               {Op: "reorderPipelines", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/pipelines/{id}/stage-order":                                    {Op: "reorderStages", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/privacy/controller-particulars":                                {Op: "setControllerParticulars", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/projects/{id}/companies":                                       {Op: "setProjectCompany", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/projects/{id}/stakeholders":                                    {Op: "setProjectStakeholder", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},

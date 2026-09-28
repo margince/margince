@@ -1,36 +1,43 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Settings -> Data model -> Pipelines: the ladders a deal moves through, the
-// stages on each, and retiring or restoring one.
+// Settings -> Sales -> Pipelines: every pipeline the company runs, the one the
+// reader has open, and that pipeline's ladder.
 //
-// Its own file rather than a sixth zone of settings.tsx, and the split is where
-// it is because the whole of it hangs off one record type: a pipeline, its
-// stages, and the three verbs that change them. Nothing outside reaches in
-// except PipelinesCard, which is what the settings screen mounts.
+// The catalog stands ABOVE the pipeline it opens rather than beside it. Every
+// settings page holds one measure, and a ladder row needs that width for its
+// name, its odds and its verbs; a side-by-side split would take it away to
+// show a list of a handful of names. Which pipeline is open lives in the
+// address, so a reload or a shared link lands on the same one.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef } from "react";
+import { type UseQueryResult, useQuery } from "@tanstack/react-query";
+import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Badge, Button } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
+import { useUrlParams } from "../app/urlstate";
+import { Badge, Disclosure } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
-import { ArchiveAction } from "./archive";
+import { SortableList } from "../design-system/sortablelist";
+import { StageStrip } from "../design-system/stagestrip";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
-import { StageCreate, StageRow, str } from "./settings.stages";
+import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
+import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
+import { ladderOf, StageLadderEditor, str } from "./settings.stages";
+import "./settings.pipelines.css";
 
 type Pipeline = components["schemas"]["Pipeline"];
+type T = ReturnType<typeof useT>;
 
-// The 3 shared scalar fields between create and edit pipeline forms.
-function pipelineFields(t: ReturnType<typeof useT>): CreateField[] {
+// The address dial naming the open pipeline.
+const PIPELINE_PARAM = "pipeline";
+
+function createFields(t: T): CreateField[] {
   return [
     { key: "name", label: "pipeline.name", required: true },
     {
@@ -43,263 +50,322 @@ function pipelineFields(t: ReturnType<typeof useT>): CreateField[] {
         { value: "true", label: t("pipeline.default") },
       ],
     },
-    { key: "position", label: "pipeline.position", type: "number" },
   ];
 }
 
-function mapPipelineBody(v: Record<string, unknown>) {
-  return {
-    name: str(v.name),
-    is_default: v.is_default === "true",
-    position: v.position ? Number(str(v.position)) : 0,
-  };
+const RENAME_FIELDS: CreateField[] = [
+  { key: "name", label: "pipeline.name", required: true },
+];
+
+// The pipeline the address names, or the one a reader would expect without it:
+// the default, then the first in use, then whatever there is.
+function openPipeline(
+  pipelines: readonly Pipeline[],
+  asked: string | undefined,
+): Pipeline | undefined {
+  return (
+    pipelines.find((each) => each.id === asked) ??
+    pipelines.find((each) => each.is_default && !each.archived_at) ??
+    pipelines.find((each) => !each.archived_at) ??
+    pipelines[0]
+  );
 }
 
-// Retiring a pipeline, and putting one back.
-//
-// Both verbs live on the row rather than behind the card's create button,
-// because what they act on is THIS ladder and a reader deciding to retire one
-// is looking at the one they mean.
-//
-// The default pipeline is refused by the server (`default_pipeline_not_archivable`)
-// and the control says so instead of letting the reader find out by pressing
-// it: STATE-4a — a control blocked by the record's STATE rather than by
-// permission stays visible and disabled WITH the reason, because the reason is
-// the information. The remedy is one the reader can act on from this same row,
-// so naming it is not a dead end.
-function PipelineRetirement({
+// One pipeline in the catalog: its name and standing, how long its ladder is,
+// and the ladder's shape, so two pipelines are told apart before either opens.
+function PipelineChoice({
   pipeline,
-  canRetire,
-  canRestore,
-  t,
-}: Readonly<{
-  pipeline: Pipeline;
-  canRetire: boolean;
-  canRestore: boolean;
-  t: ReturnType<typeof useT>;
-}>) {
-  const queryClient = useQueryClient();
-  const toast = useToast();
-  const blockedId = useId();
-  const restore = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.POST("/pipelines/{id}/restore", {
-        params: { path: { id: pipeline.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (restored) => {
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      toast.show(t("pipeline.restored", { name: restored.name }));
-    },
-  });
+  open,
+  onOpen,
+}: Readonly<{ pipeline: Pipeline; open: boolean; onOpen: () => void }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const ladder = ladderOf(pipeline);
+  const openCount = ladder.filter((stage) => stage.semantic === "open").length;
+  return (
+    <button
+      type="button"
+      className="pipeline-choice"
+      aria-current={open ? "true" : undefined}
+      onClick={onOpen}
+    >
+      <span className="pipeline-choice-head">
+        <span className="pipeline-choice-name">{pipeline.name}</span>
+        {pipeline.is_default && !pipeline.archived_at && (
+          <Badge tone="success">{t("pipeline.default")}</Badge>
+        )}
+        <span className="t-caption">
+          {plural("pipeline.openStageCount", openCount, {
+            count: formatNumber(openCount, locale),
+          })}
+        </span>
+      </span>
+      <StageStrip
+        compact
+        label={pipeline.name}
+        steps={ladder.map((stage) => ({
+          key: stage.id,
+          name: stage.name,
+          probability: stage.win_probability,
+          reading: "",
+          outcome: stage.semantic === "open" ? undefined : stage.semantic,
+        }))}
+      />
+    </button>
+  );
+}
 
-  if (pipeline.archived_at) {
-    if (!canRestore) {
-      return null;
-    }
-    return (
-      <>
-        <Button
-          onClick={() => restore.mutate()}
-          // `pending`, not `disabled`: the design system's Button keeps a
-          // control focusable while its write is out and blocks the repeat
-          // press itself. A natively disabled button drops focus to <body>
-          // mid-press, which is exactly where a keyboard reader loses the row.
-          pending={restore.isPending}
-        >
-          {t("pipeline.restore")}
-        </Button>
-        {/* Announced as ArchiveAction announces a refused retire: the row
-            still says Retired, so silence reads exactly like success. */}
-        <ErrorLine inline error={restore.error} />
-      </>
-    );
-  }
-  if (!canRetire) {
-    return null;
-  }
+// The pipelines themselves: those in use, in the order they are offered, and
+// the retired ones apart, since they hold no place in that order.
+function CatalogList({
+  pipelines,
+  openId,
+  onOpen,
+  hintId,
+}: Readonly<{
+  pipelines: readonly Pipeline[];
+  openId: string | undefined;
+  onOpen: (id: string) => void;
+  hintId: string;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const canEdit = useCanWrite("pipeline", "update");
+  const order = usePipelineOrder();
+  const inUse = pipelines.filter((each) => !each.archived_at);
+  const retired = pipelines.filter((each) => each.archived_at);
+  const place = (position: number, count: number) => ({
+    position: formatNumber(position, locale),
+    total: formatNumber(count, locale),
+  });
   return (
     <>
-      <ArchiveAction
-        label={t("pipeline.retire")}
-        confirmText={t("pipeline.retireConfirm", { name: pipeline.name })}
-        // The version travels as If-Match: retiring a pipeline somebody else
-        // has just renamed or made default is a decision taken about a record
-        // the reader was not looking at. requireVersion rather than a fallback,
-        // because an unpinned DELETE is last-write-wins and this one cannot be
-        // taken back by the reader who lost the race.
-        archive={async () => {
-          const { error } = await api.DELETE("/pipelines/{id}", {
-            params: {
-              path: { id: pipeline.id },
-              ...ifMatch(requireVersion(pipeline.version)),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return pipeline;
+      {canEdit && inUse.length > 1 && (
+        <p id={hintId} className="t-caption stage-hint">
+          {t("pipeline.orderHint")}
+        </p>
+      )}
+      <SortableList
+        label={t("pipeline.inUse")}
+        items={inUse.map((pipeline) => ({ key: pipeline.id, pipeline }))}
+        selectedKey={openId}
+        hintId={canEdit ? hintId : undefined}
+        busy={order.pending}
+        onReorder={
+          canEdit ? (keys) => order.reorder(pipelines, keys) : undefined
+        }
+        labels={{
+          handle: (item, position, count) =>
+            t("pipeline.handle", {
+              name: item.pipeline.name,
+              ...place(position, count),
+            }),
+          moved: (item, position, count) =>
+            t("pipeline.moved", {
+              name: item.pipeline.name,
+              ...place(position, count),
+            }),
         }}
-        invalidate="pipelines"
-        recordKey="pipeline"
-        archivedMessage={t("pipeline.retired.done", { name: pipeline.name })}
-        onArchived={() => {}}
-        disabledReasonId={pipeline.is_default ? blockedId : undefined}
+        renderItem={(item) => (
+          <PipelineChoice
+            pipeline={item.pipeline}
+            open={item.key === openId}
+            onOpen={() => onOpen(item.key)}
+          />
+        )}
       />
-      {pipeline.is_default && (
-        // The same treatment Button gives a reason it renders itself:
-        // ArchiveAction takes only the id of a sentence the page already owns,
-        // so the sentence is written here and must read the same as one the
-        // design system would have drawn.
-        <span id={blockedId}>{t("pipeline.retireBlocked")}</span>
+      {retired.length > 0 && (
+        <Disclosure
+          summary={plural("pipeline.retiredGroup", retired.length, {
+            count: formatNumber(retired.length, locale),
+          })}
+          open={retired.some((each) => each.id === openId) || undefined}
+        >
+          <ul className="pipeline-retired">
+            {retired.map((pipeline) => (
+              <li key={pipeline.id}>
+                <PipelineChoice
+                  pipeline={pipeline}
+                  open={pipeline.id === openId}
+                  onOpen={() => onOpen(pipeline.id)}
+                />
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
       )}
     </>
   );
 }
 
-// One pipeline as one row: its name on the left, and under it what the pipeline
-// IS — default or not — the verbs that change it, and the stage ladder itself.
-//
-// Stacked, because the ladder IS the subject rather than an answer to a question
-// that fits beside it: three to six stages, each carrying a name, a semantic
-// badge, a probability and two verbs of its own. The pipeline's own name is the
-// row's LABEL, which is what puts it at the same x as every other naming on the
-// page — it used to be an inner heading, drawn one step larger than the card
-// title above it.
-function PipelineRow({
-  pipeline,
-  canEdit,
-  canRetire,
-  t,
+// The catalog panel draws its title and its verbs whatever state the list is
+// in: the page is named by it, and a loading or empty list is still this page.
+function PipelineCatalog({
+  query,
+  openId,
+  onOpen,
 }: Readonly<{
-  pipeline: Pipeline;
-  canEdit: boolean;
-  // Retiring is pipeline:DELETE, a different verb from everything else this
-  // row offers — the same split stage removal already makes. Putting one back
-  // is pipeline:update, so it rides canEdit: restoring is not a deletion and
-  // a seat that may rename a pipeline may un-retire one.
-  canRetire: boolean;
-  t: ReturnType<typeof useT>;
+  query: UseQueryResult<Pipeline[]>;
+  openId: string | undefined;
+  onOpen: (id: string) => void;
 }>) {
-  const stageList = useRef<HTMLUListElement>(null);
-  const stages = [...(pipeline.stages ?? [])].sort(
-    (a, b) => a.position - b.position,
-  );
+  const t = useT();
+  const hintId = useId();
+  const canCreate = useCanWrite("pipeline", "create");
+  const canEdit = useCanWrite("pipeline", "update");
+  const inUse = (query.data ?? []).filter((each) => !each.archived_at);
+  const lastPosition = Math.max(0, ...inUse.map((each) => each.position));
   return (
-    <SettingRow
-      label={pipeline.name}
-      layout="stack"
-      control={
-        <div className="form-stack settingrow-measure">
-          {/* What this pipeline IS, and the verbs that change it, above the
-              ladder they act on. */}
-          <div className="pipeline-standing">
-            {/* Retired is the leading fact about a pipeline that has one: a
-                reader scanning this list needs to know which ladders are still
-                offered before anything else about them, and the default badge
-                beside it would otherwise be the only mark on the row. */}
-            {pipeline.archived_at && (
-              // No tone: retiring a pipeline is a deliberate choice somebody
-              // made, not a status going badly, and Badge's tones say how a
-              // thing is going.
-              <Badge>{t("pipeline.retired")}</Badge>
-            )}
-            <Badge tone={pipeline.is_default ? "success" : undefined}>
-              {pipeline.is_default
-                ? t("pipeline.default")
-                : t("pipeline.notDefault")}
-            </Badge>
-            {canEdit && (
-              <>
-                <EditAction<Pipeline>
-                  label={t("pipeline.edit")}
-                  savedMessage={(saved) =>
-                    t("record.saveDone", { name: saved.name })
-                  }
-                  invalidate="pipelines"
-                  recordKey="pipeline"
-                  record={{
-                    id: pipeline.id,
-                    name: pipeline.name,
-                    is_default: String(pipeline.is_default),
-                    position: String(pipeline.position),
-                  }}
-                  fields={pipelineFields(t)}
-                  update={async (values) => {
-                    const { data, error } = await api.PATCH("/pipelines/{id}", {
-                      params: { path: { id: pipeline.id } },
-                      body: mapPipelineBody(values),
-                    });
-                    if (error) {
-                      throwProblem(error);
-                    }
-                    return data;
-                  }}
-                />
-                <StageCreate pipelineId={pipeline.id} />
-              </>
-            )}
-            <PipelineRetirement
-              pipeline={pipeline}
-              canRetire={canRetire}
-              canRestore={canEdit}
-              t={t}
-            />
-          </div>
-          {/* tabIndex -1 so a removal can hand focus to the list it changed:
-              the row's own Remove button is gone by then, and focus dropped to
-              <body> leaves a screen-reader user at the top of the document. */}
-          <ul ref={stageList} tabIndex={-1} className="stage-rows">
-            {stages.map((stage) => (
-              <StageRow
-                key={stage.id}
-                stage={stage}
-                canEdit={canEdit}
-                t={t}
-                returnFocusTo={() => stageList.current}
-              />
-            ))}
-          </ul>
-        </div>
+    <Panel
+      title={t("settings.pipelines")}
+      titleAction={
+        canCreate && (
+          <CreateAction<Pipeline>
+            label={t("pipeline.new")}
+            invalidate="pipelines"
+            screen="settings"
+            stay
+            onCreated={(created) => onOpen(created.id)}
+            // A new pipeline lands at the end of the catalog and already holds
+            // the two ways out, so its ladder is open stages plus the close.
+            create={async (values) => {
+              const { data, error } = await api.POST("/pipelines", {
+                body: {
+                  name: str(values.name),
+                  is_default: values.is_default === "true",
+                  position: lastPosition + 1,
+                  stages: [
+                    {
+                      name: t("stage.semWon"),
+                      semantic: "won",
+                      position: 1,
+                      win_probability: 100,
+                    },
+                    {
+                      name: t("stage.semLost"),
+                      semantic: "lost",
+                      position: 2,
+                      win_probability: 0,
+                    },
+                  ],
+                },
+              });
+              if (error) {
+                throwProblem(error);
+              }
+              return data;
+            }}
+            fields={createFields(t)}
+          />
+        )
       }
-    />
+    >
+      <PanelBody>
+        <PanelIntro>{t("settings.pipelinesSub")}</PanelIntro>
+        {!canCreate && !canEdit && (
+          <PanelIntro>{t("settings.pipelinesReadOnly")}</PanelIntro>
+        )}
+        <QueryGate
+          pendingLabel={t("settings.pipelines")}
+          query={query}
+          empty={(pipelines) => pipelines.length === 0}
+        >
+          {(pipelines) => (
+            <CatalogList
+              pipelines={pipelines}
+              openId={openId}
+              onOpen={onOpen}
+              hintId={hintId}
+            />
+          )}
+        </QueryGate>
+      </PanelBody>
+    </Panel>
   );
 }
 
-// D-8: Settings → Pipelines config. Reads via the SAME ["pipelines","all"]
-// key the deals screen's plural selector uses (an array shape, distinct
-// from DealScreen's single-pipeline ["pipelines"] cache entry) — any
-// mutation here invalidates the ["pipelines"] prefix, so both shapes stay
-// fresh. The list itself is readable by everyone; only the write affordances are
-// gated, and the server stays the RBAC authority. Three of the five seeded roles
-// hold pipeline READ and no write verb at all, so for most readers this card is
-// the read-only case rather than an edge of it — which is why it states that
-// posture once instead of leaving a reader to infer it from absent buttons.
-export function PipelinesCard() {
+// The open pipeline: its standing and verbs in the head, its ladder, and the
+// way to retire it at the foot, where a destructive verb waits last.
+function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const t = useT();
-  // Adding a pipeline is pipeline:create. Everything else here — renaming a
-  // pipeline, adding a stage, editing one, reordering — is pipeline:update,
-  // including the stage CREATE affordance: a stage is not its own RBAC object,
-  // so adding one is an update to the pipeline that owns it.
-  const canCreate = useCanWrite("pipeline", "create");
+  // Renaming, reordering stages and making default are pipeline:update;
+  // retiring is pipeline:delete; putting one back is update, because
+  // restoring is not a deletion.
   const canEdit = useCanWrite("pipeline", "update");
-  // Retiring one is pipeline:delete. The card's read-only line below still
-  // turns on the two verbs that draw most of it; a seat holding delete alone
-  // sees the retire verb and nothing else, which is what it holds.
   const canRetire = useCanWrite("pipeline", "delete");
-  // Its OWN cache key, and the reason is the whole point of retiring one. The
-  // deal board, the stage-automation picker and the lead qualifier all read
-  // ["pipelines","all"], and a retired pipeline must not appear in any of them
-  // — so this card cannot widen that entry to include archived rows without
-  // putting retired pipelines back in the three places a retirement removes
-  // them from. A longer key still matches the ["pipelines"] prefix every
-  // mutation here invalidates, so both shapes stay fresh.
+  const retired = Boolean(pipeline.archived_at);
+  return (
+    <Panel
+      title={pipeline.name}
+      titleAction={
+        <span className="pipeline-standing">
+          {retired && <Badge>{t("pipeline.retired")}</Badge>}
+          {pipeline.is_default && !retired && (
+            <Badge tone="success">{t("pipeline.default")}</Badge>
+          )}
+          {canEdit && !retired && !pipeline.is_default && (
+            <MakeDefault pipeline={pipeline} />
+          )}
+          {canEdit && !retired && (
+            <EditAction<Pipeline>
+              label={t("pipeline.rename")}
+              savedMessage={(saved) =>
+                t("record.saveDone", { name: saved.name })
+              }
+              invalidate="pipelines"
+              recordKey="pipeline"
+              record={{ id: pipeline.id, name: pipeline.name }}
+              fields={RENAME_FIELDS}
+              update={async (values) => {
+                const { data, error } = await api.PATCH("/pipelines/{id}", {
+                  params: { path: { id: pipeline.id } },
+                  body: { name: str(values.name) },
+                });
+                if (error) {
+                  throwProblem(error);
+                }
+                return data;
+              }}
+            />
+          )}
+        </span>
+      }
+    >
+      <PanelBody className="pipeline-detail">
+        {retired && <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>}
+        <StageLadderEditor pipeline={pipeline} canEdit={canEdit} />
+        {(retired ? canEdit : canRetire) && (
+          <SettingList>
+            <SettingRow
+              label={retired ? t("pipeline.restore") : t("pipeline.retire")}
+              description={retired ? undefined : t("pipeline.retireNote")}
+              control={
+                <span className="pipeline-standing">
+                  <PipelineRetirement
+                    pipeline={pipeline}
+                    canRetire={canRetire}
+                    canRestore={canEdit}
+                  />
+                </span>
+              }
+            />
+          </SettingList>
+        )}
+      </PanelBody>
+    </Panel>
+  );
+}
+
+// Settings → Pipelines. The list is readable by everyone and only the write
+// affordances are gated, with the server the RBAC authority. Three of the five
+// seeded roles hold pipeline READ and no write verb, so for most readers this
+// is the read-only case rather than an edge of it.
+export function PipelinesCard() {
+  const [params, setParams] = useUrlParams();
   const query = useQuery({
-    queryKey: ["pipelines", "all", "including-retired"],
+    queryKey: SETTINGS_PIPELINES,
     queryFn: async () => {
       const { data, error } = await api.GET("/pipelines", {
         params: { query: { include_archived: true } },
@@ -310,64 +376,16 @@ export function PipelinesCard() {
       return data.data;
     },
   });
+  const open = (id: string) => {
+    const next = new Map(params);
+    next.set(PIPELINE_PARAM, id);
+    setParams(next);
+  };
+  const opened = openPipeline(query.data ?? [], params.get(PIPELINE_PARAM));
   return (
-    <Panel
-      title={t("settings.pipelines")}
-      // Adding a pipeline is four inputs committed together, so the header
-      // keeps the verb and the dialog keeps the form. It sits in the header
-      // band rather than as a trailing row: a row's label would repeat the
-      // button beside it, and a card-level create verb is the header's job
-      // everywhere else on these pages. Absent without the create grant,
-      // exactly as each Edit verb is — the read-only posture is stated once
-      // below.
-      titleAction={
-        canCreate && (
-          <CreateAction
-            label={t("pipeline.new")}
-            invalidate="pipelines"
-            screen="settings"
-            create={async (values) => {
-              const { data, error } = await api.POST("/pipelines", {
-                body: { ...mapPipelineBody(values), stages: [] },
-              });
-              if (error) {
-                throwProblem(error);
-              }
-              return data;
-            }}
-            fields={pipelineFields(t)}
-          />
-        )
-      }
-    >
-      <PanelBody>
-        <PanelIntro>{t("settings.pipelinesSub")}</PanelIntro>
-        {/* Said once, at the top, rather than annotating each absent control —
-            the rule in design-system/README.md. A reader holding one of the two
-            verbs can see for themselves which controls they got. */}
-        {!canCreate && !canEdit && (
-          <PanelIntro>{t("settings.pipelinesReadOnly")}</PanelIntro>
-        )}
-        <SettingList>
-          <QueryGate
-            pendingLabel={t("settings.pipelines")}
-            query={query}
-            empty={(pipelines) => pipelines.length === 0}
-          >
-            {(pipelines) =>
-              pipelines.map((pipeline) => (
-                <PipelineRow
-                  key={pipeline.id}
-                  pipeline={pipeline}
-                  canEdit={canEdit}
-                  canRetire={canRetire}
-                  t={t}
-                />
-              ))
-            }
-          </QueryGate>
-        </SettingList>
-      </PanelBody>
-    </Panel>
+    <div className="settings-pipelines">
+      <PipelineCatalog query={query} openId={opened?.id} onOpen={open} />
+      {opened && <PipelineDetail pipeline={opened} />}
+    </div>
   );
 }

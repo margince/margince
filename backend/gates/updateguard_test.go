@@ -158,6 +158,8 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// write is conditioned on reversed_at IS NULL on top of that — so a second
 	// caller gets ErrNoRows and treats it as the decline it is. One reversal
 	// counted twice would double the safety rate that governs the transition.
+	"internal/modules/deals:markLadderChanged":         "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
+	"internal/modules/deals:movePipeline":              "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
 	"internal/modules/deals:markMoveReversed":          "the caller holds the row (FOR UPDATE) and the write is conditioned on reversed_at IS NULL; ErrNoRows means somebody reversed it first, which is a decline rather than a failure",
 	"internal/modules/deals:suspendTransitionPolicyTx": "conditioned on suspended_at IS NULL; ErrNoRows means a concurrent pass suspended it first and that reason stands",
 	"internal/modules/deals:ResumeTransitionPolicy":    "conditioned on suspended_at IS NOT NULL; ErrNoRows means a concurrent caller already cleared it",

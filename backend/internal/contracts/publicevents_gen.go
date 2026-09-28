@@ -1892,7 +1892,7 @@ type PublicEventPipelineCreatedStage struct {
 	Semantic string `json:"semantic"`
 }
 
-// PublicEventPipelineUpdated Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat name/is_default/position patch from UpdatePipeline, or a stage_positions reorder map from UpdateStage when a stage's position changes), so the honest shape is a change-set map rather than a fixed field list.
+// PublicEventPipelineUpdated Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat name/is_default/position patch from UpdatePipeline or reorderPipelines, or a stage_positions reorder map from UpdateStage, reorderStages or a stage removal when stage positions change), so the honest shape is a change-set map rather than a fixed field list.
 type PublicEventPipelineUpdated struct {
 	// ChangedFields Field name → new value for whatever this update touched (name, is_default, position, or stage_positions).
 	ChangedFields map[string]interface{} `json:"changed_fields"`

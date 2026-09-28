@@ -5304,11 +5304,9 @@ export const vi = {
   "settings.pipelinesSub":
     "Các giai đoạn một deal đi qua — mỗi pipeline một thang.",
   "pipeline.new": "Pipeline mới",
-  "pipeline.edit": "Sửa pipeline",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
   "pipeline.notDefault": "Không mặc định",
-  "pipeline.position": "Vị trí",
   "pipeline.retired": "Đã ngừng dùng",
   "pipeline.retire": "Ngừng dùng",
   "pipeline.retireConfirm":
@@ -5318,6 +5316,29 @@ export const vi = {
   "pipeline.retired.done": "Đã ngừng dùng {name}",
   "pipeline.restore": "Dùng lại",
   "pipeline.restored": "{name} đã được dùng lại",
+  "pipeline.rename": "Đổi tên",
+  "pipeline.makeDefault": "Đặt làm mặc định",
+  "pipeline.defaultSet": "Đã đặt {name} làm mặc định",
+  "pipeline.inUse": "Pipeline đang dùng",
+  "pipeline.orderHint":
+    "Kéo pipeline bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "pipeline.handle": "Di chuyển {name}, vị trí {position} trên {total}",
+  "pipeline.moved": "Đã chuyển {name} đến vị trí {position} trên {total}",
+  "pipeline.openStageCount_one": "{count} giai đoạn đang mở",
+  "pipeline.openStageCount_other": "{count} giai đoạn đang mở",
+  "pipeline.retiredGroup_one": "{count} pipeline đã ngừng dùng",
+  "pipeline.retiredGroup_other": "{count} pipeline đã ngừng dùng",
+  "pipeline.retiredNote":
+    "Đã ngừng dùng. Deal mới không thể bắt đầu trong pipeline này, và các giai đoạn của nó không thể thay đổi cho đến khi được dùng lại.",
+  "pipeline.retireNote":
+    "Pipeline sẽ rời khỏi các danh sách chọn và biểu mẫu deal mới. Deal trên đó vẫn giữ giai đoạn.",
+  "pipeline.flow": "Deal đi qua các giai đoạn",
+  "pipeline.orderSaved": "Đã lưu thứ tự",
+  "pipeline.orderRestored": "Đã khôi phục thứ tự trước",
+  "pipeline.orderStale":
+    "Thứ tự chưa được lưu. Thứ tự đã được thay đổi ở nơi khác trước, nên thứ tự mới nhất đang được hiển thị.",
+  "pipeline.orderNotSaved":
+    "Thứ tự chưa được lưu. Hãy thử lại hoặc tải lại trang.",
   "stage.new": "Giai đoạn mới",
   "stage.edit": "Sửa giai đoạn",
   "stage.name": "Tên",
@@ -5331,6 +5352,22 @@ export const vi = {
   "stage.removeTitle": "Gỡ giai đoạn này?",
   "stage.removeBody":
     "“{name}” sẽ rời khỏi pipeline và các giai đoạn sau dồn lên. Lịch sử chuyển giai đoạn vẫn đọc được. Các deal còn nằm ở đây phải chuyển đi trước.",
+  "stage.openGroup": "Giai đoạn đang mở",
+  "stage.closingGroup": "Giai đoạn kết thúc",
+  "stage.closingNote":
+    "Mọi deal kết thúc ở một trong các giai đoạn này, nên chúng luôn đứng sau các giai đoạn đang mở.",
+  "stage.closingMissing":
+    "Chưa có giai đoạn thắng hoặc thua. Hãy thêm một giai đoạn mới thuộc loại đó.",
+  "stage.orderHint":
+    "Kéo giai đoạn bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "stage.handle": "Di chuyển {name}, bước {position} trên {total}",
+  "stage.moved": "{name} giờ là bước {position} trên {total}",
+  "stage.lowerThanAbove": "Thấp hơn {name} ({reading}) ở trên",
+  "stage.oddsOf": "Xác suất thắng của {name}",
+  "stage.noneOpen": "Chưa có giai đoạn đang mở",
+  "stage.noneOpenNote":
+    "Thêm bước đầu tiên của một deal. Bước này đứng trước các giai đoạn kết thúc.",
+  "stage.added": "Đã thêm giai đoạn",
   "stage.criteria.title": "Tiêu chí rời giai đoạn",
   "stage.criteria.sub":
     "Điều gì phải đúng trước khi một deal rời giai đoạn này.",

@@ -93,6 +93,7 @@ func TestGovernanceOperationsAreHumanOnly(t *testing.T) {
 		"recordConsent": true, "createConsentPurpose": true,
 		"createDataSubjectRequest": true, "updateDataSubjectRequest": true,
 		"createPipeline": true, "updatePipeline": true,
+		"reorderPipelines": true, "reorderStages": true,
 		"createStage": true, "updateStage": true,
 		"issuePassport": true, "revokePassport": true,
 		"issueDoubleOptIn": true,

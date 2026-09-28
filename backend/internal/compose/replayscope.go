@@ -302,7 +302,13 @@ var replayableOperations = map[string]replayTarget{
 	},
 	"POST /v1/pipelines":       {object: objectPipeline, rowNote: "pipeline has no owner and is governed by object grants only (auth.EnsureVisible's own note)"},
 	"PATCH /v1/pipelines/{id}": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
-	"POST /v1/stages":          {object: objectPipeline, rowNote: noOwnerStage},
+	// A catalog reorder retried after a lost answer replays rather than laying
+	// the same order over one somebody set since.
+	"PUT /v1/pipelines/order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
+	// A stage reorder moves the version its If-Match is judged against, so a
+	// retry must replay rather than re-execute into its own version_skew.
+	"PUT /v1/pipelines/{id}/stage-order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
+	"POST /v1/stages":                    {object: objectPipeline, rowNote: noOwnerStage},
 	// A transition's automation rule is pipeline config, governed by the
 	// pipeline's object grant and owned by nobody. A retried save must replay:
 	// re-executing would bump the row's version, so an admin's own retry would

@@ -5358,11 +5358,9 @@ export const de = {
   "settings.pipelinesSub":
     "Phasen, die ein Deal durchläuft, eine Abfolge pro Pipeline.",
   "pipeline.new": "Neue Pipeline",
-  "pipeline.edit": "Pipeline bearbeiten",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
-  "pipeline.position": "Position",
   "pipeline.retired": "Stillgelegt",
   "pipeline.retire": "Stilllegen",
   "pipeline.retireConfirm":
@@ -5372,6 +5370,29 @@ export const de = {
   "pipeline.retired.done": "{name} stillgelegt",
   "pipeline.restore": "Wiederherstellen",
   "pipeline.restored": "{name} wiederhergestellt",
+  "pipeline.rename": "Umbenennen",
+  "pipeline.makeDefault": "Zum Standard machen",
+  "pipeline.defaultSet": "{name} ist jetzt Standard",
+  "pipeline.inUse": "Pipelines in Verwendung",
+  "pipeline.orderHint":
+    "Ziehe eine Pipeline am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "pipeline.handle": "{name} verschieben, {position} von {total}",
+  "pipeline.moved": "{name} auf {position} von {total} verschoben",
+  "pipeline.openStageCount_one": "{count} offene Phase",
+  "pipeline.openStageCount_other": "{count} offene Phasen",
+  "pipeline.retiredGroup_one": "{count} stillgelegte Pipeline",
+  "pipeline.retiredGroup_other": "{count} stillgelegte Pipelines",
+  "pipeline.retiredNote":
+    "Stillgelegt. In dieser Pipeline beginnen keine neuen Deals, und ihre Phasen lassen sich erst nach dem Wiederherstellen ändern.",
+  "pipeline.retireNote":
+    "Die Pipeline verschwindet aus Auswahllisten und Formularen für neue Deals. Deals darauf behalten ihre Phase.",
+  "pipeline.flow": "So bewegt sich ein Deal",
+  "pipeline.orderSaved": "Reihenfolge gespeichert",
+  "pipeline.orderRestored": "Vorherige Reihenfolge wiederhergestellt",
+  "pipeline.orderStale":
+    "Reihenfolge nicht gespeichert. Jemand anderes hat sie zuerst geändert, daher siehst du jetzt die aktuelle Reihenfolge.",
+  "pipeline.orderNotSaved":
+    "Reihenfolge nicht gespeichert. Versuche es erneut oder lade die Seite neu.",
   "stage.new": "Neue Phase",
   "stage.edit": "Phase bearbeiten",
   "stage.name": "Name",
@@ -5385,6 +5406,22 @@ export const de = {
   "stage.removeTitle": "Diese Phase entfernen?",
   "stage.removeBody":
     "„{name}“ wird aus der Pipeline entfernt, spätere Phasen rücken auf. Frühere Phasenwechsel bleiben lesbar. Verschiebe die Deals dieser Phase, bevor du sie entfernst.",
+  "stage.openGroup": "Offene Phasen",
+  "stage.closingGroup": "Abschlussphasen",
+  "stage.closingNote":
+    "Jeder Deal endet in einer davon, deshalb bleiben sie nach den offenen Phasen.",
+  "stage.closingMissing":
+    "Noch keine Phase für gewonnen oder verloren. Lege eine als neue Phase dieses Typs an.",
+  "stage.orderHint":
+    "Ziehe eine Phase am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "stage.handle": "{name} verschieben, Schritt {position} von {total}",
+  "stage.moved": "{name} ist jetzt Schritt {position} von {total}",
+  "stage.lowerThanAbove": "Niedriger als {name} ({reading}) darüber",
+  "stage.oddsOf": "Gewinnwahrscheinlichkeit von {name}",
+  "stage.noneOpen": "Noch keine offenen Phasen",
+  "stage.noneOpenNote":
+    "Lege den ersten Schritt eines Deals an. Er steht vor den Abschlussphasen.",
+  "stage.added": "Phase hinzugefügt",
   "stage.criteria.title": "Austrittskriterien",
   "stage.criteria.sub":
     "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",

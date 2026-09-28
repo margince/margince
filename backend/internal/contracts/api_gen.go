@@ -7129,6 +7129,27 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for CreatePipelineStageSemantic.
+const (
+	CreatePipelineStageSemanticLost CreatePipelineStageSemantic = "lost"
+	CreatePipelineStageSemanticOpen CreatePipelineStageSemantic = "open"
+	CreatePipelineStageSemanticWon  CreatePipelineStageSemantic = "won"
+)
+
+// Valid indicates whether the value is a known member of the CreatePipelineStageSemantic enum.
+func (e CreatePipelineStageSemantic) Valid() bool {
+	switch e {
+	case CreatePipelineStageSemanticLost:
+		return true
+	case CreatePipelineStageSemanticOpen:
+		return true
+	case CreatePipelineStageSemanticWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateProductRequestBillingIntervalMonths.
 const (
 	CreateProductRequestBillingIntervalMonthsN1  CreateProductRequestBillingIntervalMonths = 1
@@ -28606,8 +28627,28 @@ type CreatePipelineRequest struct {
 	Position  *int   `json:"position,omitempty"`
 
 	// Stages Optional initial stages.
-	Stages *[]CreateStageRequest `json:"stages,omitempty"`
+	Stages *[]CreatePipelineStage `json:"stages,omitempty"`
 }
+
+// CreatePipelineStage One initial stage of a pipeline being created. It joins the pipeline this same request
+// creates, so unlike `CreateStageRequest` it needs no `pipeline_id`. A won stage without a
+// `win_probability` takes 100, as `createStage` fills it.
+type CreatePipelineStage struct {
+	Name string `json:"name"`
+
+	// PipelineId Accepted and ignored. The stage joins the pipeline this request creates; the field
+	// stays so a client written when nested stages reused `CreateStageRequest` is not refused.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
+
+	// Position Omitted or 0, the stage takes its place in the list (1-based).
+	Position       *int                         `json:"position,omitempty"`
+	Semantic       *CreatePipelineStageSemantic `json:"semantic,omitempty"`
+	WinProbability *int                         `json:"win_probability,omitempty"`
+}
+
+// CreatePipelineStageSemantic defines model for CreatePipelineStage.Semantic.
+type CreatePipelineStageSemantic string
 
 // CreateProductRequest defines model for CreateProductRequest.
 type CreateProductRequest struct {
@@ -34760,6 +34801,12 @@ type PipelineListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// PipelineOrderRequest The live pipelines, first to last.
+type PipelineOrderRequest struct {
+	// PipelineIds Every live pipeline, each exactly once, in the new order.
+	PipelineIds []openapi_types.UUID `json:"pipeline_ids"`
+}
+
 // PipelineStageRung defines model for PipelineStageRung.
 type PipelineStageRung struct {
 	// At When this rung happened, for the stages that know. Null rather than invented: a derived rung usually carries no timestamp of its own, and dating it from the activity would date the wrong event.
@@ -38791,6 +38838,12 @@ type StageExitCriterionListResponse struct {
 type StageListResponse struct {
 	Data []Stage  `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// StageOrderRequest One pipeline's stage ladder, first to last.
+type StageOrderRequest struct {
+	// StageIds Every live stage of the pipeline, each exactly once, in the new order.
+	StageIds []openapi_types.UUID `json:"stage_ids"`
 }
 
 // StageTransitionEvidenceRecord defines model for StageTransitionEvidenceRecord.
@@ -46339,6 +46392,25 @@ type CreatePipelineParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ReorderPipelinesParams defines parameters for ReorderPipelines.
+type ReorderPipelinesParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ArchivePipelineParams defines parameters for ArchivePipeline.
 type ArchivePipelineParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -46351,6 +46423,32 @@ type ArchivePipelineParams struct {
 
 // UpdatePipelineParams defines parameters for UpdatePipeline.
 type UpdatePipelineParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ReorderStagesParams defines parameters for ReorderStages.
+type ReorderStagesParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -48827,8 +48925,14 @@ type IssuePassportJSONRequestBody = IssuePassportRequest
 // CreatePipelineJSONRequestBody defines body for CreatePipeline for application/json ContentType.
 type CreatePipelineJSONRequestBody = CreatePipelineRequest
 
+// ReorderPipelinesJSONRequestBody defines body for ReorderPipelines for application/json ContentType.
+type ReorderPipelinesJSONRequestBody = PipelineOrderRequest
+
 // UpdatePipelineJSONRequestBody defines body for UpdatePipeline for application/json ContentType.
 type UpdatePipelineJSONRequestBody = UpdatePipelineRequest
+
+// ReorderStagesJSONRequestBody defines body for ReorderStages for application/json ContentType.
+type ReorderStagesJSONRequestBody = StageOrderRequest
 
 // SetControllerParticularsJSONRequestBody defines body for SetControllerParticulars for application/json ContentType.
 type SetControllerParticularsJSONRequestBody = ControllerParticulars
@@ -60466,6 +60570,9 @@ type ServerInterface interface {
 	// Create a pipeline.
 	// (POST /pipelines)
 	CreatePipeline(w http.ResponseWriter, r *http.Request, params CreatePipelineParams)
+	// Put the live pipelines in a new order.
+	// (PUT /pipelines/order)
+	ReorderPipelines(w http.ResponseWriter, r *http.Request, params ReorderPipelinesParams)
 	// Retire a pipeline (soft delete; archive is the delete).
 	// (DELETE /pipelines/{id})
 	ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams)
@@ -60478,6 +60585,9 @@ type ServerInterface interface {
 	// Put a retired pipeline back in use.
 	// (POST /pipelines/{id}/restore)
 	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// Put a pipeline's stages in a new order.
+	// (PUT /pipelines/{id}/stage-order)
+	ReorderStages(w http.ResponseWriter, r *http.Request, id Id, params ReorderStagesParams)
 	// What this installation says about itself in the messages it sends.
 	// (GET /privacy/controller-particulars)
 	GetControllerParticulars(w http.ResponseWriter, r *http.Request)
@@ -64012,6 +64122,12 @@ func (_ Unimplemented) CreatePipeline(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Put the live pipelines in a new order.
+// (PUT /pipelines/order)
+func (_ Unimplemented) ReorderPipelines(w http.ResponseWriter, r *http.Request, params ReorderPipelinesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Retire a pipeline (soft delete; archive is the delete).
 // (DELETE /pipelines/{id})
 func (_ Unimplemented) ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams) {
@@ -64033,6 +64149,12 @@ func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id
 // Put a retired pipeline back in use.
 // (POST /pipelines/{id}/restore)
 func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a pipeline's stages in a new order.
+// (PUT /pipelines/{id}/stage-order)
+func (_ Unimplemented) ReorderStages(w http.ResponseWriter, r *http.Request, id Id, params ReorderStagesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -85125,6 +85247,53 @@ func (siw *ServerInterfaceWrapper) CreatePipeline(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ReorderPipelines operation middleware
+func (siw *ServerInterfaceWrapper) ReorderPipelines(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReorderPipelinesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderPipelines(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchivePipeline operation middleware
 func (siw *ServerInterfaceWrapper) ArchivePipeline(w http.ResponseWriter, r *http.Request) {
 
@@ -85294,6 +85463,81 @@ func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RestorePipeline(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReorderStages operation middleware
+func (siw *ServerInterfaceWrapper) ReorderStages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReorderStagesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderStages(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -96208,6 +96452,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/pipelines", wrapper.CreatePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/pipelines/order", wrapper.ReorderPipelines)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/pipelines/{id}", wrapper.ArchivePipeline)
 	})
 	r.Group(func(r chi.Router) {
@@ -96218,6 +96465,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/pipelines/{id}/stage-order", wrapper.ReorderStages)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/controller-particulars", wrapper.GetControllerParticulars)

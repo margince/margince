@@ -1955,6 +1955,10 @@ func (stubs) CreatePipeline(w nethttp.ResponseWriter, r *nethttp.Request, params
 	httperr.NotImplemented(w, r, "CreatePipeline")
 }
 
+func (stubs) ReorderPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ReorderPipelinesParams) {
+	httperr.NotImplemented(w, r, "ReorderPipelines")
+}
+
 func (stubs) ArchivePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchivePipelineParams) {
 	httperr.NotImplemented(w, r, "ArchivePipeline")
 }
@@ -1969,6 +1973,10 @@ func (stubs) UpdatePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) RestorePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RestorePipeline")
+}
+
+func (stubs) ReorderStages(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ReorderStagesParams) {
+	httperr.NotImplemented(w, r, "ReorderStages")
 }
 
 func (stubs) GetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Request) {

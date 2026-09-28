@@ -3610,6 +3610,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pipelines/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put the live pipelines in a new order.
+         * @description Names the whole order at once: `pipeline_ids` lists every live pipeline exactly once,
+         *     first to last, and each takes the position of its place in the list. `listPipelines`
+         *     and every pipeline picker answer in this order.
+         *
+         *     `409` with the code `order_stale` when the list does not name exactly the live
+         *     pipelines — one was created, retired or restored since the caller read them — so read
+         *     again and resend. `422` when the list names a pipeline twice.
+         *
+         *     Publishes one `pipeline.updated` per pipeline whose position changed; an order that
+         *     moves nothing writes nothing.
+         */
+        put: operations["reorderPipelines"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipelines/{id}/stage-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a pipeline's stages in a new order.
+         * @description Names the whole ladder at once: `stage_ids` lists every live stage of the pipeline
+         *     exactly once, first to last, and the stages take positions 1..n in that order. One
+         *     write rather than a `position` per stage, because `position` is unique within the
+         *     pipeline and a run of single moves passes through states that uniqueness refuses.
+         *
+         *     Won and lost stages close a deal, so they come after every open stage. An order that
+         *     puts one earlier is refused `422` with the code `closing_stage_before_open`.
+         *
+         *     The pipeline's `version` is its ladder's version: this operation moves it, and so
+         *     does every write that adds, removes or repositions one of its stages. Send it as
+         *     `If-Match` so an order drawn from a ladder somebody has since changed answers
+         *     `409 version_skew` instead of landing on top of their change.
+         *
+         *     `409` with the code `order_stale` when the list does not name exactly the live
+         *     stages; `422` when it names one twice. Publishes ONE `pipeline.updated` carrying the
+         *     `stage_positions` delta; an order that moves nothing writes nothing.
+         */
+        put: operations["reorderStages"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stages": {
         parameters: {
             query?: never;
@@ -3622,8 +3689,12 @@ export interface paths {
         put?: never;
         /**
          * Create a stage in a pipeline.
-         * @description `position` is unique within the pipeline. Terminal stages enforce probability:
-         *     won=100, lost=0 (features/01 §4.1).
+         * @description `position` is unique within the pipeline, from 0 to 1048576. A won stage is always at
+         *     100 and a lost stage at 0, whatever `win_probability` says.
+         *
+         *     Won and lost stages come after every open stage. An open stage created past them is
+         *     placed in front of them, and that shift rides one `pipeline.updated` with the
+         *     `stage_positions` delta. Creating a stage moves the pipeline's `version`.
          */
         post: operations["createStage"];
         delete?: never;
@@ -3667,7 +3738,14 @@ export interface paths {
         delete: operations["archiveStage"];
         options?: never;
         head?: never;
-        /** Update a stage (rename / reorder / probability). */
+        /**
+         * Update a stage (rename / reorder / probability).
+         * @description A `position` change that would leave a won or lost stage above an open one is refused
+         *     `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
+         *     instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
+         *     behind the open ones, published as the same `pipeline.updated` position delta. A change
+         *     to either moves the pipeline's `version`.
+         */
         patch: operations["updateStage"];
         trace?: never;
     };
@@ -25925,12 +26003,45 @@ export interface components {
             /** @default 0 */
             position: number;
             /** @description Optional initial stages. */
-            stages?: components["schemas"]["CreateStageRequest"][];
+            stages?: components["schemas"]["CreatePipelineStage"][];
+        };
+        /**
+         * @description One initial stage of a pipeline being created. It joins the pipeline this same request
+         *     creates, so unlike `CreateStageRequest` it needs no `pipeline_id`. A won stage without a
+         *     `win_probability` takes 100, as `createStage` fills it.
+         */
+        CreatePipelineStage: {
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description Accepted and ignored. The stage joins the pipeline this request creates; the field
+             *     stays so a client written when nested stages reused `CreateStageRequest` is not refused.
+             */
+            pipeline_id?: string;
+            name: string;
+            /** @description Omitted or 0, the stage takes its place in the list (1-based). */
+            position?: number;
+            /**
+             * @default open
+             * @enum {string}
+             */
+            semantic: "open" | "won" | "lost";
+            win_probability?: number;
         };
         UpdatePipelineRequest: {
             name?: string;
             is_default?: boolean;
             position?: number;
+        };
+        /** @description The live pipelines, first to last. */
+        PipelineOrderRequest: {
+            /** @description Every live pipeline, each exactly once, in the new order. */
+            pipeline_ids: string[];
+        };
+        /** @description One pipeline's stage ladder, first to last. */
+        StageOrderRequest: {
+            /** @description Every live stage of the pipeline, each exactly once, in the new order. */
+            stage_ids: string[];
         };
         PipelineListResponse: {
             data: components["schemas"]["Pipeline"][];
@@ -44358,6 +44469,110 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    reorderPipelines: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PipelineOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description The live pipelines, in their new order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reorderStages: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description The pipeline, its stages in their new order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pipeline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listStages: {
