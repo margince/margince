@@ -11,15 +11,18 @@ package compose
 // A lead is ARCHIVED the moment it is promoted or disqualified, and every list
 // this product serves excludes archived rows by default. That is right for a
 // work queue and it leaves the board's two terminal columns with no count to
-// show — which is the gap (#1886) this key fills.
+// show — which is the gap this key fills.
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,33 +37,16 @@ func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 	e := integration.Setup(t)
 
 	// Live leads, which any list would also return.
-	seedLeadAt(t, e, "new", false)
-	seedLeadAt(t, e, "new", false)
-	seedLeadAt(t, e, "engaged", false)
+	seedLeadAt(t, e, "new", false, nil)
+	seedLeadAt(t, e, "new", false, nil)
+	seedLeadAt(t, e, "engaged", false, nil)
 	// Terminal leads: archived, which is what makes them invisible everywhere
 	// else. A promoted lead and two disqualified ones.
-	seedLeadAt(t, e, "promoted", true)
-	seedLeadAt(t, e, "disqualified", true)
-	seedLeadAt(t, e, "disqualified", true)
+	seedLeadAt(t, e, "promoted", true, nil)
+	seedLeadAt(t, e, "disqualified", true, nil)
+	seedLeadAt(t, e, "disqualified", true, nil)
 
-	handlers := reportHandlers{engine: newReportEngine(e.Pool)}
-	req := httptest.NewRequest(http.MethodPost, "/v1/reports/leads-by-status",
-		strings.NewReader(`{}`)).WithContext(e.Admin())
-	rec := httptest.NewRecorder()
-	handlers.RunReport(rec, req, "leads-by-status")
-
-	var result reportResultWire
-	decodeWire(t, rec, http.StatusOK, &result)
-
-	counts := map[string]int64{}
-	for _, row := range result.Rows {
-		status, ok := row["status"].(string)
-		if !ok {
-			t.Fatalf("row %v has no status", row)
-		}
-		counts[status] = wireInt(t, row, "leads")
-	}
-
+	counts := leadStatusCounts(e.Admin(), t, e)
 	for status, want := range map[string]int64{
 		"new": 2, "engaged": 1, "promoted": 1, "disqualified": 2,
 	} {
@@ -71,27 +57,79 @@ func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 	}
 }
 
-// An unowned lead is the ordinary shape of a fresh, unrouted one, and it must
-// count on a rep's own board the same way it counts on their unscoped list:
-// `owner_id = $me` matches nothing against a NULL owner_id under ordinary SQL
-// null semantics, so the Leads board's terminal-status columns would
-// otherwise silently drop a lead the panel's own list still shows one click
-// below.
-func TestLeadsByStatusCountsAnUnownedLeadForARep(t *testing.T) {
+// The column's count and the column's list answer over one population.
+//
+// A lead is readable by every seat holding the lead grant, whatever its row
+// scope, so the terminal column lists a colleague's disqualified lead and an
+// unowned one beside the reader's own. A count narrowed to the reader's own
+// work printed 2 at the head of a column showing three rows.
+func TestLeadsByStatusCountsEveryLeadTheTerminalColumnLists(t *testing.T) {
 	e := integration.Setup(t)
-	seedLeadAt(t, e, "new", false)
-	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, archived_at)
-		VALUES ($1, 'Owned Fixture', 'disqualified', 'inbound', 'human:x', $2, now())`, ids.NewV7(), e.Rep1)
+	seedLeadAt(t, e, "new", false, nil)
+	// The reader's own, a colleague's, and one nobody has claimed: the three
+	// ownership shapes the opened column puts side by side.
+	seedLeadAt(t, e, "disqualified", true, &e.Rep1)
+	seedLeadAt(t, e, "disqualified", true, &e.Rep3)
+	seedLeadAt(t, e, "disqualified", true, nil)
 
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+	rep := repReadingLeads(e)
+	if listed := disqualifiedLeadsListed(rep, t, e); listed != 3 {
+		t.Fatalf("the column listed %d leads, want the 3 an identity table serves every seat", listed)
+	}
+	if counted := leadStatusCounts(rep, t, e)["disqualified"]; counted != 3 {
+		t.Errorf("the column's head counted %d disqualified leads over a list of 3 — "+
+			"the count and the rows below it measure one population", counted)
+	}
+}
+
+// The board's owner dial is an owner filter: naming a colleague is refused for
+// a rep, as on every install-wide report.
+func TestLeadsByStatusRefusesARepsOwnerDialOnAColleague(t *testing.T) {
+	e := integration.Setup(t)
+	seedLeadAt(t, e, "disqualified", true, &e.Rep3)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/reports/leads-by-status",
+		strings.NewReader(`{"filters":{"owner_id":"`+e.Rep3.String()+`"}}`)).WithContext(repReadingLeads(e))
+	rec := httptest.NewRecorder()
+	reportHandlers{engine: newReportEngine(e.Pool)}.RunReport(rec, req, "leads-by-status")
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("a rep's owner dial on a colleague got %d %s, want 403", rec.Code, rec.Body.String())
+	}
+}
+
+// repReadingLeads is an own-scope rep holding the lead grant: the seat a
+// population narrows, on a table whose row scope does not.
+func repReadingLeads(e *integration.Env) context.Context {
+	return e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"lead":                  {Read: true},
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeOwn,
 	})
+}
+
+// disqualifiedLeadsListed is what the opened column shows: the same read the
+// board makes, archived rows and all.
+func disqualifiedLeadsListed(as context.Context, t *testing.T, e *integration.Env) int {
+	t.Helper()
+	status := crmcontracts.ListLeadsParamsStatus("disqualified")
+	archived := true
+	rec := httptest.NewRecorder()
+	contacts.NewHandlers(InstallationDB(e.Pool)).ListLeads(rec,
+		httptest.NewRequest(http.MethodGet, "/v1/leads", nil).WithContext(as),
+		crmcontracts.ListLeadsParams{Status: &status, IncludeArchived: &archived})
+	var page crmcontracts.LeadListResponse
+	decodeWire(t, rec, http.StatusOK, &page)
+	return len(page.Data)
+}
+
+// leadStatusCounts is the board's own report call: the figure at the head of
+// each column, keyed by status.
+func leadStatusCounts(as context.Context, t *testing.T, e *integration.Env) map[string]int64 {
+	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/v1/reports/leads-by-status",
-		strings.NewReader(`{}`)).WithContext(rep)
+		strings.NewReader(`{}`)).WithContext(as)
 	rec := httptest.NewRecorder()
 	reportHandlers{engine: newReportEngine(e.Pool)}.RunReport(rec, req, "leads-by-status")
 
@@ -105,23 +143,17 @@ func TestLeadsByStatusCountsAnUnownedLeadForARep(t *testing.T) {
 		}
 		counts[status] = wireInt(t, row, "leads")
 	}
-	if counts["new"] != 1 {
-		t.Errorf(`a rep's own population counted %d "new" leads, want 1 — `+
-			"an unowned lead must not silently drop out", counts["new"])
-	}
-	if counts["disqualified"] != 1 {
-		t.Errorf(`a rep's own population counted %d "disqualified" leads, want 1 (their own)`,
-			counts["disqualified"])
-	}
+	return counts
 }
 
-// seedLeadAt plants one lead at a status, archived or not.
+// seedLeadAt plants one lead at a status, archived or not, owned by the seat
+// named or by nobody.
 //
 // archived_at is set from the status rather than passed independently: a
 // promoted or disqualified lead IS an archived one, and a fixture that could
 // spell a live disqualified lead would be proving the report against a row the
 // product cannot produce.
-func seedLeadAt(t *testing.T, e *integration.Env, status string, terminal bool) {
+func seedLeadAt(t *testing.T, e *integration.Env, status string, terminal bool, owner *ids.UUID) {
 	t.Helper()
 	id := ids.NewV7()
 	archived := "NULL"
@@ -144,6 +176,7 @@ func seedLeadAt(t *testing.T, e *integration.Env, status string, terminal bool) 
 	if status == "promoted" {
 		promotedAt = "now()"
 	}
-	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, archived_at, promoted_at, promoted_contact_id)
-		VALUES ($1, 'Terminal Fixture', $2, 'inbound', 'human:x', `+archived+`, `+promotedAt+`, `+promotedContact+`)`, id, status)
+	e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, archived_at, promoted_at, promoted_contact_id)
+		VALUES ($1, 'Terminal Fixture', $2, 'inbound', 'human:x', $3, `+archived+`, `+promotedAt+`, `+promotedContact+`)`,
+		id, status, owner)
 }
