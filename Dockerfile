@@ -190,7 +190,15 @@ WORKDIR /app
 # stay correct: `--frozen-lockfile` fails outright for any member the lockfile
 # records and the image has not copied yet, so the first unit to grow a screen
 # would have broken this build with an error about a missing importer.
-COPY pnpm-lock.yaml ./
+#
+# pnpm-workspace.yaml IS copied, and it is not a package manifest: it is where
+# pnpm keeps `overrides`, which `pnpm fetch` checks against the lockfile's own
+# recorded copy. Without it the lockfile's `overrides: {js-yaml: ...}` is
+# compared against an empty config and the fetch aborts with
+# ERR_PNPM_LOCKFILE_CONFIG_MISMATCH. The check only runs when the store is cold
+# AND this layer is invalidated by a lockfile edit, so a warm cache hides it.
+# It lists `frontend` alone, so it names no member this layer has not copied.
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
     pnpm fetch --store-dir /pnpm-store
 
