@@ -92,13 +92,25 @@ var classByKind = map[string]string{
 // kind the contract admits is a colleague's words, and a fifth one placed
 // itself the day the contract grew it.
 func ClassFor(kind string) (string, error) {
+	class, placed := classOf(kind)
+	if !placed {
+		return "", fmt.Errorf("notices: no notification class for kind %q", kind)
+	}
+	return class, nil
+}
+
+// classOf is the placement itself, for the caller that asks whether a kind can
+// be placed rather than requiring that it is. Refusing a write over an
+// unplaceable kind and skipping one line of a digest over it are different
+// answers, and only one of them is an error.
+func classOf(kind string) (string, bool) {
 	if class, placed := classByKind[kind]; placed {
-		return class, nil
+		return class, true
 	}
 	if crmcontracts.NoticeKind(kind).Valid() {
-		return classCoach, nil
+		return classCoach, true
 	}
-	return "", fmt.Errorf("notices: no notification class for kind %q", kind)
+	return "", false
 }
 
 // DefaultDelivery is what the installation decides for a seat that never chose.

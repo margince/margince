@@ -430,11 +430,11 @@ func newBatchedClasses(user ids.UserID) *batchedClasses {
 
 // A kind the product can no longer place is not batched, for the reason
 // effective() leaves a retired class out: the enumeration runs before any seat
-// is claimed, so returning the error here would cost the WHOLE installation its
-// morning over one historical row nobody can edit.
+// is claimed, so failing here would cost the WHOLE installation its morning
+// over one historical row nobody can edit.
 func (b *batchedClasses) wants(ctx context.Context, tx pgx.Tx, kind string) (bool, error) {
-	class, err := ClassFor(kind)
-	if err != nil {
+	class, placed := classOf(kind)
+	if !placed {
 		return false, nil
 	}
 	if wanted, decided := b.decided[class]; decided {
