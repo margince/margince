@@ -180,3 +180,50 @@ func TestWorthRedrivingOnlyAnExhaustedLadderThatCouldClear(t *testing.T) {
 		})
 	}
 }
+
+// A throttled run waits on the THROTTLE's timescale, not the dropped
+// connection's.
+//
+// Both faults are retryable and they clear differently: a dropped connection
+// is gone by the time the socket is remade, a rate limit lasts as long as the
+// window the provider is enforcing. Waiting 2s then 8s puts all three attempts
+// inside one window, so the ladder buys three refusals and the task is
+// abandoned with no record — which the certification page shows as `untested`,
+// a word that is supposed to mean nobody measured it.
+//
+// The whole ladder is asserted, not the first wait: a table that rose to the
+// right number only at the end would leave the early attempts still stacked
+// inside the window this exists to clear.
+func TestATaskThrottledByTheProviderWaitsOnTheThrottlesTimescale(t *testing.T) {
+	waited := recordSleeps(t)
+	// Every rung, every attempt: the provider is rate limiting and stays that
+	// way, so the run exhausts its attempts and the waits between them are the
+	// whole of what this test reads.
+	throttled := fmt.Errorf("provider said no: %w", ai.ErrProviderThrottled)
+	steps := failedWalk(t, throttled)
+	for range runAttempts - 1 {
+		steps = append(steps, failedWalk(t, throttled)...)
+	}
+	candidate := ai.NewFakeClient().ScriptSteps(steps...)
+
+	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient())},
+			maxRuns:       1,
+		})
+	if err == nil {
+		t.Fatal("a run the provider refused on every attempt must not report a measurement")
+	}
+	if len(*waited) != runAttempts-1 {
+		t.Fatalf("waited %v, want %d waits — one before each re-drive", *waited, runAttempts-1)
+	}
+	for i, got := range *waited {
+		if got != runThrottleBackoff[i] {
+			t.Errorf("wait %d was %v, want %v — a throttle asks for the window it is enforcing, "+
+				"and the dropped-connection table lands every attempt inside one",
+				i+1, got, runThrottleBackoff[i])
+		}
+	}
+}
