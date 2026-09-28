@@ -19,7 +19,7 @@ import (
 // promoteHeldLeadsTx promotes every live lead whose email this contact now
 // holds onto the contact, in the caller's transaction.
 //
-// A lead and a contact for one address are one person filed twice. It happens
+// A lead and a contact for one address are the same contact filed twice. It happens
 // when a contact is typed in, imported, or minted by mail capture for somebody
 // who is already a lead — typically a lead carried over from the previous CRM
 // who then writes to a connected mailbox. Left alone,
@@ -43,9 +43,13 @@ import (
 // already promoted, nameless — is left as it is rather than failing the write
 // that created the contact.
 func (s *Store) promoteHeldLeadsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, trigger PromoteTrigger, evidence *ids.ActivityID, by string) error {
-	if auth.Require(ctx, "lead", principal.ActionUpdate) != nil ||
-		auth.Require(ctx, "contact", principal.ActionCreate) != nil {
-		return nil
+	for object, action := range map[string]principal.Action{"lead": principal.ActionUpdate, "contact": principal.ActionCreate} {
+		if err := auth.Require(ctx, object, action); err != nil {
+			if errors.Is(err, apperrors.ErrPermissionDenied) {
+				return nil
+			}
+			return err
+		}
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT l.id

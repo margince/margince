@@ -204,10 +204,10 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 
 // promoteLeadsByMailTx folds a lead holding this counterparty's address into
 // the contact the mail resolved to — the one it just minted, or one that
-// already stood beside the lead — once the person has written to us.
+// already stood beside the lead — once they have written to us.
 //
-// Only their own mail counts. Promotion is engagement (features/01 §6.4): mail
-// we sent that nobody answered is the cold outbound the trigger vocabulary
+// Only their own mail counts. Promotion needs engagement — a reply, a meeting,
+// or a seat's own judgement — and mail we sent that nobody answered is the cold outbound the trigger vocabulary
 // refuses, so it leaves the lead where it is. Their first reply reaches this
 // same call for the same contact and promotes it then, as an inbound_reply
 // with that message as the evidence.

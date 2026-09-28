@@ -73,7 +73,7 @@ A lead also qualifies on its own when a contact appears for its email address:
 
 - **You add a contact** (typed in, or imported) for somebody who is already a
   lead. The lead merges into the new contact straight away, qualified by you.
-- **The person writes to a connected mailbox.** The contact their mail creates,
+- **The lead writes to a connected mailbox.** The contact their mail creates,
   or the one it finds, takes the lead with it, as an inbound reply. Mail you
   sent that nobody answered does not qualify the lead; their first reply does.
   A contact that is still visible only to its owner, or held for review as a

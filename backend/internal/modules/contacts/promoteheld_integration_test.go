@@ -8,7 +8,7 @@ package contacts
 // A contact created for an address a live lead holds takes the lead with it.
 //
 // Before this, the two stood side by side: the lead kept the history and sat on
-// the lead list as if nobody had spoken to the person, and the contact held the
+// the lead list as if nobody had spoken to them, and the contact held the
 // conversation. Mail capture made it routine — a lead carried over from the
 // previous CRM writes to a connected mailbox, capture mints a contact, and
 // nothing connects the two.
@@ -117,7 +117,7 @@ func TestCapturedMailFromALeadPromotesTheLead(t *testing.T) {
 			status, archived, promotedTo, res.ContactID)
 	}
 	if trigger != string(TriggerInboundReply) {
-		t.Errorf("promotion trigger = %q, want %q: the person wrote to us", trigger, TriggerInboundReply)
+		t.Errorf("promotion trigger = %q, want %q: they wrote to us", trigger, TriggerInboundReply)
 	}
 }
 
@@ -156,7 +156,7 @@ func TestAnOwnerScopedCapturedContactLeavesTheLeadAlone(t *testing.T) {
 // Mail we sent that nobody answered is cold outbound, which promotion refuses:
 // the lead stays. Their first reply promotes it into the contact the outbound
 // mail already minted.
-func TestOutboundMailLeavesTheLeadUntilThePersonReplies(t *testing.T) {
+func TestOutboundMailLeavesTheLeadUntilTheyReply(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "cold@held.test"
