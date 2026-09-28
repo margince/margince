@@ -364,7 +364,7 @@ func TestMailJudgedToAskNothingIsHiddenWithItsFigure(t *testing.T) {
 		t.Fatalf("reading the hidden backlog: %v", err)
 	}
 	if _, _, err := o.e.Activities.LogActivity(o.reader(), activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindTask), Source: "ui", RequestActivityID: &accepted,
+		Kind: string(crmcontracts.ActivityKindTask), Source: "manual", RequestActivityID: &accepted,
 	}); err != nil {
 		t.Fatalf("accepting the request: %v", err)
 	}

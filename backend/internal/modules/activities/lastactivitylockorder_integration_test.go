@@ -189,7 +189,7 @@ func logLinkedActivity(t *testing.T, e *sendEnv, links []ActivityLinkInput) ids.
 	t.Helper()
 	subject := "Depot slot"
 	activity, _, err := e.store(nil).LogActivity(linkWriterCtx(e), LogActivityInput{
-		Kind: "note", Subject: &subject, Source: "ui", Links: links,
+		Kind: "note", Subject: &subject, Source: "manual", Links: links,
 	})
 	if err != nil {
 		t.Fatalf("LogActivity: %v", err)

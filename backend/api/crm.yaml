@@ -163,6 +163,8 @@ tags:
       built only from what was filed, or a refusal that says which of the two it is.
   - name: Assignments
     description: Who is responsible for a record — administered roles, and the colleagues or teams holding them. Responsibility, never access.
+  - name: Bulk
+    description: One change over a selection of contacts, companies or deals — previewed, confirmed by whoever asked for it, and applied record by record.
 
 # =============================================================================
 paths:
@@ -758,6 +760,13 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/IssuePassportResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: >-
+            `archived_role_held` — the caller holds an archived role and gets no new
+            credential until an admin gives them a live role.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /passports/{id}:
@@ -4808,6 +4817,97 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /bulk/preview:
+    post:
+      tags: [Bulk]
+      operationId: previewBulkChange
+      summary: Say what one change over a selection of records would do, without doing it.
+      description: |
+        The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
+        each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`) or
+        `archive`. The answer says which records the change would alter (`affected`), which it
+        would leave alone and why (`excluded`), and up to three before/after rows to show the user.
+
+        Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
+        inside a transaction that is rolled back, so a record excluded here is excluded for the same
+        reason there. A record the caller cannot see answers `not_found`, one they may read but not
+        change answers `not_writable`, and one whose version moved since the caller read it answers
+        `changed_since_preview`.
+
+        A preview that would change at least one record answers a `confirm_token`. It is good for
+        one execution of exactly this selection, verb and owner, by the same caller, until
+        `expires_at`, and that execution changes no record outside `affected`. A selection of more
+        than 10 records needs the user's confirmation, so `executeBulkChange` requires the token
+        there; a selection of 10 or fewer may run without one.
+      x-mcp-tool: { verb: bulk_update_records, tier: auto_execute, scope: write }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BulkChangePreviewRequest' }
+      responses:
+        '200':
+          description: What the change would do.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BulkChangePreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /bulk/execute:
+    post:
+      tags: [Bulk]
+      operationId: executeBulkChange
+      summary: Apply one change to a selection of records, record by record.
+      description: |
+        The second half of a bulk change. Each record is changed exactly as the single-record
+        operation would change it (`updateContact`, `updateCompany`, `updateDeal` for an owner;
+        `archiveContact`, `archiveCompany`, `archiveDeal` for an archive), with its own `audit_log`
+        row and its own event. Every audit row the change writes carries the same `batch_id`, which
+        the answer returns.
+
+        A record is skipped, not overwritten, when its version is no longer the one the caller
+        sent (`changed_since_preview`), and skipped when the caller may not change it or a
+        single-record rule refuses it (the installation's own company cannot be archived). One
+        skipped record never stops the others. `owner_id` must name a colleague the caller may hand
+        work to, or nothing runs (`422`).
+
+        More than 10 records need the `confirm_token` a preview of exactly this selection returned;
+        a missing, expired, used or mismatched token answers `422` and nothing runs. With a token,
+        a record the preview did not list in `affected` is skipped as `not_previewed`, so the
+        change never reaches further than what the user was shown. Without one, the change is its
+        own preview: it changes exactly the records a preview at that moment would list. The token
+        is spent in the same transaction as the change, so a retry under the same
+        `Idempotency-Key` answers the first result rather than a spent token.
+
+        An agent's change counts every record it changed against the agent's write budget, reserved
+        before the change commits, so two changes running at once cannot both spend the same
+        remainder. A change that would take the agent past that budget is refused (`429`) and
+        nothing runs; it is not put in an approval inbox.
+      x-mcp-tool: { verb: bulk_update_records, tier: auto_execute, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BulkChangeExecuteRequest' }
+      responses:
+        '200':
+          description: What changed and what was skipped.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BulkChangeResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: The change would take this agent past its write budget for the window.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /projects/transfer-ownership:
     post:
@@ -15640,6 +15740,7 @@ paths:
         - { name: actor, in: query, schema: { type: string }, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.' }
         - { name: entity_type, in: query, schema: { type: string } }
         - { name: entity_id, in: query, schema: { type: string, format: uuid } }
+        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).' }
         - { name: action, in: query, schema: { type: string }, description: 'One of the AuditLogEntry.action values.' }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
@@ -17350,8 +17451,9 @@ paths:
         Creates an active member with the chosen system role and no password, then issues a
         single-use set-password token. When an email sender is configured the invite link is
         mailed to the new address; otherwise the member sets a password through the standard
-        account-recovery flow. Admin-only (`role: admin`); an agent may never provision a human.
-        Emits `user.invited`.
+        account-recovery flow. Needs `user_admin.create`; an agent may never provision a human.
+        Naming `team_ids` puts the member on those teams, which only an admin may do: any other
+        caller gets 403 `team_membership_requires_admin`. Emits `user.invited`.
       x-agent-access: human-only
       requestBody:
         required: true
@@ -17380,9 +17482,8 @@ paths:
         '404':
           description: >-
             Not found, with the reason distinguished by the problem `code`:
-            `unknown_role` — this company defines no role with the requested key.
-            The `role` enum is documentation, not binding validation, so a mistyped key
-            reaches the server and must say which of the two things was not found.
+            `unknown_role` — this company defines no live role with the requested key.
+            An archived role answers the same: it cannot be given to anybody.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -17403,6 +17504,32 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /users/assignable-roles:
+    get:
+      tags: [Identity]
+      operationId: listAssignableRoles
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: The live roles this caller may hand out when inviting or re-roling a member.
+      description: |
+        The invite form's and the role picker's list. Gated on `user_admin` create or update,
+        not on `role_admin`: a member administrator hands roles out without editing them.
+
+        Each role listed is one the assignment ceiling admits for this caller — the same
+        check `inviteUser` and `changeUserRole` run. For a caller who is not an admin that
+        ceiling is containment: the caller must already hold every grant the stored role
+        document names (extension grants included), its row scope and every field it reads.
+        It is an offer, not a promise: the writes also check the teams the account will be
+        on and the member being re-roled. Ordered by key.
+      responses:
+        '200':
+          description: The roles this caller may assign.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssignableRoleDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /users/access-preview:
     get:
       tags: [Identity]
@@ -17422,9 +17549,10 @@ paths:
         - name: role
           in: query
           required: true
+          description: A live role's key — a seeded one or one made with `createRole`.
           schema:
             type: string
-            enum: [admin, management, manager, rep, read_only, ops]
+            maxLength: 64
         - name: team_ids
           in: query
           required: false
@@ -17513,9 +17641,7 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '404':
           description: >-
-            `unknown_role` — this company defines no role with the requested key. The
-            enum is documentation rather than binding validation, so a mistyped key
-            reaches the server.
+            `unknown_role` — this company defines no live role with the requested key.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -17647,7 +17773,9 @@ paths:
             a different action, not this one: an `invited` member has never set a
             password, and a `suspended` member is held for a reason that reactivating
             would clear without it ever being resolved. (An `active` member is a no-op
-            and answers 200, not this.)
+            and answers 200, not this.) Or `archived_role_held` — the member still holds an
+            archived role, which would hand the account its grants back the moment the role
+            is restored; an admin gives them a live role first.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -17719,8 +17847,9 @@ paths:
           description: >-
             Refused, with the reason distinguished by the problem `code`:
             `public_base_url_unset` (no canonical base to build a link against — an operator
-            configuration gap), or `member_not_active` (the member is suspended or deactivated, so
-            redemption would refuse the link this call would mint).
+            configuration gap), `member_not_active` (the member is suspended or deactivated, so
+            redemption would refuse the link this call would mint), or `archived_role_held` (the
+            member holds an archived role; an admin gives them a live role first).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -17736,26 +17865,14 @@ paths:
       operationId: listRoles
       security: [ { cookieAuth: [] } ]   # human session only — role editing is an admin console, not an agent surface
       x-agent-access: human-only
-      summary: List the workspace's roles with their object grants. Admin-only, human-only.
+      summary: List the workspace's roles with their object grants and row scope. Human-only.
       description: |
-        The role editor's read. Every role the workspace defines — the five seeded system
+        The role editor's read. Every live role the workspace defines — the six seeded system
         roles and any custom ones — with the `objects` map exactly as `role.permissions`
-        stores it.
+        stores it. Archived roles are left out unless `include_archived` is true.
 
-        Admin-only, and not because a grant map is a secret: it is the same authority
-        `changeUserRole` carries, and an admin is the only caller who can act on it. Agents
-        are refused outright — no autonomy tier makes rewriting the permission model an
-        agent's call.
-
-        Gated on the admin ROLE, not on an RBAC object, and there is deliberately no `role`
-        entry in `RbacObject`. That is the posture every identity-administration surface here
-        takes (`/users`, `/teams`), for the reason recorded against them: object RBAC exists
-        to narrow WHO among peers may touch a record, and there is no such narrowing to
-        express here — no role but `admin` should ever hold it, so the grant map would encode
-        a constant, at the cost of a backfill of every already-seeded workspace's
-        `role.permissions`. It would also be circular: an admin who revoked their own grant on
-        `role` could never restore it. A client gates this screen on the caller holding
-        `admin` (`/me`'s `roles`), the same way it gates the member roster.
+        Gated on `role_admin.read`. Agents are refused outright — no autonomy tier makes
+        rewriting the permission model an agent's call.
 
         The `objects` map is returned VERBATIM from the stored document, including any object
         this installation no longer knows (a unit that was removed). `policy.Parse` drops such
@@ -17763,6 +17880,12 @@ paths:
         an operator find and clear it, and hiding it would report the document as something it
         is not. A client that groups objects by extension unit (see `listExtensions`) should
         expect names it cannot place, and must not treat them as an error.
+      parameters:
+        - name: include_archived
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+          description: True also lists archived roles, each carrying `archived_at`.
       responses:
         '200':
           description: Every role this workspace defines.
@@ -17771,6 +17894,173 @@ paths:
               schema: { $ref: '#/components/schemas/RoleDirectory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Identity]
+      operationId: createRole
+      security: [ { cookieAuth: [] } ]   # human session only — see listRoles
+      x-agent-access: human-only
+      summary: Create a role by copying an existing one. Human-only.
+      description: |
+        A new role starts as an exact copy of `copy_from`: the stored permissions document
+        as it is, grants on objects this installation cannot name included, and the source
+        role's field masks. It gets a generated key (`custom_<slug of the name>`, never a
+        seeded key, never changed afterwards) and `is_system: false`.
+
+        Admin only (403 `widening_requires_admin` for any other holder of `role_admin.create`):
+        a new role is authority nobody held before. In this version only an admin may widen
+        what a role grants; other holders of `role_admin` may rename, narrow and archive.
+
+        No public event: the closed catalog has no role-definition type. The audit row
+        names the new role, its source and its name.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRoleRequest' }
+      responses:
+        '201':
+          description: The new role.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`unknown_role` — no live role has the `copy_from` key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: '`role_name_taken` — a live role already has this name.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /roles/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 64 }
+        description: The role key — not its id.
+    patch:
+      tags: [Identity]
+      operationId: updateRole
+      security: [ { cookieAuth: [] } ]   # human session only — see listRoles
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      summary: Rename a role or change its row scope. Human-only.
+      description: |
+        Gated on `role_admin.update`. Renaming and narrowing the row scope are open to every
+        holder of the grant. Widening the row scope is admin only (403
+        `widening_requires_admin`): it reaches every holder's teams at once.
+
+        Send the `version` you read in `If-Match`; a stale one is refused 409 `version_skew`.
+        The audit row carries the before and after of each changed field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoleRequest' }
+      responses:
+        '200':
+          description: The updated role.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`unknown_role` — no live role has this key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >-
+            `version_skew` — somebody changed the role since it was read; or `role_name_taken` —
+            a live role already has this name.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /roles/{key}/archive:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 64 }
+    post:
+      tags: [Identity]
+      operationId: archiveRole
+      security: [ { cookieAuth: [] } ]   # human session only — see listRoles
+      x-agent-access: human-only
+      summary: Archive a custom role nobody who can sign in holds. Human-only.
+      description: |
+        Gated on `role_admin.delete`. An archived role grants nothing, cannot be assigned and
+        drops out of `listRoles`; its grants and field masks are kept for `restoreRole`.
+        Archiving an archived role is a no-op.
+
+        Refused 409 `system_role` for a role the product ships, and 409 `role_in_use` while an
+        active or invited member holds it — give them another role first. A deactivated or
+        suspended member may keep holding it, and gets nothing from it.
+      responses:
+        '200':
+          description: The archived role.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`unknown_role` — no role has this key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: '`system_role` or `role_in_use`, as described above.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /roles/{key}/restore:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 64 }
+    post:
+      tags: [Identity]
+      operationId: restoreRole
+      security: [ { cookieAuth: [] } ]   # human session only — see listRoles
+      x-agent-access: human-only
+      summary: Restore an archived role. Human-only.
+      description: |
+        Admin only (403 `widening_requires_admin` for any other holder of `role_admin.delete`):
+        restoring hands the role's grants back to every member still holding it. The role
+        comes back with the grants and field masks it had. Restoring a live role is a no-op.
+        Refused 409 `role_name_taken` when a live role has taken its name in the meantime;
+        rename that one first.
+      responses:
+        '200':
+          description: The restored role.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`unknown_role` — no role has this key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: '`role_name_taken` — a live role already has this name.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /roles/{key}/objects/{object}:
     parameters:
@@ -17817,6 +18107,13 @@ paths:
         opposite is true — refusing input an admin just typed costs them a correction, and
         storing a typo would create a grant nobody can ever satisfy and no screen can explain.
 
+        Gated on `role_admin.update`. Turning a verb OFF is open to every holder of the grant.
+        Turning one ON is admin only (403 `widening_requires_admin`), which is also how a newly
+        installed extension's objects are first granted. The
+        seeded `admin` role's grants on the administration objects cannot be narrowed (409
+        `admin_role_floor`), because an installation whose admin role lost `role_admin` or
+        `user_admin` could not be administered back.
+
         Concurrency: `role` is a versioned row, so send the `version` you read in `If-Match`
         and a write against a stale read is refused 409 `version_skew` rather than silently
         clobbering it. A permission document is ONE jsonb value, so two admins editing two
@@ -17859,7 +18156,7 @@ paths:
           description: >-
             Refused with `code: version_skew` — the `If-Match` version is not the role's
             current one, so somebody else changed this role since it was read. Nothing was
-            written; re-read the role, re-apply, retry.
+            written; re-read the role, re-apply, retry. Or `admin_role_floor`, as above.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -17935,7 +18232,10 @@ paths:
       operationId: createTeam
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
-      summary: Create a team. Admin only.
+      summary: Create a team. Needs `team_admin.create`.
+      description: |
+        A new team has no members, so it changes nobody's reach; any holder of
+        `team_admin.create` may create one. Only an admin puts anybody on it.
       requestBody:
         required: true
         content:
@@ -17960,7 +18260,12 @@ paths:
       operationId: updateTeam
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
-      summary: Rename, archive or restore a team. Admin only.
+      summary: Rename, archive or restore a team.
+      description: |
+        Renaming needs `team_admin.update`. Archiving or restoring switches every member's
+        team reach off or on, so it is admin only, like every other change to who is on a
+        team: a holder of `team_admin` who is not an admin gets 403
+        `team_membership_requires_admin`.
       requestBody:
         required: true
         content:
@@ -17994,6 +18299,9 @@ paths:
       description: |
         Membership resolves `row_scope: team` and team shares from the next request on. Members of
         the team may edit records owned by anyone on it.
+
+        Only an admin changes who is on a team. A holder of `team_admin.update` who is not an
+        admin gets 403 `team_membership_requires_admin`, for themselves as for anybody else.
       responses:
         '204': { description: On the team. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -18005,6 +18313,10 @@ paths:
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
       summary: Take a member off a team. Admin only; idempotent.
+      description: |
+        Removing a member ends their team reach and who leads or coaches them there, so it is
+        admin only too: 403 `team_membership_requires_admin` for any other holder of
+        `team_admin.update`.
       responses:
         '204': { description: Off the team. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -23373,10 +23685,9 @@ paths:
   #   /workflow-runs                                     (workflow registry run records)
   #   /teams                                             (team CRUD; the read is specified above)
   # /users and /roles are no longer deferred: /users carries the invite/re-role/
-  # deactivate set, and /roles carries the grant editor an extension's objects need
-  # (listRoles + setRoleObjectGrant). What is still absent for /roles is creating,
-  # renaming and archiving a role, and editing row_scope — the grant map was built
-  # first because it is the one an enabled extension is unusable without.
+  # deactivate set, and /roles carries the role editor — create by copy, rename,
+  # row scope, archive and restore, and the per-object grant map. Field masks have
+  # no editor yet; a copy carries its source's masks unchanged.
   # =========================================================================
 
   # =========================================================================
@@ -34995,6 +35306,133 @@ components:
         from_owner_id: { type: string, format: uuid }
         to_owner_id: { type: string, format: uuid, description: 'An active user of the workspace (422 otherwise).' }
 
+    BulkRecordType:
+      type: string
+      description: The kind of record a bulk change acts on. One change acts on one kind.
+      enum: [contact, company, deal]
+
+    BulkVerb:
+      type: string
+      description: |
+        What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+        `archive` retires it exactly as the single-record archive does.
+      enum: [reassign_owner, archive]
+
+    BulkItem:
+      type: object
+      description: One selected record and the version the caller was shown.
+      required: [id, version]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer, format: int64, description: 'The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.' }
+
+    BulkChangePreviewRequest:
+      type: object
+      required: [record_type, verb, items]
+      properties:
+        record_type: { $ref: '#/components/schemas/BulkRecordType' }
+        verb: { $ref: '#/components/schemas/BulkVerb' }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/BulkItem' }
+        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for `archive`.' }
+
+    BulkChangeExecuteRequest:
+      type: object
+      required: [record_type, verb, items]
+      properties:
+        record_type: { $ref: '#/components/schemas/BulkRecordType' }
+        verb: { $ref: '#/components/schemas/BulkVerb' }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/BulkItem' }
+        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for `archive`.' }
+        confirm_token: { type: string, description: 'The token a preview of exactly this selection returned. Required above 10 records.' }
+
+    BulkSkipReason:
+      type: string
+      description: |
+        Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+        archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+        its version moved since the caller read it. `no_change`: it already has this owner.
+        `anchor_company`: it is the installation's own company, which is never archived.
+        `not_previewed`: the preview whose token this execution presents did not list it.
+        `refused`: a single-record rule refuses it; `code` says which.
+      enum: [not_found, not_writable, changed_since_preview, no_change, anchor_company, not_previewed, refused]
+
+    BulkSkip:
+      type: object
+      required: [id, reason]
+      properties:
+        id: { type: string, format: uuid }
+        reason: { $ref: '#/components/schemas/BulkSkipReason' }
+        code:
+          type: string
+          description: |
+            Which single-record rule refused the record, when the reason is `refused` — the same
+            code the single-record operation answers, for example `sole_project_company`.
+        params:
+          type: object
+          additionalProperties: true
+          description: The values the rule named, when it named any.
+        message: { type: string, description: 'The refusal in English, for a code the client does not know.' }
+
+    BulkRecordState:
+      type: object
+      description: The two facts a bulk change can move on a record.
+      required: [owner_id, archived]
+      properties:
+        owner_id: { type: [string, 'null'], format: uuid }
+        archived: { type: boolean }
+
+    BulkSampleRow:
+      type: object
+      description: One record the change would alter, as it is and as it would be.
+      required: [id, label, before, after]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string, description: The record's name as its list shows it. }
+        before: { $ref: '#/components/schemas/BulkRecordState' }
+        after: { $ref: '#/components/schemas/BulkRecordState' }
+
+    BulkChangePreview:
+      type: object
+      required: [record_type, verb, count, affected, excluded, sample, requires_confirmation]
+      properties:
+        record_type: { $ref: '#/components/schemas/BulkRecordType' }
+        verb: { $ref: '#/components/schemas/BulkVerb' }
+        count: { type: integer, description: The number of records the change would alter. }
+        affected:
+          type: array
+          description: The records the change would alter.
+          items: { type: string, format: uuid }
+        excluded:
+          type: array
+          description: The records the change would leave alone, each with its reason.
+          items: { $ref: '#/components/schemas/BulkSkip' }
+        sample:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/BulkSampleRow' }
+        requires_confirmation: { type: boolean, description: 'True above 10 records: executing needs `confirm_token`.' }
+        confirm_token: { type: string, description: 'Present when the change would alter at least one record. Required above 10 records; below that, presenting it holds the execution to `affected`.' }
+        expires_at: { type: string, format: date-time, description: When `confirm_token` stops being accepted. }
+
+    BulkChangeResult:
+      type: object
+      required: [batch_id, changed, skipped]
+      properties:
+        batch_id: { type: string, format: uuid, description: 'The id every audit row of this change carries as `batch_id`.' }
+        changed: { type: integer, description: The number of records changed. }
+        skipped:
+          type: array
+          description: The records left alone, each with its reason.
+          items: { $ref: '#/components/schemas/BulkSkip' }
+
     TransferProjectOwnershipResult:
       type: object
       required: [transferred]
@@ -39183,10 +39621,10 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 255 }
         role:
           type: string
-          enum: [admin, management, manager, rep, read_only, ops]
+          maxLength: 64
           default: rep
           description: >-
-            Defaults to `rep`. A deactivated seat exercises no authority whatever its role,
+            A live role's key. Defaults to `rep`. A deactivated seat exercises no authority whatever its role,
             so this records what they were rather than granting anything — but the caller
             may still not name a role they could not assign themselves.
         left_at:
@@ -39208,12 +39646,16 @@ components:
         display_name: { type: string, minLength: 1, maxLength: 255 }
         role:
           type: string
-          enum: [admin, management, manager, rep, read_only, ops]
+          maxLength: 64
           description: >-
-            System role key (ADR-0110). Keys are wire vocabulary and diverge from
-            the product names on purpose — `manager` displays as "Team Lead",
-            `rep` as "User"; `management` is the whole-company seat that
-            holds no admin power.
+            A live role's key: one of the seeded system roles or one made with
+            `createRole`. Seeded keys are wire vocabulary and diverge from the
+            product names on purpose — `manager` displays as "Team Lead", `rep` as
+            "User"; `management` is the whole-company seat that holds no admin
+            power. A caller who is not an admin may only produce an account whose whole
+            access their own contains — every grant, row scope, team and readable field —
+            because the set-password link goes to an address the caller chooses.
+            `listAssignableRoles` names the roles this caller may hand out.
         team_ids:
           type: array
           maxItems: 20
@@ -39229,7 +39671,7 @@ components:
       description: >-
         What a seat with this role and these teams may do — computed by the server from the
         evaluated policy, the same one the gates read, so the screen never interprets the role
-        a second way. Used before an invite (`POST /users/access-preview`) and for an existing
+        a second way. Used before an invite (`GET /users/access-preview`) and for an existing
         member (`GET /users/{id}/access`).
       required: [role, row_scope, objects, field_masks, teams]
       properties:
@@ -39309,7 +39751,10 @@ components:
       type: object
       required: [role]
       properties:
-        role: { type: string, enum: [admin, management, manager, rep, read_only, ops] }
+        role:
+          type: string
+          maxLength: 64
+          description: A live role's key; see `InviteUserRequest.role`.
 
     DeactivateUserRequest:
       type: object
@@ -40825,7 +41270,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, seat_usage, team_oversight]
+         authentication_policy, oauth_application, seat_usage, team_oversight, team_lead]
 
     RbacAction:
       type: string
@@ -40947,7 +41392,7 @@ components:
     Role:
       type: object
       additionalProperties: false
-      required: [key, name, is_system, version, objects]
+      required: [key, name, is_system, version, row_scope, objects]
       description: >-
         One role as `role.permissions` stores it. This is a ROLE's document, not a
         principal's — unlike `Authorization.objects` nothing here is merged, because
@@ -40987,6 +41432,17 @@ components:
             rather than as unknown. May carry names outside `RbacObject` and outside any
             enabled extension; see `listRoles`.
           additionalProperties: { $ref: '#/components/schemas/RbacObjectGrant' }
+        row_scope:
+          type: string
+          enum: [own, team, all]
+          description: >-
+            Whose records the grants reach: the holder's own, those of everyone sharing a live
+            team with them, or every record. A document storing none reads as `own`, the
+            narrowest, which is how authentication reads it too.
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the role was archived. Absent or null for a live role.
 
     RoleDirectory:
       type: object
@@ -40994,12 +41450,60 @@ components:
       required: [roles]
       description: >-
         Every role this workspace defines. Not paginated and deliberately not: the set is
-        bounded by what an operator created (five seeded, plus a handful at most), the editor
+        bounded by what an operator created (six seeded, plus a handful at most), the editor
         needs all of it to render, and a cursor over it would be ceremony over a complete answer.
       properties:
         roles:
           type: array
           items: { $ref: '#/components/schemas/Role' }
+
+    AssignableRoleDirectory:
+      type: object
+      additionalProperties: false
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/AssignableRole' }
+
+    AssignableRole:
+      type: object
+      additionalProperties: false
+      required: [key, name, is_system]
+      properties:
+        key: { type: string, description: The role key an invite or a role change sends. }
+        name: { type: string, description: The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this. }
+        is_system: { type: boolean, description: True for a role the product ships. }
+
+    CreateRoleRequest:
+      type: object
+      additionalProperties: false
+      required: [copy_from, name]
+      properties:
+        copy_from:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: The key of the live role the new one starts as a copy of.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: The new role's name. Unique among live roles, ignoring case.
+
+    UpdateRoleRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: A sparse patch. An absent field is left as it is.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        row_scope:
+          type: string
+          enum: [own, team, all]
 
     SetRoleObjectGrantRequest:
       type: object
@@ -41409,6 +41913,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
+        batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
         action:
           type: string
           # Every mutation is attributable (P12). connector captures audit as actor_type=connector.

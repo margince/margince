@@ -221,7 +221,8 @@ export function useCanUpsert(object: RbacObject): boolean {
  * Reading a role key is the re-derivation everything above exists to avoid, so
  * this is the deliberate exception and its scope is fixed: identity
  * administration, role grants, the extension inventory, the audit read, the
- * installation's own company profile, and the non-production reset. Those
+ * installation's own company profile, the non-production reset, and who is on
+ * a team (identity/teams.go refuses anyone else a membership change). Those
  * routes gate on the role SERVER-SIDE and no RBAC object describes them — a
  * `role` object would encode a constant, and an admin who revoked their own
  * grant on it could never restore it — so the role is their honest predicate

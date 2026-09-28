@@ -89,6 +89,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		`{"record_type":"contact","fields":{"full_name":"To Be Archived"}}`)
 	duplicate := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"contact","fields":{"full_name":"Schema Conformance (dup)"}}`)
+	handable := createThroughTheToolSurface(ctx, t, registry,
+		`{"record_type":"contact","fields":{"full_name":"To Be Handed On"}}`)
+	handableItems := `[{"id":"` + handable.String() + `","version":` +
+		e.WsScalar(t, `SELECT version::text FROM contact WHERE id = $1`, handable) + `}]`
 	project := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"project","fields":{"name":"Conformance project","company_id":"`+
 			company.String()+`"}}`)
@@ -259,6 +263,12 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// the table. Its declared shape is another guaranteed subset, so the
 		// real handler is the only thing that can say whether it holds.
 		{"demote_lead", `{"lead_id":"` + promotable.String() + `","reason":"promoted by mistake"}`},
+		// Preview first, then the change it previewed: both answer the one
+		// declared shape, each with its own members.
+		{"bulk_update_records", `{"mode":"preview","record_type":"contact","verb":"reassign_owner","owner_id":"` +
+			e.Rep2.String() + `","items":` + handableItems + `}`},
+		{"bulk_update_records", `{"mode":"execute","record_type":"contact","verb":"reassign_owner","owner_id":"` +
+			e.Rep2.String() + `","items":` + handableItems + `}`},
 		{"archive_record", `{"record_type":"contact","id":"` + spare.String() + `"}`},
 		{"merge_records", `{"record_type":"contact","source_id":"` + duplicate.String() +
 			`","target_id":"` + contact.String() + `"}`},

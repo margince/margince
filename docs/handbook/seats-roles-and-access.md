@@ -65,7 +65,7 @@ To create a team in Margince, open **Settings → Teams** and choose **New team*
 2. Choose **New team**.
 3. Fill **Team name** (required), for example "DACH Sales".
 4. Choose **Create team**.
-To add colleagues, open the team and tick their names under **Team members**. Only active human users can be added. Without the permission the page says "Your role cannot manage teams."
+To add colleagues, an Admin opens the team and ticks their names under **Team members**. Only active human users can be added. Without the permission the page says "Your role cannot manage teams."
 Also called: group, squad, sales team.
 
 ### How do I change someone's seat from read to full?
@@ -145,10 +145,10 @@ someone reports an empty app, check their role first.
 
 Holding more than one role gives you the widest of them.
 
-The six roles are seeded with the product, but they are not frozen: an
-administrator can change what they grant. This page describes the **seeded**
-grants. What actually decides a request is the permission, so a custom role
-holding one reaches what it names, and an Admin whose role lost one does not.
+The six roles are seeded, not frozen. Through the `/roles` API (no settings page
+yet) only an Admin copies, restores or widens a role; other role editors rename,
+narrow or archive. An archived role grants nothing. This page describes the
+**seeded** grants; the permission decides, so a custom role reaches what it holds.
 
 ## Row scope: which records, not which kinds
 
@@ -279,10 +279,9 @@ open it. Copy the address to ask someone who has access."
 
 ## Teams
 
-A team in Margince is a named group of colleagues. Creating one, archiving
-it or changing who is in it takes the team-administration permission
-(`team_admin`), which only the Admin role holds by default. Anyone can see the
-list of teams.
+A team in Margince is a named group of colleagues. Creating or renaming one
+takes the team-administration permission (`team_admin`). **Only an Admin changes
+who is on a team**, or archives or restores one. Anyone can see the teams.
 
 **A team carries no permissions of its own.** It is not a role. It does two
 things:
@@ -341,10 +340,12 @@ Inviting, deactivating and the **Members** settings list all answer to that
 permission, so a custom role holding it manages colleagues without being called
 Admin.
 
-**One ceiling stands above that permission.** Acting on an **Admin's** account
-(inviting one, changing their role, deactivating them) takes the literal Admin
-role, whatever else you hold. A grant that could reach an Admin would be a way to
-become one.
+**Your access must cover theirs.** Acting on an **Admin's** account takes the
+Admin role itself. Otherwise, deactivating or reactivating needs their
+administration permissions and row scope; a set-password link, a role change or
+an invite needs everything the account holds or will hold, fields and teams
+included. Only an Admin changes their own role. A member on an archived role
+gets no link or reactivation until an Admin gives them a live role.
 
 **Inviting.** You choose a role, and the colleague is created with no password.
 If your installation sends email, they get a link. If not, the administrator

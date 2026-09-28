@@ -38,11 +38,11 @@ import (
 // KeysetClause that a cf_-sorted walk never exercises.
 func TestCustomFieldVocab_DefaultSortPaginatesWithCursor(t *testing.T) {
 	f := setupCFV(t)
-	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "ui"})
+	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "manual"})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}
-	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "ui"})
+	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "manual"})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestCustomFieldVocab_DefaultSortPaginatesWithCursor(t *testing.T) {
 // once the lone NULL row is served.
 func TestCustomFieldVocab_SortPaginatesThroughNullTailContinuation(t *testing.T) {
 	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	a := f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
 	b := f.seedScoredDeal(t, "B", nil)
 	c := f.seedScoredDeal(t, "C", nil)
@@ -104,7 +104,7 @@ func TestCustomFieldVocab_SortPaginatesThroughNullTailContinuation(t *testing.T)
 // clause, so it needs its own coverage.
 func TestCustomFieldVocab_DescendingSortPaginatesStably(t *testing.T) {
 	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	a := f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
 	b := f.seedScoredDeal(t, "B", map[string]any{score: float64(2)})
 	c := f.seedScoredDeal(t, "C", map[string]any{score: float64(3)})
@@ -141,9 +141,9 @@ func TestCustomFieldVocab_DescendingSortPaginatesStably(t *testing.T) {
 func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
 	f := setupDealCFV(t)
 	eur := "EUR"
-	budget := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
-	renewal := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Renewal", Type: customfields.TypeDate, Source: "ui"})
-	strategic := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
+	budget := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "manual"})
+	renewal := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Renewal", Type: customfields.TypeDate, Source: "manual"})
+	strategic := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Strategic", Type: customfields.TypeBoolean, Source: "manual"})
 
 	match := f.seedScoredDeal(t, "Match", map[string]any{budget: float64(129900), renewal: "2026-07-11", strategic: true})
 	f.seedScoredDeal(t, "NoMatch", map[string]any{budget: float64(50000), renewal: "2020-01-01", strategic: false})
@@ -166,11 +166,11 @@ func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
 func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
 	f := setupCFV(t)
 	owner := ids.From[ids.UserKind](f.e.Rep1)
-	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "ui", OwnerID: &owner})
+	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "manual", OwnerID: &owner})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}
-	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "ui", OwnerID: &owner})
+	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "manual", OwnerID: &owner})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}
@@ -203,11 +203,11 @@ func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
 // key through parsesAsKind/listBindCast's timestamp branch.
 func TestCustomFieldVocab_SortByCreatedAtWithCursor(t *testing.T) {
 	f := setupCFV(t)
-	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "ui"})
+	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "manual"})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}
-	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "ui"})
+	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "manual"})
 	if err != nil {
 		t.Fatalf("CreateContact: %v", err)
 	}

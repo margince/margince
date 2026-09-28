@@ -83,8 +83,9 @@ Two questions decide it, in this order — the same order
 `notices.RaiseCoachNotice` asks them:
 
 1. **May this seat coach at all?** `auth.RequireCoach` — a human (not an agent,
-   not a Deal Room buyer) holding `admin`, `management` or `manager`. A `rep` is
-   excluded deliberately: a rep on a team would otherwise coach their teammates.
+   not a Deal Room buyer) holding `team_lead.create`, seeded to `admin`,
+   `management` and `manager`. A `rep` holds nothing on it deliberately: a rep on
+   a team would otherwise coach their teammates.
 2. **Is there anybody here to coach?** A live team shared with a colleague
    seated in the meeting, through the same membership seam the Worklist reads.
    Being seated yourself is not a disqualifier — a lead in the room coaching

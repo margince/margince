@@ -325,6 +325,12 @@
         "read": true,
         "update": true
       },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "team_oversight": {
         "create": false,
         "delete": false,
@@ -682,6 +688,12 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "team_oversight": {
@@ -1043,6 +1055,12 @@
         "read": false,
         "update": false
       },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "team_oversight": {
         "create": false,
         "delete": false,
@@ -1397,6 +1415,12 @@
         "update": true
       },
       "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_lead": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1761,6 +1785,12 @@
         "read": false,
         "update": false
       },
+      "team_lead": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "team_oversight": {
         "create": false,
         "delete": false,
@@ -2115,6 +2145,12 @@
         "update": false
       },
       "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_lead": {
         "create": false,
         "delete": false,
         "read": false,

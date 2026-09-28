@@ -453,7 +453,6 @@ internal/modules/identity/passport.go#func mintPassport
 internal/modules/identity/passport.go#var passportScopeVocabulary
 internal/modules/identity/passwordlink.go#func passwordLink
 internal/modules/identity/rbacobjects.go#func RegisterRbacObjects
-internal/modules/identity/roles.go#method Service.ListRoles
 internal/modules/identity/seatusage.go#const fullSeatsInUseQuery
 internal/modules/identity/service.go#func passwordLengthError
 internal/modules/identity/settingsentry.go#func BaseCurrencyOf
@@ -462,7 +461,6 @@ internal/modules/integrations/poll.go#func pollFrom
 internal/modules/integrations/store.go#const block at const auditKeyProvider
 internal/modules/integrations/surfe/surfe.go#const baseURL
 internal/modules/integrations/surfe/surfe.go#const block at const poolEmail
-internal/modules/privacy/auditfilter_test.go#func TestEveryPublishedAuditFilterReachesTheStore
 internal/modules/privacy/auditlog.go#const auditContentStateKey
 internal/modules/privacy/auditlog.go#func ScrubNewerThanRowSQL
 internal/modules/privacy/erasure.go#const block at const evidenceKeyCause

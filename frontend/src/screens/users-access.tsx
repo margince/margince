@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
+import { useCan, useCanWrite, useHoldsAdminRole } from "../app/capability";
 import {
   Button,
   Checkbox,
@@ -151,18 +151,18 @@ export function TeamsCard() {
   const toast = useToast();
   const qc = useQueryClient();
   const me = useMe();
-  // Team membership is admin surface, the same authority `UsersAdminCard`
-  // gates on: an ops seat reads the roster below but does not change who is
-  // on a team. `me.isSuccess` below keeps the read-only line from flashing
-  // at an admin while /me is still in flight.
-  // The two verbs teams.go takes: CreateTeam is `team_admin:create`, and both
-  // UpdateTeam and SetTeamMember are `team_admin:update`.
+  // `me.isSuccess` below keeps the read-only line from flashing at an admin
+  // while /me is still in flight.
+  // teams.go: create is `team_admin:create`; membership and archiving are the
+  // admin's alone (refuseTeamMembershipUnlessAdmin).
   //
   // `useCanWrite`, not `useCan`: the seat ceiling sits ABOVE RBAC
   // (identity/admission.go), so a read seat holding the grant is refused every
   // one of these writes.
   const canCreateTeam = useCanWrite("team_admin", "create");
-  const canEditTeam = useCanWrite("team_admin", "update");
+  const holdsTeamWrite = useCanWrite("team_admin", "update");
+  const isAdmin = useHoldsAdminRole();
+  const canEditTeam = holdsTeamWrite && isAdmin;
   // Membership is a DIFFERENT grant from the verb that changes it: `team_ids`
   // rides the roster's privileged projection, which handlers_roster.go gates on
   // `user_admin:read`. A holder of the team write without that read would get
@@ -237,7 +237,7 @@ export function TeamsCard() {
         <PanelIntro>
           {t("users.teamsSub")}
           {me.isSuccess &&
-            !(canCreateTeam || canEditTeam) &&
+            !(canCreateTeam || holdsTeamWrite) &&
             ` ${t("users.teamsAdminOnly")}`}
         </PanelIntro>
         {/* A refused archive belongs to the card, not to the row: the roster

@@ -12,7 +12,6 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -20,15 +19,15 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./users-admin.css";
 import { useCan, useCanWrite } from "../app/capability";
-import { isOption } from "../app/options";
-import {
-  InviteUserForm,
-  ROLES,
-  type Role,
-  roleLabel,
-  roleOptions,
-} from "./users-invite-form";
+import { type AssignableRole, useAssignableRoles } from "./roles.queries";
+import { InviteUserForm, type Role } from "./users-invite-form";
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
+import {
+  drawsRolePicker,
+  RoleCell,
+  roleAnswer,
+  withRoles,
+} from "./users-rolecell";
 
 type User = components["schemas"]["User"];
 // The member roster (company settings). Every user-management WRITE is admin-only
@@ -147,6 +146,10 @@ function MembersCard({
   const t = useT();
   const { locale } = useLocale();
   const roster = members.data;
+  // The roles this reader may hand out: what each row's picker offers, and the
+  // names custom roles are shown under.
+  const assignable = useAssignableRoles(canChangeRole);
+  const read = withRoles(members, assignable, canChangeRole);
   return (
     <Panel
       title={t("users.membersTitle")}
@@ -181,8 +184,8 @@ function MembersCard({
           {t("users.membersSub")}
           {probeSettled && !administers && ` ${t("users.adminOnly")}`}
         </PanelIntro>
-        <QueryGate query={members} pendingLabel={t("users.membersTitle")}>
-          {(list) =>
+        <QueryGate query={read} pendingLabel={t("users.membersTitle")}>
+          {({ list, roles }) =>
             list.length === 0 ? (
               <EmptyState>{t("users.empty")}</EmptyState>
             ) : (
@@ -196,6 +199,7 @@ function MembersCard({
                   <MemberRow
                     key={u.id}
                     member={u}
+                    roles={roles}
                     canIssueLink={canIssueLink}
                     canChangeRole={canChangeRole}
                     canSetStatus={canSetStatus}
@@ -275,86 +279,6 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
   );
 }
 
-// The role picker, held to the row language's measure so nine of them line up
-// at one x rather than each shrinking to its own answer's width.
-//
-// It draws only where a role is something this reader can CHANGE. The agent
-// seat has no role at all and a reader without the grant has a fact rather than
-// a control — both read as the row's `value`, decided by the caller, because a
-// picker the server would refuse promises something it cannot do.
-function RoleCell({
-  member,
-  pending,
-  inFlight,
-  onPick,
-}: Readonly<{
-  member: User;
-  pending: boolean;
-  inFlight?: Role;
-  onPick: (role: Role) => void;
-}>) {
-  const t = useT();
-  // `roles` arrives only for an admin caller — which this control always has —
-  // and normally holds exactly one key. No key (an unassigned seat) and several
-  // keys both leave the select on its placeholder, because neither has one
-  // current role to show.
-  const heldRoles = member.roles ?? [];
-  const currentRole =
-    heldRoles.length === 1 && isOption(heldRoles[0], ROLES) ? heldRoles[0] : "";
-  // A member holding SEVERAL roles is the case worth naming: any choice here
-  // replaces the whole set, so a neutral "Set role…" would let an admin strip
-  // privileges they never saw. The placeholder says what is held instead.
-  // plural-rule:allow the two arms name what is held and what to do, which is a
-  // state the reader is in rather than two forms of one sentence
-  const placeholder =
-    heldRoles.length > 1
-      ? t("users.rolesHeld", { roles: heldRoles.map(roleLabel(t)).join(", ") })
-      : t("users.setRole");
-  return (
-    // The unset state is the select's PLACEHOLDER, not an option: picking it
-    // back would set no role, so it belongs on the closed face and nowhere in
-    // the list. It is only ever seen when there is no single role to show.
-    //
-    // Its own `aria-label` rather than the row's label through `control`'s ARIA:
-    // the row names the MEMBER, and a combobox announcing itself as "Ada
-    // Active" would leave a reader to guess what picking from it does.
-    <Select
-      className="settingrow-measure"
-      aria-label={t("users.setRoleFor", { name: member.display_name })}
-      value={inFlight ?? currentRole}
-      placeholder={placeholder}
-      disabled={pending}
-      onChange={(value) => {
-        if (isOption(value, ROLES)) {
-          onPick(value);
-        }
-      }}
-      options={roleOptions(t)}
-    />
-  );
-}
-
-// The role a row reports rather than offers: the agent seat's, whose authority
-// is the passport granting it intersected with the contact that passport names,
-// and any member's for a reader who may not change one. `undefined` means the
-// row draws a picker instead.
-function roleAnswer(
-  member: User,
-  canChangeRole: boolean,
-  t: ReturnType<typeof useT>,
-): string | undefined {
-  if (member.is_agent) {
-    return t("users.agentSeatRole");
-  }
-  if (canChangeRole) {
-    return undefined;
-  }
-  const held = (member.roles ?? []).map(roleLabel(t)).join(", ");
-  // A seat holding no role has nothing to report, and an empty value would
-  // draw an empty span where the answer belongs.
-  return held === "" ? undefined : held;
-}
-
 // The verbs a member's row offers, behind the one control a row spends on them.
 //
 // Two of them, one a credential and one destructive, used to sit as ghost
@@ -427,11 +351,13 @@ function statusTone(
 
 function MemberRow({
   member,
+  roles,
   canIssueLink,
   canChangeRole,
   canSetStatus,
 }: Readonly<{
   member: User;
+  roles: readonly AssignableRole[];
   canIssueLink: boolean;
   canChangeRole: boolean;
   canSetStatus: boolean;
@@ -534,6 +460,7 @@ function MemberRow({
 
   const pending =
     setRole.isPending || deactivate.isPending || reactivate.isPending;
+  const drawsPicker = drawsRolePicker(member, roles, canChangeRole);
 
   // Issuance admits exactly whom redemption admits — an active member, and an
   // invited one who has not redeemed yet — so a deactivated row is excluded
@@ -572,7 +499,7 @@ function MemberRow({
       <SettingRow
         label={member.display_name}
         description={member.email}
-        value={roleAnswer(member, canChangeRole, t)}
+        value={roleAnswer(member, roles, drawsPicker, t)}
         // Status, then role, then the verbs — and that ORDER is what keeps nine
         // role pickers at one x. The control column packs from the right, so an
         // item's position is decided by the width of everything after it: with
@@ -588,9 +515,10 @@ function MemberRow({
                 OWNS records — a client resolving an owner has to find it — so
                 the row says what it is rather than passing for a colleague. */}
             {member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>}
-            {canChangeRole && !member.is_agent && (
+            {drawsPicker && (
               <RoleCell
                 member={member}
+                roles={roles}
                 pending={pending}
                 // While a change is in flight the cell shows the role being
                 // applied — and it stays in flight until the refreshed roster

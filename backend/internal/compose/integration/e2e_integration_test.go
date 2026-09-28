@@ -27,7 +27,7 @@ func exerciseContactWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID
 	var contact AnyMap
 	status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Grace Hopper",
-		"source":    "ui",
+		"source":    "manual",
 		"emails":    []AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
 	}, nil, &contact)
 	if status != http.StatusCreated {
@@ -41,7 +41,7 @@ func exerciseContactWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID
 	var dup AnyMap
 	status = e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Grace Clone",
-		"source":    "ui",
+		"source":    "manual",
 		"emails":    []AnyMap{{"email": "grace@navy.mil"}},
 	}, nil, &dup)
 	if status != http.StatusConflict {

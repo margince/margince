@@ -193,7 +193,7 @@ Also called: move a deal to another account, attach a deal to a project.
 
 ### How do I change the owner of a deal?
 To reassign a deal to a colleague in Margince, open the deal and pick the colleague in the **Owner** row of its **Details** panel. It saves as soon as you pick.
-To reassign many, switch **Deals** to **Table**, tick them, and use **Pick an owner** → **Assign** in the bulk bar.
+To reassign many, switch **Deals** to **Table**, tick them, and use **Pick an owner** → **Assign owner** in the bulk bar, then **Change owner**.
 The new owner must be "an active colleague you may assign work to": a user on a full seat, not an agent, within your own reach.
 Also called: hand over a deal, change deal owner, transfer an opportunity.
 

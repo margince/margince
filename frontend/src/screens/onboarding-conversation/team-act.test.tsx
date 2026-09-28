@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
+import { SEEDED_ASSIGNABLE_ROLES } from "../roles.testkit";
 import { installFetchStub, jsonResponse } from "../story-utils";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
@@ -40,6 +41,8 @@ function renderTeam(
         admin_password_link: options.passwordLink ?? false,
       }),
     "GET /teams": () => jsonResponse({ data: [], next_cursor: null }),
+    "GET /users/assignable-roles": () =>
+      jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
     "POST /users/access-preview": () =>
       jsonResponse({ role: "rep", row_scope: "own", objects: {} }),
     "POST /users": () => jsonResponse({ id: NEW_USER }, 201),

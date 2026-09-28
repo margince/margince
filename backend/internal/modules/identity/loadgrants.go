@@ -72,10 +72,14 @@ func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UU
 	return out, nil
 }
 
+// loadRoleDocuments reads live roles only: an archived role grants nothing.
+// Archiving refuses while anybody who can sign in holds the role, so what this
+// drops is the role a deactivated member still carries, and reactivating them
+// does not bring an archived role's grants back with them.
 func loadRoleDocuments(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT ra.user_id, r.key, r.permissions FROM role_assignment ra JOIN role r ON r.id = ra.role_id
-		  WHERE ra.user_id = ANY($1)`, users)
+		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NULL`, users)
 	if err != nil {
 		return nil, nil, err
 	}

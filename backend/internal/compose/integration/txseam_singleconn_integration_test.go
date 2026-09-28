@@ -134,7 +134,7 @@ func singleConnPool(t *testing.T) *pgxpool.Pool {
 func (f txSeamFixture) defineTxSeamField(t *testing.T, object, label string) string {
 	t.Helper()
 	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{
-		Object: object, Label: label, Type: customfields.TypeText, Source: "ui",
+		Object: object, Label: label, Type: customfields.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the %s field %q: %v", object, label, err)
@@ -165,7 +165,7 @@ func TestGetContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	col := f.defineTxSeamField(t, "contact", "Tier")
 
 	created, err := f.contacts.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Ada Lovelace", Source: "ui",
+		FullName: "Ada Lovelace", Source: "manual",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {
@@ -199,7 +199,7 @@ func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	col := f.defineTxSeamField(t, "company", "Segment")
 
 	created, err := f.contacts.CreateCompany(f.ctx, contacts.CreateCompanyInput{
-		DisplayName: "Analytical Engines", Source: "ui",
+		DisplayName: "Analytical Engines", Source: "manual",
 		CustomFields: map[string]any{col: "enterprise"},
 	})
 	if err != nil {
@@ -234,7 +234,7 @@ func TestUpdateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	col := f.defineTxSeamField(t, "deal", "Renewal Risk")
 
 	created, err := f.deals.CreateDeal(f.ctx, deals.CreateDealInput{
-		Name: "Difference Engine", PipelineID: pipeline, StageID: stage, Source: "ui",
+		Name: "Difference Engine", PipelineID: pipeline, StageID: stage, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -279,7 +279,7 @@ func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.contacts.CreateContactTx(f.ctx, tx, contacts.CreateContactInput{
-			FullName: "Ada Lovelace", Source: "ui",
+			FullName: "Ada Lovelace", Source: "manual",
 		})
 		return err
 	}); err != nil {
@@ -291,7 +291,7 @@ func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		_, err := f.contacts.CreateContactTx(f.ctx, tx, contacts.CreateContactInput{
-			FullName: "Grace Hopper", Source: "ui", CustomFields: map[string]any{col: "gold"},
+			FullName: "Grace Hopper", Source: "manual", CustomFields: map[string]any{col: "gold"},
 		})
 		return err
 	})
@@ -309,7 +309,7 @@ func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.contacts.CreateCompanyTx(f.ctx, tx, contacts.CreateCompanyInput{
-			DisplayName: "Analytical Engines", Source: "ui",
+			DisplayName: "Analytical Engines", Source: "manual",
 		})
 		return err
 	}); err != nil {
@@ -321,7 +321,7 @@ func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		_, err := f.contacts.CreateCompanyTx(f.ctx, tx, contacts.CreateCompanyInput{
-			DisplayName: "Difference Engines", Source: "ui", CustomFields: map[string]any{col: "enterprise"},
+			DisplayName: "Difference Engines", Source: "manual", CustomFields: map[string]any{col: "enterprise"},
 		})
 		return err
 	})
@@ -341,7 +341,7 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, fresh, err = f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
-			FullName: StrPtr("Jean Bartik"), Email: &email, Status: "new", Source: "ui",
+			FullName: StrPtr("Jean Bartik"), Email: &email, Status: "new", Source: "manual",
 		})
 		return err
 	}); err != nil {
@@ -354,7 +354,7 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		other := "betty@holberton.test"
 		_, _, err := f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
-			FullName: StrPtr("Betty Holberton"), Email: &other, Status: "new", Source: "ui",
+			FullName: StrPtr("Betty Holberton"), Email: &other, Status: "new", Source: "manual",
 			CustomFields: map[string]any{col: "enterprise"},
 		})
 		return err
@@ -374,7 +374,7 @@ func TestCreateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
 		created, err = f.deals.CreateDealTx(f.ctx, tx, deals.CreateDealInput{
-			Name: "Difference Engine", PipelineID: pipeline, StageID: stage, Source: "ui",
+			Name: "Difference Engine", PipelineID: pipeline, StageID: stage, Source: "manual",
 		})
 		return err
 	}); err != nil {
@@ -386,7 +386,7 @@ func TestCreateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		_, err := f.deals.CreateDealTx(f.ctx, tx, deals.CreateDealInput{
-			Name: "Analytical Engine", PipelineID: pipeline, StageID: stage, Source: "ui",
+			Name: "Analytical Engine", PipelineID: pipeline, StageID: stage, Source: "manual",
 			CustomFields: map[string]any{col: "high"},
 		})
 		return err

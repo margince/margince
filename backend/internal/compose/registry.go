@@ -121,6 +121,10 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// entry point, which is what the REST route calls too.
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
+	// The bulk change runs the engine the /v1/bulk routes run, admitted against
+	// this registry's own gate so an agent's changed records meet the write
+	// counter the registry charges them to.
+	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate)})
 	// enrich rides the site-read seam rather than the datasource one: it reads
 	// the company's OWN website, which no record provider can answer.
 	agents.RegisterEnrichTool(registry, provider, enricher)

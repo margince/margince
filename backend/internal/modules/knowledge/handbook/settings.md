@@ -379,9 +379,10 @@ one of those reaches the page, and an Admin whose role lost it does not.
 A few things still ask for the literal Admin role rather than a permission. Two
 matter to most readers: **only an Admin may act on another Admin's account**, or
 hand out the Admin role, and **only an Admin reads or changes the company
-context**. Some repair and maintenance actions ask for the role too. Separately,
-the last Admin cannot be demoted or deactivated, so an installation always keeps
-one.
+context**. Changing who is on a team and widening a role are the Admin's too
+([Seats, roles and who can see what](seats-roles-and-access.md) has the rules),
+and some repair and maintenance actions ask for the role. Separately, the last
+Admin cannot be demoted or deactivated, so an installation always keeps one.
 
 ## Two things administrators should decide early
 

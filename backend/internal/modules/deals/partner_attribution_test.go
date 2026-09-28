@@ -264,7 +264,7 @@ func TestACreateBodyCarriesItsPartnerThroughToTheStore(t *testing.T) {
 		Name:               "Northgate rollout",
 		PipelineId:         openapi_types.UUID(ids.New[ids.PipelineKind]().UUID),
 		StageId:            openapi_types.UUID(ids.New[ids.StageKind]().UUID),
-		Source:             "ui",
+		Source:             "manual",
 		PartnerCompanyId:   &partner,
 		PartnerAttribution: &claim,
 	})

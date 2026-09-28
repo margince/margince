@@ -112,7 +112,7 @@ func assertSameRefusal(t *testing.T, storeOpened, callerOpened error) {
 
 func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
-	valid := contacts.CreateContactInput{FullName: "Ada Lovelace", Source: "ui"}
+	valid := contacts.CreateContactInput{FullName: "Ada Lovelace", Source: "manual"}
 
 	if _, err := f.contacts.CreateContact(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
@@ -131,7 +131,7 @@ func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
 	// A contact that does not parse: the validation both settle before any
 	// transaction opens.
 	malformed := contacts.CreateContactInput{
-		FullName: "Ada Lovelace", Source: "ui",
+		FullName: "Ada Lovelace", Source: "manual",
 		Emails: []contacts.ContactEmailInput{{Email: "not-an-address", EmailType: "work", IsPrimary: true}},
 	}
 	_, storeOpened := f.contacts.CreateContact(f.granted, malformed)
@@ -147,7 +147,7 @@ func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
 
 func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
-	valid := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui"}
+	valid := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "manual"}
 
 	if _, err := f.contacts.CreateCompany(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
@@ -166,7 +166,7 @@ func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 	// A size band outside the vocabulary: refused on create, not only on the
 	// patch, so the database never has to answer for it.
 	band := "enormous"
-	bad := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui", SizeBand: &band}
+	bad := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "manual", SizeBand: &band}
 	_, storeOpened := f.contacts.CreateCompany(f.granted, bad)
 	probe = f.refusedInTx(f.granted, t, "company", func(tx pgx.Tx) error {
 		_, err := f.contacts.CreateCompanyTx(f.granted, tx, bad)
@@ -181,7 +181,7 @@ func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
 	email := "jean@bartik.test"
-	valid := contacts.CreateLeadInput{Email: &email, Status: "new", Source: "ui"}
+	valid := contacts.CreateLeadInput{Email: &email, Status: "new", Source: "manual"}
 
 	if _, _, err := f.contacts.CreateLead(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
@@ -199,7 +199,7 @@ func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 
 	// A status outside the writable vocabulary — the normalization both
 	// entry points settle before any transaction opens.
-	bad := contacts.CreateLeadInput{Email: &email, Status: "promoted", Source: "ui"}
+	bad := contacts.CreateLeadInput{Email: &email, Status: "promoted", Source: "manual"}
 	_, _, storeOpened := f.contacts.CreateLead(f.granted, bad)
 	probe = f.refusedInTx(f.granted, t, "lead", func(tx pgx.Tx) error {
 		_, _, err := f.contacts.CreateLeadTx(f.granted, tx, bad)
@@ -213,7 +213,7 @@ func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 
 func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
-	valid := deals.CreateDealInput{Name: "Difference Engine", PipelineID: f.pipeline, StageID: f.stage, Source: "ui"}
+	valid := deals.CreateDealInput{Name: "Difference Engine", PipelineID: f.pipeline, StageID: f.stage, Source: "manual"}
 
 	if _, err := f.deals.CreateDeal(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
@@ -233,7 +233,7 @@ func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 	// close has nothing to freeze.
 	amount := int64(1000)
 	half := deals.CreateDealInput{
-		Name: "Difference Engine", PipelineID: f.pipeline, StageID: f.stage, Source: "ui",
+		Name: "Difference Engine", PipelineID: f.pipeline, StageID: f.stage, Source: "manual",
 		AmountMinor: &amount,
 	}
 	_, storeOpened := f.deals.CreateDeal(f.granted, half)
@@ -257,7 +257,7 @@ func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
 	// pairing CHECK surfacing as an opaque database error.
 	sourced := "sourced"
 	unpairedInput := deals.CreateDealInput{
-		Name: "Difference Engine", PipelineID: f.pipeline, StageID: f.stage, Source: "ui",
+		Name: "Difference Engine", PipelineID: f.pipeline, StageID: f.stage, Source: "manual",
 		PartnerAttribution: &sourced,
 	}
 	_, storeOpened = f.deals.CreateDeal(f.granted, unpairedInput)

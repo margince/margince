@@ -112,9 +112,9 @@ type Identity struct {
 	Permissions        principal.Permissions
 }
 
-// systemRoles is the seeded default role set (data-model §2.4, ADR-0110);
-// custom roles beyond these are a code extension, not a runtime builder.
-// The keys are wire vocabulary and diverge from the product names on purpose:
+// systemRoles is the seeded default role set (ADR-0110).
+// An operator makes further roles at runtime by copying one of these
+// (CreateRole), under a generated custom_ key. The keys are wire vocabulary and diverge from the product names on purpose:
 // `manager` is the Team Lead, `rep` the User — renaming the keys would churn
 // the contract enum, every historical migration and three locales to change a
 // string the UI already indirects through i18n. A migration carries each rename

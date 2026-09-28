@@ -515,7 +515,7 @@ describe("the roster walk", () => {
     renderRosterHost();
 
     await user.click(
-      await screen.findByRole("combobox", { name: en["deals.bulkOwner"] }),
+      await screen.findByRole("combobox", { name: en["bulk.owner"] }),
     );
 
     // An assignment is written against ONE subject, so a subject the picker
@@ -609,7 +609,7 @@ describe("invited seats", () => {
     renderRosterHost();
 
     await user.click(
-      await screen.findByRole("combobox", { name: en["deals.bulkOwner"] }),
+      await screen.findByRole("combobox", { name: en["bulk.owner"] }),
     );
     expect(
       await screen.findByRole("option", { name: "Priya Shah" }),

@@ -75,9 +75,16 @@ type UpdateTeamInput struct {
 // UpdateTeam renames, archives or restores a team. Archiving keeps the rows
 // and the memberships; an archived team stops resolving scope and shares
 // because every reader of team_membership joins a live team.
+//
+// A rename changes nobody's reach and stays on team_admin. Archiving and
+// restoring switch every member's team reach off and on, so they are an
+// admin's, like every other change to who is on a team.
 func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, in UpdateTeamInput) (Team, error) {
 	ctx, err := admit(ctx, actor, objectTeamAdmin, principal.ActionUpdate)
 	if err != nil {
+		return Team{}, err
+	}
+	if err := refuseTeamMembershipUnlessAdmin(actor, in.Archived != nil); err != nil {
 		return Team{}, err
 	}
 	var name *string
@@ -90,6 +97,9 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 	}
 	var out Team
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		var before Team
 		if err := tx.QueryRow(ctx, `SELECT id, name, archived_at FROM team WHERE id = $1 FOR UPDATE`, id).
 			Scan(&before.ID, &before.Name, &before.ArchivedAt); err != nil {
@@ -138,7 +148,13 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 	if err != nil {
 		return err
 	}
+	if err := refuseTeamMembershipUnlessAdmin(actor, true); err != nil {
+		return err
+	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		// The team is locked for the write: an archive committing between
 		// this check and the insert would otherwise leave a member on a
 		// team nobody can see, holding authority the moment it is restored.
@@ -191,6 +207,21 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 			map[string]any{teamAuditKeyMember: userID, "on": !on},
 			map[string]any{teamAuditKeyMember: userID, "on": on})
 	})
+}
+
+// errTeamMembershipRequiresAdmin refuses a change to who is on a team by a
+// caller who is not an admin.
+var errTeamMembershipRequiresAdmin = fmt.Errorf("%w: only an admin changes who is on a team", apperrors.ErrPermissionDenied)
+
+// refuseTeamMembershipUnlessAdmin holds the one rule for teams: only an admin
+// changes who is on a team. Adding a member widens their reach and makes them
+// coachable by the team's leads; removing one ends both. Either reshapes
+// authority the way a role change does, and team_admin is not role authority.
+func refuseTeamMembershipUnlessAdmin(actor Identity, changesMembership bool) error {
+	if changesMembership && !actor.hasRole(roleAdmin) {
+		return errTeamMembershipRequiresAdmin
+	}
+	return nil
 }
 
 // recordTeamChange is the write shape's second half for every team change:

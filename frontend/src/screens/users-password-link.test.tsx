@@ -12,6 +12,7 @@ import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 
 // The admin-issued set-password link. What matters here is WHEN the action is
@@ -99,6 +100,9 @@ function backend(opts: {
         { set_password_url: LINK_URL, expires_at: "2026-08-12T09:00:00Z" },
         201,
       );
+    }
+    if (req.url.includes("/users/assignable-roles")) {
+      return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
     }
     if (req.url.includes("/users") && req.method === "GET") {
       return jsonResponse(ROSTER);
@@ -315,6 +319,9 @@ describe("admin-issued set-password link", () => {
             admin_password_link: true,
           });
         }
+        if (req.url.includes("/users/assignable-roles")) {
+          return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
+        }
         if (req.url.includes("/password-link")) {
           throw new TypeError("Failed to fetch");
         }
@@ -366,6 +373,9 @@ describe("admin-issued set-password link", () => {
             },
             admin_password_link: true,
           });
+        }
+        if (req.url.includes("/users/assignable-roles")) {
+          return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
         }
         if (req.url.includes("/password-link")) {
           call += 1;

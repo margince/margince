@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -67,55 +67,76 @@ func TestIdentityNamesItsRbacObjectsThroughConstants(t *testing.T) {
 	}
 }
 
-// A role-editor holder may only turn ON a verb they already hold.
-//
-// The guard this exercises is what stops the editor being a ladder: a delegated
-// role_admin.update holder who could write a verb they lack would grant it to
-// whichever role they can already be assigned, and hold it by proxy a moment
-// later. Unit-lane because the comparison is between two values in hand — no
-// stored document decides it, which is itself the property worth pinning.
-func TestTheRoleEditorRefusesAVerbTheCallerDoesNotHold(t *testing.T) {
-	delegated := Identity{
-		Roles: []string{"custom"},
+// Containment of a whole seat, one axis at a time. Each case differs from a
+// contained target in exactly one way, so a check that stopped reading that
+// axis fails its own case.
+func TestWholeAccessContainmentReadsEveryAxis(t *testing.T) {
+	teamA, teamB := ids.New[ids.TeamKind](), ids.New[ids.TeamKind]()
+	mask := principal.FieldMask{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}
+	caller := Identity{
+		Teams: []ids.TeamID{teamA},
 		Permissions: principal.Permissions{
-			Objects: map[string]principal.ObjectGrant{
-				// Holds read and update on contacts, and nothing else.
-				"contact": {Read: true, Update: true},
-			},
+			Objects:    map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+			RowScope:   principal.RowScopeTeam,
+			FieldMasks: []principal.FieldMask{mask},
 		},
 	}
-	literalAdmin := Identity{Roles: []string{roleAdmin}}
-
-	for _, tt := range []struct {
-		name    string
-		actor   Identity
-		object  string
-		grant   storedGrant
-		refused bool
-	}{
-		{"a verb the caller holds", delegated, "contact", storedGrant{Read: true}, false},
-		{"both verbs the caller holds", delegated, "contact", storedGrant{Read: true, Update: true}, false},
-		{"a verb the caller lacks", delegated, "contact", storedGrant{Delete: true}, true},
-		{"create, which the caller lacks", delegated, "contact", storedGrant{Create: true}, true},
-		{"one held verb beside one lacked", delegated, "contact", storedGrant{Read: true, Delete: true}, true},
-		// An object the caller holds nothing on at all is the same question with
-		// every verb missing, and the commonest shape of the mistake.
-		{"any verb on an unheld object", delegated, "system_reset", storedGrant{Delete: true}, true},
-		// Turning everything OFF grants nobody anything, so it is allowed even
-		// on an object the caller cannot write. Narrowing is not escalation.
-		{"the empty grant on an unheld object", delegated, "system_reset", storedGrant{}, false},
-		// The literal admin is its own ceiling and skips the comparison.
-		{"the literal admin writes anything", literalAdmin, "system_reset", storedGrant{Delete: true}, false},
+	contained := func() seatGrants {
+		return seatGrants{
+			teams: []ids.TeamID{teamA},
+			perms: principal.Permissions{
+				Objects:    map[string]principal.ObjectGrant{"deal": {Read: true}},
+				RowScope:   principal.RowScopeTeam,
+				FieldMasks: []principal.FieldMask{mask},
+			},
+		}
+	}
+	if !containsWholeAccess(caller, contained()) {
+		t.Fatal("a target narrower on every axis is not contained — every refusal below would pass for the wrong reason")
+	}
+	for name, widen := range map[string]func(*seatGrants){
+		"a grant the caller lacks": func(g *seatGrants) { g.perms.Objects["deal"] = principal.ObjectGrant{Delete: true} },
+		"a wider row scope":        func(g *seatGrants) { g.perms.RowScope = principal.RowScopeAll },
+		"a team the caller is not on": func(g *seatGrants) {
+			g.teams = []ids.TeamID{teamB}
+		},
+		"a mask the caller carries and the target lacks": func(g *seatGrants) { g.perms.FieldMasks = nil },
+		"leading a team the caller is not on": func(g *seatGrants) {
+			g.teams = []ids.TeamID{teamB}
+			g.perms.RowScope = principal.RowScopeOwn
+			g.perms.Objects[objectTeamLead] = principal.ObjectGrant{Read: true}
+		},
 	} {
-		t.Run(tt.name, func(t *testing.T) {
-			err := refuseUnlessCallerHoldsGrant(tt.actor, tt.object, tt.grant)
-			if tt.refused && !errors.Is(err, apperrors.ErrPermissionDenied) {
-				t.Errorf("writing %+v on %q = %v, want permission denied — the editor would "+
-					"hand its holder a verb they do not have", tt.grant, tt.object, err)
-			}
-			if !tt.refused && err != nil {
-				t.Errorf("writing %+v on %q = %v, want admitted", tt.grant, tt.object, err)
-			}
-		})
+		target := contained()
+		widen(&target)
+		if containsWholeAccess(caller, target) {
+			t.Errorf("%s: contained, want refused", name)
+		}
+	}
+	// A team outside the caller's is harmless when nothing the target holds
+	// follows its teams.
+	ownScoped := contained()
+	ownScoped.teams = []ids.TeamID{teamB}
+	ownScoped.perms.RowScope = principal.RowScopeOwn
+	if !containsWholeAccess(caller, ownScoped) {
+		t.Error("an own-scoped target on another team was refused; its team gives it nothing")
+	}
+}
+
+// Only a literal admin widens what a role grants; narrowing is open to every
+// holder of the grant, and the delegate's other grants do not substitute.
+func TestOnlyAnAdminWidensARole(t *testing.T) {
+	delegate := Identity{
+		Roles:       []string{"custom_role_editor"},
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{objectRoleAdmin: {Read: true, Update: true}}},
+	}
+	if err := refuseWideningUnlessAdmin(delegate, true); !errors.Is(err, errWideningRequiresAdmin) {
+		t.Errorf("a delegate widening: %v, want errWideningRequiresAdmin", err)
+	}
+	if err := refuseWideningUnlessAdmin(delegate, false); err != nil {
+		t.Errorf("a delegate narrowing: %v, want allowed", err)
+	}
+	if err := refuseWideningUnlessAdmin(Identity{Roles: []string{roleAdmin}}, true); err != nil {
+		t.Errorf("an admin widening: %v, want allowed", err)
 	}
 }

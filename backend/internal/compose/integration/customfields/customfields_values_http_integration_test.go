@@ -52,7 +52,7 @@ func createWithCF(t *testing.T, e *apptest.AppEnv, path string, body integration
 func assertContactWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
 	created, id := createWithCF(t, e, "/v1/contacts", integration.AnyMap{
-		"full_name": "Ada Lovelace", "source": "ui", col: "gold",
+		"full_name": "Ada Lovelace", "source": "manual", col: "gold",
 	})
 	assertWireCF(t, created, col, "gold")
 
@@ -83,7 +83,7 @@ func assertContactWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 func assertCompanyWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
 	created, id := createWithCF(t, e, "/v1/companies", integration.AnyMap{
-		"display_name": "Acme GmbH", "source": "ui", col: "emea",
+		"display_name": "Acme GmbH", "source": "manual", col: "emea",
 	})
 	assertWireCF(t, created, col, "emea")
 
@@ -102,7 +102,7 @@ func assertDealWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	created, id := createWithCF(t, e, "/v1/deals", integration.AnyMap{
 		"name": "Acme Renewal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
-		"source": "ui", col: "enterprise",
+		"source": "manual", col: "enterprise",
 	})
 	assertWireCF(t, created, col, "enterprise")
 
@@ -136,7 +136,7 @@ func assertDealWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 func assertLeadWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
 	created, id := createWithCF(t, e, "/v1/leads", integration.AnyMap{
-		"full_name": "Grace Hopper", "source": "ui", col: "champion",
+		"full_name": "Grace Hopper", "source": "manual", col: "champion",
 	})
 	assertWireCF(t, created, col, "champion")
 
@@ -170,12 +170,12 @@ func assertLeadWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 func sixTypeWireFields(t *testing.T, e *apptest.AppEnv) map[string]string {
 	t.Helper()
 	specs := map[string]integration.AnyMap{
-		"text":     {"object": "contact", "label": "Note", "type": "text", "source": "ui"},
-		"number":   {"object": "contact", "label": "Score", "type": "number", "source": "ui"},
-		"date":     {"object": "contact", "label": "Renewal", "type": "date", "source": "ui"},
-		"currency": {"object": "contact", "label": "Budget", "type": "currency", "currency": "EUR", "source": "ui"},
-		"picklist": {"object": "contact", "label": "Route", "type": "picklist", "options": []string{"direct", "partner"}, "source": "ui"},
-		"boolean":  {"object": "contact", "label": "Strategic", "type": "boolean", "source": "ui"},
+		"text":     {"object": "contact", "label": "Note", "type": "text", "source": "manual"},
+		"number":   {"object": "contact", "label": "Score", "type": "number", "source": "manual"},
+		"date":     {"object": "contact", "label": "Renewal", "type": "date", "source": "manual"},
+		"currency": {"object": "contact", "label": "Budget", "type": "currency", "currency": "EUR", "source": "manual"},
+		"picklist": {"object": "contact", "label": "Route", "type": "picklist", "options": []string{"direct", "partner"}, "source": "manual"},
+		"boolean":  {"object": "contact", "label": "Strategic", "type": "boolean", "source": "manual"},
 	}
 	cols := make(map[string]string, len(specs))
 	for kind, body := range specs {
@@ -204,7 +204,7 @@ func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 		cols["picklist"]: "partner",
 		cols["boolean"]:  true,
 	}
-	body := integration.AnyMap{"full_name": "Grace Hopper", "source": "ui"}
+	body := integration.AnyMap{"full_name": "Grace Hopper", "source": "manual"}
 	for col, v := range want {
 		body[col] = v
 	}
@@ -231,7 +231,7 @@ func assertPicklistCheckViolation422(t *testing.T, e *apptest.AppEnv, col string
 	// the thing it is guarding.
 	var raw json.RawMessage
 	status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Bad Option", "source": "ui", col: "bogus",
+		"full_name": "Bad Option", "source": "manual", col: "bogus",
 	}, nil, &raw)
 	var problem customFieldProblem
 	if err := json.Unmarshal(raw, &problem); err != nil {
@@ -262,25 +262,25 @@ func TestCustomFieldValuesHTTP(t *testing.T) {
 
 	status, tier, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "contact", "label": "Tier", "type": "picklist",
-		"options": []string{"gold", "silver"}, "source": "ui",
+		"options": []string{"gold", "silver"}, "source": "manual",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create contact field status = %d: %+v", status, problem)
 	}
 	status, region, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "company", "label": "Region", "type": "text", "source": "ui",
+		"object": "company", "label": "Region", "type": "text", "source": "manual",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create company field status = %d: %+v", status, problem)
 	}
 	status, segment, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "deal", "label": "Segment", "type": "text", "source": "ui",
+		"object": "deal", "label": "Segment", "type": "text", "source": "manual",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create deal field status = %d: %+v", status, problem)
 	}
 	status, persona, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "lead", "label": "Persona", "type": "text", "source": "ui",
+		"object": "lead", "label": "Persona", "type": "text", "source": "manual",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create lead field status = %d: %+v", status, problem)

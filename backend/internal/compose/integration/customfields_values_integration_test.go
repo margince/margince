@@ -103,10 +103,10 @@ func assertNoCF(t *testing.T, got map[string]any, key string) {
 
 func TestCustomFieldValues_ContactRoundTrip(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
 
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Ada Lovelace", Source: "ui",
+		FullName: "Ada Lovelace", Source: "manual",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {
@@ -148,10 +148,10 @@ func TestCustomFieldValues_ContactRoundTrip(t *testing.T) {
 
 func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "company", Label: "Region", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "company", Label: "Region", Type: customfields.TypeText, Source: "manual"})
 
 	created, err := f.store.CreateCompany(f.ctx, contacts.CreateCompanyInput{
-		DisplayName: "Acme GmbH", Source: "ui",
+		DisplayName: "Acme GmbH", Source: "manual",
 		CustomFields: map[string]any{col: "emea"},
 	})
 	if err != nil {
@@ -203,15 +203,15 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
 	f := setupCFV(t)
 	eur := "EUR"
-	text := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Note", Type: customfields.TypeText, Source: "ui"})
-	number := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
-	date := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Renewal", Type: customfields.TypeDate, Source: "ui"})
-	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
-	picklist := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Route", Type: customfields.TypePicklist, Options: []string{"direct", "partner"}, Source: "ui"})
-	boolean := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
+	text := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Note", Type: customfields.TypeText, Source: "manual"})
+	number := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
+	date := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Renewal", Type: customfields.TypeDate, Source: "manual"})
+	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "manual"})
+	picklist := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Route", Type: customfields.TypePicklist, Options: []string{"direct", "partner"}, Source: "manual"})
+	boolean := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Strategic", Type: customfields.TypeBoolean, Source: "manual"})
 
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Grace Hopper", Source: "ui",
+		FullName: "Grace Hopper", Source: "manual",
 		CustomFields: map[string]any{
 			text:     "prefers morning calls",
 			number:   float64(42.5),
@@ -243,10 +243,10 @@ func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
 // update's drop leaves the stored value standing).
 func TestCustomFieldValues_WrongShapeDropped(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Mismatch On Create", Source: "ui",
+		FullName: "Mismatch On Create", Source: "manual",
 		CustomFields: map[string]any{col: true},
 	})
 	if err != nil {
@@ -279,9 +279,9 @@ func TestCustomFieldValues_WrongShapeDropped(t *testing.T) {
 func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 	f := setupCFV(t)
 	eur := "EUR"
-	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
-	date := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Renewal", Type: customfields.TypeDate, Source: "ui"})
-	boolean := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Strategic", Type: customfields.TypeBoolean, Source: "ui"})
+	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "manual"})
+	date := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Renewal", Type: customfields.TypeDate, Source: "manual"})
+	boolean := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Strategic", Type: customfields.TypeBoolean, Source: "manual"})
 
 	cases := map[string]struct {
 		col string
@@ -295,7 +295,7 @@ func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-				FullName: "Mismatch", Source: "ui",
+				FullName: "Mismatch", Source: "manual",
 				CustomFields: map[string]any{tc.col: tc.wrong},
 			})
 			if err != nil {
@@ -315,10 +315,10 @@ func TestCustomFieldValues_WrongShapeDroppedAcrossTypes(t *testing.T) {
 // same posture as every other type mismatch).
 func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
 	fromJSONNumber, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Via json.Number", Source: "ui",
+		FullName: "Via json.Number", Source: "manual",
 		CustomFields: map[string]any{col: json.Number("42.5")},
 	})
 	if err != nil {
@@ -327,7 +327,7 @@ func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T)
 	assertCF(t, fromJSONNumber.AdditionalProperties, col, json.Number("42.5"))
 
 	fromString, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Via decimal string", Source: "ui",
+		FullName: "Via decimal string", Source: "manual",
 		CustomFields: map[string]any{col: "7.25"},
 	})
 	if err != nil {
@@ -336,7 +336,7 @@ func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T)
 	assertCF(t, fromString.AdditionalProperties, col, json.Number("7.25"))
 
 	unparseable, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Via unparseable string", Source: "ui",
+		FullName: "Via unparseable string", Source: "manual",
 		CustomFields: map[string]any{col: "not-a-number-string"},
 	})
 	if err != nil {
@@ -352,10 +352,10 @@ func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T)
 // drop-on-mismatch posture every other unrepresentable value gets.
 func TestCustomFieldValues_NumberNaNDropped(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "NaN Score", Source: "ui",
+		FullName: "NaN Score", Source: "manual",
 		CustomFields: map[string]any{col: math.NaN()},
 	})
 	if err != nil {
@@ -368,7 +368,7 @@ func TestCustomFieldValues_UnknownKeyDropped(t *testing.T) {
 	f := setupCFV(t)
 
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "No Such Column", Source: "ui",
+		FullName: "No Such Column", Source: "manual",
 		CustomFields: map[string]any{"cf_never_defined": "x"},
 	})
 	if err != nil {
@@ -384,14 +384,14 @@ func TestCustomFieldValues_UnknownKeyDropped(t *testing.T) {
 // un-retire is a catalog re-activation away).
 func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 	f := setupCFV(t)
-	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "ui"})
+	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "manual"})
 	if err != nil {
 		t.Fatalf("defining field: %v", err)
 	}
 	col := *field.ColumnName
 
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Retire Me", Source: "ui",
+		FullName: "Retire Me", Source: "manual",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {
@@ -435,10 +435,10 @@ func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 // carries the change with no extra bookkeeping.
 func TestCustomFieldValues_UpdateAuditCarriesDiff(t *testing.T) {
 	f := setupCFV(t)
-	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "ui"})
+	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
 
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
-		FullName: "Audit Trail", Source: "ui",
+		FullName: "Audit Trail", Source: "manual",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {

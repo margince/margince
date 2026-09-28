@@ -155,7 +155,7 @@ func TestARestCreateCustomFieldStagesRatherThanRefuses(t *testing.T) {
 		Detail string `json:"detail"`
 	}
 	if status := e.Call(t, "POST", "/v1/custom-fields", AnyMap{
-		"object": "deal", "label": "Champion Score", "type": "text", "source": "ui",
+		"object": "deal", "label": "Champion Score", "type": "text", "source": "manual",
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Fatalf("agent custom field create → %d %q, want 403 approval_required — a hard refusal here is "+
 			"the exact regression this test rules out", status, problem.Code)

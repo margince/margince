@@ -115,6 +115,9 @@ func (e *InvalidScopeError) Error() string {
 func (s *Service) IssuePassport(ctx context.Context, id Identity, in IssuePassportInput) (IssuedPassport, error) {
 	var out IssuedPassport
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		var err error
 		out, err = mintPassport(ctx, tx, id, in, nil)
 		return err
@@ -188,6 +191,12 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 		}
 	}
 
+	// Every issuance path, the OAuth exchange included, refuses a member on an
+	// archived role. The exchange does not take lockAuthorization: it already
+	// holds grant locks, and deactivation takes the two in the other order.
+	if err := refuseWhileHoldingArchivedRole(ctx, tx, id.UserID); err != nil {
+		return IssuedPassport{}, err
+	}
 	raw, _, err := mintSessionToken()
 	if err != nil {
 		return IssuedPassport{}, err
@@ -275,7 +284,7 @@ func (s *Service) revokePassportTx(
 		// could cut off every agent acting for an administrator has reach over
 		// that administrator's work, and one grant should not buy both the
 		// widened list and power over the contacts it lists.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf, reachDenial); err != nil {
 			return apperrors.ErrNotFound
 		}
 	}

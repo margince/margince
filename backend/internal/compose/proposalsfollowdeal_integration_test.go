@@ -295,7 +295,7 @@ func (e *reconcileEnv) readTranscriptFor(
 func (e *reconcileEnv) logTranscript(t *testing.T, subject string, dealIDs ...ids.UUID) ids.ActivityID {
 	t.Helper()
 	body, source := transcriptBody, "transcript"
-	in := activities.LogActivityInput{Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &source, Source: "ui"}
+	in := activities.LogActivityInput{Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &source, Source: "manual"}
 	for _, deal := range dealIDs {
 		in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "deal", EntityID: deal})
 	}
