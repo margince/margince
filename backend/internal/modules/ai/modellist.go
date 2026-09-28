@@ -75,10 +75,11 @@ func getListBody(
 	//craft:ignore swallowed-errors best-effort close on a body we have finished with
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		// The status and nothing else. A vendor's error body on this endpoint is
-		// frequently HTML from a proxy, and echoing it into a log is how a
-		// request — or a key in a redirected URL — ends up in one.
-		return nil, &listStatusError{vendor: vendor, status: resp.StatusCode}
+		// The status and one structured code, never the body's words. A
+		// vendor's error body on this endpoint is frequently HTML from a proxy,
+		// and echoing it into a log is how a request — or a key in a redirected
+		// URL — ends up in one.
+		return nil, &listStatusError{vendor: vendor, status: resp.StatusCode, reason: errorInfoReason(resp.Body)}
 	}
 	// Bounded, so a vendor cannot stream an unbounded body into memory on a read
 	// nobody is metering, and refused past the bound rather than cut: a cut list
@@ -100,6 +101,49 @@ func getListBody(
 type listStatusError struct {
 	vendor string
 	status int
+	// reason is the google.rpc ErrorInfo code a Google API names its failure
+	// with (API_KEY_INVALID), or empty. A closed upper-case code, never text.
+	reason string
+}
+
+// errorInfoLimit bounds the error body read for its code.
+const errorInfoLimit = 16 << 10
+
+// errorInfoReason reads the one structured field Google APIs put on a
+// failure: `error.details[].reason`. Anything that is not that shape — a
+// proxy's HTML, another vendor's envelope — reads as no code.
+func errorInfoReason(body io.Reader) string {
+	var envelope struct {
+		Error struct {
+			Details []struct {
+				Reason string `json:"reason"`
+			} `json:"details"`
+		} `json:"error"`
+	}
+	raw, err := io.ReadAll(io.LimitReader(body, errorInfoLimit))
+	if err != nil || json.Unmarshal(raw, &envelope) != nil {
+		return ""
+	}
+	for _, d := range envelope.Error.Details {
+		if isErrorCode(d.Reason) {
+			return d.Reason
+		}
+	}
+	return ""
+}
+
+// isErrorCode admits an UPPER_SNAKE code and nothing else, so a field a proxy
+// filled with prose cannot carry it into a log.
+func isErrorCode(s string) bool {
+	if s == "" || len(s) > 64 {
+		return false
+	}
+	for _, r := range s {
+		if (r < 'A' || r > 'Z') && r != '_' && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 func (e *listStatusError) Error() string {

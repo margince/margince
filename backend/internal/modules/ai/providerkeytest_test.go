@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -174,23 +175,36 @@ func TestEveryPickerStateHasAKeyTestReading(t *testing.T) {
 	}
 }
 
-// Gemini refuses a bad key with 400 API_KEY_INVALID where other vendors say
-// 401. Read as unreachable, the button would send a reader after the network
-// for a key that is simply wrong.
-func TestGeminiReadsA400AsARefusedKeyAndNobodyElseDoes(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-	}))
-	t.Cleanup(srv.Close)
-
-	gemini := probeProviderKey(context.Background(), boundAt(providerGemini, srv.URL), providerGemini,
-		cloudKeyFor(providerGemini, "k"), stubBuilder)
-	if gemini.Reason != KeyTestAuthFailed {
-		t.Fatalf("gemini 400: got %+v, want auth_failed", gemini)
+// Gemini refuses a bad key with 400 and names it API_KEY_INVALID in the
+// error's details; read as unreachable, the button would send a reader after
+// the network for a key that is simply wrong. The code decides, not the
+// status: a bare 400 — a proxy in front of it — is not a refused key.
+func TestGeminiReadsItsInvalidKeyCodeAndNothingElse(t *testing.T) {
+	cases := map[string]KeyTestReason{
+		`{"error":{"code":400,"status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}`: KeyTestAuthFailed,
+		`{"error":{"code":400,"details":[{"reason":"MODEL_NOT_FOUND"}]}}`:                             KeyTestUnreachable,
+		`<html>bad request sk-live-abc</html>`:                                                        KeyTestUnreachable,
+		``:                                                                                            KeyTestUnreachable,
 	}
-	openai := probeProviderKey(context.Background(), boundAt(providerOpenAI, srv.URL), providerOpenAI,
-		cloudKeyFor(providerOpenAI, "k"), stubBuilder)
-	if openai.Reason != KeyTestUnreachable {
-		t.Fatalf("openai 400: got %+v, want unreachable", openai)
+	for body, want := range cases {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			if _, err := w.Write([]byte(body)); err != nil {
+				t.Errorf("writing the fixture body: %v", err)
+			}
+		}))
+		got := probeProviderKey(context.Background(), boundAt(providerGemini, srv.URL), providerGemini,
+			cloudKeyFor(providerGemini, "k"), stubBuilder)
+		srv.Close()
+		if got.Reason != want {
+			t.Errorf("gemini 400 %q: got %+v, want %q", body, got, want)
+		}
+	}
+}
+
+// A code only ever arrives as a code: prose in its place is dropped.
+func TestAnErrorCodeIsAdmittedOnlyAsACode(t *testing.T) {
+	if got := errorInfoReason(strings.NewReader(`{"error":{"details":[{"reason":"key sk-live-abc is bad"}]}}`)); got != "" {
+		t.Fatalf("prose was read as a code: %q", got)
 	}
 }

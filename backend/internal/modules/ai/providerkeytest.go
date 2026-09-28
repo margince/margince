@@ -178,19 +178,22 @@ func keyTestRefusal(state ModelAvailability) KeyTestReason {
 	}
 }
 
+// geminiKeyInvalid is the ErrorInfo reason Google APIs give a bad API key.
+const geminiKeyInvalid = "API_KEY_INVALID"
+
 // keyTestFailure reads a vendor's refusal. Only the status is trusted: 401 and
 // 403 are the credential, 429 is the vendor's throttle, and everything else —
 // a timeout, a 5xx, a 404 from a host that is not the vendor — is unreachable.
 //
-// Gemini is the exception: it answers an invalid key with 400 API_KEY_INVALID.
-// Its list request carries nothing a caller chose, so a 400 there can only be
-// the key.
+// Gemini is the exception: it answers an invalid key with 400 and names it
+// API_KEY_INVALID in the error's structured details. The code, not the status,
+// decides — a 400 from a proxy in front of it is not a refused key.
 func keyTestFailure(err error) KeyTestReason {
 	var refused *listStatusError
 	if !errors.As(err, &refused) {
 		return KeyTestUnreachable
 	}
-	if refused.vendor == geminiListVendor && refused.status == http.StatusBadRequest {
+	if refused.vendor == geminiListVendor && refused.reason == geminiKeyInvalid {
 		return KeyTestAuthFailed
 	}
 	switch refused.status {
