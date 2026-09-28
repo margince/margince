@@ -202,3 +202,37 @@ func TestOutboundMailLeavesTheLeadUntilTheyReply(t *testing.T) {
 		t.Errorf("promotion trigger = %q, want %q", trigger, TriggerInboundReply)
 	}
 }
+
+// Capture keeps a contact it minted from mail nobody has answered to its owner,
+// so the ensure hands it no lead. The reply that publishes it hands it the lead.
+func TestPublishingAContactOnReplyPromotesTheLead(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	const email = "published@held.test"
+	lead := e.seedHeldLead(ctx, t, email)
+	in := e.datedEnsureInput(ctx, t, email, "held.test", time.Now().Add(-time.Hour).UTC())
+	in.OwnerScoped = true
+	in.NarrowedBecause = NarrowedOutboundNoAnswer
+
+	res, err := e.store.EnsureCounterparty(ctx, in)
+	if err != nil {
+		t.Fatalf("ensure: %v", err)
+	}
+	if status, _, _, _ := e.leadOutcome(ctx, t, lead); status == "promoted" {
+		t.Fatal("an owner-scoped contact took the lead")
+	}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		moved, err := e.store.PromoteOnReplyTx(ctx, tx, res.ContactID, e.rep)
+		if err != nil || !moved {
+			t.Fatalf("publish on reply: moved=%t err=%v", moved, err)
+		}
+		return e.store.PromoteHeldLeadsOnReplyTx(ctx, tx, res.ContactID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	status, promotedTo, _, trigger := e.leadOutcome(ctx, t, lead)
+	if status != "promoted" || promotedTo == nil || *promotedTo != res.ContactID.UUID || trigger != string(TriggerInboundReply) {
+		t.Fatalf("after publishing, lead is status=%q promoted_to=%v trigger=%q, want promoted onto %v as %q",
+			status, promotedTo, trigger, res.ContactID, TriggerInboundReply)
+	}
+}

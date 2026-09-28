@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -43,18 +44,16 @@ import (
 // already promoted, nameless — is left as it is rather than failing the write
 // that created the contact.
 func (s *Store) promoteHeldLeadsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, trigger PromoteTrigger, evidence *ids.ActivityID, by string) error {
-	for object, action := range map[string]principal.Action{"lead": principal.ActionUpdate, "contact": principal.ActionCreate} {
-		if err := auth.Require(ctx, object, action); err != nil {
-			if errors.Is(err, apperrors.ErrPermissionDenied) {
-				return nil
-			}
-			return err
-		}
+	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		return unlessDenied(err)
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+		return unlessDenied(err)
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT l.id
 		  FROM contact c
-		  JOIN contact_email ce ON ce.contact_id = c.id
+		  JOIN contact_email ce ON ce.contact_id = c.id AND ce.archived_at IS NULL
 		  JOIN lead l ON l.email = ce.email
 		 WHERE c.id = $1
 		   AND c.archived_at IS NULL AND c.merged_into_id IS NULL
@@ -70,7 +69,7 @@ func (s *Store) promoteHeldLeadsTx(ctx context.Context, tx pgx.Tx, contactID ids
 		return fmt.Errorf("contacts: leads holding the contact's address: %w", err)
 	}
 	for _, leadID := range leadIDs {
-		if err := s.promoteHeldLeadTx(ctx, tx, ids.From[ids.LeadKind](leadID), PromoteLeadInput{
+		if err := s.promoteHeldLeadTx(ctx, tx, ids.From[ids.LeadKind](leadID), contactID, PromoteLeadInput{
 			Trigger: string(trigger), EvidenceActivityID: evidence,
 		}, by); err != nil {
 			return err
@@ -79,16 +78,40 @@ func (s *Store) promoteHeldLeadsTx(ctx context.Context, tx pgx.Tx, contactID ids
 	return nil
 }
 
+// PromoteHeldLeadsOnReplyTx is promoteHeldLeadsTx for the capture step that
+// publishes a contact once its address has answered: the contact was kept to
+// its owner when the mail arrived, so the ensure took no lead, and the reply
+// that now publishes it is the inbound_reply the promotion needs.
+func (s *Store) PromoteHeldLeadsOnReplyTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return s.promoteHeldLeadsTx(ctx, tx, contactID, TriggerInboundReply, nil, by)
+}
+
 // promoteHeldLeadTx runs one promotion under a savepoint, so a refusal rolls
 // back that lead alone. A fault that is not a refusal still fails the caller:
 // a broken promotion must not be mistaken for a lead that was out of reach.
-func (s *Store) promoteHeldLeadTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, in PromoteLeadInput, by string) error {
-	sp, err := tx.Begin(ctx)
-	if err != nil {
+//
+// The promotion resolves its own target from the lead's email, read under the
+// lead's lock. The lead was chosen without that lock, so its email can have
+// moved in between, and the promotion would then land on another contact — or
+// mint one — that none of the checks above were applied to. Anything but a
+// merge into THIS contact is rolled back and the lead left as it is.
+func (s *Store) promoteHeldLeadTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID ids.ContactID, in PromoteLeadInput, by string) error {
+	// A named savepoint, released on both paths: pgx's nested-transaction
+	// rollback only rolls back TO the savepoint and leaves it open, so a bulk
+	// import that met many refusals would pile them up until it committed.
+	if _, err := tx.Exec(ctx, "SAVEPOINT promote_held_lead"); err != nil {
 		return fmt.Errorf("contacts: savepoint before promoting a held lead: %w", err)
 	}
-	if _, err := s.promoteLeadTx(ctx, sp, leadID, in, by, nil); err != nil {
-		if rbErr := sp.Rollback(ctx); rbErr != nil {
+	out, err := s.promoteLeadTx(ctx, tx, leadID, in, by, nil)
+	if err == nil && (!out.Merged || ids.UUID(out.Contact.Id) != contactID.UUID) {
+		err = apperrors.ErrConflict
+	}
+	if err != nil {
+		if _, rbErr := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT promote_held_lead; RELEASE SAVEPOINT promote_held_lead"); rbErr != nil {
 			return fmt.Errorf("contacts: roll back a refused lead promotion: %w", rbErr)
 		}
 		if promotionRefused(err) {
@@ -96,10 +119,19 @@ func (s *Store) promoteHeldLeadTx(ctx context.Context, tx pgx.Tx, leadID ids.Lea
 		}
 		return fmt.Errorf("contacts: promote the lead holding this address: %w", err)
 	}
-	if err := sp.Commit(ctx); err != nil {
+	if _, err := tx.Exec(ctx, "RELEASE SAVEPOINT promote_held_lead"); err != nil {
 		return fmt.Errorf("contacts: release the lead promotion savepoint: %w", err)
 	}
 	return nil
+}
+
+// unlessDenied answers nil for a permission refusal, which only means this
+// caller cannot promote, and the error itself for anything else.
+func unlessDenied(err error) error {
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil
+	}
+	return err
 }
 
 // promotionRefused says the promotion declined this lead for a reason that

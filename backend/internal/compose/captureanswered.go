@@ -44,6 +44,11 @@ func publishAnsweredTx(
 	if err != nil || !moved {
 		return err
 	}
+	// Kept to its owner, the contact took no lead when the mail was captured.
+	// Published by the reply, it takes one now.
+	if err := store.PromoteHeldLeadsOnReplyTx(ctx, tx, contactID); err != nil {
+		return err
+	}
 	return capture.ClearWithheldFromWorkspaceTx(ctx, tx, email)
 }
 
