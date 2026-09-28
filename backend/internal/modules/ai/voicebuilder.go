@@ -24,7 +24,11 @@ const voiceSystemPrompt = `You are a forensic writing-style analyst.
 Analyze only how the author writes and thinks.
 The supplied deterministic statistics are ground truth. Do not invent quotations or examples.
 Describe concrete, repeatable behavior rather than flattering adjectives. The thinking_pattern is the headline: the repeated cognitive move as ordered steps, because reproducing the thinking matters more than reproducing the words.
-Keep spoken and written registers distinct. Avoid topic facts, contacts, customers, secrets and opinions that do not describe style.
+register_notes says how the writing changes between the registers the samples are labelled with — for a customer against a colleague, spoken against written — because every draft is written in one of them; keep them distinct rather than averaging them into one voice. Avoid topic facts, names, customers, secrets and opinions that do not describe style.
+Three lists are the easiest place to break that rule, because each reads like content:
+observed_obsessions: what the author's reasoning keeps returning to (what they check, weigh or refuse), never a subject they write about.
+vocabulary: words the author reaches for whatever the topic, never a term of their trade, a product or a figure.
+closings: how a message ends, described as a move, never a sign-off or its wording.
 Every signature move must quote a short verbatim fragment from a supplied sample and cite that sample's id.
 The universal anti-AI baseline always forbids parenthetical em dashes, abstract not-X-but-Y reframes, canned engagement openers, balanced consultant tricolons, generic calls to action and corporate filler.
 Return only the requested JSON object.`
@@ -70,6 +74,16 @@ func SafeVoiceBuildFailure(err error) string {
 	// honest sentence is that the provider said no.
 	if errors.Is(err, errProviderRefused) {
 		return "Our AI provider turned the call away, so the build never ran. Your previous version is unchanged. Check the provider's status and account, then build again."
+	}
+	// Two answers that are not a profile and not an outage. A model that
+	// declined made a decision the same corpus will usually meet again; a
+	// request refused as malformed is ours to fix, and says nothing of the
+	// samples.
+	if errors.Is(err, model.ErrOutputWithheld) {
+		return "The AI model declined to write this voice profile, so the build produced nothing. Your previous version is unchanged. Building again may meet the same answer; a model bound to another vendor under Settings → AI may not."
+	}
+	if errors.Is(err, model.ErrRequestRejected) {
+		return "Our AI provider rejected the build request as malformed, so the build never ran. Your previous version is unchanged. This is a fault on our side rather than in your samples; the server log carries the provider's reason."
 	}
 	text := strings.ToLower(err.Error())
 	switch {

@@ -100,7 +100,7 @@ describe("a reversal and the change it reversed, as one row", () => {
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
     expect(
-      await screen.findByText("Sam Okafor's change, undone by Tin Nguyen"),
+      await screen.findByText("Sam Okafor’s change, undone by Tin Nguyen"),
     ).toBeTruthy();
     // The two rows are a disclosure away, not on the surface.
     expect(screen.queryByText("Sam Okafor updated the record")).toBeNull();
@@ -108,14 +108,14 @@ describe("a reversal and the change it reversed, as one row", () => {
     // The value the record moved to and back from is not drawn as a diff: the
     // pair came to nothing, so there is nothing to point an arrow at.
     expect(screen.queryByText("Head of Platform")).toBeNull();
-    expect(screen.getByText("net: unchanged")).toBeTruthy();
+    expect(screen.getByText("Net: unchanged")).toBeTruthy();
     expect(screen.getByText("Head of Ops")).toBeTruthy();
   });
 
   it("carries no action of its own while collapsed", async () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
-    await screen.findByText("Sam Okafor's change, undone by Tin Nguyen");
+    await screen.findByText("Sam Okafor’s change, undone by Tin Nguyen");
 
     // One control, and it opens the pair. Two changes with opposite intents
     // have no honest single label, so the collapsed face offers no verb.
@@ -194,9 +194,7 @@ describe("a reversal and the change it reversed, as one row", () => {
     // for the opposite intent, on the row above the one it undid.
     expect(within(reversal).getByRole("button", { name: /Redo/ })).toBeTruthy();
     expect(within(reversal).queryByText("Put back")).toBeNull();
-    expect(
-      screen.getByText("This change has already been put back."),
-    ).toBeTruthy();
+    expect(screen.getByText("This change was already undone.")).toBeTruthy();
   });
 });
 
@@ -215,14 +213,14 @@ describe("a pair that only partly went back", () => {
 
     expect(
       await screen.findByText(
-        "Sam Okafor's change, partly undone by Tin Nguyen",
+        "Sam Okafor’s change, partly undone by Tin Nguyen",
       ),
     ).toBeTruthy();
     expect(
-      screen.queryByText("Sam Okafor's change, undone by Tin Nguyen"),
+      screen.queryByText("Sam Okafor’s change, undone by Tin Nguyen"),
     ).toBeNull();
-    expect(screen.queryByText("net: unchanged")).toBeNull();
-    expect(screen.getByText("still changed")).toBeTruthy();
+    expect(screen.queryByText("Net: unchanged")).toBeNull();
+    expect(screen.getByText("Still changed")).toBeTruthy();
     // The field that did NOT go back, as the diff it still is.
     expect(screen.getByText("Source")).toBeTruthy();
     expect(screen.getByText("referral")).toBeTruthy();
@@ -245,7 +243,7 @@ describe("one contact correcting themselves", () => {
       await screen.findByText("Sam Okafor undid their own change"),
     ).toBeTruthy();
     expect(
-      screen.queryByText("Sam Okafor's change, undone by Sam Okafor"),
+      screen.queryByText("Sam Okafor’s change, undone by Sam Okafor"),
     ).toBeNull();
   });
 });
@@ -255,7 +253,7 @@ describe("a reversal whose partner is not on the page", () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal]));
     render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
-    expect(await screen.findByText("undoing an earlier change")).toBeTruthy();
+    expect(await screen.findByText("Undoes an earlier change")).toBeTruthy();
     expect(screen.getByText("Tin Nguyen restored the record")).toBeTruthy();
     // Never a half-empty pair: nothing to disclose, and its own verb is redo.
     expect(

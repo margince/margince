@@ -25,10 +25,11 @@ type ActivityFields struct {
 	// provider that is not also a kind exists.
 	ChannelProvider string
 
-	Subject    string
-	Body       string
-	OccurredAt time.Time
-	Direction  string // connector.DirectionInbound | DirectionOutbound | "" (not directional)
+	Subject         string
+	Body            string
+	OccurredAt      time.Time
+	DurationSeconds *int
+	Direction       string // connector.DirectionInbound | DirectionOutbound | "" (not directional)
 
 	// HasCalendarPart says the message carried a text/calendar payload.
 	//

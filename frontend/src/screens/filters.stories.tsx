@@ -162,7 +162,7 @@ export const LoadedFromASavedView: Story = {
     // are therefore found through the document, not the story's root.
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Load a saved filter" }),
+      await canvas.findByRole("button", { name: "Load saved filter" }),
     );
     await userEvent.click(
       await page.findByRole("button", { name: "Gold tier in Berlin" }),

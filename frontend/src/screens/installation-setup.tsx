@@ -7,6 +7,7 @@ import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ComboBox } from "../design-system/combobox";
+import { ErrorLine } from "../design-system/errorline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import {
   OnboardingStage,
@@ -259,11 +260,13 @@ function useBindModels() {
       };
       const { error } = await api.PUT("/ai/routing", {
         body: {
-          // eu_hosted rather than a question: `sovereign` forbids the cloud
-          // vendors this screen offers, and asking a first-time admin to choose
-          // a location ladder before they have bound anything is asking them to
-          // answer a question they cannot yet have.
-          profile: "eu_hosted",
+          // cloud_frontier rather than a question: `sovereign` forbids the
+          // cloud vendors this screen offers, `eu_hosted` promises EU inference
+          // that none of them is bound to keep (the server refuses an unpinned
+          // broker under it), and asking a first-time admin to choose a location
+          // ladder before they have bound anything is asking them to answer a
+          // question they cannot yet have.
+          profile: "cloud_frontier",
           tiers: {
             local_small: binding,
             cheap_cloud: binding,
@@ -829,9 +832,9 @@ function StepNeeds({
     return null;
   }
   return (
-    <p className="ob-stage-note" role="alert">
+    <ErrorLine inline>
       {t("firstRun.stillNeeded", { fields: missing.join(", ") })}
-    </p>
+    </ErrorLine>
   );
 }
 

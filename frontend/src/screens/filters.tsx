@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, SegmentedControl } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
@@ -292,8 +293,10 @@ function MatchCount({
     // Silent: the results card below carries the reason in an assertive live
     // region, and announcing the same failure twice fragments it.
     return (
-      <span className="filters-count filters-count-failed">
-        {t("filters.countUnavailable")}
+      <span className="filters-count">
+        <ErrorLine inline standing>
+          {t("filters.countUnavailable")}
+        </ErrorLine>
       </span>
     );
   }

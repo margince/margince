@@ -252,6 +252,33 @@ func TestACreatedLeadCannotNameAnIneligibleOwner(t *testing.T) {
 	}
 }
 
+// An invited colleague may be named as the owner of a NEW lead, as on every
+// other record's create: an import creates records on behalf of colleagues who
+// have not signed in yet. Handing an EXISTING lead to them is routing, which
+// still asks for an active seat.
+func TestACreatedLeadMayNameAnInvitedColleague(t *testing.T) {
+	e := Setup(t)
+	e.WsExec(t, `UPDATE app_user SET status = 'invited' WHERE id = $1`, e.Rep3)
+	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
+
+	name := "Created For An Invited Seat"
+	owner := ids.From[ids.UserKind](e.Rep3)
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+		FullName: &name, Source: "manual", OwnerID: &owner,
+	})
+	if err != nil {
+		t.Fatalf("creating a lead owned by an invited seat → %v, want it created", err)
+	}
+	if lead.OwnerId == nil || ids.UUID(*lead.OwnerId) != e.Rep3 {
+		t.Errorf("owner = %v, want the invited seat", lead.OwnerId)
+	}
+
+	unowned := seedOwnerlessLead(t, e, "Unowned, Then Routed")
+	if err := assignLead(e.Admin(), e, unowned, e.Rep3); !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+		t.Fatalf("assigning an existing lead to an invited seat → %v, want AssigneeNotAllowedError", err)
+	}
+}
+
 func mustStayUnowned(t *testing.T, e *Env, id ids.LeadID) {
 	t.Helper()
 	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND owner_id IS NULL`, id.UUID); n != 1 {

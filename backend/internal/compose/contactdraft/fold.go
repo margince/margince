@@ -25,6 +25,7 @@ import (
 func FromView(view crmcontracts.Contact360, req Request) Input {
 	in := Input{
 		Intent:          strings.TrimSpace(req.Intent),
+		RewriteOf:       strings.TrimSpace(req.RewriteOf),
 		Envelope:        req.Envelope,
 		Recipient:       recipientOf(view),
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
@@ -184,7 +185,6 @@ func foldProject(in *Input, view crmcontracts.Contact360, projectID *ids.Project
 			continue
 		}
 		folded := ProjectIn{
-			ID:    project.ProjectId.String(),
 			Name:  project.Name,
 			Phase: string(project.Phase),
 		}
@@ -226,7 +226,6 @@ func foldClaims(in *Input, view crmcontracts.Contact360, now time.Time) {
 			continue
 		}
 		folded := ClaimIn{
-			ID:       claim.Id.String(),
 			Kind:     string(claim.Kind),
 			Body:     claim.Body,
 			SourceID: claim.SourceActivityId.String(),

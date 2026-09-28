@@ -125,10 +125,8 @@ func faultFor(ctx context.Context, kind string, err error) error {
 		slog.ErrorContext(ctx, "jobs: a worker returned a failure class this installation did not declare for this kind, so its sentence is not published",
 			faultLogAttrs(ctx, kind, class.Class, err)...)
 	}
-	for _, known := range vocabulary {
-		if errors.Is(err, known.sentinel) {
-			return &fault{sentence: known.sentence, cause: err}
-		}
+	if known, ok := sentinelFaultFor(err); ok {
+		return &fault{sentence: known.sentence, cause: err}
 	}
 	// AFTER the sentinels, because a cause carrying one has already been named
 	// in the product's own terms and that name is the more useful of two true
@@ -150,6 +148,32 @@ func faultFor(ctx context.Context, kind string, err error) error {
 	// the kind nor anything else identifying the tick.
 	slog.ErrorContext(ctx, "jobs: a worker failed with an unclassified cause", faultLogAttrs(ctx, kind, "", err)...)
 	return &fault{sentence: unrecognised, cause: err}
+}
+
+// sentinelFaultFor answers the vocabulary entry a cause's sentinel names.
+func sentinelFaultFor(err error) (sentinelFault, bool) {
+	for _, known := range vocabulary {
+		if errors.Is(err, known.sentinel) {
+			return known, true
+		}
+	}
+	return sentinelFault{}, false
+}
+
+// ClassFor answers the core class a failure is recorded under, or "" when the
+// core vocabulary cannot name it.
+//
+// For a caller that stores the class instead of River's sentence: the column
+// then holds a token from this closed set and never the cause's text. The
+// order is faultFor's: a sentinel names a failure before its shape does.
+func ClassFor(err error) string {
+	if known, ok := sentinelFaultFor(err); ok {
+		return known.class
+	}
+	if technical, ok := technicalFaultFor(err); ok {
+		return technical.class
+	}
+	return ""
 }
 
 // The bounds a requested postponement is held to before it reaches the queue.
@@ -369,6 +393,15 @@ type fault struct {
 func (f *fault) Error() string { return f.sentence }
 func (f *fault) Unwrap() error { return f.cause }
 
+// sentinelFault is one core vocabulary entry: the sentinel it classifies and
+// what the product says about it.
+type sentinelFault struct {
+	sentinel error
+	class    string
+	sentence string
+	remedy   string
+}
+
 // vocabulary maps the shared sentinel registry to operator sentences. Each
 // says what went wrong AND what it means for the job — an operator reading
 // a failure list needs to know whether to retry, wait, or fix something.
@@ -383,12 +416,7 @@ func (f *fault) Unwrap() error { return f.cause }
 // from apperrors itself: a sentinel added there without an entry here fails the
 // gate rather than silently reporting as unclassifiable the first time a job
 // returns it.
-var vocabulary = []struct {
-	sentinel error
-	class    string
-	sentence string
-	remedy   string
-}{
+var vocabulary = []sentinelFault{
 	{apperrors.ErrNotFound, "record_gone", "the record this job names no longer exists", "Nothing to do: the work is moot. Re-queue only if the record was deleted in error and has been restored."},
 	{apperrors.ErrConflict, "write_conflict", "another writer changed the record while this job ran", "Re-queue it. The job re-reads the record and the second attempt normally settles."},
 	{apperrors.ErrVersionSkew, "version_skew", "the record changed under this job; it will re-read on retry", "Nothing to do: the retry re-reads. A job stuck here across many attempts means a writer is changing the record faster than the job can finish."},

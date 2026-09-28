@@ -115,7 +115,8 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 // LATERAL join picks each row's as-of-date rate (RateFor's same
 // resolution, inlined so the whole window prices in one query instead of
 // one round-trip per call), the four-bucket arithmetic mirrors PriceCall
-// exactly (same floor, same truncating /1000000), and GROUP BY the
+// exactly (same floor, same zero-cache-price fallback to the input rate, same
+// truncating /1000000), and GROUP BY the
 // call's UTC calendar day + task + tier rolls the window up to exactly
 // AIRT-WIRE-1's /ai/usage grain — one report line per wire row, so the
 // handler attaches each line to its one matching (day, task, tier) row
@@ -144,8 +145,8 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 			      WHEN ac.cache_hit OR (ac.tokens_in = 0 AND ac.tokens_out = 0) THEN 0
 			      WHEN r.id IS NULL THEN 0
 			      ELSE (GREATEST(ac.tokens_in - ac.cached_tokens - ac.cache_write_tokens, 0) * r.input_per_mtok_microusd
-			           + ac.cached_tokens * r.cache_read_per_mtok_microusd
-			           + ac.cache_write_tokens * r.cache_write_per_mtok_microusd
+			           + ac.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+			           + ac.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
 			           + ac.tokens_out * r.output_per_mtok_microusd) / 1000000
 			    END
 			  ), 0) AS cost_microusd,

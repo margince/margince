@@ -125,7 +125,7 @@ describe("whether the open deals support the reference", () => {
     await user.click(await screen.findByRole("button", { name: "Evidence" }));
 
     expect(
-      await screen.findByText(/median of the last four comparable periods/i),
+      await screen.findByText(/median of the last 4 comparable periods/i),
     ).toBeTruthy();
   });
 
@@ -155,7 +155,7 @@ describe("whether the open deals support the reference", () => {
       />,
     );
 
-    expect(screen.getByText(/50% of the deal value this needs/i)).toBeTruthy();
+    expect(screen.getByText(/50% of required deal value/i)).toBeTruthy();
   });
 
   // The case a zeroed figure would get exactly backwards: no basis must not

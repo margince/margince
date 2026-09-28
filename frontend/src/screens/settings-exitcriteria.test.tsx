@@ -144,7 +144,9 @@ describe("StageExitCriteria", () => {
     for (const semantic of ["won", "lost"] as const) {
       vi.stubGlobal("fetch", criteriaStub({}));
       render(<StageExitCriteria stageId="s1" semantic={semantic} canEdit />);
-      expect(await screen.findByText(/is where a deal stops/)).toBeTruthy();
+      expect(
+        await screen.findByText(/is final, so it has no exit criteria/),
+      ).toBeTruthy();
       expect(screen.queryByTestId("new-criterion-s1")).toBeNull();
       cleanup();
     }
@@ -198,7 +200,7 @@ describe("StageExitCriteria", () => {
     );
     render(<StageExitCriteria stageId="s1" semantic="open" canEdit />);
 
-    expect(await screen.findByText(/could not read/)).toBeTruthy();
+    expect(await screen.findByText(/Criteria did not load/)).toBeTruthy();
     expect(screen.queryByText(/asks for nothing yet/)).toBeNull();
   });
 

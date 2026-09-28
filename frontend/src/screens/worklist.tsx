@@ -8,7 +8,7 @@ import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Translator, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { rosterOwnerNaming, useRoster } from "./entityref";
 import { useOpenEmail } from "./openemail";
 import { useWorklistAddress } from "./worklist.address";
@@ -18,6 +18,7 @@ import {
   unbandedRows,
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
+import { clearSentence } from "./worklist.clear";
 import { sourceUnavailableText } from "./worklist.copy";
 import {
   reviewShortfall,
@@ -44,7 +45,7 @@ import {
 import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
-import { WalkNotice } from "./worklist.walknotice";
+import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
 import "./worklist.css";
 
 // The Worklist: one ranked list, not fourteen lanes.
@@ -214,50 +215,6 @@ function QueueRows({
       ))}
     </ol>
   );
-}
-
-// The day, drawn.
-//
-// TWO kinds of number reach this component and they must not be confused.
-// `day` is the first page: its summary, counts, reach and scope options
-// describe the whole assembled day and do not move as the reader pages.
-// `queue` is every row loaded so far, which grows. Reading rows off `day`
-// would draw only the first page; reading figures off the latest page would
-// describe a slice as though it were the day.
-// Which "there is nothing here" sentence an empty queue earns.
-//
-// A partial read outranks the rest: a day cannot be reported clear while
-// something that would have filled it was never read. Then the Tasks pill names
-// its HORIZON — this queue is today's, so a task due tomorrow is deliberately
-// absent, and "Nothing is waiting on you" read as "you have no work" to a rep
-// looking at three open tasks on the company page beside it. The other pills
-// keep the unqualified sentence: the full queue carries replies and reviews
-// that have no deadline, so "due today" would be the wrong frame for it.
-//
-// WHOSE day is clear is the last question, and only the unqualified sentence
-// gets it wrong: it is the one arm that says "on YOU", and on a colleague's
-// queue that named the reader over somebody else's empty day. The other two
-// describe the READ rather than the reader and stay as they are.
-//
-// The name is the roster's, and its absence falls back to the unqualified
-// sentence rather than to an id or a gap: a reader who cannot be named is a
-// question this line does not have to answer, and "Nothing is waiting on
-// 4f3c…" is worse than a sentence one word too general.
-function clearSentence(
-  partial: boolean,
-  filter: WorklistFilter,
-  colleague: string | null,
-  t: Translator,
-): string {
-  if (partial) {
-    return t("worklist.clearOfWhatWasRead");
-  }
-  if (filter === "tasks") {
-    return t("worklist.clearOfTasksToday");
-  }
-  return colleague
-    ? t("worklist.clearFor", { name: colleague })
-    : t("worklist.clear");
 }
 
 function WorklistBody({
@@ -500,26 +457,6 @@ function WorklistBody({
                   {unbandedRows(today).length > 0 && (
                     <QueueRows items={unbandedRows(today)} {...rowProps} />
                   )}
-                  {/* The way to the rest of the backlog.
-                  Acceptance asks that the queue's counts be reachable, and
-                  before this the page stopped at its first read with no route
-                  to the rows behind it — the figures said work existed and
-                  offered no way to it. */}
-                  {hasMore && (
-                    <div className="worklist-more">
-                      <Button onClick={onMore} pending={loadingMore}>
-                        {t("worklist.more")}
-                      </Button>
-                      {/* A refused page leaves the button looking exactly as an
-                      unpressed one does. Saying so is what tells the reader
-                      the backlog is still there and worth asking for again. */}
-                      {moreFailed && (
-                        <span className="co-part-error" role="alert">
-                          {t("worklist.more.failed")}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </Panel>
               }
             />
@@ -535,8 +472,17 @@ function WorklistBody({
           <ReviewPanel
             items={review}
             shortfall={reviewMissing}
+            more={hasMore}
             rows={rowProps}
           />
+          {/* One way on for the whole day, below both panels it fills. */}
+          {queue.length > 0 && hasMore && (
+            <LoadMoreOfTheDay
+              pending={loadingMore}
+              failed={moreFailed}
+              onMore={onMore}
+            />
+          )}
           {/* Team oversight belongs to the explicitly selected wider scope. */}
           {owner === "" &&
             scope !== "mine" &&
@@ -558,7 +504,10 @@ function WorklistBody({
             )}
           {/* This diagnostic counts all readable history, not personal obligations. */}
           {owner === "" && scope === "all" && (
-            <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
+            <HiddenBacklogPanel
+              enabled={day.scope_options.includes("team")}
+              onOpenEmail={onOpenEmail}
+            />
           )}
           {/* LAST, and open. A reader opens this page to find what to do next;
           what is already finished answers a different question — worth having,
@@ -581,10 +530,12 @@ function WorklistBody({
 function ReviewPanel({
   items,
   shortfall,
+  more,
   rows,
 }: Readonly<{
   items: readonly WorklistItem[];
   shortfall: { loaded: number; total: number } | null;
+  more: boolean;
   rows: RowContext;
 }>) {
   const t = useT();
@@ -602,18 +553,22 @@ function ReviewPanel({
       // own inset, so the sentence started a full `--padPanel` to the left of
       // every row above it and read as a line that had escaped the card.
       //
-      // The panel has no cursor of its own — review rows arrive as a side
-      // effect of paging the day — so a reader with an approval past the page
+      // The panel has no cursor of its own — review rows arrive through the
+      // day's one control below it — so a reader with an approval past the page
       // cut sees a panel that looks complete and nothing that says otherwise.
       // The day's own total is the denominator, never drawn bare: it counts
       // every candidate the read weighed, so alone it would claim rows this
-      // panel does not hold.
+      // panel does not hold. Once the walk is over the gap is still true, but
+      // there is no control left to point at.
       footer={
         shortfall
-          ? t("worklist.review.partial", {
-              loaded: formatNumber(shortfall.loaded, locale),
-              total: formatNumber(shortfall.total, locale),
-            })
+          ? t(
+              more ? "worklist.review.partial" : "worklist.review.partialDone",
+              {
+                loaded: formatNumber(shortfall.loaded, locale),
+                total: formatNumber(shortfall.total, locale),
+              },
+            )
           : undefined
       }
     >
@@ -693,7 +648,7 @@ export function WorklistScreen({
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const refreshWalk = useRefreshWalk();
   const queryClient = useQueryClient();
-  // A failed SHOW MORE is not a failed page. `isError` covers both, and
+  // A failed LOAD MORE is not a failed page. `isError` covers both, and
   // treating them alike would replace a screen of rows the reader is working
   // through with an error panel because one extra page did not arrive. The
   // rows already loaded are still true, so the surface stays ready and the

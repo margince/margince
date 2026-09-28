@@ -411,11 +411,7 @@ describe("the verdict and its evidence", () => {
           .replace("{name}", "Sofia Meier"),
       ),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        en["contact.intro.factReceipts"].replace("{count}", "2"),
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText("2 visible receipts")).toBeTruthy();
     // A mail is cited as a mail; a meeting keeps the plain line, so the
     // reader is not told it was a message.
     expect(screen.getByText("Re: Q4 rollout")).toBeTruthy();
@@ -431,6 +427,17 @@ describe("the verdict and its evidence", () => {
         en["contact.intro.askTitle"].replace("{name}", anchor.label),
       ),
     ).toBeTruthy();
+  });
+
+  it("cites a single receipt in the singular", async () => {
+    renderTab({
+      contact_id: CONTACT,
+      nodes: [anchor],
+      edges: [],
+      routes: [{ ...sofia, receipts: sofia.receipts?.slice(0, 1) }],
+      groups_omitted: [],
+    });
+    expect(await screen.findByText("1 visible receipt")).toBeTruthy();
   });
 
   it("names the colleague a route goes through, and says the counts are pooled", async () => {

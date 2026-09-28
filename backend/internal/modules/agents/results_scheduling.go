@@ -9,7 +9,11 @@ package agents
 // the type saying so lives beside the slots rather than among the record
 // shapes.
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
+)
 
 // FreeSlot is one interval a host is free, as the scheduling store reports it.
 type FreeSlot struct {
@@ -20,19 +24,22 @@ type FreeSlot struct {
 // CalendarBacking is what a free/busy answer rests on.
 type CalendarBacking string
 
+// The values come from the kernel package the REST door also publishes with:
+// the same three answers reach a reader over both transports, and ADR-0055 says
+// the two surfaces do not get to disagree about what an answer means.
 const (
 	// CalendarBacked means a live calendar connection feeds the meetings this
 	// answer is computed from, so an empty window is a reading of the host's
 	// own diary.
-	CalendarBacked CalendarBacking = "calendar"
+	CalendarBacked CalendarBacking = calendarbacking.Backed
 	// CalendarUnbacked means the acting seat has no calendar connected, so the
 	// window is only what this CRM happens to hold.
-	CalendarUnbacked CalendarBacking = "none"
+	CalendarUnbacked CalendarBacking = calendarbacking.Unbacked
 	// CalendarBackingUnknown means the host is somebody else, and whether their
 	// calendar is connected is not this seat's to read. The window is still
 	// only what this CRM holds — that much is true of every host — but nothing
 	// here says anything about that contact's account.
-	CalendarBackingUnknown CalendarBacking = "unknown"
+	CalendarBackingUnknown CalendarBacking = calendarbacking.Unknown
 )
 
 // AvailabilityResult is what check_availability answers.

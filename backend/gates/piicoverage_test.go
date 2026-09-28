@@ -284,6 +284,20 @@ var piiTables = map[string]piiHandling{
 	// a subject asking what we concluded about their mail is asking for exactly
 	// this.
 	"activity_reply_verdict_history": {erasureWrite: true, sarRead: true},
+	// A claim carries a VERBATIM quotation of the activity it was read from —
+	// the writer refuses one that does not — so the row is a copy of the
+	// subject's own words held outside the message. It goes when the body goes,
+	// and the contact foreign key cannot do it: Art. 17 anonymizes that
+	// row in place, so nothing cascades.
+	//
+	// Neither sarRead nor sarForbidden, deliberately and temporarily. Whether
+	// an Art. 15 package returns a colleague's or an agent's READING of the
+	// subject's words as well as the words is a product and legal call, and it
+	// is open — until it is answered, declaring either here would assert a
+	// decision nobody has made. Registered unflagged means a future SAR query
+	// over this table passes this gate silently, which is the cost of leaving
+	// it open and is named here so the next reader is not surprised by it.
+	"conversation_claim": {erasureWrite: true},
 	// A handoff names the subject it was about, and its note is what one seat
 	// wrote about them to another. The judgement — accepted, or refused for this
 	// reason — is a decision contacts made about that contact, the same holding

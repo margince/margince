@@ -4,131 +4,17 @@ import { useId, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  TableScroll,
-} from "../design-system/atoms";
-import { Eyebrow } from "../design-system/eyebrow";
+import { Badge, Button, EmptyState, TableScroll } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { ExportScenarioDialog } from "./aiexport";
+import { tierLabel } from "./ai-decision-labels";
+import { CallDetailPanel } from "./aicalls-detail";
 import { QueryGate, QueryStates, throwProblem, useMe } from "./common";
 import "./aicalls.css";
-
-// A string response is shown verbatim (real newlines); an object is
-// pretty-printed. Either way the .code-block surface wraps and scrolls it.
-function payloadText(value: unknown): string {
-  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
-}
-
-export function CallDetailPanel({
-  id,
-  captureEnabled,
-}: Readonly<{ id: string; captureEnabled: boolean }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [exporting, setExporting] = useState(false);
-  const query = useQuery({
-    queryKey: ["ai-call", id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/ai/calls/{id}", {
-        params: { path: { id } },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
-  return (
-    <QueryStates query={query} pendingLabel={t("aicalls.title")}>
-      {query.data && (
-        <Card as="div" inset className="aicalls-detail">
-          <p>
-            {t("aicalls.detail.identity", {
-              served: query.data.served_model,
-              provider: query.data.provider,
-              configured: query.data.model_id,
-            })}
-          </p>
-          <p>
-            {t("aicalls.detail.source", {
-              source: query.data.served_identity_source,
-            })}
-          </p>
-          <p>
-            {query.data.context_scopes.length > 0
-              ? t("aicalls.detail.context", {
-                  scopes: query.data.context_scopes.join(", "),
-                })
-              : t("aicalls.detail.contextNone")}
-          </p>
-          {/* A bare h3 carries no class, and preflight leaves it at body size
-              and body weight — a heading only the document tree can see. The
-              eyebrow is the one spelling of a label over a block, and `as="h3"`
-              is what keeps it a real heading inside the card's own h2. */}
-          <Eyebrow as="h3">{t("aicalls.detail.attempts")}</Eyebrow>
-          <ol>
-            {query.data.attempts.map((attempt) => (
-              <li key={attempt.attempt}>
-                <span className="t-num">#{ordinalNumber(attempt.attempt)}</span>{" "}
-                {attempt.attempt_reason || "—"} ·{" "}
-                {t("aicalls.ms", {
-                  value: formatNumber(attempt.latency_ms, locale),
-                })}
-                {attempt.error_sentinel && (
-                  <Badge tone="danger">{attempt.error_sentinel}</Badge>
-                )}
-              </li>
-            ))}
-          </ol>
-          {!captureEnabled ? (
-            <p>{t("aicalls.payload.off")}</p>
-          ) : !query.data.payload_captured || !query.data.payload ? (
-            <p>{t("aicalls.payload.none")}</p>
-          ) : (
-            <>
-              <div className="form-stack">
-                <div className="field">
-                  <span className="code-label t-eyebrow">
-                    {t("aicalls.detail.request")}
-                  </span>
-                  <pre className="code-block">
-                    {payloadText(query.data.payload.request)}
-                  </pre>
-                </div>
-                <div className="field">
-                  <span className="code-label t-eyebrow">
-                    {t("aicalls.detail.response")}
-                  </span>
-                  <pre className="code-block">
-                    {payloadText(query.data.payload.response)}
-                  </pre>
-                </div>
-                <div>
-                  <Button onClick={() => setExporting(true)}>
-                    {t("aiexport.button")}
-                  </Button>
-                </div>
-              </div>
-              {exporting && (
-                <ExportScenarioDialog
-                  call={query.data}
-                  onClose={() => setExporting(false)}
-                />
-              )}
-            </>
-          )}
-        </Card>
-      )}
-    </QueryStates>
-  );
-}
 
 // The trace's first page, as one query the card and the page header share.
 //
@@ -375,6 +261,12 @@ function FragmentRow({
   const t = useT();
   const { locale } = useLocale();
   const panelId = useId();
+  // The attempts the ladder itself made. A decision model that fell back is
+  // the first of `calls_attempted`, and the rung after it is a second model
+  // asked, not a retry of the first — so it does not count toward the badge.
+  const ladderAttempts = call.decision_attempted
+    ? call.calls_attempted - 1
+    : call.calls_attempted;
   return (
     <>
       {/* The disclosure is a real button in the first cell, not a click handler on
@@ -413,6 +305,12 @@ function FragmentRow({
         <td>
           {call.task}
           <div className="aicalls-badges">
+            {/* The logical call's flag, not this row's kind: a fallback's
+                terminal row is the completion that answered after the
+                decision model was asked. */}
+            {call.decision_attempted && (
+              <Badge>{t("aicalls.badge.decision")}</Badge>
+            )}
             {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
             {call.degraded && (
               <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
@@ -420,17 +318,17 @@ function FragmentRow({
             {call.error_sentinel && (
               <Badge tone="danger">{call.error_sentinel}</Badge>
             )}
-            {call.calls_attempted > 1 && (
+            {ladderAttempts > 1 && (
               <Badge>
                 {t("aicalls.badge.retries", {
-                  count: formatNumber(call.calls_attempted, locale),
+                  count: formatNumber(ladderAttempts, locale),
                 })}
               </Badge>
             )}
           </div>
         </td>
         <td>
-          {call.tier} · {call.provider}/{call.served_model}
+          {tierLabel(call.tier, t)} · {call.provider}/{call.served_model}
         </td>
         <td>{tokens}</td>
         <td>

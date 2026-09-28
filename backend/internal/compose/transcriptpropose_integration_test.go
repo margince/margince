@@ -104,7 +104,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	body := transcriptBody
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, Body: &body,
-		SourceSystem: &sourceSystem, Source: "ui",
+		SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("logging the transcript: %v", err)
@@ -346,7 +346,7 @@ func TestAnActivityThatCarriesNoTranscriptCannotBeRead(t *testing.T) {
 	subject := "An ordinary note"
 	body := "No transcript here."
 	note, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
-		Kind: "note", Subject: &subject, Body: &body, Source: "ui",
+		Kind: "note", Subject: &subject, Body: &body, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("logging the note: %v", err)
@@ -474,7 +474,7 @@ func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
 	sourceSystem := "transcript"
 	body := strings.TrimSuffix(long, "\n")
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
-		Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &sourceSystem, Source: "ui",
+		Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("logging the long transcript: %v", err)

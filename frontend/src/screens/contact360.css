@@ -499,7 +499,8 @@
   inset: 0;
 }
 .pe-employment-role,
-.pe-employment-actions {
+.pe-employment-actions,
+.pe-employment-company > .evmark {
   position: relative;
   z-index: 1;
 }
@@ -529,8 +530,12 @@
 
 .pe-employment-company {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+.pe-employment-company > .pe-meta-link {
+  text-align: start;
 }
 
 /* Contacts and open deals, under the company name: a fact about the
@@ -690,13 +695,6 @@
   flex: 1;
 }
 
-/* A refusal the rep has to act on — a consent gate, an unsendable mailbox —
-   sits beside the control that produced it rather than replacing the drawer. */
-.pe-send-error {
-  margin: var(--space-2) 0 0;
-  color: var(--dangerText);
-}
-
 /* "Why this draft": the reasoning is a SIBLING of the body, never part of it.
    A body that explained itself is a body the rep has to edit before sending. */
 .pe-why {
@@ -779,12 +777,6 @@
 
 .pe-brief-section {
   margin-bottom: var(--space-5);
-}
-
-/* The pulse card's facts sit under the relationship line, which is prose —
- * the gap is what separates a reading from the sentence explaining it. */
-.contact-pulse-facts {
-  margin-top: var(--space-3);
 }
 
 /* The one move the thin-record surface offers, spaced off the sentence that
@@ -949,33 +941,4 @@
 }
 .pe-thin-remediation {
   margin: var(--space-2) 0 0;
-}
-.pe-consent-blocked {
-  margin: var(--space-1) 0 0;
-}
-
-/* What happened to the relationship, under the line that says who is warmest. */
-.pe-changes {
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-1);
-}
-
-.pe-career {
-  margin: 0;
-  padding-left: var(--space-4);
-}
-.pe-career-item {
-  margin-top: var(--space-1);
-}
-
-.pe-network {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.pe-network-item {
-  padding: var(--space-2) 0;
 }

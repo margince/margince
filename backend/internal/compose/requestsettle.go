@@ -28,7 +28,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -64,6 +63,13 @@ const (
 	// history and can afford to be smaller.
 	settleThreadMessages = 8
 )
+
+// settleDeclinedBy is what an UNSURE verdict records as its judge when no model
+// judged the conversation: every rung declined it (declinedByTheModels). It
+// stands in decided_by, whose other values name a classifier, because that is
+// the column saying what reached the verdict — and here nothing did; no model is
+// ever served under this name, so the two cannot be confused.
+const settleDeclinedBy = "declined"
 
 // settleCandidate is one answered request with the conversation behind it.
 type settleCandidate struct {
@@ -104,8 +110,11 @@ func NewRequestSettler(pool *pgxpool.Pool, brain completer, now func() time.Time
 
 // RunWorkspace judges up to cap answered requests in the workspace bound in ctx.
 //
-// A budget stop ends the pass cleanly: what is judged is committed and the rest
-// is simply still unjudged, which the next cycle reads again.
+// A budget stop, or no provider bound, ends the pass cleanly: what is judged is
+// committed and the rest is simply still unjudged, which the next cycle reads
+// again. The pass is bounded by the model calls it makes (sweepCalls), for the
+// reason the owed pass gives: a batch where every verdict abstains makes no
+// progress by the verdict count and would re-ask the same threads forever.
 func (s *RequestSettler) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if s.brain == nil {
 		return nil
@@ -114,12 +123,8 @@ func (s *RequestSettler) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 		maxVerdicts = settleCatchUpCap
 	}
 	judged := 0
-	// Bounded by CALLS as well as by verdicts, for the reason the owed pass
-	// gives: a batch where every verdict abstains makes no progress by the
-	// verdict count and would re-ask the same threads forever.
-	calls := 0
-	maxCalls := maxVerdicts/settleBatchSize + 1
-	for judged < maxVerdicts && calls < maxCalls {
+	calls := newSweepCalls(maxVerdicts, settleBatchSize)
+	for judged < maxVerdicts && calls.remain() {
 		batch, err := s.candidates(ctx, settleBatchSize)
 		if err != nil {
 			return err
@@ -127,12 +132,10 @@ func (s *RequestSettler) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 		if len(batch) == 0 {
 			return nil
 		}
-		calls++
-		n, err := s.judgeBatch(ctx, batch)
+		n, err := s.judgeBatch(ctx, batch, calls)
 		judged += n
-		if errors.Is(err, ai.ErrBudgetDeferred) {
-			s.log.InfoContext(ctx, "request settle: budget exhausted, stopping the pass",
-				"judged", judged)
+		if sweepPaused(err) {
+			s.log.InfoContext(ctx, "request settle: stopping the pass", "judged", judged, "reason", err)
 			return nil
 		}
 		if err != nil {
@@ -270,8 +273,14 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 // call — and one still below it is recorded UNSURE rather than guessed: the
 // request stays owed and the watermark advances, so the same conversation is
 // not re-read until somebody writes on it again.
-func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate) (int, error) {
+func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate, calls *sweepCalls) (int, error) {
+	if !calls.take() {
+		return 0, nil
+	}
 	verdicts, err := s.ask(ctx, batch)
+	if declinedByTheModels(err) {
+		return s.judgeEach(ctx, batch, calls)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -295,13 +304,30 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 		}
 		judged++
 	}
-	for _, candidate := range retry {
-		solo, err := s.ask(ctx, []settleCandidate{candidate})
-		if err != nil {
-			return judged, err
+	solo, err := s.judgeEach(ctx, retry, calls)
+	return judged + solo, err
+}
+
+// judgeEach asks about each conversation in its own call. One still below the
+// floor is recorded UNSURE, and so is one every rung declines, judged by
+// settleDeclinedBy: either way the request stays owed and is not re-read until
+// somebody writes on it again, so the next conversation is asked.
+func (s *RequestSettler) judgeEach(ctx context.Context, candidates []settleCandidate, calls *sweepCalls) (int, error) {
+	judged := 0
+	for _, candidate := range candidates {
+		if !calls.take() {
+			return judged, nil
 		}
 		result := settleResult{ID: candidate.Request.RequestID.String(), Verdict: activities.RequestUnsure}
-		if len(solo.results) == 1 && solo.results[0].Confidence >= settleConfidenceFloor {
+		solo, err := s.ask(ctx, []settleCandidate{candidate})
+		switch {
+		case declinedByTheModels(err):
+			s.log.WarnContext(ctx, "request settle: the models declined one conversation, recorded unsure",
+				"request_id", candidate.Request.RequestID, "err", err)
+			solo.judge = settleDeclinedBy
+		case err != nil:
+			return judged, err
+		case len(solo.results) == 1 && solo.results[0].Confidence >= settleConfidenceFloor:
 			result = solo.results[0]
 		}
 		if err := s.commit(ctx, candidate, result, solo.judge); err != nil {

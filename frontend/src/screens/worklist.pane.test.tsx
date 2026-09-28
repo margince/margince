@@ -58,19 +58,23 @@ describe("what the selected row is about", () => {
     //
     // The pane names the record and answers the question the row cannot: how
     // long the silence has run, in both directions.
-    await screen.findByText("They last wrote");
-    expect(screen.getByText("We last wrote")).toBeTruthy();
+    await screen.findByText("Last inbound");
+    expect(screen.getByText("Last outbound")).toBeTruthy();
 
     // And it is still a control: pressing the rank puts the row down.
-    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Show details for/ }),
+    );
     await waitFor(() => {
-      expect(screen.queryByText("They last wrote")).toBeNull();
+      expect(screen.queryByText("Last inbound")).toBeNull();
     });
 
     // And picks it up again, so the press is a toggle rather than a one-way
     // dismissal the reader cannot undo.
-    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
-    await screen.findByText("They last wrote");
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Show details for/ }),
+    );
+    await screen.findByText("Last inbound");
   });
 
   // A rank that opens nothing is not a control.
@@ -103,7 +107,9 @@ describe("what the selected row is about", () => {
 
     // The row drew — this is not a test that the page failed to render.
     await screen.findByText("Northstar renewal");
-    expect(screen.queryByRole("button", { name: /^Show what/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Show details for/ }),
+    ).toBeNull();
   });
 
   // The other half of the same rule. Without this case, "no rank button" would
@@ -137,13 +143,15 @@ describe("what the selected row is about", () => {
     // And the rank is a real control, not a pressed state over a pane that was
     // going to be there anyway: pressing it takes the aside away.
     await userEvent.click(
-      await screen.findByRole("button", { name: /^Show what/ }),
+      await screen.findByRole("button", { name: /^Show details for/ }),
     );
     await waitFor(() => {
       expect(screen.queryByRole("complementary")).toBeNull();
     });
 
-    await userEvent.click(screen.getByRole("button", { name: /^Show what/ }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Show details for/ }),
+    );
     await waitFor(() => {
       expect(screen.getByRole("complementary")).toBeTruthy();
     });
@@ -181,7 +189,7 @@ describe("what the selected row is about", () => {
     renderWorklist();
 
     // In hand on arrival, so there is nothing to press to open it.
-    await screen.findByText("They last wrote");
+    await screen.findByText("Last inbound");
 
     current = day({
       queue: [],
@@ -189,9 +197,9 @@ describe("what the selected row is about", () => {
     });
     // Re-render through the filter, which refetches: the row is gone, and the
     // pane goes with it rather than outliving the row it describes.
-    await userEvent.click(screen.getByRole("button", { name: /Decisions/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Approvals/ }));
     await waitFor(() => {
-      expect(screen.queryByText("They last wrote")).toBeNull();
+      expect(screen.queryByText("Last inbound")).toBeNull();
     });
   });
   it("draws no aside landmark for a row that has no pane", async () => {

@@ -7,15 +7,16 @@ package integration_test
 
 // The team's frozen week over real migrated Postgres.
 //
-// What these defend is the freeze and the tier gate. The freeze is why the
-// table exists at all: team membership moves, so a snapshot that re-summed on
-// read would put a rep who joined later into an older team week and drop one
-// who left, and a lead comparing two quarters would be comparing two different
-// teams without being told.
+// What these defend is the freeze and the gate on who reads a team's week. The
+// freeze is why the table exists at all: team membership moves, so a snapshot
+// that re-summed on read would put a rep who joined later into an older team
+// week and drop one who left, and a lead comparing two quarters would be
+// comparing two different teams without being told.
 
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -79,14 +80,41 @@ func TestAnOwnScopedSeatIsRefusedTheTeamWeek(t *testing.T) {
 	}
 }
 
-// teamScoped is a lead: they may read deals, and their row scope reaches a
-// team. Every other test here runs under AdminPerms, which is RowScopeAll and
-// short-circuits the membership question — which is exactly why the leak below
-// stayed invisible until someone asked for a team they are not on.
+// teamScoped is a Team Lead: the manager role, a row scope that reaches a
+// team, and no oversight grant — so the membership question is the one that
+// decides. Every other test here assembles under AdminPerms, which holds the
+// grant and skips that question.
 func teamScoped(e *integration.Env, user ids.UUID, teams []ids.UUID) context.Context {
-	perms := integration.AdminPerms
+	perms := withoutOversight(integration.AdminPerms)
+	perms.RoleKeys = []string{"manager"}
 	perms.RowScope = principal.RowScopeTeam
 	return e.As(user, teams, perms)
+}
+
+// withoutOversight copies a fixture minus the team oversight grant.
+func withoutOversight(perms principal.Permissions) principal.Permissions {
+	perms.Objects = maps.Clone(perms.Objects)
+	delete(perms.Objects, "team_oversight")
+	return perms
+}
+
+// withOversight copies a fixture plus the team oversight grant.
+func withOversight(perms principal.Permissions) principal.Permissions {
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["team_oversight"] = principal.ObjectGrant{Read: true}
+	return perms
+}
+
+// writeTeamTwosWeek freezes Team2's week, which Rep3 alone is on.
+func writeTeamTwosWeek(t *testing.T, e *teamEnv) weekly.TeamReview {
+	t.Helper()
+	writeRepWeek(t, e, e.Rep3)
+	written, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team2, "Team Two",
+		[]weekly.TeamMember{{UserID: e.Rep3, DisplayName: "Rep Three"}}, teamClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return written
 }
 
 // THE TEAM'S WEEK COUNTS WHAT ADVANCED. Every member's weekly_review has
@@ -139,11 +167,7 @@ func TestALeadOfOneTeamCannotOpenAnothersWeek(t *testing.T) {
 	e := setupTeamWeekly(t)
 
 	// Team2 is Rep3's in the harness; Rep1 and Rep2 share Team1.
-	writeRepWeek(t, e, e.Rep3)
-	if _, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team2, "Team Two",
-		[]weekly.TeamMember{{UserID: e.Rep3, DisplayName: "Rep Three"}}, teamClock); err != nil {
-		t.Fatal(err)
-	}
+	writeTeamTwosWeek(t, e)
 
 	outsider := teamScoped(e.Env, e.Rep1, []ids.UUID{e.Team1})
 
@@ -181,25 +205,17 @@ func TestATeamScopedLeadReadsTheirOwnTeamsWeek(t *testing.T) {
 	}
 }
 
-// A MANAGEMENT SEAT OPENS A TEAM IT IS NOT ON. Row scope "all" reaches every
-// row by definition, so asking membership of it would refuse a reader the
-// row-scope predicate then admits.
-//
-// This case is why the gate short-circuits on auth.Unbounded rather than asking
-// membership of everyone: removing that short-circuit leaves every OTHER test
-// here green, because their readers happen to be members of the team they ask
-// about. Only a reader who is deliberately not can tell the difference.
+// A MANAGEMENT SEAT OPENS A TEAM IT IS NOT ON, because it holds the oversight
+// grant. Every other admitted reader here is a member of the team it asks
+// about, so only a reader who deliberately is not can tell the grant apart
+// from the membership arm.
 func TestAManagementSeatOpensATeamItIsNotOn(t *testing.T) {
 	e := setupTeamWeekly(t)
+	writeTeamTwosWeek(t, e)
 
-	writeRepWeek(t, e, e.Rep3)
-	if _, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team2, "Team Two",
-		[]weekly.TeamMember{{UserID: e.Rep3, DisplayName: "Rep Three"}}, teamClock); err != nil {
-		t.Fatal(err)
-	}
-
-	// Rep1 is on Team1 and nowhere near Team2 — AdminPerms is RowScopeAll.
-	management := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	perms := integration.AdminPerms
+	perms.RoleKeys = []string{"management"}
+	management := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 
 	read, err := e.engine.LatestTeamReview(management, e.Team2, nil)
 	if err != nil {
@@ -210,23 +226,87 @@ func TestAManagementSeatOpensATeamItIsNotOn(t *testing.T) {
 	}
 }
 
+// A READ-ONLY SEAT IS REFUSED, and refused as a refusal. Its row scope reaches
+// every record, which is not a claim to read a manager's verdict on a named
+// colleague. It gets ErrPermissionDenied rather than ErrNotFound: a 404 draws
+// "no week has closed yet", which tells the reader they passed the gate.
+//
+// Both teams: the one it is not on, and the one it is. Being on a team does not
+// make a seat its lead.
+func TestAReadOnlySeatIsRefusedTheTeamWeek(t *testing.T) {
+	e := setupTeamWeekly(t)
+	writeTeamTwosWeek(t, e)
+	auditor := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.ReadOnlyPerms)
+
+	for _, team := range []ids.UUID{e.Team1, e.Team2} {
+		_, err := e.engine.LatestTeamReview(auditor, team, nil)
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("a read-only seat asking for team %s got %v, wanted a refusal", team, err)
+		}
+	}
+}
+
+// THE GRANT, NOT THE ROW SCOPE, ADMITS a seat that leads no team. The same
+// read-only seat, unchanged but for team_oversight.read, opens a team it is not
+// on. Without this case the refusal above would pass over a gate that refuses
+// every workspace-wide seat, management included.
+func TestTheOversightGrantAdmitsAWorkspaceWideSeat(t *testing.T) {
+	e := setupTeamWeekly(t)
+	writeTeamTwosWeek(t, e)
+	overseer := e.As(e.Rep1, []ids.UUID{e.Team1}, withOversight(integration.ReadOnlyPerms))
+
+	read, err := e.engine.LatestTeamReview(overseer, e.Team2, nil)
+	if err != nil {
+		t.Fatalf("a seat holding the oversight grant reading another team's week: %v", err)
+	}
+	if read.TeamName != "Team Two" {
+		t.Errorf("got the week of %q, wanted Team Two", read.TeamName)
+	}
+}
+
+// A rep on the team is refused its week. The harness rep reaches its team's
+// rows, so this is the coaching question refusing, not the row scope.
+func TestARepIsRefusedTheirOwnTeamsWeek(t *testing.T) {
+	e := setupTeamWeekly(t)
+	rep := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.RepPerms)
+
+	_, err := e.engine.LatestTeamReview(rep, e.Team1, nil)
+
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep asking for their own team's week got %v, wanted a refusal", err)
+	}
+}
+
+// A lead whose deal read was revoked reads no team's week. The week carries
+// each member's won deals and pipeline totals, so the grant that hides deals
+// hides them here too — refused, not "no week has closed".
+func TestALeadWithoutDealReadIsRefusedTheirTeamsWeek(t *testing.T) {
+	e := setupTeamWeekly(t)
+	perms := withoutOversight(integration.AdminPerms)
+	perms.RoleKeys = []string{"manager"}
+	perms.RowScope = principal.RowScopeTeam
+	perms.Objects["deal"] = principal.ObjectGrant{}
+	lead := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+
+	_, err := e.engine.LatestTeamReview(lead, e.Team1, nil)
+
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a lead without deal read got %v, wanted a refusal", err)
+	}
+}
+
 // The NAMED week takes the same gate as the newest one. They are separate entry
 // points, and a gate written into one alone leaves "?week=2026-06-01" open.
 func TestNamingTheWeekDoesNotBypassTheTeamGate(t *testing.T) {
 	e := setupTeamWeekly(t)
 
-	writeRepWeek(t, e, e.Rep3)
-	written, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team2, "Team Two",
-		[]weekly.TeamMember{{UserID: e.Rep3, DisplayName: "Rep Three"}}, teamClock)
-	if err != nil {
-		t.Fatal(err)
-	}
+	written := writeTeamTwosWeek(t, e)
 
 	outsider := teamScoped(e.Env, e.Rep1, []ids.UUID{e.Team1})
 
 	// The week that was actually written, so a refusal cannot be a miss on the
 	// date rather than the gate doing its job.
-	_, err = e.engine.TeamReview(outsider, e.Team2, written.LocalWeekStart)
+	_, err := e.engine.TeamReview(outsider, e.Team2, written.LocalWeekStart)
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("naming another team's week: got %v, wanted ErrNotFound", err)

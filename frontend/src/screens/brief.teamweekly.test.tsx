@@ -1,6 +1,8 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { formatMoneyCompact } from "../format/format";
 import { en } from "../i18n/en";
 import { TeamWeeklyPanel, TeamWeeklySection } from "./brief.teamweekly";
@@ -375,12 +377,31 @@ describe("the team's frozen week", () => {
   });
 });
 
+// Two teams, for the cases that ask which of them the picker lists.
+const twoTeams = () =>
+  jsonResponse({
+    data: [
+      { id: "t1", name: "Nord" },
+      { id: "t2", name: "Sued" },
+    ],
+    page: { next_cursor: null, has_more: false },
+  });
+
+// A Team Lead on Nord: team scope, one membership, no oversight grant.
+const leadOfNord = () => ({
+  ...meFixture({ rowScope: "team" }),
+  teams: ["t1"],
+});
+
+// A seat on no team, which the server says oversees every team.
+const overseer = () => meFixture({ rowScope: "all" });
+
 describe("the team picker", () => {
-  // Offered on the same tier the team board is. A picker shown to a reader who
+  // Offered on the rule the week is served on. A picker shown to a reader who
   // will be refused every team is a control that exists to fail.
-  it("draws nothing at all for a reader whose scope reaches no team", () => {
+  it("draws nothing at all for a reader who may open no team's week", () => {
     const calls = stubApi({});
-    const { container } = render(<TeamWeeklyPanel offered={false} />);
+    const { container } = render(<TeamWeeklyPanel reach="none" />);
 
     expect(container.firstChild).toBeNull();
     expect(calls.filter((call) => call.path === "/teams")).toHaveLength(0);
@@ -390,17 +411,45 @@ describe("the team picker", () => {
   // showing asks the reader to confirm what they cannot change.
   it("names the selected team even when there is only one", async () => {
     stubApi({
-      "GET /teams": () =>
-        jsonResponse({
-          data: [{ id: "t1", name: "Nord" }],
-          page: { next_cursor: null, has_more: false },
-        }),
+      "GET /me": () => jsonResponse(leadOfNord()),
+      "GET /teams": twoTeams,
       "GET /weekly-reviews/team": () => jsonResponse(review()),
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="teams_led" />);
 
     await screen.findByText(en["teamweekly.movement.title"]);
     expect(screen.getByLabelText(en["teamweekly.pickTeam"])).toBeTruthy();
+  });
+
+  // A lead is offered the teams they are on and no other: the server answers
+  // any other team's week with 404, so listing it is a choice that fails.
+  it("lists only the teams a lead is on", async () => {
+    stubApi({
+      "GET /me": () => jsonResponse(leadOfNord()),
+      "GET /teams": twoTeams,
+      "GET /weekly-reviews/team": () => jsonResponse(review()),
+    });
+    render(<TeamWeeklyPanel reach="teams_led" />);
+
+    await screen.findByText(en["teamweekly.movement.title"]);
+    const picker = screen.getByLabelText(en["teamweekly.pickTeam"]);
+    await userEvent.setup().click(picker);
+    expect(await screen.findByRole("option", { name: "Nord" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Sued" })).toBeNull();
+  });
+
+  // The server's `every_team` answer, not the row scope, lists every team.
+  it("lists every team to a seat the server says oversees them", async () => {
+    stubApi({
+      "GET /me": () => jsonResponse(overseer()),
+      "GET /teams": twoTeams,
+    });
+    render(<TeamWeeklyPanel reach="every_team" />);
+
+    const picker = await screen.findByLabelText(en["teamweekly.pickTeam"]);
+    await userEvent.setup().click(picker);
+    expect(await screen.findByRole("option", { name: "Nord" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Sued" })).toBeTruthy();
   });
 });
 
@@ -410,16 +459,10 @@ describe("the team picker", () => {
 describe("the page before a team is chosen", () => {
   it("gives the page a body rather than leaving it empty under the picker", async () => {
     stubApi({
-      "GET /teams": () =>
-        jsonResponse({
-          data: [
-            { id: "t1", name: "Nord" },
-            { id: "t2", name: "Sued" },
-          ],
-          page: { next_cursor: null, has_more: false },
-        }),
+      "GET /me": () => jsonResponse(overseer()),
+      "GET /teams": twoTeams,
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="every_team" />);
 
     // The picker is a real choice with two teams, so it is drawn — and the
     // pane under it is drawn WITH it rather than after the reader answers.
@@ -440,7 +483,7 @@ describe("the page before a team is chosen", () => {
           page: { next_cursor: null, has_more: false },
         }),
     });
-    const { container } = render(<TeamWeeklyPanel offered />);
+    const { container } = render(<TeamWeeklyPanel reach="every_team" />);
 
     await waitFor(() =>
       expect(screen.queryByLabelText(en["teamweekly.pickTeam"])).toBeNull(),
@@ -452,16 +495,10 @@ describe("the page before a team is chosen", () => {
 
   it("asks the server for no week until a team is named", async () => {
     const calls = stubApi({
-      "GET /teams": () =>
-        jsonResponse({
-          data: [
-            { id: "t1", name: "Nord" },
-            { id: "t2", name: "Sued" },
-          ],
-          page: { next_cursor: null, has_more: false },
-        }),
+      "GET /me": () => jsonResponse(overseer()),
+      "GET /teams": twoTeams,
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="every_team" />);
 
     await screen.findByLabelText(en["teamweekly.pickTeam"]);
     expect(
@@ -489,14 +526,11 @@ describe("the team's landing", () => {
 
   it("says no forecast rather than drawing zeros when none was composed", async () => {
     stubApi({
-      "GET /teams": () =>
-        jsonResponse({
-          data: [{ id: "t1", name: "Nord" }],
-          page: { next_cursor: null, has_more: false },
-        }),
+      "GET /me": () => jsonResponse(leadOfNord()),
+      "GET /teams": twoTeams,
       "GET /weekly-reviews/team": () => jsonResponse(review()),
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="teams_led" />);
 
     // Said in WORDS, not drawn as an absence: a team nobody forecast and a
     // team that landed on nothing are different facts, and only the panel can
@@ -506,17 +540,14 @@ describe("the team's landing", () => {
 
   it("draws the frozen landing when the snapshot carries one", async () => {
     stubApi({
-      "GET /teams": () =>
-        jsonResponse({
-          data: [{ id: "t1", name: "Nord" }],
-          page: { next_cursor: null, has_more: false },
-        }),
+      "GET /me": () => jsonResponse(leadOfNord()),
+      "GET /teams": twoTeams,
       "GET /weekly-reviews/team": () =>
         jsonResponse(
           review({}, { outlook: [horizon] } as Partial<TeamWeeklyReview>),
         ),
     });
-    render(<TeamWeeklyPanel offered />);
+    render(<TeamWeeklyPanel reach="teams_led" />);
 
     // The panel is the rep's own, so finding its heading proves the team page
     // reuses it rather than having grown a second one.

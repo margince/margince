@@ -57,6 +57,7 @@ func setupLicensedApp(t *testing.T) (*apptest.AppEnv, *atomic.Int64) {
 		}
 	}))
 	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
 	return e, granted
 }
 

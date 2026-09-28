@@ -6,6 +6,8 @@ package compose
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -24,6 +26,11 @@ func (s Server) GetMagic(w http.ResponseWriter, r *http.Request, params crmcontr
 	s.magicHandlers.GetMagic(w, r, params)
 }
 
+// GetMagicLineRecords forwards opening one receipt line to the same surface.
+func (s Server) GetMagicLineRecords(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params crmcontracts.GetMagicLineRecordsParams) {
+	s.magicHandlers.GetMagicLineRecords(w, r, id, params)
+}
+
 // GetWorklist forwards the ranked read to the same assembled surface.
 func (s Server) GetWorklist(w http.ResponseWriter, r *http.Request, params crmcontracts.GetWorklistParams) {
 	s.attentionHandlers.GetWorklist(w, r, params)
@@ -39,6 +46,13 @@ func (s Server) GetResponseMetrics(
 // GetHiddenBacklog forwards the guardrail over the queue's own hiding rules.
 func (s Server) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
 	s.attentionHandlers.GetHiddenBacklog(w, r)
+}
+
+// GetHiddenBacklogRows forwards the rows behind one of those rules.
+func (s Server) GetHiddenBacklogRows(
+	w http.ResponseWriter, r *http.Request, rule crmcontracts.GetHiddenBacklogRowsParamsRule,
+) {
+	s.attentionHandlers.GetHiddenBacklogRows(w, r, rule)
 }
 
 // GetHandledForYou forwards the reader's own receipt of what was done.

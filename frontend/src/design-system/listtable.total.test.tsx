@@ -45,7 +45,7 @@ describe("the count line", () => {
         total={8372}
       />,
     );
-    expect(screen.getByText(/1–25 of 8,372 rows/)).toBeTruthy();
+    expect(screen.getByText(/1 to 25 of 8,372 rows/)).toBeTruthy();
     // "Loaded so far" is the caveat for a number the client counted itself. An
     // exact total needs none, and carrying it would make the real figure read
     // as a floor.
@@ -64,7 +64,7 @@ describe("the count line", () => {
         hasMore
       />,
     );
-    expect(screen.getByText(/1–25 of 50 rows loaded so far/)).toBeTruthy();
+    expect(screen.getByText(/1 to 25 of 50 rows loaded/)).toBeTruthy();
   });
 
   // Zero is a real answer and must not be read as "did not count": a filter

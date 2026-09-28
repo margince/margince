@@ -14,6 +14,7 @@ import {
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate, formatNumber } from "../format/format";
@@ -363,14 +364,11 @@ export function RestrictedRecordsCard() {
                     <Button type="submit" disabled={!pinIdIsWellFormed}>
                       {t("restricted.pin.submit")}
                     </Button>
+                    {/* Re-announced on each keystroke, it would drown the field being typed. */}
                     {pinIdIsMalformed && (
-                      <p
-                        className="restricted-pin-error"
-                        id={pinErrorId}
-                        role="alert"
-                      >
+                      <ErrorLine id={pinErrorId} standing>
                         {t("restricted.pin.idMalformed")}
-                      </p>
+                      </ErrorLine>
                     )}
                   </form>
                 )}

@@ -1,10 +1,23 @@
-/* The shapes `common.tsx` draws for every list screen. It owned no sheet, so the
-   one interval it needs travelled as an inline `style` on 38 surfaces' worth of
-   button — including inside a settings card, where a raw 10px sat among rows
-   spaced in tokens. */
+/* The shapes `common.tsx` draws for every list screen, and the title every
+   modal form built beside them wears. */
 
 /* "Load more" stands under the page it extends, spaced off it: it acts on the
    list above rather than being one more row of it. */
 .load-more {
+  margin-top: var(--space-3);
+}
+
+/* A modal or form title, held off the body it names. Chained to `.heading`,
+   which zeroes every heading's margin at one class of specificity. */
+.heading.dialog-heading {
+  margin-bottom: var(--space-3);
+}
+
+/* QueryGate's failure: the cause reads under the headline, and Retry stands
+   apart from both. */
+.querygate-cause {
+  margin-top: var(--space-2);
+}
+.querygate-retry {
   margin-top: var(--space-3);
 }

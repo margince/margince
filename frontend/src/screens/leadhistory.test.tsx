@@ -119,7 +119,7 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     expect(
-      await screen.findByText("Nothing is logged on this lead yet."),
+      await screen.findByText("No activity logged on this lead yet."),
     ).toBeTruthy();
   });
 });

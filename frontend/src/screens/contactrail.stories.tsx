@@ -241,7 +241,7 @@ const signalsPartlyDerivable: View = {
 // The rail sits in a 320px column in the record page's grid, and its readings
 // are laid out for that width: shown any wider, the label and its verdict drift
 // apart and the section stops reading as a glance.
-function rail(view: View) {
+function rail(view: View, entries = guard.entries) {
   installFetchStub({
     // The rail draws capability-gated verbs (the inline edits, add employment),
     // so the session has to be routed: an unrouted probe denies every grant and
@@ -251,7 +251,7 @@ function rail(view: View) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 320 }}>
-        <ContactRail view={view} guard={guard} />
+        <ContactRail view={view} guard={{ ...guard, entries }} />
       </div>
     </StoryProviders>
   );
@@ -280,4 +280,23 @@ export const EverythingWithheld: Story = {
 export const SignalsPartlyDerivable: Story = {
   name: "Signals only partly derivable",
   render: () => rail(signalsPartlyDerivable),
+};
+
+// A workspace whose purposes carry no correspondence class. Email has nothing
+// of its own to report and says so, while the grant that does exist keeps its
+// own name: a marketing permission drawn against the transport is one the
+// composer would then refuse.
+export const NoCorrespondencePurpose: Story = {
+  name: "Marketing granted, correspondence undefined",
+  render: () =>
+    rail(granted, [
+      {
+        purpose_key: "newsletter",
+        purpose_label: "Newsletter",
+        purpose_class: "marketing",
+        channel: "email",
+        verdict: "allowed",
+        reason: "They opted in on 3 March.",
+      },
+    ]),
 };

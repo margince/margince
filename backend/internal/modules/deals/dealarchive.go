@@ -55,39 +55,8 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		if err := archiveDealInTx(ctx, tx, id, ifVersion); err != nil {
 			return err
-		}
-		// A liveness probe, not a wire read — no custom columns needed.
-		if _, err := readDeal(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
-			return err
-		}
-		now := time.Now().UTC()
-		p := storekit.NewPatch()
-		p.Set("archived_at", nil, now)
-		if err := applyDealPatchGuarded(ctx, tx, id, p, ifVersion); err != nil {
-			return fmt.Errorf("archive deal: %w", err)
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL`,
-			id, now); err != nil {
-			return fmt.Errorf("archive the deal's relationships: %w", err)
-		}
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = $1`, id); err != nil {
-			return fmt.Errorf("detach list memberships: %w", err)
-		}
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1`, id); err != nil {
-			return fmt.Errorf("detach tags: %w", err)
-		}
-
-		auditID, err := storekit.Audit(ctx, tx, "archive", "deal", id.UUID, nil, nil)
-		if err != nil {
-			return fmt.Errorf("audit deal archive: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealArchived{}); err != nil {
-			return fmt.Errorf("emit deal.archived: %w", err)
 		}
 		if out, err = readDealForCaller(ctx, tx, id, storekit.IncludeArchived, active); err != nil {
 			return fmt.Errorf("read archived deal: %w", err)
@@ -95,4 +64,54 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 		return nil
 	})
 	return out, err
+}
+
+// ArchiveDealTx is ArchiveDeal on the caller's transaction, for a bulk change
+// that archives many deals in one commit. It asks every gate ArchiveDeal asks
+// and answers nothing: the caller already knows which row it archived.
+func (s *Store) ArchiveDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
+		return err
+	}
+	return archiveDealInTx(ctx, tx, id, ifVersion)
+}
+
+// archiveDealInTx is the archive itself, behind the object gate its callers
+// ask: the row's write check, the guarded patch and the cascade.
+func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64) error {
+	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		return err
+	}
+	// A liveness probe, not a wire read — no custom columns needed.
+	if _, err := readDeal(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	p := storekit.NewPatch()
+	p.Set("archived_at", nil, now)
+	if err := applyDealPatchGuarded(ctx, tx, id, p, ifVersion); err != nil {
+		return fmt.Errorf("archive deal: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL`,
+		id, now); err != nil {
+		return fmt.Errorf("archive the deal's relationships: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = $1`, id); err != nil {
+		return fmt.Errorf("detach list memberships: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1`, id); err != nil {
+		return fmt.Errorf("detach tags: %w", err)
+	}
+
+	auditID, err := storekit.Audit(ctx, tx, "archive", "deal", id.UUID, nil, nil)
+	if err != nil {
+		return fmt.Errorf("audit deal archive: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealArchived{}); err != nil {
+		return fmt.Errorf("emit deal.archived: %w", err)
+	}
+	return nil
 }

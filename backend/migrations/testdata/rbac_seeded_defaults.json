@@ -325,6 +325,18 @@
         "read": true,
         "update": true
       },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "team_oversight": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "user_admin": {
         "create": true,
         "delete": true,
@@ -678,6 +690,18 @@
         "read": false,
         "update": false
       },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "team_oversight": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "user_admin": {
         "create": false,
         "delete": false,
@@ -1026,6 +1050,18 @@
         "update": false
       },
       "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "team_oversight": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1384,6 +1420,18 @@
         "read": false,
         "update": false
       },
+      "team_lead": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_oversight": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "user_admin": {
         "create": false,
         "delete": false,
@@ -1737,6 +1785,18 @@
         "read": false,
         "update": false
       },
+      "team_lead": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_oversight": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "user_admin": {
         "create": false,
         "delete": false,
@@ -2085,6 +2145,18 @@
         "update": false
       },
       "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_lead": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_oversight": {
         "create": false,
         "delete": false,
         "read": false,

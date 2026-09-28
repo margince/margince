@@ -207,7 +207,7 @@ describe("stage automation rules", () => {
     // The reason itself, not a summary of it. It is the whole basis on which
     // somebody decides to start the transition again.
     expect(await screen.findByText(/above the 1.0% ceiling/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Start again/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Resume/ })).toBeTruthy();
   });
 
   it("asks before starting a suspended transition again, and says the bar still applies", async () => {
@@ -225,7 +225,7 @@ describe("stage automation rules", () => {
     render(<StageAutomationCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /Start again/ }),
+      await screen.findByRole("button", { name: /Resume/ }),
     );
 
     // Nothing sent yet: the confirmation is the point, and a resume that fired
@@ -234,7 +234,9 @@ describe("stage automation rules", () => {
       0,
     );
     // The dialog says what starting again does NOT do.
-    expect(await screen.findByText(/does not skip the bar/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/does not skip the threshold/i),
+    ).toBeTruthy();
   });
 
   it("does not offer a way back on a rule the product has not stopped", async () => {
@@ -245,7 +247,7 @@ describe("stage automation rules", () => {
     await screen.findByRole("switch", { name: /Discovery → Negotiation/ });
     // A running rule has nothing to resume, and a control offering it would
     // ask for a decision about a state the transition is not in.
-    expect(screen.queryByRole("button", { name: /Start again/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Resume/ })).toBeNull();
   });
 
   it("refuses the controls to a reader who may see the report and not change it", async () => {
@@ -277,7 +279,7 @@ describe("stage automation rules", () => {
     expect((toggle as HTMLButtonElement).disabled).toBe(true);
     // The way back is absent rather than refused: resuming is a whole act, and
     // a disabled control for one is a door that was never theirs to open.
-    expect(screen.queryByRole("button", { name: /Start again/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Resume/ })).toBeNull();
     // And the reason is still readable — this reader came to consult it.
     expect(
       screen.getByText(/a move reached a record outside its own workspace/),

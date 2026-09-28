@@ -89,7 +89,10 @@ var ceilings = map[string]int{
 	// +4 for the one-Badge rule: a second spelling of a pill is invisible to a
 	// reviewer who has not read that there is one, and the gate that refuses it
 	// names itself only here.
-	"frontend/AGENTS.md": 176,
+	//
+	// +7 for the copy-style pointer: the gate holds only mechanics, and an author
+	// who never opens the style page writes the tone and vocabulary it cannot see.
+	"frontend/AGENTS.md": 183,
 }
 
 func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {

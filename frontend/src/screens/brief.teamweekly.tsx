@@ -22,11 +22,12 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
-import { BriefTeamSelect } from "./brief.teamselect";
+import { BriefTeamSelect, weekTeams } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import { OutlookPanel } from "./brief.waterfall";
 import {
   type TeamWeeklyReview,
+  type TeamWeekReach,
   useTeamWeeklyReview,
 } from "./teamweekly.queries";
 
@@ -405,11 +406,11 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  * control and the refusal cannot disagree — a picker offered to a rep who will
  * be refused every team is a control that exists to fail.
  */
-export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
+export function TeamWeeklyPanel({ reach }: Readonly<{ reach: TeamWeekReach }>) {
   const [params] = useUrlParams();
-  if (!offered) return null;
+  if (reach === "none") return null;
   return (
-    <BriefTeamSelect>
+    <BriefTeamSelect lists={weekTeams(reach)}>
       {(team) => <TeamWeeklySection teamId={team} week={params.get("week")} />}
     </BriefTeamSelect>
   );

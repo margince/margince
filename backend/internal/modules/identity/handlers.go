@@ -110,6 +110,9 @@ type Handlers struct {
 	// rollout lives in the composition root and identity may not import it —
 	// the same shape as dataResetAvailable above, and for the same reason.
 	companyContextAvailable bool
+	// embedReindexAvailable is whether an embeddings model is bound, so the
+	// reindex routes serve rather than 501. Injected for the same reason.
+	embedReindexAvailable bool
 	// mcpResource is the canonical MCP server URL (public_base_url +
 	// "/mcp"), injected by the composition root from deployment config.
 	// The RFC 9728 protected-resource document advertises this verbatim

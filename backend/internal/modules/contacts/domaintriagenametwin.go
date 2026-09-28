@@ -174,8 +174,9 @@ func (s *Store) adoptDomainIntoCompany(
 	// The dedupe ladder scores every company in the installation, so a twin can
 	// be a record outside the caller's own scope. Visibility is the wrong
 	// question here — a manual read share widens it — and adopting writes a
-	// domain onto the record. A miss reads as not-found rather than denied,
-	// which keeps that company's existence hidden.
+	// domain onto the record. A twin the seat cannot see is refused as
+	// not-found, which keeps its existence hidden; one it can see but not
+	// change is refused as denied, which tells it nothing new.
 	if err := auth.EnsureWritable(ctx, tx, entityCompany, companyID.UUID); err != nil {
 		return nil, err
 	}

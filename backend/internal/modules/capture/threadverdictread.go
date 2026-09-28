@@ -64,19 +64,24 @@ func ThreadHoldsItsCounterparty(ctx context.Context, tx pgx.Tx, activityID ids.U
 	var held bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
-		  SELECT 1
-		    FROM activity a
-		    LEFT JOIN capture_thread_verdict v ON v.thread_key = a.thread_key
-		                                      AND a.thread_key <> ''
-		   WHERE a.id = $1
-		     AND (a.restricted_at IS NOT NULL
-		          OR (a.audience <> 'workspace' AND a.audience_reason IN (
-		                'workspace_floor', 'counterparty',
-		                'explicitly_confidential', 'inherited_verdict'))
-		          OR v.status IN ('held', 'unsure', 'held_by_owner', 'pending')))`,
+		  SELECT 1 FROM activity a
+		   WHERE a.id = $1 AND `+counterpartyHeldOn("a")+`)`,
 		activityID).Scan(&held)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return false, fmt.Errorf("capture: reading whether the thread is held: %w", err)
 	}
 	return held, nil
+}
+
+// counterpartyHeldOn is the hold ThreadHoldsItsCounterparty describes, as a
+// condition on the activity alias given. The reply evidence asks the same
+// question of a different message, so it takes this rather than a second copy.
+func counterpartyHeldOn(alias string) string {
+	return fmt.Sprintf(`(%[1]s.restricted_at IS NOT NULL
+		OR (%[1]s.audience <> 'workspace' AND %[1]s.audience_reason IN (
+		      'workspace_floor', 'counterparty', 'explicitly_confidential', 'inherited_verdict'))
+		OR EXISTS (
+		      SELECT 1 FROM capture_thread_verdict v
+		       WHERE v.thread_key = %[1]s.thread_key AND %[1]s.thread_key <> ''
+		         AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending')))`, alias)
 }

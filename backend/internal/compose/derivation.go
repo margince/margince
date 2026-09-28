@@ -78,34 +78,6 @@ type derivationQuery struct {
 	AsOf time.Time
 }
 
-// derivationOutcome is a resolved handle: definition, drill-through
-// rows, and the aggregates recomputed over exactly those rows.
-type derivationOutcome struct {
-	Report     string
-	Definition string
-	Plan       map[string]any
-	Columns    []string
-	Rows       []map[string]any
-	Aggregates map[string]any
-	TotalRows  int
-	// ExcludedByPermission counts the visible rows a field mask withheld —
-	// nil when no mask applied, exactly like the report envelope it explains.
-	ExcludedByPermission *int
-	GeneratedAt          time.Time
-	// AsOf is the instant these figures were computed at: the headline's when
-	// the handle pinned one, and a fresh reading when it did not.
-	AsOf time.Time
-	// AsOfPinned says which of those it was.
-	//
-	// The pin makes a detail reconcile to its headline. It cannot do that for a
-	// link minted before the key existed, or saved before it — and there is no
-	// way to recover the instant such a link was made at. Recomputing is the
-	// only thing left, so the answer says it recomputed. Silence here is the
-	// failure the pin exists to prevent, arriving by a different route: figures
-	// that do not add up to the number above them, presented as though they do.
-	AsOfPinned bool
-}
-
 // boundExpr is one validated predicate: the vocabulary field, its fixed
 // SQL expression, and the bound value ("" = SQL NULL).
 type boundExpr struct {
@@ -274,6 +246,14 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	// measure the vocabulary declares — a derived measure (e.g. the
 	// weighted value) sits NEXT TO its inputs, so the lineage bottoms
 	// out at base values with no opaque intermediate step.
+	//
+	// On an install-wide report these rows carry colleagues' owners and
+	// amounts, which adds no disclosure: deal and project are identity tables,
+	// deal values are open to every seat that may read the deal, and the
+	// ordinary read serves this caller the same owner and amount. What that
+	// read withholds, a field mask, is withheld here too (fetchDerivation's
+	// mask exclusion). Held by:
+	// TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore.
 	plan.columns = []string{"id"}
 	plan.selects = []string{"t.id AS id"}
 	for _, name := range sortedKeys(spec.dimensions) {

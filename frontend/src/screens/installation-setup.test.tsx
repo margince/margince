@@ -233,10 +233,10 @@ describe("the first-run setup gate", () => {
     // the step says so in the open rather than in a fold; and the pin is
     // the directory sign-in runs on, which nothing else would explain.
     expect(
-      screen.getByText("Register these redirect URIs on the app"),
+      screen.getByText("Register these redirect URIs in the app"),
     ).toBeTruthy();
     expect(
-      screen.getByText(/directory is what puts Microsoft on the login page/),
+      screen.getByText(/directory puts Microsoft on the login page/),
     ).toBeTruthy();
     await user.type(screen.getByLabelText("Client ID"), "entra-app");
     await user.type(screen.getByLabelText("Client secret"), "s3cret");

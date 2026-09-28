@@ -103,7 +103,7 @@ describe("ProjectScreen", () => {
     expect(screen.getByText("Started in Initiative")).toBeTruthy();
     expect(screen.getByText(/31d · current/)).toBeTruthy();
     expect(
-      screen.getByText(/No agreement is filed under this project/),
+      screen.getByText(/No contract is filed under this project/),
     ).toBeTruthy();
     expect(
       screen.getByText(/No file is attached to this project/),
@@ -191,14 +191,14 @@ describe("ProjectScreen", () => {
     });
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
-    const withheld = screen.getAllByText("Hidden — your role cannot read this");
+    const withheld = screen.getAllByText("Hidden for your role");
     // The contracts card, the rollups plate, the company in the subtitle and
     // the timeline: four withheld sections, four sentences, no empty state
     // standing in for any of them. The coverage line is gone from the page, so
     // it withholds nothing.
     expect(withheld).toHaveLength(4);
     expect(
-      screen.queryByText(/No agreement is filed under this project/),
+      screen.queryByText(/No contract is filed under this project/),
     ).toBeNull();
     expect(screen.queryByTestId("project-coverage")).toBeNull();
     expect(screen.queryByTestId("project-coverage-withheld")).toBeNull();
@@ -293,7 +293,7 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     // The page says why once, rather than each control failing on its own.
-    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+    expect(screen.getByText(/You cannot edit this project/)).toBeTruthy();
 
     // Every verb, not a sample of them: asserting one control would leave the
     // others free to regress one at a time. New Deal is here because binding a
@@ -322,7 +322,7 @@ describe("ProjectScreen", () => {
         expect(
           document.getElementById(verb.getAttribute("aria-describedby") ?? "")
             ?.textContent,
-        ).toMatch(/You cannot change this project/);
+        ).toMatch(/You cannot edit this project/);
       }
     }
 
@@ -347,7 +347,7 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
 
-    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+    expect(screen.getByText(/You cannot edit this project/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
   });
 
@@ -363,7 +363,7 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
 
-    expect(screen.getByText(/You cannot change this project/)).toBeTruthy();
+    expect(screen.getByText(/You cannot edit this project/)).toBeTruthy();
   });
 });
 

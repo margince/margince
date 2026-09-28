@@ -16,11 +16,11 @@
 import { useMemo, useState } from "react";
 
 import type { components } from "../../api/schema";
+import { ErrorLine } from "../../design-system/errorline";
 import { RelationshipMap } from "../../design-system/relationshipmap";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf } from "../common";
 import { mapLabels } from "../companycontacts/summary";
 import { useContactGraph } from "../contactgraph";
 import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
@@ -99,12 +99,8 @@ export function ContactNetworkTab({
   if (graph.isError) {
     // Not SurfaceState's `failed`: WHICH failure this was is what a reader
     // acts on — a refusal is answered by asking for the grant, a timeout by
-    // retrying. problemMessageOf keeps the internal cause off the screen.
-    return (
-      <p role="alert" className="pn-failed">
-        {problemMessageOf(graph.error, t)}
-      </p>
-    );
+    // retrying. ErrorLine keeps the internal cause off the screen.
+    return <ErrorLine error={graph.error} />;
   }
   const data = graph.data;
   if (!data?.nodes) {

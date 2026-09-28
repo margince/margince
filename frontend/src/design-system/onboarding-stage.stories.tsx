@@ -26,8 +26,8 @@ type Story = StoryObj<typeof OnboardingStage>;
 export const Unlit: Story = {
   args: {
     lit: false,
-    coreStateLabel: "core · at rest",
-    progress: { steps: ["The model", "Your platform"], at: 0 },
+    coreStateLabel: "Core · idle",
+    progress: { steps: ["The model", "Platform"], at: 0 },
     eyebrow: "First run · 1 of 2",
     title: "Choose a model provider",
     sub: "Margince provides no inference of its own, so it works through your vendor account.",
@@ -40,8 +40,8 @@ export const Unlit: Story = {
 export const Lit: Story = {
   args: {
     lit: true,
-    coreStateLabel: "core · at rest",
-    progress: { steps: ["The model", "Your platform"], at: 1 },
+    coreStateLabel: "Core · idle",
+    progress: { steps: ["The model", "Platform"], at: 1 },
     eyebrow: "First run · 2 of 2",
     title: "Connect a Google app",
     sub: "Mailboxes are connected through a Google OAuth app you own, so mail is read with your company’s own credentials.",
@@ -62,7 +62,7 @@ export const GrowingAndTopAnchored: Story = {
     // The orb steps back once the reader has work of their own to watch. Same
     // element, same place, less room.
     coreScale: "work",
-    coreStateLabel: "core · taking it in",
+    coreStateLabel: "Core · reading input",
     title: "Reading gradion.com",
     sub: "Following the pages that say what this company does.",
     children: <p className="t-body">Nine pages read, four still to reach.</p>,
@@ -84,7 +84,7 @@ export const ABoardLongerThanTheRoom: Story = {
     lit: true,
     coreScale: "work",
     anchor: "start",
-    coreStateLabel: "core · at rest",
+    coreStateLabel: "Core · idle",
     title: "Tell me about the work",
     sub: "Nothing here is guessed. Every line you leave empty stays empty.",
     hint: "Answers are saved as you go; leaving is safe.",
@@ -92,7 +92,7 @@ export const ABoardLongerThanTheRoom: Story = {
     children: (
       <>
         {[
-          "What do you sell?",
+          "Products and services",
           "Who do you sell it to?",
           "What does a good customer look like?",
           "Where do most of them come from?",

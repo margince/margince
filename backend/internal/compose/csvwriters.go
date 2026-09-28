@@ -55,8 +55,9 @@ type csvWriters struct {
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
 	nativeIDs map[string]ids.UUID
-	// employers is the normalized company-name index, built once per run by
-	// employerIndex and nil until the first row needs it.
+	// employers caches one answer per folded company name the FILE names, so a
+	// file naming one employer on every row asks the database once. Nil until
+	// the first row needs it; bounded by the file, never by the estate.
 	employers map[string]employerCandidate
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no

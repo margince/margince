@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "5ca1c5e079a56bc7891535d415790b02688bc525d16f8e7807ab22e523c6e0ae"
+const jobContractHash = "bcb403de4f1a4ee4d093f23965d9697934d9125088f2e81bc8574866a8e8e90b"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -34,6 +34,7 @@ type declaredJobArgs interface {
 		AiModelRateRefreshArgs |
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
+		AssuranceRunArgs |
 		AssuranceSweepArgs |
 		BriefGenerateArgs |
 		CaptureAutoEnrichSweepArgs |
@@ -76,12 +77,15 @@ type declaredJobArgs interface {
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
 		LinkedInRematchArgs |
+		MailDraftRetentionArgs |
+		MeetingDeliveryArgs |
 		OwedVerdictArgs |
 		ParticipantBackfillArgs |
 		PrivacyRetentionArgs |
 		ProviderLookupSweepArgs |
 		ProviderRunPollSweepArgs |
 		ProviderRunSubmitArgs |
+		RiskVerdictSweepArgs |
 		SignalScanArgs |
 		SiteDeepReadArgs |
 		StageEvidenceReadArgs |
@@ -161,6 +165,7 @@ var (
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
+	_ jobs.FleetWide = RiskVerdictSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
 	_ jobs.FleetWide = StoredObjectReapArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
@@ -174,6 +179,7 @@ var (
 var (
 	_ jobs.WorkspaceScoped = AccountScanArgs{}
 	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
+	_ jobs.WorkspaceScoped = AssuranceRunArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CheckCompanyVatArgs{}

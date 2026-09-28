@@ -78,7 +78,7 @@ func TestWeeklyReviewHourAppliesToTeamsAndSundayCanCatchUp(t *testing.T) {
 func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
-	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,forecast}','{"read":true,"create":true}'::jsonb) WHERE key='team_lead_under_test'`)
+	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,forecast}','{"read":true,"create":true}'::jsonb) WHERE key='manager'`)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	plan := weeklyPlanStore(e.Pool)
 	during := teamJobClock.AddDate(0, 0, -7)
@@ -107,7 +107,7 @@ func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
 func TestReadOnlyPlanAuthorityStillReceivesRecordedWork(t *testing.T) {
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
-	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,weekly_plan}','{"read":true,"update":false}'::jsonb) WHERE key='team_lead_under_test'`)
+	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,weekly_plan}','{"read":true,"update":false}'::jsonb) WHERE key='manager'`)
 	w := teamSnapshotWorker(e)
 	if err := w.measureWorkspace(e.Admin(), e.WS, teamJobClock); err != nil {
 		t.Fatal(err)

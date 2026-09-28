@@ -73,7 +73,7 @@ func setupNotices(t *testing.T) *noticeEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 	return e

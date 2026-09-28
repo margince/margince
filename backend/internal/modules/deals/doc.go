@@ -20,7 +20,10 @@
 // engine: rate-card products, versioned deal-bound offers with derived money
 // totals), deal_acquisition_source (the administered business channels a deal
 // is attributed to — the opportunity's origin, distinct from the lead
-// vocabulary's record provenance).
+// vocabulary's record provenance), deal_risk_day and deal_risk_verdict
+// (each day's first risk pass and the deals it judged material and at risk,
+// written by compose's hourly pass because the judgement cannot be recomputed
+// afterwards).
 //
 // The project moved OUT of this module into modules/projects, superseding
 // ADR-0073 — see that package's doc.go for the reasoning and for the two

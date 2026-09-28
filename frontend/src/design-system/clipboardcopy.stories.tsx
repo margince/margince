@@ -22,7 +22,7 @@ function CopyTheLink({ text = LINK }: Readonly<{ text?: string }>) {
   const copy = useClipboardCopy(text, {
     copy: "Copy link",
     copied: "Copied",
-    remedy: "Select the link and copy it by hand.",
+    remedy: "Select the link and copy it manually.",
   });
   return (
     <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: "32rem" }}>
@@ -83,7 +83,7 @@ export const Refused: Story = {
       await userEvent.click(
         within(canvasElement).getByRole("button", { name: "Copy link" }),
       );
-      await screen.findByText("This browser refused the clipboard");
+      await screen.findByText("Clipboard access denied");
     } finally {
       clipboard.restore();
     }

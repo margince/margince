@@ -139,7 +139,7 @@ describe("InstallationSettingsCard", () => {
     // aria-describedby — so the sentence reaches a reader who lands on the
     // refused control, not only one who happens past the paragraph.
     const reason = screen.getByText(
-      "Only an admin or ops can change these settings.",
+      "Only an administrator or operations user can change these settings.",
     );
     expect(reason.id).not.toBe("");
     for (const fact of [
@@ -208,10 +208,10 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit financial year starts/i);
+    const dialog = await openFrom(user, /edit fiscal year starts/i);
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        within(dialog).getByLabelText(/financial year starts/i),
+        within(dialog).getByLabelText(/fiscal year starts/i),
       ),
     );
   });

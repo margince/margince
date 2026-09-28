@@ -1,0 +1,13 @@
+.mergeaction-lede {
+  margin-bottom: var(--space-2);
+}
+
+.mergeaction-candidates {
+  list-style: none;
+  margin: var(--space-2) 0;
+  padding: 0;
+}
+
+.mergeaction-confirm {
+  margin-bottom: var(--space-4);
+}

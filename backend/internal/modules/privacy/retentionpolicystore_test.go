@@ -164,7 +164,7 @@ func TestValidateRetentionActionJudgesThePairNotTheAction(t *testing.T) {
 		{"deal/won", actionErase},
 		{"deal/lost", actionAnonymize},
 		{"activity", actionAnonymize},
-		{"lead/unconverted", actionArchive},
+		{"lead/unconverted", actionErase},
 		{"ai_call_payload/content", actionArchive},
 		{"contact/no_consent_no_deal", actionArchive},
 	} {

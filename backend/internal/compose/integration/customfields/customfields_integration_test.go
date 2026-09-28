@@ -61,7 +61,7 @@ func wsExecErr(e *integration.Env, ws ids.UUID, sql string, args ...any) error {
 }
 
 func dateSpec(label string) customfieldsmod.FieldSpec {
-	return customfieldsmod.FieldSpec{Object: "deal", Label: label, Type: customfieldsmod.TypeDate, Source: "ui"}
+	return customfieldsmod.FieldSpec{Object: "deal", Label: label, Type: customfieldsmod.TypeDate, Source: "manual"}
 }
 
 func TestCustomFieldCreate_ColumnCatalogAndAuditLandTogether(t *testing.T) {
@@ -176,13 +176,13 @@ func TestCustomFieldCreate_RefusalsWriteNothing(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	if _, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "deal", Label: "Link to invoice system", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "deal", Label: "Link to invoice system", Type: customfieldsmod.TypeText, Source: "manual",
 	}); !errors.Is(err, customfieldsmod.ErrStructural) {
 		t.Fatalf("structural label must refuse with ErrStructural, got %v", err)
 	}
 	var verr *customfieldsmod.ValidationError
 	if _, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "deal", Label: "Budget", Type: "money", Source: "ui",
+		Object: "deal", Label: "Budget", Type: "money", Source: "manual",
 	}); !errors.As(err, &verr) {
 		t.Fatalf("unknown type must refuse with ValidationError, got %v", err)
 	}
@@ -220,7 +220,7 @@ func TestCustomFieldCreate_BusyTableAnswersRetryableConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	spec := customfieldsmod.FieldSpec{Object: "company", Label: "Region", Type: customfieldsmod.TypeText, Source: "ui"}
+	spec := customfieldsmod.FieldSpec{Object: "company", Label: "Region", Type: customfieldsmod.TypeText, Source: "manual"}
 	_, err = svc.Create(ctx, spec)
 	if !errors.Is(err, customfieldsmod.ErrTableBusy) {
 		t.Fatalf("a busy table must answer ErrTableBusy, got %v", err)
@@ -250,7 +250,7 @@ func TestCustomFieldSetOptions_BusyTableAnswersRetryableConflict(t *testing.T) {
 
 	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
 		Object: "contact", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
-		Options: []string{"direct", "reseller"}, Source: "ui",
+		Options: []string{"direct", "reseller"}, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)

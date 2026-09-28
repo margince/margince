@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "5ca1c5e079a56bc7891535d415790b02688bc525d16f8e7807ab22e523c6e0ae"
+const JobContractHash = "bcb403de4f1a4ee4d093f23965d9697934d9125088f2e81bc8574866a8e8e90b"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -108,6 +108,15 @@ var specs = map[string]Spec{
 		MaxAttempts: 1,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 5 * time.Minute},
+	},
+	"assurance_run": {
+		Kind:      "assurance_run",
+		GoType:    "AssuranceRunArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "RequestedBy"}, {Name: "Workspace"}},
 	},
 	"assurance_sweep": {
 		Kind:      "assurance_sweep",
@@ -274,6 +283,7 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 24 * time.Hour},
+		Fault:     FaultPolicy{NilAfterLogging: "the warn line is this pass's FINDING, not a failure: it is the mail enforcing the engine would have stopped, logged at warn because that is what an operator weighs before enforcing. A pass that read the disagreement has succeeded whatever it found; a pass that could not read it returns that through jobs.Fault."},
 	},
 	"comms_controller_payload_sweep": {
 		Kind:         "comms_controller_payload_sweep",
@@ -551,6 +561,27 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
+	"mail_draft_retention": {
+		Kind:        "mail_draft_retention",
+		GoType:      "MailDraftRetentionArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 1 * time.Hour},
+	},
+	"meeting_delivery": {
+		Kind:         "meeting_delivery",
+		GoType:       "MeetingDeliveryArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts:  1,
+		OptsOwner:    OptsArgs,
+		Cadence:      Cadence{Fixed: 15 * time.Second},
+		Registration: Registration{When: []string{"GmailRegistry"}},
+	},
 	"owed_verdict": {
 		Kind:         "owed_verdict",
 		GoType:       "OwedVerdictArgs",
@@ -577,7 +608,7 @@ var specs = map[string]Spec{
 		GoType:      "PrivacyRetentionArgs",
 		Role:        Worker,
 		Queue:       "privacy_retention",
-		Timeout:     TimeoutPolicy{Fixed: 22300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
+		Timeout:     TimeoutPolicy{Fixed: 405 * time.Minute, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{OperatorField: "PrivacyRetention.Interval", ScheduleWhenPositive: "PrivacyRetention.Interval"},
@@ -614,6 +645,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsArgs,
 		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
 		Args:         []ArgField{{Name: "RunID"}, {Name: "Workspace"}},
+	},
+	"risk_verdict_sweep": {
+		Kind:      "risk_verdict_sweep",
+		GoType:    "RiskVerdictSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
 	"signal_scan": {
 		Kind:      "signal_scan",

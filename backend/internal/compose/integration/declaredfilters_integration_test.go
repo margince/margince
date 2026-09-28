@@ -175,7 +175,7 @@ func TestTheActivityListNarrowsToTheOpenTasksOneAssigneeHolds(t *testing.T) {
 	closed := e.logTask(t, "Already handled", e.Rep1, due)
 	e.logTask(t, "Someone else's", e.Rep3, due)
 	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](closed),
-		activities.UpdateActivityInput{IsDone: boolPtr(true)}); err != nil {
+		activities.UpdateActivityInput{IsDone: BoolPtr(true)}); err != nil {
 		t.Fatalf("completing the task: %v", err)
 	}
 
@@ -459,7 +459,7 @@ func TestTheContactListNarrowsToOneEmployer(t *testing.T) {
 			Kind:             "employment",
 			ContactID:        &contactID,
 			CompanyID:        &companyID,
-			IsCurrentPrimary: boolPtr(ended == nil),
+			IsCurrentPrimary: BoolPtr(ended == nil),
 			EndedAt:          ended,
 			Source:           "manual",
 		}); err != nil {

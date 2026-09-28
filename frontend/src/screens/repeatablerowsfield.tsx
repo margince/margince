@@ -18,6 +18,7 @@ import {
   withRowMoved,
   withRowUpdated,
 } from "./createrows";
+import "./repeatablerowsfield.css";
 
 // A repeatable-row field (emails/phones/domains): each existing row renders
 // its subfields via the same fieldControl every scalar field uses, plus an
@@ -136,12 +137,7 @@ export function RepeatableRowsField({
           as="div"
           // biome-ignore lint/suspicious/noArrayIndexKey: every cell is controlled from rows[index], so a swap re-renders in place
           key={index}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "var(--space-2)",
-            alignItems: "center",
-          }}
+          className="repeatablerowsfield-row"
         >
           {rowFields.map((subField) => (
             <Field

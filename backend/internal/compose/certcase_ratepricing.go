@@ -14,10 +14,10 @@ package compose
 // What the expectation MEANS here: the models the page grounds, each with the
 // four price buckets it must carry. Prices are the whole product of this site —
 // what reaches an administrator's approval queue is a per-model price — so a
-// price is the one thing the model can be right or wrong about. It is a subset
-// claim, never an inventory: a real pricing page states more models than a
-// scenario cares to pin, and demanding exhaustiveness would fail a read for being
-// richer than its author imagined.
+// price is the one thing the model can be right or wrong about. It is an
+// inventory, not a subset: every surviving row is staged for approval, so a row
+// for a model the scenario does not name is an invented price in that queue, and
+// a scenario names every model its page prices.
 //
 // Two things the expectation deliberately cannot name. A PROVIDER: the gate
 // overwrites every row's provider with the configured source, so naming one could
@@ -240,13 +240,49 @@ func (c *ratePricingCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		}
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
 	}
-	if disagreements := c.disagreements(kept); len(disagreements) > 0 {
+	disagreements := slices.Concat(c.disagreements(kept), c.uninvited(kept), c.misattributions(kept))
+	if len(disagreements) > 0 {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: strings.Join(append(disagreements, detail...), "; "),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted, Detail: strings.Join(detail, "; ")}
+}
+
+// uninvited names every model a surviving row prices that the scenario does not
+// expect, once each and sorted, whatever passage the row cites.
+func (c *ratePricingCase) uninvited(kept []extractedModel) []string {
+	var ids []string
+	for i := range kept {
+		if _, expected := c.expected[kept[i].ModelID]; !expected {
+			ids = append(ids, kept[i].ModelID)
+		}
+	}
+	slices.Sort(ids)
+	out := make([]string, 0, len(ids))
+	for _, id := range slices.Compact(ids) {
+		out = append(out, fmt.Sprintf("%q is priced, and the scenario expects no such model", id))
+	}
+	return out
+}
+
+// misattributions names every surviving row for an expected model whose
+// evidence cites no passage stating its prices.
+func (c *ratePricingCase) misattributions(kept []extractedModel) []string {
+	passages := ratePassages(c.pageText)
+	var out []string
+	for i := range kept {
+		if _, expected := c.expected[kept[i].ModelID]; !expected {
+			continue
+		}
+		row := kept[i]
+		if miss := misattributed(passages, row.ModelID, row.Evidence,
+			row.InputUsd, row.OutputUsd, row.CacheReadUsd, row.CacheWriteUsd); miss != "" {
+			out = append(out, miss)
+		}
+	}
+	return out
 }
 
 // rateRowRefusals names every claimed row the gate did not let through, by asking

@@ -4,32 +4,33 @@ site: narrative
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:
-  week_start: "2026-07-06"
+  week_start: "2026-07-20"
   counts:
-    tasks_due: 2
-    tasks_done: 2
+    tasks_due: 0
+    tasks_done: 0
     tasks_carried_over: 0
     deals_moved: 0
     deals_won: 0
     deals_lost: 0
-    proposals_accepted: 1
+    proposals_accepted: 0
     proposals_rejected: 0
-    brief_items_acted: 2
-    brief_items_dismissed: 1
+    brief_items_acted: 0
+    brief_items_dismissed: 0
   deals: []
 expect:
   outcome: accepted
   answer:
     must_mention: []
-    # The failure this case exists for: inventing significance to fill the
-    # space. A week where nothing closed and nothing slipped is a true and
-    # useful thing to say, and a sentence claiming momentum, a breakthrough or
-    # a deal is describing a week that did not happen.
+    # Every count is zero, so the product serves the quiet-week rule. The
+    # failure is inventing significance to fill the space: praise, momentum,
+    # or work the summary does not carry.
     must_not_mention:
-      ["won", "lost", "closed", "breakthrough", "momentum", "Weber"]
+      ["won", "breakthrough", "momentum", "productive", "busy", "great week"]
   bands: { certified_min: 70, degraded_min: 50, floor: 40 }
   rubric: >
-    One sentence is enough. It must say the week was quiet, or say what little
-    happened, without inventing significance. Claiming a deal moved, closed or
-    was won is wrong: the summary carries none. Saying the two promised tasks
-    were both kept is correct and welcome.
+    Every count is zero and no deal is listed. The right sentence says plainly
+    that the week was quiet — nothing closed, nothing slipped — in one
+    sentence. Inventing activity, a deal, a number or a reason the summary
+    does not carry scores at the floor. Dressing the week up as productive,
+    advising the rep what to do next, or congratulating or consoling them
+    breaks the product's "state it" rule and caps the score at degraded.

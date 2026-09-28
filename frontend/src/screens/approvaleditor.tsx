@@ -19,15 +19,15 @@ import { isRealCalendarDay } from "../format/calendarday";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   EDITABLE_FIELDS,
   type EditableField,
   humanizeKind,
-  resolveDisplay,
-  stagedDayFormatter,
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { QueryGate, throwProblem } from "./common";
+import "./common.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
 // dialog behind its meta line, and the inline staged-draft editor. They sit
@@ -126,12 +126,7 @@ export function ApprovalDetailModal({
   });
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {t("decision.detail")}
       </Heading>
       {open && (

@@ -104,24 +104,27 @@ func (s *Store) CreateCompanyFact(
 		archived:   storekit.NoArchiveColumn,
 		changedKey: factKey,
 		value:      &value,
-		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, bool, error) {
-			_, err := readFactRow(ctx, tx, companyID, factKey)
+		locate: func(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
+			_, err := factRowID(ctx, tx, companyID, factKey)
 			if err == nil {
 				// Already stated. Upserting here would let a hand write
 				// overwrite a machine claim with none of the correction path's
 				// before-image, so the honest verbs are named instead.
-				return evidenceRow{}, false, fmt.Errorf(
+				return ids.UUID{}, false, fmt.Errorf(
 					"this company already states %s; confirm or correct it instead: %w",
 					factKey, apperrors.ErrConflict)
 			}
 			if !errors.Is(err, apperrors.ErrNotFound) {
-				return evidenceRow{}, false, err
+				return ids.UUID{}, false, err
 			}
 			minted, err := insertHumanCompanyFact(ctx, tx, companyID, in.Category, in.Field, value, valueKey)
 			if err != nil {
-				return evidenceRow{}, false, err
+				return ids.UUID{}, false, err
 			}
 			return minted, true, nil
+		},
+		readLocked: func(ctx context.Context, tx pgx.Tx, id ids.UUID) (evidenceRow, error) {
+			return readFactRowLocked(ctx, tx, companyID, id)
 		},
 		readAfter: func(ctx context.Context, tx pgx.Tx) (crmcontracts.CompanyFact, error) {
 			return readFactWire(ctx, tx, companyID, factKey)
@@ -144,16 +147,22 @@ func (s *Store) DeleteCompanyFact(
 		changedKey: factKey,
 		ifVersion:  in.IfVersion,
 		remove:     true,
-		readBefore: func(ctx context.Context, tx pgx.Tx) (evidenceRow, bool, error) {
-			row, err := readFactRow(ctx, tx, companyID, factKey)
-			return row, false, err
+		locate: func(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
+			id, err := factRowID(ctx, tx, companyID, factKey)
+			return id, false, err
+		},
+		readLocked: func(ctx context.Context, tx pgx.Tx, id ids.UUID) (evidenceRow, error) {
+			return readFactRowLocked(ctx, tx, companyID, id)
 		},
 	})
 	return err
 }
 
-// insertHumanCompanyFact writes the row a contact stated and reads back the
-// before-image shape the shared writer works in.
+// insertHumanCompanyFact writes the row a contact stated and answers its id.
+//
+// Its id and nothing else: the row's own values are read back by the shared
+// writer AFTER it takes the lock, on the same statement that reads them for
+// every other verb.
 //
 // `evidence_snippet` and `source_url` are empty and `confidence` is 1: a contact
 // stating a fact IS the evidence, and there is no page to quote. That is the
@@ -162,34 +171,32 @@ func (s *Store) DeleteCompanyFact(
 func insertHumanCompanyFact(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	category, field, value, valueKey string,
-) (evidenceRow, error) {
+) (ids.UUID, error) {
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return evidenceRow{}, err
+		return ids.UUID{}, err
 	}
-	var r evidenceRow
+	var id ids.UUID
 	err = tx.QueryRow(ctx, `
 		INSERT INTO company_fact
 		       (company_id, category, field, value, value_key,
 		        evidence_snippet, source_url, confidence, source, captured_by, site_read_id)
 		VALUES ($1, $2, $3, $4, $5, '', '', 1, 'human', $6, NULL)
-		RETURNING id, value, source, evidence_snippet, source_url, confidence,
-		          verified_at, verified_by, captured_by`,
+		RETURNING id`,
 		companyID, category, field, value, valueKey, capturedBy,
-	).Scan(&r.ID, &r.Value, &r.Source, &r.EvidenceSnippet, &r.SourceURL, &r.Confidence,
-		&r.VerifiedAt, &r.VerifiedBy, &r.CapturedBy)
+	).Scan(&id)
 	// The probe above and this insert are two statements, so a second caller
 	// can land the same fact between them. uq_company_fact is what actually
 	// prevents the duplicate; without translating its violation the loser of
 	// that race gets a 500 where the contract promises a 409, and the answer
 	// would depend on timing rather than on what is true.
 	if constraint, dup := storekit.UniqueViolation(err); dup && constraint == "uq_company_fact" {
-		return evidenceRow{}, fmt.Errorf(
+		return ids.UUID{}, fmt.Errorf(
 			"this company already states %s:%s; confirm or correct it instead: %w",
 			field, valueKey, apperrors.ErrConflict)
 	}
 	if err != nil {
-		return evidenceRow{}, fmt.Errorf("state company fact %s.%s: %w", category, field, err)
+		return ids.UUID{}, fmt.Errorf("state company fact %s.%s: %w", category, field, err)
 	}
-	return r, nil
+	return id, nil
 }

@@ -306,7 +306,7 @@ describe("a record timeline you can work in", () => {
     vi.stubGlobal("fetch", feed.fetcher);
     mount();
     await screen.findByText("Fleet renewal");
-    const note = /Conversations whose content you may not open/;
+    const note = /threads whose content you cannot open/;
     expect(screen.queryByText(note)).toBeNull();
 
     await user.type(

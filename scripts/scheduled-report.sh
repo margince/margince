@@ -615,6 +615,12 @@ fi
 # unit somebody can act on — and because a standing "merges are landing unproven"
 # issue would collect every case under one title and be closed once, which is how
 # a recurring finding becomes a stale one.
+#
+# The TITLE still leads with what broke. Six of these fired for one outage and a
+# reader scanning open issues saw six merges rather than one red tree, because
+# the title named the pull request and not the state of main. Keeping the number
+# keeps them one-per-merge; leading with the state is what makes the first one
+# actionable without opening it.
 
 if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
   # TWO findings, two titles. The judge reports a commit no pull request names
@@ -622,8 +628,11 @@ if [[ "${MERGE_VERDICT_RESULT:-}" = "failure" ]]; then
   # would describe a check that never ran — and the two are told apart by
   # exactly the thing the title would otherwise name, the pull request number.
   if [[ -n "${MERGE_VERDICT_PR:-}" ]]; then
-    merge_title="A merge landed on main against a failing verdict (#$MERGE_VERDICT_PR)"
+    merge_title="main is red: \`${MERGE_VERDICT_LANE:-the required check}\` failed on the tree merged by #$MERGE_VERDICT_PR"
   else
+    # NOT "main is red": no verdict ever ran, so this says the tree is
+    # unverified rather than that it is known bad. The two are different facts
+    # and a reader acts on them differently.
     merge_title="A merge landed on main with no pull request behind it"
   fi
   report "$merge_title" "priority: high,area: ci-tests,bug" \

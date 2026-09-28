@@ -246,14 +246,9 @@ export function QueryStates({
             button is something to reach, not something to hear. */}
         <div role="alert">
           <p>{t("common.error")}</p>
-          <p style={{ marginTop: "var(--space-2)" }}>
-            {problemMessageOf(query.error, t)}
-          </p>
+          <p className="querygate-cause">{problemMessageOf(query.error, t)}</p>
         </div>
-        <Button
-          onClick={() => query.refetch()}
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <Button onClick={() => query.refetch()} className="querygate-retry">
           {t("common.retry")}
         </Button>
       </EmptyState>

@@ -78,7 +78,7 @@ const meta: Meta<typeof IntroDecisionDrawer> = {
   component: IntroDecisionDrawer,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
-    await drawer.findByText("Note your colleague can forward");
+    await drawer.findByText("Forwardable note");
   },
 };
 export default meta;

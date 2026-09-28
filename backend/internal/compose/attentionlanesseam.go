@@ -88,9 +88,14 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 // The depth-reporting scanner, not the plain SlippingLister: the team board
 // needs to know whether the sweep was cut, and that cannot be recovered from the
 // rows it returns.
+//
+// The lane reads the SERVICE's clock, the same one the day is judged and
+// priced at, so one read — the hourly verdict pass included — takes its
+// at-risk set, its prices and its day from a single instant.
 type attentionAtRisk struct {
 	lister func(context.Context) ([]agents.SlippingDeal, bool, error)
 	pool   *pgxpool.Pool
+	now    attention.Clock
 }
 
 func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool, error) {
@@ -98,7 +103,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 	if err != nil {
 		return nil, false, err
 	}
-	now := clockNow()
+	now := a.now().UTC()
 	cover, err := a.championCover(ctx, candidates, now)
 	if err != nil {
 		return nil, false, err

@@ -164,14 +164,21 @@ func UpsertAction(replacing bool) principal.Action {
 }
 
 // RequireHuman refuses an AGENT (Passport) principal outright, whatever its
-// scope or the granting human's RBAC. It is the runtime twin of the
-// contract's `x-agent-access: human-only` for the operations the agent gate
-// cannot cover: reads. The gate only inspects mutating methods, so a
-// human-only GET (an admin-only sheet) must reject an agent principal here,
-// or an admin-minted read-scoped passport would satisfy the object grant and
-// see it. A buyer is refused too, by the shared helper: "human" here means a
-// seated member, and an external Deal Room participant is not one. The
-// connector and system principals are, and pass.
+// scope or the granting human's RBAC.
+//
+// A second answer to the contract's `x-agent-access: human-only`, not the only
+// one: agentGate refuses an annotated route centrally from the generated table,
+// on reading methods (refusedAsHumanOnly) as well as mutating ones, and most
+// human-only routes carry no call here at all. That coverage is held by
+// humanonlyenforcement_test.go.
+//
+// The two ask different questions, which is what makes the dozen calls that
+// remain worth their line. The gate asks whether this ROUTE is an agent's,
+// reading an annotation; this asks whether this CALLER is a human, reading the
+// principal. So it binds a route carrying no annotation at all, and it refuses
+// a buyer as well — "human" here means a seated member, and an external Deal
+// Room participant is not one. The connector and system principals are, and
+// pass.
 func RequireHuman(ctx context.Context) error {
 	p, err := rbacActor(ctx)
 	if err != nil {
@@ -377,24 +384,15 @@ const ruleDealRoomSession = "deal_room_session"
 
 const roleAdmin = "admin"
 
-// coachingRoles are the seats that may raise a coaching notice for somebody
-// else: the two leadership seats and the Team Lead.
+// objTeamLead is the grant that says a seat leads the teams it is on: create
+// raises a coaching notice for a teammate, read opens a led team's week.
+// Seeded to admin, management and manager, and editable like any other grant,
+// so a custom role can lead a team.
 //
-// A role list rather than an object grant, for the reason RequireAdmin is one:
-// what is being authorized is speaking to a colleague, which is not a CRUD verb
-// on a record kind and cannot be spelled in the object grid. `rep` is absent
-// deliberately — a rep on a team would otherwise coach their teammates, and
-// coaching is a thing a lead does.
-//
-// The keys are spelled here rather than read from the module that seeds them
-// because platform sits below modules in the DAG, exactly as roleAdmin above
-// is. TestTheCoachingRolesAreSeededRoles holds the two spellings together.
-//
-// Matching on the KEY is matching on the seeded role, because `role.key` is
-// UNIQUE: an operator cannot author a custom role keyed `manager` beside the
-// Team Lead — the insert fails. So a principal carrying one of these keys holds
-// the seeded seat it names, which is the same ground RequireAdmin stands on.
-var coachingRoles = []string{roleAdmin, "management", "manager"}
+// A grant rather than a role list: a list of keys admitted only the seeded
+// seats it named, so a role an operator made could never coach, and a seeded
+// lead whose operator took the authority away kept it.
+const objTeamLead = "team_lead"
 
 // RequireCoach admits a seat that may raise a coaching notice.
 //
@@ -414,15 +412,17 @@ func RequireCoach(ctx context.Context) error {
 	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
 		return err
 	}
-	if p.Type != principal.PrincipalHuman {
+	if !leads(p, principal.ActionCreate) {
 		return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
 	}
-	for _, role := range coachingRoles {
-		if slices.Contains(p.Permissions.RoleKeys, role) {
-			return nil
-		}
-	}
-	return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
+	return nil
+}
+
+// leads reports whether a human seat holds the team-lead grant for this act.
+// Leading is a human's act: an agent or connector holding the grant through
+// its human leads nobody on its own.
+func leads(p principal.Principal, action principal.Action) bool {
+	return p.Type == principal.PrincipalHuman && p.Permissions.Allows(objTeamLead, action)
 }
 
 // RequireAdmin admits only a principal carrying the workspace "admin" role.

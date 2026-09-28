@@ -1,0 +1,62 @@
+package planted
+
+import "fmt"
+
+type Lang string
+
+type stageInput struct{ Summary string }
+
+type copyTable struct{ drafted string }
+
+const quiet = "This deal went quiet"
+
+var byLang = map[Lang]copyTable{"en": {drafted: "A reply is drafted"}}
+
+var kindPhrases = map[string]string{"merge": "Merge two records"}
+
+func direct() stageInput     { return stageInput{Summary: "Rename the account?"} }
+func concat(n string) stageInput { return stageInput{Summary: "Rename " + n + " to " + n} }
+func sprintf(n string) stageInput {
+	return stageInput{Summary: fmt.Sprintf("Found on %s", n)}
+}
+func helper(n string) string { return fmt.Sprintf("%s was not sent", n) }
+func viaHelper(n string) stageInput { return stageInput{Summary: helper(n)} }
+func reason(code string) string {
+	switch code {
+	case "x":
+		return "a recipient withdrew consent"
+	}
+	return code
+}
+func viaSwitch(code string) stageInput { return stageInput{Summary: fmt.Sprintf("%s (%s)", code, reason(code))} }
+func viaLocal(n string) stageInput {
+	was := n
+	if was == "" {
+		was = "none in force today"
+	}
+	return stageInput{Summary: fmt.Sprintf("%s (%s)", n, was)}
+}
+func viaParam(summary string) stageInput { return stageInput{Summary: summary} }
+func callsViaParam() stageInput         { return viaParam("Is this worth keeping?") }
+func viaConst() stageInput { return stageInput{Summary: quiet} }
+func viaAssign(n string) stageInput {
+	in := stageInput{Summary: n}
+	in.Summary = fmt.Sprintf("Archive %s", n)
+	return in
+}
+func verb(approve bool) string {
+	if approve {
+		return "Approve"
+	}
+	return "reject"
+}
+func viaOneWord(id string) stageInput { return stageInput{Summary: fmt.Sprintf("%s %s", verb(true), id)} }
+func viaTable(kind string) stageInput { return stageInput{Summary: kindPhrases[kind]} }
+func formatOnly(a, b string) stageInput { return stageInput{Summary: fmt.Sprintf("%s → %s", a, b)} }
+func forwarded(in stageInput) stageInput { return stageInput{Summary: in.Summary} }
+func copyField(lang Lang) stageInput {
+	said := byLang[lang]
+	return stageInput{Summary: said.drafted}
+}
+func langTable(lang Lang) stageInput { return stageInput{Summary: byLang[lang].drafted} }
+func identifier(id string) stageInput { return stageInput{Summary: fmt.Sprintf("%s %s", "offer", id)} }

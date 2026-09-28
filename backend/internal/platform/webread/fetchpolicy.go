@@ -5,14 +5,12 @@ package webread
 
 // The fetch policy: which addresses this product will read at all.
 //
-// It lives HERE, beside robots and the SSRF guard, because it is a decision
-// about fetching rather than about searching. It was written in the websearch
-// port, where only a consumer of the Brave seam could reach it — and in
-// practice no consumer did: it was written, tested, and called by nothing,
-// while the enrich tool handed a caller-supplied URL straight to this fetcher.
+// It lives HERE, beside robots and the SSRF guard, so every fetch path asks it:
+// the fetcher itself, and the enrich tool's URL override before it stages.
 //
-// What actually refused a denied host was the host's OWN robots.txt. That is a
-// real guard and it fails closed here, but it is somebody else's document: a
+// Without it, the only thing refusing a denied host is the host's OWN
+// robots.txt. That is a real guard and it fails closed here, but it is
+// somebody else's document: a
 // platform may permit a path in robots and still prohibit automated collection
 // in its terms, and a host serving no robots.txt allows everything. A promise
 // this product makes cannot rest on a file the other party writes.
@@ -33,14 +31,14 @@ import (
 // and an operator reading a run record needs to know which one fired.
 var ErrFetchPolicy = errors.New("webread: this product does not fetch this address")
 
-// deniedHosts are the platforms this product never fetches, whatever a search
-// returns.
+// deniedHosts are the platforms this product never fetches, whatever page or
+// caller links to them.
 //
 // The reason is contract law rather than data protection, and the distinction
 // matters because the two have different remedies: these platforms' terms
 // prohibit automated collection, and being public data does not touch that.
 // LinkedIn's sanctioned channels stay what ADR-0078 §8 made them — the
-// member's own portability export and CSV — and this seam does not add a
+// member's own portability export and CSV — and the fetcher does not add a
 // third by the back door.
 //
 // Subdomains are covered: the check is suffix-based, so `de.linkedin.com`
@@ -89,7 +87,7 @@ func MayFetch(raw string) FetchDecision {
 	for _, denied := range deniedHosts {
 		if host == denied || strings.HasSuffix(host, "."+denied) {
 			return FetchDecision{
-				Reason: "the platform's terms prohibit automated collection; its results are cited, never fetched",
+				Reason: "the platform's terms prohibit automated collection, so it is never fetched",
 			}
 		}
 	}

@@ -58,6 +58,7 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))
 	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{})))
+	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck())
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))

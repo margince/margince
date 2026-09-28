@@ -89,7 +89,7 @@ func withGhostOwnerAsSubject(ctx context.Context) (context.Context, ids.UUID, er
 func linkedInMatchStager(pool *pgxpool.Pool) func(context.Context) error {
 	svc, store := approvalsServiceWithEffects(pool), contacts.NewStore(InstallationDB(pool))
 	return func(ctx context.Context) error {
-		_, err := StageLinkedInMatches(ctx, svc, store)
+		_, err := StageLinkedInMatches(ctx, pool, svc, store)
 		return err
 	}
 }
@@ -100,12 +100,12 @@ func linkedInMatchStager(pool *pgxpool.Pool) func(context.Context) error {
 // It runs under the ghost owner's own authority — the caller establishes that,
 // as every other pass over these rows does — so a contact outside their row
 // scope never becomes a proposal they can see.
-func StageLinkedInMatches(ctx context.Context, svc *approvals.Service, store *contacts.Store) (int, error) {
+func StageLinkedInMatches(ctx context.Context, pool *pgxpool.Pool, svc *approvals.Service, store *contacts.Store) (int, error) {
 	pending, err := store.PendingLinkedInMatches(ctx)
 	if err != nil {
 		return 0, err
 	}
-	return stagePendingLinkedInMatches(ctx, svc, store, pending)
+	return stagePendingLinkedInMatches(ctx, pool, svc, store, pending)
 }
 
 // StageLinkedInMatchesForContact is the same pass narrowed to the matches about
@@ -116,18 +116,19 @@ func StageLinkedInMatches(ctx context.Context, svc *approvals.Service, store *co
 // about that arrival, so this is the complete answer for that caller as well as
 // the bounded one: proposing the member's entire outstanding set instead would
 // run once per contact event and only ever rejoin rows that already exist.
-func StageLinkedInMatchesForContact(ctx context.Context, svc *approvals.Service, store *contacts.Store, contact ids.UUID) (int, error) {
+func StageLinkedInMatchesForContact(ctx context.Context, pool *pgxpool.Pool, svc *approvals.Service, store *contacts.Store, contact ids.UUID) (int, error) {
 	pending, err := store.PendingLinkedInMatchesForContact(ctx, contact)
 	if err != nil {
 		return 0, err
 	}
-	return stagePendingLinkedInMatches(ctx, svc, store, pending)
+	return stagePendingLinkedInMatches(ctx, pool, svc, store, pending)
 }
 
 // stagePendingLinkedInMatches turns the candidates a match produced into
 // proposals — the one place both scopes pass through.
 func stagePendingLinkedInMatches(
-	ctx context.Context, svc *approvals.Service, store *contacts.Store, pending []contacts.PendingLinkedInMatch,
+	ctx context.Context, pool *pgxpool.Pool, svc *approvals.Service, store *contacts.Store,
+	pending []contacts.PendingLinkedInMatch,
 ) (int, error) {
 	// Staged ON BEHALF OF the member whose network produced it, so the audit
 	// trail records whose export raised the question. It grants nothing and
@@ -140,9 +141,13 @@ func stagePendingLinkedInMatches(
 	if err != nil {
 		return 0, err
 	}
+	if len(pending) == 0 {
+		return 0, nil
+	}
+	said := approvalSummaryCopyOver(ctx, pool)
 	staged := 0
 	for _, m := range pending {
-		proposed, err := stageOneLinkedInMatch(ctx, svc, m)
+		proposed, err := stageOneLinkedInMatch(ctx, svc, said, m)
 		if err != nil {
 			return staged, err
 		}
@@ -172,7 +177,7 @@ func stagePendingLinkedInMatches(
 	return staged, nil
 }
 
-func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, m contacts.PendingLinkedInMatch) (bool, error) {
+func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said approvalSummaryCopy, m contacts.PendingLinkedInMatch) (bool, error) {
 	canonical, hash, err := diffhash.Object(map[string]any{
 		"connection_id": m.ConnectionID.String(), "owner_user_id": m.OwnerUserID.String(),
 		"contact_id":      m.ContactID.String(),
@@ -204,17 +209,17 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, m contac
 		TargetID:       m.ContactID,
 		Identity:       identity,
 		JoinPending:    true,
-		Summary: fmt.Sprintf("%s at %s looks like %s",
-			m.ConnectionName, employerOrPlaceholder(m.ConnectionCompany), m.ContactName),
+		Summary: fmt.Sprintf(said.linkedInLooksLike,
+			m.ConnectionName, employerOrPlaceholder(said, m.ConnectionCompany), m.ContactName),
 	})
 	return proposed, err
 }
 
-func employerOrPlaceholder(s string) string {
-	if s == "" {
-		return "an unnamed employer"
+func employerOrPlaceholder(said approvalSummaryCopy, employer string) string {
+	if employer == "" {
+		return said.unnamedEmployer
 	}
-	return s
+	return employer
 }
 
 // linkedInMatchDeclineEffect marks the ghost row terminal when a member says no.

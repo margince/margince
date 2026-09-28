@@ -8,13 +8,13 @@ package magic
 // ITS OWN LANE, and never folded into done. A failure reported as an achievement
 // is the one thing this surface must not do — a rep who reads "drafted the recap"
 // and acts as though it was sent has been misled by the product, not by a
-// system that broke. Two sources, one meaning:
+// system that broke.
 //
-//   - an APPROVAL whose effect failed. Somebody said yes, the write did not
-//     happen, and nothing else on the morning says so: the approval reads as
-//     decided everywhere it appears.
-//   - an AUTOMATION run that failed or was blocked. The rule is live and enabled
-//     and its last firing did nothing.
+// ITS SUBJECT IS A FIRING THAT DID NOT LAND: an automation run failed or
+// blocked, whose rule is live and enabled, so the reader is owed the news that
+// the last firing did nothing. The standing condition of a source is the
+// watching lane's subject instead, and the split is what keeps one fault from
+// being reported twice.
 
 import (
 	"context"

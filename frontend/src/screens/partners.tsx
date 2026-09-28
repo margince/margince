@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { isOption } from "../app/options";
 import { usePageName } from "../app/pagemeta";
 import {
   Button,
@@ -21,6 +22,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
+import { SUBMIT_COPY, type SubmitIntent } from "./create";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -106,16 +108,6 @@ const STAGE_LABELS: Record<RelationshipStage, MessageKey> = {
   no_fit: "partner.stage.noFit",
 };
 
-// A Select and a filter chip both hand back a bare string; every field below
-// is a contract enum. One narrowing answers for all of them, and it answers by
-// searching the enum rather than asserting the string is already a member.
-function asMember<T extends string>(
-  members: readonly T[],
-  value: string,
-): T | undefined {
-  return members.find((member) => member === value);
-}
-
 async function fetchPartner(companyId: string): Promise<Partner | null> {
   const { data, error, response } = await api.GET("/companies/{id}/partner", {
     params: { path: { id: companyId } },
@@ -175,13 +167,13 @@ function PartnerForm({
   partner,
   onSaved,
   onCancel,
-  submitLabel,
+  intent,
 }: Readonly<{
   companyId: string;
   partner?: Partner;
   onSaved: () => void;
   onCancel?: () => void;
-  submitLabel: MessageKey;
+  intent: SubmitIntent;
 }>) {
   const t = useT();
   // This form only mounts while editing (PartnerDetail/PartnerTab remount it
@@ -230,11 +222,8 @@ function PartnerForm({
             {...control}
             value={values.partner_role}
             onChange={(value) =>
-              setValues({
-                ...values,
-                partner_role:
-                  asMember(PARTNER_ROLES, value) ?? values.partner_role,
-              })
+              isOption(value, PARTNER_ROLES) &&
+              setValues({ ...values, partner_role: value })
             }
             options={PARTNER_ROLES.map((role) => ({
               value: role,
@@ -249,11 +238,8 @@ function PartnerForm({
             {...control}
             value={values.cert_status}
             onChange={(value) =>
-              setValues({
-                ...values,
-                cert_status:
-                  asMember(CERT_STATUSES, value) ?? values.cert_status,
-              })
+              isOption(value, CERT_STATUSES) &&
+              setValues({ ...values, cert_status: value })
             }
             options={CERT_STATUSES.map((status) => ({
               value: status,
@@ -270,9 +256,7 @@ function PartnerForm({
             onChange={(value) =>
               setValues({
                 ...values,
-                margin_tier: value
-                  ? (asMember(MARGIN_TIERS, value) ?? values.margin_tier)
-                  : "",
+                margin_tier: isOption(value, MARGIN_TIERS) ? value : "",
               })
             }
             // The clearing entry is a real choice, not a placeholder: a tier once
@@ -295,12 +279,8 @@ function PartnerForm({
             {...control}
             value={values.relationship_stage}
             onChange={(value) =>
-              setValues({
-                ...values,
-                relationship_stage:
-                  asMember(RELATIONSHIP_STAGES, value) ??
-                  values.relationship_stage,
-              })
+              isOption(value, RELATIONSHIP_STAGES) &&
+              setValues({ ...values, relationship_stage: value })
             }
             options={RELATIONSHIP_STAGES.map((stage) => ({
               value: stage,
@@ -345,13 +325,7 @@ function PartnerForm({
         )}
       </Field>
       <ErrorLine error={mutation.error} />
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--gapActions)",
-          justifyContent: "flex-end",
-        }}
-      >
+      <div className="form-actions">
         {onCancel && (
           <Button type="button" onClick={onCancel}>
             {t("create.cancel")}
@@ -361,9 +335,9 @@ function PartnerForm({
           variant="primary"
           type="submit"
           pending={mutation.isPending}
-          busyLabel={t("create.saving")}
+          busyLabel={t(SUBMIT_COPY[intent].busy)}
         >
-          {t(submitLabel)}
+          {t(SUBMIT_COPY[intent].label)}
         </Button>
       </div>
     </form>
@@ -412,7 +386,7 @@ function PartnerDetail({
         <PartnerForm
           companyId={companyId}
           partner={partner}
-          submitLabel="record.save"
+          intent="save"
           onCancel={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
@@ -515,7 +489,7 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
               <SectionHeader title={t("partner.setup")} />
               <PartnerForm
                 companyId={companyId}
-                submitLabel="create.save"
+                intent="create"
                 onSaved={invalidateAfterSave}
               />
             </PanelBody>
@@ -540,13 +514,15 @@ async function fetchPartnersPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Partner>> {
+  const role = query.filters.partner_role ?? "";
+  const cert = query.filters.cert_status ?? "";
   const { data, error } = await api.GET("/partners", {
     params: {
       query: {
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
-        partner_role: asMember(PARTNER_ROLES, query.filters.partner_role ?? ""),
-        cert_status: asMember(CERT_STATUSES, query.filters.cert_status ?? ""),
+        partner_role: isOption(role, PARTNER_ROLES) ? role : undefined,
+        cert_status: isOption(cert, CERT_STATUSES) ? cert : undefined,
       },
     },
   });

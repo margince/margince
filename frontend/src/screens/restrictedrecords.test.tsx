@@ -149,7 +149,7 @@ describe("RestrictedRecordsCard", () => {
   it("says when nothing is held", async () => {
     backend({ retention_policy: ["read"] }, []);
     render(<RestrictedRecordsCard />);
-    expect(await screen.findByText(/No record is being held/)).toBeVisible();
+    expect(await screen.findByText(/No records held/)).toBeVisible();
   });
 
   it("releases a held record only with a stated reason, and says the release erases", async () => {
@@ -195,7 +195,9 @@ describe("RestrictedRecordsCard", () => {
     backend({}, [HELD_ANGEBOT]);
     render(<RestrictedRecordsCard />);
     expect(
-      await screen.findByText(/Only an admin or ops can see which records/),
+      await screen.findByText(
+        /Only an administrator or operations user can see which records/,
+      ),
     ).toBeVisible();
     expect(
       screen.queryByText("Acme rollout, Acme renewal"),

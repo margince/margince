@@ -114,7 +114,7 @@ describe("DirectSendModal", () => {
     expect(confirm().disabled).toBe(true);
 
     await user.type(
-      screen.getByLabelText(/why, in your own words/i),
+      screen.getByLabelText(/^explanation$/i),
       "The contract obliges it.",
     );
     expect(confirm().disabled).toBe(false);
@@ -125,7 +125,7 @@ describe("DirectSendModal", () => {
   it("takes a newline in the reason rather than confirming", async () => {
     const user = userEvent.setup();
     open();
-    const reason = screen.getByLabelText(/why, in your own words/i);
+    const reason = screen.getByLabelText(/^explanation$/i);
     await user.click(reason);
     await user.keyboard("first{Enter}second");
     expect((reason as HTMLTextAreaElement).value).toContain("\n");

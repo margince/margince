@@ -6,6 +6,7 @@
 // another one.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -18,6 +19,7 @@ import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { NewProjectAction } from "./companyactions";
 import { PhaseBadge } from "./projects";
 import type { ProjectPhase } from "./projects.form";
 
@@ -52,13 +54,14 @@ export function CompanyProjects({
   companyId,
   projects,
   readOnly,
-  onCreate,
+  create,
   bare,
 }: Readonly<{
   companyId: string;
   projects: readonly Company360Project[] | undefined;
   readOnly?: boolean;
-  onCreate?: () => void;
+  // The create verb, handed to the section's own verb row.
+  create?: ReactNode;
   // As a group inside the pane the caller holds — see ProjectLinks.
   bare?: boolean;
 }>) {
@@ -131,7 +134,7 @@ export function CompanyProjects({
     roles: COMPANY_ROLES.map((value) => ({ value, label: t(roleKey(value)) })),
     attach: (projectId, role) => attach.mutateAsync({ projectId, role }),
     detach: (projectId) => detach.mutateAsync(projectId),
-    onCreate,
+    create,
   };
 
   return (
@@ -185,11 +188,22 @@ export function CompanyProjectsPanel({
   // its mount in `CompanyProjects` bare, which stands inside a caller's own
   // panel and would otherwise repeat the title on a second heading.
   if (state === "ready" || state === "empty") {
+    // A project is born with this company as its customer, so the company is
+    // never a field: the rep is standing on it.
+    const company = view?.company;
     return (
       <CompanyProjects
         companyId={companyId}
         projects={projects}
         readOnly={readOnly}
+        create={
+          company && (
+            <NewProjectAction
+              companyId={company.id}
+              companyName={company.display_name}
+            />
+          )
+        }
       />
     );
   }

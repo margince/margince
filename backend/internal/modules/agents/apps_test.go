@@ -207,26 +207,14 @@ func TestAViewsEmptyAllowlistReachesTheWireAsAnEmptyAllowlist(t *testing.T) {
 // assertion above would also pass against a renderer that drops every list.
 func TestADeclaredOriginReachesTheWire(t *testing.T) {
 	meta := resourceUIMeta(mcp.Resource{URI: "ui://margince/x.html", UI: &mcp.ResourceUI{
-		CSP:         mcp.ResourceCSP{ConnectDomains: []string{"https://example.test"}},
-		Permissions: mcp.ResourcePermissions{ClipboardWrite: true},
-		Domain:      "app.example.test",
+		CSP:    mcp.ResourceCSP{ConnectDomains: []string{"https://example.test"}},
+		Domain: "app.example.test",
 	}})
 	if meta == nil {
 		t.Fatal("no _meta.ui at all")
 	}
 	if got := meta.CSP.ConnectDomains; len(got) != 1 || got[0] != "https://example.test" {
 		t.Errorf("connectDomains = %v, want the declared origin", got)
-	}
-	if _, asked := meta.Permissions["clipboardWrite"]; !asked {
-		t.Errorf("a declared clipboard permission did not reach the wire: %+v", meta.Permissions)
-	}
-	// And only that one. A permission the view did not ask for must be absent
-	// rather than present-and-false, or a presence-reading host grants it.
-	for _, unasked := range []string{"camera", "microphone", "geolocation"} {
-		if _, present := meta.Permissions[unasked]; present {
-			t.Errorf("%s reaches the wire although the view never asked for it, and a host reading presence "+
-				"would grant it", unasked)
-		}
 	}
 	if meta.Domain != "app.example.test" {
 		t.Errorf("domain = %q, want the declared sandbox origin", meta.Domain)

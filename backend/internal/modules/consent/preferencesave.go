@@ -107,7 +107,8 @@ func (s *Store) PublicSaveChoices(
 	}
 	var refused []ChoiceOutcome
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
+		contactID, err := lockPressSubject(ctx, tx, contactID)
+		if err != nil {
 			return err
 		}
 		refused = nil
@@ -235,6 +236,26 @@ func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	return nil
 }
 
+// lockPressSubject takes the consent lock of the contact a public link was
+// resolved to, and answers the contact the press must act on.
+//
+// The link was resolved in an earlier transaction, and a merge can retire
+// that contact in between. The merge holds this same lock until it commits,
+// so once it is held the merge has either committed — and merged_into_id
+// names the survivor, which is then locked too — or not begun. Original then
+// survivor, the order PublicStop takes them in.
+func lockPressSubject(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (ids.ContactID, error) {
+	if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
+		return ids.ContactID{}, err
+	}
+	surviving, err := survivingSubject(ctx, tx, contactID.UUID)
+	if err != nil || surviving == contactID.UUID {
+		return contactID, err
+	}
+	survivor := ids.From[ids.ContactKind](surviving)
+	return survivor, lockOneSubjectsConsent(ctx, tx, survivor)
+}
+
 // PublicWithdrawAll stops the named purposes in one transaction and
 // returns ONLY the ones this call actually changed.
 //
@@ -249,10 +270,10 @@ func (s *Store) PublicWithdrawAll(
 ) ([]string, error) {
 	var changed []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
+		contactID, err := lockPressSubject(ctx, tx, contactID)
+		if err != nil {
 			return err
 		}
-		var err error
 		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, purposeKeys)
 		return err
 	})
@@ -306,7 +327,8 @@ func (s *Store) PublicStopAllMarketing(
 ) ([]string, error) {
 	var changed []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockOneSubjectsConsent(ctx, tx, contactID); err != nil {
+		contactID, err := lockPressSubject(ctx, tx, contactID)
+		if err != nil {
 			return err
 		}
 		keys, err := withdrawableMarketingPurposeKeysTx(ctx, tx)

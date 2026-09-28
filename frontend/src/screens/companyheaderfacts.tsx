@@ -10,13 +10,12 @@ import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { provenanceOf, useViewerId } from "./common";
-import { companyWebsite, displayHost } from "./companyheader";
 import {
-  EntityRef,
-  rosterOwnerName,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
+  CompanyOwnerControl,
+  companyWebsite,
+  displayHost,
+} from "./companyheader";
+import { EntityRef, useRoster } from "./entityref";
 
 // The account's name-line subtitle and its facts strip: what CompanyIdentityLine
 // used to draw as one running sentence, in the contact record page's own
@@ -73,7 +72,6 @@ export function CompanyIdentityFacts({
   const zone = useRecordZone();
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
-  const rosterPartial = useRosterPartial("user", true);
   const website = companyWebsite(company);
   const wayIn = loading ? undefined : view?.strength;
   return (
@@ -93,14 +91,11 @@ export function CompanyIdentityFacts({
           {t("co.pulse.sizeBand", { band: company.size_band })}
         </Fact>
       )}
+      {/* The owner control, not a read of the owner: on an unowned account it
+          is the claim door, and a label here left that account with no way to
+          become anybody's. */}
       <Fact label={t("co.pulse.owner")}>
-        {rosterOwnerName(
-          company.owner_id,
-          roster,
-          rosterPartial,
-          t,
-          t("co.pulse.unowned"),
-        )}
+        <CompanyOwnerControl company={company} hideLabel />
       </Fact>
       {wayIn?.contributor_contact_id && (
         <Fact label={t("co.pulse.strongestLead")}>

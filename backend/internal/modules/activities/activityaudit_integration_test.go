@@ -56,7 +56,7 @@ func loggedNote(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Acti
 	t.Helper()
 	subject, body := noteSubject, noteBody
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "note", Subject: &subject, Body: &body, Source: "ui",
+		Kind: "note", Subject: &subject, Body: &body, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)
@@ -126,7 +126,7 @@ func TestCompletingATaskRecordsTheStampTheRowReceived(t *testing.T) {
 	ctx := e.as(principal.RowScopeAll)
 	subject := "Send the deck"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "task", Subject: &subject, Source: "ui",
+		Kind: "task", Subject: &subject, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)
@@ -166,7 +166,7 @@ func TestATranscriptPatchRecordsTheNormalizedBodyTheRowHolds(t *testing.T) {
 	ctx := e.as(principal.RowScopeAll)
 	raw, sourceSystem := "Anna: hello", "transcript"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "call", Body: &raw, SourceSystem: &sourceSystem, Source: "ui",
+		Kind: "call", Body: &raw, SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)
@@ -284,7 +284,7 @@ func loggedMeeting(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.A
 	t.Helper()
 	subject := "Quarterly review"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "meeting", Subject: &subject, Source: "ui",
+		Kind: "meeting", Subject: &subject, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)

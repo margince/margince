@@ -883,8 +883,11 @@
   }
 }
 
+/* The row wraps rather than running off a narrow dialog, and only between the
+   lead verbs and the pair: Cancel and the confirm never part. */
 .modal .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--gapActions);
@@ -894,7 +897,17 @@
 /* A verb that is neither the confirm nor the cancel goes to the far end of the
    row, so the two controls that close the dialog stay a pair. */
 .modal .actions > .actions-lead {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
   margin-inline-end: auto;
+}
+
+.modal .actions > .actions-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gapActions);
 }
 
 /* One control in two halves: the confirm, and the caret that opens the other
@@ -922,7 +935,8 @@
    items' first line puts the two buttons back on one line and lets the
    sentence hang below the one it belongs to, capped so a long reason wraps
    inside the dialog instead of setting its width. */
-.modal .actions:has(.btn-with-reason) {
+.modal .actions:has(.btn-with-reason),
+.modal .actions:has(.btn-with-reason) > .actions-pair {
   align-items: flex-start;
 }
 .modal .actions .btn-with-reason {

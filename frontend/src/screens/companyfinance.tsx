@@ -2,7 +2,6 @@ import { Landmark } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Button } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Sparkline } from "../design-system/readings";
@@ -209,19 +208,19 @@ export function CompanyFinanceCard({
 // Where the figures came from and how fresh they are belongs beside the
 // panel's NAME rather than under its last row — it qualifies every number in
 // the panel, and a reader who has scrolled past the invoice table has stopped
-// looking for it. The footer carries what the table could not fit, and the
-// offer to connect a source is an action rather than a reading.
+// looking for it. The footer carries what the table could not fit. No slot
+// offers to connect a source: nothing in the product writes a finance
+// connection, so such a button would be a door with nothing behind it.
 function chromeOf(
   summary: FinanceSummary,
   present: boolean,
   t: ReturnType<typeof useT>,
-): { titleAction?: ReactNode; actions?: ReactNode; footer?: ReactNode } {
+): { titleAction?: ReactNode; footer?: ReactNode } {
   if (!present) {
     return {};
   }
   return {
     titleAction: <FinanceProvenance summary={summary} />,
-    actions: summary.provider ? undefined : <ConnectFinance />,
     footer: summary.truncated ? (
       <span className="t-caption">{t("finance.moreInvoices")}</span>
     ) : undefined,
@@ -378,17 +377,5 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
           })
         : t("finance.fromNeverSynced", { provider: summary.provider })}
     </p>
-  );
-}
-
-// The offer to connect an accounting source, for a panel that has none. An
-// action rather than a reading, so it never sits in the provenance line, and
-// never on a panel that already has a source to report.
-function ConnectFinance() {
-  const t = useT();
-  return (
-    <div className="card-actions">
-      <Button>{t("finance.connect")}</Button>
-    </div>
   );
 }

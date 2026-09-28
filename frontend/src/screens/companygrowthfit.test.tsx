@@ -94,9 +94,7 @@ describe("the wait before the first assessment", () => {
 
     const live = container.querySelector("[role='status'][aria-busy='true']");
     expect(live).toBeTruthy();
-    expect(live?.textContent).toContain(
-      "Working out what this account is worth",
-    );
+    expect(live?.textContent).toContain("Assessing this company");
     // And it must not have resolved into any of the panel's verdicts.
     expect(screen.queryByText("Not enough to judge")).toBeNull();
   });
@@ -169,13 +167,13 @@ describe("how well this company fits what we sell", () => {
       ],
     });
 
-    expect(screen.getByText("Argues for")).toBeTruthy();
+    expect(screen.getByText("Supporting factors")).toBeTruthy();
     // A judgment that read as a stored fact would be the one claim the reader
     // could not check, so only the assessment carries a label. The nature word
     // now sits in the sentence's own line with a trailing colon
     // (NatureBadge, record360/citations.tsx), so the matcher only needs the
     // word rather than the exact rendered text.
-    expect(screen.getByText(/Our read/)).toBeTruthy();
+    expect(screen.getByText(/Assessment/)).toBeTruthy();
     // "Fact" is the label a fact WOULD carry if facts were labelled, so its
     // absence is what proves the badge is reserved for judgments. Asserting a
     // string the panel never renders under any nature would prove nothing.
@@ -208,7 +206,7 @@ describe("how well this company fits what we sell", () => {
     );
 
     expect(
-      await screen.findByText(/This assessment could not be read/),
+      await screen.findByText(/Assessment could not be loaded/),
     ).toBeTruthy();
     expect(screen.queryByText(/inputs recorded/)).toBeNull();
   });

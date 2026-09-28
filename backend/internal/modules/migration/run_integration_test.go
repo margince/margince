@@ -99,7 +99,7 @@ func testWorkspaceCtx(t *testing.T, grants map[string]principal.ObjectGrant) (co
 	// of its own, so it runs last and sees a package that has genuinely stopped.
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 
 	opCtx := principal.WithWorkspaceID(context.Background(), ws)
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())

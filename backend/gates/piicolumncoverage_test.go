@@ -133,6 +133,11 @@ var erasureColumnBaseline = map[string][]string{
 		// derived from what they wrote — the same string on every row one build
 		// judged.
 		"owed_verdict_ruleset",
+		// The same digest, naming which prompt every rung declined to answer.
+		// Nothing the subject wrote, and identical on every row one build
+		// declined.
+		"capture_label_declined_ruleset",
+		"owed_verdict_declined_ruleset",
 		"captured_by",
 		"channel_provider",
 		"direction",
@@ -211,6 +216,9 @@ var erasureColumnBaseline = map[string][]string{
 		// same column and the same reading, a few entries up.
 		"source_system",
 		"visibility",
+		// Why an owner-scoped contact is its owner's: one of five values the
+		// column's CHECK closes, none of them anything about the subject.
+		"narrowing_reason",
 	},
 	"provider_run": {
 		"last_safe_status_code",

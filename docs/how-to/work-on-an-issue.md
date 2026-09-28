@@ -1,4 +1,8 @@
-# Work on an issue without colliding
+# Work on an issue
+
+Two things go wrong between picking an issue up and writing the diff, and they
+are unrelated. Somebody else is already on it — most of this page. Or it is
+yours and its ruling describes a tree that has moved, which is the last section.
 
 Several sessions read the same tracker, and the interesting issues look
 interesting to all of them at once. Two of them start the same work, both write
@@ -129,3 +133,37 @@ A tracker gathers children and is worked by nobody directly. Assigning yourself
 to it says every child is taken, which stands the colleagues who would have
 worked its siblings down. Claim the child you are actually writing, and leave
 the parent alone.
+
+## Re-derive the ruling before you execute it
+
+The claim is settled and the issue is yours. **Open the files it names before
+you build any of it**, and check the prescription against what is there now —
+not just the premise, which is usually still true.
+
+This is not caution about old issues. A ruling that is recent, specific and
+confidently written is the one that costs most, because there is nothing about
+it to distrust. The rulebook's *"do not refuse or narrow ordinary product
+evolution because an older document disagrees"* fires on a disagreement you can
+SEE, and a stale ruling does not look like one: it reads as perfectly consistent
+with a tree it has not been checked against.
+
+Three things worth asking of each item, because they fail differently:
+
+- **Is it already done?** Somebody may have built it since, under another
+  ticket or in passing. Grep for the thing before you write it.
+- **Would it still be right here?** A fix copied from a neighbouring rule can be
+  wrong in a way the diff cannot show. One lead-schema ruling said to copy
+  `company`'s `linkedin_url` CHECK across; `company`'s matches
+  `linkedin.com/company/…` while a lead's URL is an `/in/…` profile, so
+  the constraint would have refused the whole column — and in review it reads as
+  an obviously-correct copy of the rule beside it.
+- **What else touches this?** An observation can be right and its scope wrong.
+  The same ruling asked to rename one table's `source_system` to end a collision
+  with `source`; six tables carry both, so renaming one leaves five and invents
+  a second vocabulary.
+
+**Fix what is actually there, and say on the issue what you did not build and
+why.** A ruling that has moved is not a reason to hand the work back — most of
+it is usually still worth doing, just not in the shape asked for. The write-up
+is often worth more than the diff: it is what stops the next session paying to
+rediscover the same four things.

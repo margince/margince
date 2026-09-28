@@ -46,13 +46,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// retrieveLimit is how many passages an ask ranks up.
+// RetrieveLimit is how many passages an ask ranks up.
 //
 // Eight rather than a larger number because every one of them is sent to the
 // model, and a model handed forty passages writes an answer that quotes the
 // most fluent rather than the most relevant. The floor already removes the
 // ungrounded ones; this bounds what a grounded answer is built from.
-const retrieveLimit = 8
+//
+// Exported because the eval ranker in askmirror.go must read the SAME number
+// the SQL below does. A ranker that ranked ten while production ranked eight
+// would go green on a scenario production never sees the last two passages of.
+const RetrieveLimit = 8
 
 // Passage is one retrieved span, with what a citation needs to point at it.
 type Passage struct {
@@ -67,26 +71,49 @@ type Passage struct {
 	StartLine int
 }
 
-// Locate answers where in the document a span of this passage's text begins:
-// the 1-based line and column a reader would open the file at.
+// Span is where a quote sits in the document: the half-open range
+// [Line, Column) .. [EndLine, EndColumn) a reader would see highlighted. The
+// end is past the quote's last character, which is what lets a quote ending a
+// line be expressed without a column that line does not have.
 //
-// Both zero when the passage does not know its own start line, or when the span
-// is not in its text. A location that points at the wrong line is worse than
-// none — the whole value of a citation is that following it lands you on the
-// sentence.
+// A zero Line means the location is not known, and then no field of it is set:
+// half a range highlights the wrong words, which is worse than highlighting
+// nothing.
+type Span struct {
+	Line, Column       int
+	EndLine, EndColumn int
+}
+
+// Locate answers where in the document a span of this passage's text begins and
+// ends: the range a reader would open the file and see marked.
+//
+// The zero Span when the passage does not know its own start line, or when the
+// span is not in its text. A location that points at the wrong line is worse
+// than none — the whole value of a citation is that following it lands you on
+// the sentence.
+func (p Passage) Locate(span string) Span {
+	if p.StartLine == 0 {
+		return Span{}
+	}
+	at := strings.Index(p.Text, span)
+	if at < 0 {
+		return Span{}
+	}
+	line, column := p.positionOf(at)
+	endLine, endColumn := p.positionOf(at + len(span))
+	return Span{Line: line, Column: column, EndLine: endLine, EndColumn: endColumn}
+}
+
+// positionOf converts a byte offset into the passage's text to the 1-based line
+// and column of the document that a reader counts to. Both ends of a span go
+// through it, so a multi-line quote's end lands on its own line by the same
+// arithmetic its start does.
 //
 // The column is in CHARACTERS, not bytes: a contact counts across a line by what
 // they can see, and a byte offset would put them past the mark on any line with
 // an accent in it.
-func (p Passage) Locate(span string) (line, column int) {
-	if p.StartLine == 0 {
-		return 0, 0
-	}
-	at := strings.Index(p.Text, span)
-	if at < 0 {
-		return 0, 0
-	}
-	before := p.Text[:at]
+func (p Passage) positionOf(offset int) (line, column int) {
+	before := p.Text[:offset]
 	line = p.StartLine + strings.Count(before, "\n")
 	if nl := strings.LastIndex(before, "\n"); nl >= 0 {
 		// A later line of the passage: the column is measured from that
@@ -96,7 +123,10 @@ func (p Passage) Locate(span string) (line, column int) {
 	// The passage's FIRST line, which may itself begin mid-line in the
 	// document — a span cut at the width ceiling does. Nothing here knows how
 	// far in that was, so the column is measured from the passage's start and
-	// is a lower bound on the true one.
+	// is a lower bound on the true one. An end offset still on that first line
+	// is a lower bound for the same reason, and by the same amount: the two
+	// are wrong together, so the length of the highlight stays right even
+	// where its position does not.
 	return line, utf8.RuneCountInString(before) + 1
 }
 
@@ -335,7 +365,7 @@ func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, id
 		    AND c.archived_at IS NULL
 		  ORDER BY c.embedding <=> $1::vector
 		  LIMIT $4`,
-		vectorkit.Literal(vec), corpusID, identity, retrieveLimit)
+		vectorkit.Literal(vec), corpusID, identity, RetrieveLimit)
 	if err != nil {
 		return nil, fmt.Errorf("rank the corpus's passages: %w", err)
 	}

@@ -46,6 +46,7 @@ func (e *snapshotEnv) asBounded(teams ...ids.UUID) context.Context {
 }
 
 func TestAForecastCallIsRefusedAgainstAScopeTheCallerDoesNotAnswerFor(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshot(t)
 	zone := time.UTC
 	period, err := ResolvePeriod(PeriodQuarter, time.Date(2026, time.May, 14, 12, 0, 0, 0, zone), 1, zone)

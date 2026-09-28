@@ -42,6 +42,12 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
+	// IncludeInvited widens the roster to invited seats for ANY member. It is
+	// for naming the owners records already point at — an import assigns the
+	// portal to colleagues before anyone is let in, and an owner left off the
+	// roster showed as a raw id. The pickers leave it off, so the default stays
+	// the list of members who can open what they are given.
+	IncludeInvited bool
 }
 
 type userRow struct {
@@ -109,6 +115,25 @@ var listUsersFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + LiveMemberSQL("") + `
+	  AND (display_name ILIKE $2 OR email ILIKE $2)
+	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
+	ORDER BY created_at, id
+	LIMIT $5`
+
+// The naming roster: the live members plus the invited ones. See
+// ListUsersInput.IncludeInvited.
+var listUsersNamingQuery = `
+	SELECT ` + userColumns + `
+	FROM app_user
+	WHERE ` + ActivatableMemberSQL("") + `
+	  AND ($2::timestamptz IS NULL OR (created_at, id) > ($2, $3))
+	ORDER BY created_at, id
+	LIMIT $4`
+
+var listUsersNamingFilteredQuery = `
+	SELECT ` + userColumns + `
+	FROM app_user
+	WHERE ` + ActivatableMemberSQL("") + `
 	  AND (display_name ILIKE $2 OR email ILIKE $2)
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
@@ -198,8 +223,11 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	}
 	mayManage := auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
 	plain, filtered := listUsersQuery, listUsersFilteredQuery
-	if mayManage && in.IncludeInactive {
+	switch {
+	case mayManage && in.IncludeInactive:
 		plain, filtered = listUsersAllQuery, listUsersAllFilteredQuery
+	case in.IncludeInvited:
+		plain, filtered = listUsersNamingQuery, listUsersNamingFilteredQuery
 	}
 	rows, page, err := listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
 		plain:     plain,

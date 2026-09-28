@@ -28,6 +28,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -158,4 +159,45 @@ func (s *Store) carryHistoryIfPublished(
 	}
 	_, err := s.PromoteContactCohortTx(ctx, tx, id)
 	return err
+}
+
+// guardVisibilityWrite is what a visibility write adds to a contact patch: the
+// staleness refusal, then the narrowing reason the write implies.
+func guardVisibilityWrite(
+	ctx context.Context, tx pgx.Tx, p *storekit.Patch, id ids.ContactID,
+	current crmcontracts.Contact, visibility *string,
+) error {
+	if visibility == nil {
+		return nil
+	}
+	if err := refuseStaleVisibility(ctx, tx, id, current); err != nil {
+		return err
+	}
+	return patchNarrowingByHand(ctx, tx, p, id, *visibility)
+}
+
+// patchNarrowingByHand records a human's visibility write as the reason too.
+//
+// Making a contact private is a decision no reply may undo, so it is written as
+// human_decided even over a row already private for another reason: the human
+// has now said so themselves. Publishing clears it, since a workspace row has
+// nothing narrowed to explain.
+func patchNarrowingByHand(
+	ctx context.Context, tx pgx.Tx, p *storekit.Patch, id ids.ContactID, visibility string,
+) error {
+	var before *NarrowingReason
+	if err := tx.QueryRow(ctx,
+		`SELECT narrowing_reason FROM contact WHERE id = $1`, id).Scan(&before); err != nil {
+		return fmt.Errorf("contacts: reading why a contact is private: %w", err)
+	}
+	var after *NarrowingReason
+	if visibility == visibilityOwner {
+		decided := NarrowedHumanDecided
+		after = &decided
+	}
+	if (before == nil) == (after == nil) && (before == nil || *before == *after) {
+		return nil
+	}
+	p.Set(fieldNarrowingReason, before, after)
+	return nil
 }

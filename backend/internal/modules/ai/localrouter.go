@@ -5,8 +5,10 @@ package ai
 
 import (
 	"context"
+	"maps"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/shared/ports/decision"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -20,6 +22,16 @@ type localOpts struct {
 	monthlyBudget   int64
 	fakeClient      *FakeClient
 	capturePayloads bool
+	harness         harnessClient
+	fakeDecider     decision.Client
+	everyCertified  bool
+}
+
+// harnessClient is WithHarnessClient's pairing: the provider name a binding
+// carries, and the caller's client that serves it.
+type harnessClient struct {
+	provider string
+	client   model.Client
 }
 
 // LocalOption configures the DB-less router NewLocalRouter builds — the
@@ -63,6 +75,14 @@ func WithFakeClient(c *FakeClient) LocalOption {
 	return func(o *localOpts) { o.fakeClient = c }
 }
 
+// WithHarnessClient serves every binding whose provider is provider with the
+// caller's own client, for a provider this package has no adapter for: the cert
+// lane's CLI judge. gates/harnesstransport_test.go fails any non-test caller
+// outside internal/compose/aicert, since every binary can reach this router.
+func WithHarnessClient(provider string, c model.Client) LocalOption {
+	return func(o *localOpts) { o.harness = harnessClient{provider: provider, client: c} }
+}
+
 // WithPayloadCapture turns on the Layer-3 content capture (the same
 // post-SecretStripper request+response the production router writes to
 // ai_call_payload) on this DB-less router, so a caller that installed a
@@ -71,6 +91,32 @@ func WithFakeClient(c *FakeClient) LocalOption {
 // aicert lane's trace dump) actually wants the bodies.
 func WithPayloadCapture() LocalOption {
 	return func(o *localOpts) { o.capturePayloads = true }
+}
+
+// WithFakeDecider stands client in for the decisions lane's own, so a test or
+// an offline certification run scripts the decision model the way
+// WithFakeClient scripts the chat tiers. It answers only where the config
+// binds a lane: the lane's provider and model still name every trace row.
+func WithFakeDecider(client decision.Client) LocalOption {
+	return func(o *localOpts) { o.fakeDecider = client }
+}
+
+// WithEveryDecisionCertified treats every (task, site, provider, model) as
+// certified. It exists for the certification lane alone, which must run the
+// lane to produce the record the generated table is built from — a runtime
+// that served only certified rows could never measure the first one. The
+// production constructor has no such knob.
+func WithEveryDecisionCertified() LocalOption {
+	return func(o *localOpts) { o.everyCertified = true }
+}
+
+// localDecisionLane is the lane a DB-less router serves: the config's own, or
+// the injected fake under the config's binding.
+func localDecisionLane(cfg RoutingConfig, fake decision.Client) (*decisionLane, error) {
+	if fake == nil || cfg.Decisions == nil {
+		return cfg.buildDecisionLane()
+	}
+	return &decisionLane{client: fake, meta: cfg.Decisions.routeMeta()}, nil
 }
 
 // sharedFakeCarriage is what ONE injected fake can honestly claim while standing
@@ -95,13 +141,18 @@ func sharedFakeCarriage(inputs [][]string) []string {
 // ai_call rows are traced (WithCallStore installs a recorder) and the
 // result cache runs (WithoutResultCache turns it off).
 func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
-	clients, embedder, err := cfg.buildClients()
-	if err != nil {
-		return nil, err
-	}
+	// A DB-less caller builds its config by struct literal, so it never passes
+	// through finalize; without this a broker binding reached here with none of
+	// the upstream preferences production would send for the same binding.
+	cfg.Tiers = maps.Clone(cfg.Tiers)
+	cfg.applyUpstreamDefaults()
 	o := localOpts{monthlyBudget: int64(DefaultMonthlyTokens)}
 	for _, opt := range opts {
 		opt(&o)
+	}
+	clients, embedder, err := o.harness.clientsFor(cfg)
+	if err != nil {
+		return nil, err
 	}
 	if o.fakeClient != nil {
 		// Swap in the caller's fake for every slot cfg.buildClients would
@@ -142,8 +193,49 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// WithCallStore opts a caller into tracing.
 	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
-	router.install(router.binding().withConfigSnapshot(cfg))
+	if o.everyCertified {
+		router.decisionCertified = func(DecisionCertKey) bool { return true }
+	}
+	decisions, err := localDecisionLane(cfg, o.fakeDecider)
+	if err != nil {
+		return nil, err
+	}
+	router.install(router.binding().withConfig(cfg, decisions))
 	return router, nil
+}
+
+// clientsFor is cfg.buildClients with every binding on h's provider served by
+// h's client. SelectBrain has no adapter for that provider, so those slots are
+// built as fakes and then swapped, the way WithFakeClient swaps its own.
+//
+//nolint:ireturn // the embed lane's client is whichever adapter or harness client the binding names
+func (h harnessClient) clientsFor(cfg RoutingConfig) (map[Tier]model.Client, model.Client, error) {
+	if h.client == nil {
+		return cfg.buildClients()
+	}
+	buildable := cfg
+	buildable.Tiers = maps.Clone(cfg.Tiers)
+	for tier, binding := range buildable.Tiers {
+		if binding.Provider == h.provider {
+			buildable.Tiers[tier] = ProviderConfig{Provider: ProviderFake}
+		}
+	}
+	if cfg.Embeddings.Provider == h.provider {
+		buildable.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}}
+	}
+	clients, embedder, err := buildable.buildClients()
+	if err != nil {
+		return nil, nil, err
+	}
+	for tier, binding := range cfg.Tiers {
+		if binding.Provider == h.provider {
+			clients[tier] = h.client
+		}
+	}
+	if cfg.Embeddings.Provider == h.provider {
+		embedder = h.client
+	}
+	return clients, embedder, nil
 }
 
 // memoryMeter accumulates spend for the life of one process: enough for

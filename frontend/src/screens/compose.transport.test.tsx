@@ -140,12 +140,12 @@ describe("the composer's transport dial", () => {
   it("asks nothing when there is only one way to reach them", async () => {
     render(drawer([MAIL]));
     expect(await screen.findByLabelText("Subject")).toBeTruthy();
-    expect(screen.queryByLabelText("How to send")).toBeNull();
+    expect(screen.queryByLabelText("Send via")).toBeNull();
   });
 
   it("offers the choice when there is one to make", async () => {
     render(drawer([MAIL, CHAT]));
-    expect(await screen.findByLabelText("How to send")).toBeTruthy();
+    expect(await screen.findByLabelText("Send via")).toBeTruthy();
     // Mail leads, because it is the transport that can open a conversation.
     expect(screen.getByLabelText("Subject")).toBeTruthy();
   });
@@ -157,11 +157,7 @@ describe("the composer's transport dial", () => {
     const user = userEvent.setup();
     render(drawer([MAIL, CHAT]));
 
-    await pickOption(
-      user,
-      await screen.findByLabelText("How to send"),
-      "Dispact",
-    );
+    await pickOption(user, await screen.findByLabelText("Send via"), "Dispact");
 
     await waitFor(() => expect(screen.queryByLabelText("Subject")).toBeNull());
     expect(screen.queryByLabelText("To")).toBeNull();
@@ -172,7 +168,7 @@ describe("the composer's transport dial", () => {
   // and the transport that message is on is the one to answer it from.
   it("opens on the transport a caller named", async () => {
     render(drawer([MAIL, CHAT], "dispact"));
-    await screen.findByLabelText("How to send");
+    await screen.findByLabelText("Send via");
     expect(screen.queryByLabelText("Subject")).toBeNull();
   });
 
@@ -186,8 +182,8 @@ describe("the composer's transport dial", () => {
     await user.type(await screen.findByLabelText("Subject"), "About the offer");
     writeMessage("Body", "Here it is.");
 
-    await pickOption(user, screen.getByLabelText("How to send"), "Dispact");
-    await pickOption(user, screen.getByLabelText("How to send"), "Email");
+    await pickOption(user, screen.getByLabelText("Send via"), "Dispact");
+    await pickOption(user, screen.getByLabelText("Send via"), "Email");
 
     await waitFor(() =>
       expect((screen.getByLabelText("Subject") as HTMLInputElement).value).toBe(
@@ -205,7 +201,7 @@ describe("the composer's transport dial", () => {
     });
     render(drawer([MAIL, CHAT], "dispact"));
 
-    await screen.findByLabelText("How to send");
+    await screen.findByLabelText("Send via");
     writeMessage("Body", "On my way.");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
@@ -299,7 +295,7 @@ describe("a channel reply held to its carriage bounds", () => {
     const sent = withCarriage();
     render(drawer([MAIL, CHAT], "dispact"));
 
-    await screen.findByLabelText("How to send");
+    await screen.findByLabelText("Send via");
     writeMessage("Body", "Here is the offer.");
     await attach(user, /^Offer_Nordwand_v3\.pdf/);
 
@@ -307,7 +303,7 @@ describe("a channel reply held to its carriage bounds", () => {
     // two to change rather than guessing.
     expect(
       await screen.findByText(
-        /Offer_Nordwand_v3\.pdf is larger than .* Dispact accepts/,
+        /Offer_Nordwand_v3\.pdf exceeds the .* per-file limit on Dispact/,
       ),
     ).toBeTruthy();
 
@@ -324,7 +320,7 @@ describe("a channel reply held to its carriage bounds", () => {
     const sent = withCarriage();
     render(drawer([MAIL, CHAT], "dispact"));
 
-    await screen.findByLabelText("How to send");
+    await screen.findByLabelText("Send via");
     writeMessage("Body", "Here is the note.");
     await attach(user, /^Site_note\.txt/);
 

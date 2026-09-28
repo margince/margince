@@ -155,8 +155,8 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	// asked the grant; the roster endpoint, the coverage read, the intro draft
 	// and the role proposals did not — they ask company, or deal, or only that
 	// the caller is human, and then name the account's contacts anyway. The row
-	// scope inside the statement answers WHICH contacts and under row_scope=all
-	// answers all of them.
+	// scope below answers WHICH contacts, and under row_scope=all answers all
+	// of them.
 	//
 	// Refusing rather than degrading, and the assembly turns that into the right
 	// answer on both sides: a section error is recorded in sections_omitted, so
@@ -164,6 +164,26 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	// whose whole subject is the contacts answers 403. A blank card would be
 	// worse than either — a row that names nobody still says somebody is there.
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	contactsPos, companyPos := arg(contactIDs), arg(companyID)
+	// The ROW half, applied HERE rather than trusted to the caller.
+	//
+	// Every id reaching this function came from a scoped read on five of the
+	// six paths; the intro draft takes the id a CLIENT named. So the safety was
+	// a property of what callers happen to pass, and the seventh caller would
+	// disclose names and titles with the function still looking correct.
+	//
+	// A contact is an identity table, so this clause is NOT an owner check —
+	// customer identity is workspace-readable by design. What it carries is
+	// CAPTURE PRIVACY: an unpromoted contact a colleague's mailbox sync
+	// invented is theirs alone, and that boundary does not yield to
+	// row_scope=all or to admin (auth.ownerPrivateTables). Naming one by id was
+	// reading exactly the rows it exists to keep private.
+	visible, err := scopeClause(ctx, "contact", "p", arg)
+	if err != nil {
 		return nil, err
 	}
 	// The purchased title rides the same correlated-subquery shape as the
@@ -181,7 +201,7 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	// harm the precedence rule exists to prevent. Matched on the claim's own
 	// company_domain against this company's domains, or on its
 	// company_name against the display name.
-	rows, err := tx.Query(ctx, `
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT p.id, p.full_name, p.title,
 		       (SELECT e.email FROM contact_email e
 		         WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
@@ -193,16 +213,18 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 		           WHERE c.contact_id = p.id AND c.claim_key = 'current_employment'
 		             AND (
 		               EXISTS (SELECT 1 FROM company_domain d
-		                        WHERE d.company_id = $2 AND d.archived_at IS NULL
+		                        WHERE d.company_id = $%[2]d AND d.archived_at IS NULL
 		                          AND lower(d.domain) = lower(c.value_json->>'company_domain'))
 		               OR EXISTS (SELECT 1 FROM company o
-		                           WHERE o.id = $2
+		                           WHERE o.id = $%[2]d
 		                             AND lower(o.display_name) = lower(c.value_json->>'company_name'))
 		             )
 		           ORDER BY c.retrieved_at DESC
 		           LIMIT 1)
 		       END
-		FROM contact p WHERE p.id = ANY($1)`, contactIDs, companyID)
+		FROM contact p
+		 WHERE p.id = ANY($%[1]d) AND p.archived_at IS NULL AND %[3]s`,
+		contactsPos, companyPos, visible), args...)
 	if err != nil {
 		return nil, err
 	}

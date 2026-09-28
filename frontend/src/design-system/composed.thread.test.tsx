@@ -112,10 +112,10 @@ describe("a thread's card", () => {
     expect(leads).toEqual([
       "Ida Kellerwrote",
       "Yousent to Ida Keller",
-      "Wesent to Ida Keller",
+      "Your teamsent to Ida Keller",
     ]);
     // Their word carries their face; ours carries a send mark, not a
-    // monogram of "We".
+    // monogram of "Your team".
     expect(screen.getByText("IK")).toBeTruthy();
     expect(document.querySelectorAll(".tl-msg-mark")).toHaveLength(2);
   });

@@ -100,7 +100,7 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 
 	return &auditBoundaryEnv{
 		ctx:     exportContext(ws, user),

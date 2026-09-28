@@ -13,6 +13,8 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isVersionSkew, ProblemError, throwProblem } from "./common";
+import "./commissiondecide.css";
+import "./common.css";
 
 // Moving one commission entry through the ledger's lifecycle.
 //
@@ -204,17 +206,12 @@ export function CommissionDecision({
         // top of the document without a named target.
         returnFocusTo={() => triggerRef.current}
       >
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
           {t(copy.label)}
         </Heading>
-        <p style={{ marginBottom: "var(--space-4)" }}>{t(copy.confirm)}</p>
+        <p className="commissiondecide-confirm">{t(copy.confirm)}</p>
         {needsReason && (
-          <div style={{ marginBottom: "var(--space-4)" }}>
+          <div className="commissiondecide-reason">
             <Field
               label={t("commission.decide.reasonLabel")}
               required

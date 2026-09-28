@@ -123,9 +123,9 @@ describe("the bulk bar's roster caveat", () => {
 
     const note = await screen.findByText(en["state.partial"]);
     for (const label of [
-      en["deals.bulkAssign"],
+      en["bulk.assign"],
       en["deals.bulkMove"],
-      en["deals.bulkArchive"],
+      en["bulk.archive"],
     ]) {
       const verb = screen.getByRole("button", { name: label });
       // DOCUMENT_POSITION_FOLLOWING reads "the note comes after this button in
@@ -149,7 +149,7 @@ describe("the bulk bar's roster caveat", () => {
 
     const note = await screen.findByText(en["state.partial"]);
     const picker = screen.getByRole("combobox", {
-      name: en["deals.bulkOwner"],
+      name: en["bulk.owner"],
     });
 
     expect(note.id).not.toBe("");
@@ -176,21 +176,11 @@ describe("the bulk bar's roster caveat", () => {
   });
 });
 
-// Every verb in the bar sends the row's own version guard.
-//
-// The bar's promise is that each row carries its own guard, and archive was the
-// verb that did not: a deal edited between the moment the list was drawn and the
-// moment the archive reached the server was archived anyway, and the edit went
-// with it. Bulk archive is the gesture most likely to race somebody else's edit,
-// and it was the one verb of three that could not lose the race.
-//
-// All three are asserted, not archive alone: a test naming only the verb that
-// was broken passes just as well after a refactor drops the header from its
-// neighbours.
-describe("the bulk bar's version guards", () => {
-  // One page of owners, so the roster caveat never appears and cannot collide
-  // with the button lookups below.
-  function stubDealWrites(): Request[] {
+// Moving a stage fans out one advance per deal, each with the row's own
+// version guard: a guard pinned to the wrong revision refuses a write nobody
+// raced, and one missing lets a stale move overwrite a concurrent edit.
+describe("the bulk bar's stage move", () => {
+  it("pins the row's version when moving a stage", async () => {
     const sent: Request[] = [];
     vi.stubGlobal(
       "fetch",
@@ -206,46 +196,6 @@ describe("the bulk bar's version guards", () => {
         });
       }),
     );
-    return sent;
-  }
-
-  // The row's OWN version, not merely a header that is present: a guard pinned
-  // to the wrong revision refuses a write nobody raced.
-  function expectGuarded(request: Request, method: string, path: string) {
-    expect(request.method).toBe(method);
-    expect(new URL(request.url, "https://test.local").pathname).toBe(path);
-    expect(request.headers.get("If-Match")).toBe(String(DEAL.version));
-  }
-
-  it("pins the row's version when assigning an owner", async () => {
-    const sent = stubDealWrites();
-    const user = userEvent.setup();
-    render(
-      <DealBulkBar
-        deals={[DEAL]}
-        stages={[STAGE, OTHER_STAGE]}
-        onDone={() => {}}
-      />,
-    );
-
-    await user.click(
-      await screen.findByRole("combobox", { name: en["deals.bulkOwner"] }),
-    );
-    await user.click(
-      within(screen.getByRole("listbox")).getByRole("option", {
-        name: "Member",
-      }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["deals.bulkAssign"] }),
-    );
-
-    await waitFor(() => expect(sent).toHaveLength(1));
-    expectGuarded(sent[0], "PATCH", "/v1/deals/d-1");
-  });
-
-  it("pins the row's version when moving a stage", async () => {
-    const sent = stubDealWrites();
     const user = userEvent.setup();
     render(
       <DealBulkBar
@@ -270,31 +220,143 @@ describe("the bulk bar's version guards", () => {
     );
 
     await waitFor(() => expect(sent).toHaveLength(1));
-    expectGuarded(sent[0], "POST", "/v1/deals/d-1/advance");
+    expect(sent[0].method).toBe("POST");
+    expect(new URL(sent[0].url, "https://test.local").pathname).toBe(
+      "/v1/deals/d-1/advance",
+    );
+    expect(sent[0].headers.get("If-Match")).toBe(String(DEAL.version));
   });
+});
 
-  it("pins the row's version when archiving", async () => {
-    const sent = stubDealWrites();
+// Owner and archive are ONE preview and ONE change on the server, whatever the
+// selection size, each deal carrying its own version. A fan-out of one PATCH or
+// DELETE per deal from the browser is exactly what these replace.
+describe("the bulk bar's owner and archive verbs", () => {
+  const SECOND: Deal = {
+    ...DEAL,
+    id: "d-2",
+    name: "Ott expansion",
+    version: 5,
+  };
+
+  function stubBulk() {
+    const writes: { path: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request) => {
+        const path = new URL(input.url, "https://test.local").pathname;
+        if (input.method !== "GET") {
+          writes.push({ path, body: await input.clone().json() });
+        }
+        if (path === "/v1/bulk/preview") {
+          return json({
+            record_type: "deal",
+            verb: "archive",
+            count: 2,
+            affected: ["d-1", "d-2"],
+            excluded: [],
+            sample: [],
+            requires_confirmation: false,
+          });
+        }
+        if (path === "/v1/bulk/execute") {
+          return json({ batch_id: "b-1", changed: 2, skipped: [] });
+        }
+        return json({
+          data: [{ id: "u-1", display_name: "Member" }],
+          page: { has_more: false },
+        });
+      }),
+    );
+    return writes;
+  }
+
+  const ITEMS = [
+    { id: "d-1", version: DEAL.version },
+    { id: "d-2", version: 5 },
+  ];
+
+  it("assigns an owner through one preview and one execute", async () => {
+    const writes = stubBulk();
+    const onDone = vi.fn();
     const user = userEvent.setup();
     render(
       <DealBulkBar
-        deals={[DEAL]}
+        deals={[DEAL, SECOND]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={onDone}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("combobox", { name: en["bulk.owner"] }),
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "Member",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: en["bulk.assign"] }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      await within(dialog).findByRole("button", {
+        name: en["bulk.confirmReassign"],
+      }),
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith([]));
+    expect(writes).toEqual([
+      {
+        path: "/v1/bulk/preview",
+        body: {
+          record_type: "deal",
+          verb: "reassign_owner",
+          items: ITEMS,
+          owner_id: "u-1",
+        },
+      },
+      {
+        path: "/v1/bulk/execute",
+        body: {
+          record_type: "deal",
+          verb: "reassign_owner",
+          items: ITEMS,
+          owner_id: "u-1",
+        },
+      },
+    ]);
+  });
+
+  it("archives through one preview and one execute", async () => {
+    const writes = stubBulk();
+    const user = userEvent.setup();
+    render(
+      <DealBulkBar
+        deals={[DEAL, SECOND]}
         stages={[STAGE, OTHER_STAGE]}
         onDone={() => {}}
       />,
     );
 
-    // Archiving asks first, so the verb is two gestures: the bar's button opens
-    // the confirmation, and the modal's button is the one that writes.
-    await user.click(
-      screen.getByRole("button", { name: en["deals.bulkArchive"] }),
-    );
+    await user.click(screen.getByRole("button", { name: en["bulk.archive"] }));
     const dialog = await screen.findByRole("dialog");
-    await user.click(
-      within(dialog).getByRole("button", { name: en["deals.bulkArchive"] }),
-    );
+    const confirm = await within(dialog).findByRole("button", {
+      name: en["bulk.confirmArchive"].replace("{unit}", en["unit.deals"]),
+    });
+    // Archiving many deals is the most destructive thing this bar does, so
+    // nothing but the preview has reached the server before the confirm.
+    expect(writes.map((write) => write.path)).toEqual(["/v1/bulk/preview"]);
+    await user.click(confirm);
 
-    await waitFor(() => expect(sent).toHaveLength(1));
-    expectGuarded(sent[0], "DELETE", "/v1/deals/d-1");
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes.map((write) => write.path)).toEqual([
+      "/v1/bulk/preview",
+      "/v1/bulk/execute",
+    ]);
+    expect(writes[1].body).toEqual({
+      record_type: "deal",
+      verb: "archive",
+      items: ITEMS,
+    });
   });
 });

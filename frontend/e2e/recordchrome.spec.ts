@@ -340,7 +340,7 @@ test.describe("the record's details pane", () => {
           await expect(pane, "the pane is open on arrival").toBeHidden();
           await detailsSwitch(page).click();
           const dialog = page.getByRole("dialog", {
-            name: "Details & Berechtigungen",
+            name: "Details und Berechtigungen",
           });
           await expect(dialog).toBeVisible();
           await expect(dialog.getByTestId("contact-rail")).toBeVisible();

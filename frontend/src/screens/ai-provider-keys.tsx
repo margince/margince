@@ -206,12 +206,14 @@ function ProviderKeyRow({
               {keyless ? "\u2014" : status.env_var}
             </span>
           </span>
-          <Badge tone={status.configured || keyless ? "success" : "warning"}>
+          <Badge tone={keyStateTone(status, keyless)}>
             {keyless
               ? t("aiProviderKeys.keyless")
               : status.configured
                 ? t("aiProviderKeys.configured")
-                : t("aiProviderKeys.absent")}
+                : status.optional
+                  ? t("aiProviderKeys.optional")
+                  : t("aiProviderKeys.absent")}
           </Badge>
           {!keyless && (
             <span className="ai-lane-open">
@@ -358,4 +360,17 @@ function ProviderKeyRow({
       </ConfirmModal>
     </PanelRow>
   );
+}
+
+// A held key, or none needed, is settled. An optional key not held is no gap —
+// the adapter calls without one — so it only reports; a required key that is
+// missing warns.
+function keyStateTone(
+  status: ProviderStatus,
+  keyless: boolean,
+): "success" | "info" | "warning" {
+  if (status.configured || keyless) {
+    return "success";
+  }
+  return status.optional ? "info" : "warning";
 }

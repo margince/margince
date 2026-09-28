@@ -141,9 +141,9 @@ type owedPayload struct {
 
 // RunWorkspace judges up to cap backlog messages in the workspace bound in ctx.
 //
-// A budget stop ends the pass cleanly: what is judged is committed and the rest
-// is simply still unjudged, which the next cycle reads again. Only
-// infrastructure faults return an error.
+// A budget stop, or no provider bound, ends the pass cleanly: what is judged is
+// committed and the rest is simply still unjudged, which the next cycle reads
+// again. Only infrastructure faults return an error.
 func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if err := c.store.CaptureEmailRequests(ctx, c.now()); err != nil {
 		return err
@@ -169,7 +169,7 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 		maxVerdicts = owedCatchUpCap
 	}
 	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
-		return c.store.OwedBacklog(ctx, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
 	}); err != nil {
 		return err
 	}
@@ -181,20 +181,17 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 // drain judges one population until it is empty, its budget is spent, or it
 // stops making progress. `what` names it in the log, so a pass that ends early
 // says which half ended.
+//
+// Bounded by the model calls it makes as well as by verdicts written, and the
+// second bound is the one that has to exist: a message the model will not
+// commit to stays unjudged and is read again, so a batch mixing one confident
+// row with nine abstentions makes progress by the verdict count and re-asks the
+// same nine every iteration. sweepCalls counts every call, a split batch's
+// included, so the bound holds whatever the batches do.
 func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func() ([]owedCandidate, time.Time, error)) error {
 	judged := 0
-	// Bounded by CALLS as well as by verdicts written, and the second bound is
-	// the one that has to exist.
-	//
-	// A message the model will not commit to stays unjudged, which is the right
-	// answer — and it therefore stays in the backlog, which the next read
-	// returns again. A batch mixing one confident row with nine abstentions
-	// makes progress by the verdict count and re-asks the same nine every
-	// iteration, so a cap on writes alone lets one stubborn tenant spend
-	// thousands of calls. The call bound is what makes the pass end.
-	calls := 0
-	maxCalls := maxVerdicts/owedBatchSize + 1
-	for judged < maxVerdicts && calls < maxCalls {
+	calls := newSweepCalls(maxVerdicts, owedBatchSize)
+	for judged < maxVerdicts && calls.remain() {
 		// The instant this batch was READ, on the DATABASE's clock, which the
 		// write compares against so a slow call cannot overwrite a verdict
 		// reached while it was thinking.
@@ -205,12 +202,11 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 		if len(batch) == 0 {
 			return nil
 		}
-		calls++
-		n, err := c.judgeBatch(ctx, batch, readAt)
+		n, err := c.judgeBatch(ctx, batch, readAt, calls)
 		judged += n
-		if errors.Is(err, ai.ErrBudgetDeferred) {
-			c.log.InfoContext(ctx, "owed classify: budget exhausted, stopping the pass",
-				"population", what, "judged", judged)
+		if sweepPaused(err) {
+			c.log.InfoContext(ctx, "owed classify: stopping the pass",
+				"population", what, "judged", judged, "reason", err)
 			return nil
 		}
 		if err != nil {
@@ -232,8 +228,16 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 // The per-call commit IS the checkpoint. A message below the floor is re-asked
 // on its own — which escalates the routing ladder by being its own structured
 // call — and one still below it afterwards is left unjudged rather than guessed.
-func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time) (int, error) {
+// A batch the models decline is asked message by message, so the one message
+// they will not judge is recorded declined and the rest of the batch proceeds.
+func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time, calls *sweepCalls) (int, error) {
+	if !calls.take() {
+		return 0, nil
+	}
 	verdicts, err := c.ask(ctx, batch)
+	if declinedByTheModels(err) {
+		return c.judgeEach(ctx, batch, readAt, calls)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -260,19 +264,42 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			judged++
 		}
 	}
-	for _, msg := range retry {
+	solo, err := c.judgeEach(ctx, retry, readAt, calls)
+	return judged + solo, err
+}
+
+// judgeEach asks about each message in its own call and commits a verdict
+// above the floor. A message every rung declines is that message's outcome: it
+// is recorded declined, which takes it out of both populations for this pass
+// and every later one, and the next message is asked.
+func (c *OwedClassifier) judgeEach(ctx context.Context, msgs []owedCandidate, readAt time.Time, calls *sweepCalls) (int, error) {
+	judged := 0
+	for _, msg := range msgs {
+		if !calls.take() {
+			return judged, nil
+		}
 		solo, err := c.ask(ctx, []owedCandidate{msg})
+		if declinedByTheModels(err) {
+			recorded, markErr := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
+			if markErr != nil {
+				return judged, markErr
+			}
+			c.log.WarnContext(ctx, "owed classify: the models declined one message, which stays unjudged",
+				"activity_id", msg.ID, "recorded", recorded, "err", err)
+			continue
+		}
 		if err != nil {
 			return judged, err
 		}
-		if len(solo) == 1 && solo[0].Confidence >= owedConfidenceFloor {
-			applied, err := c.store.SetOwedVerdict(ctx, msg.ID, solo[0].Verdict, owedverdict.Ruleset, readAt)
-			if err != nil {
-				return judged, err
-			}
-			if applied {
-				judged++
-			}
+		if len(solo) != 1 || solo[0].Confidence < owedConfidenceFloor {
+			continue
+		}
+		applied, err := c.store.SetOwedVerdict(ctx, msg.ID, solo[0].Verdict, owedverdict.Ruleset, readAt)
+		if err != nil {
+			return judged, err
+		}
+		if applied {
+			judged++
 		}
 	}
 	return judged, nil
@@ -296,7 +323,7 @@ func owedRequest(batch []owedCandidate) model.Request {
 		System:         owedverdict.SystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: owedverdict.Prompt(fence, batch)}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: owedSchema(),
+		ResponseSchema: owedSchema(owedIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -335,11 +362,7 @@ func owedShapeValid(batch []owedCandidate) ai.Validator {
 // validateOwedPayload names the first batch-fidelity violation, or "" when the
 // payload is exact.
 func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
-	requested := make([]string, len(batch))
-	for i, m := range batch {
-		requested[i] = m.ID.String()
-	}
-	if msg := checkBatchFidelity(payload.Results, requested); msg != "" {
+	if msg := checkBatchFidelity(payload.Results, owedIDs(batch)); msg != "" {
 		return msg
 	}
 	// The vocabulary is this site's own, so it is checked here rather than in
@@ -359,13 +382,23 @@ func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
 
 func (r owedResult) answeredID() string { return r.ID }
 
+// owedIDs is the ids one batch asks about: what the schema lets the model name
+// and what the validator requires it to answer.
+func owedIDs(batch []owedCandidate) []string {
+	requested := make([]string, len(batch))
+	for i, m := range batch {
+		requested[i] = m.ID.String()
+	}
+	return requested
+}
+
 // owedSchema is the generation-time shape guardrail.
-func owedSchema() json.RawMessage {
+func owedSchema(requested []string) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			owedResultsKey: schema.Array(schema.Object(
 				map[string]schema.Node{
-					"id":                    schema.String(),
+					"id":                    requestedIDNode(requested),
 					owedVerdictKey:          schema.Enum(activities.OwedVerdictAsksUs, activities.OwedVerdictInformsUs),
 					extractionConfidenceKey: schema.Number(),
 				},

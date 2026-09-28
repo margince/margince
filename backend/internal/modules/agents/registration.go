@@ -80,6 +80,12 @@ func (r *Registry) Register(t mcp.Tool) {
 		panic(fmt.Sprintf("crmagents: %s has a %d-rune Description, past the %d a tool may spend — "+
 			"every run's prompt carries it and never elides it", spec.Name, n, maxDescriptionRunes))
 	}
+	// A surface offering part of the catalog cuts Instead out of Description, so
+	// it must be a whole sentence of it or the cut would leave the pointer in.
+	if spec.Instead != "" && !strings.Contains(spec.Description, " "+spec.Instead) {
+		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+		panic(fmt.Sprintf("crmagents: %s has an Instead that is not a sentence of its Description", spec.Name))
+	}
 	// The version a result declares as its own. It is not documentation: every
 	// result this surface seals carries it as `schema_version`, which is the
 	// only thing that lets a client tell a shape change from a data change. A

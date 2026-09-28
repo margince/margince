@@ -12,7 +12,6 @@ import {
   type ElementType,
   type FormEventHandler,
   type InputHTMLAttributes,
-  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type RefObject,
   useEffect,
@@ -25,8 +24,9 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
-import { useDialogFocus } from "./dialogfocus";
+import { coveredByDialog, useDialogFocus } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
+import { swallowWhileBusy, useSinglePress } from "./presslatch";
 import "./atoms.css";
 import "./evidencemark.css";
 
@@ -82,20 +82,6 @@ export function BusyMark({ className }: Readonly<{ className?: string }>) {
       aria-hidden="true"
     />
   );
-}
-
-// A press that lands on a control already waiting for its own answer. Both
-// halves are load bearing: `preventDefault` is what stops a `type="submit"`
-// button posting the form a second time (a plain early return does not — the
-// browser submits on the click, not on the handler), and `stopPropagation`
-// stops a clickable row underneath treating the press as a click on itself.
-//
-// Aliased on import because this file also uses the DOM's own `MouseEvent`,
-// for the document-level listener `OverflowMenu` attaches; the unaliased React
-// type shadows it and that listener stops compiling.
-function swallowWhileBusy(event: ReactMouseEvent<HTMLButtonElement>) {
-  event.preventDefault();
-  event.stopPropagation();
 }
 
 export function Button({
@@ -211,6 +197,7 @@ export function Button({
 }) {
   const ownReasonId = useId();
   const busyLabelId = useId();
+  const singlePress = useSinglePress();
   const classes = [
     "btn",
     `btn-${variant}`,
@@ -264,7 +251,7 @@ export function Button({
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
       aria-describedby={describedBy}
-      onClick={busy ? swallowWhileBusy : onClick}
+      onClick={busy ? swallowWhileBusy : singlePress(onClick)}
     >
       {busy && <BusyMark />}
       {/* The children stay, ALWAYS. An icon-only control has no room for two
@@ -1383,7 +1370,7 @@ function isSetting(item: Element): boolean {
 // The children are the caller's own action components (each opening its own
 // confirm flow), so the menu owns only the disclosure: it closes on Escape, on
 // a click outside, and on an item being chosen — with the two exceptions
-// `isSetting` and the `.overlay` test below name, an item that SETS rather than
+// `isSetting` and `coveredByDialog` below name, an item that SETS rather than
 // does, and one that put a dialog up which now owns the screen and the focus.
 //
 // The children are not rendered until the menu is first opened. They are
@@ -1443,10 +1430,10 @@ export function OverflowMenu({
   // strand the reader on <body>. Which of the two happened is not knowable
   // while the item's own handler is running: the dialog is not in the document
   // until React has committed the state that handler set. So the press records
-  // that it happened, and this effect — after that commit — reads the same
-  // `.overlay` the Escape handler reads and answers accordingly.
+  // that it happened, and this effect — after that commit — asks the same
+  // `coveredByDialog` the Escape handler asks and answers accordingly.
   useEffect(() => {
-    if (chosen === 0 || document.querySelector(".overlay")) {
+    if (chosen === 0 || coveredByDialog(trigger.current)) {
       return;
     }
     setOpen(false);
@@ -1484,7 +1471,7 @@ export function OverflowMenu({
       // both layers on one keypress would take the reader back past the menu
       // they were choosing from, and they would have to reopen it to pick
       // something else.
-      if (document.querySelector(".overlay")) {
+      if (coveredByDialog(trigger.current)) {
         return;
       }
       setOpen(false);

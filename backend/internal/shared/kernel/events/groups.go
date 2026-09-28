@@ -109,10 +109,13 @@ func Groups() []Group {
 		// would be lost permanently while the ask read unanswered.
 		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// What the installation owes a contact it obtained without asking them.
-		// Contact stream only: the duty is decided from how the contact was
-		// acquired, and the acquisition row is written in the same transaction
-		// as the contact and the event that announces it.
-		{Name: "cg:notice-case-open", Streams: forEntities(contactStreamEntity)},
+		// The contact stream opens the duty: it is decided from how the contact
+		// was acquired, and the acquisition row is written in the same
+		// transaction as the contact and the event that announces it. The
+		// activity stream settles it: activity.captured is the contact's own
+		// mail arriving after a backfill minted them from our reply, which
+		// answers the unknown source the duty was opened for.
+		{Name: "cg:notice-case-open", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// What happened in a Deal Room, written onto the deal's timeline. Its own
 		// group because a room's traffic is live and conversational while the
 		// projections above are batchy: a backlog of embeddings must not delay the

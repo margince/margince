@@ -306,7 +306,7 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 				fmt.Sprintf("$%d", arg(readerAddresses)),
-				unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant)),
+				neverRelaxed,
 				olderThan(before, arg)), args...)
 		if err != nil {
 			return err

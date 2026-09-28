@@ -4,8 +4,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   problemCodeOf,
@@ -154,6 +155,7 @@ export function CompanyAct({
   adoptedRead = null,
 }: CompanyActProps) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
@@ -1004,10 +1006,9 @@ export function CompanyAct({
           <Button variant="ghost" onClick={() => setArtifactMode("record")}>
             {t("ob.digest.pickFacts")}
           </Button>
-          {/* One Save for every line corrected in place, and only once one
-              has been: the deck's own Confirm is the way onward for a reader
-              who changed nothing, and a second button saying the same thing
-              beside an untouched record would be a choice with no difference. */}
+          {/* One Save for every corrected line, shown only once one is: an
+              untouched record already has the deck's Confirm, and a second
+              button saying the same would be a choice with no difference. */}
           {draft.edited.size > 0 && (
             <WayOnward
               label={t("ob.digest.saveChanges")}
@@ -1020,7 +1021,7 @@ export function CompanyAct({
               }
               note={
                 <p className="ob-stage-hint">
-                  {t("ob.digest.changed", {
+                  {plural("ob.digest.changed", draft.edited.size, {
                     count: formatNumber(draft.edited.size, locale),
                   })}
                 </p>
@@ -1094,25 +1095,24 @@ export function CompanyAct({
         />
       }
       {/* The list of what still wants an answer is NOT here: the deck IS that
-          list, met one card at a time and counted in its own tray. Printing it
-          again underneath was the same outstanding work said twice, in a flat
-          order the reader was not being walked through. A failure that needs a
-          retry has no such home, so those stay. */}
+          list, met one card at a time and counted in its own tray, and a list
+          underneath says the same work twice in an order nobody walks. A
+          failure that needs a retry has no such home, so those stay. */}
       {startRead.isError && (
-        <p className="ob-conv-notice" role="alert">
+        <ErrorLine>
           {t("ob.gate.startFailed", {
             detail: safeStartError(startRead.error, t),
           })}
-        </p>
+        </ErrorLine>
       )}
       {clarify.failure && (
-        <p className="ob-conv-notice" role="alert">
+        <ErrorLine>
           {clarify.failure.kind === "request"
             ? t("ob.conv.clarify.applyFailed", {
                 detail: clarify.failure.detail,
               })
             : t("ob.conv.clarify.applyMissing")}
-        </p>
+        </ErrorLine>
       )}
     </ConversationWorkbench>
   );

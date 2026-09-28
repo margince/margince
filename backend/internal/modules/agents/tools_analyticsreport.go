@@ -38,6 +38,7 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 		Name: "compose_analytics_report", Title: "Compose an analytics report",
 		Version:     toolVersionV1,
 		Description: composeAnalyticsReportCopy.render(),
+		Instead:     composeAnalyticsReportCopy.Instead,
 		// Read, not write: composing renders a document from runs that already
 		// exist. Nothing is stored and no record moves, so a write scope would
 		// claim an authority this never uses.

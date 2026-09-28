@@ -32,7 +32,7 @@ afterEach(cleanup);
 describe("the OAuth return note", () => {
   it("reports an outcome the server defines", () => {
     mount("ok");
-    expect(screen.getByText("Connection made")).toBeTruthy();
+    expect(screen.getByText("Connected")).toBeTruthy();
   });
 
   it.each([

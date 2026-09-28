@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
+import { ErrorLine } from "./errorline";
 import { Heading } from "./heading";
 
 // Answering a finding from the nightly input check.
@@ -25,12 +26,18 @@ export function ResolveSheet({
   onSubmit,
   onClose,
   pending,
+  error,
+  returnFocusTo,
 }: Readonly<{
   open: boolean;
   labels: ResolveSheetLabels;
   onSubmit: (answer: ResolveAnswer) => void;
   onClose: () => void;
   pending?: boolean;
+  /** The refused save, drawn above the actions so the sheet never fails silently. */
+  error?: unknown;
+  /** Where focus lands on close, when a save unmounts the control that opened it. */
+  returnFocusTo?: () => HTMLElement | null;
 }>) {
   const [outcome, setOutcome] = useState<ResolveOutcome | "">("");
   const [reason, setReason] = useState("");
@@ -51,7 +58,13 @@ export function ResolveSheet({
     (!needsRemind || remindAt !== "");
 
   return (
-    <Modal open={open} labelledBy={titleID} onClose={onClose} placement="right">
+    <Modal
+      open={open}
+      labelledBy={titleID}
+      onClose={onClose}
+      placement="right"
+      returnFocusTo={returnFocusTo}
+    >
       <Heading size="large" id={titleID}>
         {labels.title}
       </Heading>
@@ -105,6 +118,8 @@ export function ResolveSheet({
           )}
         </Field>
       )}
+
+      <ErrorLine error={error} />
 
       <div className="card-actions">
         <Button onClick={onClose}>{labels.cancel}</Button>

@@ -33,6 +33,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -59,22 +60,24 @@ type ApplyTagCommand struct {
 // for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewApplyTagCall(records datasource.SystemOfRecordProvider, cmd ApplyTagCommand) GovernedCall {
+func NewApplyTagCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd ApplyTagCommand) GovernedCall {
 	return bind[ApplyTagCommand](applyTagResolver{
-		target: routedRecordTarget{records: records, recordType: tagRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: tagRecordType},
 	}, cmd)
 }
 
 type applyTagResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the TAG the approval binds to.
-func (r applyTagResolver) Subject(_ context.Context, cmd ApplyTagCommand) (StageInfo, error) {
+func (r applyTagResolver) Subject(ctx context.Context, cmd ApplyTagCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: tagRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Apply tag %s", cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).applyTag, cmd.ID),
 	}, nil
 }
 
@@ -98,22 +101,24 @@ type AddOfferLineItemCommand struct {
 // that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewAddOfferLineItemCall(records datasource.SystemOfRecordProvider, cmd AddOfferLineItemCommand) GovernedCall {
+func NewAddOfferLineItemCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd AddOfferLineItemCommand) GovernedCall {
 	return bind[AddOfferLineItemCommand](addOfferLineItemResolver{
-		target: routedRecordTarget{records: records, recordType: offerRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: offerRecordType},
 	}, cmd)
 }
 
 type addOfferLineItemResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the OFFER the approval binds to.
-func (r addOfferLineItemResolver) Subject(_ context.Context, cmd AddOfferLineItemCommand) (StageInfo, error) {
+func (r addOfferLineItemResolver) Subject(ctx context.Context, cmd AddOfferLineItemCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: offerRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Add a line item to offer %s", cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).addLineItem, cmd.ID),
 	}, nil
 }
 
@@ -138,14 +143,16 @@ type UpdateOfferLineItemCommand struct {
 // answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewUpdateOfferLineItemCall(records datasource.SystemOfRecordProvider, cmd UpdateOfferLineItemCommand) GovernedCall {
+func NewUpdateOfferLineItemCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd UpdateOfferLineItemCommand) GovernedCall {
 	return bind[UpdateOfferLineItemCommand](updateOfferLineItemResolver{
-		target: routedRecordTarget{records: records, recordType: offerRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: offerRecordType},
 	}, cmd)
 }
 
 type updateOfferLineItemResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the OFFER the approval binds to, with the line item being
@@ -153,11 +160,11 @@ type updateOfferLineItemResolver struct {
 // GovernedCall.Subject owes this operation, distinct per line item even
 // though no door renders it today (confirmFactResolver's own doc,
 // commandsidecar.go, says why).
-func (r updateOfferLineItemResolver) Subject(_ context.Context, cmd UpdateOfferLineItemCommand) (StageInfo, error) {
+func (r updateOfferLineItemResolver) Subject(ctx context.Context, cmd UpdateOfferLineItemCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: offerRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Update line item %s on offer %s", cmd.LineItemID, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).updateLineItem, cmd.LineItemID, cmd.ID),
 	}, nil
 }
 
@@ -178,22 +185,24 @@ type RemoveOfferLineItemCommand struct {
 // that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRemoveOfferLineItemCall(records datasource.SystemOfRecordProvider, cmd RemoveOfferLineItemCommand) GovernedCall {
+func NewRemoveOfferLineItemCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RemoveOfferLineItemCommand) GovernedCall {
 	return bind[RemoveOfferLineItemCommand](removeOfferLineItemResolver{
-		target: routedRecordTarget{records: records, recordType: offerRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: offerRecordType},
 	}, cmd)
 }
 
 type removeOfferLineItemResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject: the same shape as updateOfferLineItemResolver's.
-func (r removeOfferLineItemResolver) Subject(_ context.Context, cmd RemoveOfferLineItemCommand) (StageInfo, error) {
+func (r removeOfferLineItemResolver) Subject(ctx context.Context, cmd RemoveOfferLineItemCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: offerRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Remove line item %s from offer %s", cmd.LineItemID, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).removeLineItem, cmd.LineItemID, cmd.ID),
 	}, nil
 }
 
@@ -217,16 +226,18 @@ type CreateOfferCommand struct {
 // through.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewCreateOfferCall(records datasource.SystemOfRecordProvider, cmd CreateOfferCommand) GovernedCall {
+func NewCreateOfferCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd CreateOfferCommand) GovernedCall {
 	return bind[CreateOfferCommand](createOfferResolver{
-		parent: routedRecordTarget{records: records, recordType: string(datasource.EntityDeal)},
+		parent:   routedRecordTarget{records: records, recordType: string(datasource.EntityDeal)},
+		language: language,
 	}, cmd)
 }
 
 type createOfferResolver struct {
 	// parent, not target: what this resolver reads and refuses is the DEAL
 	// the offer nests under, never an offer — the offer has no row yet.
-	parent routedRecordTarget
+	parent   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the record TYPE the approval binds to, with NO id — exactly
@@ -236,10 +247,12 @@ type createOfferResolver struct {
 // target_entity_type=offer with the deal's id names a target that resolves to
 // no row, or to an unrelated offer that happens to share the id space. Naming
 // no id at all is the only staged target this create could honestly carry.
-func (r createOfferResolver) Subject(_ context.Context, cmd CreateOfferCommand) (StageInfo, error) {
+func (r createOfferResolver) Subject(ctx context.Context, cmd CreateOfferCommand) (StageInfo, error) {
+	said := summaryIn(ctx, r.language)
+	write := describeGenericWrite(said, fmt.Sprintf(said.createHead, said.noun(offerRecordType)), cmd.Fields)
 	return StageInfo{
 		TargetType: offerRecordType,
-		Summary:    fmt.Sprintf("%s on deal %s", describeGenericWrite("Create", offerRecordType, cmd.Fields), cmd.DealID),
+		Summary:    fmt.Sprintf(said.onDeal, write, cmd.DealID),
 	}, nil
 }
 

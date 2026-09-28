@@ -152,7 +152,8 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// decision not to write.
 	"internal/compose/company360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
 
-	"internal/compose:employerOf": "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
+	"internal/compose:settleWhenSubjectWrote": "the notice consumer's settle pass, under the system principal HandleEvent binds (compose/noticecaseopen.go): it resolves which contacts a connector-captured mail came FROM, and each id is spent inside the same transaction recording that the contact wrote to us and closing their capture-unknown notice cases — a caller never sees it",
+	"internal/compose:employerOf":             "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by
 	// referenceScopeClauses (reportsql.go), which renders
@@ -226,6 +227,9 @@ var rowScopeSpellings = map[string]bool{
 	// unscoped, and the fix a reader would reach for from that message is a
 	// second, weaker call over the same row.
 	"EnsureWritable": true, "EnsureWritableLive": true, "HoldWritableLive": true,
+	// The whole-record admissions open with the object grant and then call
+	// EnsureVisible and EnsureWritableLive, so they bound the row the same way.
+	"EnsureReadable": true, "EnsureChangeable": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a

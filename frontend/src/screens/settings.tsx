@@ -82,6 +82,7 @@ import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
+import { CaptureHealthCard } from "./capturehealth";
 import {
   LoadMoreButton,
   problemMessageOf,
@@ -118,6 +119,7 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
+import { MeetingSettings } from "./meeting-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OvernightGrantCard } from "./overnight-grant";
@@ -136,7 +138,6 @@ import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
-import { WorkingHoursCard } from "./working-hours";
 import "./settings.css";
 
 import { ProvidersStat, SpendStat } from "./ai-settings";
@@ -153,7 +154,6 @@ import {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsReach,
   useSettingsSection,
   useVisibleSettingsPages,
@@ -170,7 +170,6 @@ export {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsSection,
 };
 
@@ -186,16 +185,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return (
-        <>
-          <AccountCard />
-          {/* When this contact is bookable. Under the identity because it is a
-              statement about this reader rather than about the workspace: their
-              own week is theirs to set, and an admin setting it for them is the
-              shape the design refuses. */}
-          <WorkingHoursCard />
-        </>
-      );
+      return <AccountCard />;
+    case "meetings":
+      return <MeetingSettings />;
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
@@ -368,10 +360,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
               page. */}
           <EmbedReindexCard />
           <JobHealthCard />
-          {/* Beside the queue reading rather than under Extensions: both
-              answer "is something broken in the background", and an operator
-              chasing a quiet feed should not have to know that a connector is
-              an extension to find out. */}
+          {/* Beside the queue reading, not under Capture or Extensions: each
+              answers "is something broken in the background". */}
+          <CaptureHealthCard />
           <ExtensionIngestHealthCard />
         </>
       );
@@ -523,9 +514,8 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // Back would land on the address that redirects and trap them there.
   //
   // Keyed on the entry the route RESOLVED to rather than on the segment it
-  // carried, so a rewrite never invents an address: a rep following a link to
-  // an admin page falls back to their first visible entry, and this rewrites to
-  // THAT, which is where they actually are.
+  // carried, so a rewrite never invents an address: a legacy link to a page the
+  // reader may not open is left as typed, and the boundary answers it.
   useEffect(() => {
     if (legacy) {
       navigateReplacing(settingsHref(active.id));
@@ -927,11 +917,9 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data;
     },
     onSuccess: (saved) => {
-      // The DRAFT holds the saved answer until `/me` catches up. Clearing it
-      // here would fall back to the cached snapshot, which still carries the
-      // old name — the field would visibly revert for as long as the refetch
-      // takes, and stay reverted if the refetch itself fails.
+      // Keep the saved name visible if the account refetch is delayed or fails.
       setDraft(saved?.display_name ?? null);
+      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
       toast.show(t("settings.saved"));
       void queryClient.invalidateQueries({ queryKey: ["me"] });
     },
@@ -1785,6 +1773,7 @@ function ResetDataCard() {
           </p>
         )}
         {summary?.drain_timed_out && (
+          // ds:ignore a warning in --warningText, not a refusal
           <p className="settings-danger-warning" role="alert">
             {t("settings.resetDataDrainWarning")}
           </p>
@@ -2189,6 +2178,7 @@ function AuditLogEntries({
     return (
       <EmptyState>
         <p>{t("common.error")}</p>
+        {/* ds:ignore the cause under an EmptyState's headline */}
         <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
         <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
       </EmptyState>

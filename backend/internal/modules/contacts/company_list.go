@@ -10,6 +10,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,10 @@ import (
 // companyEntity is the company's auth object and table name.
 const companyEntity = "company"
 
+// maxCompanyIDFilter bounds the id filter, matching the contract's maxItems:
+// one board's worth of companies, not an export.
+const maxCompanyIDFilter = 100
+
 // companyNameColumn is the company's display column — the quick-find
 // target and the DM-VOCAB-2 name sort key.
 const companyNameColumn = "display_name"
@@ -36,6 +41,8 @@ type ListCompaniesInput struct {
 	// The predicate is storekit's, shared with the contact and deal lists.
 	TagIDs  []ids.UUID
 	TagMode storekit.TagMode
+	// IDs narrows to these companies, at most maxCompanyIDFilter of them.
+	IDs []ids.UUID
 	// IncludeAnchor admits the installation's own company (ADR-0082/A127).
 	IncludeAnchor bool
 	Cursor        *string
@@ -194,6 +201,13 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			// companies, and no contact or deal has one.
 			if !in.IncludeAnchor {
 				where = append(where, "NOT is_anchor")
+			}
+			if len(in.IDs) > maxCompanyIDFilter {
+				return nil, httperr.Validation("id", "too_many",
+					fmt.Sprintf("name at most %d companies per request", maxCompanyIDFilter))
+			}
+			if len(in.IDs) > 0 {
+				where = append(where, storekit.SQLf("company.id = ANY($%d)", arg(in.IDs)))
 			}
 			where = appendCompanyLinkClauses(ctx, where, in, arg)
 			// A value outside the enum is a client mistake, not a selection

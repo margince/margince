@@ -105,13 +105,15 @@ describe("the pipeline ladder", () => {
       rung({ stage: "internal_drop", order: 40, status: "done" }),
       rung({ stage: "tier_ladder", order: 60, status: "done" }),
     ]);
-    expect(screen.getAllByText(/turned payload capture off/i)).toHaveLength(1);
+    expect(screen.getAllByText(/payload capture is turned off/i)).toHaveLength(
+      1,
+    );
   });
 
   it("says nothing about the posture when the operator turned it on", () => {
     show([rung({ stage: "tier_ladder", order: 60, status: "done" })], true);
     expect(
-      screen.queryByText(/turned payload capture off/i),
+      screen.queryByText(/payload capture is turned off/i),
     ).not.toBeInTheDocument();
   });
 
@@ -150,7 +152,7 @@ describe("the pipeline ladder", () => {
       }),
       rung({ stage: "tier_ladder", order: 60, status: "not_applicable" }),
     ]);
-    expect(screen.getByText(/cannot tell/i)).toBeInTheDocument();
-    expect(screen.getByText(/did not apply/i)).toBeInTheDocument();
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
+    expect(screen.getByText("Not applicable")).toBeInTheDocument();
   });
 });

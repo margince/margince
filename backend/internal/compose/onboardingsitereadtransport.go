@@ -191,6 +191,9 @@ func siteReadConfirmationRefusal(err error) error {
 }
 
 func (e *deepReadEngine) stageOnboardingContacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, read contacts.SiteRead, found []contacts.SiteReadContact) ([]ids.UUID, error) {
+	if siteLeadsRefused(ctx, e.logger(), read.ID.String(), len(found)) {
+		return nil, nil
+	}
 	decider, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, errors.New("compose: company site-read confirmation has no deciding principal")
@@ -212,6 +215,7 @@ func (e *deepReadEngine) stageOnboardingContacts(ctx context.Context, tx pgx.Tx,
 	if err := e.approvals.LockPendingGroupInTx(execCtx, tx, companyID.UUID, siteLeadProposalKind); err != nil {
 		return nil, err
 	}
+	said := approvalSummaryCopyIn(execCtx, tx)
 	proposalIDs := make([]ids.UUID, 0, len(found))
 	for _, contact := range found {
 		// A published contact the workspace already reaches by email is not a
@@ -235,7 +239,7 @@ func (e *deepReadEngine) stageOnboardingContacts(ctx context.Context, tx pgx.Tx,
 		if known {
 			continue
 		}
-		in, err := siteLeadStageInput(read.ID, companyID.UUID, read.SeedURL, siteContact{
+		in, err := siteLeadStageInput(said, read.ID, companyID.UUID, read.SeedURL, siteContact{
 			Name: contact.Name, Role: contact.Role, PublishedEmail: contact.PublishedEmail,
 			LinkedinURL: contact.LinkedinURL, EvidenceSnippet: contact.EvidenceSnippet, SourceURL: contact.SourceURL,
 		}, bundleID)

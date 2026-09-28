@@ -60,7 +60,12 @@ type Call = { url: string; method: string; body: unknown };
 // while the target is off, so a case about the NUMBER has to start from an
 // installation that tracks one. The stub answers the same body every read, so
 // flipping the switch inside a test would not enable the box.
-function backend(allow: GrantSpec, calls: Call[] = [], slaOn = false) {
+function backend(
+  allow: GrantSpec,
+  calls: Call[] = [],
+  slaOn = false,
+  rows?: ReturnType<typeof source>[],
+) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
@@ -73,7 +78,7 @@ function backend(allow: GrantSpec, calls: Call[] = [], slaOn = false) {
       body = meFixture({ allow });
     } else if (url.includes("/lead-sources") && method === "GET") {
       body = {
-        data: [
+        data: rows ?? [
           source("manual", "Created manually", { system: true, lead_count: 3 }),
           source("trade_show", "Trade show", { intent: "high" }),
         ],
@@ -86,7 +91,7 @@ function backend(allow: GrantSpec, calls: Call[] = [], slaOn = false) {
       body = source("trade_show", "Messe");
     } else if (url.includes("/lead-disqualify-reasons") && method === "GET") {
       body = {
-        data: [
+        data: rows ?? [
           { ...source("r1", "Bad timing", { system: true, lead_count: 2 }) },
           { ...source("r2", "Went quiet") },
         ],
@@ -135,10 +140,10 @@ describe("LeadSourcesCard", () => {
     );
     expect(screen.getByText("Built-in")).toBeTruthy();
     expect(screen.getByText("3 leads")).toBeTruthy();
-    // The built-in, in-use source says "switch off instead"; the unused
+    // The built-in, in-use source says "deactivate instead"; the unused
     // custom one gets the Remove button.
     const manual = screen.getByTestId("lead-source-manual");
-    expect(manual.textContent).toContain("switch off instead");
+    expect(manual.textContent).toContain("deactivate instead");
     const trade = screen.getByTestId("lead-source-trade_show");
     expect(within(trade).getByRole("button", { name: "Remove" })).toBeTruthy();
     expect(within(manual).queryByRole("button", { name: "Remove" })).toBeNull();
@@ -171,7 +176,7 @@ describe("LeadSourcesCard", () => {
     await userEvent.click(
       screen.getByRole("combobox", { name: "Intent of Trade show" }),
     );
-    await userEvent.click(screen.getByRole("option", { name: "Low interest" }));
+    await userEvent.click(screen.getByRole("option", { name: "Low intent" }));
     await waitFor(() =>
       expect(
         calls.some(
@@ -247,7 +252,9 @@ describe("LeadSourcesCard", () => {
     // The card's band says the posture as a heading, so it carries no full
     // stop; the same claim reaches the handling card's switch as a sentence.
     expect(
-      screen.getByText("Only an admin or ops seat changes this list"),
+      screen.getByText(
+        "Only an administrator or operations user can change this list",
+      ),
     ).toBeTruthy();
     // Both verbs the card offers a writer: the one that OPENS the dialog and
     // the one that submits it. Read from the catalog under the keys the card
@@ -277,7 +284,7 @@ describe("LeadDisqualifyReasonsCard", () => {
       expect(screen.getByDisplayValue("Bad timing")).toBeTruthy(),
     );
     expect(screen.getByTestId("lead-reason-src-r1").textContent).toContain(
-      "switch off instead",
+      "deactivate instead",
     );
     expect(
       within(screen.getByTestId("lead-reason-src-r2")).getByRole("button", {
@@ -285,6 +292,31 @@ describe("LeadDisqualifyReasonsCard", () => {
       }),
     ).toBeTruthy();
   });
+});
+
+// A custom entry still in use explains itself in the reader's grammar.
+const IN_USE = [
+  source("webinar", "Webinar", { lead_count: 1 }),
+  source("referral", "Referral", { lead_count: 2 }),
+];
+
+it.each([
+  [LeadSourcesCard, "1 lead uses this source.", "2 leads use this source."],
+  [
+    LeadDisqualifyReasonsCard,
+    "1 lead has this reason.",
+    "2 leads have this reason.",
+  ],
+])("counts the leads holding an entry (%#)", async (Card, one, many) => {
+  vi.stubGlobal("fetch", backend(ADMIN, [], false, IN_USE));
+  render(
+    <Providers>
+      <Card />
+    </Providers>,
+  );
+  const suffix = " Deactivate it instead.";
+  expect(await screen.findByTitle(one + suffix)).toBeTruthy();
+  expect(screen.getByTitle(many + suffix)).toBeTruthy();
 });
 
 describe("LeadHandlingCard", () => {
@@ -334,7 +366,7 @@ describe("LeadHandlingCard", () => {
     // The refusal is announced and attached to the control that holds the
     // value, so a reader who cannot see the row still hears the rule.
     const refusal = await screen.findByRole("alert");
-    expect(refusal.textContent).toContain("between 15 and 10080");
+    expect(refusal.textContent).toContain("from 15 to 10,080");
     expect(minutes.getAttribute("aria-invalid")).toBe("true");
     expect(minutes.getAttribute("aria-describedby")).toContain(refusal.id);
     expect(
@@ -358,7 +390,9 @@ describe("LeadHandlingCard", () => {
     )) as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
     expect(
-      screen.getByText("Only an admin or ops seat changes this list."),
+      screen.getByText(
+        "Only an administrator or operations user can change this list.",
+      ),
     ).toBeTruthy();
   });
 });

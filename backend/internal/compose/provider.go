@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -55,13 +56,13 @@ func NewProviderFor(db *database.DB) *Provider {
 	return &Provider{
 		// The fieldcatalog seam mirrors the HTTP wiring (server.go): the
 		// MCP surface's record verbs carry cf_* values too.
-		// The stop carry mirrors the HTTP wiring (serverassembly.go) for the
-		// same reason the fieldcatalog seam does: the MCP surface merges and
-		// promotes records too, and an unwired carrier refuses every merge of
-		// a subject who holds a stop.
+		// The merge carriers mirror the HTTP wiring (serverassembly.go): the
+		// MCP surface merges and promotes records too, and an unwired carrier
+		// refuses every merge of a subject holding what it carries.
 		contacts: contacts.NewProvider(db).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
-			WithStopCarrier(consent.NewStore(db)),
+			WithStopCarrier(consent.NewStore(db)).
+			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)),
 		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:   projects.ProviderOver(ProjectsStoreOver(db)),
 		activities: activities.NewProvider(InstallationDB(pool)),

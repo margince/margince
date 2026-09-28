@@ -61,7 +61,7 @@ var mirroredTasks = gatekit.Waive(map[string]string{
 	"stage_evidence_extract":          "the evidence a stage move rests on",
 	"transcript_propose":              "proposals read out of a meeting transcript",
 	"propose_roles":                   "who plays which part on a deal",
-	"enrich":                          "third-party enrichment of a record",
+	"enrich":                          "contact fields read off the contact's own mail signature; its doc line, one phone entry per number, is still to be copied into the upstream contract",
 	"summarize":                       "the summary of one record or thread",
 	"draft_reply":                     "a reply drafted for a human to send",
 	"nl_search":                       "a natural-language query over the workspace",

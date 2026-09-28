@@ -272,7 +272,7 @@ func (s *Store) ListSignals(ctx context.Context, in ListSignalsInput) ([]crmcont
 	var page storekit.Page
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT `+signalColumns("s")+` FROM signal s WHERE `+strings.Join(where, " AND ")+
+			`SELECT `+signalColumns("s")+` FROM signal s`+signalResolutionJoin+` WHERE `+strings.Join(where, " AND ")+
 				storekit.SQLf(` ORDER BY s.created_at DESC, s.id DESC LIMIT %d`, limit+1),
 			args...)
 		if err != nil {
@@ -409,11 +409,11 @@ func signalColumns(alias string) string {
 	for i, c := range cols {
 		cols[i] = alias + "." + c
 	}
-	return strings.Join(cols, ", ")
+	return strings.Join(cols, ", ") + ", " + signalResolutionColumns
 }
 
 func readSignal(ctx context.Context, tx pgx.Tx, id ids.SignalID, archived storekit.ArchivedFilter) (crmcontracts.Signal, error) {
-	q := `SELECT ` + signalColumns("s") + ` FROM signal s WHERE s.id = $1`
+	q := `SELECT ` + signalColumns("s") + ` FROM signal s` + signalResolutionJoin + ` WHERE s.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND s.archived_at IS NULL`
 	}
@@ -434,14 +434,22 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, error) {
 	var evidenceJSON []byte
 	var capturedBy string
 	var version int64
+	// All four are NULL together: the lateral join found no answer, which is
+	// every signal nobody has resolved yet.
+	var resolutionOutcome *string
+	var resolutionNote *string
+	var resolvedBy *ids.UUID
+	var resolvedAt *time.Time
 
 	err := row.Scan(&id, &kind, &sourceChannel, &sig.RawRef, &entityType, &entityID,
 		&resolutionState, &confidence, &resolvedCompanyID, &resolvedContactID,
 		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &capturedBy,
-		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt)
+		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt,
+		&resolutionOutcome, &resolutionNote, &resolvedBy, &resolvedAt)
 	if err != nil {
 		return sig, err
 	}
+	sig.Resolution = resolutionFrom(resolutionOutcome, resolutionNote, resolvedBy, resolvedAt)
 	if err := json.Unmarshal(evidenceJSON, &sig.Evidence); err != nil {
 		return sig, fmt.Errorf("signal evidence is not the contract shape: %w", err)
 	}

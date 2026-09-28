@@ -128,7 +128,7 @@ func setupFinance(t *testing.T) *financeEnv {
 	// of its own, so it runs last and sees a package that has genuinely stopped.
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	// The mirror's base currency is a fixed input here, not a thing under
 	// test: this suite is about the sync pass — the hash discipline, the
 	// derived status, the credit-note placement. Injecting the literal keeps

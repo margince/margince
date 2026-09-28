@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"sort"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -32,12 +33,19 @@ const rrfK = 60
 // that publishes its ranking as semantic owes the answer that word, and there
 // are two ways to lose the lane — see degradeToLexical.
 func (s *Store) HybridSearch(ctx context.Context, query string, embedder Embedder, limit int, types ...string) ([]Hit, bool, error) {
+	return s.hybridSearchWithin(ctx, query, embedder, limit, nil, types...)
+}
+
+// hybridSearchWithin is HybridSearch with both lanes bounded to the records in
+// within (see Input.Within). The bound rides each lane rather than the fused
+// page, for the reason types does.
+func (s *Store) hybridSearchWithin(ctx context.Context, query string, embedder Embedder, limit int, within []ids.UUID, types ...string) ([]Hit, bool, error) {
 	limit = clampLimit(limit)
 	// Overfetch both lanes: an entity ranked just past `limit` in each
 	// lane can still fuse into the top set.
 	laneDepth := limit * 3
 
-	lexical, err := s.Search(ctx, Input{Query: query, Types: types, Limit: laneDepth})
+	lexical, err := s.Search(ctx, Input{Query: query, Types: types, Limit: laneDepth, Within: within})
 	if err != nil {
 		return nil, false, err
 	}
@@ -90,7 +98,7 @@ func (s *Store) HybridSearch(ctx context.Context, query string, embedder Embedde
 		// every embed on this binding is also hitting.
 		return nil, false, fmt.Errorf("search: query embedding returned %d vectors", len(queryEmb.Vectors))
 	}
-	vector, err := s.SimilarEntities(ctx, queryEmb.Vectors[0], identity, laneDepth, types...)
+	vector, err := s.similarEntitiesWithin(ctx, queryEmb.Vectors[0], identity, laneDepth, within, types...)
 	if err != nil {
 		return nil, false, err
 	}

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -38,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -68,8 +70,11 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		// A merge carries the retiring subject's stops, or it refuses. consent
 		// owns communication_suppression; contacts owns the merge; neither
-		// imports the other, so the edge is injected here.
-		WithStopCarrier(consent.NewStore(InstallationDB(pool)))
+		// imports the other, so the edge is injected here. The consent links
+		// and the introduction asks ride the same way.
+		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
+		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
+			introductions.NewStore(InstallationDB(pool), time.Now))
 }
 
 // newFinanceHandlers builds the invoicing transport over the two edges it
@@ -97,6 +102,10 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
+		// The SAME seam the check_availability tool reads, so the two doors
+		// answer one question one way: whether a window was read off the host's
+		// own diary or derived from this CRM's records.
+		WithCalendarConnected(activities.CalendarConnected(calendarBackingResolver(pool))).
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
@@ -167,6 +176,29 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
 }
 
+// wireSurfaces binds the handler sets built after the literal, each over a
+// dependency the literal had to build first.
+func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
+	s.wireStagedSurfaces(pool)
+	s.wireAnalyticsSurface(pool)
+	s.wireCaptureSettingsSurface(pool)
+	s.wireExportSurface(pool, log)
+	s.wireOnboardingSurface(pool)
+	s.wireSystemOfRecordReads(pool)
+	s.wireBulkSurface(pool)
+}
+
+// wireStagedSurfaces binds the two surfaces that read the staged queue. They
+// share ONE approvals engine, so the day's card and the receipt's line are one
+// queue rather than two readings of it; a second engine here is how the two
+// would come to disagree.
+func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
+	staged := approvalsServiceWithEffects(pool)
+	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.magicService = newMagicService(pool, staged, time.Now)
+	s.magicHandlers = magic.NewHandlers(s.magicService)
+}
+
 // wireCaptureSettingsSurface binds the workspace's own capture posture
 // controls.
 // wireAnalyticsSurface wires the four handler sets that read the numbers:
@@ -189,7 +221,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
 	s.analyticsQueryHandlers = newAnalyticsQueryHandlers(
-		InstallationDB(pool), analyticsquery.DefaultFloor)
+		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)))
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(

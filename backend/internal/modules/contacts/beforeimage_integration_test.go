@@ -153,36 +153,6 @@ func TestACompletedNameNeverRecordsAColumnAHumanTyped(t *testing.T) {
 	}
 }
 
-// A field a public search result answered had no prior value, and the row says
-// so per field rather than leaving a reader to infer it from the statement.
-func TestASearchDiscoveredFillRecordsTheEmptyFields(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	contactID, _ := e.seedEmployedContact(ctx, t,
-		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
-
-	const profile = "https://linkedin.test/in/mira-halvorsen"
-	applied, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
-		Field: "linkedin", Value: profile,
-		EvidenceSnippet: "Mira Halvorsen — Head of Platform at Voltaq Systems",
-		SourceRef:       "search:voltaq-mira",
-	}})
-	if err != nil {
-		t.Fatalf("ApplyDiscoveredFields: %v", err)
-	}
-	if len(applied) != 1 || applied[0] != "linkedin" {
-		t.Fatalf("applied = %v, want the linkedin field", applied)
-	}
-
-	before, after := auditImagesHolding(ctx, t, e.store, entityContact, contactID.UUID, "linkedin")
-	wantImage(t, before, "before", "linkedin", nil)
-	wantImage(t, after, "after", "linkedin", profile)
-	// The source is context about the write, not a field of the contact.
-	if _, folded := after[auditKeySource]; folded {
-		t.Errorf("the after image carries the operation's source: %v", after)
-	}
-}
-
 // The site-read fill records what the page filled and what each field held —
 // nothing — and keeps the page that said so out of the images.
 func TestASiteContactFillRecordsTheEmptyFields(t *testing.T) {

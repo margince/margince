@@ -16,7 +16,7 @@ import {
 // collapsible sections. Every seeded demo account grants full RBAC and
 // omits nothing, so the withheld story below is the only place a reader
 // ever sees this rail's own honesty rule — a section the caller's role
-// cannot read reads "Hidden — your role cannot read this", never a silent
+// cannot read reads "Hidden for your role", never a silent
 // empty state.
 
 const meta: Meta = {

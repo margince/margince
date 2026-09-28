@@ -64,17 +64,62 @@ type PurgeSubject struct {
 	// SharedImports are the activities a colleague also imported. This seat's
 	// import row and participant row go; the message stays, for them.
 	SharedImports []ids.UUID
-	// Restricted are the activities under a statutory hold or an open erasure
-	// request. They survive both arms and are reported, because a purge that
-	// silently skipped them would tell an owner their mail is gone when it is
-	// not.
+	// Restricted are the activities under a statutory hold, inside a retention
+	// window, or named by a data-subject request nobody has finished yet. They
+	// survive both arms and are reported, because a purge that silently skipped
+	// them would tell an owner their mail is gone when it is not.
+	//
+	// It is the union of the three below, kept as one list because most callers
+	// only need "what did this purge leave standing".
 	Restricted []ids.UUID
+	// Held are the activities an erasure or a controller pinned by hand.
+	Held []ids.UUID
+	// UnderStatute are the activities inside their commercial-retention window
+	// — a Handelsbrief the law still requires keeping. Counted apart from the
+	// other two because it is the one an owner is most owed an explanation of:
+	// a deletion that correctly leaves them standing looks, from the owner's
+	// side, exactly like one that silently failed.
+	UnderStatute []ids.UUID
+	// UnderRequest are the activities a data-subject request is still about.
+	UnderRequest []ids.UUID
 }
 
 // Total is how many messages the rule matched at all.
 func (s PurgeSubject) Total() int {
 	return len(s.SoleImports) + len(s.SharedImports) + len(s.Restricted)
 }
+
+// underAnOpenRequest shields a message a data-subject request is still about.
+//
+// `restricted_at` is written when an erasure EXECUTES, or when a controller
+// pins a record by hand. A request sitting at `open` or `in_progress` marks
+// nothing on the activity — so a seat could purge its own exclusion rule and
+// destroy exactly the correspondence a pending request was about to assemble,
+// with the count of skipped messages reporting zero.
+//
+// EVERY KIND, not only erasure. An access request needs the messages to build
+// the package and a rectification needs them to correct against; destroying
+// them defeats all three equally, and a kind filter here would protect the one
+// case where the subject has already asked for the records to go.
+//
+// BOTH SUBJECT HANDLES, for the reason sarsections.go and erasure_consent.go
+// already read both: a case an officer opened by hand may carry only
+// `subject_ref`, and fulfilling an erasure TOMBSTONES that reference on the
+// subject's other cases — so either half alone misses a real open request.
+// The comparison casts the contact id to text rather than the reference to a
+// uuid, because `subject_ref` is free text and a row holding anything else
+// would fail the whole query rather than simply not match.
+//
+// It reaches two tables this module does not own, and only reads them: which
+// correspondence a request covers is a question about the request, and there is
+// no seam that answers it without them.
+const underAnOpenRequest = `EXISTS (
+		    SELECT 1 FROM data_subject_request d
+		     WHERE d.status IN ('open', 'in_progress')
+		       AND EXISTS (SELECT 1 FROM contact_email ce
+		                    WHERE lower(ce.email) = lower(a.counterparty_email)
+		                      AND (ce.contact_id = d.contact_id
+		                           OR ce.contact_id::text = d.subject_ref)))`
 
 // SelectPurgeSubjectTx finds what a purge of one exclusion rule would touch,
 // for one seat.
@@ -102,7 +147,7 @@ func SelectPurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       (a.restricted_at IS NOT NULL OR (`+shielded+`)) AS withheld,
+		       `+withheldReason(shielded, true)+` AS withheld,
 		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
@@ -111,21 +156,50 @@ func SelectPurgeSubjectTx(
 	if err != nil {
 		return subject, fmt.Errorf("capture: selecting what a purge would destroy: %w", err)
 	}
+	if err := collectPurgeRows(rows, &subject, "selecting what a purge would destroy"); err != nil {
+		return subject, err
+	}
+	return subject, nil
+}
+
+// collectPurgeRows drains one purge selection into the three buckets every
+// purge answer is built from, and closes the rows.
+//
+// Both selectors — an owner's exclusion rule, and the personal-mail window —
+// ask different questions of different joins and then sort the answer the same
+// way. Spelled twice, they could disagree about which bucket a row belongs in,
+// and the same message would survive or not depending on which sweep reached
+// it first.
+//
+// WITHHELD outranks both other cases: a statutory hold, commercial
+// correspondence still inside its legal retention window, or a message a
+// data-subject request has not finished with. Neither destroyed nor released —
+// the row is an obligation the installation owes somebody else, and an owner's
+// rule does not outrank the law.
+//
+// SHARED comes next: a colleague imported it too, their claim is not this
+// seat's to destroy, and a message two mailboxes received is by that fact less
+// likely to be the private correspondence a purge is for. What is left is the
+// seat's own, which is what a purge is about.
+//
+// `what` names the read for the error, because a caller that lost which query
+// failed leaves an operator with a wrapped pgx error and no idea which sweep
+// produced it.
+func collectPurgeRows(rows pgx.Rows, subject *PurgeSubject, what string) error {
 	defer rows.Close()
 	for rows.Next() {
 		var id ids.UUID
-		var withheld bool
+		var withheld string
 		var importers int
 		if err := rows.Scan(&id, &withheld, &importers); err != nil {
-			return subject, fmt.Errorf("capture: selecting what a purge would destroy: %w", err)
+			return fmt.Errorf("capture: %s: %w", what, err)
 		}
 		switch {
-		case withheld:
-			// A statutory hold, or commercial correspondence still inside its
-			// legal retention window. Neither destroyed nor released: the row
-			// is an obligation the installation owes somebody else, and an
-			// owner's rule does not outrank the law.
+		case withheld != "":
+			// Restricted stays the union so a caller that only wants "what was
+			// left standing" reads one list, and the reason rides beside it.
 			subject.Restricted = append(subject.Restricted, id)
+			subject.noteWithheld(withheld, id)
 		case importers > 1:
 			subject.SharedImports = append(subject.SharedImports, id)
 		default:
@@ -133,9 +207,9 @@ func SelectPurgeSubjectTx(
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return subject, fmt.Errorf("capture: selecting what a purge would destroy: %w", err)
+		return fmt.Errorf("capture: %s: %w", what, err)
 	}
-	return subject, nil
+	return nil
 }
 
 // purgeMatchClause builds the address-or-domain match, in the shape every other
@@ -382,7 +456,7 @@ func SelectWorkspacePurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       (a.restricted_at IS NOT NULL OR (`+shielded+`)) AS withheld
+		       `+withheldReason(shielded, false)+` AS withheld
 		  FROM activity a
 		 WHERE `+match+`
 		   AND EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = a.id)
@@ -393,11 +467,11 @@ func SelectWorkspacePurgeSubjectTx(
 	defer rows.Close()
 	for rows.Next() {
 		var id ids.UUID
-		var withheld bool
+		var withheld string
 		if err := rows.Scan(&id, &withheld); err != nil {
 			return subject, fmt.Errorf("capture: selecting what a workspace purge would destroy: %w", err)
 		}
-		if withheld {
+		if withheld != "" {
 			// The same answer the seat purge gives: an obligation the
 			// installation owes somebody else is not the workspace's to
 			// destroy, and it is REPORTED rather than silently skipped.
@@ -408,6 +482,7 @@ func SelectWorkspacePurgeSubjectTx(
 			// failed purge that destroys nothing at all, including the rows the
 			// admin could have had.
 			subject.Restricted = append(subject.Restricted, id)
+			subject.noteWithheld(withheld, id)
 			continue
 		}
 		subject.SoleImports = append(subject.SoleImports, id)

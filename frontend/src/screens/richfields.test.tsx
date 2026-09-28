@@ -61,7 +61,7 @@ function Harness({
       error={null}
       onSubmit={onSubmit}
       onClose={vi.fn()}
-      submitLabelKey="create.save"
+      intent="create"
     />
   );
 }

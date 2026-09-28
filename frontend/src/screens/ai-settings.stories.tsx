@@ -123,6 +123,7 @@ function story(
             {
               id: "01a0-0000-7000-8000-000000000001",
               occurred_at: "2026-09-01T14:22:09Z",
+              kind: "completion",
               task: "company.enrich",
               tier: "cheap_cloud",
               provider: "gemini",
@@ -137,6 +138,7 @@ function story(
               cache_hit: false,
               degraded: false,
               has_payload: false,
+              decision_attempted: false,
             },
           ],
           page: { next_cursor: null, has_more: false },

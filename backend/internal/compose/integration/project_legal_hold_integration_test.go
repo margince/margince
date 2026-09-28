@@ -155,6 +155,7 @@ func TestRetentionSweepSkipsAnOverAgeNoteLinkedOnlyToAHeldProject(t *testing.T) 
 		activities.ActivityLinkInput{EntityType: "project", EntityID: f.free})
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	SettleIntoInstall(t, e)
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}

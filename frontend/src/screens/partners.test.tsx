@@ -157,7 +157,7 @@ describe("PartnerTab — the margin tier", () => {
 
     render(<PartnerTab companyId="o-1" />);
 
-    expect(await screen.findByText("Active Collab (20%)")).toBeTruthy();
+    expect(await screen.findByText("Active collaboration (20%)")).toBeTruthy();
     expect(screen.queryByLabelText("Masked value")).toBeNull();
   });
 

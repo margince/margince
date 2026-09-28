@@ -596,7 +596,7 @@ list, approval, signal) and durably own no business entity. See
 | The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |
 | The scan on the page: ensure on open, poll, the pending row | `frontend/src/screens/accountscan.tsx`, `companytoday.tsx` |
 | Data layer + right-rail cards | `frontend/src/screens/company360.tsx`, `company360.css` |
-| The connections card | `frontend/src/screens/network.tsx`, with `companygraph.ts` as its read |
+| The connections comparison | `frontend/src/screens/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
 | Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
 
 ## Where to go next

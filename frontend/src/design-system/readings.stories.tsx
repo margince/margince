@@ -36,7 +36,7 @@ export const Meters: Story = {
       </div>
       <div>
         <p className="t-caption">Payment behaviour — low is the bad end</p>
-        <Meter value={3} max={10} label="Payment behaviour" tone="warning" />
+        <Meter value={3} max={10} label="Payment behavior" tone="warning" />
       </div>
       <div>
         <p className="t-caption">Nothing measured yet</p>

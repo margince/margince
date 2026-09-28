@@ -142,11 +142,11 @@ describe("the worklist readings strip", () => {
   // statement, and marking one invites the reading where the others are exact.
   it("says so when the figures are floors rather than totals", () => {
     const exact = draw({ buyer_replies: 4, more_available: false });
-    expect(screen.queryByText(/floors, not totals/)).toBeNull();
+    expect(screen.queryByText(/Each figure is a minimum/)).toBeNull();
     exact.unmount();
 
     draw({ buyer_replies: 4, more_available: true });
-    expect(screen.getByText(/floors, not totals/)).toBeTruthy();
+    expect(screen.getByText(/Each figure is a minimum/)).toBeTruthy();
   });
 
   // The strip is one comparison, so it always draws its four slots — a reading

@@ -1,0 +1,163 @@
+{
+  "task": "site_extract",
+  "provider": "openai_compatible",
+  "served_model": "google/gemma-4-31b-it",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p8b239e645a9d055678cfcbbb63915cfb",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 15,
+  "passed": 12,
+  "reliability": 0.8,
+  "reported_accepted": 9,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 6,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 97,
+  "judge_score_min": 41,
+  "latency_p50": 5063,
+  "latency_p95": 12007,
+  "mean_tokens": 804,
+  "mean_tokens_in": 674,
+  "mean_tokens_out": 129,
+  "mean_cached_tokens": 94,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "claude-sonnet-4-6",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "candidate_upstream": {
+    "only": null,
+    "ignore": null,
+    "quantizations": [
+      "fp8"
+    ],
+    "sort": "throughput",
+    "require_parameters": true,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-09-26T20:14:43Z",
+  "scenarios": [
+    {
+      "scenario": "js_only_page_yields_no_fabrication",
+      "site": "profile",
+      "stamp": "ebcc910b452acc016367c5908515729e130bfa858875e8bc9c43d6bf71a05053057dd7cbf4b28d1c45d321bc93f07a111acc5f6ec753c9846c630c25da2399fbfb93ef2041ef715701de52acae50652c35b435789c5d34f477e794d42b8caa35",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 0,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 3
+    },
+    {
+      "scenario": "home_page_profile_fields_grounded",
+      "site": "profile",
+      "stamp": "449e74747988a2cb4038d569010dc803af2ef7be9f3e8c299f3d4f4238b8edf2554e4556e514b72e9adce35f4f7c34ca852449539f63577c6e3cc313f14744d6808d0817e8378a351c2c88f7801d7df91af530133638e60f3fec44ae68df052e",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        97,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "one_legal_page_naming_two_entities",
+      "site": "profile",
+      "stamp": "3f84d8697e2d49090e9360739f4eac6a6ceb6551d9918d5ae113f474ec472c8e46e7d7bb29f609cf59637ecbf64ebb2d14002190f0c01995b2b347c26b8c2fa9fec130e84ff0ddd3727be33d474613f002d90e6e694da4e61717e9431c512f8b",
+      "verdict": "not_supported",
+      "judge_band": "not_supported",
+      "runs": 3,
+      "passed": 0,
+      "judge_scores": [
+        42,
+        41,
+        42
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 0,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 3
+    },
+    {
+      "scenario": "an_impressum_grounds_the_legal_trio",
+      "site": "profile",
+      "stamp": "e9102e2cbf0ee63973682ff123e83713891e03e661c73aa8c54646d2dae2c817db30e7d868d883163dd0a3038472c98b7554caf77b1c1b823cd3d1976d4f84494cca659859bef59ea161cf6fe2998d8d2e03ded70b3fd90cd3229f305fb9ffc5",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        97,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "services_page_profile_fields_grounded",
+      "site": "profile",
+      "stamp": "00a55da9b2e62b768cebeba8fd8ebb7e9bfab60d0b16f1aef469b11561f4ac091a9d2a7e8e2bb01a0b6e0236c9fa592b019d6c7ae37a0c6d52ca53f6e8403317e9c7981f6574087303be10875086aeab5cd4da9f3a40f0cc25fd08547bff2b96",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        97,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

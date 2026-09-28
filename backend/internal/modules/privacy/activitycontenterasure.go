@@ -97,6 +97,23 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		DELETE FROM activity_reply_verdict_history WHERE activity_id = $1`, id); err != nil {
 		return err
 	}
+	// What was promised, asked or decided in the message — and, on every one of
+	// these rows, a VERBATIM quotation of the words it was read from. The
+	// writer refuses a claim that carries neither the activity nor the snippet,
+	// so there is no such row without a copy of the text on it.
+	//
+	// The same argument as the verdict history above, one step stronger: a
+	// verdict is a conclusion ABOUT the text, and this is the text. Clearing
+	// the body and leaving the quotation erases nothing a reader would notice
+	// the difference of.
+	//
+	// The contact foreign key cannot be left to do this. Art. 17 ANONYMIZES the
+	// contact row in place rather than deleting it, so the cascade never fires
+	// — the identical reason transcript_read is deleted by statement here.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM conversation_claim WHERE source_activity_id = $1`, id); err != nil {
+		return err
+	}
 	// The external identities this message answered to, through the helper the
 	// Art. 17 cascade also calls — see retireActivityIdentities for why they
 	// cannot be left behind.

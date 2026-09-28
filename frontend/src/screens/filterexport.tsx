@@ -18,9 +18,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { downloadBytes, filenameFromDisposition } from "./download";
 import type { FilterResource } from "./filterdata";
 import { encode, isComplete, type Node } from "./segmentpredicate";
@@ -110,14 +111,9 @@ export function ExportFilterMenu({
           {t(LABEL[format])}
         </Button>
       ))}
-      {run.isError && (
-        // Spoken, and it carries the server's own reason: a bulk read can be
-        // refused for reasons a reader can act on, and "request failed" is not
-        // one of them.
-        <span className="filters-export-error" role="alert">
-          {problemMessageOf(run.error, t)}
-        </span>
-      )}
+      {/* The server's own reason: a bulk read can be refused for something a
+          reader can act on, and "request failed" is not one of them. */}
+      <ErrorLine inline error={run.error} />
     </>
   );
 }

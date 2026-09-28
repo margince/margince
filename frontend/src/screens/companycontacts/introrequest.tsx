@@ -4,10 +4,11 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Field, Modal } from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { ProvenanceTag } from "../../design-system/trust";
 import { useT } from "../../i18n";
-import { problemMessageOf, throwProblem } from "../common";
+import { throwProblem } from "../common";
 
 // Asking a colleague for the introduction.
 //
@@ -125,9 +126,7 @@ export function IntroRequestModal({
           </Button>
         </div>
       )}
-      {draft.isError && (
-        <p className="cp-intro-error">{problemMessageOf(draft.error, t)}</p>
-      )}
+      <ErrorLine error={draft.error} />
       {written && (
         <>
           <p className="cp-intro-mark">

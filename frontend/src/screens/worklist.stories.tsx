@@ -193,7 +193,7 @@ export const AFullDay: Story = {
           category: "decisions",
           level: 6,
           consequence: "data_drifts",
-          title: "Add someone from your mail",
+          title: "Add contact from mail",
           because: [{ kind: "routine" }],
           actions: ["decide"],
         },
@@ -427,7 +427,7 @@ export const ALeadsDay: Story = {
 export const ATeamBiggerThanTheBoardCanCount: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      await within(canvasElement).findByRole("button", { name: "My team" }),
+      await within(canvasElement).findByRole("button", { name: "Team" }),
     );
   },
   render: () => {
@@ -581,6 +581,89 @@ export const WhatWentWrong: Story = {
         },
       ],
     });
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// A day with more behind the page, split across both panels.
+//
+// The header states the two halves the panels hold, and the way to the rest of
+// the day stands below BOTH of them: the next page's rows land in whichever
+// panel their destination names, so a control inside one of them would describe
+// itself wrongly.
+function aDayWithMore(): Worklist {
+  return {
+    as_of: "2026-08-31T09:00:00Z",
+    scope: "mine",
+    scope_options: ["mine"],
+    summary: {
+      urgent: 1,
+      due: 0,
+      lower_priority: 11,
+      total: 12,
+      buckets: { urgent: 1, due_today: 0, planned: 6, review: 5 },
+    },
+    sources_unavailable: [],
+    reach: [],
+    readings: {
+      changed_since_brief: 0,
+      revenue_at_risk_minor: 0,
+      revenue_currency: "EUR",
+      buyer_replies: 1,
+      prospecting: 0,
+      review: 5,
+      more_available: false,
+    },
+    counts: [],
+    next_cursor: "page-2",
+    queue: [
+      {
+        id: "waiting-1",
+        source: "customer_waiting",
+        category: "customer_waiting",
+        destination: "today",
+        level: 1,
+        consequence: "buyer_waits",
+        title: "Re: pricing for the retrofit",
+        because: [{ kind: "buyer_wrote_last" }],
+        actions: [],
+      },
+      {
+        id: "pair-1",
+        source: "dedupe_candidate",
+        category: "decisions",
+        destination: "review",
+        level: 6,
+        consequence: "data_drifts",
+        title: "Two records for one company",
+        because: [],
+        actions: [],
+      },
+    ],
+  };
+}
+
+export const MoreOfTheDay: Story = {
+  render: () => {
+    stubDay(aDayWithMore());
+    return (
+      <StoryProviders>
+        <WorklistScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// The same day at 390px, where the button and the caption beside it wrap.
+export const MoreOfTheDayPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    stubDay(aDayWithMore());
     return (
       <StoryProviders>
         <WorklistScreen />

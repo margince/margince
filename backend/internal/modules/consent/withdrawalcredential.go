@@ -142,6 +142,9 @@ func (s *Store) EnsureWithdrawalCredentialTx(
 			return "", err
 		}
 	}
+	if err := holdLeadSubject(ctx, tx, in.LeadID); err != nil {
+		return "", err
+	}
 	return insertWithdrawalCredential(ctx, tx, in)
 }
 
@@ -182,7 +185,20 @@ func (s *Store) ensureWithdrawalCredentialForSendTx(
 			return "", err
 		}
 	}
+	if err := holdLeadSubject(ctx, tx, in.LeadID); err != nil {
+		return "", err
+	}
 	return insertWithdrawalCredential(ctx, tx, in)
+}
+
+// holdLeadSubject holds a lead the link names until it commits, as the contact
+// arm above is held: a lead merge or promotion then waits for the link and
+// carries it, rather than committing first and stranding it on the retired lead.
+func holdLeadSubject(ctx context.Context, tx pgx.Tx, lead ids.LeadID) error {
+	if lead.IsZero() {
+		return nil
+	}
+	return auth.LockSubjectLive(ctx, tx, entityLead, lead.UUID)
 }
 
 // validWithdrawalMint refuses what no link can be written for, before either
@@ -314,7 +330,8 @@ func resolveWithdrawalTokenTx(ctx context.Context, tx pgx.Tx, token string) (Wit
 // a merged predecessor's credential belongs to a record that no longer receives
 // mail. Honouring any of the three would let a link act for a subject who is
 // gone or for a holder who is not the recipient. A rotated or expired token is
-// neither — it is the same recipient's own older link.
+// neither — it is the same recipient's own older link, and so is one a merge
+// marked merged_into_survivor, which already names the survivor.
 //
 // It grants NOTHING beyond withdrawal: the ref carries an address and the
 // all-marketing scope, and the caller cannot read a consent state with it.
@@ -328,8 +345,8 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 		  FROM preference_token pt
 		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
 		 WHERE pt.token = $1
-		   AND (pt.revoked_reason IS NULL OR pt.revoked_reason IN ('rotated', 'expired'))`,
-		token).Scan(&contactID, &address)
+		   AND (pt.revoked_reason IS NULL OR pt.revoked_reason IN ('rotated', 'expired', $2))`,
+		token, PreferenceRevokedMergedIntoSurvivor).Scan(&contactID, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WithdrawalRef{}, apperrors.ErrNotFound
 	}
@@ -351,11 +368,12 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 }
 
 // RevokeSubjectCredentialsTx kills every live withdrawal credential a subject
-// holds, for a stated reason.
+// holds, for a stated reason. Each reason is answered differently by the
+// public page.
 //
-// Reached from erasure (the subject is gone), from a merge (the predecessor no
-// longer receives mail) and from the admin compromise route. Each writes a
-// different reason because the public page answers each differently.
+// A merge never calls this: the merged human's links follow the survivor and
+// keep working (satellitecarry.go), so revoking them would stop a withdrawal
+// the recipient is entitled to make.
 func (s *Store) RevokeSubjectCredentialsTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, reason string,
 ) error {

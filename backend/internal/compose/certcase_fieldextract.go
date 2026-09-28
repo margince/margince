@@ -159,7 +159,7 @@ func (c *fieldExtractCase) Run(ctx context.Context, completer aitasks.Completer)
 // A reply that grounded something is usable whatever else it claimed, so a
 // missing or fabricated expected fact is a wrong answer, named as such.
 func (c *fieldExtractCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	fields, dropped := gateEvidence(trace.Output, c.sourceText, c.sourceURL, c.accept)
+	fields, dropped := gateEvidence(trace.Output, c.sourceText, c.sourceURL, c.accept, nil)
 	// Every refusal reaches the Detail whatever the result: a reply that grounded
 	// the expected facts while fabricating evidence for three others is not the
 	// clean run it would otherwise look like.

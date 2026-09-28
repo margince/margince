@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -45,14 +46,16 @@ type PromoteLeadCommand struct {
 // reading the lead through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewPromoteLeadCall(records datasource.SystemOfRecordProvider, cmd PromoteLeadCommand) GovernedCall {
+func NewPromoteLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd PromoteLeadCommand) GovernedCall {
 	return bind[PromoteLeadCommand](&promoteLeadResolver{
-		lead: anchoredRecord{records: records, entityType: datasource.EntityLead},
+		language: language,
+		lead:     anchoredRecord{records: records, entityType: datasource.EntityLead},
 	}, cmd)
 }
 
 type promoteLeadResolver struct {
-	lead anchoredRecord
+	lead     anchoredRecord
+	language baselanguage.Resolver
 }
 
 // Subject names the LEAD the approval binds to, pins the version the human's
@@ -67,7 +70,7 @@ func (r *promoteLeadResolver) Subject(ctx context.Context, cmd PromoteLeadComman
 		TargetType:    string(datasource.EntityLead),
 		TargetID:      cmd.LeadID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf("Promote lead %s to a contact (%s)", recordLabel(rec), cmd.Trigger),
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).promoteLead, recordLabel(rec), cmd.Trigger),
 	}, nil
 }
 
@@ -123,14 +126,16 @@ type DisqualifyLeadCommand struct {
 // it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, cmd DisqualifyLeadCommand) GovernedCall {
+func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DisqualifyLeadCommand) GovernedCall {
 	return bind[DisqualifyLeadCommand](&disqualifyLeadResolver{
-		lead: anchoredRecord{records: records, entityType: datasource.EntityLead},
+		language: language,
+		lead:     anchoredRecord{records: records, entityType: datasource.EntityLead},
 	}, cmd)
 }
 
 type disqualifyLeadResolver struct {
-	lead anchoredRecord
+	lead     anchoredRecord
+	language baselanguage.Resolver
 }
 
 func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLeadCommand) (StageInfo, error) {
@@ -142,7 +147,7 @@ func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLead
 		TargetType:    string(datasource.EntityLead),
 		TargetID:      cmd.LeadID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf("Disqualify lead %s", recordLabel(rec)),
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).disqualifyLead, recordLabel(rec)),
 	}, nil
 }
 
@@ -166,14 +171,16 @@ type DemoteLeadCommand struct {
 // NewDemoteLeadCall binds one reversal to the resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDemoteLeadCall(records datasource.SystemOfRecordProvider, cmd DemoteLeadCommand) GovernedCall {
+func NewDemoteLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DemoteLeadCommand) GovernedCall {
 	return bind[DemoteLeadCommand](&demoteLeadResolver{
-		lead: anchoredRecord{records: records, entityType: datasource.EntityLead},
+		language: language,
+		lead:     anchoredRecord{records: records, entityType: datasource.EntityLead},
 	}, cmd)
 }
 
 type demoteLeadResolver struct {
-	lead anchoredRecord
+	lead     anchoredRecord
+	language baselanguage.Resolver
 }
 
 func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand) (StageInfo, error) {
@@ -185,7 +192,7 @@ func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand)
 		TargetType:    string(datasource.EntityLead),
 		TargetID:      cmd.LeadID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf("Reverse the promotion of lead %s", recordLabel(rec)),
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).demoteLead, recordLabel(rec)),
 	}, nil
 }
 
@@ -233,14 +240,16 @@ type AdvanceProjectPhaseCommand struct {
 // answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewAdvanceProjectPhaseCall(records datasource.SystemOfRecordProvider, cmd AdvanceProjectPhaseCommand) GovernedCall {
+func NewAdvanceProjectPhaseCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd AdvanceProjectPhaseCommand) GovernedCall {
 	return bind[AdvanceProjectPhaseCommand](&advanceProjectPhaseResolver{
-		project: anchoredRecord{records: records, entityType: datasource.EntityProject},
+		language: language,
+		project:  anchoredRecord{records: records, entityType: datasource.EntityProject},
 	}, cmd)
 }
 
 type advanceProjectPhaseResolver struct {
-	project anchoredRecord
+	project  anchoredRecord
+	language baselanguage.Resolver
 }
 
 func (r *advanceProjectPhaseResolver) Subject(ctx context.Context, cmd AdvanceProjectPhaseCommand) (StageInfo, error) {
@@ -252,7 +261,7 @@ func (r *advanceProjectPhaseResolver) Subject(ctx context.Context, cmd AdvancePr
 		TargetType:    string(datasource.EntityProject),
 		TargetID:      cmd.ProjectID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf("Move project %s to %s", recordLabel(rec), cmd.ToPhase),
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).projectPhase, recordLabel(rec), cmd.ToPhase),
 	}, nil
 }
 
@@ -311,11 +320,12 @@ type AdvanceDealCommand struct {
 // summary is written from, never the request's own labels.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewAdvanceDealCall(records datasource.SystemOfRecordProvider, stages StageResolver, cmd AdvanceDealCommand) GovernedCall {
+func NewAdvanceDealCall(records datasource.SystemOfRecordProvider, stages StageResolver, language baselanguage.Resolver, cmd AdvanceDealCommand) GovernedCall {
 	return advanceDealCall{
 		GovernedCall: bind[AdvanceDealCommand](&advanceDealResolver{
-			deal:   anchoredRecord{records: records, entityType: datasource.EntityDeal},
-			stages: stages,
+			language: language,
+			deal:     anchoredRecord{records: records, entityType: datasource.EntityDeal},
+			stages:   stages,
 		}, cmd),
 		records: records,
 		stages:  stages,
@@ -347,8 +357,9 @@ func (c advanceDealCall) tierInput(ctx context.Context, args json.RawMessage) (m
 }
 
 type advanceDealResolver struct {
-	deal   anchoredRecord
-	stages StageResolver
+	deal     anchoredRecord
+	stages   StageResolver
+	language baselanguage.Resolver
 }
 
 // Subject pins the staged move to the deal's CURRENT version, so an approval
@@ -369,7 +380,7 @@ func (r *advanceDealResolver) Subject(ctx context.Context, cmd AdvanceDealComman
 		TargetType:    string(datasource.EntityDeal),
 		TargetID:      cmd.DealID,
 		TargetVersion: &rec.Version,
-		Summary:       dealMoveSummary(ctx, r.stages, rec, semantic),
+		Summary:       dealMoveSummary(ctx, summaryIn(ctx, r.language), r.stages, rec, semantic),
 	}, nil
 }
 

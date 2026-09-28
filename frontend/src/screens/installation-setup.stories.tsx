@@ -306,7 +306,13 @@ export const TheIgnition: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Continue" }),
     );
-    const carryOn = await canvas.findByRole("button", { name: "Carry on" });
+    // The key step's own button is also "Continue", so the ignition's is the
+    // one inside its sequence.
+    const carryOn = await waitFor(() => {
+      const go = canvasElement.querySelector<HTMLElement>(".ob-ig-go");
+      if (go === null) throw new Error("the ignition has not begun");
+      return within(go).getByRole("button", { name: "Continue" });
+    });
     await waitFor(
       () => {
         const settled = carryOn.closest(".ob-ig-go");

@@ -40,7 +40,7 @@ func TestTheContactPageShowsAThreadTheContactWasOnlyCopiedOn(t *testing.T) {
 
 	subject, body := "Renewal terms", "the numbers we discussed"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
 		// Filed under the counterparty alone, which is what capture does.
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: filedUnder}},
 	})

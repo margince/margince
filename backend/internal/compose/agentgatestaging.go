@@ -194,7 +194,7 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 		DiffHash:       diffHash,
 		TargetType:     target.TargetType,
 		TargetID:       target.TargetID,
-		Summary:        restSummary(pol, r, body),
+		Summary:        restSummary(commands.summaryCopy(ctx), pol, r, body),
 	})
 	if sErr != nil {
 		httperr.Write(w, r, sErr)

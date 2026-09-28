@@ -69,6 +69,11 @@ export { type Choice, ChoiceList } from "../design-system/choicelist";
 // page with it. A unit's listing is the second shape, and publishing the first
 // would promise a contract the core changes for its own record screens.
 export { DataTable } from "../design-system/datatable";
+// ErrorLine, because a unit that says a write failed has otherwise only a bare
+// `<p>`: no danger ink, since a unit ships no stylesheet, and no announcement
+// unless it remembers `role="alert"`. The reader's words come from
+// `problemMessageOf`, so a unit hands it the thrown value and never the server's.
+export { ErrorLine } from "../design-system/errorline";
 // FactList, because a unit screen has NO other way to draw a label→value pair.
 //
 // No extension ships a stylesheet — nothing in extensions/*/frontend imports

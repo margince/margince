@@ -10,6 +10,7 @@ package contactdraft
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,7 +35,7 @@ func (h Handlers) DraftContactEmail(w http.ResponseWriter, r *http.Request, id c
 	}
 	draft, err := h.svc.Draft(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), req)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, draft)
@@ -54,6 +55,9 @@ func decodeRequest(w http.ResponseWriter, r *http.Request) (Request, bool) {
 	var req Request
 	if body.Intent != nil {
 		req.Intent = *body.Intent
+	}
+	if body.RewriteOf != nil {
+		req.RewriteOf = *body.RewriteOf
 	}
 	if body.ProjectId != nil {
 		// A null project_id is "the contact in general", which is ordinary. A

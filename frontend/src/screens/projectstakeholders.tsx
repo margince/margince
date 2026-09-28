@@ -30,6 +30,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { Stack } from "../design-system/stack";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { projectRoleLabel } from "./record360";
@@ -147,13 +148,7 @@ export function AddProjectStakeholder({
         pending={seat.isPending}
         error={seat.isError ? problemMessageOf(seat.error, t) : null}
       >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-          }}
-        >
+        <Stack gap="2">
           {/* Says what a second seating does before anybody tries it: the same
               contact named again is a re-role, not a duplicate row. */}
           <p className="t-caption">{t("project.stakeholders.addHint")}</p>
@@ -181,7 +176,7 @@ export function AddProjectStakeholder({
               />
             )}
           </Field>
-        </div>
+        </Stack>
       </ConfirmModal>
     </>
   );

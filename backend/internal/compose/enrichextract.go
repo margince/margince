@@ -376,7 +376,7 @@ func (x evidenceExtractor) extractFields(ctx context.Context, sourceLabel, sourc
 	if err != nil {
 		return nil, err
 	}
-	fields, dropped := gateEvidence(resp.Text, sourceText, sourceURL, accept)
+	fields, dropped := gateEvidence(resp.Text, sourceText, sourceURL, accept, nil)
 	x.reportDrops(ctx, sourceURL, dropped)
 	return fields, nil
 }
@@ -401,10 +401,11 @@ func (x evidenceExtractor) extractGrounded(ctx context.Context, sourceLabel, sou
 // gateEvidence is the no-guess gate, generic over the accepted field
 // vocabulary: accepted name, non-empty value, evidence on the page
 // (byte-exact or presentation-normalized — evidenceOnPage), confidence
-// in (0,1], first occurrence wins. Whatever fails comes back as a
+// in (0,1], first occurrence wins. A field in repeats — a signature's phone —
+// holds a list, so it wins once per distinct value rather than once. Whatever fails comes back as a
 // droppedFinding with its reason — an absent field is still the
 // contract's "could not evidence", but never a silent one.
-func gateEvidence(modelText, pageText, sourceURL string, accept func(string) bool) ([]evidencedField, []droppedFinding) {
+func gateEvidence(modelText, pageText, sourceURL string, accept func(string) bool, repeats map[string]bool) ([]evidencedField, []droppedFinding) {
 	const lane = laneFields
 	var parsed struct {
 		Fields []extractedField `json:"fields"`
@@ -423,10 +424,14 @@ func gateEvidence(modelText, pageText, sourceURL string, accept func(string) boo
 	pageNorm := normalizeEvidence(pageText)
 	seen := map[string]bool{}
 	for _, f := range parsed.Fields {
+		key := f.Field
+		if repeats[f.Field] {
+			key += "\x00" + normalizeEvidence(f.Value)
+		}
 		switch {
 		case !accept(f.Field):
 			drop(f, dropUnknownField)
-		case seen[f.Field]:
+		case seen[key]:
 			drop(f, dropDuplicate)
 		case strings.TrimSpace(f.Value) == "":
 			drop(f, dropEmptyValue)
@@ -437,7 +442,7 @@ func gateEvidence(modelText, pageText, sourceURL string, accept func(string) boo
 		case f.Confidence <= 0 || f.Confidence > 1:
 			drop(f, dropConfidenceRange)
 		default:
-			seen[f.Field] = true
+			seen[key] = true
 			out = append(out, evidencedField{
 				Field:           f.Field,
 				Value:           f.Value,

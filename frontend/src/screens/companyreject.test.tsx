@@ -139,7 +139,7 @@ it("rejects a company in one request and reports the domain the server refused",
 
   await user.click(await screen.findByTestId("reject-company"));
   await user.type(
-    screen.getByLabelText(/why is this not a company/i),
+    screen.getByLabelText(/reason this is not a company/i),
     "a tool we use",
   );
   await user.click(screen.getByTestId("reject-company-confirm"));
@@ -211,7 +211,10 @@ it("will not send until a reason is written", async () => {
 
   await user.click(await screen.findByTestId("reject-company"));
   expect(screen.getByTestId("reject-company-confirm")).toBeDisabled();
-  await user.type(screen.getByLabelText(/why is this not a company/i), "   ");
+  await user.type(
+    screen.getByLabelText(/reason this is not a company/i),
+    "   ",
+  );
   expect(screen.getByTestId("reject-company-confirm")).toBeDisabled();
   expect(sent).toHaveLength(0);
 });
@@ -229,7 +232,7 @@ it("mints a new idempotency key for each confirmation", async () => {
   for (const reason of ["a tool we use", "still a tool we use"]) {
     await user.click(await screen.findByTestId("reject-company"));
     await user.type(
-      screen.getByLabelText(/why is this not a company/i),
+      screen.getByLabelText(/reason this is not a company/i),
       reason,
     );
     await user.click(screen.getByTestId("reject-company-confirm"));

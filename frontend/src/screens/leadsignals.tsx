@@ -15,9 +15,10 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import { leadManualSignalsKey, leadWriteKeys } from "./leadkeys";
+import "./leadsignals.css";
 
 type SetSignalRequest = components["schemas"]["SetLeadManualSignalRequest"];
 type SignalFactor = SetSignalRequest["factor"];
@@ -195,9 +196,9 @@ export function LeadManualSignals({
           loading, failed, or not yet retained (ADR-0105 §1), nothing here can
           say what is set, so nothing here claims "not entered". */}
       {signals.isPending && <span>{t("lead.scoreLoading")}</span>}
-      {signals.isError && <span>{problemMessageOf(signals.error, t)}</span>}
+      <ErrorLine error={signals.error} />
       {signals.isSuccess && (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ul className="leadsignals-list">
           {SIGNAL_FACTORS.map((name) => {
             const entries = signals.data.filter(
               (entry: ManualSignal) => entry.factor === name,
@@ -205,15 +206,7 @@ export function LeadManualSignals({
             const live = entries.find((entry) => !entry.superseded_at);
             const superseded = entries.filter((entry) => entry.superseded_at);
             return (
-              <li
-                key={name}
-                style={{
-                  display: "flex",
-                  gap: "var(--space-2)",
-                  alignItems: "baseline",
-                  flexWrap: "wrap",
-                }}
-              >
+              <li key={name} className="leadsignals-factor">
                 <span>{label(name)}</span>
                 {live ? (
                   <>

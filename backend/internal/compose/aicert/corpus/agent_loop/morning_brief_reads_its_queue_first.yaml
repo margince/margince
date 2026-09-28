@@ -1,0 +1,18 @@
+name: morning_brief_reads_its_queue_first
+task: agent_loop
+site: morning_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: morning_brief:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding: []
+expect:
+  outcome: accepted
+  answer: read_brief
+  near_misses:
+    - list_records
+    - annotate_brief
+  judge: none
+  judge_none_reason: >
+    The answer is the turn's first tool call, which the check reads off the
+    replayed loop. The rubric asked for that call and graded nothing else.

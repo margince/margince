@@ -62,8 +62,3 @@
 .auto-row-fill {
   flex-grow: 1;
 }
-
-.auto-error {
-  margin-top: var(--space-2);
-  color: var(--dangerText);
-}

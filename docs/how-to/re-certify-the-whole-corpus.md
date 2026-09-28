@@ -27,10 +27,10 @@ mkdir -p .tmp
 `.tmp/` is gitignored and may not exist yet — this step runs before anything
 else has written there.
 
-This is not bookkeeping. A stale row names **which half of its stamp moved** —
-the case, the prompt this build sends, or the grader — and that is the only
-record of it you will have: once the sweep overwrites the records, the old stamps
-are gone and the report can no longer attribute anything.
+This is not bookkeeping. A stale row names **which part of its stamp moved** —
+the case, the prompt this build sends, or how a run is graded — and that is the
+only record of it you will have: once the sweep overwrites the records, the old
+stamps are gone and the report can no longer attribute anything.
 
 The three causes want opposite responses, which is why the report separates them:
 
@@ -39,9 +39,9 @@ The three causes want opposite responses, which is why the report separates them
 - **the prompt this build sends** — the product changed. The new band describes
   the NEW prompt; a drop is a consequence of a product change, and somebody
   should be told which change.
-- **the grader** — the judge's own request moved. A band can move with neither
-  the test nor the product touched. This reads as a model regression and is not
-  one.
+- **how a run is graded** — the judge's request or the scoring rule moved. A
+  band can move with neither the test nor the product touched. This reads as a
+  model regression and is not one.
 
 Keep the file. §2 reads it.
 
@@ -56,27 +56,39 @@ cd backend
 
 # gemini_cloud: every tier on Gemini, one credential.
 make e2e-ai ROUTING=config/presets/gemini_cloud.yaml \
-  JUDGE=openai_compatible:mistralai/mistral-large-2512 \
-  JUDGE_BASE_URL=https://openrouter.ai/api \
   TRACE="$PWD/../.tmp/aicert/gemini" RESUME="$PWD/../.tmp/aicert/gemini/resume"
 
-# openrouter_cloud: every lane through the broker.
+# openrouter_cloud: the default judge grades it too, as no task it certifies leads on Claude.
 make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
-  JUDGE=gemini:gemini-3.5-flash \
   TRACE="$PWD/../.tmp/aicert/openrouter" RESUME="$PWD/../.tmp/aicert/openrouter/resume"
 ```
+
+> **Check the judge is still served before you start.** A judge named here is a
+> model on somebody else's catalogue, and it can be withdrawn between sweeps
+> without anything in this tree changing. `mistralai/mistral-large-2512` stood
+> in this page until its non-batch endpoint disappeared, and the failure is not
+> obvious from the message: the task's own calls are made and BILLED, then every
+> run fails judging with `No endpoints found`, three attempts each, and no
+> record is written. Check the ENDPOINTS rather than the model list: a broker
+> keeps its catalogue and its per-model availability apart, so a slug stays
+> listed after the last host behind it has gone. For OpenRouter that is
+> `GET /api/v1/models/<slug>/endpoints`, and an empty list — or nothing but
+> `:batch` — is the same outage as a missing slug. Confirm it against a model
+> you know works, because one 404 says nothing about a model on its own.
 
 `TRACE=`/`RESUME=` must be **absolute**. The default the Makefile computes is,
 and for a reason a relative one silently gets wrong: a Go test runs with its
 working directory set to the package under test, so `../.tmp/…` typed here would
 land under `backend/internal/compose/` rather than beside the repo.
 
-**The judges are crossed on purpose, and a run refuses them uncrossed.**
-`cert_judge` is a task like any other and leads at `premium`, so a judge bound to
-the model that preset puts on its premium rung collides with every premium-led
-candidate. `validateRoutedBindings` checks every task the routing resolves and
-fails **before the first paid call** — caught mid-corpus it would be caught after
-the tasks before it had been billed.
+**One judge grades every task of a run, and a model never grades itself.** The
+default is `claude_cli:claude-sonnet-4-6`, graded through `claude -p` on a Claude
+Code subscription (`CLAUDE_CODE_OAUTH_TOKEN`); `JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}'`
+pays OpenRouter for the same model, and `JUDGE=gemini:gemini-3.5-flash` picks a
+Gemini one. A judge swap flips verdicts on the same candidate, so keep one judge
+across a sweep, and `judge_served_model` names it on every record. A run in which
+any task it certifies has the judge's family as its candidate is refused **before
+the first paid call**, naming those tasks.
 
 Two further rules the commands above encode:
 
@@ -161,11 +173,8 @@ tells the two apart for free, and it is the only thing that does:
 
 ```bash
 cd backend
-make e2e-ai TASK=<task> ROUTING=config/presets/gemini_cloud.yaml \
-  JUDGE=openai_compatible:mistralai/mistral-large-2512 \
-  JUDGE_BASE_URL=https://openrouter.ai/api RESUME=
-make e2e-ai TASK=<task> ROUTING=config/presets/openrouter_cloud.yaml \
-  JUDGE=gemini:gemini-3.5-flash RESUME=
+make e2e-ai TASK=<task> ROUTING=config/presets/gemini_cloud.yaml RESUME=
+make e2e-ai TASK=<task> ROUTING=config/presets/openrouter_cloud.yaml RESUME=
 ```
 
 Run it again afterwards and read the headline: every site current means the fix

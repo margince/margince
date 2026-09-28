@@ -15,6 +15,7 @@ import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
+import "./common.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];
 type Request = components["schemas"]["EmploymentImportRequest"];
@@ -86,10 +87,11 @@ export function ImportedEmploymentHistory({
   }
   return (
     <div className="form-stack">
+      {/* A read's warnings are a fact of that read, not news. */}
       {reading.data?.warnings?.map((warning) => (
-        <p role="alert" key={warning}>
+        <ErrorLine standing key={warning}>
           {warning}
-        </p>
+        </ErrorLine>
       ))}
       {reading.isPending && <p>{t("employment.importLoading")}</p>}
       <ErrorLine error={reading.error} />
@@ -234,12 +236,7 @@ function EmploymentMatchModal({
   );
   return (
     <Modal open onClose={onClose} labelledBy={heading}>
-      <Heading
-        size="large"
-        id={heading}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={heading} className="t-h2 dialog-heading">
         {t("employment.resolve")}
       </Heading>
       <div className="form-stack">

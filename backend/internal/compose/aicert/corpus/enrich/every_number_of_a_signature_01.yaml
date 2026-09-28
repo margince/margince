@@ -1,0 +1,41 @@
+name: every_number_a_signature_lists
+task: enrich
+site: signature
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A signature listing one number per country states four current numbers. The
+# pass records each, so a reply that keeps only the first is wrong, not terse.
+fixture:
+  full_name: Linh Brandt
+  email: linh.brandt@kestrel-freight.test
+  body: |
+    Hi Tomas,
+
+    The revised schedule works for us. I will be in Singapore the week after
+    next, so the Singapore number is the quickest way to reach me then.
+
+    Kind regards,
+
+    Linh Brandt
+    Regional Director, Asia-Europe Lanes
+    Kestrel Freight GmbH
+    Germany:   +49 175 5550142
+    Vietnam:   +84 35 555 0143
+    Singapore: +65 9555 0144
+    Thailand:  +66 97 555 0145
+expect:
+  outcome: accepted
+  answer:
+    title: Regional Director, Asia-Europe Lanes
+    company_name: Kestrel Freight GmbH
+    phone:
+      - +49 175 5550142
+      - +84 35 555 0143
+      - +65 9555 0144
+      - +66 97 555 0145
+  judge: none
+  judge_none_reason: >
+    Every number the signature lists is expected verbatim, one entry each, so a
+    reply that merges them, keeps one, or reformats one disagrees. The title and
+    company are pinned so a reply that spends itself on numbers still has to
+    read the rest of the block.

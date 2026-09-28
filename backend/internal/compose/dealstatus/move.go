@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/nextstep"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -82,12 +83,15 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 			return move(ActionDraftEmail, "This request already has a reminder. The reply still needs to be handled.", map[string]any{argActivityID: request.Id},
 				evidenceOf(request, "Request: "+subjectOf(request)))
 		}
-		reason := "Review and take responsibility for the outstanding request: " + subjectOf(request)
+		reason := "Review and take responsibility for the reply still owed: " + subjectOf(request)
 		if request.EmailSummary == nil || request.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
 			reason = "Review whether this conversation needs a follow-up: " + subjectOf(request)
 		}
+		//nolint:goconst // "source" is the record's provenance KEY, and the Go census
+		// (backend/gates/recordsourcespelling_test.go) reads that key as a string literal
+		// at each site — a shared constant here would be a key the census cannot see.
 		return move(ActionCreateTask, reason,
-			map[string]any{"subject": subjectOf(request), "request_activity_id": request.Id, "source": "ui"},
+			map[string]any{"subject": subjectOf(request), "request_activity_id": request.Id, "source": provenance.RecordSourceManual},
 			evidenceOf(request, "Request: "+subjectOf(request)))
 	}
 	if f.deal.Status != crmcontracts.DealStatusOpen {
@@ -149,7 +153,7 @@ func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
 			map[string]any{
 				"subject": "Agree the next step on " + f.deal.Name,
 				"links":   []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}},
-				"source":  "ui",
+				"source":  provenance.RecordSourceManual,
 			},
 			lastContactEvidence(f)...)
 	}
@@ -190,7 +194,7 @@ func meetingRequest(f facts, seat Seat) crmcontracts.DealStatusCardMove {
 		map[string]any{
 			"subject": meetingSubject(seat, f.deal),
 			"links":   links,
-			"source":  "ui",
+			"source":  provenance.RecordSourceManual,
 		},
 		lastContactEvidence(f)...)
 }

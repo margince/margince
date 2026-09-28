@@ -12,7 +12,7 @@ import type { RelationshipMapModel } from "./relationshipmap.layout";
 // account with nothing recorded — are only visible here.
 
 const LABELS: RelationshipMapLabels = {
-  region: "Who can reach whom at this account",
+  region: "Contact map for this company",
   band: { strong: "strong", developing: "developing", cold: "cold" },
   bestRoute: "Best route",
   alternatives: "Alternatives",
@@ -22,7 +22,7 @@ const LABELS: RelationshipMapLabels = {
   emptyTitle: "No route recorded yet",
   emptyBody:
     "Start by assigning the buying roles, or import the interactions this account already has.",
-  nothingSelected: "Select a contact to see the best route into them.",
+  nothingSelected: "Select a contact to see the best route to them.",
 };
 
 const FULL: RelationshipMapModel = {
@@ -53,7 +53,7 @@ const FULL: RelationshipMapModel = {
       label: "Philipp Königs",
       sublabel: "CFO",
       engagement: "untried",
-      engagementLabel: "Not approached",
+      engagementLabel: "Not contacted",
       actions: [
         { id: "write", label: "Write to Philipp", primary: true },
         { id: "open", label: "Open contact" },
@@ -122,7 +122,7 @@ const FULL: RelationshipMapModel = {
       to: "p-1",
       kind: "route",
       band: "cold",
-      words: "never written to",
+      words: "never contacted",
     },
     {
       id: "e-3",
@@ -193,7 +193,7 @@ export const MissingChampion: Story = {
           id: "gap:champion",
           kind: "gap",
           label: "Champion missing",
-          sublabel: "Nobody is carrying this deal",
+          sublabel: "No one owns this deal",
         },
       ],
       lanes: [
@@ -230,7 +230,7 @@ export const LargeAccount: Story = {
           kind: "contact" as const,
           label: `Contact ${i + 1}`,
           engagement: "untried" as const,
-          engagementLabel: "Not approached",
+          engagementLabel: "Not contacted",
         })),
       ],
       lanes: [

@@ -32,8 +32,7 @@ type Provenance = Pick<
 
 const WROTE_IT: Provenance = {
   ai_generated: true,
-  ai_disclosure:
-    "This message was drafted with AI assistance and reviewed by the sender.",
+  ai_disclosure: "Drafted with AI assistance. Review before sending.",
   voice_profile_version: 1234,
   voice_degraded: false,
 };

@@ -11,6 +11,7 @@ import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { downloadBytes } from "./download";
+import "./common.css";
 
 export type AiCallDetail = Pick<
   components["schemas"]["AiCall"],
@@ -119,12 +120,7 @@ export function ExportScenarioDialog({
 
   return (
     <Modal open onClose={onClose} labelledBy={headingId} size="wide">
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {t("aiexport.title")}
       </Heading>
       <div className="form-stack">

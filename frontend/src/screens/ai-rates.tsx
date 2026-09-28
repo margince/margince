@@ -6,6 +6,7 @@ import { StatStrip } from "../design-system/statstrip";
 import { formatUsdPerMTok } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import {
+  inputOnlyLane,
   type ModelCatalogue,
   type ModelLane,
   type VendorCatalogue,
@@ -69,7 +70,7 @@ function priceOf(rate: Rate, locale: Locale): string | undefined {
     return undefined;
   }
   const input = formatUsdPerMTok(rate.input_per_mtok, locale);
-  if (rate.lane === "embeddings") {
+  if (inputOnlyLane(rate.lane)) {
     return input;
   }
   if (unreadable(rate.output_per_mtok)) {
@@ -194,7 +195,7 @@ function LaneSlot({
               the price above, and a card's detail holds two lines. */}
           <span>
             {`${modelId} · ${
-              rate.lane === "embeddings"
+              inputOnlyLane(rate.lane)
                 ? t("aiRates.perMTok")
                 : t("aiRates.perMTokInOut")
             }`}

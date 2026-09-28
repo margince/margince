@@ -20,25 +20,8 @@ fixture:
 expect:
   outcome: accepted
   answer: security_incident
-  rubric: >
-    A confirmed, reproducible, cross-tenant data exposure with a working
-    reproduction attached and the fix not yet deployed. Every hour this is
-    readable by more contacts than need it is an hour a working exploit for a live
-    hole sits somewhere it can leak.
-    "security_incident" scores high. "explicitly_confidential" scores in the
-    middle — the message does ask for it not to be circulated, and it holds the
-    thread, which is the outcome that matters. "legal" also scores in the middle:
-    a breach that may have been used becomes a notification duty, so the reading
-    is not unreasonable and its effect is the same.
-    "ordinary" is the failure this scenario exists to catch and scores zero at
-    any confidence. It is the worst-consequence miss in this corpus: an
-    unpatched, reproducible vulnerability handed to the whole workspace.
-    The trap is the register it is written in. This reads as routine engineering traffic — a
-    "quick update", a build, a rollout, a parameter — with none of the vocabulary
-    a keyword-matching classifier looks for. Nothing says "incident", "breach" or
-    "confidential"; the severity is only legible from what the sentences actually
-    describe.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The rubric
+    only ranked the other kinds by the harm each does, which the check fails
+    outright.

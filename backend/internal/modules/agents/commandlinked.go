@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -92,12 +93,13 @@ type SendCompanyEmailCommand struct {
 // answers for it, reading its named records through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewSendCompanyEmailCall(records datasource.SystemOfRecordProvider, cmd SendCompanyEmailCommand) GovernedCall {
-	return bind[SendCompanyEmailCommand](&accountSendResolver{links: namedLinks{records: records}}, cmd)
+func NewSendCompanyEmailCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd SendCompanyEmailCommand) GovernedCall {
+	return bind[SendCompanyEmailCommand](&accountSendResolver{links: namedLinks{records: records}, language: language}, cmd)
 }
 
 type accountSendResolver struct {
-	links namedLinks
+	links    namedLinks
+	language baselanguage.Resolver
 }
 
 // Subject stages a CREATE, and the shape says so: target type `activity` with
@@ -126,7 +128,7 @@ func (r *accountSendResolver) Subject(ctx context.Context, cmd SendCompanyEmailC
 	}
 	return StageInfo{
 		TargetType: string(datasource.EntityActivity),
-		Summary:    describeAccountSend(cmd, links),
+		Summary:    describeAccountSend(summaryIn(ctx, r.language), cmd, links),
 	}, nil
 }
 
@@ -183,12 +185,12 @@ func requireAccountSendLinks(links []RecordLink) error {
 // their ids mean nothing to a human reading one line, and the staged row is
 // decidable on the activity floor rather than on those records, so naming them
 // would disclose more than the decision rests on.
-func describeAccountSend(cmd SendCompanyEmailCommand, links []RecordLink) string {
-	summary := fmt.Sprintf("Start an email conversation with %s", strings.Join(cmd.To, ", "))
+func describeAccountSend(said summaryCopy, cmd SendCompanyEmailCommand, links []RecordLink) string {
+	summary := fmt.Sprintf(said.accountSend, strings.Join(cmd.To, ", "))
 	if len(cmd.Cc) > 0 {
-		summary += fmt.Sprintf(", cc %s", strings.Join(cmd.Cc, ", "))
+		summary += fmt.Sprintf(said.cc, strings.Join(cmd.Cc, ", "))
 	}
-	return summary + fmt.Sprintf(", subject %q, filed under %d record(s)", cmd.Subject, len(links))
+	return summary + fmt.Sprintf(said.accountSendFiled, cmd.Subject, len(links))
 }
 
 // BookMeetingCommand is one booking, whichever door asked for it. It carries
@@ -206,12 +208,13 @@ type BookMeetingCommand struct {
 // reading its named records through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewBookMeetingCall(records datasource.SystemOfRecordProvider, cmd BookMeetingCommand) GovernedCall {
-	return bind[BookMeetingCommand](&bookMeetingResolver{links: namedLinks{records: records}}, cmd)
+func NewBookMeetingCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd BookMeetingCommand) GovernedCall {
+	return bind[BookMeetingCommand](&bookMeetingResolver{links: namedLinks{records: records}, language: language}, cmd)
 }
 
 type bookMeetingResolver struct {
-	links namedLinks
+	links    namedLinks
+	language baselanguage.Resolver
 }
 
 // Subject names the booking's FIRST link as the target and pins its version,
@@ -236,7 +239,7 @@ func (r *bookMeetingResolver) Subject(ctx context.Context, cmd BookMeetingComman
 		TargetType:    links[0].EntityType,
 		TargetID:      links[0].EntityID,
 		TargetVersion: &rows[0].Version,
-		Summary:       describeBooking(cmd, links),
+		Summary:       describeBooking(summaryIn(ctx, r.language), cmd, links),
 	}, nil
 }
 
@@ -336,18 +339,18 @@ func requireBookingLinks(links []RecordLink) error {
 // The subject is the agent's own text, so it is quoted rather than run into
 // the sentence; the approvals engine sanitizes every summary at the single
 // staging path regardless.
-func describeBooking(cmd BookMeetingCommand, links []RecordLink) string {
+func describeBooking(said summaryCopy, cmd BookMeetingCommand, links []RecordLink) string {
 	subject := cmd.Subject
 	if strings.TrimSpace(subject) == "" {
-		subject = "(no subject)"
+		subject = said.noSubject
 	}
-	summary := fmt.Sprintf("Book %q from %s to %s",
+	summary := fmt.Sprintf(said.booking,
 		subject, cmd.Start.Format(time.RFC3339), cmd.End.Format(time.RFC3339))
 	if cmd.HostUserID != nil {
-		summary += fmt.Sprintf(" on %s's calendar", cmd.HostUserID)
+		summary += fmt.Sprintf(said.bookingHost, cmd.HostUserID)
 	}
 	if len(links) > 0 {
-		summary += fmt.Sprintf(", attached to %d record(s)", len(links))
+		summary += fmt.Sprintf(said.bookingLinks, len(links))
 	}
 	return summary
 }

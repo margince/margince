@@ -49,9 +49,9 @@ const AI_RUNTIME_READER: GrantSpec = { ai_budget: ["read", "update"] };
 // notice is standing rather than announced, so it carries no ARIA role, and an
 // assertion on one would pass whether or not a banner was on screen.
 const BANNER_LINES = [
-  "80% AI allowance threshold reached — review feature impacts",
-  "AI allowance reached — review deferred work",
-  "AI budget status is not recognized",
+  "80% of AI allowance reached. Review affected features.",
+  "AI allowance reached. Review deferred work.",
+  "AI allowance status not recognized",
 ];
 
 function bannerLinesOnScreen(): string[] {
@@ -73,7 +73,7 @@ it("does not probe usage for a non-admin", async () => {
   ).toBe(false);
   expect(
     screen.queryByText(
-      "80% AI allowance threshold reached — review feature impacts",
+      "80% of AI allowance reached. Review affected features.",
     ),
   ).toBeNull();
 });
@@ -82,14 +82,14 @@ it("shows and dismisses economy mode for an admin", async () => {
   mount(AI_RUNTIME_READER, "degraded");
   expect(
     await screen.findByText(
-      "80% AI allowance threshold reached — review feature impacts",
+      "80% of AI allowance reached. Review affected features.",
     ),
   ).toBeTruthy();
   const user = userEvent.setup({ delay: null });
   await user.click(screen.getByLabelText("Dismiss"));
   expect(
     screen.queryByText(
-      "80% AI allowance threshold reached — review feature impacts",
+      "80% of AI allowance reached. Review affected features.",
     ),
   ).toBeNull();
 });
@@ -97,7 +97,7 @@ it("shows and dismisses economy mode for an admin", async () => {
 it("shows queued while normal stays silent", async () => {
   mount(AI_RUNTIME_READER, "queued");
   expect(
-    await screen.findByText("AI allowance reached — review deferred work"),
+    await screen.findByText("AI allowance reached. Review deferred work."),
   ).toBeTruthy();
   cleanup();
   const { fetchMock } = mount(AI_RUNTIME_READER, "normal");
@@ -110,7 +110,7 @@ it("shows a recurring band as a new occurrence", async () => {
   const { client } = mount(AI_RUNTIME_READER, () => band);
   expect(
     await screen.findByText(
-      "80% AI allowance threshold reached — review feature impacts",
+      "80% of AI allowance reached. Review affected features.",
     ),
   ).toBeTruthy();
   const user = userEvent.setup({ delay: null });
@@ -128,7 +128,7 @@ it("shows a recurring band as a new occurrence", async () => {
   await client.refetchQueries({ queryKey: ["ai-budget"] });
   expect(
     await screen.findByText(
-      "80% AI allowance threshold reached — review feature impacts",
+      "80% of AI allowance reached. Review affected features.",
     ),
   ).toBeTruthy();
 });
@@ -136,7 +136,7 @@ it("shows a recurring band as a new occurrence", async () => {
 it("surfaces an unknown budget band", async () => {
   mount(AI_RUNTIME_READER, "future-band");
   expect(
-    await screen.findByText("AI budget status is not recognized"),
+    await screen.findByText("AI allowance status not recognized"),
   ).toBeTruthy();
 });
 

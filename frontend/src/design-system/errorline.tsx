@@ -35,10 +35,17 @@ export function ErrorLine({
   standing,
 }: ErrorLineProps) {
   const t = useT();
-  // A `false` error is a guard's short-circuit (`isError && error`), not a failure.
-  const absent = error === undefined || error === null || error === false;
+  // A `false` error is a guard's short-circuit (`isError && error`), not a
+  // failure, and an empty string says nothing an alert could announce.
+  const absent =
+    error === undefined || error === null || error === false || error === "";
   const message = absent ? children : problemMessageOf(error, t);
-  if (message === undefined || message === null || message === false) {
+  if (
+    message === undefined ||
+    message === null ||
+    message === false ||
+    message === ""
+  ) {
     return null;
   }
   const Line = inline ? "span" : "p";

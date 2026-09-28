@@ -70,6 +70,11 @@ emit() {
 			echo "$why"
 			echo "MERGE_VERDICT_EOF"
 			echo "pr=${pr_number:-}"
+			# The lane, so the issue can be TITLED by what broke. A reader
+			# scanning open issues has to see "main is red" without opening
+			# one, and a title that named only the pull request left six
+			# alarms for one outage reading as six unrelated merges.
+			echo "lane=$required"
 		} >>"$GITHUB_OUTPUT"
 	fi
 }

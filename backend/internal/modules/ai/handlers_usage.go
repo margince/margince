@@ -54,7 +54,27 @@ func (h Handlers) GetAiUsage(w http.ResponseWriter, r *http.Request, params crmc
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireAiUsage(days, budget))
+	decisions, err := h.calls.DecisionSummaries(r.Context(), from, to)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := wireAiUsage(days, budget)
+	out.Decisions = wireDecisionSummaries(decisions)
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// wireDecisionSummaries maps the decision summary onto the wire, always as a
+// present list: a window with no consultation is an empty one, never an absent
+// field a reader would take for a server that predates it.
+func wireDecisionSummaries(summaries []DecisionSummary) *[]crmcontracts.AiDecisionSummary {
+	out := make([]crmcontracts.AiDecisionSummary, 0, len(summaries))
+	for _, s := range summaries {
+		out = append(out, crmcontracts.AiDecisionSummary{
+			Task: s.Task, Asked: s.Asked, Decided: s.Decided, Fallbacks: s.Fallbacks,
+		})
+	}
+	return &out
 }
 
 // aiUsage type aliases: the generated schema nests anonymous structs,

@@ -94,7 +94,7 @@ func (s *Store) UpdateCompany(ctx context.Context, id ids.CompanyID, in UpdateCo
 func (s *Store) updateCompanyInTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
-	if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+	if err := auth.EnsureChangeable(ctx, tx, "company", id.UUID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if err := lockCompanyNameWritesForEdit(ctx, tx, in); err != nil {
@@ -105,6 +105,9 @@ func (s *Store) updateCompanyInTx(
 		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
 	}
 	if err := refuseUnreadableCompany(current, in); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := ensureHandedOnOwnerAssignable(ctx, tx, current.OwnerId, in.OwnerID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)

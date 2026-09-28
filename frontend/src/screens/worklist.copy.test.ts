@@ -39,7 +39,7 @@ describe("comparisonText", () => {
       theirs: { kind: "days", days: 30 },
     };
     expect(comparisonText(comparison, t, "en", zone)).toBe(
-      "Above the next: 12 against 30.",
+      "Ranked above the next item: 12 compared with 30.",
     );
   });
 
@@ -49,7 +49,7 @@ describe("comparisonText", () => {
     // could check draws the plain sentence rather than a false tie.
     const comparison: WorklistComparison = { comparator: "waiting_days" };
     expect(comparisonText(comparison, t, "en", zone)).toBe(
-      "Above the next on how long it has waited.",
+      "Ranked above the next item by waiting time.",
     );
   });
 
@@ -76,7 +76,7 @@ describe("comparisonText", () => {
   // explain was the one row with no explanation.
   it("names crowded, which this build's own server emits", () => {
     expect(comparisonText({ comparator: "crowded" }, t, "en", zone)).toBe(
-      "Above the next because that one is one of many of its kind.",
+      "Ranked above the next item, which is one of many of its kind.",
     );
   });
 });
@@ -206,8 +206,8 @@ describe("the verbs the row can and cannot take a reader to", () => {
   });
 
   it("names a first message as writing, not as replying", () => {
-    expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft the email");
-    expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft the reply");
+    expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft email");
+    expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft reply");
   });
 
   // And the label still follows the ROUTE. A deal has no composer, so the same
@@ -217,7 +217,7 @@ describe("the verbs the row can and cannot take a reader to", () => {
       ...movingRow("draft_email"),
       subject: { type: "deal", id: "d-1" },
     };
-    expect(moveLabel(onADeal, t)).toBe("Open to write");
+    expect(moveLabel(onADeal, t)).toBe("Write email");
   });
 
   // These are PERFORMED, not navigated: one posts a task body, one leaves for a
@@ -383,6 +383,54 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
   });
 });
 
+describe("itemTitle — a group counts in the reader's plural", () => {
+  const group = (
+    key: NonNullable<WorklistItem["batch"]>["key"],
+    count: number,
+  ): WorklistItem => ({
+    id: "g-1",
+    source: "automation_run",
+    level: 3,
+    category: "system",
+    title: "",
+    because: [],
+    consequence: "none",
+    actions: [],
+    batch: { key, count, label: "Recap draft" },
+  });
+
+  it.each([
+    ["duplicates", 1, "1 possible duplicate"],
+    ["duplicates", 3, "3 possible duplicates"],
+    ["system_incident", 1, "Recap draft failed 1 time"],
+    ["system_incident", 3, "Recap draft failed 3 times"],
+    ["company_match", 1, "1 address at a company you know"],
+    ["company_match", 3, "3 addresses at companies you know"],
+    ["held_draft", 1, "1 draft waiting to send"],
+    ["held_draft", 3, "3 drafts waiting to send"],
+    ["likely_automated", 1, "1 likely automated sender"],
+    ["likely_automated", 3, "3 likely automated senders"],
+    ["uncertain_contact", 1, "1 address to review"],
+    ["uncertain_contact", 3, "3 addresses to review"],
+  ] as const)("titles a %s group of %i", (key, count, title) => {
+    expect(itemTitle(group(key, count), t, "en")).toBe(title);
+  });
+
+  // A kind a newer server minted arrives through the wire untyped, which is
+  // exactly how the client meets it: named by its label, or generically.
+  it.each([
+    ["Four deals to advance", "Four deals to advance"],
+    [undefined, "Routine items to review"],
+  ])("titles a kind this build has no pair for by %s", (label, title) => {
+    const wire = JSON.stringify({
+      ...group("duplicates", 4),
+      batch: { key: "brief_pile", count: 4, label },
+    });
+    const skewed: WorklistItem = JSON.parse(wire);
+    expect(itemTitle(skewed, t, "en")).toBe(title);
+  });
+});
+
 describe("an unavailable source", () => {
   // All three shipped locales, because the frame is a per-language decision and
   // a check that reads only English proves the rule for the one translator who
@@ -410,7 +458,7 @@ describe("an unavailable source", () => {
 
   it("never reads its own title as the sentence's subject", () => {
     // What `sourceName` returns is a row TITLE, and most of them are whole
-    // clauses — "A mailbox connection needs attention". Framed as a subject,
+    // clauses — "Mailbox connection needs attention". Framed as a subject,
     // fourteen of these ran two sentences together, and each one read as a
     // rendering fault rather than as a source the page could not reach.
     //
@@ -478,7 +526,7 @@ describe("the open_meeting_brief move", () => {
   // so on its own rather than borrow the reply wording, which is only the
   // fall-through for a verb with no words of its own.
   it("names itself as the brief, not as a reply", () => {
-    expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for the meeting");
+    expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for meeting");
   });
 });
 

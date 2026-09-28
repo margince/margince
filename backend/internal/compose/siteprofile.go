@@ -68,6 +68,7 @@ var profileSystem = fmt.Sprintf(`You extract a company's profile from numbered p
 Return ONLY a JSON object: {"fields":[{"f":field,"v":value,"e":passage id,"c":confidence 0.0-1.0}]} with at most one entry per field.
 Allowed fields: %s.
 Cite the passage id that grounds each value; write v in the site's own terms. legal_name, registered_address, legal_form, register_court, register_number and register_vat ONLY from a legal-notice page's passages, and ONLY when the site's legal pages name exactly one entity.
+display_name is the name the company trades under, copied from a passage: a heading or a legal name without its legal form and descriptor words ("Acme Consulting GmbH" trades as "Acme"). The one-entity rule withholds only the legal fields, so two entities that share a trading name still ground display_name.
 register_number is the court's commercial-register entry ("HRB 12345 B"); register_vat is the tax identifier ("DE123456789"). Different authorities issue them and a notice prints both — never put one in the other's place.
 OMIT any field the passages do not ground — never guess.`,
 	strings.Join(extractionFieldNames, ", "))

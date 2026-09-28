@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -116,6 +117,7 @@ func (t searchContext) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "search_context", Title: "Search for relevant material", Version: toolVersionV1,
 		Description:   searchContextCopy.render(),
+		Instead:       searchContextCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		// The input is three members and stays three. The retrieval seam
 		// serves exactly these, and a filter vocabulary invented here would be
@@ -266,6 +268,10 @@ func (t searchContext) hydrate(ctx context.Context, found retrieval.Result) (Sea
 // different things: false is a definite answer and the hit is dropped, while an
 // error is the absence of one — reporting an unreachable store as a partial page
 // would describe an infrastructure fault as a property of the caller's data.
+//
+// A record whose content this caller may no longer read counts as unreadable
+// too: it ranked on that content, so serving it with the excerpt it ranked on
+// would hand back what the audience now withholds.
 func (t searchContext) read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, bool, error) {
 	record, err := t.p.Read(ctx, ref)
 	if err != nil {
@@ -274,7 +280,26 @@ func (t searchContext) read(ctx context.Context, ref datasource.EntityRef) (data
 		}
 		return datasource.Record{}, false, err
 	}
+	withheld, err := contentWithheld(record)
+	if err != nil || withheld {
+		return datasource.Record{}, false, err
+	}
 	return record, true, nil
+}
+
+// contentWithheld reads the content_state an activity carries when the caller
+// may know it exists but not read it. Other records carry none.
+func contentWithheld(record datasource.Record) (bool, error) {
+	if len(record.Fields) == 0 {
+		return false, nil
+	}
+	var state struct {
+		ContentState *crmcontracts.ActivityContentState `json:"content_state"`
+	}
+	if err := json.Unmarshal(record.Fields, &state); err != nil {
+		return false, fmt.Errorf("agents: reading a record's content state: %w", err)
+	}
+	return state.ContentState != nil && *state.ContentState == crmcontracts.ActivityContentStateWithheld, nil
 }
 
 // excerptsOf carries the retriever's grounding onto the wire. An excerpt with no

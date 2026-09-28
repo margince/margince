@@ -216,14 +216,14 @@ describe("PageTitle", () => {
   // own subtitle had to print its own title above it to hang it on, and the
   // shell was already printing that title.
   it("prints the page's subtitle under the heading", () => {
-    const { container } = render(<PageTitle route={{ screen: "ai" }} />);
+    const { container } = render(<PageTitle route={{ screen: "filters" }} />);
     const heading = screen.getByRole("heading", {
       level: 1,
-      name: "Ask Margince",
+      name: "Filters and views",
     });
     const sub = container.querySelector(".pagesub");
     expect(sub?.textContent).toBe(
-      "bring your own agent — governed by the two-tier contract",
+      "Build a filter, preview its matches and save it as a view.",
     );
     // Directly under the name it explains, inside the title's own text column —
     // not beside the actions, where it would read as product chrome. The
@@ -259,8 +259,8 @@ describe("PageTitle", () => {
   // at all — or the document would offer two page titles for the same record.
   // Where the reader came from is the top bar's trail (topbar.test.tsx).
   //
-  // No record screen carries a subtitle key today (the map names `ai`, `filters`
-  // and `scheduled`, and none has a record segment), so what the subtitle half
+  // No record screen carries a subtitle key today (the map names `filters` and
+  // `scheduled`, and neither has a record segment), so what the subtitle half
   // pins is the structure. Give a record screen a subtitle and this is the case that
   // says where it may not appear.
   it("renders nothing at all on a record route", () => {
@@ -335,7 +335,7 @@ describe("Section switcher (the page title at phone width)", () => {
   it("renders no switcher above the phone breakpoint", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Privacy & retention" }),
+      screen.getByRole("heading", { level: 1, name: "Privacy and retention" }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
@@ -349,12 +349,12 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     const heading = screen.getByRole("heading", { level: 1 });
     const switcher = screen.getByRole("button", {
-      name: "Privacy & retention — change section",
+      name: "Privacy and retention: change section",
     });
     expect(heading.contains(switcher)).toBe(true);
     // The visible word is the entry, and it is part of the name (WCAG 2.5.3), so
     // a reader driving the app by voice says what they can see.
-    expect(switcher.textContent).toContain("Privacy & retention");
+    expect(switcher.textContent).toContain("Privacy and retention");
     expect(switcher.getAttribute("aria-expanded")).toBe("false");
     // One heading, and the entry's name is in it once — not once in a heading
     // and again in a control under it.
@@ -369,7 +369,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     const dialog = screen.getByRole("dialog");
@@ -413,7 +413,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={named} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     const dialog = screen.getByRole("dialog");
@@ -433,7 +433,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     await user.click(
@@ -452,7 +452,7 @@ describe("Section switcher (the page title at phone width)", () => {
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
     await user.click(
       screen.getByRole("button", {
-        name: "Privacy & retention — change section",
+        name: "Privacy and retention: change section",
       }),
     );
     await user.click(
@@ -561,7 +561,6 @@ describe("Shell", () => {
     ["#/worklist", true],
     ["#/filters", true],
     ["#/analytics", true],
-    ["#/ai", true],
     // Analytics' old address parses to the same screen, so it inherits the
     // same column: a bookmark cannot land on a differently laid-out page.
     ["#/reports", true],
@@ -669,15 +668,15 @@ describe("Shell", () => {
   // hang it on. Asserted through the real shell because the head is what mounts
   // it — the subtitle is only as reachable as the route that carries it.
   it("mints the page's subtitle beneath that one heading", () => {
-    window.location.hash = "#/ai";
+    window.location.hash = "#/filters";
     const { container } = render(
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
     );
     const headings = screen.getAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
-    expect(headings[0].textContent).toBe("Ask Margince");
+    expect(headings[0].textContent).toBe("Filters and views");
     expect(container.querySelector(".pagesub")?.textContent).toBe(
-      "bring your own agent — governed by the two-tier contract",
+      "Build a filter, preview its matches and save it as a view.",
     );
   });
 

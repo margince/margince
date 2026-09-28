@@ -63,6 +63,8 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureWritable":     {argument: 2},
 	"EnsureWritableLive": {argument: 2},
 	"HoldWritableLive":   {argument: 2},
+	"EnsureReadable":     {argument: 2},
+	"EnsureChangeable":   {argument: 2},
 	"EnsureLinkTarget":   {argument: 2},
 	// The attach direction's probe opens with EnsureLinkTarget and narrows the
 	// share arm, so it bounds a reference at least as tightly.

@@ -28,9 +28,9 @@ func TestASplitStampNamesTheHalfThatMoved(t *testing.T) {
 	}{
 		"the case alone":    {seg('z') + seg('b') + seg('c'), "the case"},
 		"the prompt alone":  {seg('a') + seg('z') + seg('c'), "the prompt this build sends"},
-		"the grader alone":  {seg('a') + seg('b') + seg('z'), "the grader"},
+		"the grader alone":  {seg('a') + seg('b') + seg('z'), "how a run is graded"},
 		"a case and prompt": {seg('z') + seg('z') + seg('c'), "the case and the prompt this build sends"},
-		"all three":         {seg('z') + seg('z') + seg('z'), "the case and the prompt this build sends and the grader"},
+		"all three":         {seg('z') + seg('z') + seg('z'), "the case and the prompt this build sends and how a run is graded"},
 		"a stamp too short": {seg('a'), "something this build cannot attribute"},
 		"nothing moved":     {base, "something this build cannot attribute"},
 	} {

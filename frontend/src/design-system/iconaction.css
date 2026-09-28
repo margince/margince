@@ -4,3 +4,11 @@
 .icon-action {
   display: inline-flex;
 }
+
+/* `inline`: one line box of the host, the square overhanging it, so the row
+ * keeps its height; `top`, so the glyph's own baseline cannot open the line. */
+.icon-action-inline {
+  align-items: center;
+  block-size: 1lh;
+  vertical-align: top;
+}

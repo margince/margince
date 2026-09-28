@@ -26,10 +26,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/riverqueue/river"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // assuranceJobEnv is one workspace holding an open deal for the pass to examine.
@@ -87,13 +90,116 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 	}
 }
 
-// run drives the worker's per-workspace turn, which is what River's row now
-// walks rather than what it carries: the pass takes no workspace in its args
-// (ADR-0103), so Work would enumerate the fleet and lose the one this suite is
-// about. It is the same code Work calls per tenant.
+// run drives the pass a human asked for, which is also the only thing that
+// STARTS a workspace: the nightly sweep skips one nobody has started, so a
+// suite that reached for the sweep here would be asserting against a pass that
+// never ran. Work rather than the inner call because these args carry their
+// workspace, so there is no fleet to enumerate.
 func (e *assuranceJobEnv) run(t *testing.T) error {
 	t.Helper()
+	worker := &assuranceRunWorker{sweep: e.worker}
+	return worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{
+		Args: AssuranceRunArgs{Workspace: e.WS, RequestedBy: e.Rep1.String()},
+	})
+}
+
+// sweep drives the NIGHTLY turn, enrolment gate and all — the same code Work
+// calls per tenant (the sweep's args carry no workspace, ADR-0103, so its own
+// Work would enumerate the fleet and lose the one this suite is about).
+func (e *assuranceJobEnv) sweep(t *testing.T) error {
+	t.Helper()
 	return e.worker.assureWorkspace(context.Background(), e.WS)
+}
+
+// The nightly sweep does not check a workspace nobody has started.
+//
+// This is the whole of the first-use guarantee. The first pass over a backlog
+// raises every exception it can see at once and mints a task per faulted deal,
+// and a queue that arrives on the calendar's schedule is one nobody chose.
+func TestTheNightlySweepSkipsAWorkspaceNobodyHasStarted(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	if err := e.sweep(t); err != nil {
+		t.Fatalf("the nightly sweep: %v", err)
+	}
+
+	if _, err := e.latestRun(t); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("the sweep checked a workspace nobody started (read answered %v) — "+
+			"a fresh installation wakes up to a wall of exceptions it never asked for", err)
+	}
+}
+
+// Once somebody has started it, the sweep checks it every night as before.
+//
+// This is the direction that can fail SHORT: a workspace wrongly read as
+// unstarted simply stops being checked, the read keeps answering the last run,
+// and nothing asserts. An installation already being checked must never enter
+// that branch.
+func TestTheNightlySweepChecksAWorkspaceSomebodyStarted(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("starting the workspace: %v", err)
+	}
+	first, err := e.latestRun(t)
+	if err != nil {
+		t.Fatalf("reading the run that started the workspace: %v", err)
+	}
+
+	if err := e.sweep(t); err != nil {
+		t.Fatalf("the nightly sweep: %v", err)
+	}
+
+	second, err := e.latestRun(t)
+	if err != nil {
+		t.Fatalf("reading the run the sweep wrote: %v", err)
+	}
+	if second.ID == first.ID {
+		t.Error("the sweep skipped a workspace that has already been checked — it " +
+			"would quietly stop checking an installation that was working, and the " +
+			"panel would keep showing the last run as though it were current")
+	}
+}
+
+// A pass somebody asked for names them on the run; the nightly one names nobody.
+func TestTheRequestedPassRecordsWhoAskedAndTheSweepDoesNot(t *testing.T) {
+	e := setupAssuranceJob(t)
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the requested pass: %v", err)
+	}
+	requested, err := e.latestRun(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := e.requesterOf(t, requested.ID); got != e.Rep1.String() {
+		t.Errorf("the requested run says %q asked for it, want %q", got, e.Rep1)
+	}
+
+	if err := e.sweep(t); err != nil {
+		t.Fatalf("the nightly sweep: %v", err)
+	}
+	nightly, err := e.latestRun(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := e.requesterOf(t, nightly.ID); got != "" {
+		t.Errorf("the nightly run says %q asked for it; nobody did", got)
+	}
+}
+
+// requesterOf reads who asked for one run, empty for the nightly cadence.
+func (e *assuranceJobEnv) requesterOf(t *testing.T, run ids.UUID) string {
+	t.Helper()
+	var out *string
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT requested_by FROM assurance_run WHERE id = $1`, run).Scan(&out); err != nil {
+		t.Fatalf("reading the run's requester: %v", err)
+	}
+	if out == nil {
+		return ""
+	}
+	return *out
 }
 
 // latestRun is the read the Forecast tab opens on, taken as an ordinary seat

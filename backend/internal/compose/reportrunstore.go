@@ -204,23 +204,38 @@ func ReadReportRun(
 func ExplainReportRunCell(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, group []any, floor analyticsquery.Floor,
 ) (AnalyticsExplanation, error) {
+	explain, err := reportRunExplain(ctx, tx, id, &group)
+	if err != nil {
+		return AnalyticsExplanation{}, err
+	}
+	// A group of the wrong length is refused by CompileExplain, which already
+	// counts the cell's keys against the question's groupings and names both
+	// numbers in its message. Re-checking it here would be a second answer to one
+	// question, and the two would drift the first time the rule moved.
+	return ExplainAnalyticsCell(ctx, tx, explain, floor)
+}
+
+// reportRunExplain is the drill-through a saved run names: the cell given, or,
+// with a nil cell, every cell the run's answer serves — its grouping kept, so
+// every narrowing the grouping brings still applies.
+func reportRunExplain(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, cell *[]any,
+) (analyticsquery.Explain, error) {
 	var queryJSON []byte
 	if err := tx.QueryRow(ctx, `
 		SELECT query FROM report_run WHERE id = $1`, id,
 	).Scan(&queryJSON); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return AnalyticsExplanation{}, apperrors.ErrNotFound
+			return analyticsquery.Explain{}, apperrors.ErrNotFound
 		}
-		return AnalyticsExplanation{}, fmt.Errorf("compose: reading a report run to explain: %w", err)
+		return analyticsquery.Explain{}, fmt.Errorf("compose: reading a report run to explain: %w", err)
 	}
 	var q analyticsquery.Query
 	if err := json.Unmarshal(queryJSON, &q); err != nil {
-		return AnalyticsExplanation{}, fmt.Errorf("compose: decoding a report run's question: %w", err)
+		return analyticsquery.Explain{}, fmt.Errorf("compose: decoding a report run's question: %w", err)
 	}
-
-	// A group of the wrong length is refused by CompileExplain, which already
-	// counts the cell's keys against the question's groupings and names both
-	// numbers in its message. Re-checking it here would be a second answer to one
-	// question, and the two would drift the first time the rule moved.
-	return ExplainAnalyticsCell(ctx, tx, analyticsquery.Explain{Query: q, Group: group}, floor)
+	if cell == nil {
+		return analyticsquery.Explain{Query: q, AllCells: true}, nil
+	}
+	return analyticsquery.Explain{Query: q, Group: *cell}, nil
 }

@@ -274,7 +274,7 @@ describe("a human's verdict on a machine's claim", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(
-        "This record changed since you opened it — reload and try again.",
+        "This record changed since it was opened. Reload and retry.",
       ),
     );
   });
@@ -303,7 +303,7 @@ describe("a human's verdict on a machine's claim", () => {
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.getByRole("alert").textContent).toBe(
-      "You do not have permission for this action. Ask an admin, or whoever shared this record with you, to widen your access.",
+      "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
     );
   });
 

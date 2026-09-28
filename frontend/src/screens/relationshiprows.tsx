@@ -23,8 +23,10 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
 import { EditAction } from "./edit";
+import "./common.css";
 import { EntityRef } from "./entityref";
 import { KIND_LABELS } from "./relationshipkinds";
+import "./relationshiprows.css";
 import {
   AddRelationshipAction,
   counterpartyRef,
@@ -182,14 +184,11 @@ export function RelationshipRows({
   // versions of a hard DELETE the day either one is touched.
   const verbsFor = (rel: Relationship) => (
     <div
-      style={{
-        display: "flex",
-        gap: "var(--space-2)",
-        // Stacked, the verbs sit under the facts rather than in a cell of their
-        // own, so they go to the far end: the labels hold the left edge and a
-        // control on that same edge reads as one more of them.
-        justifyContent: stacked ? "flex-end" : undefined,
-      }}
+      className={
+        stacked
+          ? "relationshiprows-verbs relationshiprows-verbs-stacked"
+          : "relationshiprows-verbs"
+      }
     >
       {canUpdate && (
         <EditAction
@@ -329,25 +328,12 @@ export function RelationshipRows({
         }}
         labelledBy={headingId}
       >
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
           {t("rel.remove")}
         </Heading>
-        <p style={{ marginBottom: "var(--space-4)" }}>
-          {t("rel.removeConfirm")}
-        </p>
+        <p className="relationshiprows-remove-lede">{t("rel.removeConfirm")}</p>
         <ErrorLine error={remove.error} />
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--gapActions)",
-            justifyContent: "flex-end",
-          }}
-        >
+        <div className="form-actions">
           <Button
             // The mutation is reset with the dialog, not just the row it was
             // aimed at: a failed remove left its sentence behind, and the next

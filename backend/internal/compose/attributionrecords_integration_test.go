@@ -68,11 +68,14 @@ type importedRecords struct {
 // them: `source_system` set, `captured_by` naming the administrator who ran the
 // import, and both author columns empty.
 //
-// RAW INSERTS rather than the module stores. The stores stamp `captured_by`
-// from the caller and have no input field for `source_system` — which is the
-// whole point of this repair — so a store-built fixture could not be put into
-// the state the importer actually leaves. The harness seeds leads and projects
-// the same way for the same reason.
+// RAW INSERTS rather than the module stores, because the stores stamp
+// `captured_by` from the caller and these fixtures need it to name the seat
+// that ran the import.
+//
+// The stores CAN now carry `source_system` — the four record create wires
+// gained it — and recordsourcesystem_integration_test.go drives them that way
+// end to end. These fixtures stay raw so this suite keeps reaching all five
+// types from one seeding shape, the lead included.
 func seedImportedRecords(t *testing.T, e *integration.Env) importedRecords {
 	t.Helper()
 	r := importedRecords{

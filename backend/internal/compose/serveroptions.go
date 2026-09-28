@@ -166,6 +166,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		// The controller's release on the retention surface is an erasure too,
 		// and reaches the same bytes.
 		s.privacyHandlers = s.privacyHandlers.WithBlobstore(store)
+		s.rewirePrivacyVault(pool)
 		// The data reset sweeps the same bytes for a whole workspace. Set here
 		// as well as read in WithDataReset so neither option order leaves the
 		// reset silently unable to reach the object store.

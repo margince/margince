@@ -48,6 +48,7 @@ export function aiAdminFixture(
         effective_candidates: [candidate],
         impact: "unchanged",
         budget_exempt: false,
+        decision_first: false,
       };
     }),
     deferred_work: [

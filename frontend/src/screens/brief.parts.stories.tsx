@@ -428,15 +428,15 @@ const TEAM_ROUTES: RouteMap = {
 // A lead's Monday: the headline against the bar it measured, the coverage, the
 // team's landing, and the agenda in the order the conversation should take.
 export const TeamWeekly: Story = {
-  render: part(<TeamWeeklyPanel offered />, TEAM_ROUTES),
+  render: part(<TeamWeeklyPanel reach="every_team" />, TEAM_ROUTES),
 };
 
-// The reader may open the picker and not the week behind it: a row scope that
-// reaches only their own rows. The panel says which absence this is, because a
-// lead refused and a team whose first week has not closed are different facts
-// and the blank space is identical.
+// The reader may open the picker and not the week behind it: the server refused
+// the week. The panel says which absence this is, because a reader refused and
+// a team whose first week has not closed are different facts and the blank
+// space is identical.
 export const TeamWeeklyForbidden: Story = {
-  render: part(<TeamWeeklyPanel offered />, {
+  render: part(<TeamWeeklyPanel reach="every_team" />, {
     ...TEAM_ROUTES,
     "GET /weekly-reviews/team": () =>
       jsonResponse({ title: "Forbidden", code: "forbidden" }, 403),

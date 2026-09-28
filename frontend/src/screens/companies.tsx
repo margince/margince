@@ -31,6 +31,7 @@ import {
   useRecordTimeline,
 } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
+import { Stack } from "../design-system/stack";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import {
@@ -40,11 +41,12 @@ import {
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
 import { BillingContactsPanel } from "./billingcontacts";
+import { useBulkSelection } from "./bulkverbs";
 import {
   coldFieldLabel,
   problemMessageOf,
@@ -177,26 +179,16 @@ import { invalidateRecord } from "./recordwritekeys";
 
 type Company = components["schemas"]["Company"];
 
-// Where the account stands with us (ADR-0079), in the words a reader
-// sees. Lives in companylookups.ts, the leaf both this screen and the rail
-// import, so the two cannot drift onto two different label sets for the same
-// enum. Re-exported: every existing caller of `LIFECYCLE_LABELS` from this
-// module still resolves, and this file still reads it below as its own.
-// What it is TO US, multi-valued (ADR-0079). Moved beside
-// LIFECYCLE_LABELS in companylookups.ts because the two vocabularies OVERLAP —
-// `customer` is a member of both — and only a module holding both can tell
-// that the header is about to print one word twice. Re-exported for the same
-// reason LIFECYCLE_LABELS is: every existing caller still resolves.
+// Both vocabularies live in companylookups.ts, the leaf this screen and the rail
+// share, because they overlap (`customer` is in both) and only a module holding
+// both can tell a header is about to print one word twice. Re-exported so every
+// existing caller of this module still resolves.
 export { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS, RELATIONSHIP_TYPE_LABELS };
 
 type Company360View = components["schemas"]["Company360"];
 
-// Lives in companylookups.ts, same reason as LIFECYCLE_LABELS above: the
-// rail's Details grid (companyraildetails.tsx) builds a size-band picker off
-// the same seven wire bands, and a second copy here is the value neither
-// screen's TypeScript catches drifting. Re-exported for the same reason too:
-// every existing caller of `SIZE_BAND_OPTIONS` from this module still
-// resolves.
+// Lives in companylookups.ts because the rail's Details grid builds a size-band
+// picker off the same seven wire bands; re-exported for the same reason as above.
 export { SIZE_BAND_OPTIONS };
 
 async function fetchCompaniesPage(
@@ -238,6 +230,11 @@ export function CompaniesScreen() {
     key: "companies",
     initialSort: "-created_at",
     fetchPage: fetchCompaniesPage,
+  });
+  const selection = useBulkSelection({
+    rows: state.rows,
+    recordType: "company",
+    labelOf: (company) => company.display_name,
   });
   // The owner dials name the reader, so they are offered only once /me has
   // answered. A chip whose value is still "" reads as "clear this filter" to
@@ -402,6 +399,7 @@ export function CompaniesScreen() {
         saveView={<SaveViewAction resource="companies" query={state.query} />}
         rowKey={(company) => company.id}
         rowRoute={(company) => ({ screen: "companies", id: company.id })}
+        selection={selection}
         dataChips={[...ownerChips, ...sizeChip, ...tagChips]}
         chips={[
           {
@@ -469,6 +467,7 @@ async function fetchHierarchyRollup(
 // optional on the wire) — never a hand-formatted or zero-filled figure.
 function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const rollupQuery = useQuery({
@@ -478,17 +477,11 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
 
   if (rollupQuery.isPending) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-3)",
-        }}
-      >
+      <Stack gap="3">
         <Skeleton width="60%" />
         <Skeleton width="90%" />
         <Skeleton width="75%" />
-      </div>
+      </Stack>
     );
   }
   if (rollupQuery.isError) {
@@ -526,13 +519,13 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
           </div>
         </dl>
         {rollup.restricted_excluded.length > 0 && (
-          <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
-            {t("rollup.excluded", {
+          <p className="t-caption co-rollup-note">
+            {plural("rollup.excluded", rollup.restricted_excluded.length, {
               count: formatNumber(rollup.restricted_excluded.length, locale),
             })}
           </p>
         )}
-        <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
+        <p className="t-caption co-rollup-note">
           {t("rollup.computedAt", {
             when: formatDateTime(rollup.computed_at, locale, recordZone),
           })}

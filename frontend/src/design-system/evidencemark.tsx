@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useT } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
 import { usePortalPanelFocus } from "./portalfocus";
 import type { ConfidenceLevel, Provenance } from "./trust";
@@ -40,6 +41,7 @@ export type EvidenceMarkSource = {
 
 export function EvidenceMark({
   value,
+  subject = value,
   source,
   onOpenHistory,
   historyLabel,
@@ -48,11 +50,19 @@ export function EvidenceMark({
   // renders as plain text: an underline that opens an empty popover teaches
   // the reader to stop opening them.
   value: string;
+  // What the mark explains, when it sits BESIDE its value and shows a word
+  // ("read", "bought") instead of it. The accessible name then opens with that
+  // word, so a voice user can say what they see, and names the value after it.
+  subject?: string;
   source?: EvidenceMarkSource;
   onOpenHistory?: () => void;
   historyLabel?: string;
 }>) {
   const t = useT();
+  const name =
+    subject === value
+      ? t("evidence.explain", { value })
+      : t("evidence.explainBeside", { label: value, value: subject });
   const [open, setOpen] = useState(false);
   // How the panel came to be open. A press is a reader asking for it, and
   // focus follows into the panel's own controls (the "Full history" button);
@@ -117,7 +127,7 @@ export function EvidenceMark({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !coveredByDialog(triggerRef.current)) {
         setOpen(false);
         // Focus returns to what opened the panel, so Escape does not drop
         // the reader at the top of the document.
@@ -159,7 +169,7 @@ export function EvidenceMark({
         className="evmark-trigger"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-label={t("evidence.explain", { value })}
+        aria-label={name}
         onClick={() => {
           setOpenedBy("press");
           setOpen((was) => !was);
@@ -177,7 +187,7 @@ export function EvidenceMark({
             ref={panelRef}
             id={panelId}
             className="evmark-panel"
-            aria-label={t("evidence.explain", { value })}
+            aria-label={t("evidence.explain", { value: subject })}
             // Portalled to the body (below), so it is no longer a DOM
             // descendant of `.evmark` — pointer enter/leave stop tracking
             // containment once the panel moves outside that subtree, and

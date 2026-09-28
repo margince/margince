@@ -9,6 +9,8 @@ import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import "./candidatepicker.css";
 import { ErrorLine } from "../design-system/errorline";
+import "./merge.css";
+import "./common.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
 // this record (the source, A) into a picked survivor (B) — A is archived
@@ -129,17 +131,10 @@ export function MergeAction<Survivor extends { id: string }>({
         {label}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
+        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
           {label}
         </Heading>
-        <p style={{ marginBottom: "var(--space-2)" }}>
-          {t("merge.pickTarget")}
-        </p>
+        <p className="mergeaction-lede">{t("merge.pickTarget")}</p>
         <SearchField
           placeholder={t("merge.searchPlaceholder")}
           aria-label={t("merge.searchPlaceholder")}
@@ -150,9 +145,7 @@ export function MergeAction<Survivor extends { id: string }>({
           }}
         />
         <ErrorLine error={searchFailure} />
-        <ul
-          style={{ listStyle: "none", margin: "var(--space-2) 0", padding: 0 }}
-        >
+        <ul className="mergeaction-candidates">
           {candidates.map((candidate) => (
             <li key={candidate.id}>
               <Button
@@ -166,7 +159,7 @@ export function MergeAction<Survivor extends { id: string }>({
           ))}
         </ul>
         {target && (
-          <p style={{ marginBottom: "var(--space-4)" }}>
+          <p className="mergeaction-confirm">
             {t("merge.confirm", { source: sourceName, target: target.name })}
           </p>
         )}

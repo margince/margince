@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
+import { useLicenseEntitlement } from "../app/license-posture";
 import { StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -41,33 +42,6 @@ import { LicenseHolderCard } from "./licenseholder";
 // true and what to do, and nothing on this screen blocks anybody.
 
 type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
-
-/**
- * What the license grants and how much of it is used.
- *
- * Exported because the shell's own foot reports the same posture (app/shell.tsx)
- * — one query key, so the strip and this screen can never disagree about how many
- * seats are in use, and the second reader pays no second request.
- */
-export function useLicenseEntitlement(enabled = true) {
-  return useQuery({
-    queryKey: ["installation-license"],
-    // A principal without `license:read` would get a 403 on every route. The
-    // caller that knows the grant passes it, and the request is never made.
-    enabled,
-    // The posture changes when somebody is invited or a license is replaced, not
-    // between two page opens. The chrome reads it on every route, so a short
-    // staleTime would put a request behind every navigation.
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data, error, response } = await api.GET("/installation/license");
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
 
 /**
  * How many seats are in use, without what the installation is entitled to.
@@ -258,12 +232,11 @@ export function LicenseReading({
             license" and "licensed" are different facts about the installation,
             and a reader should not have to learn a colour to tell them apart. */}
         <PanelIntro>{t(stateKey(entitlement, capped))}</PanelIntro>
-        {/* This card is the ONE place the installation's licence gap is stated.
-            It used to be the orb as well: `license === "none"` mapped to amber,
-            so every demo and every fresh dev stack wore a permanent warning and
-            amber stopped meaning "a fault that can wait". Taking that away left
-            the fact stated nowhere an operator would meet it — a sub-line above
-            a seat meter that reads fine is not where somebody looks for it.
+        {/* This card is where the installation's licence gap is REPAIRED, so
+            it states the gap in every posture; the shell banner (refused) and
+            the agent panel's pill (absent or refused) name it and link here. The
+            orb never does: an unlicensed demo or dev stack would wear permanent
+            amber, and amber would stop meaning "a fault that can wait".
 
             Not `live="alert"`: `over_limit` above owns the only interruption on
             this screen, and neither of these is news that arrived while the

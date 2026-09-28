@@ -29,6 +29,16 @@ import (
 // reply this site will not act on is owed a decision.
 var ErrOutputRejected = errors.New("ai: model output rejected by the validator")
 
+// ModelDeclined reports whether a call ended on a verdict about this input
+// rather than an outage: the validator refused every answer the models gave
+// (ErrOutputRejected), or the walk ended on a withheld answer
+// (model.ErrOutputWithheld). Both are terminal in the same way — asked again,
+// the same words meet the same refusal — so a site that decides "retry or give
+// up" asks this rather than either sentinel alone.
+func ModelDeclined(err error) bool {
+	return errors.Is(err, ErrOutputRejected) || errors.Is(err, model.ErrOutputWithheld)
+}
+
 // ErrUnconfiguredModel marks a rejection whose text came from the offline fake
 // provider — the stand-in an installation runs on until an operator binds a
 // real vendor. The fake answers every request with a hash string, so it fails
@@ -72,14 +82,23 @@ type Validator func(text string) error
 const maxLadderWalks = 3
 
 func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Request, validate Validator) (model.Response, RouteInfo, error) {
-	ladder, ok := taskLadders[task]
-	if !ok {
+	if _, ok := taskLadders[task]; !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}
 	lc := newLogicalCall()
 	defer r.flushDetached(ctx, r.binding(), lc)
+	return r.completeStructuredOn(ctx, lc, task, req, validate, "")
+}
 
-	resp, info, err := r.serveAttempt(ctx, lc, task, ladder, req, "")
+// completeStructuredOn is the §5.2 policy over a logical call its caller owns
+// and flushes. firstReason is why its first walk runs: "" for an ordinary first
+// try, a decision_* reason when a decision attempt in the same logical call
+// did not stand.
+func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task Task, req model.Request,
+	validate Validator, firstReason string,
+) (model.Response, RouteInfo, error) {
+	ladder := taskLadders[task]
+	resp, info, err := r.serveAttempt(ctx, lc, task, ladder, req, firstReason)
 	if err != nil {
 		return model.Response{}, info, err
 	}
@@ -89,7 +108,7 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 	}
 	r.forgetCached(ctx, task, req)
 
-	retry := withValidatorFeedback(req, resp.Text, firstErr)
+	retry := feedbackFor(req, resp, firstErr)
 	resp, info, err = r.serveAttempt(ctx, lc, task, ladder, retry, attemptReasonSchemaInvalid)
 	if err != nil {
 		return model.Response{}, info, err
@@ -100,14 +119,14 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 	}
 	r.forgetCached(ctx, task, retry)
 
-	escalated := withValidatorFeedback(req, resp.Text, secondErr)
+	escalated := feedbackFor(req, resp, secondErr)
 	resp, info, err = r.completeEscalated(ctx, lc, task, escalated)
 	if err != nil {
 		return model.Response{}, info, err
 	}
 	if finalErr := validate(resp.Text); finalErr != nil {
 		r.forgetCached(ctx, task, escalated)
-		return model.Response{}, info, rejected(task, info, finalErr)
+		return model.Response{}, info, rejected(task, info, finalErr, truncated(resp))
 	}
 	return resp, info, nil
 }
@@ -117,8 +136,18 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 // unconfigured installation and gets its own sentinel on top of the terminal
 // one — the caller then has the choice between "your model misbehaved" and
 // "you have no model", which is the difference between a retry and a setting.
-func rejected(task Task, info RouteInfo, finalErr error) error {
-	err := fmt.Errorf("%w: %s after retry and escalation: %w", ErrOutputRejected, task, finalErr)
+func rejected(task Task, info RouteInfo, finalErr error, wasTruncated bool) error {
+	// The truncation is said BEFORE the validator's complaint, because the
+	// complaint is a consequence: a document cut mid-value is invalid for a
+	// reason that has nothing to do with how it was written. An operator reading
+	// this is owed the output ceiling and not the schema — and the task, which
+	// an earlier spelling of this branch dropped by rebuilding the error.
+	reason := "after retry and escalation"
+	if wasTruncated {
+		reason = "after retry and escalation, and the last answer was cut off at the output " +
+			"limit rather than finishing, so what the validator refused was an incomplete document"
+	}
+	err := fmt.Errorf("%w: %s %s: %w", ErrOutputRejected, task, reason, finalErr)
 	if info.Provider == ProviderFake {
 		return fmt.Errorf("%w: %w", ErrUnconfiguredModel, err)
 	}
@@ -146,10 +175,118 @@ func (r *Router) forgetCached(ctx context.Context, task Task, req model.Request)
 	r.cache.forget(key)
 }
 
+// truncationFeedback is what a cut-off attempt is told instead of a complaint
+// about its shape. Actionable where the schema complaint is not: a model whose
+// JSON was well-formed until the ceiling cut it can act on "you ran out of
+// room" and cannot act on "your JSON is invalid".
+const truncationFeedback = "Your previous answer was cut off because it reached the output limit " +
+	"before it finished. Answer the same question again, but much more briefly — " +
+	"the shortest complete answer that satisfies the schema."
+
+// truncated reports whether resp is a completion the provider stopped at the
+// output ceiling rather than at the end of its answer.
+func truncated(resp model.Response) bool {
+	return resp.FinishReason == model.FinishReasonLength
+}
+
+// withTruncationFeedback is the retry for an attempt that ran out of room.
+//
+// It does NOT echo the failed text back, unlike the schema-invalid retry: the
+// failed text here is up to a whole output budget of runaway, and quoting it
+// would spend the retry's own prompt window on the thing that caused the
+// problem. The instruction alone is what the model can act on.
+func withTruncationFeedback(req model.Request) model.Request {
+	out := req
+	out.Messages = append(append([]model.Message{}, req.Messages...),
+		model.Message{Role: roleUser, Content: truncationFeedback})
+	return out
+}
+
+// feedbackFor picks the retry an attempt has earned. A cut-off answer gets the
+// lever for whatever spent the budget — room, when thinking spent it; brevity,
+// when the answer did — and a complete-but-wrong one is shown why it was
+// refused.
+//
+// Room is only a lever while there is room to give. A request already at
+// roomToAnswerMaxTokens would go out again unchanged — the same request re-rolled,
+// and a byte-identical one besides, which the result cache cannot tell from
+// the attempt that failed — so it gets the brevity retry instead: the one lever
+// left is asking for less.
+func feedbackFor(req model.Request, resp model.Response, cause error) model.Request {
+	switch {
+	case truncated(resp) && thinkingSpentTheBudget(resp):
+		if room := withRoomToAnswer(req, resp); room.MaxTokens > appliedCeiling(req) {
+			return room
+		}
+		return withTruncationFeedback(req)
+	case truncated(resp):
+		return withTruncationFeedback(req)
+	default:
+		return withValidatorFeedback(req, resp.Text, cause)
+	}
+}
+
+// thinkingSpentTheBudget reports whether a cut-off attempt's reasoning, not its
+// answer, took the larger share of the output ceiling. Every reasoning wire
+// charges thinking to the same ceiling as the answer, and a model can think
+// until almost nothing is left; "answer more briefly" then shortens the one
+// part that was already short, and the retry runs out the same way.
+//
+// An adapter that reports no reasoning figure leaves ReasoningTokens 0, which
+// reads as an answer that ran long, and gets the brevity retry.
+func thinkingSpentTheBudget(resp model.Response) bool {
+	answer := resp.OutputTokens - resp.ReasoningTokens
+	return resp.ReasoningTokens > 0 && resp.ReasoningTokens >= answer
+}
+
+// withRoomToAnswer is the retry for an attempt whose thinking spent its output
+// ceiling: the same request, with the ceiling raised by what the thinking took,
+// so the answer gets at least the whole budget it was meant to have. The
+// messages are unchanged — nothing about the answer was wrong — and the raised
+// ceiling alone keys the retry apart from the cut-off attempt in the cache.
+//
+// Raising the ceiling rather than lowering the thinking level, because it is
+// the one lever every wire has: thinking controls are per vendor, and a
+// structured Gemini request already thinks at low or at its model's shallower
+// default (geminiStructuredThinkingLevel).
+//
+// The growth is bounded three ways: the ceiling at most doubles; every retry
+// grows from the caller's request rather than from the previous retry, so a
+// model that keeps thinking to the ceiling cannot ratchet it upward; and no
+// retry asks for more than roomToAnswerMaxTokens, though it never lowers a
+// ceiling the caller set above that.
+func withRoomToAnswer(req model.Request, resp model.Response) model.Request {
+	out := req
+	ceiling := appliedCeiling(req)
+	grown := min(ceiling+min(resp.ReasoningTokens, ceiling), roomToAnswerMaxTokens)
+	out.MaxTokens = max(ceiling, grown)
+	return out
+}
+
+// appliedCeiling is the output ceiling a request actually ran under. A request
+// that set none ran under the one every adapter sends for it, and that
+// constant, not the attempt's reported output count, is what a retry grows
+// from: a count off the wire is the provider's claim, and it must not decide
+// what the next request may spend.
+func appliedCeiling(req model.Request) int {
+	if req.MaxTokens <= 0 {
+		return unsetMaxOutputTokens
+	}
+	return req.MaxTokens
+}
+
+// roomToAnswerMaxTokens is the most output a room-to-answer retry asks for:
+// one more structured budget (ReasoningOutputMaxTokens) on top of the one a
+// structured lane already runs under. It bounds what a retry may spend, and
+// it is not a model's output limit: a serving model that cannot emit this much
+// answers the retry with a 400, which walks the ladder like any other refusal.
+const roomToAnswerMaxTokens = 2 * ReasoningOutputMaxTokens
+
 // withValidatorFeedback appends the failed output and its validation
 // error as conversation turns, so the retry is a correction, not a
 // blind re-roll. The changed messages also miss the result cache — a
 // retry can never be served the cached invalid answer.
+//
 // Both echoed turns are DATA and go inside the request's boundary. The failed
 // output is the model repeating text a sender steered, and the validator's
 // message quotes tokens out of it, so appending either in the clear would put

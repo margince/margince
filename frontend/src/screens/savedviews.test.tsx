@@ -268,7 +268,7 @@ describe("saved views", () => {
       screen.getByRole("region", { name: "Saved views" }).contains(failed),
     ).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitFor(() =>
       expect(screen.queryByText("This section did not load.")).toBeNull(),

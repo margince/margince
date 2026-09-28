@@ -132,7 +132,7 @@ test("says nobody has answered rather than naming a fallback", async () => {
     />,
   );
 
-  expect(await screen.findByText("Written to · no replies")).not.toBeNull();
+  expect(await screen.findByText("Contacted · no replies")).not.toBeNull();
 });
 
 // A bare "6" says nothing about an account until the reader knows whether it
@@ -162,7 +162,7 @@ test("reads coverage against the roster, and names both gaps", async () => {
   // talking to us.
   expect(await screen.findByText("6 of 9")).not.toBeNull();
   expect(
-    await screen.findByText("2 not approached · 2 owed a reply"),
+    await screen.findByText("2 not contacted · 2 awaiting your reply"),
   ).not.toBeNull();
 });
 
@@ -351,7 +351,7 @@ test("a way-in nobody has answered narrows to nothing in particular", async () =
   (
     await screen.findByRole("button", {
       name: "Open",
-      description: "Best way in",
+      description: "Best route",
     })
   ).click();
   expect(narrowed).toEqual([null]);
@@ -402,7 +402,7 @@ test("says the reading failed rather than vanishing", async () => {
 
   expect(await screen.findByText("Unavailable")).not.toBeNull();
   expect(
-    await screen.findByText("Read failed · list unaffected"),
+    await screen.findByText("Load failed · list unaffected"),
   ).not.toBeNull();
 });
 
@@ -518,20 +518,20 @@ function suggestedCoverage(): Partial<Coverage> {
   } as Partial<Coverage>;
 }
 
+const UTE_BUYS: components["schemas"]["DealRoleProposalWritten"] = {
+  contact_id: "p-1",
+  full_name: "Ute Sommer",
+  role: "economic_buyer",
+  evidence_snippet: "I sign off the budget for this, so send",
+  source_activity_id: "a-1",
+  confidence: 0.9,
+};
+
 test("reads the roles from the deal, and refreshes the board after", async () => {
   const writes: Writes = {
     calls: [],
     proposals: {
-      written: [
-        {
-          contact_id: "p-1",
-          full_name: "Ute Sommer",
-          role: "economic_buyer",
-          evidence_snippet: "I sign off the budget for this, so send",
-          source_activity_id: "a-1",
-          confidence: 0.9,
-        },
-      ],
+      written: [UTE_BUYS],
       skipped: 0,
       generated_by: "model",
     },
@@ -549,7 +549,7 @@ test("reads the roles from the deal, and refreshes the board after", async () =>
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Seated 1 from what they wrote/);
+  await screen.findByText("1 role assigned from their messages");
   // The POST goes to the DEAL; the refresh reads the ACCOUNT. A component that
   // refreshed the deal instead would show the board as it was before the write.
   expect(
@@ -580,7 +580,7 @@ test("tells nothing-proposed apart from everything-refused", async () => {
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Nothing in their messages says who buys/);
+  await screen.findByText(/Their messages do not show who buys/);
   first.unmount();
 
   stub(suggestedCoverage(), {
@@ -597,8 +597,32 @@ test("tells nothing-proposed apart from everything-refused", async () => {
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/3 reading\(s\) were dropped/);
+  await screen.findByText(/3 suggestions were dropped for weak evidence/);
 });
+
+test.each([
+  [[UTE_BUYS, { ...UTE_BUYS, contact_id: "p-2" }], 0, "2 roles assigned"],
+  [[], 1, "1 suggestion was dropped"],
+])(
+  "counts what the reading wrote or dropped (%#)",
+  async (written, skipped, said) => {
+    stub(suggestedCoverage(), {
+      calls: [],
+      proposals: { written, skipped, generated_by: "model" },
+    });
+    render(
+      <CoverageBand
+        companyId="o-1"
+        accountName="Brandt GmbH"
+        onNarrow={() => {}}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: /Suggest roles/i }));
+    expect(await screen.findByText(new RegExp(said))).toBeTruthy();
+  },
+);
 
 // A role is recorded on a deal. Hidden, the button teaches nothing; disabled
 // with the reason, it says what the account is missing.
@@ -613,7 +637,7 @@ test("says why it cannot read roles when the account has no open deal", async ()
   );
   const button = await screen.findByRole("button", { name: /Suggest roles/i });
   expect((button as HTMLButtonElement).disabled).toBe(true);
-  expect(await screen.findByText(/Roles are recorded on a deal/)).toBeTruthy();
+  expect(await screen.findByText(/Roles are set per deal/)).toBeTruthy();
 });
 
 // Confirming writes the SAME role back. That looks like a no-op and is not:
@@ -746,7 +770,7 @@ test("says a concurrent edit happened rather than printing the sentinel", async 
     />,
   );
   await user.click(await screen.findByRole("button", { name: /^Confirm$/ }));
-  await screen.findByText(/changed since you opened it/);
+  await screen.findByText(/changed since it was opened/);
   expect(screen.queryByText("version skew")).toBeNull();
 });
 
@@ -773,6 +797,6 @@ test("says the reading needs a model rather than naming a handler", async () => 
   await user.click(
     await screen.findByRole("button", { name: /Suggest roles/i }),
   );
-  await screen.findByText(/Reading roles needs a model/);
+  await screen.findByText(/Role suggestions need a model/);
   expect(screen.queryByText(/ProposeDealRoles/)).toBeNull();
 });

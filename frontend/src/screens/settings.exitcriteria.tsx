@@ -108,6 +108,7 @@ export function StageExitCriteria({
           {/* The server's own account of the failure, the way every sibling
               read on this card reports one — a fixed sentence here would throw
               away the one detail that says whether reloading can help. */}
+          {/* ds:ignore the cause inside a Callout's body; the Callout is the notice */}
           <p>{problemMessageOf(query.error, t)}</p>
           <p>{t("stage.criteria.unreadable")}</p>
         </Callout>

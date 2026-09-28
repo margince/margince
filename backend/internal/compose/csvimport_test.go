@@ -227,6 +227,45 @@ func TestMappingFromRefusesATargetTheObjectDoesNotHave(t *testing.T) {
 	}
 }
 
+// The other half of a mapping entry. An unknown TARGET is refused above; an
+// unknown COLUMN was accepted, and the row builder then dropped it — so the
+// field it named imported empty on every row while the preview reported clean
+// creates and the commit landed them.
+func TestMappingRefusesAColumnTheFileDoesNotCarry(t *testing.T) {
+	err := mappingNamesTheFilesColumns(
+		map[string]string{"Company": "display_name", "Firma": "legal_name"},
+		[]string{"Company", "Website"})
+	if err == nil {
+		t.Fatal("a column the file does not carry was accepted; every row would import that field empty")
+	}
+	// The name to correct, and the names it could have been. A caller driving
+	// this over MCP cannot open the file to read its header the way a screen
+	// can, so a refusal that named neither would be a dead end.
+	for _, name := range []string{"Firma", "Company", "Website"} {
+		if !strings.Contains(err.Error(), name) {
+			t.Errorf("the refusal does not name %q, so the caller cannot act on it: %v", name, err)
+		}
+	}
+}
+
+// Compared exactly as the file spells it, because that is how the row builder
+// looks a column up (CSVSource.rowFrom). A check that folded case or trimmed
+// would accept a name the walk then misses, which is the defect it exists to
+// catch rather than a convenience to add.
+func TestMappingComparesColumnsTheWayTheRowBuilderDoes(t *testing.T) {
+	header := []string{"Company", "Employee Count"}
+
+	if err := mappingNamesTheFilesColumns(map[string]string{
+		"Company": "display_name", "Employee Count": "size_band",
+	}, header); err != nil {
+		t.Fatalf("a mapping naming this file's own columns was refused: %v", err)
+	}
+	if err := mappingNamesTheFilesColumns(
+		map[string]string{"company": "display_name"}, header); err == nil {
+		t.Fatal("a differently-cased column was accepted; the row builder would not find it")
+	}
+}
+
 // Both refusals below are dead ends without the vocabulary: the mapping targets
 // are a closed set that no error, schema or tool description spells out, so a
 // caller who guesses wrong has nowhere to look. An agent driving this over MCP

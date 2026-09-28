@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -26,9 +27,11 @@ import (
 // point is to stay short of all of them.
 const SubjectMaxRunes = 70
 
-// replyPrefixes are the ways a client marks a subject as a reply, in the
-// languages this product writes.
-var replyPrefixes = []string{"re:", "aw:", "fwd:", "wg:", "antw:"}
+// replyPrefixes lists the prefixes that claim an earlier message: a forward
+// claims one as much as a reply does.
+func replyPrefixes() []string {
+	return append(mailsubject.ReplyPrefixes(), mailsubject.ForwardPrefixes()...)
+}
 
 // Subject reads a draft's subject line against the correspondence it belongs to.
 //
@@ -50,7 +53,7 @@ func Subject(subject string, lang textlang.Lang, band convstate.Band, threaded b
 		}}
 	}
 
-	for _, prefix := range replyPrefixes {
+	for _, prefix := range replyPrefixes() {
 		if !strings.HasPrefix(lowered, prefix) {
 			continue
 		}
@@ -111,8 +114,22 @@ func Feedback(findings []Finding) string {
 	}
 	var b strings.Builder
 	b.WriteString("\n\nThe previous draft was rejected. Rewrite it, and this time:\n")
+	inBody := false
 	for _, f := range findings {
+		if f.InLabel {
+			b.WriteString("- Do not write \"" + f.Phrase + "\" or any synonym of it in a reasoning label. " +
+				f.Why + ". Label that input by its purpose instead; the rule is about the label, " +
+				"so the body may still say who is writing and why.\n")
+			continue
+		}
+		inBody = true
 		b.WriteString("- Do not write \"" + f.Phrase + "\" or any synonym of it. " + f.Why + ".\n")
+	}
+	// Only a body finding earns the closing line. Told that a message "needs no
+	// phrase for the act of writing" over a label-only fault, the retry cut the
+	// sender's self-introduction from a body nothing was wrong with.
+	if !inBody {
+		return b.String()
 	}
 	// A correction that only says what to delete gets the nearest synonym back:
 	// told to drop "circling back", the model returns "checking in", which is

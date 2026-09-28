@@ -9,10 +9,12 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { precedes } from "../testing/domorder";
+import { Heading } from "./heading";
 import { type ListChip, ListSurface, type SortOption } from "./listsurface";
+import { Modal } from "./modal";
 
 // The toolbar as a reader meets it: what the sort dial SAYS without being
 // opened, which triggers promise a list behind them, the order the row is read
@@ -130,7 +132,7 @@ it("carets the triggers that open a list, and only those", async () => {
   await user.click(screen.getByRole("button", { name: "Status" }));
   await user.click(screen.getByRole("radio", { name: "Open" }));
 
-  const add = screen.getByRole("button", { name: "Add a filter" });
+  const add = screen.getByRole("button", { name: "Add filter" });
   expect(add.querySelector(".lucide-plus")).toBeTruthy();
   expect(add.querySelector(".lt-caret")).toBeNull();
 });
@@ -155,9 +157,9 @@ it("stands an applied filter's row ahead of the button that adds another", async
 
   const row = screen.getByRole("group", { name: "Status: Open" });
   expect(
-    precedes(row, screen.getByRole("button", { name: "Add a filter" })),
+    precedes(row, screen.getByRole("button", { name: "Add filter" })),
   ).toBe(true);
-  await user.click(screen.getByRole("button", { name: "Add a filter" }));
+  await user.click(screen.getByRole("button", { name: "Add filter" }));
   expect(screen.queryByRole("button", { name: "Status" })).toBeNull();
 });
 
@@ -210,7 +212,7 @@ it("hands focus back to the trigger when a value is picked", async () => {
 
   // The trigger the press LEFT behind: applying the first filter turns the
   // labelled button into the bare "+".
-  expect(screen.getByRole("button", { name: "Add a filter" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Add filter" })).toHaveFocus();
 });
 
 // Last on the row is the surface's own promise now, not something each screen
@@ -247,4 +249,48 @@ it("closes the whole menu on Escape, from either step", async () => {
   expect(
     screen.getByLabelText("Filter", { selector: "fieldset" }),
   ).toHaveAttribute("inert");
+});
+
+it("leaves Escape to a dialog raised over the open menu", async () => {
+  const onDialogClose = vi.fn();
+  const page = (dialogOpen: boolean) => (
+    <LocaleProvider initial="en">
+      <Surface />
+      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+        <Heading size="large" id="edit">
+          Edit deal
+        </Heading>
+      </Modal>
+    </LocaleProvider>
+  );
+  const user = userEvent.setup();
+  const { rerender } = rtlRender(page(false));
+  await user.click(filterTrigger());
+  rerender(page(true));
+
+  await user.keyboard("{Escape}");
+
+  expect(onDialogClose).toHaveBeenCalledOnce();
+  expect(filterTrigger()).toHaveAttribute("aria-expanded", "true");
+});
+
+// The count gives way on screen, never in the text: however narrow the row, the
+// whole sentence is there for a screen reader, and it reads before the verbs it
+// sits beside.
+it("keeps the whole count sentence, read before the header's verbs", () => {
+  render(
+    <ListSurface
+      count="1 to 25 of 1,312 companies loaded, sorted by Last updated"
+      action={<button type="button">New company</button>}
+    >
+      <p>rows</p>
+    </ListSurface>,
+  );
+
+  const count = screen.getByText(
+    "1 to 25 of 1,312 companies loaded, sorted by Last updated",
+  );
+  expect(
+    precedes(count, screen.getByRole("button", { name: "New company" })),
+  ).toBe(true);
 });

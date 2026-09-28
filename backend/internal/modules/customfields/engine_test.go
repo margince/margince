@@ -11,48 +11,48 @@ import (
 )
 
 func TestValidate_UnsupportedObjectRejected(t *testing.T) {
-	errs := Validate(FieldSpec{Object: "widget", Label: "X", Type: TypeText, Source: "ui"})
+	errs := Validate(FieldSpec{Object: "widget", Label: "X", Type: TypeText, Source: "manual"})
 	if !hasFieldError(errs, "object", "unsupported_object") {
 		t.Fatalf("expected object/unsupported_object, got %+v", errs)
 	}
 }
 
 func TestValidate_UnsupportedTypeRejected(t *testing.T) {
-	errs := Validate(FieldSpec{Object: "deal", Label: "X", Type: "money", Source: "ui"})
+	errs := Validate(FieldSpec{Object: "deal", Label: "X", Type: "money", Source: "manual"})
 	if !hasFieldError(errs, "type", "unsupported_type") {
 		t.Fatalf("expected type/unsupported_type, got %+v", errs)
 	}
 }
 
 func TestValidate_EmptyLabelRejected(t *testing.T) {
-	errs := Validate(FieldSpec{Object: "deal", Label: "  ", Type: TypeText, Source: "ui"})
+	errs := Validate(FieldSpec{Object: "deal", Label: "  ", Type: TypeText, Source: "manual"})
 	if !hasFieldError(errs, "label", "required") {
 		t.Fatalf("expected label/required, got %+v", errs)
 	}
 }
 
 func TestValidate_CurrencyRequiresISOCode(t *testing.T) {
-	errs := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Source: "ui"})
+	errs := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Source: "manual"})
 	if !hasFieldError(errs, "currency", "required_for_type_currency") {
 		t.Fatalf("expected currency/required_for_type_currency, got %+v", errs)
 	}
 	usd := "usd"
-	errsBad := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &usd, Source: "ui"})
+	errsBad := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &usd, Source: "manual"})
 	if !hasFieldError(errsBad, "currency", "required_for_type_currency") {
 		t.Fatalf("lowercase currency must fail the ^[A-Z]{3}$ pattern, got %+v", errsBad)
 	}
 	USD := "USD"
-	if errs := (Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &USD, Source: "ui"})); len(errs) != 0 {
+	if errs := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &USD, Source: "manual"}); len(errs) != 0 {
 		t.Fatalf("valid currency must pass, got %+v", errs)
 	}
 }
 
 func TestValidate_PicklistRequiresNonEmptyOptions(t *testing.T) {
-	errs := Validate(FieldSpec{Object: "deal", Label: "Route", Type: TypePicklist, Source: "ui"})
+	errs := Validate(FieldSpec{Object: "deal", Label: "Route", Type: TypePicklist, Source: "manual"})
 	if !hasFieldError(errs, "options", "required_for_type_picklist") {
 		t.Fatalf("expected options/required_for_type_picklist, got %+v", errs)
 	}
-	if errs := Validate(FieldSpec{Object: "deal", Label: "Route", Type: TypePicklist, Options: []string{"direct"}, Source: "ui"}); len(errs) != 0 {
+	if errs := Validate(FieldSpec{Object: "deal", Label: "Route", Type: TypePicklist, Options: []string{"direct"}, Source: "manual"}); len(errs) != 0 {
 		t.Fatalf("one option must pass (PARAM-5 minimum=1), got %+v", errs)
 	}
 }
@@ -64,7 +64,7 @@ func TestValidate_PicklistOptionWithNULByteRejected(t *testing.T) {
 	// Identifier.Sanitize already strips NULs).
 	errs := Validate(FieldSpec{
 		Object: "deal", Label: "Route", Type: TypePicklist,
-		Options: []string{"a\x00b"}, Source: "ui",
+		Options: []string{"a\x00b"}, Source: "manual",
 	})
 	if !hasFieldError(errs, "options", "invalid_characters") {
 		t.Fatalf("expected options/invalid_characters, got %+v", errs)
@@ -74,7 +74,7 @@ func TestValidate_PicklistOptionWithNULByteRejected(t *testing.T) {
 func TestValidate_PicklistOptionWithInvalidUTF8Rejected(t *testing.T) {
 	errs := Validate(FieldSpec{
 		Object: "deal", Label: "Route", Type: TypePicklist,
-		Options: []string{"a\xffb"}, Source: "ui",
+		Options: []string{"a\xffb"}, Source: "manual",
 	})
 	if !hasFieldError(errs, "options", "invalid_characters") {
 		t.Fatalf("expected options/invalid_characters, got %+v", errs)

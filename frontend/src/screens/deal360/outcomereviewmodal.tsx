@@ -13,6 +13,7 @@ import {
   type ReviewTemplate,
   useCreateOutcomeReview,
 } from "../outcomereview.queries";
+import "../common.css";
 
 /**
  * Writing a review of how the deal went.
@@ -145,12 +146,7 @@ export function OutcomeReviewModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <Heading
-        size="large"
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
+      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
         {draftTemplate.label}
       </Heading>
       <div className="form-stack">

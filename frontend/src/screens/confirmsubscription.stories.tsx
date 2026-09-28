@@ -109,7 +109,7 @@ export const ConfirmingTheSubscription: Story = {
   },
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Yes, subscribe me" }),
+      await screen.findByRole("button", { name: "Confirm subscription" }),
     );
     await screen.findByText("You are subscribed");
   },

@@ -354,7 +354,7 @@
  * colour on collapse would read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
- * reader walked into), More at phone width, then the installation's entitlement
+ * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
  * pinned to the foot. */
 .rail {
   /* Glass over the glow: the pane's translucent ground with the blur that lets
@@ -1180,7 +1180,8 @@
   overflow-y: auto;
   padding: var(--space-2);
 }
-.palette-row {
+.palette-row,
+.palette-ask {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -1193,7 +1194,15 @@
   font-family: var(--fontFamilyBody);
   text-align: left;
 }
-.palette-row svg {
+/* Asking is not one of the destinations, so it does not sit in their list: a
+   hairline under it says the rows below answer a different question. */
+.palette-ask {
+  border-bottom: 1px solid var(--borderSubtle);
+  border-radius: 0;
+  margin-bottom: var(--space-1);
+}
+.palette-row svg,
+.palette-ask svg {
   width: 14px;
   height: 14px;
   flex: none;
@@ -1203,7 +1212,8 @@
   background: var(--bgHover);
   color: var(--textPrimary);
 }
-.palette-row .label {
+.palette-row .label,
+.palette-ask .label {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1427,9 +1437,9 @@
   .rail.collapsed .navlevel {
     display: contents;
   }
-  /* The bottom bar carries destinations and nothing else. The group headings and
-     the entitlement row belong to a column with room for them, so the sheet
-     below is where they come back. */
+  /* The bottom bar carries destinations and nothing else. The brand block and
+     the group headings belong to a column with room for them, so the sheet
+     below is where they come back; the spacer and tooltips stay hidden. */
   .rail .navheading,
   .rail .ws,
   .rail .grow,

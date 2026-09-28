@@ -130,8 +130,9 @@ func directionOf(class string) string {
 const (
 	// maxRouteSeries caps how many distinct label sets the AI families hold.
 	// Sized well above the live product of the closed dimensions — 31 tasks by
-	// 5 tiers by the one model a binding holds at a time is ~300 — so an
-	// ordinary fleet never reaches it and a provider minting identities does.
+	// 5 tiers by the one model a binding holds at a time is ~300, and the
+	// decide tier adds one series per decision task — so an ordinary fleet
+	// never reaches it and a provider minting identities does.
 	maxRouteSeries = 500
 	// maxLabelLen bounds one wire-supplied label value in runes. A model
 	// identity a human would recognise is far shorter; this is the ceiling on
@@ -217,11 +218,11 @@ func plainCompletionTokens(tokensOut, reasoning int) int {
 // ai_call row either way; only the series count is at stake here.
 var finishReasons = map[string]bool{
 	// OpenAI and the OpenAI-compatible wire.
-	"stop": true, "length": true, "content_filter": true,
+	"stop": true, "length": true, finishContentFilter: true,
 	"tool_calls": true, "function_call": true,
 	// Anthropic.
 	"end_turn": true, "max_tokens": true, "stop_sequence": true, "tool_use": true,
-	"pause_turn": true, "refusal": true,
+	"pause_turn": true, finishRefusal: true,
 	// Gemini, whose abnormal terminals reach the trace as a named error.
 	"safety": true, "recitation": true, "language": true, "blocklist": true,
 	"prohibited_content": true, "spii": true, "malformed_function_call": true,

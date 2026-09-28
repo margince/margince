@@ -147,7 +147,7 @@ describe("the provider status vocabulary", () => {
     // the missing fact, because supplying it is the only thing that helps.
     const message = en[profileLabel("nothing_to_look_up")];
     expect(message).toMatch(/LinkedIn/);
-    expect(message).toMatch(/company/i);
+    expect(message).toMatch(/employer/i);
     // And it must not read as a fault of the provider or of the contact.
     expect(message).not.toMatch(/failed|error|not eligible/i);
   });

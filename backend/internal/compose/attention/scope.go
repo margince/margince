@@ -16,6 +16,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -451,6 +452,21 @@ func answersTo(row ranked) (ids.UUID, bool) {
 		return ids.UUID(*row.item.Deal.OwnerId), true
 	}
 	return ids.UUID{}, false
+}
+
+// teamWeekFor answers which teams' frozen weeks this reader may open, on the
+// predicate the week is served on. Not a scope: the `team` scope is the team's
+// live work and follows row scope, while the week is a lead's verdict on named
+// colleagues, which a read-only seat reaching every row does not get.
+func teamWeekFor(ctx context.Context) crmcontracts.WorklistTeamWeek {
+	switch auth.TeamWeekReachOf(ctx) {
+	case auth.ReachesEveryTeam:
+		return crmcontracts.WorklistTeamWeekEveryTeam
+	case auth.ReachesTeamsLed:
+		return crmcontracts.WorklistTeamWeekTeamsLed
+	default:
+		return crmcontracts.WorklistTeamWeekNone
+	}
 }
 
 // scopeOptions puts the resolver's answer on the wire.

@@ -60,7 +60,7 @@ func seedBuyerInARoom(t *testing.T, e *Env, email string) buyerSeat {
 	ctx := e.As(e.AdminUser, nil, roomErasureAdmin)
 	name := "Rita Reviewer"
 	contact, err := contacts.NewStore(e.DB()).CreateContact(ctx, contacts.CreateContactInput{
-		FullName: name, Source: "ui",
+		FullName: name, Source: "manual",
 		Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
@@ -70,14 +70,14 @@ func seedBuyerInARoom(t *testing.T, e *Env, email string) buyerSeat {
 	rooms := dealrooms.NewStore(e.DB())
 	title := "Acme Expansion — Deal Room"
 	room, err := rooms.CreateRoom(ctx, dealrooms.CreateRoomInput{
-		DealID: ids.From[ids.DealKind](dealID), Title: title, Source: "ui",
+		DealID: ids.From[ids.DealKind](dealID), Title: title, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal room: %v", err)
 	}
 	roomID := ids.From[ids.DealRoomKind](ids.UUID(room.Id))
 	invited, err := rooms.InviteParticipant(ctx, roomID, dealrooms.InviteInput{
-		FullName: name, Email: email, Capability: "comment", Source: "ui",
+		FullName: name, Email: email, Capability: "comment", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the buyer's seat: %v", err)

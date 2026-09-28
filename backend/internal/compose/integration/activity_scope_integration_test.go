@@ -151,7 +151,7 @@ func TestRelinkActivityBumpsVersion(t *testing.T) {
 	second := e.SeedContact(t, "Second Contact", &e.Rep1)
 
 	logged, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Conversation"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Conversation"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: first}},
 	})
 	if err != nil {
@@ -194,7 +194,7 @@ func TestRelinkActivityBumpsVersion(t *testing.T) {
 func assertOwnTeamActivityStillMutable(rep context.Context, t *testing.T, e *Env, myContact ids.UUID) {
 	t.Helper()
 	mine, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Subject: strPtr("Mine"), Source: "manual",
+		Kind: "note", Subject: StrPtr("Mine"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: myContact}},
 	})
 	if err != nil {
@@ -202,7 +202,7 @@ func assertOwnTeamActivityStillMutable(rep context.Context, t *testing.T, e *Env
 	}
 	mineID := ids.From[ids.ActivityKind](ids.UUID(mine.Id))
 
-	if _, err := e.Activities.UpdateActivity(rep, mineID, activities.UpdateActivityInput{Subject: strPtr("Mine, edited")}); err != nil {
+	if _, err := e.Activities.UpdateActivity(rep, mineID, activities.UpdateActivityInput{Subject: StrPtr("Mine, edited")}); err != nil {
 		t.Errorf("UpdateActivity in row scope → %v, want ok", err)
 	}
 	if _, err := e.Activities.RelinkActivity(rep, mineID, activities.RelinkActivityInput{

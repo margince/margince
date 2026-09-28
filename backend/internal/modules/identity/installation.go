@@ -248,7 +248,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		origin == originConfigured).Scan(&userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	if err := seedSystemRoles(ctx, tx, userID); err != nil {
+	if err := seedSystemRolesForBootstrap(ctx, tx, userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	// Any outstanding claim credential is retired here, on BOTH paths. The

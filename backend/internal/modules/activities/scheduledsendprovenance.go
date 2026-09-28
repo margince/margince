@@ -80,3 +80,15 @@ func provenanceOf(p principal.Principal) agentProvenance {
 	}
 	return out
 }
+
+// principalKind records WHAT will execute this send, not who authorized it.
+// The send path withholds a human's sign-off and display name when an agent is
+// the actor, so a message scheduled by an agent and fired under a rebuilt human
+// principal would go out over a signature its immediate twin would never carry
+// (ADR-0104 §4).
+func principalKind(p principal.Principal) string {
+	if p.Type == principal.PrincipalHuman {
+		return "human"
+	}
+	return "agent"
+}

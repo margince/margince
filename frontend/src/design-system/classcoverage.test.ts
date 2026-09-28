@@ -360,9 +360,11 @@ describe("what a className can be shown to produce", () => {
   // read and the one touching the interpolation is dropped rather than
   // half-read. `tone-` is not a class and `tone-warning` is not one this can know.
   it("reads a template's whole tokens and drops the one it cannot finish", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the placeholder is the SUBJECT of this case, not an interpolation that failed to happen — the string is the source text the reader under test parses, and turning it into a template literal would evaluate the very thing the test hands it verbatim
     expect(names("<p className={`card tone-${level}`}>x</p>")).toEqual([
       "card",
     ]);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the placeholder is the SUBJECT of this case, not an interpolation that failed to happen — the string is the source text the reader under test parses, and turning it into a template literal would evaluate the very thing the test hands it verbatim
     expect(names("<p className={`${prefix}-tail head`}>x</p>")).toEqual([
       "head",
     ]);
@@ -493,6 +495,7 @@ describe("what a browser journey can be shown to walk", () => {
   });
 
   it("reads a template's whole tokens and not its interpolation", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the placeholder is the SUBJECT of this case, not an interpolation that failed to happen — the string is the source text the reader under test parses, and turning it into a template literal would evaluate the very thing the test hands it verbatim
     expect(walks('page.locator(`.auto-row[data-id="${id}"]`)')).toEqual([
       "auto-row",
     ]);

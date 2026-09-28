@@ -18,9 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -55,35 +53,19 @@ func (s *Store) PromoteOwnCapturedContact(ctx context.Context, id ids.ContactID)
 	// record", which a write grant or a team scope can satisfy — and neither is
 	// authority to publish somebody's private correspondence. Capture privacy
 	// is the importing user's alone, so the row test is ownership, and it lives
-	// in the statement below where it cannot be skipped.
+	// in widenTx's statement, pinned to this seat, where it cannot be skipped.
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE contact SET visibility = $3
-			 WHERE id = $1 AND owner_id = $2
-			   AND visibility = $4 AND archived_at IS NULL`,
-			id.UUID, actor.UserID, visibilityWorkspace, visibilityOwner)
+		moved, err := widenTx(ctx, tx, id, widening{liftsAny: true, owner: &actor.UserID})
 		if err != nil {
 			return fmt.Errorf("contacts: publishing a captured contact: %w", err)
 		}
-		if tag.RowsAffected() == 0 {
+		if !moved {
 			// Not theirs, not private, or not there. All three answer the same
 			// way: existence is what the boundary hides.
 			return apperrors.ErrNotFound
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", entityContact, id.UUID,
-			map[string]any{fieldVisibility: visibilityOwner},
-			map[string]any{fieldVisibility: visibilityWorkspace})
-		if err != nil {
-			return fmt.Errorf("contacts: recording a captured contact's publication: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			crmcontracts.PublicEventContactUpdated{
-				ChangedFields: map[string]any{fieldVisibility: visibilityWorkspace},
-			}); err != nil {
-			return err
 		}
 		// The mail and meetings that were only ever linked to this contact
 		// follow it. Without this the record is visible and its history is not,

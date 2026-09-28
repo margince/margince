@@ -26,11 +26,16 @@ package events
 // link (audit_log OR system_log) so the outcome stays attributable — Validate
 // enforces the trace, only the entity is relaxed.
 var pipelineEventTypes = map[string]struct{}{
-	"capture.received":      {},
-	"capture.normalized":    {},
-	"capture.failed":        {},
-	"capture.skipped":       {},
-	"ai_task.state_changed": {},
+	// Host settings and invitation delivery state feed private UI recovery;
+	// activity.captured/updated publish the resulting domain meeting.
+	"booking_page.updated":       {},
+	"meeting_invitation.updated": {},
+	"meeting_proposal.updated":   {},
+	"capture.received":           {},
+	"capture.normalized":         {},
+	"capture.failed":             {},
+	"capture.skipped":            {},
+	"ai_task.state_changed":      {},
 	// A Brief open names no record it could hand a consumer: the subject is the
 	// READING, not the run, and the run is the reader's own queue. Entity-less
 	// is also what keeps it off the subscribable set — see its schema in

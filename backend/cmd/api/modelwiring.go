@@ -248,7 +248,7 @@ func jobEnqueueOptions(
 		accountScan = compose.WithAccountScan(inserter, modelPath.AccountScan, modelPath.RoutingVersion)
 	}
 	opts := []compose.Option{
-		deepRead, accountScan, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter),
+		deepRead, accountScan, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter), compose.WithAssuranceRun(inserter),
 		compose.WithTechnicalEnrich(inserter),
 		compose.WithTranscriptRead(inserter),
 		compose.WithDocumentRead(inserter),

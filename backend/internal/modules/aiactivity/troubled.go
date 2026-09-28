@@ -54,7 +54,7 @@ SELECT id, kind, state, occurred_at, summary, subject_label FROM (
       FROM ai_task_run
      WHERE actor_user_id = $1
        AND state IN ('queued','running')
-       AND stale_after IS NOT NULL AND stale_after < now()
+       AND ` + pastLeaseSQL + `
      ORDER BY COALESCE(started_at, queued_at) DESC, id DESC
      LIMIT $3
   )

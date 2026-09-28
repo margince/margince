@@ -19,8 +19,8 @@ import (
 // unavailable when nothing injected one.
 //
 // The fail-closed direction is the half worth a test. An installation that
-// never wired the rollout must hide the Company page rather than offer one its
-// own endpoints would refuse, and the way that breaks is a struct default
+// never wired the rollout must report it unavailable rather than claim a surface
+// its own endpoints would refuse, and the way that breaks is a struct default
 // flipping or the field being read from somewhere else — neither of which
 // surfaces as an error.
 func TestMeReportsTheCompanyContextAvailabilityItWasGiven(t *testing.T) {
@@ -41,11 +41,38 @@ func TestMeReportsTheCompanyContextAvailabilityItWasGiven(t *testing.T) {
 			got := tt.build().meResponse(context.Background(), Identity{})
 			if got.SettingsAvailability == nil {
 				t.Fatal("/me carries no settings_availability, so every client reading it fails " +
-					"closed and the Company page disappears whatever the installation configured")
+					"closed and reports each surface absent whatever the installation configured")
 			}
 			if got.SettingsAvailability.CompanyContext != tt.want {
 				t.Errorf("company_context = %v, want %v",
 					got.SettingsAvailability.CompanyContext, tt.want)
+			}
+		})
+	}
+}
+
+// /me reports the reindex surface it was injected with, and absent when nothing
+// injected one — a role that wired no embeddings lane must not offer its settings.
+func TestMeReportsTheEmbedReindexAvailabilityItWasGiven(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		h    Handlers
+		want bool
+	}{
+		{"nothing injected", NewHandlers(&Service{}), false},
+		{"injected available", NewHandlers(&Service{}).WithEmbedReindexAvailable(true), true},
+		{"injected unavailable", NewHandlers(&Service{}).WithEmbedReindexAvailable(false), false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.h.meResponse(context.Background(), Identity{})
+			if got.SettingsAvailability == nil {
+				t.Fatal("/me carries no settings_availability")
+			}
+			if got.SettingsAvailability.EmbeddingReindex != tt.want {
+				t.Errorf("embedding_reindex = %v, want %v", got.SettingsAvailability.EmbeddingReindex, tt.want)
+			}
+			if got.SettingsAvailability.CompanyContext {
+				t.Error("injecting the reindex surface leaked into company_context")
 			}
 		})
 	}

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // countingMailer records what it was handed and, when told to, refuses it.
@@ -240,4 +241,70 @@ func TestADeactivatedSeatIsNotMailedTheirWeek(t *testing.T) {
 	if cause == nil || !strings.Contains(*cause, "no email") {
 		t.Errorf("the row does not say why no mail went out: %v", cause)
 	}
+}
+
+// THE ORDERING, as behaviour rather than as a shape read off the source.
+//
+// The workspace job has ten minutes, one send may take 45 seconds, and the
+// loop is serial. Interleaved, one stalled relay spends the whole budget on
+// the first few reps and everyone after them loses THE REVIEW — the counts and
+// the deal lines, not just the mail — and loses it for good, because the
+// candidate query only ever asks about the week that just closed.
+//
+// So the assertion is taken at the moment the relay is FIRST dialled: by then
+// every rep the pass found due must already have their week written. That is
+// false the instant the send moves inside the measuring loop, and it is a
+// question only a database can answer.
+func TestEveryRepIsMeasuredBeforeTheFirstRelayIsDialled(t *testing.T) {
+	e := setupWeeklyMail(t)
+	for _, rep := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
+		e.GrantRole(t, rep, "rep")
+	}
+
+	var atFirstDial int
+	var dials int
+	e.relay.onSend = func() {
+		dials++
+		if dials == 1 {
+			atFirstDial = countWeeklyReviews(t)
+		}
+	}
+
+	if err := e.worker.measureWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS, weeklyMailClock); err != nil {
+		t.Fatalf("measuring the workspace: %v", err)
+	}
+
+	// Without this the case passes vacuously on a pass that mailed nobody,
+	// which is exactly what it looked like before the harness could grant a
+	// seat its role.
+	if dials == 0 {
+		t.Fatal("the relay was never dialled, so nothing here observed the ordering: the pass " +
+			"measured nobody, or every seat was refused before it reached a review")
+	}
+	total := countWeeklyReviews(t)
+	// The floor, and it is the whole reason GrantRole exists. With ONE rep
+	// measured, atFirstDial and total are both 1 whichever arrangement the code
+	// takes — the case passes over the defect it is named for. Verified by
+	// running it both ways: send inlined and grants removed, it is green.
+	if total < 2 {
+		t.Fatalf("only %d rep was measured, and one rep cannot show an ordering: this case is "+
+			"green against the interleaved arrangement too, which is the state it was written "+
+			"to leave behind", total)
+	}
+	if atFirstDial != total {
+		t.Errorf("%d of %d reviews were written when the first relay was dialled; the rest were "+
+			"measured after it. A relay that stalls there costs every rep behind it their review, "+
+			"not their mail", atFirstDial, total)
+	}
+}
+
+// countWeeklyReviews reads how many reps have their week written.
+func countWeeklyReviews(t *testing.T) int {
+	t.Helper()
+	var n int
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM weekly_review`).Scan(&n); err != nil {
+		t.Fatalf("counting weekly reviews: %v", err)
+	}
+	return n
 }

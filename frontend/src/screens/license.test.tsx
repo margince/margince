@@ -229,12 +229,10 @@ describe("LicenseCard", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  // This card is the one place the licence gap is stated. The orb used to carry
-  // it and no longer does — an unlicensed installation wore permanent amber, so
-  // the colour stopped meaning "a fault that can wait" — and a sub-line above a
-  // seat meter that reads fine is not somewhere an operator looks. These two
-  // cases hold that the fact is still said, and that the two absences are not
-  // said as one thing.
+  // This card is where the licence gap is repaired, so it states the gap itself
+  // rather than leaving it to the shell banner and the agent panel's pill. These
+  // two cases hold that the fact is said, and that the two absences are not said
+  // as one thing.
   it("says an installation with no license has none, and what that costs", async () => {
     vi.stubGlobal(
       "fetch",
@@ -274,7 +272,7 @@ describe("LicenseCard", () => {
 
     expect(
       await waitFor(() =>
-        screen.getByText("This installation's license was refused"),
+        screen.getByText("This installation’s license was refused"),
       ),
     ).toBeTruthy();
     expect(screen.getByText("License refused")).toBeTruthy();
@@ -303,7 +301,7 @@ describe("LicenseCard", () => {
     // The copy has to say both halves, because an admin acts on the difference:
     // nobody currently working loses anything (P7), and the next invitation is
     // the thing that will not go through.
-    expect(alert.textContent).toMatch(/nobody loses access/i);
+    expect(alert.textContent).toMatch(/no one loses access/i);
     expect(alert.textContent).toMatch(/no new member can be invited/i);
     // The reading still states both figures, and its detail says which side of
     // the grant the count is on rather than leaving a reader to subtract.
@@ -480,7 +478,7 @@ describe("the licensee", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() => screen.getByText("This license needs a renewal")),
+      await waitFor(() => screen.getByText("License needs renewal")),
     ).toBeTruthy();
     // Amber, not an alert: nothing has gone wrong yet.
     expect(screen.queryByRole("alert")).toBeNull();
@@ -509,7 +507,7 @@ describe("the licensee", () => {
     expect(screen.getByText(/still works/i)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     // One notice, not two: the grace state supersedes the renewal warning.
-    expect(screen.queryByText("This license needs a renewal")).toBeNull();
+    expect(screen.queryByText("License needs renewal")).toBeNull();
   });
 
   it("shows no licensee card for an unlicensed installation", async () => {

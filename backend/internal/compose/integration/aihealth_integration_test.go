@@ -54,10 +54,11 @@ func TestAiHealthReportsARungThatStoppedAnswering(t *testing.T) {
 	}
 }
 
-// A failure a retry rescued is not a lane that failed. Counting non-terminal
-// attempts would report a rung as failing while every caller of it got an
-// answer, which is a false alarm an operator learns to ignore.
-func TestAiHealthIgnoresAnAttemptARetryRescued(t *testing.T) {
+// A failure a retry rescued is still a failure on that rung: the attempt
+// reached the provider and it did not answer. It does not make the rung read
+// down while its latest attempt answers, because health is the latest outcome
+// and not the ratio.
+func TestAiHealthCountsAnAttemptARetryRescuedButReadsTheLatest(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	logical := ids.NewV7()
@@ -73,11 +74,44 @@ func TestAiHealthIgnoresAnAttemptARetryRescued(t *testing.T) {
 	if len(got.Rungs) != 1 {
 		t.Fatalf("%d rungs, want 1", len(got.Rungs))
 	}
-	if got.Rungs[0].Failures != 0 {
-		t.Errorf("failures = %d, want 0 — the retry answered", got.Rungs[0].Failures)
+	if got.Rungs[0].Calls != 2 || got.Rungs[0].Failures != 1 {
+		t.Errorf("calls/failures = %d/%d, want 2/1", got.Rungs[0].Calls, got.Rungs[0].Failures)
 	}
 	if !got.Rungs[0].Healthy {
-		t.Error("a rung whose retry succeeded is reported unhealthy")
+		t.Error("a rung whose latest attempt answered is reported unhealthy")
+	}
+}
+
+// When the decision lane fails, the ladder answers the call instead, so its
+// attempt is never the terminal one. Counted only where terminal, a decision
+// endpoint that fails every call would report healthy for as long as the
+// ladder works.
+func TestAiHealthCountsAFailedDecisionAttemptTheLadderAnswered(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	seedDecisionAttempt(t, e, "", time.Now().Add(-10*time.Minute), ids.NewV7(), true)
+	logical := ids.NewV7()
+	seedDecisionAttempt(t, e, "provider_error", time.Now().Add(-4*time.Minute), logical, false)
+	seedAttempt(t, e, "cheap_cloud", "", 200, time.Now().Add(-3*time.Minute), logical, 2, true)
+
+	var got crmcontracts.AiHealth
+	if status := e.Call(t, http.MethodGet, "/v1/ai/health", nil, nil, &got); status != http.StatusOK {
+		t.Fatalf("GET /v1/ai/health = %d, want 200", status)
+	}
+	rungs := map[string]crmcontracts.AiRungHealth{}
+	for _, r := range got.Rungs {
+		rungs[r.Tier] = r
+	}
+	decide := rungs["decide"]
+	if decide.Calls != 2 || decide.Failures != 1 {
+		t.Errorf("decide calls/failures = %d/%d, want 2/1", decide.Calls, decide.Failures)
+	}
+	if decide.Healthy {
+		t.Error("a decision lane whose latest attempt failed is reported healthy " +
+			"because the ladder answered the call after it")
+	}
+	if !rungs["cheap_cloud"].Healthy {
+		t.Error("the rung that answered after the decision lane is reported unhealthy")
 	}
 }
 
@@ -245,5 +279,24 @@ func seedAttempt(t *testing.T, e *apptest.AppEnv, tier, sentinel string,
 		        10, 5, $3, $4, $5, $6, $7, $8)`,
 		ids.NewV7(), tier, latency, errSentinel, logical, attempt, terminal, at); err != nil {
 		t.Fatalf("seeding an ai_call: %v", err)
+	}
+}
+
+func seedDecisionAttempt(t *testing.T, e *apptest.AppEnv, sentinel string,
+	at time.Time, logical ids.UUID, terminal bool,
+) {
+	t.Helper()
+	var errSentinel any
+	if sentinel != "" {
+		errSentinel = sentinel
+	}
+	if _, err := e.Owner.Exec(context.Background(), `
+		INSERT INTO ai_call (id, task, kind, tier, provider, model_id, request_fingerprint,
+		                     tokens_in, tokens_out, latency_ms, error_sentinel,
+		                     logical_call_id, attempt, is_terminal, occurred_at)
+		VALUES ($1, 'site_triage', 'decision', 'decide', 'jev_compatible',
+		        'typesafe/jev-1.13', 'fp', 10, 0, 200, $2, $3, 1, $4, $5)`,
+		ids.NewV7(), errSentinel, logical, terminal, at); err != nil {
+		t.Fatalf("seeding a decision ai_call: %v", err)
 	}
 }

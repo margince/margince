@@ -70,7 +70,7 @@ func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testi
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	staged, err := StageLinkedInMatches(ctx, svc, store)
+	staged, err := StageLinkedInMatches(ctx, e.Pool, svc, store)
 	if err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
@@ -129,7 +129,7 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 	}
 
 	// The stager runs again, exactly as a re-import or the hourly sweep would.
-	staged, err := StageLinkedInMatches(ctx, svc, store)
+	staged, err := StageLinkedInMatches(ctx, e.Pool, svc, store)
 	if err != nil {
 		t.Fatalf("re-staging: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
@@ -226,7 +226,7 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 
 	// The refusal is observed by the pass that would have re-proposed, which is
 	// what writes it to the row.
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("re-staging after the refusal: %v", err)
 	}
 	if status := linkedInMatchStatus(t, e); status != "rejected" {
@@ -283,7 +283,7 @@ func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	id := onlyPendingLinkedInMatch(t, e)
@@ -432,7 +432,7 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	approval := onlyPendingLinkedInMatch(t, e)
@@ -498,7 +498,7 @@ func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testi
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 
@@ -547,7 +547,7 @@ func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) 
 
 	// Through the real reject, which is what a member does.
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 	if _, err := svc.Decide(ctx, onlyPendingLinkedInMatch(t, e), false, nil); err != nil {
@@ -591,7 +591,7 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if _, err := StageLinkedInMatches(ctx, svc, store); err != nil {
+	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
 
@@ -642,7 +642,7 @@ func TestAColleagueDecidingAMatchAppliesItToTheStagersConnection(t *testing.T) {
 		t.Fatalf("matching: %v", err)
 	}
 	svc := approvalsServiceWithEffects(e.Pool)
-	if staged, err := StageLinkedInMatches(stager, svc, store); err != nil || staged != 1 {
+	if staged, err := StageLinkedInMatches(stager, e.Pool, svc, store); err != nil || staged != 1 {
 		t.Fatalf("staging = %d, %v; want the one folded-name match", staged, err)
 	}
 

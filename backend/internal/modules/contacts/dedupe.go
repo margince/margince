@@ -98,6 +98,10 @@ type ContactCandidate struct {
 	// a name and no key. So it is stated by whoever knows what they will do with
 	// the answer.
 	QueueNameCollisions bool
+	// ExcludeID leaves one contact out of the candidate set: the contact being
+	// re-checked after a rename, which would otherwise match itself perfectly
+	// and hide every real twin behind the self-score.
+	ExcludeID *ids.ContactID
 }
 
 // ContactResolution is PO-F-1's output: the decision, the contact it names,
@@ -175,7 +179,7 @@ type contactCandidateRow struct {
 // trigram arm does. Computing one side in Go would move the divergence rather
 // than close it: SQL's lower+unaccent and Go's Unicode full folding are two
 // different normalizations, and the point is to stop relying on either being a
-// superset of the other. It is contactNameKeySQL, which spells the two
+// superset of the other. It is exactNameKeySQL, which spells the two
 // properties NormalizeContactName has and a bare SQL comparison does not: the
 // trim, and the internal-whitespace collapse. Both are real divergences —
 // "  Lucy Vo  " and "Lucy Vo" are Go-equal, and so are "Éva  Ő" and "Éva Ő",
@@ -208,10 +212,11 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		  LEFT JOIN company_domain od
 		    ON od.company_id = r.company_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
+		   AND ($3::uuid IS NULL OR p.id <> $3)
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
 		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
-		        OR `+contactNameKeySQL("p.full_name")+` = `+contactNameKeySQL("$1")+`)`,
-		c.FullName, c.CurrentPrimaryCompanyID)
+		        OR `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`)`,
+		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID)
 	if err != nil {
 		return ContactResolution{}, fmt.Errorf("dedupe contact candidate set: %w", err)
 	}

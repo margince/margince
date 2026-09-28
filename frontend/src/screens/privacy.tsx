@@ -466,9 +466,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         )}
       </Field>
 
-      {create.isError && (
-        <p className="dsr-error">{problemMessageOf(create.error, t)}</p>
-      )}
+      <ErrorLine error={create.error} />
 
       <Button
         variant="primary"
@@ -807,18 +805,9 @@ function DsrRow({
                 regardless of `terminal`, not only inside the open-case
                 branch below (an assignment failure on a closed request would
                 otherwise be invisible). */}
-            {/* role="alert": this line is the ONLY report that a transition
-                did not land, and `privacy.movedOn` exists precisely to say the
-                click a reader just made changed nothing. Rendered silently it
-                told nobody — the row's badges do not move on a refused write,
-                so a reader who was looking at the buttons saw the same screen
-                either way. The paragraph mounts carrying its message, which is
-                the case an assertive region is for. */}
-            {patchErrorMessage && (
-              <p className="dsr-error" role="alert">
-                {patchErrorMessage}
-              </p>
-            )}
+            {/* Announced, never standing: the row's badges do not move on a
+                refused write, so this line alone says the click changed nothing. */}
+            {patchErrorMessage && <ErrorLine>{patchErrorMessage}</ErrorLine>}
 
             {terminal ? (
               <p>{t("privacy.closed")}</p>

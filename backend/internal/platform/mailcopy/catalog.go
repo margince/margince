@@ -74,7 +74,7 @@ func resetLines(line writeLine) {
 		"Đặt lại mật khẩu trong vòng một giờ:")
 	line(func(c *Copy) *string { return &c.ResetIgnore },
 		"If this wasn't you, ignore this email — your password is unchanged.",
-		"Warst du das nicht, ignoriere diese E-Mail — dein Passwort bleibt unverändert.",
+		"Warst du das nicht, ignoriere diese E-Mail. Dein Passwort bleibt unverändert.",
 		"Nếu không phải bạn, hãy bỏ qua email này — mật khẩu của bạn không thay đổi.")
 }
 
@@ -139,8 +139,8 @@ func weeklyFigureLines(line writeLine) {
 		"Bewegt",
 		"Đã chuyển")
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
-		"You decided",
-		"Von dir entschieden",
+		"Proposals decided",
+		"Entschiedene Vorschläge",
 		"Bạn đã quyết")
 	weeklyDecisionLines(line)
 }
@@ -169,8 +169,8 @@ func weeklyDecisionLines(line writeLine) {
 // with the week, and what it carried into the next one.
 func weeklyQueueLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyQueue },
-		"Morning queue",
-		"Morgen-Liste",
+		"Morning brief items",
+		"Einträge im Morgenbericht",
 		"Danh sách buổi sáng")
 	line(func(c *Copy) *string { return &c.WeeklyActed },
 		"acted",
@@ -182,7 +182,7 @@ func weeklyQueueLines(line writeLine) {
 		"đã bỏ qua")
 	line(func(c *Copy) *string { return &c.WeeklyCarried },
 		"Carried over",
-		"Übernommen",
+		"Übertragen",
 		"Chuyển tiếp")
 }
 
@@ -205,7 +205,7 @@ func weeklyMovementLines(line writeLine) {
 func weeklyClosingLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
 		"This week’s commitments",
-		"Zusagen für diese Woche",
+		"Zusagen dieser Woche",
 		"Cam kết tuần này")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
 		"The full week, and the ones before it:",
@@ -280,16 +280,16 @@ func confirmAskLines(line writeLine) {
 	// proof can name a published row rather than quoting whatever arrived with
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
-		"News from time to time, roughly once a month. You decide, and I will hold to it.",
-		"Neuigkeiten ab und zu, etwa einmal im Monat. Sie entscheiden, ich halte mich daran.",
+		"News from time to time, roughly once a month. Your choice is respected.",
+		"Neuigkeiten von Zeit zu Zeit, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
 		"Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
-		"Yes, keep me posted",
-		"Ja, halten Sie mich auf dem Laufenden",
+		"Subscribe to news",
+		"Neuigkeiten abonnieren",
 		"Có, hãy gửi tin cho tôi")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
-		"No thanks, just keep my details correct",
-		"Nein danke, nur meine Daten korrekt halten",
+		"Do not send news",
+		"Keine Neuigkeiten senden",
 		"Không, chỉ cần giữ thông tin của tôi chính xác")
 	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
 	// rather than describing a frequency. A grant through that door binds this;
@@ -299,8 +299,8 @@ func confirmAskLines(line writeLine) {
 		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
 		"Xác nhận rằng bạn muốn nhận {purpose}.")
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
-		"Yes, subscribe me",
-		"Ja, ich möchte das Abo",
+		"Confirm subscription",
+		"Abonnement bestätigen",
 		"Có, đăng ký cho tôi")
 }
 
@@ -367,7 +367,7 @@ func confirmConsentLines(line writeLine) {
 		"You asked to hear from us. Confirming below is what turns that into a\n"+
 			"permission we will act on — until you do, we will not write to you about it.",
 		"Sie haben darum gebeten, von uns zu hören. Erst Ihre Bestätigung unten macht\n"+
-			"daraus eine Einwilligung, auf die wir uns stützen — bis dahin schreiben wir\n"+
+			"daraus eine Einwilligung, auf die wir uns stützen. Bis dahin schreiben wir\n"+
 			"Ihnen dazu nicht.",
 		"Quý vị đã yêu cầu nhận tin từ chúng tôi. Việc xác nhận bên dưới mới biến điều đó\n"+
 			"thành sự đồng ý mà chúng tôi dựa vào — cho đến lúc đó, chúng tôi sẽ không\n"+

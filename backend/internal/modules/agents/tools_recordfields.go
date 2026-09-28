@@ -48,6 +48,7 @@ func (t describeRecordFields) Spec() mcp.ToolSpec {
 		Name: "describe_record_fields", Title: "Describe the record write vocabulary",
 		Version:     toolVersionV1,
 		Description: describeRecordFieldsCopy.render(),
+		Instead:     describeRecordFieldsCopy.Instead,
 		// ScopeRead, where the RESOURCE beside it is ScopeWrite, and the
 		// asymmetry is forced rather than chosen. A tool's read-only-ness is
 		// DERIVED from this field: a write scope here would have the surface

@@ -6,6 +6,7 @@ import { formatNumber, INTL_LOCALE, ordinalNumber } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./margince-workbench.css";
 import { Heading } from "./heading";
@@ -345,10 +346,9 @@ export function AiRuntimeChip({
     };
   }, []);
 
-  // An open popover has to close on Escape and on a click elsewhere, or it
-  // becomes a panel the reader cannot dismiss without guessing. Bound to `open`
-  // rather than to `pinned`: a popover held open by keyboard focus is exactly
-  // the one whose reader has no pointer to move away.
+  // An open popover closes on Escape and on a click elsewhere, or a reader
+  // cannot dismiss it without guessing. Keyed on `open`, not `pinned`: the
+  // popover focus holds open is the one whose reader has no pointer to move.
   useEffect(() => {
     if (!open) {
       return;
@@ -358,7 +358,7 @@ export function AiRuntimeChip({
       setDismissed(true);
     };
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !coveredByDialog(wrapper.current)) {
         close();
       }
     }

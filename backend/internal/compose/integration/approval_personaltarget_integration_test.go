@@ -58,7 +58,7 @@ func TestAStagedViewArchiveIsDecidableByItsOwnerAlone(t *testing.T) {
 
 	// The owner sees it and can decide it — the gate narrows to one seat, it does
 	// not strand the row.
-	pending, _, err := svc.List(owner, approvals.ListInput{Status: strPtr("pending"), Limit: 50})
+	pending, _, err := svc.List(owner, approvals.ListInput{Status: StrPtr("pending"), Limit: 50})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestAStagedViewArchiveIsDecidableByItsOwnerAlone(t *testing.T) {
 	if _, err := svc.Get(owner, approvalID); err != nil {
 		t.Errorf("owner Get → %v, want ok", err)
 	}
-	if _, err := svc.Decide(owner, approvalID, false, strPtr("keeping it")); err != nil {
+	if _, err := svc.Decide(owner, approvalID, false, StrPtr("keeping it")); err != nil {
 		t.Errorf("owner reject → %v, want ok — seeing it and deciding it are one predicate", err)
 	}
 }
@@ -86,7 +86,7 @@ func TestAStagedViewArchiveIsDecidableByItsOwnerAlone(t *testing.T) {
 // cannot see is one they cannot dismiss either.
 func assertCannotDecideStagedApproval(ctx context.Context, t *testing.T, svc *approvals.Service, who string, approvalID ids.ApprovalID) {
 	t.Helper()
-	pending, _, err := svc.List(ctx, approvals.ListInput{Status: strPtr("pending"), Limit: 50})
+	pending, _, err := svc.List(ctx, approvals.ListInput{Status: StrPtr("pending"), Limit: 50})
 	if err != nil {
 		t.Fatalf("%s list: %v", who, err)
 	}
@@ -101,7 +101,7 @@ func assertCannotDecideStagedApproval(ctx context.Context, t *testing.T, svc *ap
 	if _, err := svc.Decide(ctx, approvalID, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("%s approve → %v, want ErrNotFound", who, err)
 	}
-	if _, err := svc.Decide(ctx, approvalID, false, strPtr("no")); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := svc.Decide(ctx, approvalID, false, StrPtr("no")); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("%s reject → %v, want ErrNotFound", who, err)
 	}
 }

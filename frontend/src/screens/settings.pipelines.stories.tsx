@@ -66,7 +66,7 @@ export const RestoreRefused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Put back in use" }),
+      await canvas.findByRole("button", { name: "Restore" }),
     );
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "A pipeline named Legacy renewals is already in use.",

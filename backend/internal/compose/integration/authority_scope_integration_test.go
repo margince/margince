@@ -137,7 +137,7 @@ func TestApprovalAuthorityHonorsTargetRowScope(t *testing.T) {
 	// rep1 holds deal.update but team1 scope: object grant yes, row no.
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
-	pending, _, err := svc.List(rep, approvals.ListInput{Status: strPtr("pending"), Limit: 50})
+	pending, _, err := svc.List(rep, approvals.ListInput{Status: StrPtr("pending"), Limit: 50})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,14 +152,14 @@ func TestApprovalAuthorityHonorsTargetRowScope(t *testing.T) {
 	if _, err := svc.Decide(rep, approvalID, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("approve out-of-row-scope approval → %v, want ErrNotFound", err)
 	}
-	if _, err := svc.Decide(rep, approvalID, false, strPtr("no")); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := svc.Decide(rep, approvalID, false, StrPtr("no")); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("reject out-of-row-scope approval → %v, want ErrNotFound (a reject is a decision too)", err)
 	}
 
 	// A human with no decision grant at all cannot reject by leaked UUID
 	// either — even when the target row itself would be visible.
 	viewer := e.As(e.Rep3, []ids.UUID{e.Team2}, ReadOnlyPerms)
-	if _, err := svc.Decide(viewer, approvalID, false, strPtr("go away")); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := svc.Decide(viewer, approvalID, false, StrPtr("go away")); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("reject without decision grants → %v, want ErrNotFound", err)
 	}
 
@@ -168,7 +168,7 @@ func TestApprovalAuthorityHonorsTargetRowScope(t *testing.T) {
 	if _, err := svc.Get(owner, approvalID); err != nil {
 		t.Errorf("owner Get → %v, want ok", err)
 	}
-	if _, err := svc.Decide(owner, approvalID, false, strPtr("not now")); err != nil {
+	if _, err := svc.Decide(owner, approvalID, false, StrPtr("not now")); err != nil {
 		t.Errorf("owner reject → %v, want ok", err)
 	}
 }
@@ -192,7 +192,7 @@ func TestApprovalListPagesPastUndecidableBurst(t *testing.T) {
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	pending, _, err := svc.List(rep, approvals.ListInput{Status: strPtr("pending"), Limit: 50})
+	pending, _, err := svc.List(rep, approvals.ListInput{Status: StrPtr("pending"), Limit: 50})
 	if err != nil {
 		t.Fatal(err)
 	}

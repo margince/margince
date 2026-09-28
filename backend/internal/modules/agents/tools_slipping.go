@@ -103,6 +103,7 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "whats_slipping_this_week", Title: "What's slipping this week", Version: toolVersionV1,
 		Description:   whatsSlippingCopy.render(),
+		Instead:       whatsSlippingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listDeals",
 		InputSchema: schema(`{"type":"object","properties":{
@@ -171,6 +172,7 @@ func (t draftFollowUpsFor) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "draft_follow_ups_for", Title: "Draft follow-ups", Version: toolVersionV1,
 		Description:   draftFollowUpsForCopy.render(),
+		Instead:       draftFollowUpsForCopy.Instead,
 		RequiredScope: principal.ScopeDraft, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "listDeals + draftEmail + logActivity",
 		InputSchema: schema(`{"type":"object","required":["segment"],"properties":{

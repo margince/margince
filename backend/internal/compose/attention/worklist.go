@@ -177,6 +177,8 @@ func (s *Service) worklistIn(
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
+	teamWeek := teamWeekFor(ctx)
+	out.TeamWeek = &teamWeek
 	if err := reader.nameWorklistRows(ctx, out.Queue, night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -337,7 +339,7 @@ func (s *Service) worklistFrom(
 	// `buyer_replies` and `prospecting` count, so leaving them out let a refused
 	// lane print a confident zero — the one direction these figures must never
 	// fail in.
-	missing := unavailable(day)
+	missing := unavailable(ctx, day)
 	for _, refusal := range besideTheDay {
 		if refusal != nil {
 			missing = append(missing, *refusal)

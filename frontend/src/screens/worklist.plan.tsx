@@ -4,9 +4,10 @@
 import { useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import { TeamPlanReview } from "./brief.teamplan";
-import { problemMessageOf, useMe } from "./common";
+import { useMe } from "./common";
 import { useSetCommitmentState } from "./weeklyplan.queries";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -39,9 +40,7 @@ export function PlanWorkActions({ item }: Readonly<{ item: WorklistItem }>) {
           {t("plan.state.done")}
         </Button>
       )}
-      {settle.isError && (
-        <span role="alert">{problemMessageOf(settle.error, t)}</span>
-      )}
+      <ErrorLine error={settle.error} inline />
     </>
   );
 }

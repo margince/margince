@@ -169,7 +169,7 @@ var registrations = []Registration{{
 	Sources:     []Source{SourceDerived},
 	Reasons: []Reason{
 		ReasonTransportNotRead, ReasonSenderUndecided, ReasonArchived,
-		ReasonNotConnectorCaptured, ReasonAudienceLimited, ReasonAwaitingBatch,
+		ReasonNotConnectorCaptured, ReasonAudienceLimited, ReasonModelsDeclined, ReasonAwaitingBatch,
 		ReasonLabelled, ReasonRecordNotAvailable,
 	},
 }, {

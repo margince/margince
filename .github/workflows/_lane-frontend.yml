@@ -83,7 +83,23 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - run: make fe-quality
+      # FE_COVERAGE=1 so the unit-screen lane inside fe-quality writes its own
+      # lcov. It is the only job that runs `fe-test-ext`, so it is the only one
+      # that can produce that report — and without it every .tsx a unit ships is
+      # indexed as product code no test covers, which is under-measurement and
+      # therefore reads as success.
+      - run: make fe-quality FE_COVERAGE=1
+      - name: Upload the unit screens' coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fe-coverage-ext
+          path: frontend/coverage-ext/lcov.info
+          # `error`, like the core report's upload: make fe-test-ext has already
+          # run check-lcov-paths.sh over this file, so a missing one here means
+          # the upload lost it — and the sonarcloud job reads an absent lcov as
+          # a tier measured at zero, silently.
+          if-no-files-found: error
+          retention-days: 1
 
   # FOUR shards, and the number comes from a measurement rather than from the
   # runner budget.

@@ -75,7 +75,11 @@ type Event struct {
 	// unreadable start, which the Sink then stamps with capture time rather than
 	// sorting the row to the beginning of history — so a decoder that cannot
 	// read a start leaves this zero rather than guessing.
-	StartsAt  time.Time
+	EndsAt   time.Time
+	StartsAt time.Time
+	// AllDay says the provider stated a date, not a time: StartsAt is then the
+	// AllDayStart noon anchor rather than a moment anybody scheduled.
+	AllDay    bool
 	Organizer Actor
 	Attendees []Actor
 }
@@ -104,15 +108,17 @@ type Meeting struct {
 	// it. Empty when none was stated, and then the meeting carries no
 	// cross-provider identity and dedupes on the natural key alone, exactly as
 	// it did before.
-	icalUID       string
-	subject       string
-	body          string
-	occurredAt    time.Time
-	cancelled     bool
-	ownerDeclined bool
-	hasExternal   bool // any party outside the OWNER's own domain — the floor, see Settle
-	addresses     []string
-	participants  []connector.MessageParticipant
+	icalUID         string
+	subject         string
+	body            string
+	occurredAt      time.Time
+	allDay          bool
+	durationSeconds *int
+	cancelled       bool
+	ownerDeclined   bool
+	hasExternal     bool // any party outside the OWNER's own domain — the floor, see Settle
+	addresses       []string
+	participants    connector.Parties
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -124,13 +130,15 @@ func Classify(ev Event, owner string) Meeting {
 	organizerDom := domainOf(ev.Organizer.Email)
 
 	return Meeting{
-		id:            strings.TrimSpace(ev.ID),
-		icalUID:       strings.TrimSpace(ev.ICalUID),
-		subject:       strings.TrimSpace(ev.Subject),
-		body:          buildBody(ev, attendeeEmails),
-		occurredAt:    ev.StartsAt,
-		cancelled:     ev.Cancelled,
-		ownerDeclined: ev.OwnerDeclined,
+		id:              strings.TrimSpace(ev.ID),
+		icalUID:         strings.TrimSpace(ev.ICalUID),
+		subject:         strings.TrimSpace(ev.Subject),
+		body:            buildBody(ev, attendeeEmails),
+		occurredAt:      ev.StartsAt,
+		allDay:          ev.AllDay,
+		durationSeconds: eventDuration(ev),
+		cancelled:       ev.Cancelled,
+		ownerDeclined:   ev.OwnerDeclined,
 		// The organizer counts as a party: an externally-organized meeting is a
 		// customer touch even when the owner is the only listed attendee.
 		//
@@ -144,9 +152,11 @@ func Classify(ev Event, owner string) Meeting {
 	}
 }
 
-// Participants are the organizer and attendees as structured rows — read by the
-// replay pass that recovers meetings captured before participants were recorded.
-func (m Meeting) Participants() []connector.MessageParticipant { return m.participants }
+// Participants are the organizer and attendees as structured rows, with the
+// count the cap was applied to — read by the replay pass that recovers meetings
+// captured before participants were recorded. A pass that sees none of them
+// still has to know whether the event named two hundred.
+func (m Meeting) Participants() connector.Parties { return m.participants }
 
 // meetingParties returns the organizer and attendees as participant rows,
 // excluding the account owner.
@@ -159,7 +169,7 @@ func (m Meeting) Participants() []connector.MessageParticipant { return m.partic
 // Organizer wins over attendee when the same address holds both, which is the
 // common case for a meeting somebody scheduled and then attended: organizing is
 // the stronger statement about their part in it.
-func meetingParties(ev Event, ownerLower string) []connector.MessageParticipant {
+func meetingParties(ev Event, ownerLower string) connector.Parties {
 	seen := map[string]bool{}
 	if ownerLower != "" {
 		seen[ownerLower] = true
@@ -208,10 +218,11 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
-			Kind:       "meeting",
-			Subject:    m.subject,
-			Body:       m.body,
-			OccurredAt: m.occurredAt,
+			Kind:            "meeting",
+			Subject:         m.subject,
+			Body:            m.body,
+			OccurredAt:      m.occurredAt,
+			DurationSeconds: m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
 		},
@@ -225,8 +236,8 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		//
 		// Empty when the provider stated no UID, and then the meeting dedupes on
 		// the natural key alone exactly as it did before.
-		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt},
-		Participants:      m.participants,
+		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay},
+		Participants:      m.participants.Participants,
 		Addresses:         m.addresses,
 	}.WithProviderAttestedParticipants(true)
 }
@@ -413,12 +424,20 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 // called off at the moment we noticed, and every question about when bookings
 // fell through would answer with the sync schedule instead of the calendar.
 func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connectorName string) error {
-	canceller, ok := sink.(connector.MeetingCanceller)
-	if !ok {
+	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
+	var err error
+	// The identity travels too where the sink can use it: an event matched onto
+	// an imported meeting left no row under its own key, and the identity is
+	// the only thing that still names that meeting.
+	if identified, ok := sink.(connector.IdentifiedMeetingCanceller); ok {
+		identity := connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay}
+		err = identified.CancelIdentifiedMeeting(ctx, key, identity, m.occurredAt)
+	} else if canceller, ok := sink.(connector.MeetingCanceller); ok {
+		err = canceller.CancelMeeting(ctx, key, m.occurredAt)
+	} else {
 		return nil
 	}
-	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
-	if err := canceller.CancelMeeting(ctx, key, m.occurredAt); err != nil {
+	if err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			return nil
 		}
@@ -445,10 +464,10 @@ func NormalizeOne(raw []byte, owner, connectorName string, decode Decode) ([]con
 // ParticipantsOf reads the organizer and attendees out of one stored event
 // resource — the calendar twin of mailmap.ParticipantsOf, for the replay pass
 // that recovers meetings captured before participants were recorded.
-func ParticipantsOf(raw []byte, owner string, decode Decode) ([]connector.MessageParticipant, error) {
+func ParticipantsOf(raw []byte, owner string, decode Decode) (connector.Parties, error) {
 	ev, err := decode(raw, owner)
 	if err != nil {
-		return nil, err
+		return connector.Parties{}, err
 	}
 	return Classify(ev, owner).Participants(), nil
 }
@@ -468,4 +487,12 @@ func SettlementOf(raw []byte, owner string, decode Decode) (Settlement, error) {
 	}
 	_, settlement := Classify(ev, owner).Settle()
 	return settlement, nil
+}
+
+func eventDuration(event Event) *int {
+	if event.StartsAt.IsZero() || !event.EndsAt.After(event.StartsAt) {
+		return nil
+	}
+	seconds := int(event.EndsAt.Sub(event.StartsAt) / time.Second)
+	return &seconds
 }

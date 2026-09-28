@@ -508,7 +508,7 @@ function FieldStatesColumn() {
             Forgot?
           </button>
         }
-        hint="At least 12 characters."
+        hint="At least 12 characters"
         trailing={reveal.trailing}
       >
         {(control) => (
@@ -523,7 +523,7 @@ function FieldStatesColumn() {
       <Field
         label="New password"
         required
-        error="Too short. Use at least 12 characters."
+        error="Password is too short. Use at least 12 characters."
         trailing={revealShort.trailing}
       >
         {(control) => (
@@ -538,7 +538,7 @@ function FieldStatesColumn() {
       <Field
         label="Confirm"
         required
-        error="These two don't match."
+        error="Passwords do not match."
         hint="Both fields have to say the same thing."
       >
         {(control) => (
@@ -741,7 +741,7 @@ const RECORD_TABS = ["overview", "research", "documents"] as const;
 type RecordTab = (typeof RECORD_TABS)[number];
 const RECORD_TAB_LABELS: Record<RecordTab, string> = {
   overview: "Overview",
-  research: "Data & tools",
+  research: "Data and tools",
   documents: "Documents",
 };
 

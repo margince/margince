@@ -106,7 +106,7 @@ describe("a lapsed relationship says what it was worth", () => {
       ]),
     ]);
 
-    expect(await screen.findByText(/an open deal rests on this/)).toBeTruthy();
+    expect(await screen.findByText(/open deal depends on this/)).toBeTruthy();
     // Beside the span, not instead of it: the rep reads both — how long, and
     // why it matters that long.
     expect(await screen.findByText(/quiet for 63 days/)).toBeTruthy();
@@ -121,7 +121,7 @@ describe("a lapsed relationship says what it was worth", () => {
     ]);
 
     expect(await screen.findByText(/quiet for 63 days/)).toBeTruthy();
-    expect(screen.queryByText(/an open deal rests on this/)).toBeNull();
+    expect(screen.queryByText(/open deal depends on this/)).toBeNull();
   });
 });
 
@@ -140,7 +140,7 @@ describe("a task says who holds it", () => {
       },
     ]);
 
-    expect(await screen.findByText(/nobody owns it/)).toBeTruthy();
+    expect(await screen.findByText(/\bno owner\b/)).toBeTruthy();
   });
 
   it("says nothing about ownership on a task somebody holds", async () => {
@@ -158,7 +158,7 @@ describe("a task says who holds it", () => {
     ]);
 
     expect(await screen.findByText("Send the retrofit quote")).toBeTruthy();
-    expect(screen.queryByText(/nobody owns it/)).toBeNull();
+    expect(screen.queryByText(/\bno owner\b/)).toBeNull();
   });
 });
 
@@ -213,7 +213,7 @@ describe("a row says its deadline once", () => {
     await screen.findByText(/^due \d/);
     expect(
       container.querySelector(".worklist-row-because")?.textContent,
-    ).toMatch(/nobody owns it/i);
+    ).toMatch(/\bno owner\b/i);
   });
 
   // OVERDUE is the same duplicate said a THIRD time. It sits beside a danger
@@ -232,7 +232,7 @@ describe("a row says its deadline once", () => {
       ".worklist-row-because",
     )?.textContent;
     expect(because).not.toMatch(/overdue/i);
-    expect(because).toMatch(/nobody owns it/i);
+    expect(because).toMatch(/\bno owner\b/i);
   });
 
   // MEETING_SOON has no non-duplicating case at all: it fires only where the

@@ -72,6 +72,11 @@ type InternalEventAiTaskStateChanged struct {
 	Summary *string `json:"summary,omitempty"`
 }
 
+// InternalEventBookingPageUpdated A host changed the policy or public availability of their booking page.
+type InternalEventBookingPageUpdated struct {
+	Enabled bool `json:"enabled"`
+}
+
 // InternalEventBriefOpened Payload for brief.opened — a rep read their morning Brief. The product question behind it is whether the thing gets opened at all, and on the days it says something worth acting on.
 // Emitted on the READ of an existing run, never on the pass that assembles one: a night that ranked a queue nobody looked at is exactly the case this event exists to make visible, and counting the assembly as an open would hide it.
 // Counts only, no prose and no record data. What a rep's morning HOLDS is already recoverable from the run itself, and what they DID with it from the audit rows brief_item marks write. This payload answers one question the other two cannot: whether they came and looked.
@@ -87,6 +92,17 @@ type InternalEventBriefOpened struct {
 	Unread int `json:"unread"`
 }
 
+// InternalEventMeetingInvitationUpdated The durable calendar operation changed state; consumers reread permissioned details.
+type InternalEventMeetingInvitationUpdated struct {
+	Status  string `json:"status"`
+	Version int64  `json:"version"`
+}
+
+// InternalEventMeetingProposalUpdated A personal scheduling proposal changed state.
+type InternalEventMeetingProposalUpdated struct {
+	Status string `json:"status"`
+}
+
 func (InternalEventAiBudgetUpdated) EventType() string { return "ai_budget.updated" }
 
 func (InternalEventAiBudgetUpdated) EntityType() string { return "ai_budget" }
@@ -95,6 +111,18 @@ func (InternalEventAiTaskStateChanged) EventType() string { return "ai_task.stat
 
 func (InternalEventAiTaskStateChanged) EntityType() string { return "" }
 
+func (InternalEventBookingPageUpdated) EventType() string { return "booking_page.updated" }
+
+func (InternalEventBookingPageUpdated) EntityType() string { return "booking_page" }
+
 func (InternalEventBriefOpened) EventType() string { return "brief.opened" }
 
 func (InternalEventBriefOpened) EntityType() string { return "" }
+
+func (InternalEventMeetingInvitationUpdated) EventType() string { return "meeting_invitation.updated" }
+
+func (InternalEventMeetingInvitationUpdated) EntityType() string { return "activity" }
+
+func (InternalEventMeetingProposalUpdated) EventType() string { return "meeting_proposal.updated" }
+
+func (InternalEventMeetingProposalUpdated) EntityType() string { return "activity" }

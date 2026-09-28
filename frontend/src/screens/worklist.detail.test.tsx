@@ -298,7 +298,7 @@ describe("a review row on the queue's own page", () => {
     ]);
     await user.click(
       await screen.findByRole("button", {
-        name: /Show what 1, Review the disclosure/,
+        name: /Show details for 1, Review the disclosure/,
       }),
     );
     expect(

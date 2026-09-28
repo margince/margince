@@ -16,7 +16,7 @@ import (
 // visible (the endpoint-scope rule then re-applies per edge).
 func (h Handlers) ListDealStakeholders(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	dealID := pathID[ids.DealKind](id)
-	kind := "deal_stakeholder"
+	kind := dealStakeholderKind
 	rels, page, err := h.store.ListRelationships(r.Context(), ListRelationshipsInput{
 		Kind:   &kind,
 		DealID: &dealID,

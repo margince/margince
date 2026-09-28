@@ -26,6 +26,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -42,6 +44,11 @@ import (
 // admin who mistyped a role and one who mistyped an object need to look in
 // different places.
 var errUnknownObject = fmt.Errorf("%w: no RBAC object with this name is defined", apperrors.ErrNotFound)
+
+var (
+	errWideningRequiresAdmin = fmt.Errorf("%w: only an admin may widen what a role grants", apperrors.ErrPermissionDenied)
+	errAdminRoleFloor        = fmt.Errorf("%w: the admin role keeps its administration grants", apperrors.ErrConflict)
+)
 
 // storedGrant is one object's CRUD as `role.permissions` SPELLS it — lower-case
 // json keys, all four verbs always present.
@@ -61,13 +68,15 @@ type storedGrant struct {
 }
 
 // roleRow is one role as the editor reads it. Deliberately NOT the whole `role`
-// table: id, workspace_id and the timestamps decide nothing on this surface,
-// and row_scope is not editable here (see the contract's deferred-stubs note),
-// so carrying them would publish fields no caller can act on.
+// table: id, workspace_id and the created/updated stamps decide nothing on
+// this surface, so carrying them would publish fields no caller can act on.
 type roleRow struct {
 	Key      string
 	Name     string
 	IsSystem bool
+	RowScope principal.RowScope
+	// ArchivedAt is nil for a live role.
+	ArchivedAt *time.Time
 	// Version is the optimistic-concurrency version (data-model §1.3a) the
 	// client echoes in If-Match. The whole document is ONE jsonb value, so two
 	// admins editing two DIFFERENT objects is a lost write rather than a merge
@@ -78,9 +87,8 @@ type roleRow struct {
 	Objects map[string]storedGrant
 }
 
-// ListRoles returns every role the workspace defines, ordered by key so a
-// re-render never reshuffles the editor. Admin-only: this is the same authority
-// ChangeUserRole carries, and an admin is the only caller who can act on it.
+// ListRoles returns every live role the workspace defines — every role, with
+// includeArchived — ordered by key so a re-render never reshuffles the editor.
 //
 // The grant map is decoded straight off the jsonb rather than through
 // policy.Parse, and that difference is load-bearing. Parse DROPS a grant on an
@@ -90,7 +98,7 @@ type roleRow struct {
 // would leave them with no way to see, let alone clear, a grant that is still
 // stored. Nothing on this path feeds an authorization decision, so showing it
 // grants nothing.
-func (s *Service) ListRoles(ctx context.Context, actor Identity) ([]roleRow, error) {
+func (s *Service) ListRoles(ctx context.Context, actor Identity, includeArchived bool) ([]roleRow, error) {
 	ctx, err := admit(ctx, actor, objectRoleAdmin, principal.ActionRead)
 	if err != nil {
 		return nil, err
@@ -98,8 +106,8 @@ func (s *Service) ListRoles(ctx context.Context, actor Identity) ([]roleRow, err
 	var out []roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT key, name, is_system, version, permissions
-			   FROM role WHERE archived_at IS NULL ORDER BY key`)
+			`SELECT `+roleColumns+` FROM role WHERE $1 OR archived_at IS NULL ORDER BY key`,
+			includeArchived)
 		if err != nil {
 			return err
 		}
@@ -120,10 +128,10 @@ func (s *Service) ListRoles(ctx context.Context, actor Identity) ([]roleRow, err
 }
 
 // SetRoleObjectGrant replaces one role's CRUD on one object and returns the
-// role as stored afterwards. Admin-only.
+// role as stored afterwards.
 //
-// Two refusals precede any write, in this order: the caller must be an admin,
-// and the object must be one a principal could ever hold — a core object or one
+// Two refusals precede any write, in this order: the caller must hold
+// role_admin.update, and the object must be one a principal could ever hold — a core object or one
 // a composed extension registered at boot. The vocabulary check is the whole
 // reason this method is not a two-line UPDATE: a typo'd object stores cleanly,
 // grants nothing, is dropped on every subsequent read, and presents to the
@@ -145,21 +153,13 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 	if !policy.IsGrantableObject(object) {
 		return roleRow{}, errUnknownObject
 	}
-	// The editor is security-administrator authority, not an ordinary toggle: a
-	// holder writing a verb they do not themselves hold would grant themselves
-	// that authority through whichever role they can already be assigned. So the
-	// caller must already hold every verb this write turns on.
-	//
-	// Turning a verb OFF is not checked, and that asymmetry is deliberate: a
-	// delegated holder narrowing a role gives nobody anything. Widening is the
-	// direction that escalates.
-	if err := refuseUnlessCallerHoldsGrant(actor, object, grant); err != nil {
-		return roleRow{}, err
-	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
 		var err error
-		updated, err = applyRoleObjectGrant(ctx, tx, roleKey, object, grant, ifVersion)
+		updated, err = applyRoleObjectGrant(ctx, tx, actor, roleKey, object, grant, ifVersion)
 		return err
 	})
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 // holding it. Inventing a verb build-side is forbidden. The audit row carries
 // the whole fact — actor, role, object, before and after — which is what a
 // permission-change investigation reads.
-func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, roleKey, object string, grant storedGrant, ifVersion *int64) (roleRow, error) {
+func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, actor Identity, roleKey, object string, grant storedGrant, ifVersion *int64) (roleRow, error) {
 	var roleID ids.UUID
 	var version int64
 	var before map[string]storedGrant
@@ -213,6 +213,19 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, roleKey, object string
 	if before, err = decodeRoleObjects(rawBefore); err != nil {
 		return roleRow{}, err
 	}
+	// Turning a verb ON reaches every holder of the role at once, whatever
+	// teams and fields they hold, so only an admin does it. Turning one OFF
+	// gives nobody anything and is open to every holder of the grant.
+	if err := refuseWideningUnlessAdmin(actor, grantAdded(before[object], grant) != storedGrant{}); err != nil {
+		return roleRow{}, err
+	}
+	// The seeded admin role keeps every administration grant it holds. Taking
+	// role_admin or user_admin off it would leave an installation whose admins
+	// can no longer administer, with no screen that could put it back.
+	narrows := !principal.ObjectGrant(grant).Contains(principal.ObjectGrant(before[object]))
+	if roleKey == roleAdmin && narrows && slices.Contains(administrationObjects, object) {
+		return roleRow{}, errAdminRoleFloor
+	}
 	encoded, err := json.Marshal(grant)
 	if err != nil {
 		return roleRow{}, err
@@ -229,7 +242,7 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, roleKey, object string
 		          jsonb_set(permissions, '{objects}', COALESCE(permissions->'objects', '{}'::jsonb), true),
 		          ARRAY['objects', $2::text], $3::jsonb, true)
 		  WHERE id = $1
-		  RETURNING key, name, is_system, version, permissions`,
+		  RETURNING `+roleColumns,
 		roleID, object, encoded)
 	updated, err := scanRoleRow(row)
 	if err != nil {
@@ -240,7 +253,7 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, roleKey, object string
 	// the rep role" gets every grant change in one scan. WHICH object moved is
 	// in the images, which name only the edited key — a full-document image
 	// would bury a one-verb change under thirty unchanged ones.
-	_, err = storekit.Audit(ctx, tx, "update", "role", roleID,
+	_, err = storekit.Audit(ctx, tx, "update", roleEntity, roleID,
 		map[string]any{"objects": map[string]storedGrant{object: before[object]}},
 		map[string]any{"objects": map[string]storedGrant{object: grant}})
 	if err != nil {
@@ -249,12 +262,16 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, roleKey, object string
 	return updated, nil
 }
 
+// roleColumns are the columns scanRoleRow reads, in its order, for every query
+// and RETURNING that feeds it.
+const roleColumns = `key, name, is_system, version, permissions, archived_at`
+
 // scanRoleRow reads the editor's columns off any row-ish source (the list
-// query, or the UPDATE's RETURNING) so both spell the decode once.
+// query, or an UPDATE's RETURNING) so every one spells the decode once.
 func scanRoleRow(row pgx.Row) (roleRow, error) {
 	var out roleRow
 	var raw []byte
-	if err := row.Scan(&out.Key, &out.Name, &out.IsSystem, &out.Version, &raw); err != nil {
+	if err := row.Scan(&out.Key, &out.Name, &out.IsSystem, &out.Version, &raw, &out.ArchivedAt); err != nil {
 		return roleRow{}, err
 	}
 	objects, err := decodeRoleObjects(raw)
@@ -262,7 +279,30 @@ func scanRoleRow(row pgx.Row) (roleRow, error) {
 		return roleRow{}, err
 	}
 	out.Objects = objects
+	if out.RowScope, err = policy.RowScopeOf(raw); err != nil {
+		return roleRow{}, err
+	}
 	return out, nil
+}
+
+// grantAdded is the verbs a write turns on that the stored grant did not hold.
+func grantAdded(before, after storedGrant) storedGrant {
+	return storedGrant{
+		Create: after.Create && !before.Create,
+		Read:   after.Read && !before.Read,
+		Update: after.Update && !before.Update,
+		Delete: after.Delete && !before.Delete,
+	}
+}
+
+// refuseWideningUnlessAdmin refuses a caller who is not an admin a write that
+// widens what a role grants: a new role, a restored one, a wider row scope or a
+// verb turned on. Narrowing needs no ceiling, because it gives nobody anything.
+func refuseWideningUnlessAdmin(actor Identity, widens bool) error {
+	if widens && !actor.hasRole(roleAdmin) {
+		return errWideningRequiresAdmin
+	}
+	return nil
 }
 
 // decodeRoleObjects reads `permissions.objects` off the stored jsonb. A

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Bookmark } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -11,6 +11,11 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import type { ListQuery, SavedViewTab } from "./listquery";
+import {
+  ManageViewsButton,
+  savedViewsKey,
+  useSaveView,
+} from "./savedviews.manage";
 import { decode, encode, isComplete, type Node } from "./segmentpredicate";
 
 // A saved view is the reader's own list state, by name: the search, the sort,
@@ -153,7 +158,7 @@ function filterStateFrom(tree: Node): Record<string, unknown> {
 /** The caller's saved views for one resource, newest last. */
 export function useSavedViews(resource: ViewResource) {
   return useQuery({
-    queryKey: ["views", resource],
+    queryKey: savedViewsKey(resource),
     queryFn: async (): Promise<SavedView[]> => {
       const { data, error } = await api.GET("/views", {
         params: { query: { resource, limit: 50 } },
@@ -202,56 +207,6 @@ export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
         ]
       : [];
   });
-}
-
-/**
- * Save the current list as a named view, and remove one that has served its
- * purpose.
- *
- * Both invalidate the resource's view list, so the tab rail is whatever the
- * server holds rather than a local copy that drifts from it.
- */
-export function useSaveView(resource: ViewResource) {
-  const client = useQueryClient();
-  const invalidate = () =>
-    client.invalidateQueries({ queryKey: ["views", resource] });
-
-  // The blob is the caller's, not this hook's: a list saves its dials under one
-  // key and the segment builder saves a tree under another, and both go through
-  // ONE write so there is one place that stamps the resource and invalidates the
-  // rail. A second mutation per shape is how the two would drift.
-  const create = useMutation({
-    mutationFn: async (
-      input: Readonly<{ name: string; query: Record<string, unknown> }>,
-    ) => {
-      const { data, error } = await api.POST("/views", {
-        body: {
-          resource,
-          name: input.name,
-          query: input.query,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: invalidate,
-  });
-
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/views/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: invalidate,
-  });
-
-  return { create, remove };
 }
 
 /**
@@ -343,6 +298,12 @@ export function SaveViewAction({
       )}
       {narrowed && (
         <SaveViewButton resource={resource} blob={() => listStateFrom(query)} />
+      )}
+      {/* Beside Save, because it is the same set of the reader's own views:
+          a tab can be pressed but not named or removed, so this is the only
+          place a view that has served its purpose can go. */}
+      {views.data && (
+        <ManageViewsButton resource={resource} views={views.data} />
       )}
     </>
   );

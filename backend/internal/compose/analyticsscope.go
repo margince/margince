@@ -280,7 +280,7 @@ func resolveAnalyticsScope(
 // workspaceLabel is what the whole-installation population is called. Held
 // here rather than translated per caller: the label rides on the answer, and
 // an answer's population must read the same in a share as on the screen.
-const workspaceLabel = "Whole workspace"
+const workspaceLabel = "Whole company"
 
 func defaultScopeFor(p principal.Principal, lens principal.RowScope) (ResolvedScope, error) {
 	switch lens {

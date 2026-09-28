@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { AiCallsCard, CallDetailPanel } from "./aicalls";
+import { AiCallsCard } from "./aicalls";
+import { CallDetailPanel } from "./aicalls-detail";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card is gated on ai_diagnostics:read, so /me decides which of its two
@@ -17,6 +18,7 @@ const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 const summary = {
   id: "call-1",
   occurred_at: "2026-07-20T10:00:00Z",
+  kind: "completion",
   task: "capture_classify",
   tier: "cheap_cloud",
   provider: "gemini",
@@ -32,6 +34,7 @@ const summary = {
   degraded: true,
   error_sentinel: "provider_unavailable",
   has_payload: true,
+  decision_attempted: false,
 };
 const detail = {
   ...summary,
@@ -42,6 +45,7 @@ const detail = {
     {
       attempt: 1,
       is_terminal: false,
+      kind: "completion",
       attempt_reason: "",
       tokens_in: 100,
       tokens_out: 0,
@@ -51,6 +55,7 @@ const detail = {
     {
       attempt: 2,
       is_terminal: true,
+      kind: "completion",
       attempt_reason: "retry_on_5xx",
       tokens_in: 100,
       tokens_out: 20,

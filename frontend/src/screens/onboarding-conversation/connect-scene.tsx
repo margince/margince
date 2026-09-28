@@ -461,11 +461,7 @@ function ConnectGuarantees() {
 function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const t = useT();
   return (
-    <div
-      className="readfail warning"
-      role="alert"
-      style={{ maxWidth: 460, margin: "0 auto" }}
-    >
+    <div className="readfail warning ob-conv-rosterfail" role="alert">
       <span className="rfi">
         <Circle aria-hidden />
       </span>
@@ -474,8 +470,8 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
         <p className="rfp">{t("ob.conv.connect.rosterFailedBody")}</p>
         <Button
           variant="ghost"
+          className="ob-conv-rosterfail-retry"
           onClick={onRetry}
-          style={{ marginTop: "var(--space-3)" }}
         >
           {t("common.retry")}
         </Button>

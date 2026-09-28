@@ -95,7 +95,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// the contract tightened and the REST door refuses (#982) — one credential,
 	// two answers, which is what ADR-0055 exists to prevent.
 	opts = append(opts, withContractTierFloor(),
-		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider))
+		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
+		agents.WithBaseLanguage(installationLanguage(pool)))
 	// ONE approvals service for both directions of the 🟡 loop, and it is the
 	// service that carries the follow-on EFFECTS. Staging can run on a bare
 	// engine — it writes a proposal and nothing else — but deciding cannot: a
@@ -120,6 +121,10 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// entry point, which is what the REST route calls too.
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
+	// The bulk change runs the engine the /v1/bulk routes run, admitted against
+	// this registry's own gate so an agent's changed records meet the write
+	// counter the registry charges them to.
+	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate)})
 	// enrich rides the site-read seam rather than the datasource one: it reads
 	// the company's OWN website, which no record provider can answer.
 	agents.RegisterEnrichTool(registry, provider, enricher)
@@ -208,11 +213,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// The comms tools ride the same store paths as the HTTP transport. The risk
 	// decorator adds the coverage findings a deal anchor would otherwise
 	// assemble without.
-	retriever := riskAwareRetriever{
-		pool:  pool,
-		inner: search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder),
-	}
-	agents.RegisterIntentTools(registry, retriever, meetingBrief)
+	searchRetriever := search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder)
+	retriever := riskAwareRetriever{pool: pool, inner: searchRetriever}
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, provider)
 	// The transport directory, read from this package's boot snapshot — the
 	// composed set is the composition root's fact, so the module takes it as a
 	// seam rather than enumerating connectors it may not reach.
@@ -223,6 +226,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// stamped, the caller's own row scope is re-applied, and the record is
 	// charged against their read bound.
 	agents.RegisterContextSearchTool(registry, provider, retriever)
+	// The evidence behind a saved run: the report drawer's own drill-through
+	// names the records, the same retriever searches only those, and each
+	// listed record is read back through the provider as search_context's are.
+	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
+		db: InstallationDB(pool), floor: analyticsquery.DefaultFloor,
+		ranker: searchRetriever, classifier: searchRetriever,
+	}.SearchReportEvidence)
 	// Identity resolution. The ladder is workspace-wide by design — a duplicate
 	// is a duplicate whoever is looking — so the provider is not decoration
 	// here: it is the ONLY thing that applies this caller's row scope to a
@@ -262,14 +272,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		introPathLister(pool),
 		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
-	// The location check (🟢), and the verb the probe card hangs off. It reads
-	// no record and takes no seam, so it registers unconditionally.
-	//
-	// TEMPORARY. It exists to answer one question — does a chat host let a
-	// Margince card read the device's position — which no document can answer
-	// and which has a different answer per host. Delete it and its view once the
-	// matrix is filled in; see apps.GeoProbeURI.
-	agents.RegisterGeoProbeTool(registry)
+	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
 	// The composed extension set's governed tools ride the same registry
 	// and admission gate as the core tools, registered last so a name that
 	// collides with a core verb fails loudly (RegisterExtensions stashed
@@ -347,6 +350,11 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 		// ambiguity the field exists to prevent, and a model acts on it.
 		if outcome.ExcludedByPermission != nil {
 			result["excluded_by_permission"] = *outcome.ExcludedByPermission
+		}
+		// The owner narrowing too: a model reading a per-rep breakdown with no
+		// signal would report it as every rep's.
+		if outcome.PopulationNarrowed != "" {
+			result["population_narrowed"] = outcome.PopulationNarrowed
 		}
 		return json.Marshal(result)
 	}

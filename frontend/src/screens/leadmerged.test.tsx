@@ -89,7 +89,11 @@ describe("a merged-away lead's page", () => {
       </StoryProviders>,
     );
 
-    expect(await screen.findByText(en["lead.standing.merged"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["lead.standing.merged"], {
+        selector: ".r360-standing",
+      }),
+    ).toBeTruthy();
     // `contacted` with a first response is "their move" on a live lead. Drawn
     // here it would send a rep back to a prospect somebody else already owns.
     expect(screen.queryByText(en["lead.standing.theirMove"])).toBeNull();

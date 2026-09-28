@@ -13,14 +13,15 @@ import {
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
 
-// LAYOUT IS A CLASS, NOT A STYLE ATTRIBUTE, AND THE COUNT IS PINNED.
+// LAYOUT IS A CLASS, NOT A STYLE ATTRIBUTE, IN EVERY FILE.
 //
 // The values are already tokens — `check-ds-spacing.sh` and `type-source.test.ts`
 // see to that — so what is left is a rule nobody can restyle: a margin written
 // at a call site belongs to that one element, and the next author who needs the
 // same step writes it again a line further down, so a spacing decision has as
 // many homes as there are elements wearing it. A class is one home, and
-// `Stack` / `Row` are the same answer for a unit that has no stylesheet.
+// `Stack` / `Row` are the same answer for a unit that has no stylesheet. Every
+// file is held at zero, so one finding fails: there is no budget to spend.
 //
 // ONLY A STATIC VALUE IS A RULE. An identifier, a call, a template with a
 // substitution, a conditional or a member access is a number the render
@@ -34,11 +35,10 @@ import {
 // A reader of the rendered page cannot tell those apart, and a census that
 // could is one an author steps around by adding a `?:`.
 //
-// The width/height family IS in scope, measured on its own before it was let
-// in: a static dimension is a rule a class holds as readily as a margin. The
-// data case the family is usually excused for — a column width off the table's
-// config — is already exempt one rule up, so excusing it twice would forgive
-// nothing but the hand-written ones.
+// The width/height family IS in scope: a static dimension is a rule a class
+// holds as readily as a margin. The data case the family is usually excused
+// for — a column width off the table's config — is already exempt one rule up,
+// so excusing it twice would forgive nothing but the hand-written ones.
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const repoRoot = join(frontendRoot, "..");
@@ -66,84 +66,6 @@ const STYLE_ANNOTATION = /\bCSSProperties\b/;
 const FIX =
   "a class in the screen's sheet, or `Stack`/`Row` from design-system/stack.tsx";
 
-/**
- * How many inline layout rules each file carries. The entry is EXACT in both
- * directions: a file over it fails naming the property, and a file under it
- * fails until the entry is lowered in the same change, because a baseline left
- * high is a budget the next author spends without deciding to.
- *
- * A file, not a line: a line number moves whenever anything above it is edited,
- * and a baseline that churns on unrelated changes is one contacts regenerate
- * without reading. Inline rather than in a JSON file beside it, the way
- * `cardzones.test.ts` keeps its allowlist — a number a reader meets in the same
- * file as the rule it bounds is a number they can weigh.
- */
-const BASELINE = new Map<string, number>([
-  ["frontend/src/app/errorboundary.tsx", 1],
-  ["frontend/src/mcp-apps/story-hosts.tsx", 2],
-  ["frontend/src/screens/addemploymentmodal.tsx", 1],
-  ["frontend/src/screens/ai.tsx", 4],
-  ["frontend/src/screens/aiexport.tsx", 1],
-  ["frontend/src/screens/analytics.tsx", 4],
-  ["frontend/src/screens/approvaleditor.tsx", 1],
-  ["frontend/src/screens/archive.tsx", 2],
-  ["frontend/src/screens/automationdetail.tsx", 1],
-  ["frontend/src/screens/automations.datefield.tsx", 1],
-  ["frontend/src/screens/billingcontactmodal.tsx", 1],
-  ["frontend/src/screens/client.tsx", 6],
-  ["frontend/src/screens/commissiondecide.tsx", 3],
-  ["frontend/src/screens/common.tsx", 2],
-  ["frontend/src/screens/companies.tsx", 5],
-  ["frontend/src/screens/companyreject.tsx", 2],
-  ["frontend/src/screens/create.tsx", 2],
-  ["frontend/src/screens/deal360/confirmadvance.tsx", 1],
-  ["frontend/src/screens/deal360/dealactions.tsx", 4],
-  ["frontend/src/screens/deal360/dealbrief.tsx", 2],
-  ["frontend/src/screens/deal360/outcomereviewmodal.tsx", 1],
-  ["frontend/src/screens/deals.tsx", 3],
-  ["frontend/src/screens/edit.tsx", 1],
-  ["frontend/src/screens/employmentedit.tsx", 1],
-  ["frontend/src/screens/employmentimport.tsx", 1],
-  ["frontend/src/screens/historyentries.tsx", 1],
-  ["frontend/src/screens/imap-connect-form.tsx", 1],
-  ["frontend/src/screens/leads.list.tsx", 3],
-  ["frontend/src/screens/leadsignals.tsx", 6],
-  ["frontend/src/screens/listquery.tsx", 2],
-  ["frontend/src/screens/merge.tsx", 5],
-  ["frontend/src/screens/oauthconsent.tsx", 9],
-  ["frontend/src/screens/offerlinebilling.tsx", 1],
-  ["frontend/src/screens/offerlinerates.tsx", 2],
-  ["frontend/src/screens/onboarding-company-form.tsx", 5],
-  ["frontend/src/screens/onboarding-conversation/connect-scene.tsx", 3],
-  ["frontend/src/screens/partnercommissions.tsx", 3],
-  ["frontend/src/screens/partners.tsx", 3],
-  ["frontend/src/screens/projecthealthmodal.tsx", 1],
-  ["frontend/src/screens/projectstakeholders.tsx", 3],
-  ["frontend/src/screens/recordteamassign.tsx", 1],
-  ["frontend/src/screens/relationshiprows.tsx", 7],
-  ["frontend/src/screens/relationships.tsx", 7],
-  ["frontend/src/screens/repeatablerowsfield.tsx", 4],
-  ["frontend/src/screens/scheduledsends.tsx", 9],
-  ["frontend/src/screens/share.tsx", 1],
-  ["frontend/src/screens/telegram-connect-form.tsx", 1],
-]);
-
-/**
- * What the whole tree carries, so a rise is ONE reviewable number rather than
- * fifty-odd entries a reader has to diff against each other.
- */
-const TOTAL = 131;
-
-/**
- * The two trees held at ZERO rather than baselined, by taking no entry at all:
- * an entry of nothing is what the census arm above already compares against, so
- * refusing the ENTRY is the whole rule. This directory publishes the
- * alternative, so a primitive laying itself out inline is the gate's own author
- * ignoring it; a unit ships no stylesheet, so `Stack` and `Row` are its only
- * spelling.
- */
-const HELD_AT_ZERO = [/^frontend\/src\/design-system\//, /^extensions\//];
-
 /** Files that are not the rendered product: their own suite and their own docs. */
 const NOT_THE_PRODUCT = new RegExp(`\\.(test|stories)${MODULE_FILE.source}`);
 
@@ -164,7 +86,7 @@ function modules(): string[] {
     .filter((path) => !NOT_THE_PRODUCT.test(path));
 }
 
-/** A path as the baseline spells it: relative to the repository, forward slashes. */
+/** A path as a finding spells it: relative to the repository, forward slashes. */
 function pathOf(file: string): string {
   return relative(repoRoot, file).replaceAll("\\", "/");
 }
@@ -390,20 +312,11 @@ function inlineLayoutIn(where: string, source: ts.SourceFile): InlineLayout[] {
   return found.sort((a, b) => a.line - b.line);
 }
 
-function countsByFile(found: readonly InlineLayout[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const one of found) {
-    counts.set(one.where, (counts.get(one.where) ?? 0) + 1);
-  }
-  return counts;
-}
-
 describe("layout is a class, not a style attribute", () => {
   const files = modules();
   const found = files.flatMap((file) =>
     inlineLayoutIn(pathOf(file), sourceFileAt(file)),
   );
-  const counts = countsByFile(found);
 
   it("reads a corpus that is every rendered module in the tree", () => {
     // A census that read a smaller tree would report the same word, PASS. So
@@ -419,41 +332,12 @@ describe("layout is a class, not a style attribute", () => {
     expect(paths).toContain("extensions/openchannel/frontend/screen.tsx");
   });
 
-  it("carries the total it is pinned at", () => {
-    expect(found.length).toBe(TOTAL);
-  });
-
-  it("carries no file over its baseline", () => {
-    const over = [...counts]
-      .filter(([where, count]) => count > (BASELINE.get(where) ?? 0))
-      .flatMap(([where]) =>
-        found
-          .filter((one) => one.where === where)
-          .map(
-            (one) =>
-              `${one.where}:${one.line}: \`${one.property}\` is laid out inline — ${FIX}`,
-          ),
-      );
-    expect(over, over.join("\n")).toEqual([]);
-  });
-
-  it("keeps no baseline entry above what the tree carries", () => {
-    const behind = [...BASELINE]
-      .filter(([where, allowed]) => (counts.get(where) ?? 0) < allowed)
-      .map(([where, allowed]) => {
-        const count = counts.get(where) ?? 0;
-        return count === 0
-          ? `${where}: carries none — remove the entry`
-          : `${where}: carries ${count}, not ${allowed} — lower the entry to ${count}`;
-      });
-    expect(behind, behind.join("\n")).toEqual([]);
-  });
-
-  it("baselines nothing in this directory or the unit tier", () => {
-    const refused = [...BASELINE.keys()]
-      .filter((where) => HELD_AT_ZERO.some((tier) => tier.test(where)))
-      .map((where) => `${where}: this tier takes no baseline entry — ${FIX}`);
-    expect(refused, refused.join("\n")).toEqual([]);
+  it("lays nothing out inline", () => {
+    const inline = found.map(
+      (one) =>
+        `${one.where}:${one.line}: \`${one.property}\` is laid out inline — ${FIX}`,
+    );
+    expect(inline, inline.join("\n")).toEqual([]);
   });
 
   // The detector must be able to SEE each shape, or a clean tree and a blind

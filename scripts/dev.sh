@@ -1179,6 +1179,7 @@ up)
       openai)            _env="OPENAI_API_KEY" ;;
       gemini)            _env="GEMINI_API_KEY" ;;
       openai_compatible) _env="OPENAI_COMPATIBLE_API_KEY" ;;
+      jev)               _env="TYPESAFE_API_KEY" ;;
     esac
     if [[ -n "$_env" && -z "${!_env:-}" ]]; then
       missing_keys="$missing_keys $_env"

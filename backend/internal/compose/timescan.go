@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -90,6 +91,17 @@ func (a dateFieldScanAdapter) Candidates(ctx context.Context, object, column str
 	return out, nil
 }
 
+// quietScanStore is the activities store the quiet-record scan reads through,
+// told how to ask capture whether a record owner's mail is visible. Without it
+// the scan calls a record silent when Margince simply cannot see the owner's
+// mailbox.
+func quietScanStore(db *database.DB) *activities.Store {
+	return activities.NewStore(db).WithOwnerMailbox(activities.OwnerMailbox{
+		CaughtUp:  capture.MailboxCaughtUpSQL,
+		Providers: MailProviders(),
+	})
+}
+
 // NewTimeScanner assembles the clock-trigger scanner for the worker
 // process role: the SAME workflow engine and starter registration
 // NewWorkflowEngine builds (so no_activity_reminder's Apply drives
@@ -108,7 +120,7 @@ func NewTimeScannerWithClock(db *database.DB, now func() time.Time, log *slog.Lo
 	engine := NewWorkflowEngine(db)
 	pool := db.Pool()
 	return automation.NewTimeScannerWithClock(engine,
-		activityScanAdapter{store: activities.NewStore(db)},
+		activityScanAdapter{store: quietScanStore(db)},
 		dateFieldScanAdapter{svc: customfields.NewService(pool, nil)},
 		now, log)
 }

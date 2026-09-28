@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -71,14 +72,16 @@ type SendEmailCommand struct {
 // reading the anchor through the record seam.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewSendEmailCall(records datasource.SystemOfRecordProvider, cmd SendEmailCommand) GovernedCall {
+func NewSendEmailCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd SendEmailCommand) GovernedCall {
 	return bind[SendEmailCommand](&sendEmailResolver{
-		anchor: anchoredRecord{records: records, entityType: datasource.EntityActivity},
+		language: language,
+		anchor:   anchoredRecord{records: records, entityType: datasource.EntityActivity},
 	}, cmd)
 }
 
 type sendEmailResolver struct {
-	anchor anchoredRecord
+	anchor   anchoredRecord
+	language baselanguage.Resolver
 }
 
 // Subject names the ANCHOR the approval binds to: the thread being replied to
@@ -99,7 +102,7 @@ func (r *sendEmailResolver) Subject(ctx context.Context, cmd SendEmailCommand) (
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary:       describeSend(cmd),
+		Summary:       describeSend(summaryIn(ctx, r.language), cmd),
 	}, nil
 }
 
@@ -128,12 +131,12 @@ func (r *sendEmailResolver) Guards(ctx context.Context, cmd SendEmailCommand) er
 
 // describeSend is the one line the inbox shows for a mail send: who it
 // reaches, cc included, and what it says it is about.
-func describeSend(cmd SendEmailCommand) string {
-	summary := fmt.Sprintf("Send an email to %s", strings.Join(cmd.To, ", "))
+func describeSend(said summaryCopy, cmd SendEmailCommand) string {
+	summary := fmt.Sprintf(said.sendEmail, strings.Join(cmd.To, ", "))
 	if len(cmd.Cc) > 0 {
-		summary += fmt.Sprintf(", cc %s", strings.Join(cmd.Cc, ", "))
+		summary += fmt.Sprintf(said.cc, strings.Join(cmd.Cc, ", "))
 	}
-	return summary + fmt.Sprintf(", subject %q", cmd.Subject)
+	return summary + fmt.Sprintf(said.sendSubject, cmd.Subject)
 }
 
 // SendMessageCommand is one channel reply, whichever door asked for it.
@@ -153,8 +156,9 @@ type SendMessageCommand struct {
 // sendMessageResolver.Guards for what it refuses and why the seam carries it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewSendMessageCall(records datasource.SystemOfRecordProvider, channels ChannelKinds, cmd SendMessageCommand) GovernedCall {
+func NewSendMessageCall(records datasource.SystemOfRecordProvider, channels ChannelKinds, language baselanguage.Resolver, cmd SendMessageCommand) GovernedCall {
 	return bind[SendMessageCommand](&sendMessageResolver{
+		language: language,
 		anchor:   anchoredRecord{records: records, entityType: datasource.EntityActivity},
 		channels: channels,
 	}, cmd)
@@ -163,6 +167,7 @@ func NewSendMessageCall(records datasource.SystemOfRecordProvider, channels Chan
 type sendMessageResolver struct {
 	anchor   anchoredRecord
 	channels ChannelKinds
+	language baselanguage.Resolver
 }
 
 // Subject names the ANCHOR the approval binds to, exactly as the mail twin's
@@ -180,7 +185,7 @@ func (r *sendMessageResolver) Subject(ctx context.Context, cmd SendMessageComman
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf("Reply on a captured conversation: %q", cmd.Body),
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).sendMessage, cmd.Body),
 	}, nil
 }
 

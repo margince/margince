@@ -36,21 +36,8 @@ fixture:
 expect:
   outcome: accepted
   answer: [asks_us, informs_us]
-  rubric: >
-    Both name a time and the verdicts differ. The first proposes one in plain
-    text that nobody has confirmed, and reserves phase 3 as still open, so two
-    separate things wait on the recipient side: asks_us. The second offers a
-    time as a calendar invitation and asks nothing a calendar response cannot
-    settle: informs_us.
-    Score high only if both are right. A model that answers informs_us to the
-    first is reading a warm opening line as the whole message and treating a
-    proposed slot as news — that is the exact failure this scenario exists to
-    catch, where a customer proposing a meeting was reported as waiting on
-    nobody, and it should score at the floor.
-    A model that answers asks_us to both errs toward keeping work visible, which
-    is the cheaper direction, and should score in the middle: it loses the
-    distinction that makes the verdict useful on invitations.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed verdict per message, and the check requires every
+    verdict exactly. The rubric only ranked the wrong answers, which the check
+    fails outright.

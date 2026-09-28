@@ -1,0 +1,4 @@
+/* The confirm sentence stands off the verbs it asks about. */
+.archive-confirm {
+  margin-bottom: var(--space-4);
+}

@@ -42,10 +42,11 @@ func TestSummarizeRunKeepsModelIdentityCostAndUnpricedUsageVisible(t *testing.T)
 	if summary.TokensIn != 1_700 || summary.TokensOut != 170 || summary.LatencyMS != 1_500 {
 		t.Fatalf("summary usage = %+v", summary)
 	}
-	// First call: 1000 input + 500 output. Second: 400 uncached input,
-	// 100 cache-read at the zero test rate, plus 250 output.
-	if summary.EstimatedCostMicroUSD != 2_150 {
-		t.Fatalf("estimated cost = %d, want 2150 micro-USD", summary.EstimatedCostMicroUSD)
+	// First call: 1000 input + 500 output. Second: 400 uncached input, 100
+	// cache-read at the input rate (the test rate publishes no cache price, so
+	// there is no discount), plus 250 output.
+	if summary.EstimatedCostMicroUSD != 2_250 {
+		t.Fatalf("estimated cost = %d, want 2250 micro-USD", summary.EstimatedCostMicroUSD)
 	}
 	if len(summary.Models) != 2 || summary.Models[0].ConfiguredModel != "gemini-3.5-flash" ||
 		summary.Models[0].ServedModel != "gemini-3.5-flash-2026-07" || summary.Models[0].CallAttempts != 2 {

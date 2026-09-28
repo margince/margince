@@ -17,6 +17,7 @@ import {
 // nothing yet.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];
+type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
 
 // One of each kind the classifier can answer with, so both halves of the
 // decision column are visible in one frame: the three admitted kinds carry the
@@ -89,11 +90,13 @@ const OVERRULED: SenderDecision[] = [
   ...EVERY_KIND.slice(0, 2),
 ];
 
-function story(rows: SenderDecision[]) {
+function story(rows: SenderDecision[], waiting: AwaitingContact[] = []) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /capture/senders": () => jsonResponse({ data: rows }),
+      "GET /capture/contacts-awaiting-decision": () =>
+        jsonResponse({ data: waiting }),
     });
     return (
       <StoryProviders>
@@ -118,3 +121,22 @@ export const Overruled: Story = { render: story(OVERRULED) };
 // were all already known. The card still stands, because its absence would read
 // as the feature being off.
 export const NothingDecided: Story = { render: story([]) };
+
+// Contacts still visible to this seat alone because nothing has decided their
+// sender. The second one's address never reached the senders list above it,
+// which is why the group is a read of its own: the admin card counts both.
+export const WaitingOnDecision: Story = {
+  render: story(EVERY_KIND.slice(0, 2), [
+    {
+      contact_id: "0190b7a2-0000-7000-8000-000000000011",
+      display_name: "Jana Keller",
+      emails: ["jana@commercetools.com"],
+      captured_at: "2026-09-02T08:15:00Z",
+    },
+    {
+      contact_id: "0190b7a2-0000-7000-8000-000000000012",
+      emails: ["m.ortiz@steireif.de"],
+      captured_at: "2026-09-10T14:40:00Z",
+    },
+  ]),
+};

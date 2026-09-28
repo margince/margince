@@ -136,7 +136,9 @@ describe("the Google app card", () => {
     mount(fromEnvironment());
     expect(
       await screen.findByText(
-        new RegExp(`In use from this deployment.s configuration: ${CLIENT_ID}`),
+        new RegExp(
+          `In use from this installation.s configuration: ${CLIENT_ID}`,
+        ),
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/No app is available/)).toBeNull();
@@ -164,10 +166,8 @@ describe("the Google app card", () => {
 
     await user.click(screen.getByRole("button", { name: /Copy Sign-in URI/i }));
 
-    expect(
-      await screen.findByText(/this browser refused the clipboard/i),
-    ).toBeTruthy();
-    expect(screen.getByText(/copy it by hand/i)).toBeTruthy();
+    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
+    expect(screen.getByText(/copy it manually/i)).toBeTruthy();
   });
 
   // The clipboard holds ONE address. Two rows both reading Copied would send an

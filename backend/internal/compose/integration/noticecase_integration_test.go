@@ -99,6 +99,37 @@ func TestAContactWhoWroteToUsOwesNothing(t *testing.T) {
 	}
 }
 
+// TestAContactCarriedOverFromAnotherCRMOwesNothing: a create stamped with the
+// reserved import namespace is a contact moved from the CRM used before. That
+// system held it under its own notice duty, so the move opens no case — before
+// this, one portal import put a disclosure per contact on the Focus list.
+func TestAContactCarriedOverFromAnotherCRMOwesNothing(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var contact struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"full_name": "Carried Over", "source": "import", "source_system": "mirror:hubspot",
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create an imported contact → %d", status)
+	}
+	var kind string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT kind FROM contact_acquisition_evidence WHERE contact_id = $1`, contact.ID).Scan(&kind); err != nil {
+		t.Fatal(err)
+	}
+	if kind != "crm_migration" {
+		t.Fatalf("acquisition kind %q, want crm_migration for a create in the import namespace", kind)
+	}
+
+	driveNoticeCase(t, e, contact.ID)
+
+	if _, _, _, found := noticeCaseFor(t, e, contact.ID); found {
+		t.Error("a contact carried over from the previous CRM was recorded as owed a notice")
+	}
+}
+
 // TestARedeliveredCreationRecordsOneDuty holds the idempotency the at-least-once
 // bus requires. The guarantee is the unique index on acquisition_id, not the
 // dedupe cache in front of it — which marks AFTER the effect, so a crash in

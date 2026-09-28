@@ -7,6 +7,7 @@ import type { Locale, PluralTranslator, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { IDLE_ORDER, type IdleKind, TIPS } from "./agentrail-copy";
 import { aroundTheName, plain, type SpokenLine } from "./ai-activity-speak";
+import { paletteHotkeyCaps } from "./palette";
 import type { Screen } from "./router";
 
 // What the agent section says while it is at rest, and how long each thing gets
@@ -162,7 +163,7 @@ export type RestingFacts = Readonly<{
  *
  * Every one is a reading it already made. A kind with nothing to report is
  * absent rather than reworded into a cheerful nothing, so an installation with a
- * clean queue and no licence rotates through two lines and not five.
+ * clean queue and no fresh runs rotates through one line and not three.
  *
  * Never empty: an installation with nothing at all to report says so, and that
  * sentence is a reading like any other — it is what a clean queue and a reachable
@@ -200,15 +201,18 @@ export function restingReadings(
  * `here` drops the tip that names the screen they are standing on. It is the
  * cheapest possible piece of situational sense and it buys more than it costs:
  * a rail telling somebody on Home to go to Home is the one line that would make
- * a reader stop trusting the other three.
+ * a reader stop trusting the other three. `platform` spells the palette's
+ * shortcut in the keys this reader's keyboard has, for the tip that names it.
  */
 export function restingTips(
   here: Screen,
-  t: (key: MessageKey) => string,
+  t: (key: MessageKey, params?: Record<string, string>) => string,
+  platform: string,
 ): readonly SpokenLine[] {
+  const chord = paletteHotkeyCaps(platform).join(" ");
   return TIPS.flatMap((tip) => {
     if (tip.to === null) {
-      return [plain(t(tip.key))];
+      return [plain(t(tip.key, { chord }))];
     }
     if (tip.to.screen === here) {
       return [];

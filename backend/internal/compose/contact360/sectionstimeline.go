@@ -211,26 +211,26 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 	return info, nil
 }
 
+// timelineProjection is the shared select list plus this page's one extra.
+//
+// A function rather than a literal in the query, so the composition is a thing
+// a test can hold: the shared list first and whole, then exactly one column
+// the scan knows to expect last. Read off the query string, a test would be
+// asserting against the WHERE clause and the ORDER BY as well.
+func timelineProjection(contentArm string) string {
+	return activities.ActivityProjection(contentArm) + `,
+		       EXISTS (SELECT 1 FROM activity_link fl
+		                WHERE fl.activity_id = a.id AND fl.contact_id = $%[1]d) AS filed_here`
+}
+
 // readActivities is the shared body of the timeline and next-step reads.
 //
-// It selects channel_provider, and that is not decoration: since ADR-0107/A158
-// the kind says only that an interaction was a message, so a row without the
-// provider renders as the bare word "message" and a Telegram thread becomes
-// indistinguishable from a unit's. It also selects version, for the same
-// reason and by the same mistake a second time: AudienceAction sends the
-// row's version as If-Match and refuses to write blind without one, so a row
-// missing it cannot have its audience narrowed from this page at all — the
-// request never leaves the browser, and the error names no cause because
-// there was no request to have one (margince#3249). This SELECT is a
-// hand-written sibling of activities.activityColumns, which is exactly how
-// it came to be missing a column for a whole slice, twice.
-// TestTheContact360TimelineNamesTheTransportThatCarriedAMessage,
-// TestTheContact360TimelineCarriesTheVersionAWriteNeeds and
-// TestTheContact360TimelineSaysAMeetingCameFromATranscript are the guards
-// that say so out loud. The third is the third instance: source_system was
-// missing, so a meeting logged as a transcript reached the contact's history
-// with nothing to say it was one, and the card that offers its reading drew
-// on the company and the deal but not on the contact who was in the room.
+// What it selects is the activities module's projection, and what it adds is
+// its own: the scopes below — which activities this contact reaches, what a
+// project narrowing removes, what the discover gate admits — are this page's
+// question, and the column list never was. A row here answers the same fields
+// a row off /activities answers, because it is read by the same list and
+// folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -247,19 +247,17 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return nil, false, err
 	}
+	// The SELECT list is the activities module's, with this page's one extra
+	// column after it. Everything before the extra is scanned by the shared
+	// projection, so there is no list here to fall behind that one.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, a.kind, a.channel_provider, a.subject, a.body, a.direction,
-		       a.occurred_at, a.due_at, a.is_done, a.assignee_id, a.source, a.captured_by, a.created_at,
-		       a.thread_key, a.bulk_mail_attested, a.audience, a.audience_reason,
-		       a.source_system, a.version, (%s) AS content_available,
-		       %s,
-		       EXISTS (SELECT 1 FROM activity_link fl
-		                WHERE fl.activity_id = a.id AND fl.contact_id = $%d) AS filed_here
+		SELECT `+timelineProjection(contentArm)+`
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		contentArm, sourceAuthorColumns, contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+		contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)),
+		scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}

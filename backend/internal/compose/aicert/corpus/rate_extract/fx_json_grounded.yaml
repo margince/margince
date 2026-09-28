@@ -15,16 +15,9 @@ expect:
   answer:
     USD: '0.9259259259'
     GBP: '1.1627906977'
-  rubric: >
-    This is a Frankfurter-style rates JSON body on one passage: base EUR, so
-    "rates" maps 1 EUR to each listed currency — 1 EUR = 1.08 USD and
-    1 EUR = 0.86 GBP. Score how faithfully the two pairs are extracted in the
-    direction the JSON states (from EUR), each citing that one passage, with the
-    rate as the plain decimal string drawn from the body (not inverted, not
-    converted, no currency symbol). confidence must be a decimal string within
-    0.0-1.0. Penalize an inverted or converted rate, an invented pair, an
-    out-of-range confidence, or a rate not present in the body.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    Every value the sheet stores is compared exactly, and the cited passage must
+    print it. The gate drops an uncited, untracked or low-confidence row before
+    the sheet sees it, so nothing else the rubric asked reaches an
+    administrator.

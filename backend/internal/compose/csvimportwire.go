@@ -16,6 +16,8 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"sort"
+	"strconv"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -130,6 +132,72 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		Object: object, Fields: fields, SourceKey: sourceKey, OnDuplicate: onDuplicate,
 		ContextTag: contextTag,
 	}, nil
+}
+
+// checkedSource binds the run to its uploaded file and proves the mapping names
+// columns that file actually carries. Before anything is staged: a mapping the
+// file contradicts is a request fault, answered the way an unknown target is
+// rather than staged as a run whose every row drops a field.
+func checkedSource(
+	ctx context.Context, blobs blobstore.Store, sourceRef string, mapping migration.RunMapping,
+) (*migration.CSVSource, error) {
+	source := migration.NewCSVSource(blobs, sourceRef, mapping.Object, mapping.Fields, mapping.SourceKey)
+	header, err := source.Header(ctx)
+	if err != nil {
+		return nil, importProblem(err)
+	}
+	if err := mappingNamesTheFilesColumns(mapping.Fields, header); err != nil {
+		return nil, err
+	}
+	return source, nil
+}
+
+// mappingNamesTheFilesColumns refuses a mapping naming a column this file's
+// header does not carry.
+//
+// The row builder DROPS such a column (CSVSource.rowFrom), so the field it was
+// mapped onto imports empty on every row while the preview reports clean
+// creates and the commit lands them. `unmapped` cannot disclose it: that list
+// names the FILE's columns nothing reads, and a column the file lacks is on
+// neither side of it.
+//
+// Refused rather than reported, beside the unknown-target refusal above: a
+// header is one fact about the WHOLE file, so a name it lacks is wrong for
+// every row or for none, and there is no row for a row-level issue to name.
+// Compared exactly as spelled, because that is how rowFrom looks a column up.
+func mappingNamesTheFilesColumns(fields map[string]string, header []string) error {
+	carried := make(map[string]bool, len(header))
+	for _, name := range header {
+		carried[name] = true
+	}
+	var absent []string
+	for column := range fields {
+		if !carried[column] {
+			absent = append(absent, column)
+		}
+	}
+	if len(absent) == 0 {
+		return nil
+	}
+	// Sorted, because a map's range order would give the same request a
+	// different sentence on every call.
+	sort.Strings(absent)
+	// The absent names lead and the header follows, because this rides to an
+	// agent as a field message cut at httperr.MaxFaultText: a wide file's
+	// header would otherwise truncate away the very name it is about.
+	return httperr.Validation("mapping", "unknown_column",
+		fmt.Sprintf("this file has no column called %s. Its header is: %s.",
+			strings.Join(quotedNames(absent), ", "), strings.Join(quotedNames(header), ", ")))
+}
+
+// quotedNames puts each column name in quotes, so a header with a space in it
+// reads as one name in the sentence.
+func quotedNames(names []string) []string {
+	out := make([]string, 0, len(names))
+	for _, name := range names {
+		out = append(out, strconv.Quote(name))
+	}
+	return out
 }
 
 // columnFor answers which source column was mapped onto a target field.

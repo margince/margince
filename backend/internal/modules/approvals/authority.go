@@ -184,8 +184,9 @@ var decisionGrants = map[string][]grantRequirement{
 	"send_company_email": {{objectActivity, principal.ActionCreate}},
 	// send_message is the same effect on a messaging channel: an activity
 	// write, with the consent gate running in the handler whoever approved it.
-	"send_message": {{objectActivity, principal.ActionCreate}},
-	"book_meeting": {{objectActivity, principal.ActionCreate}},
+	"send_message":   {{objectActivity, principal.ActionCreate}},
+	"book_meeting":   {{objectActivity, principal.ActionCreate}},
+	"invite_meeting": {{objectActivity, principal.ActionCreate}},
 	// A relink moves an activity onto another record, which the store gates on
 	// activity.UPDATE — an association change, not a re-capture. It reaches a
 	// human at all only for one destination: filing under a PROJECT classifies

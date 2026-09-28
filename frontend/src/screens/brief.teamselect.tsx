@@ -7,11 +7,31 @@ import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { useMe } from "./common";
-import { useTeams } from "./teamweekly.queries";
+import { type TeamWeekReach, useTeams } from "./teamweekly.queries";
+
+/** Which teams a picker lists: every team, or the ones the reader is on. */
+export type TeamList = "every" | "mine";
+
+/**
+ * Morning's rule. The team board is served on row scope: a team-scoped seat
+ * reads the teams it is on, and any wider seat reads every team.
+ */
+export function morningTeams(rowScope: string | undefined): TeamList {
+  return rowScope === "team" ? "mine" : "every";
+}
+
+/**
+ * Weekly's rule, as the server answered it. A seat holding the oversight grant
+ * opens every team's week; a lead opens the weeks of the teams they are on.
+ */
+export function weekTeams(reach: TeamWeekReach): TeamList {
+  return reach === "every_team" ? "every" : "mine";
+}
 
 export function BriefTeamSelect({
+  lists,
   children,
-}: Readonly<{ children: (team: string) => ReactNode }>) {
+}: Readonly<{ lists: TeamList; children: (team: string) => ReactNode }>) {
   const t = useT();
   const teams = useTeams();
   const me = useMe();
@@ -19,8 +39,7 @@ export function BriefTeamSelect({
   const options = (teams.data ?? [])
     .filter(
       (team) =>
-        me.data?.authorization?.row_scope !== "team" ||
-        me.data.teams.includes(team.id),
+        lists === "every" || (me.data?.teams.includes(team.id) ?? false),
     )
     .map((team) => ({
       value: team.id,

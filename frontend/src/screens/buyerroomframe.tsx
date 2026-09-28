@@ -44,17 +44,17 @@ export function BuyerFrame({
 
 // The one thing on the buyer's page that is ours rather than the seller's:
 // the product's mark, closing the column, saying what is serving the room.
-function PoweredBy() {
+export function PoweredBy({
+  className = "buyer-powered",
+  markClassName = "buyer-powered-mark",
+}: Readonly<{ className?: string; markClassName?: string }>) {
   const t = useT();
   return (
-    <span className="buyer-powered">
+    <span className={className}>
       <span className="t-caption" aria-hidden>
         {t("buyer.poweredBy")}
       </span>
-      <Wordmark
-        alt={t("buyer.poweredByMargince")}
-        className="buyer-powered-mark"
-      />
+      <Wordmark alt={t("buyer.poweredByMargince")} className={markClassName} />
     </span>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -255,11 +256,7 @@ function PolicyRow({
               patch.mutate({ intent: "switch", body: { enabled: next } })
             }
           />
-          {patch.isError && (
-            <p className="retention-error" role="alert">
-              {problemMessageOf(patch.error, t)}
-            </p>
-          )}
+          <ErrorLine error={patch.error} />
           <div className="retention-actions">
             <Button
               variant="primary"
@@ -409,11 +406,7 @@ function PostureToggle({
         pending={update.isPending}
         onChange={(next) => update.mutate(next)}
       />
-      {update.isError && (
-        <p className="retention-error" role="alert">
-          {problemMessageOf(update.error, t)}
-        </p>
-      )}
+      <ErrorLine error={update.error} />
     </div>
   );
 }
@@ -529,9 +522,7 @@ export function RetentionCard() {
                   // percentage of.
                   <Skeleton width={40} height={22} />
                 ) : settings.isError ? (
-                  <p className="retention-error" role="alert">
-                    {problemMessageOf(settings.error, t)}
-                  </p>
+                  <ErrorLine error={settings.error} />
                 ) : (
                   <PostureToggle
                     retainOnly={settings.data.retain_only}

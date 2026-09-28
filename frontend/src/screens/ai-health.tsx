@@ -8,7 +8,8 @@ import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
+import { tierLabel } from "./ai-decision-labels";
 import { QueryGate, throwProblem, useMe } from "./common";
 
 // Whether the model lanes are answering.
@@ -103,6 +104,7 @@ function RungTable({
   hours,
 }: Readonly<{ rungs: RungHealth[]; hours: number }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
   return (
@@ -114,7 +116,7 @@ function RungTable({
         {
           key: "tier",
           header: t("aiHealth.colTier"),
-          render: (row) => row.tier,
+          render: (row) => tierLabel(row.tier, t),
         },
         {
           key: "state",
@@ -134,8 +136,8 @@ function RungTable({
           render: (row) =>
             // Both numbers, because "12 calls" beside a red badge leaves a
             // reader working out how many of them failed.
-            t("aiHealth.callCounts", {
-              calls: formatNumber(row.calls, locale),
+            plural("aiHealth.callCounts", row.calls, {
+              count: formatNumber(row.calls, locale),
               failures: formatNumber(row.failures, locale),
             }),
         },

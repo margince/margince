@@ -53,6 +53,13 @@ func (p *Provider) WithStopCarrier(carrier StopCarrier) *Provider {
 	return p
 }
 
+// WithSatelliteCarriers mirrors the HTTP wiring for the same reason
+// WithStopCarrier does.
+func (p *Provider) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) *Provider {
+	p.store = p.store.WithSatelliteCarriers(consent, intros)
+	return p
+}
+
 func ref(t datasource.EntityType, id openapi_types.UUID) datasource.EntityRef {
 	return datasource.EntityRef{Type: t, ID: ids.UUID(id)}
 }

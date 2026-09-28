@@ -19,6 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"image"
+	"image/color"
 	"io"
 	"log/slog"
 	"mime/multipart"
@@ -136,6 +138,61 @@ func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
 	}
 	if bounds := decoded.Bounds(); bounds.Dx() != 400 || bounds.Dy() != 400 {
 		t.Fatalf("the stored logo is %dx%d, want the 400px source preserved without upscaling", bounds.Dx(), bounds.Dy())
+	}
+}
+
+// letterboxedFixture is a 4:1 wordmark centred in a square transparent
+// canvas, the shape a site or a contact often hands over.
+func letterboxedFixture(t *testing.T, edge int) []byte {
+	t.Helper()
+	wide := image.NewNRGBA(image.Rect(0, 0, edge, edge/4))
+	for y := range edge / 4 {
+		for x := range edge {
+			wide.SetNRGBA(x, y, color.NRGBA{R: 20, G: 90, B: 160, A: 255})
+		}
+	}
+	square, err := imagenorm.SquarePNG(wide, edge)
+	if err != nil {
+		t.Fatalf("encoding the letterboxed fixture: %v", err)
+	}
+	return square
+}
+
+// storedBounds decodes the object at key and answers its size.
+func storedBounds(t *testing.T, blob blobstore.Store, key string) image.Rectangle {
+	t.Helper()
+	rc, _, err := blob.Get(context.Background(), key)
+	if err != nil {
+		t.Fatalf("no object at %q: %v", key, err)
+	}
+	raw, err := io.ReadAll(rc)
+	if cerr := rc.Close(); cerr != nil {
+		t.Fatalf("closing %q: %v", key, cerr)
+	}
+	if err != nil {
+		t.Fatalf("reading %q: %v", key, err)
+	}
+	decoded, err := imagenorm.Decode(raw)
+	if err != nil {
+		t.Fatalf("the object at %q does not decode: %v", key, err)
+	}
+	return decoded.Bounds()
+}
+
+func TestAnUploadedMarkIsStoredWithoutItsTransparentCanvas(t *testing.T) {
+	e := integration.Setup(t)
+	blob := blobstore.NewMemory()
+	handlers := companyHandlers{store: e.Contacts, blob: blob}
+	company := theCompanyExists(t, e)
+
+	uploadMark(t, e, handlers, letterboxedFixture(t, 400), "acme-wordmark.png")
+
+	key, err := e.Contacts.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, contacts.LogoWide)
+	if err != nil {
+		t.Fatalf("the company wears no mark after its own upload: %v", err)
+	}
+	if bounds := storedBounds(t, blob, key); bounds.Dx() != 400 || bounds.Dy() != 100 {
+		t.Fatalf("the stored mark is %dx%d, want the 400x100 wordmark without its canvas", bounds.Dx(), bounds.Dy())
 	}
 }
 

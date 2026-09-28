@@ -201,53 +201,94 @@ func (s *CSVSource) skip(line int, reason string) {
 	s.skipped = append(s.skipped, SkippedLine{Line: line, Reason: reason})
 }
 
+// Header names the file's own columns, and reads no further.
+//
+// A mapping is written against these names, so a run is checked against them
+// before it exists: rowFrom drops a column the header does not carry, and the
+// field it was mapped onto then imports empty on every row.
+func (s *CSVSource) Header(ctx context.Context) ([]string, error) {
+	file, err := s.open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer file.close(ctx)
+	return append([]string(nil), file.header...), nil
+}
+
+// openFile is the stored source, framed: the body to close, the reader standing
+// at the first data record, and the header it just read.
+type openFile struct {
+	body    io.ReadCloser
+	records *csv.Reader
+	header  []string
+	key     string
+}
+
+// open reads the header and leaves the reader at the first data record.
+//
+// Two callers want different amounts of one file — a run walks every row, a
+// mapping check needs only the names — and both must frame it identically, or
+// the check accepts a column the walk then cannot find.
+func (s *CSVSource) open(ctx context.Context) (openFile, error) {
+	body, _, err := s.blobs.Get(ctx, s.key)
+	if err != nil {
+		return openFile{}, fmt.Errorf("import source %q: %w", s.key, err)
+	}
+	file := openFile{body: body, records: csv.NewReader(body), key: s.key}
+	file.records.TrimLeadingSpace = true
+	header, err := file.records.Read()
+	if err != nil {
+		file.close(ctx)
+		if errors.Is(err, io.EOF) {
+			return openFile{}, fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
+		}
+		return openFile{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+	}
+	if err := validateHeader(header); err != nil {
+		file.close(ctx)
+		return openFile{}, err
+	}
+	file.header = header
+	return file, nil
+}
+
+// close releases the stored file. A close error cannot change what was already
+// parsed, and shadowing the parse result with it would report the wrong
+// failure — so it is logged rather than returned, and never dropped.
+func (f openFile) close(ctx context.Context) {
+	if err := f.body.Close(); err != nil {
+		slog.WarnContext(ctx, "closing the import source", "key", f.key, "err", err)
+	}
+}
+
 // walk opens the object and calls visit for each data record, handing it the
 // file line (the header is line 1) and the header index. One reader, one place
 // that knows the file's framing.
 func (s *CSVSource) walk(ctx context.Context, visit func(line int, record []string, index map[string]int) error) error {
-	body, _, err := s.blobs.Get(ctx, s.key)
+	file, err := s.open(ctx)
 	if err != nil {
-		return fmt.Errorf("import source %q: %w", s.key, err)
-	}
-	defer func() {
-		// A close error cannot change what was already parsed, and shadowing
-		// the parse result with it would report the wrong failure — so it is
-		// logged rather than returned, and never dropped.
-		if cerr := body.Close(); cerr != nil {
-			slog.WarnContext(ctx, "closing the import source", "key", s.key, "err", cerr)
-		}
-	}()
-
-	cr := csv.NewReader(body)
-	cr.TrimLeadingSpace = true
-	header, err := cr.Read()
-	if errors.Is(err, io.EOF) {
-		return fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
-	}
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
-	}
-	if err := validateHeader(header); err != nil {
 		return err
 	}
+	defer file.close(ctx)
+
 	// Indexed by the header EXACTLY as the file spells it, because that is the
 	// key ProfileCSV published and the mapping was therefore written against.
 	// Trimming here instead would make a header like "Email " unresolvable:
 	// its mapped fields would vanish, and a row keyed on it would be skipped.
-	index := make(map[string]int, len(header))
-	for i, name := range header {
+	index := make(map[string]int, len(file.header))
+	for i, name := range file.header {
 		index[name] = i
 	}
 
 	for {
-		record, err := cr.Read()
+		record, err := file.records.Read()
 		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		// The reader's own position, not a counter: a quoted field may span
 		// several lines, and a disclosure that named the Nth record would send
 		// a human to the wrong line of their file.
-		line, _ := cr.FieldPos(0)
+		line, _ := file.records.FieldPos(0)
 		if err != nil {
 			return fmt.Errorf("%w: line %d: %v", ErrSourceUnreadable, line, err)
 		}
