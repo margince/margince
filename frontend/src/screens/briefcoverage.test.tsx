@@ -42,6 +42,30 @@ it("speaks a failed source and stays silent about a withheld one", () => {
   );
   expect(silent.querySelector('[role="status"]')).toBeNull();
 });
+// The mixed day is the one that decides it. A failure alongside a standing
+// withholding must announce only the failure, or the grant gets spoken after
+// all, on the back of an unrelated retry.
+it("announces the failure alone when a withheld line sits beside it", () => {
+  const day = readingsDay({}, []);
+  day.sources_unavailable = [
+    { source: "task", reason: "failed", category: "tasks" },
+    { source: "dsr", reason: "withheld" },
+  ];
+  const { container } = render(
+    <BriefCoverage
+      day={day}
+      run={{ ...ranked, factors_omitted: ["warmth"] }}
+      onRetry={vi.fn()}
+    />,
+  );
+  const spoken = container.querySelector('[role="status"]');
+  expect(spoken?.textContent).toContain("Tasks");
+  expect(spoken?.textContent).not.toContain("Privacy requests");
+  expect(spoken?.textContent).not.toContain(en["brief.factor.warmth"]);
+  // Still on the page, just not announced.
+  expect(document.body.textContent).toContain("Privacy requests");
+  expect(document.body.textContent).toContain(en["brief.factor.warmth"]);
+});
 it("names a withheld source without dressing it as a fault", () => {
   const day = readingsDay({}, []);
   day.sources_unavailable = [{ source: "dsr", reason: "withheld" }];
