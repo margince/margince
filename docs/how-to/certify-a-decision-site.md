@@ -1,8 +1,13 @@
 # Certify a decision site
 
-A bound `decisions:` lane answers a site only when the generated table
-`backend/internal/modules/ai/decisioncert_gen.go` holds a row for that
-(task, site, provider, model). This page is how a row gets there, and what
+A bound `decisions:` lane answers every site its local-only rule admits as
+soon as it is bound — no certification row is required to serve, the same as
+any other task's ladder rung. Certification is **advisory**: it measures a
+(task, site, provider, model) binding's real accuracy against graded scenarios
+and writes a record to the generated table
+`backend/internal/modules/ai/decisioncert_gen.go`, which is what an operator
+(and, later, an admin surface) reads before trusting a binding — it is not
+consulted by `Router.Decide`. This page is how a record gets there, and what
 happens to it when the site changes. What the lane is and when it falls back:
 [ai-runtime.md](../explanation/ai-runtime.md#the-decision-lane). The ordinary
 LLM certification this rides on: [certify-an-ai-model.md](certify-an-ai-model.md).
@@ -85,8 +90,9 @@ writes a row into `decisioncert_gen.go` for every decision record that is
 certified and whose scenario stamps match this build, with the record's path as
 a comment on its row. Regenerate the certification page too
 (`cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`),
-and commit the record, the table and the page together. Until the row is in a build, the lane skips the
-site with `uncertified` and the ladder answers.
+and commit the record, the table and the page together. The lane already
+answers the site whether or not this row exists — landing it only updates what
+the certification page and a future admin surface report about the binding.
 
 ## 4. When the site changes: re-certify or drop
 
@@ -99,13 +105,15 @@ criterion leaves the LLM record current.
 Change any of the three and the record goes stale. `make gen` then drops its
 row, and until you commit that the drift check fails naming the record:
 `… went stale (…) and loses its row: re-certify it or delete the record`.
-So an edit can never switch the lane off in production silently; CI stops it
-first. Choose one:
+That row is reporting only now — the lane keeps serving the site either way —
+so this stops the certification page from silently claiming an out-of-date
+measurement, not from silently switching the lane off. Choose one:
 
 - **Re-certify** — rerun §1 for that task and commit the new record and table.
-- **Drop** — delete the record and commit the regenerated table. The site
-  goes back to the ladder alone, which is always a safe state.
+- **Drop** — delete the record and commit the regenerated table. The
+  certification page then lists the site as not measured; the lane still
+  serves it.
 
 Regenerating and committing the table alone also turns CI green, but it only
 makes the drop official and leaves a stale record behind, which the
-certification page goes on listing as not serving.
+certification page goes on listing as not measured.

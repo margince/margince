@@ -136,31 +136,26 @@ func TestDecideServesTheDecisionOrSaysWhyTheLadderAnswered(t *testing.T) {
 	oversize := triageQuestion
 	oversize.State = json.RawMessage(`{"page":{"text":"` + strings.Repeat("x", 49_000) + `"}}`)
 	cases := []struct {
-		name        string
-		replies     []decisionReply
-		uncertified bool
-		dreq        decision.Request
-		decided     bool
-		calls       int
-		rows        []rowShape
+		name    string
+		replies []decisionReply
+		dreq    decision.Request
+		decided bool
+		calls   int
+		rows    []rowShape
 	}{
-		{"accepted", []decisionReply{answered("parked", 0.95)}, false, triageQuestion, true, 1, []rowShape{decisionRow}},
-		{"no certification row", []decisionReply{answered("parked", 0.95)}, true, triageQuestion, false, 0, []rowShape{completion(attemptReasonDecisionUncertified)}},
-		{"below the floor", []decisionReply{answered("parked", 0.5)}, false, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionBelowFloor)}},
-		{"a label the question never offered", []decisionReply{answered("personal", 0.99)}, false, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionOffEnum)}},
-		{"no answer to the question", []decisionReply{{resp: decision.Response{Answers: map[string]decision.Answer{}}}}, false, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionOffEnum)}},
-		{"a provider error", []decisionReply{{err: errors.New("down")}}, false, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionError)}},
-		{"a 429", []decisionReply{{err: fmt.Errorf("%w: busy", errProviderRefused)}}, false, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionError)}},
-		{"a rejected request", []decisionReply{{err: fmt.Errorf("%w: %w", errDecisionRejected, rejectedRequest(errors.New("400")))}}, false, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionError)}},
-		{"a state too large to send", []decisionReply{answered("parked", 0.95)}, false, oversize, false, 0, []rowShape{completion(attemptReasonDecisionStateTooLarge)}},
+		{"accepted", []decisionReply{answered("parked", 0.95)}, triageQuestion, true, 1, []rowShape{decisionRow}},
+		{"below the floor", []decisionReply{answered("parked", 0.5)}, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionBelowFloor)}},
+		{"a label the question never offered", []decisionReply{answered("personal", 0.99)}, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionOffEnum)}},
+		{"no answer to the question", []decisionReply{{resp: decision.Response{Answers: map[string]decision.Answer{}}}}, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionOffEnum)}},
+		{"a provider error", []decisionReply{{err: errors.New("down")}}, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionError)}},
+		{"a 429", []decisionReply{{err: fmt.Errorf("%w: busy", errProviderRefused)}}, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionError)}},
+		{"a rejected request", []decisionReply{{err: fmt.Errorf("%w: %w", errDecisionRejected, rejectedRequest(errors.New("400")))}}, triageQuestion, false, 1, []rowShape{decisionRow, completion(attemptReasonDecisionError)}},
+		{"a state too large to send", []decisionReply{answered("parked", 0.95)}, oversize, false, 0, []rowShape{completion(attemptReasonDecisionStateTooLarge)}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			decider := &scriptedDecider{replies: tc.replies}
 			f := newDecideFixture(t, decider, 0)
-			if tc.uncertified {
-				f.router.decisionCertified = func(DecisionCertKey) bool { return false }
-			}
 			out, info, err := f.decide(t, tc.dreq)
 			if err != nil {
 				t.Fatal(err)

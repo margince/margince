@@ -44,13 +44,6 @@ func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) 
 	}
 }
 
-// certifyForTest plants one certification row for the duration of a test.
-func certifyForTest(t *testing.T, key DecisionCertKey) {
-	t.Helper()
-	decisionCertified[key] = DecisionCert{PromptVersion: "test", CorpusVersion: "test"}
-	t.Cleanup(func() { delete(decisionCertified, key) })
-}
-
 func triageRoute(t *testing.T, cfg RoutingConfig, band string) crmcontracts.AiFeatureRoute {
 	t.Helper()
 	for _, row := range FeatureRoutes(cfg, cfg, band) {
@@ -79,18 +72,13 @@ func TestTheRoutingPreviewSaysWhyTheDecisionLaneIsSkipped(t *testing.T) {
 	}
 
 	cfg.Decisions = jevLane
-	uncertified := triageRoute(t, cfg, BandNormal)
-	if uncertified.DecisionFirst || reason(uncertified) != DecisionSkipUncertified {
-		t.Errorf("uncertified model: first=%v reason=%q", uncertified.DecisionFirst, reason(uncertified))
+	bound := triageRoute(t, cfg, BandNormal)
+	if !bound.DecisionFirst || reason(bound) != "" {
+		t.Errorf("bound lane: first=%v reason=%q", bound.DecisionFirst, reason(bound))
 	}
 	want := crmcontracts.AiRouteCandidate{Tier: "decide", Provider: jevLane.Provider, Model: jevLane.Model, Processing: "cloud_provider"}
-	if uncertified.DecisionCandidate == nil || *uncertified.DecisionCandidate != want {
-		t.Errorf("candidate = %v, want %v", uncertified.DecisionCandidate, want)
-	}
-
-	certifyForTest(t, DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: jevLane.Provider, Model: jevLane.Model})
-	if row := triageRoute(t, cfg, BandNormal); !row.DecisionFirst || row.DecisionSkipReason != nil {
-		t.Errorf("certified: first=%v reason=%q", row.DecisionFirst, reason(row))
+	if bound.DecisionCandidate == nil || *bound.DecisionCandidate != want {
+		t.Errorf("candidate = %v, want %v", bound.DecisionCandidate, want)
 	}
 	if row := triageRoute(t, cfg, BandQueued); row.DecisionFirst {
 		t.Error("a deferred background feature is reported as answered by the lane")
@@ -122,10 +110,7 @@ func TestTheRoutingPreviewReportsADecisionLaneChangeApartFromAModelChange(t *tes
 	refallbacked := map[Tier]ProviderConfig{
 		TierCheapCloud: {Provider: ProviderFake, Model: "cheap"}, TierPremium: {Provider: ProviderFake, Model: "premium-next"},
 	}
-	certifyForTest(t, DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: jevLane.Provider, Model: jevLane.Model})
-	certifiedOther := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-other", BaseURL: jevLane.BaseURL}
-	certifyForTest(t, DecisionCertKey{Task: TaskSiteTriage, Site: "triage", Provider: certifiedOther.Provider, Model: certifiedOther.Model})
-	uncertified := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-9.99", BaseURL: jevLane.BaseURL}
+	anotherModel := &DecisionsConfig{Provider: jevLane.Provider, Model: "typesafe/jev-other", BaseURL: jevLane.BaseURL}
 	with := func(lane *DecisionsConfig, tiers map[Tier]ProviderConfig) RoutingConfig {
 		next := before
 		next.Decisions = lane
@@ -142,12 +127,11 @@ func TestTheRoutingPreviewReportsADecisionLaneChangeApartFromAModelChange(t *tes
 	}{
 		{"added", nil, jevLane, nil, "decision_changed"},
 		{"removed", jevLane, nil, nil, "decision_changed"},
-		{"another certified model", jevLane, certifiedOther, nil, "decision_changed"},
+		{"another model", jevLane, anotherModel, nil, "decision_changed"},
 		{"added beside a rebound tier", nil, jevLane, retiered, "model_changed"},
 		{"a rebound fallback alone", nil, nil, refallbacked, "fallback_changed"},
 		{"added beside a rebound fallback", nil, jevLane, refallbacked, "model_changed"},
 		{"the same lane", jevLane, jevLane, nil, "unchanged"},
-		{"unbound to an uncertified model", nil, uncertified, nil, "unchanged"},
 	}
 	for _, tc := range cases {
 		var got string

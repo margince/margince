@@ -165,7 +165,7 @@ func (r *Router) cachedAnswerServes(b *binding, task Task, wsID ids.WorkspaceID,
 func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *binding, task Task, site string,
 	dreq decision.Request, gate DecisionGate,
 ) (decisionTry, error) {
-	if reason := r.decisionRefusal(b, task, site); reason != "" {
+	if reason := r.decisionRefusal(b, task); reason != "" {
 		return decisionTry{reason: reason}, nil
 	}
 	// The state is data a site assembled from mail and pages, bound for a
@@ -186,15 +186,14 @@ func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *bindin
 }
 
 // decisionRefusal is why the lane may not answer this site, as the attempt
-// reason the ladder walk carries; "" when it may. The order matches the route
-// preview's: keep local-only data local, then the certification row.
-func (r *Router) decisionRefusal(b *binding, task Task, site string) string {
+// reason the ladder walk carries; "" when it may. A bound lane serves every
+// site its local-only rule admits — no certification row required, same as
+// any other task's ladder rung: bind it and it runs, the site's own floor
+// (decisionAttempt's below-floor check) is what catches a bad answer.
+func (r *Router) decisionRefusal(b *binding, task Task) string {
 	m := b.decisions.meta
 	if decisionSkipFor(&DecisionsConfig{Provider: m.provider, Model: m.model, BaseURL: m.baseURL}, task) == DecisionSkipLocalOnly {
 		return attemptReasonDecisionLocalOnly
-	}
-	if !r.decisionCertified(DecisionCertKey{Task: task, Site: site, Provider: m.provider, Model: m.model}) {
-		return attemptReasonDecisionUncertified
 	}
 	return ""
 }

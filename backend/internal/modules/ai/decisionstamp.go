@@ -28,30 +28,17 @@ func decisionSkipFor(lane *DecisionsConfig, task Task) string {
 	return ""
 }
 
-// anySiteCertified reports whether some site of task has a certification row
-// for the lane's provider and model: the route preview's "would the lane
-// answer this feature at all", which the runtime asks per site.
-func anySiteCertified(task Task, lane DecisionsConfig, certified func(DecisionCertKey) bool) bool {
-	for _, site := range SitesFor(task) {
-		if certified(DecisionCertKey{Task: task, Site: site.Name, Provider: lane.Provider, Model: lane.Model}) {
-			return true
-		}
-	}
-	return false
-}
-
 // decisionRoute fills a feature row's decision fields. A feature that
 // declares no decision form carries none; one that does says whether the lane
 // answers it first and, when not, why — in the order an operator would fix
-// it: bind a lane, keep local data local, certify the site.
+// it: bind a lane, keep local data local. No certification row is required —
+// a bound lane serves every site its local-only rule admits, the same as any
+// other task's ladder rung.
 func decisionRoute(row *crmcontracts.AiFeatureRoute, cfg RoutingConfig, task Task, blocked bool) {
 	if !TaskDecides(task) {
 		return
 	}
 	skip := decisionSkipFor(cfg.Decisions, task)
-	if skip == "" && !anySiteCertified(task, *cfg.Decisions, decisionIsCertified) {
-		skip = DecisionSkipUncertified
-	}
 	if lane := cfg.Decisions; lane != nil {
 		row.DecisionCandidate = &crmcontracts.AiRouteCandidate{
 			Tier: string(TierDecideLane), Provider: lane.Provider, Model: lane.Model,
