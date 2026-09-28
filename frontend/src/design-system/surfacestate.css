@@ -1,7 +1,7 @@
 /* SurfaceState — the message lines the nine-state vocabulary draws when a
  * surface has something other than content to report.
  *
- * The 6px top margin on the two message lines is an optical value, not a
+ * The 6px top margin on the withheld line is an optical value, not a
  * rhythm one: it sets a sentence against the heading or rows immediately
  * above it inside a card that has already paid for its own padding, and on
  * the --space-* scale the step below it disappears while the step above it
@@ -18,10 +18,10 @@
    The two absent states still read differently, and the difference is colour
    and voice rather than size: "there is none" is ordinary secondary prose,
    "you may not see this" is set apart in the italic voice below so a reader
-   never mistakes a permission boundary for an empty account. */
-.surfacestate-empty {
-  margin-top: 6px;
-}
+   never mistakes a permission boundary for an empty account.
+
+   `.surfacestate-empty` itself carries no margin: the body or plate holding it
+   already pays the interval above it. */
 /* What would be here, under the line saying there is none. Not italic: it is a
    fact about the RECORD — what puts a row here — where the italic voice below
    is the surface talking about itself. */
