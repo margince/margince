@@ -8271,6 +8271,11 @@ export const en = {
   "roles.grantsSub": "Each switch saves at once.",
   "roles.grantsCore": "Records and settings",
   "roles.grantsExtensions": "Extensions",
+  "roles.grantsNarrowOnly":
+    "Each switch saves at once. Only an admin can turn a right on; you can turn rights off.",
+  "roles.turnOnAdminOnly": "Only an admin can turn a right on.",
+  "roles.widenAdminOnly":
+    "Only an admin can widen whose records a role reaches; you can narrow it.",
   "roles.objectColumn": "Object",
   "roles.preview": "Preview what this role sees",
   "roles.archive": "Archive role",

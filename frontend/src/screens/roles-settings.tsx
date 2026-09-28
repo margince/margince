@@ -98,6 +98,7 @@ export function RolesSettings() {
           canUpdate={mayUpdate}
           canMove={mayMove}
           canRestore={mayMove && isAdmin}
+          canWiden={isAdmin}
         />
       )}
     </div>

@@ -8046,6 +8046,11 @@ export const vi = {
   "roles.grantsSub": "Mỗi công tắc lưu ngay lập tức.",
   "roles.grantsCore": "Bản ghi và cài đặt",
   "roles.grantsExtensions": "Tiện ích mở rộng",
+  "roles.grantsNarrowOnly":
+    "Mỗi công tắc lưu ngay lập tức. Chỉ quản trị viên mới bật được một quyền; bạn có thể tắt quyền.",
+  "roles.turnOnAdminOnly": "Chỉ quản trị viên mới bật được một quyền.",
+  "roles.widenAdminOnly":
+    "Chỉ quản trị viên mới mở rộng được phạm vi bản ghi của vai trò; bạn có thể thu hẹp nó.",
   "roles.objectColumn": "Đối tượng",
   "roles.preview": "Xem trước những gì vai trò này thấy",
   "roles.archive": "Lưu trữ vai trò",

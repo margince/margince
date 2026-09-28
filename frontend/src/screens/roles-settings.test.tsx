@@ -42,8 +42,18 @@ const FIELD: Role = {
   name: "Field sales",
   is_system: false,
   version: 7,
-  row_scope: "own",
+  row_scope: "team",
   objects: { contact: { ...NONE, read: true }, deal: NONE },
+};
+// A built-in role an operator renamed: its stored name is what the company
+// reads now, not the seeded translation.
+const RENAMED_REP: Role = {
+  key: "rep",
+  name: "Account executive",
+  is_system: true,
+  version: 5,
+  row_scope: "own",
+  objects: { contact: GRANT, deal: GRANT },
 };
 const OLD: Role = {
   key: "custom_old",
@@ -84,7 +94,9 @@ function backend(
     if (url.pathname.endsWith("/v1/roles") && req.method === "GET") {
       const withArchived = url.searchParams.get("include_archived") === "true";
       return json({
-        roles: withArchived ? [ADMIN, FIELD, OLD] : [ADMIN, FIELD],
+        roles: withArchived
+          ? [ADMIN, RENAMED_REP, FIELD, OLD]
+          : [ADMIN, RENAMED_REP, FIELD],
       });
     }
     if (url.pathname.endsWith("/v1/users/access-preview")) {
@@ -226,13 +238,13 @@ describe("RolesSettings", () => {
     render(<RolesSettings />);
     await openRole(user, "Field sales");
 
-    await user.click(screen.getByRole("radio", { name: /their teams/i }));
+    await user.click(screen.getByRole("radio", { name: /everyone/i }));
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
           method: "PATCH",
           url: "/v1/roles/custom_field_sales",
-          body: { row_scope: "team" },
+          body: { row_scope: "all" },
           ifMatch: "7",
         }),
       ),
@@ -319,5 +331,145 @@ describe("RolesSettings", () => {
       expect(control.hasAttribute("disabled")).toBe(true);
     }
     expect(screen.queryByRole("button", { name: "Rename" })).toBeNull();
+  });
+
+  it("shows a renamed built-in role under the name the operator gave it", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<RolesSettings />);
+    const rep = await screen.findByTestId("role-rep");
+    expect(within(rep).getByText("Account executive")).toBeTruthy();
+    expect(within(rep).queryByText(en["role.rep"])).toBeNull();
+    // A built-in still under its seeded name reads translated.
+    expect(
+      within(screen.getByTestId("role-admin")).getByText(en["role.admin"]),
+    ).toBeTruthy();
+  });
+
+  it("holds every control on a role while one write on it is in flight, then sends the version it returned", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    const routed = backend(calls);
+    let answer: (response: Response) => void = () => undefined;
+    let held = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "PATCH" && held) {
+          held = false;
+          calls.push({
+            method: req.method,
+            url: new URL(req.url).pathname,
+            ifMatch: req.headers.get("If-Match") ?? undefined,
+          });
+          return new Promise<Response>((resolve) => {
+            answer = resolve;
+          });
+        }
+        return routed(input, init);
+      }),
+    );
+    render(<RolesSettings />);
+    await openRole(user, "Field sales");
+
+    await user.click(
+      screen.getByRole("switch", {
+        name: /allow field sales to create contact/i,
+      }),
+    );
+    const other = screen.getByRole("switch", {
+      name: /allow field sales to read deal/i,
+    });
+    await waitFor(() => expect(other.hasAttribute("disabled")).toBe(true));
+    expect(
+      screen
+        .getByRole("radio", { name: /their own/i })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "Archive role" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+
+    answer(
+      json({
+        ...FIELD,
+        version: 8,
+        objects: {
+          ...FIELD.objects,
+          contact: { ...NONE, read: true, create: true },
+        },
+      }),
+    );
+    await waitFor(() => expect(other.hasAttribute("disabled")).toBe(false));
+    await user.click(other);
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({
+          url: "/v1/roles/custom_field_sales/objects/deal",
+          ifMatch: "8",
+        }),
+      ),
+    );
+    expect(calls.filter((call) => call.method === "PATCH")).toHaveLength(2);
+  });
+
+  it("lets a reader who is not an admin narrow a role and never widen it", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal(
+      "fetch",
+      backend(calls, {
+        roles: ["ops"],
+        allow: { role_admin: ["read", "update"] },
+      }),
+    );
+    render(<RolesSettings />);
+    await openRole(user, "Field sales");
+    expect(screen.getByText(en["roles.grantsNarrowOnly"])).toBeTruthy();
+    expect(screen.getByText(en["roles.widenAdminOnly"])).toBeTruthy();
+
+    // Turning a right on and a wider scope are held.
+    expect(
+      screen
+        .getByRole("switch", { name: /allow field sales to read deal/i })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("radio", { name: /everyone/i }).hasAttribute("disabled"),
+    ).toBe(true);
+
+    // Turning a right off and a narrower scope are sent.
+    await user.click(
+      screen.getByRole("switch", {
+        name: /allow field sales to read contact/i,
+      }),
+    );
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({
+          url: "/v1/roles/custom_field_sales/objects/contact",
+          body: NONE,
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("radio", { name: /their own/i })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    await user.click(screen.getByRole("radio", { name: /their own/i }));
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({
+          url: "/v1/roles/custom_field_sales",
+          body: { row_scope: "own" },
+        }),
+      ),
+    );
   });
 });

@@ -64,6 +64,7 @@ export function RoleDetail({
   canUpdate,
   canMove,
   canRestore,
+  canWiden,
 }: Readonly<{
   role: Role;
   directory: readonly Role[];
@@ -71,6 +72,8 @@ export function RoleDetail({
   canUpdate: boolean;
   canMove: boolean;
   canRestore: boolean;
+  /** Whether this reader may turn a right on or widen the row scope. */
+  canWiden: boolean;
 }>) {
   const t = useT();
   const toast = useToast();
@@ -83,6 +86,10 @@ export function RoleDetail({
   const setGrant = useSetRoleGrant();
   const move = useMoveRole();
   const failure = [update, setGrant, move].find((write) => write.isError);
+  // Every write on a role carries the role's one version, so a second write
+  // sent before the first answers would be refused as a concurrent edit. One
+  // write at a time: the next is sent with the version the last one returned.
+  const busy = update.isPending || setGrant.isPending || move.isPending;
   const objects = grantObjects(directory, units);
 
   return (
@@ -107,7 +114,7 @@ export function RoleDetail({
                   title={t("roles.renameTitle")}
                   label={t("roles.nameLabel")}
                   confirmLabel={t("roles.renameSubmit")}
-                  pending={update.isPending}
+                  pending={busy}
                   onSave={(next, done) =>
                     update.mutate(
                       { roleKey: role.key, version: role.version, name: next },
@@ -118,40 +125,18 @@ export function RoleDetail({
               ) : null
             }
           />
-          <SettingRow
-            layout="stack"
-            label={t("roles.scopeTitle")}
-            description={t("roles.scopeSub")}
-            control={(control) => (
-              <fieldset
-                className="roles-scope"
-                aria-labelledby={control["aria-labelledby"]}
-              >
-                {SCOPES.map((scope) => (
-                  <Radio
-                    key={scope}
-                    name={`row-scope:${role.key}`}
-                    checked={role.row_scope === scope}
-                    disabled={!editable || update.isPending}
-                    onChange={() =>
-                      update.mutate({
-                        roleKey: role.key,
-                        version: role.version,
-                        rowScope: scope,
-                      })
-                    }
-                    label={
-                      <span className="roles-scope-option">
-                        <span>{t(`roles.scope.${scope}`)}</span>
-                        <span className="t-caption">
-                          {t(`roles.scope.${scope}Sub`)}
-                        </span>
-                      </span>
-                    }
-                  />
-                ))}
-              </fieldset>
-            )}
+          <ScopeField
+            role={role}
+            editable={editable}
+            canWiden={canWiden}
+            busy={busy}
+            onPick={(scope) =>
+              update.mutate({
+                roleKey: role.key,
+                version: role.version,
+                rowScope: scope,
+              })
+            }
           />
           <GrantSection
             title={t("roles.grantsCore")}
@@ -159,6 +144,8 @@ export function RoleDetail({
             role={role}
             name={name}
             editable={editable}
+            canWiden={canWiden}
+            busy={busy}
             setGrant={setGrant}
           />
           {objects.extensions.length > 0 && (
@@ -168,6 +155,8 @@ export function RoleDetail({
               role={role}
               name={name}
               editable={editable}
+              canWiden={canWiden}
+              busy={busy}
               setGrant={setGrant}
             />
           )}
@@ -181,7 +170,7 @@ export function RoleDetail({
           role={role}
           canMove={canMove}
           canRestore={canRestore}
-          pending={move.isPending}
+          pending={busy}
           onMove={(to) =>
             move.mutate(
               { roleKey: role.key, to },
@@ -248,6 +237,8 @@ function GrantSection({
   role,
   name,
   editable,
+  canWiden,
+  busy,
   setGrant,
 }: Readonly<{
   title: string;
@@ -255,6 +246,8 @@ function GrantSection({
   role: Role;
   name: string;
   editable: boolean;
+  canWiden: boolean;
+  busy: boolean;
   setGrant: ReturnType<typeof useSetRoleGrant>;
 }>) {
   const t = useT();
@@ -287,7 +280,11 @@ function GrantSection({
     <SettingRow
       layout="stack"
       label={title}
-      description={editable ? t("roles.grantsSub") : undefined}
+      description={
+        editable
+          ? t(canWiden ? "roles.grantsSub" : "roles.grantsNarrowOnly")
+          : undefined
+      }
       control={(control) => (
         <div className="settingrow-measure">
           <GrantMatrix
@@ -295,10 +292,66 @@ function GrantSection({
             rows={rows}
             canManage={editable}
             readOnlyReason={t("roles.readOnly")}
+            turnOnReason={canWiden ? undefined : t("roles.turnOnAdminOnly")}
+            busy={busy}
             labelledBy={control["aria-labelledby"]}
             scrollLabel={title}
           />
         </div>
+      )}
+    />
+  );
+}
+
+// Whose records members change: three radios, each with its explanation. A
+// reader who may not widen may still narrow, so the wider options are held
+// for them, with the reason said once under the choice.
+function ScopeField({
+  role,
+  editable,
+  canWiden,
+  busy,
+  onPick,
+}: Readonly<{
+  role: Role;
+  editable: boolean;
+  canWiden: boolean;
+  busy: boolean;
+  onPick: (scope: RowScope) => void;
+}>) {
+  const t = useT();
+  const held = SCOPES.indexOf(role.row_scope);
+  return (
+    <SettingRow
+      layout="stack"
+      label={t("roles.scopeTitle")}
+      description={t("roles.scopeSub")}
+      control={(control) => (
+        <fieldset
+          className="roles-scope"
+          aria-labelledby={control["aria-labelledby"]}
+        >
+          {SCOPES.map((scope, at) => (
+            <Radio
+              key={scope}
+              name={`row-scope:${role.key}`}
+              checked={role.row_scope === scope}
+              disabled={!editable || busy || (!canWiden && at > held)}
+              onChange={() => onPick(scope)}
+              label={
+                <span className="roles-scope-option">
+                  <span>{t(`roles.scope.${scope}`)}</span>
+                  <span className="t-caption">
+                    {t(`roles.scope.${scope}Sub`)}
+                  </span>
+                </span>
+              }
+            />
+          ))}
+          {editable && !canWiden && held < SCOPES.length - 1 && (
+            <p className="t-caption">{t("roles.widenAdminOnly")}</p>
+          )}
+        </fieldset>
       )}
     />
   );

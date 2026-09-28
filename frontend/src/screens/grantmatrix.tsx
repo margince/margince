@@ -64,13 +64,17 @@ export type GrantMatrixRow = Readonly<{
  *
  * A reader who may not write gets `readOnlyReason` on every switch, attached by
  * `aria-describedby` and hidden from the eye: the caller states it once above
- * the grid.
+ * the grid. `turnOnReason` does the same for a reader who may turn rights off
+ * and not on, on the switches that are off. `busy` holds every switch still
+ * while a write the grid cannot see through is in flight.
  */
 export function GrantMatrix({
   rowHeader,
   rows,
   canManage,
   readOnlyReason,
+  turnOnReason,
+  busy = false,
   labelledBy,
   scrollLabel,
 }: Readonly<{
@@ -79,6 +83,10 @@ export function GrantMatrix({
   rows: readonly GrantMatrixRow[];
   canManage: boolean;
   readOnlyReason: string;
+  /** Why a switch that is off may not be turned on; absent when it may. */
+  turnOnReason?: string;
+  /** Whether another write on the same subject is in flight. */
+  busy?: boolean;
   /** The id of the label naming the grid. */
   labelledBy: string;
   /** The name the scroll region announces once the grid overflows. */
@@ -107,22 +115,31 @@ export function GrantMatrix({
                   <span className="t-caption grant-row-note">{row.note}</span>
                 ) : null}
               </th>
-              {CRUD.map((action) => (
-                <td key={action} className="grant-cell">
-                  <Switch
-                    labelHidden
-                    label={row.cellLabel(action)}
-                    checked={row.grant[action]}
-                    disabled={!canManage}
-                    pending={row.pending}
-                    // Only the permission denial gets a reason; a write in
-                    // flight is the other way a switch is disabled, and a
-                    // sentence flashing for 200ms on every flip is noise.
-                    reason={canManage ? undefined : readOnlyReason}
-                    onChange={(next) => row.onChange(action, next)}
-                  />
-                </td>
-              ))}
+              {CRUD.map((action) => {
+                const refusal = !canManage
+                  ? readOnlyReason
+                  : row.grant[action]
+                    ? undefined
+                    : turnOnReason;
+                return (
+                  <td key={action} className="grant-cell">
+                    <Switch
+                      labelHidden
+                      label={row.cellLabel(action)}
+                      checked={row.grant[action]}
+                      // The row being written keeps focus through `pending`;
+                      // every other switch waits for it.
+                      disabled={busy && !row.pending}
+                      pending={row.pending}
+                      // Only a permission denial gets a reason; a write in
+                      // flight is the other way a switch is held, and a
+                      // sentence flashing for 200ms on every flip is noise.
+                      reason={refusal}
+                      onChange={(next) => row.onChange(action, next)}
+                    />
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>

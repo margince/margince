@@ -52,29 +52,34 @@ export function useAssignableRoles(enabled: boolean) {
   });
 }
 
-// The catalog key each SEEDED role reads under. A seeded role's stored name is
-// English and fixed at bootstrap; the catalog carries it in the reader's
-// language. `read_only` reads under `role.readOnly`, so the map is written out.
-const SEEDED_ROLE_LABEL: Readonly<Record<string, MessageKey>> = {
-  admin: "role.admin",
-  management: "role.management",
-  manager: "role.manager",
-  rep: "role.rep",
-  read_only: "role.readOnly",
-  ops: "role.ops",
+// Each SEEDED role's catalog key and the name bootstrap stores for it. The
+// stored name is English; the catalog carries it in the reader's language —
+// but only while the name is still the one seeded. An operator who renamed
+// the role chose the words the company reads, and those win.
+// Held to identity's systemRoles table by backend/gates/frontendrolekeys_test.go.
+const SEEDED_ROLES: Readonly<
+  Record<string, Readonly<{ label: MessageKey; name: string }>>
+> = {
+  admin: { label: "role.admin", name: "Admin" },
+  management: { label: "role.management", name: "Management" },
+  manager: { label: "role.manager", name: "Team Lead" },
+  rep: { label: "role.rep", name: "User" },
+  read_only: { label: "role.readOnly", name: "Read-only" },
+  ops: { label: "role.ops", name: "Ops / Integrations" },
 };
 
 /**
- * The name a role is shown under: a seeded role in the reader's language, any
- * other under the name its maker gave it, and a key nothing here can name as
- * itself, so the admin still learns what is held.
+ * The name a role is shown under: a seeded role still under its seeded name
+ * in the reader's language, a renamed or made role under its stored name, and
+ * a key nothing here can name as itself, so the admin still learns what is
+ * held. With no stored name to hand, a seeded key reads translated.
  */
 export const roleLabel =
   (t: ReturnType<typeof useT>) =>
   (key: string, name?: string): string => {
-    const seeded = SEEDED_ROLE_LABEL[key];
-    if (seeded !== undefined) {
-      return t(seeded);
+    const seeded = SEEDED_ROLES[key];
+    if (seeded !== undefined && (name === undefined || name === seeded.name)) {
+      return t(seeded.label);
     }
     return name ?? key;
   };
@@ -133,13 +138,24 @@ export function refreshAfterRoleEdit(client: QueryClient) {
   ]);
 }
 
-// What is read off a role, apart from the directory itself.
+// What is read off a role, apart from the directory itself. The two rosters
+// are among them: each member's allowed actions follow the roles they and the
+// reader hold.
 function refreshReadersOfRoles(client: QueryClient) {
   return Promise.all([
     client.invalidateQueries({ queryKey: ["access-preview"] }),
     client.invalidateQueries({ queryKey: ASSIGNABLE_ROLES_KEY }),
     client.invalidateQueries({ queryKey: ["me"] }),
+    client.invalidateQueries({ queryKey: ["users-admin"] }),
+    client.invalidateQueries({ queryKey: ["users"] }),
   ]);
+}
+
+// Puts the role a write answered with into every directory read.
+function replaceRole(client: QueryClient, role: Role) {
+  client.setQueriesData<readonly Role[]>({ queryKey: ROLES_KEY }, (roles) =>
+    roles?.map((existing) => (existing.key === role.key ? role : existing)),
+  );
 }
 
 /**
@@ -174,9 +190,7 @@ export function useSetRoleGrant() {
     // takes it verbatim: a refetch would repaint the matrix a beat later, and a
     // local merge would invent a grant the server never confirmed.
     onSuccess: (role) => {
-      client.setQueriesData<readonly Role[]>({ queryKey: ROLES_KEY }, (roles) =>
-        roles?.map((existing) => (existing.key === role.key ? role : existing)),
-      );
+      replaceRole(client, role);
       void refreshReadersOfRoles(client);
     },
     // Another admin's concurrent change is the likeliest refusal, so re-read
@@ -238,6 +252,9 @@ export function useUpdateRole() {
       }
       return data;
     },
+    // The answer carries the role's new version; the next write on it must
+    // send that one, so the directory takes it before the refetch lands.
+    onSuccess: (role) => replaceRole(client, role),
     onSettled: () => refreshAfterRoleEdit(client),
   });
 }
@@ -280,6 +297,9 @@ export function useMoveRole() {
       }
       return data;
     },
+    // The answer carries the role's new version; the next write on it must
+    // send that one, so the directory takes it before the refetch lands.
+    onSuccess: (role) => replaceRole(client, role),
     onSettled: () => refreshAfterRoleEdit(client),
   });
 }

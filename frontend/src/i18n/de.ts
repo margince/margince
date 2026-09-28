@@ -8112,6 +8112,11 @@ export const de = {
   "roles.grantsSub": "Jeder Schalter speichert sofort.",
   "roles.grantsCore": "Datensätze und Einstellungen",
   "roles.grantsExtensions": "Erweiterungen",
+  "roles.grantsNarrowOnly":
+    "Jeder Schalter speichert sofort. Nur ein Admin kann ein Recht einschalten; du kannst Rechte ausschalten.",
+  "roles.turnOnAdminOnly": "Nur ein Admin kann ein Recht einschalten.",
+  "roles.widenAdminOnly":
+    "Nur ein Admin kann erweitern, wessen Datensätze eine Rolle erreicht; du kannst es einschränken.",
   "roles.objectColumn": "Objekt",
   "roles.preview": "Vorschau, was diese Rolle sieht",
   "roles.archive": "Rolle archivieren",
