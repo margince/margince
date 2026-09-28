@@ -8758,8 +8758,10 @@ export const de = {
     "{count} Nachricht bleibt als Handelsbrief erhalten, den du nicht löschen darfst.",
   "capturePurge.keptStatute_other":
     "{count} Nachrichten bleiben als Handelsbriefe erhalten, die du nicht löschen darfst.",
-  "capturePurge.keptFor_one": "Das Gesetz verlangt, ihn {years} Jahr aufzubewahren.",
-  "capturePurge.keptFor_other": "Das Gesetz verlangt, ihn {years} Jahre aufzubewahren.",
+  "capturePurge.keptFor_one":
+    "Das Gesetz verlangt, ihn {years} Jahr aufzubewahren.",
+  "capturePurge.keptFor_other":
+    "Das Gesetz verlangt, ihn {years} Jahre aufzubewahren.",
   "capturePurge.keptForFromYearEnd_one":
     "Das Gesetz verlangt, ihn {years} Jahr nach Ablauf des Kalenderjahres aufzubewahren, in dem er eingegangen ist.",
   "capturePurge.keptForFromYearEnd_other":

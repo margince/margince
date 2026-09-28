@@ -8905,7 +8905,8 @@ export const en = {
   "capturePurge.keptStatute_other":
     "{count} messages were kept as commercial correspondence, which is not yours to delete.",
   "capturePurge.keptFor_one": "The law requires keeping it for {years} year.",
-  "capturePurge.keptFor_other": "The law requires keeping it for {years} years.",
+  "capturePurge.keptFor_other":
+    "The law requires keeping it for {years} years.",
   "capturePurge.keptForFromYearEnd_one":
     "The law requires keeping it for {years} year after the end of the calendar year it arrived in.",
   "capturePurge.keptForFromYearEnd_other":

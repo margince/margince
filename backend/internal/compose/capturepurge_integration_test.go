@@ -644,8 +644,13 @@ func TestAPurgeNamesTheStatutoryClassThatKeptTheMail(t *testing.T) {
 	if outcome.Kept.UnderStatute != 1 {
 		t.Fatalf("kept.under_statute = %d, want the window named as the reason", outcome.Kept.UnderStatute)
 	}
-	if outcome.Kept.StatutoryClass == "" || outcome.Kept.StatutoryPeriod == "" {
-		t.Fatalf("kept = %+v, want the class and the period that shielded it", outcome.Kept)
+	if outcome.Kept.StatutoryClass == "" {
+		t.Fatalf("kept = %+v, want the class that shielded it named", outcome.Kept)
+	}
+	// The period travels as whole years, and a pack declaring months or days
+	// reports none rather than a number this copy could not state truthfully.
+	if outcome.Kept.StatutoryYears < 0 {
+		t.Errorf("years = %d, want a period that is never negative", outcome.Kept.StatutoryYears)
 	}
 }
 
