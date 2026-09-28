@@ -37,6 +37,7 @@ describe("DealCard + PipelineBoard", () => {
     id: "d1",
     name: "Fleet retrofit",
     company: "Brandt Automotive",
+    companyId: "o-1",
     valueMinor: 4_800_000,
     currency: "EUR",
     ageMs: 62 * 86_400_000,
@@ -117,7 +118,7 @@ describe("DealCard + PipelineBoard", () => {
   it("marks the owner it was given, labelled by name, and no slot for a deal without one", () => {
     const { container, rerender } = render(
       <DealCard
-        deal={{ ...deal, owner: "Ada Lindqvist" }}
+        deal={{ ...deal, owner: { id: "u-1", name: "Ada Lindqvist" } }}
         href="#/deals/d1"
         zone="Europe/Berlin"
       />,
@@ -394,6 +395,7 @@ describe("RecordView's chrome", () => {
   it("draws the tab strip above the band, and the band above the columns", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Fleet retrofit"
         zone="UTC"
         tabs={<Button>Overview</Button>}
@@ -417,6 +419,7 @@ describe("RecordView's chrome", () => {
   it("draws the tab strip on a record that carries no band", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Fleet retrofit"
         zone="UTC"
         tabs={<Button>Overview</Button>}
@@ -437,6 +440,7 @@ describe("RecordView + timeline", () => {
   it("renders the header and provenance-tagged timeline in the workspace zone", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Anna Weber"
         subtitle="Head of Procurement · Brandt Automotive"
         zone="Europe/Berlin"
@@ -473,6 +477,7 @@ describe("RecordView + timeline", () => {
     const body = `Moin Christian, ${"eine sehr lange Zeile ".repeat(20)}Ende.`;
     render(
       <RecordView
+        identity="r-1"
         name="ScaleCommerce"
         zone="Europe/Berlin"
         timeline={[
@@ -495,6 +500,7 @@ describe("RecordView + timeline", () => {
     // must render as a row with no message, not as an empty quote.
     render(
       <RecordView
+        identity="r-1"
         name="ScaleCommerce"
         zone="Europe/Berlin"
         timeline={[
@@ -515,6 +521,7 @@ describe("RecordView + timeline", () => {
   it("renders a timeline entry's action slot when present", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Acme"
         zone="UTC"
         timeline={[
@@ -579,6 +586,7 @@ describe("TimelineText on a mail row", () => {
     ] as const) {
       const { unmount } = render(
         <RecordView
+          identity="r-1"
           name="Acme"
           zone="UTC"
           timeline={[
@@ -610,6 +618,7 @@ describe("TimelineText on a mail row", () => {
   it("draws an email with its summary through the canonical row", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Acme"
         zone="UTC"
         timeline={[
@@ -645,6 +654,7 @@ describe("TimelineText on a mail row", () => {
   it("names nobody on a withheld row, summary or not", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Acme"
         zone="UTC"
         timeline={[
@@ -667,7 +677,14 @@ describe("TimelineText on a mail row", () => {
 
   it("shows the message and hides the signature until asked", async () => {
     const user = userEvent.setup();
-    render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);
+    render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={mailRow(SIGNED)}
+      />,
+    );
 
     expect(screen.getByText(/Können wir Dienstag/)).toBeTruthy();
     expect(screen.queryByText(/Mit freundlichen Grüßen/)).toBeNull();
@@ -681,7 +698,14 @@ describe("TimelineText on a mail row", () => {
 
   it("folds the signature away again", async () => {
     const user = userEvent.setup();
-    render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);
+    render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={mailRow(SIGNED)}
+      />,
+    );
 
     await user.click(
       screen.getByRole("button", { name: "Show signature and quoted text" }),
@@ -696,7 +720,14 @@ describe("TimelineText on a mail row", () => {
     // The preamble says who wrote to whom, which is part of reading a mail on
     // a record. It is the row TITLE that must not lead with it — see the
     // timelineTitle rule in contacts.tsx — not the message body.
-    render(<RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />);
+    render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={mailRow(SIGNED)}
+      />,
+    );
     const body = document.querySelector(".tl-text-clamp")?.textContent ?? "";
     expect(body).toContain("anna@kunde.de");
     expect(body).toContain("Können wir Dienstag");
@@ -705,6 +736,7 @@ describe("TimelineText on a mail row", () => {
   it("leaves a note whose text reads like a sign-off intact", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Acme"
         zone="UTC"
         timeline={mailRow("Viele Grüße an das Team ausgerichtet.", "note")}
@@ -721,6 +753,7 @@ describe("TimelineText on a mail row", () => {
   it("offers no reveal when a mail carries no signature or quote", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Acme"
         zone="UTC"
         timeline={mailRow("Kurz: ja, Dienstag passt uns gut.")}
@@ -736,6 +769,7 @@ describe("TimelineText on a mail row", () => {
   it("renders a link with its address as the label", () => {
     render(
       <RecordView
+        identity="r-1"
         name="Acme"
         zone="UTC"
         timeline={mailRow(
@@ -757,7 +791,12 @@ describe("TimelineText on a mail row", () => {
     const user = userEvent.setup();
     const { rerender } = rtlRender(
       <LocaleProvider initial="en">
-        <RecordView name="Acme" zone="UTC" timeline={mailRow(SIGNED)} />
+        <RecordView
+          identity="r-1"
+          name="Acme"
+          zone="UTC"
+          timeline={mailRow(SIGNED)}
+        />
       </LocaleProvider>,
     );
     await user.click(
@@ -768,6 +807,7 @@ describe("TimelineText on a mail row", () => {
     rerender(
       <LocaleProvider initial="en">
         <RecordView
+          identity="r-1"
           name="Acme"
           zone="UTC"
           timeline={mailRow("Neue Nachricht.\n\n-- \nMax Muster\nAndere GmbH")}
@@ -781,6 +821,7 @@ describe("TimelineText on a mail row", () => {
     const user = userEvent.setup();
     render(
       <RecordView
+        identity="r-1"
         name="Acme"
         zone="UTC"
         timeline={mailRow(

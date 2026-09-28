@@ -447,7 +447,7 @@ export function ContactPageV2({
             aside={narrow ? undefined : contactDetails}
             asideOpen={details.open}
             name={contact.full_name}
-            avatarSrc={null}
+            identity={contact.id}
             // One rung under the record scale: the name is still the largest
             // thing on the page, but beside a work column that opens on the
             // agent's ask it no longer needs to be the size of a masthead.

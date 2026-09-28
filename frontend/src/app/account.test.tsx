@@ -85,19 +85,17 @@ const choice = (name: string) => screen.getByRole("radio", { name });
 
 describe("AccountMenu", () => {
   // The rail's chip and the settings page's chip are the SAME contact, so they
-  // are the same colour — and they stay that colour when the display name
-  // changes, because the tint is keyed on the address rather than on the name.
-  it("keys the chip's tone on the address, not the display name", () => {
-    const toneOf = (root: HTMLElement) =>
-      [...(root.querySelector(".avatar")?.classList ?? [])].find((cls) =>
-        cls.startsWith("avatar-t"),
-      );
+  // wear the same mesh — and keep it when the display name changes, because
+  // the mesh is keyed on the address rather than on the name.
+  it("keys the chip's mesh on the address, not the display name", () => {
+    const meshOf = (root: HTMLElement) =>
+      root.querySelector(".avatar-mesh")?.getAttribute("style");
     const { container: named } = renderNamed("Test User");
-    const tone = toneOf(named);
-    expect(tone).toBeTruthy();
+    const mesh = meshOf(named);
+    expect(mesh).toContain("--avatar-hue-a");
     cleanup();
     const { container: renamed } = renderNamed("Renamed Contact");
-    expect(toneOf(renamed)).toBe(tone);
+    expect(meshOf(renamed)).toBe(mesh);
   });
 
   // WCAG 2.5.3: the row prints the contact's name, so a voice user who says the

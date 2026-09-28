@@ -169,7 +169,7 @@ export const InlineVerbsWiderThanTheHeader: Story = {
     name: "Brandt Automotive GmbH",
     subtitle: "Automotive · München",
     zone: "Europe/Berlin",
-    markShape: "company",
+    identity: "o-1",
     actionsInline: true,
     actions: (
       <>
@@ -208,6 +208,7 @@ function boardDeal(
     id,
     name,
     company: "Acme GmbH",
+    companyId: "o-1",
     valueMinor,
     currency: "EUR",
     ageMs: ageDays * 24 * 60 * 60 * 1000,
@@ -228,7 +229,7 @@ const boardColumns: BoardMoneyColumn[] = [
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
         singleThreaded: true,
         closeDate: "2026-10-14",
-        owner: "Ada Lindqvist",
+        owner: { id: "u-1", name: "Ada Lindqvist" },
         lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
       }),
       // A close date the nightly run set and nobody confirmed: marked, not
@@ -250,7 +251,9 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 8_400,
     currency: "EUR",
     deals: [
-      boardDeal("d3", "Globex onboarding", 28_000, 14, { owner: "Tim Rasche" }),
+      boardDeal("d3", "Globex onboarding", 28_000, 14, {
+        owner: { id: "u-2", name: "Tim Rasche" },
+      }),
     ],
   },
   {

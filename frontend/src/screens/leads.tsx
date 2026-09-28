@@ -1409,7 +1409,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         }
         asideOpen={details.open}
         name={leadIdentityName(lead) || t("lead.unnamed")}
-        avatarSrc={null}
+        identity={lead.id}
         // The role and the company, on the name's own line: the contact
         // page's register for the same two facts (ContactSubtitle). A lead
         // carries no company FK, so unlike the contact's this is never a link.

@@ -120,7 +120,10 @@ export const WithAside: Story = {
           email="anna.brandt@nordwind-logistik.de"
           aside={
             <AvatarStack
-              contacts={[{ name: "Tim Rasche" }, { name: "Lena Ott" }]}
+              contacts={[
+                { name: "Tim Rasche", identity: "Tim Rasche" },
+                { name: "Lena Ott", identity: "Lena Ott" },
+              ]}
             />
           }
         />

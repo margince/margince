@@ -133,13 +133,9 @@ function ProfileMark({
     rows.find((row) => row.field === "display_name")?.value.trim() ||
     (identity === undefined ? "" : hostOf(identity.rootUrl));
   return (
-    <Avatar
-      shape="company"
-      size="md"
-      name={name}
-      identity={identity?.rootUrl}
-      src={identity?.logoUrl}
-    />
+    // Setup reviews a read before any company record exists, so there is no
+    // id yet and the name is the key, as on the confirm card.
+    <Avatar size="md" name={name} identity={name} src={identity?.logoUrl} />
   );
 }
 

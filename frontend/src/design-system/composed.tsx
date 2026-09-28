@@ -48,10 +48,11 @@ export type BoardRecord = {
 
 export type BoardDeal = BoardRecord & {
   /**
-   * The company this deal is with, as a name a reader recognises. Empty for a
-   * deal that names no company, which is the one reading that draws nothing.
+   * The company this deal is with, as a name a reader recognises, and the id
+   * keying its mark: both empty for a deal naming no company, which draws none.
    */
   company: string;
+  companyId: string;
   /**
    * The company's own address, when the caller has one to give.
    *
@@ -114,12 +115,11 @@ export type BoardDeal = BoardRecord & {
   closeDate?: string | null;
   closeDateProvisional?: boolean;
   /**
-   * Who carries the deal, as a display name. Null for a deal nobody owns and
-   * for one whose owner the caller could not name — the card draws nothing for
-   * either, small as it is; the table's owner column is where the two are
-   * told apart.
+   * Who carries the deal: the seat's name, and its user id to key the chip.
+   * Null for a deal nobody owns and for one whose owner the caller could not
+   * name — the card draws nothing for either; the owner column tells them apart.
    */
-  owner?: string | null;
+  owner?: Readonly<{ id: string; name: string }> | null;
   /**
    * The newest email on the deal that the whole workspace may see, as how long
    * ago it was and which way it went. A span rather than an instant, for the
@@ -1080,11 +1080,11 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
       </span>
     );
   }
-  // The face is ONE contact's — the first named on the other side — never
-  // the phrase the lead line shows, whose monogram would be nobody's.
+  // The face is ONE contact's — the first named on the other side, keyed on
+  // that name (a counterpart has no record id) — never the lead line's phrase.
   const [face] = otherSideNames(entry);
   if (entry.direction === "inbound" && face) {
-    return <Avatar name={face} />;
+    return <Avatar name={face} identity={face} />;
   }
   const Icon =
     entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];

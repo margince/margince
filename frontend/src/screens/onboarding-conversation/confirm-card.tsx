@@ -816,12 +816,10 @@ function CompanyIdentityCard({
   return (
     <div className="ob-company-card">
       {/* The contract carries no logo/favicon field for a company; the
-          monogram is the floor, not a fallback for a missing fetch. Tinted,
-          because the floor is a DETERMINISTIC mark: the same company draws
-          the same colour here, in the companies list and on the
-          connections graph, and a neutral chip would make the one company
-          this whole surface is about the only anonymous one. */}
-      <Avatar name={name} size="md" />
+          monogram is the floor, not a fallback for a missing fetch. No company
+          record exists yet while setup confirms the read, so there is no id
+          and the name is the key, as on the profile digest. */}
+      <Avatar name={name} identity={name} size="md" />
       <div className="ob-company-card-body">
         <Heading size="medium" className="t-h3">
           {name}

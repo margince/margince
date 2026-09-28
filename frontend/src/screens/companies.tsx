@@ -299,7 +299,6 @@ export function CompaniesScreen() {
                   identity={company.id}
                   name={company.display_name}
                   src={company.logo_url}
-                  shape="company"
                 />
                 <strong>{company.display_name}</strong>
                 {company.archived_at && (
@@ -1281,6 +1280,7 @@ function CompanyPage({
     <div className="record-sheet">
       <RecordView
         name={company.display_name}
+        identity={company.id}
         avatarSrc={company.logo_url}
         // One rung under the record scale: the name is still the largest thing
         // on the page, but beside a work column that opens on the reader's ask
@@ -1353,9 +1353,6 @@ function CompanyPage({
         // page above the columns: the details pane opens under it, from the
         // control at its end.
         tabs={tabs}
-        // A company's mark is its logo, so it is drawn on a square the way a
-        // logo is rather than round the way a face is.
-        markShape="company"
         // The chronology is the account's story and belongs to the overview.
         // The Partner tab is a form, so it does not repeat it under itself.
         {...slots}

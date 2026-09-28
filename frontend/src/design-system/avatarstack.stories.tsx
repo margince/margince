@@ -17,20 +17,23 @@ type Story = StoryObj<typeof AvatarStack>;
 
 export const FewContacts: Story = {
   args: {
-    contacts: [{ name: "Alex Rivera" }, { name: "Sam Okafor" }],
+    contacts: [
+      { name: "Alex Rivera", identity: "Alex Rivera" },
+      { name: "Sam Okafor", identity: "Sam Okafor" },
+    ],
   },
 };
 
 export const OverTheMax: Story = {
   args: {
     contacts: [
-      { name: "Alex Rivera" },
-      { name: "Sam Okafor" },
-      { name: "Priya Nair" },
-      { name: "Jordan Blake" },
-      { name: "Casey Lund" },
-      { name: "Mira Vance" },
-      { name: "Theo Marsh" },
+      { name: "Alex Rivera", identity: "Alex Rivera" },
+      { name: "Sam Okafor", identity: "Sam Okafor" },
+      { name: "Priya Nair", identity: "Priya Nair" },
+      { name: "Jordan Blake", identity: "Jordan Blake" },
+      { name: "Casey Lund", identity: "Casey Lund" },
+      { name: "Mira Vance", identity: "Mira Vance" },
+      { name: "Theo Marsh", identity: "Theo Marsh" },
     ],
     max: 5,
   },

@@ -87,7 +87,7 @@ export function ContactMemory({
             interactionLabel,
             locale,
             recordZone,
-            view.contact.full_name,
+            view.contact,
           ),
         )
       : foldActivities(view, t, interactionLabel, locale, recordZone);
@@ -147,7 +147,7 @@ export function ContactMemory({
               line: the counterparty on an email row, the contact themself on
               every other kind, so the column reads the same way a reader
               scans any list of contacts on this product. */}
-          <Avatar name={row.who} size="sm" />
+          <Avatar name={row.who.name} identity={row.who.key} size="sm" />
           {/* The meta line, as words: who the row is with, the transport the
               message came by (the directory's name for it with the kind's
               glyph, the one rule every source on this page follows, so a chat
@@ -155,7 +155,7 @@ export function ContactMemory({
               folded behind the row, and its standing. A pill per fact made
               three rows carry nine pills. */}
           <span className="meta-row-line t-caption">
-            <strong className="meta-row-who">{row.who}</strong>
+            <strong className="meta-row-who">{row.who.name}</strong>
             <span className="pe-source">
               {interactionIcon(row.kind)}
               {row.channelLabel}
@@ -231,8 +231,9 @@ type Row = {
   key: string;
   // Who the row is drawn beside: the other party on a retained email, and the
   // contact themself on every other kind, since a note or a call has no
-  // second name of its own to show.
-  who: string;
+  // second name of its own to show. `key` is the contact's id, or the
+  // counterparty's name, which is all a retained email knows of them.
+  who: Readonly<{ name: string; key: string }>;
   date: string;
   time: string;
   // What a reply anchors on, and the transport it would leave by. Null when the
@@ -308,9 +309,12 @@ type InteractionLabel = ReturnType<typeof useInteractionLabel>;
 // with the record the card is on.
 function whoFor(
   emailSummary: EmailSummary | null,
-  contactName: string,
-): string {
-  return emailSummary?.counterparty ?? contactName;
+  contact: Readonly<{ id: string; full_name: string }>,
+): Row["who"] {
+  const counterparty = emailSummary?.counterparty;
+  return counterparty
+    ? { name: counterparty, key: counterparty }
+    : { name: contact.full_name, key: contact.id };
 }
 
 function fromEntry(
@@ -319,14 +323,14 @@ function fromEntry(
   interactionLabel: InteractionLabel,
   locale: Locale,
   recordZone: string,
-  contactName: string,
+  contact: Readonly<{ id: string; full_name: string }>,
 ): Row {
   const status = entry.status ?? null;
   return {
     key: entry.key,
     // A thread-projection entry carries no email summary of its own, so the
     // counterparty it reads is always the contact this card is on.
-    who: whoFor(null, contactName),
+    who: whoFor(null, contact),
     date: formatDayMonth(entry.occurred_at, locale, recordZone),
     time: formatTimeOfDay(entry.occurred_at, locale, recordZone),
     // first_activity_id is what "expand to original" opens, and it is the right
@@ -373,7 +377,7 @@ function foldActivities(
     return {
       key: row.id,
       messageCount: group.entries.length,
-      who: whoFor(row.email_summary ?? null, view.contact.full_name),
+      who: whoFor(row.email_summary ?? null, view.contact),
       date: formatDayMonth(row.occurred_at, locale, recordZone),
       time: formatTimeOfDay(row.occurred_at, locale, recordZone),
       activityId: row.id,

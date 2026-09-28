@@ -202,7 +202,6 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
           <Avatar
             identity={installation.company_id}
             name={installation.display_name}
-            shape="company"
           />
         </span>
         {/* `as="div"`: the workspace name is the rail's identity, not a section
