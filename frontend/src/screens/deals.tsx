@@ -134,11 +134,7 @@ import {
   useProjectsOfCompany,
 } from "./dealproject";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
-import { DealSuggestionCard } from "./dealsuggestion";
-import {
-  type DealSuggestion,
-  useDealSuggestions,
-} from "./dealsuggestions.queries";
+import { useSuggestionGhosts } from "./dealsuggestion";
 import {
   EntityRef,
   type OwnerNaming,
@@ -1559,25 +1555,6 @@ function DealViewTools({
   );
 }
 
-// The open suggestions for the pipeline on screen, by the stage each would
-// open in. Nothing is read until a pipeline is chosen.
-function useSuggestionsByStage(
-  pipelineId: string | undefined,
-): Map<string, DealSuggestion[]> {
-  const query = useDealSuggestions(
-    { pipeline_id: pipelineId },
-    Boolean(pipelineId),
-  );
-  const byStage = new Map<string, DealSuggestion[]>();
-  for (const suggestion of query.data ?? []) {
-    byStage.set(suggestion.stage_id, [
-      ...(byStage.get(suggestion.stage_id) ?? []),
-      suggestion,
-    ]);
-  }
-  return byStage;
-}
-
 // The board surface's body, drawn only while the board is showing.
 //
 // Its own component because the choice it makes is three deep — a pipeline to
@@ -1633,7 +1610,7 @@ function DealBoardBody({
     companies,
     companiesSettled,
   );
-  const suggested = useSuggestionsByStage(effectivePipeline?.id);
+  const suggestionGhosts = useSuggestionGhosts(effectivePipeline?.id);
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>
@@ -1665,18 +1642,7 @@ function DealBoardBody({
                 mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
-                // Suggestions sit BESIDE a column's cards, never among them:
-                // the column's count and totals come from its deals alone,
-                // and a suggestion is not one.
-                columnExtras={(column) =>
-                  (suggested.get(column.stage) ?? []).map((suggestion) => (
-                    <DealSuggestionCard
-                      key={suggestion.id}
-                      suggestion={suggestion}
-                      compact
-                    />
-                  ))
-                }
+                columnExtras={suggestionGhosts}
               />
               <LoadMoreButton query={dealsQuery} />
             </>

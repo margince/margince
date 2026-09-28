@@ -9,9 +9,11 @@
 // suggestions — the same read, under the same visibility rule, the company page
 // makes — and draws this one with its evidence and its two answers.
 
+import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import { DealSuggestionCard } from "./dealsuggestion";
 import { useDealSuggestions } from "./dealsuggestions.queries";
+import { PairDecision } from "./worklist.pair";
 import type { WorklistItem } from "./worklist.queries";
 
 export function SuggestionDecision({ item }: Readonly<{ item: WorklistItem }>) {
@@ -30,4 +32,24 @@ export function SuggestionDecision({ item }: Readonly<{ item: WorklistItem }>) {
     );
   }
   return <DealSuggestionCard suggestion={suggestion} />;
+}
+
+// The answers too large for the row's own line, drawn UNDER it.
+export function answerBelow(
+  item: WorklistItem,
+): { below: ReactNode } | undefined {
+  if (item.source === "dedupe_candidate" && item.pair) {
+    // UNDER the row, not in it. Each of its two verbs names the record it
+    // would keep and stands in the list entry that describes that record —
+    // lifted out into a row of verbs, "Keep Acme GmbH" and "Keep Acme GmbH"
+    // would be two identical buttons over an irreversible merge.
+    return { below: <PairDecision item={item} /> };
+  }
+  // A suggestion's evidence is what a rep reads before opening a deal, and it
+  // does not fit on one line either. Never on a batch, which names no single
+  // suggestion.
+  if (item.source === "deal_suggestion" && !item.batch) {
+    return { below: <SuggestionDecision item={item} /> };
+  }
+  return undefined;
 }

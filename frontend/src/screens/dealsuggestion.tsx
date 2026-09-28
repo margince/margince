@@ -9,7 +9,7 @@
 // the board then draws as an ordinary card; the suggestion never counts in a
 // column, a total or a forecast.
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
@@ -387,4 +387,32 @@ export function CompanySuggestions({
       </PanelBody>
     </Panel>
   );
+}
+
+/**
+ * The board's ghost cards: for the pipeline on screen, a function drawing each
+ * column's open suggestions, keyed by the stage each would open in.
+ *
+ * Drawn BESIDE a column's cards through its extras, never among them: the
+ * column's count and totals come from its deals alone, and a suggestion is not
+ * one. Nothing is read until a pipeline is chosen.
+ */
+export function useSuggestionGhosts(
+  pipelineId: string | undefined,
+): (column: { stage: string }) => ReactNode {
+  const query = useDealSuggestions(
+    { pipeline_id: pipelineId },
+    Boolean(pipelineId),
+  );
+  const byStage = new Map<string, DealSuggestion[]>();
+  for (const suggestion of query.data ?? []) {
+    byStage.set(suggestion.stage_id, [
+      ...(byStage.get(suggestion.stage_id) ?? []),
+      suggestion,
+    ]);
+  }
+  return (column) =>
+    (byStage.get(column.stage) ?? []).map((suggestion) => (
+      <DealSuggestionCard key={suggestion.id} suggestion={suggestion} compact />
+    ));
 }

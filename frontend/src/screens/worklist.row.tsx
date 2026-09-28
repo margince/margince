@@ -43,7 +43,6 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { MeetingOutcome } from "./worklist.meetingoutcome";
-import { PairDecision } from "./worklist.pair";
 import { lastTouch } from "./worklist.pane";
 import { PlanWorkActions } from "./worklist.plan";
 import {
@@ -63,7 +62,7 @@ import {
 } from "./worklist.row.captions";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
-import { SuggestionDecision } from "./worklist.suggestion";
+import { answerBelow } from "./worklist.suggestion";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
 
@@ -547,24 +546,6 @@ const ANSWER_BY_SOURCE: Partial<
     draw: (item) => ({ primary: <NudgeDismiss contactId={item.id} /> }),
   },
 };
-
-// The answers too large for the row's own line, drawn UNDER it.
-function answerBelow(item: WorklistItem): RowPlacement | undefined {
-  if (item.source === "dedupe_candidate" && item.pair) {
-    // UNDER the row, not in it. Each of its two verbs names the record it
-    // would keep and stands in the list entry that describes that record —
-    // lifted out into a row of verbs, "Keep Acme GmbH" and "Keep Acme GmbH"
-    // would be two identical buttons over an irreversible merge.
-    return { below: <PairDecision item={item} /> };
-  }
-  // A suggestion's evidence is what a rep reads before opening a deal, and it
-  // does not fit on one line either. Never on a batch, which names no single
-  // suggestion.
-  if (item.source === "deal_suggestion" && !item.batch) {
-    return { below: <SuggestionDecision item={item} /> };
-  }
-  return undefined;
-}
 
 function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   if (item.source === "weekly_commitment")
