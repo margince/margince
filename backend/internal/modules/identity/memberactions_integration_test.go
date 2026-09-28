@@ -10,6 +10,7 @@ package identity
 // the handler refuses or answers without changing the member.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -194,5 +195,30 @@ func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
 		for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate} {
 			assertOfferAgrees(t, e, h, caller, offered, action, "a rep", target.UserID, repCopy)
 		}
+	}
+}
+
+// The sole admin holding a second role may still be given admin alone, which
+// keeps an administrator; the roster offers the change, and every other
+// choice for them is refused.
+func TestTheRosterOffersTheSoleAdminARoleChangeThatKeepsAdmin(t *testing.T) {
+	e := setupRevocationEnv(t, "allowed-sole-admin-extra")
+	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
+	extra := e.customRole(t, "Extra", "rep", nil)
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
+		e.roleID(t, extra), e.admin.UserID); err != nil {
+		t.Fatal(err)
+	}
+	offered := rosterActions(t, e, h, e.admin)[e.admin.UserID.UUID]
+	if !slices.Contains(offered, crmcontracts.UserAllowedActions(actionChangeRole)) {
+		t.Fatalf("the sole admin holding [admin, %s] is offered %v, want change_role", extra, offered)
+	}
+	if code := callMemberVerb(e, h, e.admin, actionChangeRole, e.admin.UserID, "rep"); code != http.StatusConflict {
+		t.Errorf("demoting the sole admin to rep answered %d, want 409", code)
+	}
+	assertOfferAgrees(t, e, h, e.admin, offered, actionChangeRole, "the sole admin", e.admin.UserID, roleAdmin)
+	if got := memberState(t, e, e.admin.UserID); got != "active admin" {
+		t.Errorf("the sole admin after keeping admin alone = %q, want %q", got, "active admin")
 	}
 }

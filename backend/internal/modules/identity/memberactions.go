@@ -98,7 +98,7 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 		actionChangeRole: refuseOwnRoleChange(actor, userID) == nil &&
 			callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			refuseRoleForAgentSeat(target.row.IsAgent) == nil &&
-			!target.soleAdmin,
+			keepsAnAdmin(target),
 		actionIssuePasswordLink: callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			!target.holdsArchivedRole &&
 			refusePasswordLinkTarget(status, target.row.IsAgent) == nil,
@@ -117,6 +117,14 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 		}
 	}
 	return out
+}
+
+// keepsAnAdmin reports whether some role change leaves the installation an
+// administrator. The sole admin holding more roles than admin may still be
+// given admin alone, which ChangeUserRole accepts; any other choice for them
+// is refused there.
+func keepsAnAdmin(target memberTarget) bool {
+	return !target.soleAdmin || len(target.row.Roles) > 1
 }
 
 // callerMay is the gate in front of every member verb: the user_admin grant
