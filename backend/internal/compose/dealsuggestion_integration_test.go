@@ -268,3 +268,35 @@ func TestAnOpenDealSupersedesTheSuggestion(t *testing.T) {
 		t.Fatalf("a company with an open deal still shows %d suggestions", len(shown))
 	}
 }
+
+func TestASuggestionFromSignalsIsHiddenWhenAMessageTheyCiteIsLimited(t *testing.T) {
+	e := setupScout(t)
+	acme := e.SeedCompany(t, "Acme GmbH", nil)
+	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
+	subject, inbound, at := "Next steps", "inbound", e.daysAgo(6)
+	mail, _, err := e.Activities.LogActivity(rep1, activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "company", EntityID: acme}},
+	})
+	if err != nil {
+		t.Fatalf("logging the mail: %v", err)
+	}
+	cited := ids.UUID(mail.Id)
+	e.signal(t, "new_opportunity", acme, cited, e.daysAgo(5), ids.Nil)
+	e.signal(t, "commitment_made", acme, e.email(t, "Confirmed", "inbound", acme, at), e.daysAgo(2), ids.Nil)
+	e.pass(t)
+	if shown := e.suggestions(rep3, t, acme); len(shown) != 1 {
+		t.Fatalf("before the limit a colleague is shown %d suggestions, want 1", len(shown))
+	}
+
+	if _, err := e.Activities.SetAudience(rep1, ids.From[ids.ActivityKind](cited),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("limiting the mail: %v", err)
+	}
+	if shown := e.suggestions(rep1, t, acme); len(shown) != 1 {
+		t.Fatalf("the mail's own author is shown %d suggestions, want 1", len(shown))
+	}
+	if shown := e.suggestions(rep3, t, acme); len(shown) != 0 {
+		t.Fatalf("a colleague who may not read the cited mail is shown %d suggestions", len(shown))
+	}
+}
