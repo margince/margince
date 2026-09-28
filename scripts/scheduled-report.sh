@@ -596,10 +596,14 @@ Three things this is NOT, each of which has looked like a regression before:
   QUOTING a record it should quote),
 - a harness fault that leaves the assistant with no tools at all.
 
-The known standing failure is case 6: asked about past account-manager changes,
-the assistant cites the record correctly, quotes the post-mortem note correctly,
-and then repeats the note's wrong month in its own voice. If that is what the
-transcript shows, this issue is the existing finding rather than a new one."\
+There is no standing failure to dismiss this against. Case 6 — asked about past
+account-manager changes, the assistant repeating a note's wrong month in its own
+voice — was the one, and it was fixed: it passes 3 of 3 on \`claude-opus-5\`, this
+lane's default model. So a case 6 failure here is a REGRESSION of that fix and
+the transcript is worth reading closely, not a known finding to be filed away.
+
+Nothing else is standing either. Every scenario in this lane is expected to pass,
+and this issue means one did not."\
     || unreported=1
 elif [[ "${LLM_RESULT:-}" = "success" ]]; then
   resolve "a use case is failing when driven by a real model"

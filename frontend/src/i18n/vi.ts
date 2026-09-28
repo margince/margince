@@ -692,6 +692,7 @@ export const vi = {
   "search.group.tag": "Tag",
   "search.kind.contact": "Liên hệ",
   "search.kind.company": "Tổ chức",
+  "search.kind.partnerCompany": "Tổ chức đối tác",
   "search.kind.deal": "Deal",
   "search.kind.project": "Dự án",
   "search.kind.product": "Sản phẩm",
@@ -706,6 +707,9 @@ export const vi = {
   "search.tag.carriedBy_other": "Trên {count} bản ghi",
   "search.tier.mirrored": "Từ hệ thống đã kết nối",
   "search.tier.unverified": "Chưa xác minh",
+  "search.partner.badge": "Đối tác",
+  "search.partner.open": "Mở hồ sơ đối tác",
+  "search.partner.openNamed": "Mở hồ sơ đối tác của {name}",
 
   "context.recentTouches": "Trao đổi gần đây",
   "context.openTasks": "Công việc đang mở",
@@ -3168,6 +3172,9 @@ export const vi = {
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.many": "Trước tiên: {lead}. Rồi {rest}.",
   "brief.sentence.rest": "{count} mục nữa",
+  "brief.order.withheld": "Không được tính trong thứ tự này: {factors}",
+  "brief.factor.warmth": "mức độ thân thiết của mối quan hệ",
+  "brief.factor.unknown": "một yếu tố mà phiên bản này không gọi tên được",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
   "brief.week.won_one": "Bạn đã chốt {count} deal.",

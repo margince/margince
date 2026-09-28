@@ -69,13 +69,12 @@ var unreachableChecks = gatekit.Waive(map[string]string{
 		"request can produce a row that violates it",
 	"project_source_author_needs_a_source": "the violating combination cannot be " +
 		"written. The CHECK refuses an author on a row naming no source_system, and " +
-		"the ONLY writer of those two columns is SetProjectSourceAuthorTx — which " +
-		"calls storekit.AttributableNow before it builds the patch, reads " +
-		"source_system under the row's own lock, and answers `skipped` with a " +
-		"reason when it is null, so the patch is never built. No other path names " +
-		"either column: the contract marks `author` readOnly, so the create and " +
-		"update paths carry no field that reaches it. Verified against the store " +
-		"rather than inferred from the contract, which is this waiver's own bar",
+		"the ONLY door that writes those two columns is the importer's create, and " +
+		"its mapper runs provenance.AdmitSourceAuthor, which refuses an author " +
+		"beside a null or empty source_system before the store is reached. The " +
+		"provider door keeps the closed mapper and carries no author, and no " +
+		"update path names either column. Verified against the mapper rather than " +
+		"inferred from the contract, which is this waiver's own bar",
 })
 
 // Every CHECK the table carries must have a message of its own. Falling

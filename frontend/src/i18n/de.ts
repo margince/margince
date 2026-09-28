@@ -697,6 +697,7 @@ export const de = {
   "search.group.tag": "Tags",
   "search.kind.contact": "Kontakt",
   "search.kind.company": "Unternehmen",
+  "search.kind.partnerCompany": "Partnerunternehmen",
   "search.kind.deal": "Deal",
   "search.kind.project": "Projekt",
   "search.kind.product": "Produkt",
@@ -711,6 +712,9 @@ export const de = {
   "search.tag.carriedBy_other": "{count} Datensätze mit diesem Tag",
   "search.tier.mirrored": "Aus einem verbundenen System",
   "search.tier.unverified": "Nicht verifiziert",
+  "search.partner.badge": "Partner",
+  "search.partner.open": "Partnerdatensatz öffnen",
+  "search.partner.openNamed": "Partnerdatensatz öffnen für {name}",
 
   "context.recentTouches": "Letzte Aktivitäten",
   "context.openTasks": "Offene Aufgaben",
@@ -3195,6 +3199,10 @@ export const de = {
   "brief.sentence.one": "Zuerst: {lead}",
   "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
   "brief.sentence.rest": "{count} weitere",
+  "brief.order.withheld":
+    "In dieser Reihenfolge nicht berücksichtigt: {factors}",
+  "brief.factor.warmth": "Beziehungsnähe",
+  "brief.factor.unknown": "ein Faktor, den diese Version nicht benennen kann",
 
   // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
   "brief.week.won_one": "Du hast {count} Deal gewonnen.",

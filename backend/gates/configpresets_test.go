@@ -242,15 +242,20 @@ func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
 }
 
 // hostedLocalOnlyBindings ratifies each shipped configuration that binds a
-// local-only task's every rung to a hosted provider — under which that task
-// does not run at all, because the router drops the rung.
+// local-only task's every rung to a hosted provider — under which that task's
+// prompt leaves the machine, which is what `local_only` says it must not do.
 //
-// These are not oversights and this is not a backlog. `local_small` is a SIZE
-// class in this tree, not a location: every file below binds it deliberately,
-// and the two capture verdicts are the only tasks that ask for more than size.
-// What the waiver buys is that the set cannot grow in silence — a new preset,
-// or a rebind of an existing one, fails this gate until somebody writes down
-// that they know the sender and thread verdicts will not run under it.
+// Nothing refuses it. The tier a ladder names is a capability class the
+// deployment binds, and `local_small` carries two jobs that pull apart:
+// docs/explanation/ai-runtime.md calls it "on-box, zero-egress", and degradeTo
+// makes it the floor every other rung falls to when a budget is spent. A
+// cloud-only deployment has no local model and still needs a floor, so it
+// binds the cheapest hosted one it has and the tier quietly stops meaning
+// zero-egress.
+//
+// Which of those two jobs the tier keeps is an open product question, so this
+// gate reports rather than enforces: the set cannot grow in silence, and the
+// list below is the evidence that question needs.
 var hostedLocalOnlyBindings = gatekit.Waive(map[string]string{
 	"margince.dev.yaml": "the dev stack rides one vendor on every rung so a contributor needs no local " +
 		"inference to boot it, and it judges seeded fixtures rather than a real mailbox",
@@ -299,13 +304,13 @@ func TestEveryShippedConfigIsHonestAboutWhereALocalOnlyTaskRuns(t *testing.T) {
 				continue
 			}
 			findings = append(findings, fmt.Sprintf(
-				"%s: task %s is local_only and no rung of its ladder (%v) binds a local provider, so it will not run there",
+				"%s: task %s declares local_only and no rung of its ladder (%v) binds a local provider, so its prompt leaves the machine there",
 				subject, task, ai.TaskLadder(task)))
 		}
 	}
 	if len(findings) > 0 {
 		sort.Strings(findings)
-		t.Errorf("a shipped config excludes a local-only task without saying so — bind a local rung, or ratify it in hostedLocalOnlyBindings with the reason:\n  %s",
+		t.Errorf("a shipped config sends a local-only task's prompt to a hosted provider without saying so — bind a local rung, or ratify it in hostedLocalOnlyBindings with the reason:\n  %s",
 			strings.Join(findings, "\n  "))
 	}
 	// The one way this gate can go quiet is by reading a smaller corpus: a file

@@ -206,10 +206,11 @@ func TestTheLLMLegRunsEveryScenarioEvenWhenTheDecisionKept(t *testing.T) {
 	}
 }
 
-// A local-only task's data stays on the machine: the lane is never called,
-// every run falls back as local_only, and the record says the lane does not
-// serve the site.
-func TestAVerdictTaskIsLocalOnlyRefusedOnJev(t *testing.T) {
+// A local-only task's data reaches a non-local lane today: localOnlyAdmits
+// (ai.decisionSkipFor's predicate) is unconditional, #6396 reverted the
+// ladder's own narrowing pending #3351, and the decision lane follows the
+// same premise. Certifying it behaves exactly as certifying any other task.
+func TestAVerdictTaskCertifiesOnJevWhileLocalOnlyIsReverted(t *testing.T) {
 	task := ai.TaskCaptureCounterpartyVerdict
 	if !ai.LocalOnly(task) {
 		t.Fatalf("%s is no longer local-only; pick a task that is", task)
@@ -225,16 +226,15 @@ func TestAVerdictTaskIsLocalOnlyRefusedOnJev(t *testing.T) {
 	if err != nil {
 		t.Fatalf("certify: %v", err)
 	}
-	if decider.called() != 0 {
-		t.Fatalf("the decision model was sent a local-only task's data %d times", decider.called())
+	if decider.called() != 3 {
+		t.Fatalf("the decision model was sent a local-only task's data %d times, want 3", decider.called())
 	}
 	if len(records) != 1 {
-		t.Fatalf("got %d records, want one saying the site is not served", len(records))
+		t.Fatalf("got %d records, want one", len(records))
 	}
 	stats := records[0].Decision
-	if records[0].Verdict != VerdictNotSupported || stats.FallbackRate != 1 ||
-		!reflect.DeepEqual(stats.FallbackByReason, map[string]int{"local_only": 3}) {
-		t.Errorf("record = %s %+v, want not_supported with every run local_only", records[0].Verdict, *stats)
+	if records[0].Verdict != VerdictCertified || stats.Kept != 3 || stats.KeptWrong != 0 || stats.FallbackRate != 0 {
+		t.Errorf("record = %s %+v, want certified with every run kept and correct", records[0].Verdict, *stats)
 	}
 }
 

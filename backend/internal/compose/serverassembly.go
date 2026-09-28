@@ -102,6 +102,10 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
+		// The SAME seam the check_availability tool reads, so the two doors
+		// answer one question one way: whether a window was read off the host's
+		// own diary or derived from this CRM's records.
+		WithCalendarConnected(activities.CalendarConnected(calendarBackingResolver(pool))).
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
@@ -352,13 +356,6 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	// The author repair reaches one module's store and its own ledger table,
-	// both off the same installation handle — so the write and the record of
-	// the write cannot end up addressing different databases.
-	s.attributionHandlers = attributionHandlers{
-		db:         InstallationDB(pool),
-		activities: activities.NewStore(InstallationDB(pool)),
-	}
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))

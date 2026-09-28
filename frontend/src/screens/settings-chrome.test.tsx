@@ -158,10 +158,10 @@ describe("the scope a settings page publishes", () => {
     return <PageTitle route={route} section={useSettingsSection(route)} />;
   }
 
-  // `company` is deliberately not among these: its requirement ANDs the
-  // company write with the `company_context` deployment flag, which the
-  // default fixture leaves off, so the page is shut and has no heading to carry
-  // a scope. The installation scope is covered by the pure catalog test instead.
+  // `company` is deliberately not among these: it opens on the installation
+  // write or the rate read, which the default fixture grants neither of, so the
+  // page is shut and has no heading to carry a scope. The installation scope is
+  // covered by the pure catalog test instead.
   // `account` and `connections` are deliberately NOT here. Both open on
   // `always`, so their heading and badge render while `/me` is still in flight
   // — `findByText` would resolve on the loading paint, and a regression that

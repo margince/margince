@@ -149,3 +149,30 @@ export const StageNotInThisPipeline: Story = {
     />
   ),
 };
+
+/**
+ * A pipeline a workspace built for itself, longer than any row has room for.
+ * The deal stands two-thirds of the way along it, so the stages it has
+ * climbed, where it is and the ways out cannot all sit in one row at once.
+ */
+export const LongPipeline: Story = {
+  render: () => (
+    <StageLadder
+      label="Stage"
+      steps={[
+        { key: "in", label: "Inbound", done: true, onPick: noop },
+        { key: "disc", label: "Discovery", done: true, onPick: noop },
+        { key: "q", label: "Qualified", done: true, onPick: noop },
+        { key: "demo", label: "Demo scheduled", done: true, onPick: noop },
+        { key: "tech", label: "Technical review", done: true, onPick: noop },
+        { key: "p", label: "Proposal sent", done: true, onPick: noop },
+        { key: "n", label: "Negotiation", current: true, onPick: noop },
+        { key: "legal", label: "Legal review", onPick: noop },
+        { key: "proc", label: "Procurement", onPick: noop },
+        { key: "sig", label: "Awaiting signature", onPick: noop },
+        { key: "w", label: "Won", terminal: true, onPick: noop },
+        { key: "l", label: "Lost", terminal: true, onPick: noop },
+      ]}
+    />
+  ),
+};

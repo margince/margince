@@ -47,6 +47,9 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row) (migr
 		return migration.EnsureResult{Skipped: true, SkipReason: "the row carries neither a name nor an email, so it names no contact"}, nil
 	}
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
+			return ids.UUID{}, err
+		}
 		contact, err := w.contacts.CreateContactTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating contact %s: %w", row.ExternalID, err)

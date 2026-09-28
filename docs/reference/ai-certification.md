@@ -999,8 +999,10 @@ answers instead whenever the lane may not be asked (a local-only task), fails,
 or answers below the site's own floor. A decision record comes from a
 `make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified
 per site with no judge: `certified` means no answer the site kept was wrong in
-any run, and at least one was kept. The lane serves a site only while its
-record is certified and not stale (*Serves*); `make gen` writes those rows into
+any run, and at least one was kept. A bound lane serves every site whether or
+not a record exists (advisory, not a runtime gate); *Serves* here means the
+record itself is certified and not stale, which is what an operator should
+trust the binding on. `make gen` writes those rows into
 `internal/modules/ai/decisioncert_gen.go`.
 
 | Site | Binding | State | Verdict | Serves | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |

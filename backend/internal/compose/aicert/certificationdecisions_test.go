@@ -82,11 +82,13 @@ func writeAICertDecisions(page *strings.Builder, decisions []aiCertDecision) {
 	page.WriteString("or answers below the site's own floor. A decision record comes from a\n")
 	page.WriteString("`make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified\n")
 	page.WriteString("per site with no judge: `certified` means no answer the site kept was wrong in\n")
-	page.WriteString("any run, and at least one was kept. The lane serves a site only while its\n")
-	page.WriteString("record is certified and not stale (*Serves*); `make gen` writes those rows into\n")
+	page.WriteString("any run, and at least one was kept. A bound lane serves every site whether or\n")
+	page.WriteString("not a record exists (advisory, not a runtime gate); *Serves* here means the\n")
+	page.WriteString("record itself is certified and not stale, which is what an operator should\n")
+	page.WriteString("trust the binding on. `make gen` writes those rows into\n")
 	page.WriteString("`internal/modules/ai/decisioncert_gen.go`.\n\n")
 	if len(decisions) == 0 {
-		page.WriteString("No decision record is committed, so the decision lane serves no site.\n\n")
+		page.WriteString("No decision record is committed, so no site has a measured verdict.\n\n")
 		return
 	}
 	page.WriteString("| Site | Binding | State | Verdict | Serves | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |\n")

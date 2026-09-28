@@ -223,9 +223,16 @@ type Timeliness struct {
 	// what stops one late payment becoming a reputation.
 	InsufficientSample bool
 	MedianDaysLate     int
-	// OnTimeRate is a share in [0,1]. Its DENOMINATOR is part of the figure,
-	// not a footnote — 100% over two invoices and over sixty are different
-	// claims and must never render the same.
+	// OnTimeRate is `count(days_late <= 0) / count(sample)`, a share in [0,1].
+	// On time means paid ON or BEFORE the due date, with NO tolerance: one day
+	// late is late. A grace period, if one is ever wanted, is a named parameter
+	// defaulting to zero rather than a wider comparison here — the boundary is
+	// what a customer is told their record says, and moving it silently
+	// rewrites every figure already quoted.
+	//
+	// Its DENOMINATOR is part of the figure, not a footnote — 100% over two
+	// invoices and over sixty are different claims and must never render the
+	// same.
 	OnTimeRate float64
 	SampleSize int
 	WindowDays int

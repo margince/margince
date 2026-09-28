@@ -88,7 +88,7 @@ func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 	if got.PartnerCompanyId != nil {
 		t.Errorf("partner_company_id = %v, want withheld", got.PartnerCompanyId)
 	}
-	assertMaskNames(t, got, "company_id", "partner_company_id")
+	assertMaskNames(t, got, "company_id", "partner_company_id", "partner_attribution")
 
 	// A project is read by every seat HOLDING THE OBJECT GRANT, and this rep
 	// holds no project grant at all (AccountRepPerms). Row scope is not the
@@ -155,7 +155,7 @@ func TestTheDealListWithholdsTheSameReferencesAsTheGet(t *testing.T) {
 			if d.CompanyId != nil || d.PartnerCompanyId != nil {
 				t.Errorf("the list handed out a private company: company %v partner %v", d.CompanyId, d.PartnerCompanyId)
 			}
-			assertMaskNames(t, d, "company_id", "partner_company_id")
+			assertMaskNames(t, d, "company_id", "partner_company_id", "partner_attribution")
 		case fx.hiddenProj.UUID:
 			// This rep holds no project.read grant, so the page withholds the
 			// id for the same reason the single-row read does — the list is
@@ -251,7 +251,7 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 				t.Errorf("%s handed back company %v partner %v, want both withheld",
 					tc.name, got.CompanyId, got.PartnerCompanyId)
 			}
-			assertMaskNames(t, got, "company_id", "partner_company_id")
+			assertMaskNames(t, got, "company_id", "partner_company_id", "partner_attribution")
 		})
 	}
 }

@@ -18,10 +18,10 @@ import {
 // fetch stub those cards read through, so the render is deterministic and
 // network-free — the same fixture shapes the settings.test.tsx cases use.
 //
-// A company entry is only reachable when the principal holds what its
-// cards ask for, and SettingsScreen falls back to Account for anything else. So
-// a story about such an entry has to name its grants: `me({...})` builds the
-// /me body that opens the entry the story is capturing.
+// A company entry is only reachable when the principal holds what its cards
+// ask for, and SettingsScreen shows the access boundary for anything else. So a
+// story about such an entry has to name its grants: `me({...})` builds the /me
+// body that opens the entry the story is capturing.
 
 const me =
   (allow: GrantSpec = {}) =>
@@ -94,83 +94,6 @@ const connectorOn = () =>
 
 const connectorOff = () =>
   jsonResponse({ title: "no MCP connector on this installation" }, 404);
-
-// Attribution names the CONTACT and says a machine did the typing second
-// (PD-002), so the fixture carries the resolved names the read path returns and
-// spells actor_id the way storekit stamps it — "human:<uuid>", not a bare id.
-// A fixture that skipped the prefix is what let the "You" branch look covered
-// while being unreachable in the product.
-const auditLog = () =>
-  jsonResponse({
-    data: [
-      {
-        id: "a1",
-        occurred_at: "2026-07-10T14:09:00Z",
-        actor_type: "human",
-        actor_id: "human:u-mor",
-        actor_name: "Ada Mortensen",
-        action: "create",
-        entity_type: "custom_field",
-        entity_id: "cf-1",
-      },
-      {
-        id: "a2",
-        occurred_at: "2026-07-10T09:41:00Z",
-        actor_type: "human",
-        actor_id: "human:u-lars",
-        actor_name: "Lars Vogt",
-        action: "update",
-        entity_type: "deal",
-        entity_id: "d-1",
-      },
-      {
-        // An agent under a human's authority reads as that human, qualified.
-        id: "a3",
-        occurred_at: "2026-07-10T08:12:00Z",
-        actor_type: "agent",
-        actor_id: "agent:01a01740-c9c2-736d-a0b6-d3e3dcb13111",
-        passport_id: "01a01740-c9c2-736d-a0b6-d3e3dcb13999",
-        on_behalf_of: "u-lars",
-        on_behalf_of_name: "Lars Vogt",
-        action: "update",
-        entity_type: "deal",
-        entity_id: "d-1",
-      },
-      {
-        // A grant was presented and no human resolved behind it: a gap, and it
-        // says so rather than reading as "System".
-        id: "a4",
-        occurred_at: "2026-07-10T07:30:00Z",
-        actor_type: "agent",
-        actor_id: "agent:scheduled_send",
-        passport_id: "01a01740-c9c2-736d-a0b6-d3e3dcb13aaa",
-        action: "send_email",
-        entity_type: "activity",
-        entity_id: "ac-1",
-      },
-      {
-        // No grant presented — a background pass nobody's context ran. Not a
-        // gap, so it shows what acted and claims no missing authority.
-        id: "a5",
-        occurred_at: "2026-07-10T06:00:00Z",
-        actor_type: "agent",
-        actor_id: "agent:company_name_promotion",
-        action: "update",
-        entity_type: "company",
-        entity_id: "o-1",
-      },
-      {
-        id: "a6",
-        occurred_at: "2026-07-10T05:00:00Z",
-        actor_type: "system",
-        actor_id: "system",
-        action: "erase",
-        entity_type: "contact",
-        entity_id: "p-9",
-      },
-    ],
-    page: { next_cursor: null, has_more: false },
-  });
 
 // The Account tab's bookability card indexes its own answer, so a tab story
 // that leaves this endpoint unrouted takes the WHOLE SCREEN down: the fallback
@@ -388,7 +311,7 @@ export const AgentToolConsoleDark: Story = {
 //
 // The custom_field READ is what opens the entry — opening a page is reading it,
 // and `meFixture` grants only the verbs named here. A write-only fixture reaches
-// no entry at all and the story silently captures the Account fallback instead,
+// no entry at all and the story silently captures the access boundary instead,
 // which is exactly what it did: nothing asserts on a story, so the gates stayed
 // green while the picture was of the wrong page. The writes stay so the builder
 // and the row actions render.
@@ -398,24 +321,21 @@ export const DataModelTab: Story = {
   }),
 };
 
-// The consent registry and the audit trail on one page: the trail is what proves
-// the surfaces above it were honoured, so it moved here from a tab of its own.
+// The consent registry, the retention ladder and the subject-request queue. The
+// audit trail that proves them honoured is its own page.
 export const PrivacyTab: Story = {
-  // `contact:read` is what opens this entry — the consent registry is gated on it
-  // server-side (consent/store.go), not on a role. Without it the entry is not
-  // visible, useVisibleSettingsTabs falls back to Account, and this story
-  // captured the Account tab: byte-identical to AccountTab, under the name of a
-  // page it never rendered. The comment two stories up describes this exact
-  // failure; it happened again here.
+  // `contact` AND `consent_config` open this entry: the registry reads through
+  // `contact` server-side (consent/store.go), and every seat holds that alone.
+  // Without the pair `SettingsScreen` answers the address with the access
+  // boundary, and the story captures the refusal under the name of a page it
+  // never rendered — the failure the comment two stories up describes.
   render: tab("privacy", {
-    "GET /me": me({ contact: ["read"] }),
-    "GET /audit-log": auditLog,
+    "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
   }),
 };
 
 const privacyRoutes = {
-  "GET /me": me({ contact: ["read"] }),
-  "GET /audit-log": auditLog,
+  "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
 };
 
 // A whole settings PAGE at 390px, which is the thing only this file can show —

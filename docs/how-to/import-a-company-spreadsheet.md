@@ -52,10 +52,15 @@ Name each source column and the field it feeds. The importer does not guess:
 ```
 
 A company can receive `display_name`, `legal_name`, `industry`, `size_band`,
-`description`, and the six address fields: `address.line1`, `address.line2`,
-`address.city`, `address.region`, `address.postal_code`, `address.country`.
-Map a name it does not take and the run is refused with the list of what it
-does — before anything is written.
+`description`, `domain`, `author`, and the six address fields: `address.line1`,
+`address.line2`, `address.city`, `address.region`, `address.postal_code`,
+`address.country`. Map a name it does not take and the run is refused with the
+list of what it does — before anything is written.
+
+`author` is who created the row in the system the file came from. Margince keeps
+the cell as written. If the cell is the email of a Margince user, the record also
+links to that user, so it shows their current name. The author is set when the
+import creates the record. A later file does not change it.
 
 **A file of contacts becomes leads, not contacts.** Set `object` to `lead` for
 those. That is a deliberate rule, not an omission: an unqualified list must not

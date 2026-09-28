@@ -297,3 +297,86 @@ func TestARotatedCredentialStillPollsAndWithdrawsItsOwnProposal(t *testing.T) {
 		t.Error("withdrawing an undecided proposal reported nothing to retract")
 	}
 }
+
+// Two CONNECTIONS of one contact, which is the loan made twice.
+//
+// The two rules either side of this one bind the credential and the human, and
+// both pass here: A and B are connected agents of the same contact, so A stages
+// and B releases with nobody having looked. The refusal text now names
+// decide_approval and tells a caller it may relay the contact's answer, so the
+// shape is reachable by instruction — a tool loop told "the user already said
+// yes" has a named tool to reach for.
+//
+// The GRANT is the line, and the sibling tests are why. A rotation is one
+// connection and is refused because nobody is present at a rotation; two
+// directly minted passports are allowed because a human session had to mint
+// each. A second connection is the first case wearing the second's clothes:
+// connecting an agent is not being present when it answers.
+func TestASecondConnectionOfTheSameContactDoesNotReleaseWhatTheFirstStaged(t *testing.T) {
+	e := setupStaging(t)
+	ctx := context.Background()
+
+	target := ids.NewV7()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Twograntz', 'gmail:seed', 'connector:gmail')`, target); err != nil {
+		t.Fatalf("seeding the target: %v", err)
+	}
+
+	// Two grants, one contact: different connections, so sameAgent separates
+	// them, and the same lender, so the human rule passes.
+	proposer := e.connectedPassport(t, e.rep, e.connection(t, e.rep))
+	confirmer := e.connectedPassport(t, e.rep, e.connection(t, e.rep))
+
+	staged, err := e.svc.Stage(proposer, StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: []byte(`{"proposed_name":"Twograntz Global"}`),
+		DiffHash:       "twogrants-" + target.String(),
+		TargetType:     tableCompany,
+		TargetID:       target,
+		Summary:        "Rename Twograntz?",
+	})
+	if err != nil {
+		t.Fatalf("staging on the first connection: %v", err)
+	}
+
+	if _, err := e.svc.Decide(confirmer, staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a second connection of the same contact approved what the first staged → %v, want "+
+			"ErrPermissionDenied — the confirm-first tier is then walked end to end by two "+
+			"credentials the contact lent once and never looked at again", err)
+	}
+
+	// A rejection still passes, for the reason every rule here spares it: it
+	// discards the proposal and cannot escalate.
+	if _, err := e.svc.Decide(confirmer, staged, false, nil); err != nil {
+		t.Errorf("the second connection could not REJECT the proposal: %v", err)
+	}
+
+	// THE POSITIVE CONTROL. Without it this test passes just as well when a
+	// connected credential can no longer decide anything at all: a HUMAN
+	// releases what a connection staged, and the proposer redeems it.
+	control := StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: []byte(`{"proposed_name":"Twograntz Worldwide"}`),
+		DiffHash:       "twogrants-control-" + target.String(),
+		TargetType:     tableCompany,
+		TargetID:       target,
+		Summary:        "Rename Twograntz again?",
+	}
+	sanctioned, err := e.svc.Stage(proposer, control)
+	if err != nil {
+		t.Fatalf("staging the control proposal: %v", err)
+	}
+	human := e.asHumanWith(principal.Permissions{
+		RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{
+			tableCompany: {Create: true, Read: true, Update: true, Delete: true},
+		},
+	})
+	if _, err := e.svc.Decide(human, sanctioned, true, nil); err != nil {
+		t.Fatalf("the contact could not release what their own connection staged: %v", err)
+	}
+	if _, _, err := e.svc.Redeem(proposer, sanctioned, control.Kind, control.DiffHash); err != nil {
+		t.Errorf("the proposing connection could not redeem what its contact released: %v", err)
+	}
+}

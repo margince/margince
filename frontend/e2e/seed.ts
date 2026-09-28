@@ -69,10 +69,10 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // never loaded — a page that renders and says nothing, which both sweeps pass.
   list: ["create", "read", "update", "delete"],
   // The two admin entries the sweep reached for and did not get. Both are
-  // gated on their own read (settings.tsx's entry visibility), and a tab this
-  // principal cannot see falls back to Account — so `settings/knowledge` and
-  // `settings/license` were sweeping the shortest page in settings twice while
-  // reporting two more pages covered.
+  // gated on their own read (the settings catalog), and a page this principal
+  // cannot open lands on the access boundary — so `settings/knowledge` and
+  // `settings/license` were sweeping a refusal while reporting two more pages
+  // covered.
   knowledge_corpus: ["create", "read", "update", "delete"],
   license: ["read"],
   // Model routing, which the AI settings page gates its whole entry on. Read

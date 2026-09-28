@@ -339,24 +339,24 @@ the ladder's. Bound, `Router.Decide` asks the lane first, inside the same
 logical call and rail entry, and falls back to the task's own ladder and prompt
 unless every check passes, in this order:
 
-1. **Local-only stays local.** A `local_only` task takes only a local lane:
-   `jev_compatible` on a loopback or private-range IP endpoint, never `jev`.
-2. **Certified for this site.** The generated table
-   `internal/modules/ai/decisioncert_gen.go` must hold a row for (task, site,
-   provider, model); certification writes it ([how-to](../how-to/certify-a-decision-site.md)).
-3. **The answer stands.** The state is secret-stripped and capped at 48,000
-   bytes, the call has 15 seconds, and the answer must be an offered label at
-   or above the **site's own** floor (the one its LLM path applies).
+1. **Local-only stays local** — nominally. `localOnlyAdmits`
+   (`internal/modules/ai/localonly.go`) is the one predicate this lane and the
+   ladder's `servableLadder` both read, unconditional today: #6396 reverted
+   the ladder's narrowing pending #3351, and the lane follows suit.
+2. **The answer stands.** The state is secret-stripped and capped at 48,000
+   bytes, the call has 15 seconds, and the answer must clear the **site's
+   own** floor (the one its LLM path applies).
 
-A fallback leaves its reason on the ladder's first attempt:
-`decision_local_only`, `decision_uncertified`, `decision_state_too_large`,
-`decision_error`, `decision_off_enum` or `decision_below_floor`. A decision
-attempt is its own `ai_call` row (`kind = decision`, tier `decide`), metered on
-input tokens and priced on the `decisions` rate lane. It keeps its answer
-(`decision_choice`, `decision_confidence`) whether or not it stood, `no_payload`
-tasks included: floors are tuned from real fallbacks. The route preview says per
-feature whether the lane answers first or why not (`unbound`, `local_only`,
-`uncertified`); `GET /v1/ai/usage` counts a task's `decisions` per logical call.
+No certification row is required — only the two checks above. [Certifying a
+site](../how-to/certify-a-decision-site.md) is advisory only, a measured
+record an operator trusts it by, never something `Router.Decide` reads. A
+fallback leaves its reason on the ladder's first attempt:
+`decision_local_only`, `decision_state_too_large`, `decision_error`,
+`decision_off_enum` or `decision_below_floor`. A decision attempt is its own
+`ai_call` row (`kind = decision`, tier `decide`), priced on the `decisions`
+rate lane, keeping its answer (`decision_choice`, `decision_confidence`)
+whether or not it stood — floors are tuned from real fallbacks, `no_payload`
+tasks included. `GET /v1/ai/usage` counts `decisions` per call.
 
 Two providers speak the one wire, `base_url` being the full endpoint: `jev`,
 TypeSafe's own API, and `jev_compatible`, any Jev-wire server — OpenRouter
