@@ -78,6 +78,8 @@ type SiteFact = components["schemas"]["CompanySiteReadFact"];
 // here — so it carries no clarify-answering props at all: no comparisons to
 // label a dismiss against, no pendingQuestionId, no answer/dismiss handlers.
 type CompanyConfirmCardProps = Readonly<{
+  /** The installation's company once one exists; its mark keys on it. */
+  companyId?: string;
   proposal: Proposal;
   draft: CompanyDraft;
   answers: readonly ClarifyAnswer[];
@@ -774,8 +776,9 @@ type CompanyCardFact = {
 // jump link into it; the rest (website has none) render as plain text.
 function CompanyIdentityCard({
   draft,
-  t,
-}: Readonly<{ draft: CompanyDraft; t: ReturnType<typeof useT> }>) {
+  companyId,
+}: Pick<CompanyConfirmCardProps, "draft" | "companyId">) {
+  const t = useT();
   const legalName = draft.values.legal_name.trim();
   const name = draft.values.display_name.trim() || legalName;
   if (name === "") {
@@ -816,10 +819,9 @@ function CompanyIdentityCard({
   return (
     <div className="ob-company-card">
       {/* The contract carries no logo/favicon field for a company; the
-          monogram is the floor, not a fallback for a missing fetch. No company
-          record exists yet while setup confirms the read, so there is no id
-          and the name is the key, as on the profile digest. */}
-      <Avatar name={name} identity={name} size="md" />
+          monogram is the floor, not a fallback for a missing fetch. Keyed as
+          the digest's is: the company once it exists, else the name. */}
+      <Avatar name={name} identity={companyId ?? name} size="md" />
       <div className="ob-company-card-body">
         <Heading size="medium" className="t-h3">
           {name}
@@ -1426,7 +1428,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
         <Sparkles aria-hidden />
         <Heading size="large">{t("ob.conv.review.title")}</Heading>
       </header>
-      <CompanyIdentityCard draft={props.draft} t={t} />
+      <CompanyIdentityCard draft={props.draft} companyId={props.companyId} />
       <div className="ob-triage-body">
         <SectionNav
           groups={frozen}

@@ -26,28 +26,51 @@ export type NameOf = (
   entityId: string,
 ) => string | undefined;
 
+/** A contact on an exchange: the record it is, and what it is called. */
+export type ContactOn = Readonly<{ id: string; name: string }>;
+
 /**
  * The contacts an activity is filed against, named and in link order.
  *
- * An id nobody can put a name to is dropped rather than printed: a reader
- * cannot recognise a uuid, and a row that shows one has spent its line saying
- * nothing.
+ * The id rides beside the name because a face is keyed on the record: a chip
+ * keyed on the name draws one contact in two colours on a page whose header
+ * keys it on the id. An id nobody can put a name to is dropped rather than
+ * printed: a reader cannot recognise a uuid, and a row that shows one has spent
+ * its line saying nothing.
  */
 export function contactsOn(
   links: readonly ActivityLinkRef[] | undefined,
   nameOf?: NameOf,
-): string[] {
-  const names: string[] = [];
+): ContactOn[] {
+  const contacts: ContactOn[] = [];
   for (const link of links ?? []) {
     if (link.entity_type !== "contact") {
       continue;
     }
     const name = nameOf?.("contact", link.entity_id);
-    if (name && !names.includes(name)) {
-      names.push(name);
+    if (name && !contacts.some((seen) => seen.id === link.entity_id)) {
+      contacts.push({ id: link.entity_id, name });
     }
   }
-  return names;
+  return contacts;
+}
+
+/**
+ * The one contact an activity is filed against, or nothing when it is filed
+ * against none or several. The server's own phrase for a message names a
+ * participant it resolved to a contact, so on an exchange filed against one
+ * contact the phrase is that contact and a face drawn from it keys on the
+ * record; filed against several, the phrase cannot say which.
+ */
+export function soleContactOn(
+  links: readonly ActivityLinkRef[] | undefined,
+): string | undefined {
+  const ids = new Set(
+    (links ?? [])
+      .filter((link) => link.entity_type === "contact")
+      .map((link) => link.entity_id),
+  );
+  return ids.size === 1 ? [...ids][0] : undefined;
 }
 
 /**

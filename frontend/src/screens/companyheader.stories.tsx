@@ -225,10 +225,10 @@ export const MenuOpen: Story = {
 
 // An archived account. "Archived" leads the pills under the name, a state of
 // the record rather than one more control among its verbs. Its verbs stay in
-// the menu, refused, over the one sentence that says why — a control blocked by the record's STATE is disabled
-// with its reason, never dropped (STATE-4a), because a missing button reads as
-// a build without the feature. The play() opens the menu, since the refusal is
-// the thing worth seeing here.
+// the menu, refused, over the one sentence that says why — a control blocked
+// by the record's STATE is disabled with its reason, never dropped (STATE-4a),
+// because a missing button reads as a build without the feature. The play()
+// opens the menu, since the refusal is the thing worth seeing here.
 export const ArchivedAccount: Story = {
   render: () => (
     <Header

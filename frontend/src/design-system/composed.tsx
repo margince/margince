@@ -25,7 +25,7 @@ import { Avatar, Badge, Button, OptionCount } from "./atoms";
 import { type BoardDealMail, DealCard } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
-import { withWhom } from "./participants";
+import { type ContactOn, withWhom } from "./participants";
 import { type Provenance, ProvenanceTag } from "./trust";
 import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
@@ -522,13 +522,13 @@ export type TimelineEntry = {
    */
   counterparts?: string;
   /**
-   * The same contacts, one name each, before they were joined into the phrase
-   * above. A thread lists everyone it was with and draws each sender's face,
-   * and both need a contact, not a phrase: a set of phrases lists "Ida Keller"
-   * and "Ida Keller, Marc Dubois" as two entries, and a monogram of a phrase
-   * is nobody's. Absent where nothing resolved a name, exactly as the phrase.
+   * The same contacts, id and name each, before they were joined into the
+   * phrase above. A thread lists everyone it was with and draws each sender's
+   * face, and both need a contact: a set of phrases counts "Ida Keller" and
+   * "Ida Keller, Marc Dubois" as two, and a monogram of a phrase is nobody's.
+   * With no name resolved, the server's phrase for the one filed contact.
    */
-  counterpartNames?: readonly string[];
+  counterpartContacts?: readonly ContactOn[];
   /**
    * The server's own row model for an email, present exactly when `kind` is
    * `email`. It is what EmailEntry draws, so the timeline hands the canonical
@@ -965,18 +965,18 @@ function otherSideOf(entry: TimelineEntry): string | undefined {
   return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
 }
 
-// The same contacts one at a time, for a set and for a face. The resolved
-// names when the adapter had any; otherwise the one phrase the row shows,
-// which is then the best name there is. Nothing on a withheld row, as above.
-function otherSideNames(entry: TimelineEntry): readonly string[] {
+// The same contacts one at a time, for a set and for a face. The adapter's
+// when it had any; otherwise the one phrase the row shows, the best name there
+// is and its own key. Nothing on a withheld row, as above.
+function otherSide(entry: TimelineEntry): readonly ContactOn[] {
   if (entry.withheld) {
     return [];
   }
-  if (entry.counterpartNames?.length) {
-    return entry.counterpartNames;
+  if (entry.counterpartContacts?.length) {
+    return entry.counterpartContacts;
   }
   const who = otherSideOf(entry);
-  return who ? [who] : [];
+  return who ? [{ id: who, name: who }] : [];
 }
 
 // Who a thread was with, as one phrase: the other side's names, each once,
@@ -991,8 +991,8 @@ function threadParticipants(
 ): string | undefined {
   const names = new Set<string>();
   for (const entry of entries) {
-    for (const name of otherSideNames(entry)) {
-      names.add(name);
+    for (const contact of otherSide(entry)) {
+      names.add(contact.name);
     }
   }
   return withWhom([...names], t, locale);
@@ -1080,11 +1080,11 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
       </span>
     );
   }
-  // The face is ONE contact's — the first named on the other side, keyed on
-  // that name (a counterpart has no record id) — never the lead line's phrase.
-  const [face] = otherSideNames(entry);
+  // The face is ONE contact's, the first on the other side, keyed on its id so
+  // it is that contact's colour everywhere — never the lead line's phrase.
+  const [face] = otherSide(entry);
   if (entry.direction === "inbound" && face) {
-    return <Avatar name={face} identity={face} />;
+    return <Avatar name={face.name} identity={face.id} />;
   }
   const Icon =
     entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];

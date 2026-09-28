@@ -689,7 +689,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
         // from every other reader's.
         `subject:${subject.toLowerCase()}`;
     const seen = conversations.get(key);
-    const contacts = contactsOn(entry.links, ctx.nameOf);
+    const contacts = contactsOn(entry.links, ctx.nameOf).map((c) => c.name);
     // The list arrives newest-first, so the first row of a conversation is its
     // latest message: that is the date the thread shows it at, and its subject
     // is the one the conversation currently goes by after a mid-thread rename.

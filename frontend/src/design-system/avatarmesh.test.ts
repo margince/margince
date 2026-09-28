@@ -126,7 +126,7 @@ describe("the key", () => {
   });
 
   it("reads a composed and a decomposed letter as one key", () => {
-    expect(hashOf("Müller")).toBe(hashOf("Müller"));
+    expect(hashOf("M\u00fcller")).toBe(hashOf("Mu\u0308ller"));
   });
 
   // Six tones summed over code points put a third of a list on one colour;

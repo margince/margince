@@ -661,9 +661,6 @@
   border-radius: var(--r-md);
   background: var(--bgCard);
 }
-.co-strip-withheld .surfacestate-withheld {
-  margin-top: 0;
-}
 
 /* The brief under the questions it answers. Label and prose sit side by side
    in one row — the label is a column heading read once per row, not a

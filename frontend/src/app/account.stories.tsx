@@ -35,9 +35,10 @@ import "./topbar.css";
  * shell). Nothing here photographs an arrangement a reader cannot reach.
  *
  * The chip is the design system's `Avatar` rather than a mark of this block's
- * own: the monogram is taken the same way everywhere, and the tint is keyed on
- * the ADDRESS, so the reader carries one colour from the chrome to their own
- * account page and a rename does not move them to another one.
+ * own: the monogram is taken the same way everywhere, and the mesh is keyed on
+ * the seat's USER ID, so the reader carries one colour from the chrome to their
+ * own account page, and neither a rename nor a new address moves them to
+ * another one.
  *
  * fullscreen: the block measures itself against the container it sits in — the
  * strip's trail is flush to the content column's right edge, and the menu's drop

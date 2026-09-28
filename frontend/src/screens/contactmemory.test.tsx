@@ -246,6 +246,25 @@ describe("the contact page's memory card", () => {
     expect(screen.getByText("Dana Buyer")).toBeTruthy();
   });
 
+  // A face keyed on the email's phrase drew one contact in two colours down one
+  // card: its mail on the name, its notes on the record.
+  it("draws one contact in one colour on a mail and on a note", () => {
+    const { container } = renderCard(
+      viewWith([
+        emailRow({
+          links: [{ entity_type: "contact", entity_id: contact.id }],
+        }),
+        noteRow,
+      ]),
+    );
+
+    const faces = [...container.querySelectorAll(".avatar-mesh")].map((face) =>
+      face.getAttribute("style"),
+    );
+    expect(faces).toHaveLength(2);
+    expect(faces[0]).toBe(faces[1]);
+  });
+
   // Five cuts do not fit beside the title on the one band a panel head is, so
   // the strip stands in the card's body above the rows. Both halves matter: a
   // strip put back in the head gives this card a taller head than every other

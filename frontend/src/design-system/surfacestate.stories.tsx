@@ -51,7 +51,7 @@ const DETAIL = {
   remaining: 4,
 };
 
-function AllStates() {
+function AllStates({ label }: Readonly<{ label?: string }>) {
   return (
     <div
       style={{
@@ -63,6 +63,7 @@ function AllStates() {
       {ALL.map((state) => (
         <Card key={state} title={state}>
           <SurfaceState
+            label={label}
             loadingLabel="Loading the section"
             state={state}
             emptyLabel="No open deals for this company."
@@ -77,6 +78,12 @@ function AllStates() {
 }
 
 export const EveryState: Story = { render: () => <AllStates /> };
+
+/** The same states under a part's own heading: every sentence sits one step
+ * under it, so "none" and "hidden" are not told apart by where they sit. */
+export const EveryStateNamed: Story = {
+  render: () => <AllStates label="Deals" />,
+};
 
 /** `stale` puts the caveat ABOVE the rows and `partial` puts the count BELOW
  * them, and neither is a layout preference: a caveat under a figure arrives

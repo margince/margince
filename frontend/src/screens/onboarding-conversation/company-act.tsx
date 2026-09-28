@@ -913,27 +913,26 @@ export function CompanyAct({
   // The confirm stop, as a deck by default and as the whole profile on ask.
   //
   // The deck is the front door because the read already knows which fields it
-  // could not settle, and putting the other hundred on screen beside them asked
-  // a reader to find six answers inside a wall. The wall is still HERE, one
-  // press away: it is where a field is edited freely and a fact is unticked,
-  // and the server wants both of those from somewhere.
+  // could not settle, and the other hundred on screen beside them asked a
+  // reader to find six answers inside a wall. The wall is still HERE, one press
+  // away: it is where a field is edited freely and a fact is unticked.
   const cards = deckCards(blocking, advisory);
   // The same mapping over EVERY row, so the deck can still draw the card it is
   // standing on after that field stops being outstanding. Built from `allRows`
-  // rather than kept as a copy: what the reader types has to reach the control
-  // it was typed into.
+  // rather than a copy, so what the reader types reaches the control it is in.
   const cardOf = (field: CompanyFieldName) =>
     deckCards(
       allRows.filter((row) => row.field === field),
       [],
     )[0];
-  // The mark at the head of the record, for both of its faces: the site the
-  // read ran on, and the logo it resolved from there when it found one.
-  // Undefined before a read exists, and the digest draws the monogram.
+  // The mark at the head of the record: the site the read ran on, the logo it
+  // resolved there, and the company once one exists (a re-run of setup), whose
+  // id keys it. Undefined before a read, and the digest draws the monogram.
+  const companyId = profile?.company_id;
   const identity =
     read === null
       ? undefined
-      : { rootUrl: read.root_url, logoUrl: read.logo_url };
+      : { rootUrl: read.root_url, logoUrl: read.logo_url, companyId };
   const reviewScene =
     state.phase === "co.review" && reviewProposal ? (
       artifactMode === "dossier" ? (
@@ -1036,6 +1035,7 @@ export function CompanyAct({
             {t("ob.deck.backToRecord")}
           </Button>
           <CompanyConfirmCard
+            companyId={companyId}
             proposal={reviewProposal}
             draft={draft}
             answers={clarify.answers}
