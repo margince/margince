@@ -388,6 +388,31 @@ func TestAnUndoAboveTenNeedsItsPreviewsToken(t *testing.T) {
 	}
 }
 
+// An undo's token confirms that undo and nothing else, even an execution
+// naming the very same records at the very same versions.
+func TestAnUndoTokenDoesNotConfirmAForwardChange(t *testing.T) {
+	e := integration.Setup(t)
+	engine := bulkEngineFor(e)
+	seeded := seedSurroundedContacts(t, e, 2)
+	archived, err := engine.Execute(e.Admin(), archiveContacts(itemsOf(seeded)))
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	undoPreview, err := engine.PreviewUndo(e.Admin(), ids.UUID(archived.BatchId))
+	if err != nil || undoPreview.ConfirmToken == nil {
+		t.Fatalf("PreviewUndo → %+v, %v", undoPreview, err)
+	}
+	now := itemsOf(seeded)
+	for i := range now {
+		now[i].Version = int64(e.WsCount(t, `SELECT version FROM contact WHERE id = $1`, now[i].Id))
+	}
+	forward := archiveContacts(now)
+	forward.confirmToken = *undoPreview.ConfirmToken
+	if _, err := engine.Execute(e.Admin(), forward); !errors.Is(err, errConfirmTokenRefused) {
+		t.Errorf("an archive presenting the undo's token → %v, want the token refused", err)
+	}
+}
+
 // restoreIn runs one single-record restore on its own transaction.
 func restoreIn(t *testing.T, e *integration.Env, restore func(tx pgx.Tx) (storekit.RestoreReport, error)) error {
 	t.Helper()
