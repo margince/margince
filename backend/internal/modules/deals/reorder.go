@@ -14,10 +14,12 @@ package deals
 // a closing stage above an open one puts the end of a deal in its middle.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -40,6 +42,8 @@ const (
 	// refusals name it, and the key a reorder's position delta rides under.
 	positionField       = "position"
 	stagePositionsField = "stage_positions"
+	// A new pipeline's opening stages, as a create refuses them.
+	stagesField = "stages"
 )
 
 // stagePositionCeiling bounds the position a stage may be written with. A
@@ -55,6 +59,29 @@ func checkStagePosition(position int) error {
 		}
 	}
 	return nil
+}
+
+// checkNewLadder holds a pipeline's opening stages to the shape every later
+// ladder write keeps: each position in range, none held twice, and the closing
+// stages after the open ones in position order.
+func checkNewLadder(stages []StageInput) error {
+	ladder := make([]ranked, len(stages))
+	held := make(map[int]bool, len(stages))
+	for i, st := range stages {
+		if err := checkStagePosition(st.Position); err != nil {
+			return err
+		}
+		if held[st.Position] {
+			return &values.ParseError{
+				Field: stagesField, Code: codeOrderDuplicate,
+				Message: fmt.Sprintf("two stages name position %d", st.Position),
+			}
+		}
+		held[st.Position] = true
+		ladder[i] = ranked{position: st.Position, closing: st.Semantic != string(SemanticOpen)}
+	}
+	slices.SortFunc(ladder, func(a, b ranked) int { return cmp.Compare(a.position, b.position) })
+	return refuseClosingBeforeOpen(ladder, stagesField)
 }
 
 // lockLadder takes the pipeline row every ladder write serializes on, and

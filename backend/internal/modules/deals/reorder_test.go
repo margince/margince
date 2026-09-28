@@ -171,3 +171,26 @@ func TestAStagePositionStaysInsideTheParkableRange(t *testing.T) {
 		}
 	}
 }
+
+func TestANewPipelinesStagesTakeTheLaddersShape(t *testing.T) {
+	stage := func(position int, semantic StageSemantic) StageInput {
+		return StageInput{Name: "s", Position: position, Semantic: string(semantic)}
+	}
+	if err := checkNewLadder([]StageInput{stage(3, SemanticLost), stage(1, SemanticOpen), stage(2, SemanticWon)}); err != nil {
+		t.Fatalf("open, won, lost named out of list order was refused: %v", err)
+	}
+	cases := map[string]struct {
+		stages []StageInput
+		code   string
+	}{
+		"won above an open stage": {[]StageInput{stage(1, SemanticWon), stage(2, SemanticOpen)}, codeClosingStageBeforeOpen},
+		"one position twice":      {[]StageInput{stage(1, SemanticOpen), stage(1, SemanticWon)}, codeOrderDuplicate},
+		"a position out of range": {[]StageInput{stage(-1, SemanticOpen)}, codePositionOutOfRange},
+	}
+	for name, c := range cases {
+		var parse *values.ParseError
+		if err := checkNewLadder(c.stages); !errors.As(err, &parse) || parse.Code != c.code {
+			t.Errorf("%s gave %v, want the %s refusal", name, err, c.code)
+		}
+	}
+}

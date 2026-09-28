@@ -176,4 +176,21 @@ func TestANewPipelinesClosingPairTakesItsPinnedOddsAndToleratesAPipelineID(t *te
 	if len(stages) != 2 || odds["won"] != 100 || odds["lost"] != 0 {
 		t.Fatalf("the closing pair reads %+v, want won at 100 and lost at 0", stages)
 	}
+	// Its opening stages keep the shape every later ladder write keeps.
+	var problem struct {
+		Details struct {
+			Errors []struct {
+				Field string `json:"field"`
+				Code  string `json:"code"`
+			} `json:"errors"`
+		} `json:"details"`
+	}
+	status := e.Call(t, "POST", "/v1/pipelines", AnyMap{
+		"name":   "Upside Down",
+		"stages": []AnyMap{{"name": "Won", "semantic": "won"}, {"name": "Pitch"}},
+	}, nil, &problem)
+	if refusals := problem.Details.Errors; status != http.StatusUnprocessableEntity || len(refusals) != 1 ||
+		refusals[0].Field != "stages" || refusals[0].Code != "closing_stage_before_open" {
+		t.Fatalf("a pipeline opening on its won stage → %d %+v, want 422 closing_stage_before_open on stages", status, problem)
+	}
 }

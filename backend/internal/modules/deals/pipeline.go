@@ -40,11 +40,6 @@ func (s *Store) CreatePipeline(ctx context.Context, in CreatePipelineInput) (crm
 	if err := auth.Require(ctx, "pipeline", principal.ActionCreate); err != nil {
 		return crmcontracts.Pipeline{}, err
 	}
-	for _, st := range in.Stages {
-		if err := checkStagePosition(st.Position); err != nil {
-			return crmcontracts.Pipeline{}, err
-		}
-	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = createPipelineTx(ctx, tx, in)
@@ -58,6 +53,9 @@ func (s *Store) CreatePipeline(ctx context.Context, in CreatePipelineInput) (crm
 // atomic bootstrap seeds defaults in the same transaction that mints the
 // workspace (C5), so a seed failure rolls the whole tenant back.
 func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (crmcontracts.Pipeline, error) {
+	if err := checkNewLadder(in.Stages); err != nil {
+		return crmcontracts.Pipeline{}, err
+	}
 	id := ids.New[ids.PipelineKind]()
 	_, err := tx.Exec(ctx,
 		`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, $2, $3, $4)`,

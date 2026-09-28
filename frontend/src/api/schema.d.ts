@@ -3527,7 +3527,10 @@ export interface paths {
         put?: never;
         /**
          * Create a pipeline.
-         * @description At most one default pipeline per workspace (409 if a second default).
+         * @description At most one default pipeline per workspace (409 if a second default). The opening
+         *     `stages` keep the ladder's shape: a won or lost stage above an open one is refused
+         *     `422` with the code `closing_stage_before_open`, and two stages naming one position
+         *     with `duplicate`.
          */
         post: operations["createPipeline"];
         delete?: never;
