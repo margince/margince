@@ -193,8 +193,7 @@ func auditInvitation(ctx context.Context, tx pgx.Tx, before *invitationRow, afte
 }
 
 // Invitation hands back the meeting's subject, location and calendar link,
-// so it asks the CONTENT gate: a meeting whose audience excludes the caller
-// reads as not found here, as it would on any content reader.
+// so it asks the CONTENT gate rather than the discover gate.
 func (s *Store) Invitation(ctx context.Context, id ids.UUID) (crmcontracts.MeetingInvitation, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return crmcontracts.MeetingInvitation{}, err
