@@ -3077,6 +3077,8 @@ export const en = {
   "bulk.assign": "Assign owner",
   "bulk.archive": "Archive",
   "bulk.titleReassign": "Change owner of selected {unit}?",
+  "bulk.titleUndo": "Undo the change to these {unit}?",
+  "bulk.confirmUndo": "Undo change",
   "bulk.titleArchive": "Archive selected {unit}?",
   "bulk.checking": "Checking the selection…",
   "bulk.affects_one": "This changes {count} of the {total} selected records.",
@@ -3126,9 +3128,10 @@ export const en = {
   "bulk.undoneCompanies_other": "{count} companies put back.",
   "bulk.undoneDeals_one": "{count} deal put back.",
   "bulk.undoneDeals_other": "{count} deals put back.",
-  "bulk.undoLeftBehind_one": "{count} link, tag or list could not come back.",
+  "bulk.undoLeftBehind_one":
+    "{count} link, tag or list membership could not come back.",
   "bulk.undoLeftBehind_other":
-    "{count} links, tags or lists could not come back.",
+    "{count} links, tags or list memberships could not come back.",
 
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",

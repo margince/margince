@@ -3015,6 +3015,8 @@ export const de = {
   "bulk.assign": "Zuständigkeit zuweisen",
   "bulk.archive": "Archivieren",
   "bulk.titleReassign": "Zuständigkeit für ausgewählte {unit} ändern?",
+  "bulk.titleUndo": "Änderung an diesen {unit} rückgängig machen?",
+  "bulk.confirmUndo": "Änderung rückgängig machen",
   "bulk.titleArchive": "Ausgewählte {unit} archivieren?",
   "bulk.checking": "Auswahl wird geprüft…",
   "bulk.affects_one":
@@ -3069,9 +3071,9 @@ export const de = {
   "bulk.undoneDeals_one": "{count} Deal zurückgesetzt.",
   "bulk.undoneDeals_other": "{count} Deals zurückgesetzt.",
   "bulk.undoLeftBehind_one":
-    "{count} Verknüpfung, Tag oder Liste kam nicht zurück.",
+    "{count} Verknüpfung, Tag oder Listenzuordnung kam nicht zurück.",
   "bulk.undoLeftBehind_other":
-    "{count} Verknüpfungen, Tags oder Listen kamen nicht zurück.",
+    "{count} Verknüpfungen, Tags oder Listenzuordnungen kamen nicht zurück.",
 
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",

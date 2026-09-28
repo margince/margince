@@ -10,6 +10,7 @@ import { startTheme } from "./app/theme";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
+import { BulkUndoProvider } from "./screens/bulkchange";
 import "./app.css";
 
 const queryClient = createQueryClient();
@@ -85,7 +86,12 @@ createRoot(root).render(
                   stays a download. It draws its own dialog, portalled like
                   every other overlay here. */}
               <FilePreviewProvider>
-                <App />
+                {/* The undo a bulk change offers opens here, not in the list
+                    that ran it: that list's bulk bar is gone once the change
+                    clears its selection. */}
+                <BulkUndoProvider>
+                  <App />
+                </BulkUndoProvider>
               </FilePreviewProvider>
               <ToastRegion />
             </ToastProvider>

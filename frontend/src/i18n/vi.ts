@@ -2994,6 +2994,8 @@ export const vi = {
   "bulk.assign": "Giao người phụ trách",
   "bulk.archive": "Lưu trữ",
   "bulk.titleReassign": "Đổi người phụ trách cho {unit} đã chọn?",
+  "bulk.titleUndo": "Hoàn tác thay đổi với các {unit} này?",
+  "bulk.confirmUndo": "Hoàn tác thay đổi",
   "bulk.titleArchive": "Lưu trữ {unit} đã chọn?",
   "bulk.checking": "Đang kiểm tra lựa chọn…",
   "bulk.affects_one": "Thay đổi {count} trên {total} mục đã chọn.",
@@ -3045,9 +3047,9 @@ export const vi = {
   "bulk.undoneDeals_one": "Đã hoàn tác {count} deal.",
   "bulk.undoneDeals_other": "Đã hoàn tác {count} deal.",
   "bulk.undoLeftBehind_one":
-    "{count} liên kết, thẻ hoặc danh sách không khôi phục được.",
+    "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
   "bulk.undoLeftBehind_other":
-    "{count} liên kết, thẻ hoặc danh sách không khôi phục được.",
+    "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
 
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
