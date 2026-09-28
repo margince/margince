@@ -42,12 +42,31 @@ data "aws_iam_policy_document" "vpc_endpoint_same_account_only" {
 # S3 is a Gateway endpoint (route-table based, no hourly cost, no ENI) — used
 # by the ECR interface endpoints below for the actual image-layer blob
 # storage backing ECR, which the interface endpoint alone does not cover.
+# ECR image layers are served from an AWS-owned bucket through presigned URLs
+# that ECR's own principal signs, so the same-account condition above does not
+# match them. This extra statement lets tasks download layers, read-only and
+# only from that bucket.
+data "aws_iam_policy_document" "vpc_endpoint_s3" {
+  source_policy_documents = [data.aws_iam_policy_document.vpc_endpoint_same_account_only.json]
+
+  statement {
+    sid     = "AllowEcrLayerDownloads"
+    effect  = "Allow"
+    actions = ["s3:GetObject"]
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
+    }
+    resources = ["arn:aws:s3:::prod-${var.aws_region}-starport-layer-bucket/*"]
+  }
+}
+
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.this.id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = aws_route_table.private[*].id
-  policy            = data.aws_iam_policy_document.vpc_endpoint_same_account_only.json
+  policy            = data.aws_iam_policy_document.vpc_endpoint_s3.json
   tags              = { Name = "${var.name_prefix}-s3", Component = "network" }
 }
 

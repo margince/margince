@@ -101,12 +101,12 @@ variable "instance_type" {
   default     = "t4g.small"
 
   validation {
-    condition     = var.cpu_architecture != "x86_64" || !can(regex("^[a-z][0-9]g\\.", var.instance_type))
+    condition     = var.cpu_architecture != "x86_64" || !can(regex("^(a1|[a-z]+[0-9]+g[a-z]*)\\.", var.instance_type))
     error_message = "instance_type \"${var.instance_type}\" is a Graviton (arm64) family; set cpu_architecture = \"arm64\" or pick an x86_64 instance type."
   }
   validation {
-    condition     = var.cpu_architecture != "arm64" || can(regex("^[a-z][0-9]g\\.", var.instance_type))
-    error_message = "instance_type \"${var.instance_type}\" does not look like a Graviton (arm64) family (e.g. t4g.small, m7g.large); set cpu_architecture = \"x86_64\" or choose an arm64 instance type."
+    condition     = var.cpu_architecture != "arm64" || can(regex("^(a1|[a-z]+[0-9]+g[a-z]*)\\.", var.instance_type))
+    error_message = "instance_type \"${var.instance_type}\" does not look like a Graviton (arm64) family (e.g. t4g.small, m7g.large, c7gd.large, c7gn.large); set cpu_architecture = \"x86_64\" or choose an arm64 instance type."
   }
 }
 
