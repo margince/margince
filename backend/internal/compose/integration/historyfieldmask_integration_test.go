@@ -120,23 +120,17 @@ func TestAMaskedAmountIsGoneFromADealsFieldHistory(t *testing.T) {
 		}
 	}
 
-	// The same reader on a deal they could change: the mask lifts exactly where
-	// the live read lifts it, so the history is whole.
+	// A trail is read under the UNCONDITIONED mask, on their own deal as much as
+	// on another team's: write authority is a question about the row today, and
+	// the row as it then stood is not the row it answers for.
 	amountField := "amount_minor"
-	own, err := privacy.ListFieldHistory(reader, e.DB(),
-		privacy.FieldHistoryFilter{EntityType: objDeal, EntityID: mine, Field: &amountField})
-	if err != nil {
-		t.Fatalf("reading their own deal's amount history: %v", err)
-	}
-	if len(own.Entries) == 0 {
-		t.Error("their own deal withheld its amount history, want it whole where they could write the value")
-	}
-
 	var refused *values.ParseError
-	_, err = privacy.ListFieldHistory(reader, e.DB(),
-		privacy.FieldHistoryFilter{EntityType: objDeal, EntityID: theirs, Field: &amountField})
-	if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
-		t.Errorf("filtering by a withheld field → %v, want the %s refusal, never an empty page", err, auth.CodeFieldMasked)
+	for _, deal := range []ids.UUID{mine, theirs} {
+		_, err = privacy.ListFieldHistory(reader, e.DB(),
+			privacy.FieldHistoryFilter{EntityType: objDeal, EntityID: deal, Field: &amountField})
+		if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
+			t.Errorf("filtering by a withheld field → %v, want the %s refusal, never an empty page", err, auth.CodeFieldMasked)
+		}
 	}
 }
 

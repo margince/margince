@@ -91,10 +91,6 @@ type Field struct {
 	// re-derived on every check so the published document and the validator
 	// read the same value, not two computations of it.
 	Ops []string
-	// Masked reports that this caller's role withholds the field on some row.
-	// A predicate on it is refused: the rows that come back answer the
-	// comparison, and comparisons answered repeatedly are the value itself.
-	Masked bool
 }
 
 // newField is the ONE way a Field comes into existence, so a field whose
@@ -270,10 +266,11 @@ func (r *VocabularyResolver) resolveTarget(ctx context.Context, schema *schemaRe
 		return TargetVocabulary{}, err
 	}
 	fields = slices.DeleteFunc(fields, func(f Field) bool { return !stored.answers(f) })
-	slices.SortFunc(fields, func(a, b Field) int { return strings.Compare(a.Name, b.Name) })
-	if err := stampMasks(ctx, entity, fields); err != nil {
+	fields, err = admittedFields(ctx, entity, fields)
+	if err != nil {
 		return TargetVocabulary{}, err
 	}
+	slices.SortFunc(fields, func(a, b Field) int { return strings.Compare(a.Name, b.Name) })
 
 	inverse, err := storedInverseRelations(ctx, schema, entity, inverseRelations(entity))
 	if err != nil {
@@ -325,44 +322,6 @@ func storedInverseRelations(ctx context.Context, schema *schemaReads, entity str
 	return kept, nil
 }
 
-// stampMasks marks the fields this caller's role withholds on some row. It
-// belongs to the per-caller pass beside admittedRelations rather than to
-// newField, which knows the contract and not who is asking — and stamping it
-// on the vocabulary is what carries it to a hop's predicates and to the
-// published document without either asking a second time.
-func stampMasks(ctx context.Context, entity string, fields []Field) error {
-	for i := range fields {
-		masked, err := maskReaches(ctx, entity, fields[i].Name)
-		if err != nil {
-			return err
-		}
-		fields[i].Masked = masked
-	}
-	return nil
-}
-
-// maskReaches asks the mask under both names the field can have: the target's
-// own, and — for a field a nested block flattened to a dotted path — the
-// embedded object's. A company republishes a partner's every scalar as
-// `partner.<field>`, so a mask on the partner's tier has to reach the copy or
-// the count of a filtered page answers what the column withholds.
-//
-// Derived from the name rather than listed per field, because the list is what
-// fails short: a seventeenth member of the block would be an oracle nobody
-// edited anything to create. A prefix naming no maskable object matches
-// nothing and the field stays askable, which is what `address.city` rests on.
-func maskReaches(ctx context.Context, entity, field string) (bool, error) {
-	masked, err := auth.MasksAnyRowOf(ctx, entity, field)
-	if err != nil || masked {
-		return masked, err
-	}
-	block, leaf, nested := strings.Cut(field, ".")
-	if !nested {
-		return false, nil
-	}
-	return auth.MasksAnyRowOf(ctx, block, leaf)
-}
-
 // admittedRelations drops the hops that land on a record type this caller may
 // not read. A hop is a read of the record it lands on, so admitting it would
 // let a plan filter deals by a company the caller cannot see — and the
@@ -371,6 +330,35 @@ func (r *VocabularyResolver) admittedRelations(ctx context.Context, relations []
 	return slices.DeleteFunc(relations, func(rel Relation) bool {
 		return auth.Require(ctx, rel.Target, principal.ActionRead) != nil
 	})
+}
+
+// admittedFields drops the columns this caller's role withholds, and is the
+// relation filter one level down: a predicate is a read of the value it tests.
+// `amount_minor >= N` never returns the amount, and it does not have to — the
+// hit or the miss answers the question, so a caller who may not read the figure
+// recovers it by bisection. The list read has refused a sort or filter over a
+// masked column all along for exactly this reason; the plan vocabulary is where
+// the agent surface asks the same question, and it was not asking.
+//
+// The unconditioned set is the one to drop on. A mask that lifts where the
+// caller may write still withholds everywhere they may not, and a predicate
+// runs over the whole table rather than over one row.
+func admittedFields(ctx context.Context, entity string, fields []Field) ([]Field, error) {
+	var refused error
+	kept := slices.DeleteFunc(fields, func(f Field) bool {
+		if refused != nil {
+			return false
+		}
+		masked, err := auth.MasksAnyRowOf(ctx, entity, f.Name)
+		if err != nil {
+			refused = err
+		}
+		return masked
+	})
+	if refused != nil {
+		return nil, refused
+	}
+	return kept, nil
 }
 
 // customFields reads the workspace's live custom columns for this record type

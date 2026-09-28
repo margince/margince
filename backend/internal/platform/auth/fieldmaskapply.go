@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,7 +98,7 @@ func maskedNamesPerRow[T any](ctx context.Context, tx pgx.Tx, object string,
 		}
 		if extra != nil {
 			for _, field := range extra(i) {
-				names[i].add(withheldWith(object, field)...)
+				names[i].add(fieldmask.Withheld(object, []string{field})...)
 			}
 		}
 	}

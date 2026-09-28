@@ -179,9 +179,13 @@ func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter
 		}
 		cursorTime, cursorID, useCursor = c.CreatedAt, c.ID, true
 	}
+	mask, err := withheldHistoryOf(ctx, f.EntityType)
+	if err != nil {
+		return FieldHistoryPage{}, err
+	}
 
 	var page FieldHistoryPage
-	err := db.Tx(ctx, func(tx pgx.Tx) error {
+	err = db.Tx(ctx, func(tx pgx.Tx) error {
 		// activity carries no owner_id — it row-scopes through its
 		// links (the entities it is attached to), so its visibility
 		// check dispatches to EnsureActivityContentVisible; every other entity
@@ -195,10 +199,6 @@ func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter
 		}
 		if visErr != nil {
 			return visErr
-		}
-		mask, err := maskForRecord(ctx, tx, f.EntityType, f.EntityID)
-		if err != nil {
-			return err
 		}
 		if err := refuseMaskedFieldFilter(f.Field, mask, f.EntityType); err != nil {
 			return err

@@ -10,13 +10,13 @@ package deals
 
 import (
 	"context"
-	"maps"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -29,21 +29,19 @@ import (
 // against every key below, and field_mask references that pair, so a mask
 // naming something nothing here withholds is refused where it is written
 // rather than going quietly inert where it is read.
-const maskObject = "deal"
+const maskObject = fieldmask.Deal
 
-// dealMaskableFields are the columns a mask may name on a deal, and how each
-// is withheld. Withholding is a deliberate act per field, not a reflective one
-// over the struct, and the set is therefore finite — which is why it can be
-// offered as a catalog: migrations/testdata/maskable_fields.txt is these keys
-// under maskObject, and the database will not store a mask outside it.
+// dealWithholders is how each field a mask may name is withheld on the wire.
+// WHICH fields those are, and what each drags with it, is the fieldmask
+// package's — every surface that meets a masked deal reads that one table, and
+// this is the half only the deal can do: nulling the struct.
 //
-// The keys are WIRE field names as a configured mask spells them, which is a
-// different vocabulary from the column constants they happen to coincide with:
-// renaming a column would not rename what an installation's stored mask says.
+// The keys are checked against the catalog by
+// TestEveryMaskableDealFieldHasSomethingThatWithholdsIt, so a field added
+// there and forgotten here fails rather than going quietly unenforced.
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary
-var dealMaskableFields = map[string]func(*crmcontracts.Deal){
-	// Each func nulls only its own column; auth.maskGroups decides the group.
+var dealWithholders = map[string]func(*crmcontracts.Deal){
 	"amount_minor":       func(d *crmcontracts.Deal) { d.AmountMinor = nil },
 	"expected_arr_minor": func(d *crmcontracts.Deal) { d.ExpectedArrMinor = nil },
 	"currency":           func(d *crmcontracts.Deal) { d.Currency = nil },
@@ -51,26 +49,10 @@ var dealMaskableFields = map[string]func(*crmcontracts.Deal){
 	// mask because the reader needs the same thing from them: a null they can
 	// tell from an empty field. Which rows they are withheld ON is a different
 	// question, answered per row by unreadableReferences.
-	filterCompanyID:        func(d *crmcontracts.Deal) { d.CompanyId = nil },
-	filterProjectID:        func(d *crmcontracts.Deal) { d.ProjectId = nil },
-	filterPartnerCompanyID: func(d *crmcontracts.Deal) { d.PartnerCompanyId = nil },
-}
-
-// dealWithholds is what a NAME in masked_fields means on a deal, a wider
-// question than what an administrator may CONFIGURE: the catalog above, plus
-// what auth's closure takes along with one of its fields. A name with no func
-// here is dropped by the pass — the value goes out and nothing says it was
-// withheld — so the closure and this map move together.
-var dealWithholds = dealWithholdsWithConsequences()
-
-// dealWithholdsWithConsequences widens the catalog by the attribution, which
-// describes the partner it travels with: "sourced" beside a null partner
-// discloses that SOME partner brought the deal. It is not offered for
-// configuration, because one fact behind two switches is how the leak returns.
-func dealWithholdsWithConsequences() map[string]func(*crmcontracts.Deal) {
-	withholds := maps.Clone(dealMaskableFields)
-	withholds[filterPartnerAttribution] = func(d *crmcontracts.Deal) { d.PartnerAttribution = nil }
-	return withholds
+	filterCompanyID:         func(d *crmcontracts.Deal) { d.CompanyId = nil },
+	filterProjectID:         func(d *crmcontracts.Deal) { d.ProjectId = nil },
+	filterPartnerCompanyID:  func(d *crmcontracts.Deal) { d.PartnerCompanyId = nil },
+	partnerAttributionField: func(d *crmcontracts.Deal) { d.PartnerAttribution = nil },
 }
 
 // finishDealPage is what every page of deals goes through before it leaves the
@@ -116,7 +98,7 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 	if err != nil {
 		return err
 	}
-	return auth.ApplyFieldMasks(ctx, tx, maskObject, deals, dealID, dealWithholds,
+	return auth.ApplyFieldMasks(ctx, tx, maskObject, deals, dealID, dealWithholders,
 		func(d *crmcontracts.Deal, names []string) { d.MaskedFields = &names },
 		extra, writable)
 }
@@ -182,7 +164,7 @@ func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 // deal's own contribution is which of its columns can be withheld at all.
 func refuseMaskedSort(ctx context.Context, sort *string) error {
 	return auth.RefuseMaskedSort(ctx, maskObject, sort, func(field string) bool {
-		_, withholdable := dealWithholds[field]
+		_, withholdable := dealWithholders[field]
 		return withholdable
 	})
 }

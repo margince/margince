@@ -23,6 +23,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -99,7 +100,7 @@ func historyEntityTypes(t *testing.T) []string {
 			t.Errorf("%s holds an entry this census cannot read", historyTypesVar)
 			continue
 		}
-		types = append(types, resolvedObject(t, pair.Key, consts, historyTypesFile))
+		types = append(types, resolvedObject(t, pair.Key, consts, filepath.Dir(historyTypesFile), historyTypesFile))
 	}
 	slices.Sort(types)
 	return types

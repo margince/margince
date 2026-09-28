@@ -27,9 +27,11 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -83,7 +85,7 @@ func maskedObjects(t *testing.T) map[string]string {
 	for _, source := range maskedObjectScope.Files(t) {
 		dir := filepath.ToSlash(filepath.Dir(source.Path))
 		for _, arg := range maskObjectArgs(source.File) {
-			if object := resolvedObject(t, arg, consts[dir], source.Path); object != "" {
+			if object := resolvedObject(t, arg, consts[dir], dir, source.Path); object != "" {
 				found[object] = source.Path
 			}
 		}
@@ -125,7 +127,7 @@ func namesTheMaskPass(fun ast.Expr, qualifier string, dotImported bool) bool {
 // read is REPORTED rather than skipped: a census that quietly drops a call site
 // it did not understand reads a smaller tree and reports the clean result it
 // never obtained.
-func resolvedObject(t *testing.T, arg ast.Expr, consts map[string]string, path string) string {
+func resolvedObject(t *testing.T, arg ast.Expr, consts map[string]string, dir, path string) string {
 	switch named := arg.(type) {
 	case *ast.BasicLit:
 		if value, isString := stringConst(named); isString {
@@ -135,11 +137,84 @@ func resolvedObject(t *testing.T, arg ast.Expr, consts map[string]string, path s
 		if value, known := consts[named.Name]; known {
 			return value
 		}
+		if value, known := borrowedConst(t, named.Name, dir); known {
+			return value
+		}
 	}
 	t.Errorf("%s calls the mask pass with an object this census cannot read, so the catalog is "+
 		"checked against a smaller set of masked objects than the tree holds: name it with a "+
 		"package-level string constant or a literal", path)
 	return ""
+}
+
+// borrowedConst reads a package constant declared as ANOTHER package's
+// constant — `const maskObject = fieldmask.Deal`, which is how a module names
+// an object whose vocabulary sits in tier 0 where every surface can reach it.
+// Folding only a literal would leave this census blind to a call site the
+// moment the object stopped being spelled twice.
+func borrowedConst(t *testing.T, name, dir string) (string, bool) {
+	t.Helper()
+	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil {
+		t.Fatalf("listing %s for %s: %v", dir, name, err)
+	}
+	for _, source := range sources {
+		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", source, err)
+		}
+		if selector, declared := constDeclaredAs(file, name); declared {
+			return constFromPackage(t, file, selector)
+		}
+	}
+	return "", false
+}
+
+// constDeclaredAs finds a package-level constant bound to a qualified name.
+func constDeclaredAs(file *ast.File, name string) (*ast.SelectorExpr, bool) {
+	for _, decl := range file.Decls {
+		general, isGeneral := decl.(*ast.GenDecl)
+		if !isGeneral || general.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range general.Specs {
+			value, isValue := spec.(*ast.ValueSpec)
+			if !isValue || len(value.Names) != 1 || len(value.Values) != 1 || value.Names[0].Name != name {
+				continue
+			}
+			if selector, qualified := value.Values[0].(*ast.SelectorExpr); qualified {
+				return selector, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// constFromPackage reads the named constant out of the package the file
+// imports under that qualifier. A path outside this module is not resolvable
+// from source, and the caller reports it like any other unreadable argument.
+func constFromPackage(t *testing.T, file *ast.File, selector *ast.SelectorExpr) (string, bool) {
+	t.Helper()
+	qualifier, isIdent := selector.X.(*ast.Ident)
+	if !isIdent {
+		return "", false
+	}
+	for _, spec := range file.Imports {
+		imported, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
+			continue
+		}
+		if named, _ := gatekit.ImportedAs(file, imported); named != qualifier.Name {
+			continue
+		}
+		local, inside := strings.CutPrefix(imported, modulePath+"/")
+		if !inside {
+			return "", false
+		}
+		value, known := gatekit.PackageStringConstants(t, local)[selector.Sel.Name]
+		return value, known
+	}
+	return "", false
 }
 
 // catalogObjects is the distinct objects the catalog offers masks on.

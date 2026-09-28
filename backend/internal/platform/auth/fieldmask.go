@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,17 +28,29 @@ import (
 // code is a client that handles the refusal on one surface and not the next.
 const CodeFieldMasked = "field_masked"
 
-// MaskedFields answers the fields of one object the principal reads as
-// withheld on a row it may or may not change, the group each configured mask
-// drags along included — so a caller nulling what it names cannot leave a
-// currency standing beside the amount it just withheld. An unbounded principal
-// and the system principal read every field; a mask conditioned on write
-// authority lifts on a row the caller could write.
+// MaskedFields answers the columns of one object the principal reads as
+// withheld on a row it may or may not change. An unbounded principal and the
+// system principal read every column; a mask conditioned on write authority
+// lifts on a row the caller could write.
 //
-// A group that crosses objects is answered under the object ASKED FOR, not the
-// one configured: a partner's margin mask reaches the commission entry that
-// republishes the tier, and the commissions read asks about its own object.
+// The answer is what the mask WITHHOLDS, not what it is configured as: a mask
+// on the amount withholds the currency and the ARR beside it, and every caller
+// here is deciding what to null or leave out. Expanding at the one place they
+// all ask is what stopped four surfaces each answering a narrower question —
+// see the fieldmask package.
+//
+// A crossing is answered under the object ASKED FOR, not the one configured: a
+// partner's margin mask reaches the commission entry that republishes the tier,
+// and the commissions read asks about its own object.
 func MaskedFields(p principal.Principal, object string, writable bool) []string {
+	return fieldmask.Withheld(object, configuredMasks(p, object, writable))
+}
+
+// configuredMasks is the raw set an administrator wrote, before the grouping.
+// Nothing outside this file wants it: a caller asking which fields are masked
+// is about to withhold them, and withholding the configured name alone is the
+// defect this package exists to have fixed.
+func configuredMasks(p principal.Principal, object string, writable bool) []string {
 	if Unbounded(p) {
 		return nil
 	}
@@ -53,9 +66,9 @@ func MaskedFields(p principal.Principal, object string, writable bool) []string 
 		if m.Condition == principal.MaskOutsideWriteAuthority && conditionLifts {
 			continue
 		}
-		for _, s := range withheldSubjects(m.Object, m.Field) {
-			if s.object == object && !slices.Contains(out, s.field) {
-				out = append(out, s.field)
+		for _, field := range reachedFields(m, object) {
+			if !slices.Contains(out, field) {
+				out = append(out, field)
 			}
 		}
 	}
@@ -71,6 +84,9 @@ func MasksAnyRowOf(ctx context.Context, object, field string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	// Masked on ANY row means either condition applies somewhere, so the
+	// conditioned masks count too: one that lifts where the caller may write
+	// still withholds everywhere they may not.
 	return len(masksWithholding(p, object, field)) > 0, nil
 }
 
@@ -278,6 +294,9 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 		return "", false, err
 	}
 	clause, masked := "", false
+	// A mask reaches this column when it WITHHOLDS it, not only when it names
+	// it: an aggregate over the amount is taken over figures the reader may not
+	// read if a mask on the ARR beside it is matched by spelling.
 	for _, m := range masksWithholding(p, object, field) {
 		masked = true
 		if narrowsToNoRow(p, m, object) {
@@ -342,12 +361,7 @@ func MaskExclusionClauses(ctx context.Context, object, alias string, arg func(an
 // maskReaches reports whether the mask withholds any field of the object — its
 // own, or one its group names on another record.
 func maskReaches(m principal.FieldMask, object string) bool {
-	for _, s := range withheldSubjects(m.Object, m.Field) {
-		if s.object == object {
-			return true
-		}
-	}
-	return false
+	return len(reachedFields(m, object)) > 0
 }
 
 // archivedAmong answers which of the rows the caller holds authority over are

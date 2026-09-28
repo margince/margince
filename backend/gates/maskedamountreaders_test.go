@@ -237,7 +237,7 @@ func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
 // the `dealColumns` var and the table in readDeal's own literal, so neither
 // declaration is a site and the file is not in this census. The deal read and
 // the deal list are covered instead by deals/fieldmask.go — auth.ApplyFieldMasks
-// over dealWithholds, at the wire boundary rather than in the statement — which
+// over dealWithholders, at the wire boundary rather than in the statement — which
 // is a whole-record pass with its own tests. So inMaskOwner below says the
 // module is reachable, not that its most direct reads are the ones reached.
 

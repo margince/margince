@@ -303,7 +303,7 @@ func TestAWithheldPartnerTakesItsAttributionWithIt(t *testing.T) {
 		t.Errorf("a mask on the partner withholds %v, want the attribution among them", names)
 	}
 	for _, field := range names {
-		withhold, known := dealWithholds[field]
+		withhold, known := dealWithholders[field]
 		if !known {
 			t.Fatalf("%s is withheld and this module cannot null it", field)
 		}

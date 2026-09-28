@@ -11,8 +11,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -38,9 +36,9 @@ func conditionedMask(object, field string) principal.FieldMask {
 	return principal.FieldMask{Object: object, Field: field, Condition: principal.MaskOutsideWriteAuthority}
 }
 
-// Every case here passes a NIL transaction, which is the assertion under the
-// assertion: a reader whose masks need no write arm must not reach the database
-// at all, and one that did would panic rather than quietly cost a statement.
+// A trail's mask is a question about the reader and the entity TYPE, so no case
+// here touches the database: history spans rows and times, and a mask that lifts
+// where the caller may write today says nothing about the row as it then stood.
 func TestTheMaskAReaderReadsARecordsHistoryUnder(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -91,7 +89,7 @@ func TestTheMaskAReaderReadsARecordsHistoryUnder(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			mask, err := maskForRecord(tc.reader, nil, tc.entityType, ids.NewV7())
+			mask, err := withheldHistoryOf(tc.reader, tc.entityType)
 			if err != nil {
 				t.Fatalf("resolving the mask: %v", err)
 			}
@@ -109,9 +107,8 @@ func TestTheMaskAReaderReadsARecordsHistoryUnder(t *testing.T) {
 
 func TestAnUnauthenticatedReaderResolvesNoMaskAtAll(t *testing.T) {
 	t.Parallel()
-	_, err := maskForRecord(context.Background(), nil, "deal", ids.NewV7())
-	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("err = %v, want permission denied — a mask is a question about a principal", err)
+	if _, err := withheldHistoryOf(context.Background(), "deal"); err == nil {
+		t.Error("a mask resolved with no actor bound, and a mask is a question about a principal")
 	}
 }
 

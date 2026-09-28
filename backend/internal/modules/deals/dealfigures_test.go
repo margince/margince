@@ -44,7 +44,7 @@ func TestACardWithholdsTheCurrencyAMaskNamesOnItsOwn(t *testing.T) {
 func TestEveryWithheldFieldTheCardCarriesIsNulled(t *testing.T) {
 	t.Parallel()
 	carried := 0
-	for field := range dealWithholds {
+	for field := range dealWithholders {
 		name, carries := figuresFieldNamed(field)
 		if !carries {
 			continue

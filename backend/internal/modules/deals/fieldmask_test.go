@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -48,13 +49,13 @@ func dealSeatMasking(fields ...string) principal.Principal {
 // named under the deal without being configured on it.
 func TestEveryNameAConfiguredDealMaskProducesIsWithheld(t *testing.T) {
 	t.Parallel()
-	for field := range dealMaskableFields {
+	for _, field := range fieldmask.Maskable(maskObject) {
 		names := auth.MaskedFields(dealSeatMasking(field), maskObject, false)
 		if len(names) == 0 {
 			t.Fatalf("a mask on %s withholds nothing at all, so the check below reads an empty list", field)
 		}
 		for _, name := range names {
-			if _, known := dealWithholds[name]; !known {
+			if _, known := dealWithholders[name]; !known {
 				t.Errorf("a mask on %s withholds %s and this module cannot null it: the field goes "+
 					"out with its value and masked_fields never names it", field, name)
 			}
@@ -70,7 +71,7 @@ func TestAWithheldPartnerNullsItsOwnColumnAlone(t *testing.T) {
 	partner, attribution := openapi_types.UUID(ids.NewV7()), crmcontracts.DealPartnerAttribution("sourced")
 	deal := crmcontracts.Deal{PartnerCompanyId: &partner, PartnerAttribution: &attribution}
 
-	dealWithholds[filterPartnerCompanyID](&deal)
+	dealWithholders[filterPartnerCompanyID](&deal)
 
 	if deal.PartnerCompanyId != nil {
 		t.Errorf("partner_company_id = %v, want it withheld", deal.PartnerCompanyId)
@@ -118,7 +119,7 @@ func TestTheDealListRefusesOnlyWhatTheRoleWithholds(t *testing.T) {
 func TestTheDealFilterCensusReachesAFilterNamedForItsQuestion(t *testing.T) {
 	t.Parallel()
 	for _, name := range withheldDealFilters(t) {
-		if _, named := dealWithholds[name]; !named {
+		if _, named := dealWithholders[name]; !named {
 			return
 		}
 	}
@@ -133,7 +134,7 @@ func TestTheDealFilterCensusReachesAFilterNamedForItsQuestion(t *testing.T) {
 func TestEveryWithheldDealFieldIsTheColumnTheSQLNames(t *testing.T) {
 	t.Parallel()
 	selected := regexp.MustCompile(`[a-z_]+`).FindAllString(dealColumns, -1)
-	for _, field := range slices.Sorted(maps.Keys(dealWithholds)) {
+	for _, field := range slices.Sorted(maps.Keys(dealWithholders)) {
 		if !slices.Contains(selected, field) {
 			t.Errorf("a mask withholds %s and the deal selects no such column: the filter census reads "+
 				"clauses for this name and would stop recognising the filters that narrow by it", field)
@@ -143,13 +144,13 @@ func TestEveryWithheldDealFieldIsTheColumnTheSQLNames(t *testing.T) {
 
 // maskableDealFields is what an administrator can configure a deal mask on.
 func maskableDealFields() []string {
-	return slices.Collect(maps.Keys(dealMaskableFields))
+	return fieldmask.Maskable(maskObject)
 }
 
 // withheldDealColumns matches any column a deal mask withholds. Whole words, so
 // partner_company_id is not read as a mention of company_id.
 var withheldDealColumns = regexp.MustCompile(
-	`\b(` + strings.Join(slices.Sorted(maps.Keys(dealWithholds)), "|") + `)\b`)
+	`\b(` + strings.Join(slices.Sorted(maps.Keys(dealWithholders)), "|") + `)\b`)
 
 // withheldDealFilters is the census both directions walk: the filters whose SQL
 // reads a column the deal can withhold.
