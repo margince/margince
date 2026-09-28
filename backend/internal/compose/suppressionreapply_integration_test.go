@@ -371,3 +371,46 @@ func TestAnExportThatCannotWriteSaysSo(t *testing.T) {
 		t.Fatal("an export that wrote nothing reported success")
 	}
 }
+
+// A subject with two suppressed addresses is one subject. Erasing them twice
+// would write a second tombstone for a record the first one already ended.
+func TestASubjectWithTwoSuppressedAddressesIsTakenOnce(t *testing.T) {
+	e := integration.Setup(t)
+	store := blobstore.NewMemory()
+	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(store)
+
+	const second = "zweite@betroffene.example"
+	seedSuppressedEmail(t, resurrectedAddress)
+	seedSuppressedEmail(t, second)
+	if _, err := eraser.ExportSuppressions(e.Admin()); err != nil {
+		t.Fatalf("ExportSuppressions: %v", err)
+	}
+	clearSuppressionList(t)
+
+	// Both addresses come back on the ONE contact, and only the journal knows
+	// either of them.
+	resurrected := seedContactWithEmail(t, e, "Die Betroffene", resurrectedAddress)
+	addEmail(t, resurrected, second)
+
+	took, err := eraser.ReapplySuppressions(e.Admin())
+	if err != nil {
+		t.Fatalf("ReapplySuppressions: %v", err)
+	}
+	if took != 1 {
+		t.Fatalf("re-erased %d, want the subject counted once for two addresses", took)
+	}
+	if live := liveEmails(t, e, resurrected); live != 0 {
+		t.Fatalf("addresses survived: %d", live)
+	}
+}
+
+func addEmail(t *testing.T, contact ids.UUID, email string) {
+	t.Helper()
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+		VALUES ($1, $2, $3, 'work', false, 'manual', 'human:restore')`,
+		ids.NewV7(), contact, email); err != nil {
+		t.Fatalf("seeding the second address: %v", err)
+	}
+}
