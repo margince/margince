@@ -21,7 +21,7 @@ import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
-import { throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import { OwnerName } from "./entityref";
 
 type BulkRecordType = components["schemas"]["BulkRecordType"];
@@ -56,6 +56,7 @@ type RecordKind = Readonly<{
   record: string;
   unit: MessageKey;
   done: PluralBase;
+  undone: PluralBase;
 }>;
 
 const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
@@ -64,18 +65,21 @@ const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
     record: "contact",
     unit: "unit.contacts",
     done: "bulk.doneContacts",
+    undone: "bulk.undoneContacts",
   },
   company: {
     list: "companies",
     record: "company",
     unit: "unit.companies",
     done: "bulk.doneCompanies",
+    undone: "bulk.undoneCompanies",
   },
   deal: {
     list: "deals",
     record: "deal",
     unit: "unit.deals",
     done: "bulk.doneDeals",
+    undone: "bulk.undoneDeals",
   },
 };
 
@@ -87,6 +91,11 @@ const SKIP_REASONS: Readonly<Record<BulkSkipReason, MessageKey>> = {
   anchor_company: "bulk.reason.anchor_company",
   not_previewed: "bulk.reason.not_previewed",
   refused: "bulk.reason.refused",
+  changed_since_batch: "bulk.reason.changed_since_batch",
+  merged: "bulk.reason.merged",
+  erased: "bulk.reason.erased",
+  value_taken: "bulk.reason.value_taken",
+  no_previous_owner: "bulk.reason.no_previous_owner",
 };
 
 // The single-record rules a `refused` skip names by code. A code missing here
@@ -138,6 +147,39 @@ async function executeBulkChange(
   const { data, error } = await api.POST("/bulk/execute", {
     params: { header: { "Idempotency-Key": run.idempotencyKey } },
     body: { ...bulkBody(run.request), confirm_token: run.confirmToken },
+  });
+  if (error) {
+    throwProblem(error, t);
+  }
+  return data;
+}
+
+type BulkUndoRun = Readonly<{
+  request: BulkChangeRequest;
+  result: BulkChangeResult;
+}>;
+
+/**
+ * Puts back what one bulk change did. The undo is previewed first and its token
+ * presented: above ten records the server requires one, and at or below ten it
+ * still holds the undo to exactly the records the preview listed. The batch id
+ * is the Idempotency-Key, so a second press replays the first answer.
+ */
+async function undoBulkChange(
+  run: BulkUndoRun,
+  t: Translate,
+): Promise<BulkChangeResult> {
+  const id = run.result.batch_id;
+  const { data: preview, error: previewError } = await api.POST(
+    "/bulk/{id}/undo/preview",
+    { params: { path: { id } } },
+  );
+  if (previewError) {
+    throwProblem(previewError, t);
+  }
+  const { data, error } = await api.POST("/bulk/{id}/undo", {
+    params: { path: { id }, header: { "Idempotency-Key": `undo-${id}` } },
+    body: { confirm_token: preview.confirm_token },
   });
   if (error) {
     throwProblem(error, t);
@@ -310,27 +352,62 @@ export function BulkChangeDialog({
     refetchOnWindowFocus: false,
   });
 
+  const refresh = async (request: BulkChangeRequest) => {
+    const kind = RECORD_KINDS[request.recordType];
+    for (const row of request.rows) {
+      for (const queryKey of recordKeysOf(kind, row.id)) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    }
+    await queryClient.invalidateQueries({ queryKey: [kind.list] });
+  };
+
+  // What a change or its undo did, in one sentence per fact.
+  const outcome = (done: PluralBase, result: BulkChangeResult) => {
+    const count = (n: number) => ({ count: formatNumber(n, locale) });
+    const left = result.left_behind?.length ?? 0;
+    return [
+      plural(done, result.changed, count(result.changed)),
+      result.skipped.length > 0
+        ? plural(
+            "bulk.doneSkipped",
+            result.skipped.length,
+            count(result.skipped.length),
+          )
+        : null,
+      left > 0 ? plural("bulk.undoLeftBehind", left, count(left)) : null,
+    ]
+      .filter((part) => part !== null)
+      .join(" ");
+  };
+
+  const undo = useMutation({
+    mutationFn: (run: BulkUndoRun) => undoBulkChange(run, t),
+    onSuccess: async (result, run) => {
+      await refresh(run.request);
+      const kind = RECORD_KINDS[run.request.recordType];
+      toast.show(outcome(kind.undone, result), {
+        tone: result.changed > 0 ? "success" : "warning",
+      });
+    },
+    onError: (error) =>
+      toast.show(problemMessageOf(error, t), { tone: "danger" }),
+  });
+
   const execute = useMutation({
     mutationFn: (run: BulkRun) => executeBulkChange(run, t),
     onSuccess: async (result, run) => {
+      await refresh(run.request);
       const kind = RECORD_KINDS[run.request.recordType];
-      for (const row of run.request.rows) {
-        for (const queryKey of recordKeysOf(kind, row.id)) {
-          queryClient.invalidateQueries({ queryKey });
-        }
-      }
-      await queryClient.invalidateQueries({ queryKey: [kind.list] });
-      const changed = plural(kind.done, result.changed, {
-        count: formatNumber(result.changed, locale),
-      });
-      const skipped =
-        result.skipped.length > 0
-          ? plural("bulk.doneSkipped", result.skipped.length, {
-              count: formatNumber(result.skipped.length, locale),
-            })
-          : null;
-      toast.show(skipped ? `${changed} ${skipped}` : changed, {
+      toast.show(outcome(kind.done, result), {
         tone: result.changed > 0 ? "success" : "warning",
+        action:
+          result.changed > 0
+            ? {
+                label: t("common.undo"),
+                onAct: () => undo.mutate({ request: run.request, result }),
+              }
+            : undefined,
       });
       onDone(result);
     },

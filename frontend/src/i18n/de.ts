@@ -3041,6 +3041,12 @@ export const de = {
   "bulk.reason.anchor_company": "Das eigene Unternehmen wird nie archiviert",
   "bulk.reason.refused": "Für diesen Datensatz nicht erlaubt",
   "bulk.reason.not_previewed": "Nicht in der bestätigten Vorschau",
+  "bulk.reason.changed_since_batch": "Seit der Änderung erneut bearbeitet",
+  "bulk.reason.merged": "In einen anderen Datensatz zusammengeführt",
+  "bulk.reason.erased": "Personenbezogene Daten wurden gelöscht",
+  "bulk.reason.value_taken":
+    "E-Mail oder Domain gehört jetzt einem anderen Datensatz",
+  "bulk.reason.no_previous_owner": "Hatte vorher keine Zuständigkeit",
   "bulk.refusal.sole_project_company":
     "Einziges Unternehmen eines laufenden Projekts",
   "bulk.refusal.locked": "Legal Hold oder Aufbewahrung aktiv",
@@ -3056,6 +3062,16 @@ export const de = {
   "bulk.doneDeals_other": "{count} Deals geändert.",
   "bulk.doneSkipped_one": "{count} blieb unverändert.",
   "bulk.doneSkipped_other": "{count} blieben unverändert.",
+  "bulk.undoneContacts_one": "{count} Kontakt zurückgesetzt.",
+  "bulk.undoneContacts_other": "{count} Kontakte zurückgesetzt.",
+  "bulk.undoneCompanies_one": "{count} Unternehmen zurückgesetzt.",
+  "bulk.undoneCompanies_other": "{count} Unternehmen zurückgesetzt.",
+  "bulk.undoneDeals_one": "{count} Deal zurückgesetzt.",
+  "bulk.undoneDeals_other": "{count} Deals zurückgesetzt.",
+  "bulk.undoLeftBehind_one":
+    "{count} Verknüpfung, Tag oder Liste kam nicht zurück.",
+  "bulk.undoLeftBehind_other":
+    "{count} Verknüpfungen, Tags oder Listen kamen nicht zurück.",
 
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",

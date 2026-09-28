@@ -462,6 +462,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "bulk.owner",
     "bulk.ownerPick",
     "bulk.reason.no_change",
+    "bulk.reason.no_previous_owner",
     "bulk.refusal.required",
     "bulk.titleReassign",
     "client.sender",

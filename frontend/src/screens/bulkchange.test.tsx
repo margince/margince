@@ -44,11 +44,12 @@ function json(body: unknown, status = 200) {
 
 type Sent = { path: string; body: unknown; idempotencyKey: string | null };
 
-/** Answers the two bulk calls and the user roster; records every POST. */
+/** Answers the bulk calls, their undo and the user roster; records every POST. */
 function stubBulk(
   preview: BulkChangePreview,
   result?: BulkChangeResult,
   executeFailures = 0,
+  undone?: BulkChangeResult,
 ) {
   const sent: Sent[] = [];
   let failuresLeft = executeFailures;
@@ -57,14 +58,22 @@ function stubBulk(
     vi.fn(async (input: Request) => {
       const path = new URL(input.url, "https://test.local").pathname;
       if (input.method === "POST") {
+        // The undo's preview carries no body at all.
+        const text = await input.clone().text();
         sent.push({
           path,
-          body: await input.clone().json(),
+          body: text === "" ? undefined : JSON.parse(text),
           idempotencyKey: input.headers.get("Idempotency-Key"),
         });
       }
       if (path === "/v1/bulk/preview") {
         return json(preview);
+      }
+      if (path.endsWith("/undo/preview")) {
+        return json({ ...preview, confirm_token: "tok-undo" });
+      }
+      if (path.endsWith("/undo")) {
+        return json(undone);
       }
       if (path === "/v1/bulk/execute") {
         if (failuresLeft > 0) {
@@ -339,6 +348,47 @@ describe("confirming a bulk change", () => {
     expect(
       await screen.findByText("2 contacts changed. 1 was left unchanged."),
     ).toBeInTheDocument();
+  });
+
+  it("offers Undo, which previews the undo, presents its token and reports what stayed", async () => {
+    const sent = stubBulk(
+      REASSIGN_PREVIEW,
+      { batch_id: "b-1", changed: 2, skipped: [] },
+      0,
+      {
+        batch_id: "b-2",
+        undo_of: "b-1",
+        changed: 1,
+        skipped: [{ id: "c-2", reason: "changed_since_batch" }],
+      },
+    );
+    const user = userEvent.setup();
+    render(
+      <BulkChangeDialog
+        request={REASSIGN}
+        onClose={() => {}}
+        onDone={() => {}}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: en["bulk.confirmReassign"] }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(
+      await screen.findByText("1 contact put back. 1 was left unchanged."),
+    ).toBeInTheDocument();
+    expect(sent.map((request) => request.path)).toEqual([
+      "/v1/bulk/preview",
+      "/v1/bulk/execute",
+      "/v1/bulk/b-1/undo/preview",
+      "/v1/bulk/b-1/undo",
+    ]);
+    expect(sent[3].body).toEqual({ confirm_token: "tok-undo" });
+    expect(sent[3].idempotencyKey).toBe("undo-b-1");
   });
 
   it("retries a lost answer under the same idempotency key, so the change runs once", async () => {
