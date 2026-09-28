@@ -101,8 +101,12 @@ export function StageLadder({
       : run.length - 1;
   useLayoutEffect(() => {
     const scroller = runRef.current;
-    const rung = scroller?.firstElementChild?.children[settleOn];
-    if (!scroller || !rung) {
+    if (!scroller) {
+      return;
+    }
+    const rung = scroller.firstElementChild?.children[settleOn];
+    if (!rung) {
+      scroller.scrollLeft = 0;
       return;
     }
     // Measured against the scroller's own box, so no ancestor has to be

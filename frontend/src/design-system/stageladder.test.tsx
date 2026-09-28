@@ -132,10 +132,14 @@ describe("a long pipeline", () => {
     expect(scroller?.scrollLeft).toBe(centredOn(OPEN.length - 1));
   });
 
-  it("leaves a record the pipeline cannot place at the start", () => {
-    const { scroller } = show(null);
+  it("returns to the start once the pipeline cannot place the record", () => {
+    const { rerender } = render(
+      <StageLadder label="Stage" steps={pipeline("Negotiation")} />,
+    );
+    rerender(<StageLadder label="Stage" steps={pipeline(null)} />);
 
-    expect(scroller?.scrollLeft).toBe(0);
+    const [run] = screen.getAllByRole("list");
+    expect(run.parentElement?.scrollLeft).toBe(0);
   });
 
   // Every rung of a refused ladder is a disabled button, which no keyboard
