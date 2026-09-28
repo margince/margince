@@ -10182,7 +10182,10 @@ export interface paths {
          *       public, so listing it would pass any key. It passes with no `model_count`.
          *     - Any other decision endpoint is sent the decision request with an empty body. A 400 or
          *       422 is a pass (the server let the caller in, then refused the body); 401 or 403 is a
-         *       refused key. It passes with no `model_count`.
+         *       refused key; a 200 is not a pass, since no decision server answers an empty request.
+         *       It passes with no `model_count`.
+         *     - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
+         *       on OpenRouter) answers `profile_forbids` without being dialled.
          *
          *     No request body. The key is the STORED one, never a candidate sent here: a credential
          *     that travels only to be tested is still a credential in a request log. The host is the

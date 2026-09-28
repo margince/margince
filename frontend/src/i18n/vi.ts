@@ -8639,6 +8639,7 @@ export const vi = {
   "aiProviderKeys.testing": "Đang kiểm tra khóa…",
   "aiProviderKeys.connected": "Đã kết nối",
   "aiProviderKeys.accepted": "Nhà cung cấp đã chấp nhận khóa.",
+  "aiProviderKeys.answered": "Máy chủ đã phản hồi.",
   "aiProviderKeys.testFailed": "Kiểm tra thất bại",
   "aiProviderKeys.modelCount_one": "Có {count} mô hình",
   "aiProviderKeys.modelCount_other": "Có {count} mô hình",

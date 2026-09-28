@@ -60,7 +60,13 @@ export function KeyTestButton({
 // serves, a failure says which of the failures it was.
 export function KeyTestOutcome({
   test,
-}: Readonly<{ test: ReturnType<typeof useTestProviderKey> }>) {
+  keyHeld,
+}: Readonly<{
+  test: ReturnType<typeof useTestProviderKey>;
+  // Whether a key was sent: a keyless pass says the server answered, not that
+  // it accepted a key nobody gave it.
+  keyHeld: boolean;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -80,7 +86,7 @@ export function KeyTestOutcome({
         <>
           <Badge tone="success">{t("aiProviderKeys.connected")}</Badge>{" "}
           {result.model_count === undefined
-            ? t("aiProviderKeys.accepted")
+            ? t(keyHeld ? "aiProviderKeys.accepted" : "aiProviderKeys.answered")
             : plural("aiProviderKeys.modelCount", result.model_count, {
                 count: formatNumber(result.model_count, locale),
               })}

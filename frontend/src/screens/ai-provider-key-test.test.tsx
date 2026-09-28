@@ -189,6 +189,26 @@ describe("testing a provider key", () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
+      backendFor(READER, () => jsonResponse({ provider: "jev", ok: true }))
+        .fetchMock,
+    );
+    render();
+
+    const row = await testRow(user, "jev");
+
+    expect(await within(row).findByText("Connected")).toBeTruthy();
+    expect(
+      within(row).getByText("The provider accepted the key."),
+    ).toBeTruthy();
+    expect(within(row).queryByText(/models available/)).toBeNull();
+  });
+
+  // A keyless server that answered accepted no key, so the line does not say
+  // it did.
+  it("says the server answered when no key was sent", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
       backendFor(READER, () =>
         jsonResponse({ provider: "jev_compatible", ok: true }),
       ).fetchMock,
@@ -197,11 +217,8 @@ describe("testing a provider key", () => {
 
     const row = await testRow(user, "jev_compatible");
 
-    expect(await within(row).findByText("Connected")).toBeTruthy();
-    expect(
-      within(row).getByText("The provider accepted the key."),
-    ).toBeTruthy();
-    expect(within(row).queryByText(/models available/)).toBeNull();
+    expect(await within(row).findByText("The server answered.")).toBeTruthy();
+    expect(within(row).queryByText(/accepted the key/)).toBeNull();
   });
 
   // A result describes the key that was held when it ran; once that key is

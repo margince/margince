@@ -8860,6 +8860,7 @@ export const en = {
   "aiProviderKeys.testing": "Testing key…",
   "aiProviderKeys.connected": "Connected",
   "aiProviderKeys.accepted": "The provider accepted the key.",
+  "aiProviderKeys.answered": "The server answered.",
   "aiProviderKeys.testFailed": "Test failed",
   "aiProviderKeys.modelCount_one": "{count} model available",
   "aiProviderKeys.modelCount_other": "{count} models available",

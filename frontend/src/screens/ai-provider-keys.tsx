@@ -249,7 +249,7 @@ function ProviderKeyRow({
             </span>
           )}
         </div>
-        <KeyTestOutcome test={test} />
+        <KeyTestOutcome test={test} keyHeld={status.configured} />
         {editing && (
           <Field
             label={t("aiProviderKeys.field")}

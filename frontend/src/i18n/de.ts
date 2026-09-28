@@ -8712,6 +8712,7 @@ export const de = {
   "aiProviderKeys.testing": "Schlüssel wird getestet …",
   "aiProviderKeys.connected": "Verbunden",
   "aiProviderKeys.accepted": "Der Anbieter hat den Schlüssel akzeptiert.",
+  "aiProviderKeys.answered": "Der Server hat geantwortet.",
   "aiProviderKeys.testFailed": "Test fehlgeschlagen",
   "aiProviderKeys.modelCount_one": "{count} Modell verfügbar",
   "aiProviderKeys.modelCount_other": "{count} Modelle verfügbar",

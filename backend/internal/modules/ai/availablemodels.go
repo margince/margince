@@ -201,7 +201,12 @@ func isDecisionProvider(provider string) bool {
 // price sheet's rows stay its suggestions.
 func (s *RoutingStore) listDecisionModels(ctx context.Context, cfg RoutingConfig, provider string) AvailableModels {
 	out := AvailableModels{Provider: provider}
-	client, err := selectDecider(boundDecisionLane(cfg, provider), s.resolvedKeys(ctx))
+	lane := boundDecisionLane(cfg, provider)
+	if decisionLaneForbidden(cfg.Profile, lane) {
+		out.Unavailable = AvailabilityProfileForbids
+		return out
+	}
+	client, err := selectDecider(lane, s.resolvedKeys(ctx))
 	if err != nil {
 		out.Unavailable = unavailableFor(err)
 		return out

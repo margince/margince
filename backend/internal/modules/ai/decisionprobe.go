@@ -30,6 +30,10 @@ import (
 //   - Any other server is asked the decision POST with an empty body: a 400
 //     means the server was reached and let the key past to validation, a
 //     401/403 that it refused the key. No model is named, so nothing is billed.
+//
+// A lane the profile would refuse to bind is not dialled either: testing a key
+// for a decision endpoint eu_hosted forbids answers profile_forbids, the same
+// verdict the routing validator gives.
 
 // decisionHost is which of those three a decision endpoint is.
 type decisionHost int
@@ -40,12 +44,12 @@ const (
 	decisionHostOpenRouter
 )
 
-// decisionHostFor classifies an endpoint. OpenRouter is recognised by host,
-// by the same predicate its routing preferences use, whichever adapter points
-// at it; `jev` is TypeSafe's API by contract, so any other host it is pointed
-// at is read as serving TypeSafe's routes.
+// decisionHostFor classifies an endpoint. `jev_compatible` on OpenRouter is
+// recognised by host, by the same predicate its routing preferences use; `jev`
+// is TypeSafe's API by contract, so whatever host it is pointed at is read as
+// serving TypeSafe's routes, and its key goes to no other route.
 func decisionHostFor(provider, endpoint string) decisionHost {
-	if IsOpenRouterHost(endpoint) {
+	if provider == providerJevCompatible && IsOpenRouterHost(endpoint) {
 		return decisionHostOpenRouter
 	}
 	if provider == providerJev {
@@ -61,6 +65,10 @@ func siblingURL(endpoint, last string) (string, error) {
 	origin, path, err := splitEndpoint(endpoint)
 	if err != nil {
 		return "", err
+	}
+	path = strings.TrimSuffix(path, "/")
+	if !strings.Contains(path, "/") {
+		path = "/"
 	}
 	return origin + path[:strings.LastIndex(path, "/")+1] + last, nil
 }
@@ -175,8 +183,11 @@ func (c *decisionClient) wireProbe(ctx context.Context) error {
 	}
 	//craft:ignore swallowed-errors best-effort close of a body this probe never reads
 	defer func() { _ = resp.Body.Close() }()
+	// 200 is not a pass: a Jev server cannot answer an empty request, so a
+	// 200 is something else at that address — a landing page, a catch-all —
+	// that checked no key at all.
 	switch resp.StatusCode {
-	case http.StatusOK, http.StatusBadRequest, http.StatusUnprocessableEntity:
+	case http.StatusBadRequest, http.StatusUnprocessableEntity:
 		return nil
 	default:
 		return &listStatusError{vendor: "decision", status: resp.StatusCode}
@@ -210,6 +221,12 @@ func (c *decisionClient) probeKey(ctx context.Context, provider string) (count i
 	default:
 		return 0, false, c.wireProbe(ctx)
 	}
+}
+
+// decisionLaneForbidden is whether the profile refuses this lane, read by the
+// routing validator's own residency rule rather than a second copy of it.
+func decisionLaneForbidden(profile Profile, lane DecisionsConfig) bool {
+	return RoutingConfig{Profile: profile, Decisions: &lane}.decisionsResidencyGap() != nil
 }
 
 // boundDecisionLane is the decision binding a test or a list uses for

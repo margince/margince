@@ -105,6 +105,8 @@ func TestAnyOtherDecisionServerIsProbedWithAnEmptyDecision(t *testing.T) {
 	for status, want := range map[int]KeyTestReason{
 		http.StatusBadRequest:          "",
 		http.StatusUnprocessableEntity: "",
+		http.StatusOK:                  KeyTestUnreachable,
+		http.StatusFound:               KeyTestUnreachable,
 		http.StatusUnauthorized:        KeyTestAuthFailed,
 		http.StatusForbidden:           KeyTestAuthFailed,
 		http.StatusBadGateway:          KeyTestUnreachable,
@@ -154,6 +156,56 @@ func TestDecisionModelsComeFromWhereEachHostPublishesThem(t *testing.T) {
 	}
 	if _, listed, err := self.decisionModels(context.Background(), providerJevCompatible); listed || err != nil {
 		t.Fatalf("a self-hosted server publishes no list: listed=%v err=%v", listed, err)
+	}
+}
+
+// The list sits beside the decision route, whatever shape the stored endpoint
+// takes: no path, a trailing slash, or a prefix a proxy mounts it under.
+func TestTheModelListIsFoundBesideAnyEndpointShape(t *testing.T) {
+	for endpoint, want := range map[string]string{
+		"https://api.typesafe.ai/v1/systemone":         "https://api.typesafe.ai/v1/models",
+		"https://api.typesafe.ai/v1/systemone/":        "https://api.typesafe.ai/v1/models",
+		"https://proxy.example":                        "https://proxy.example/models",
+		"https://proxy.example/":                       "https://proxy.example/models",
+		"https://proxy.example/typesafe/v1/systemone":  "https://proxy.example/typesafe/v1/models",
+		"https://proxy.example/v1/systemone?region=eu": "https://proxy.example/v1/models",
+	} {
+		got, err := siblingURL(endpoint, "models")
+		if err != nil || got != want {
+			t.Errorf("siblingURL(%q) = %q, %v; want %q", endpoint, got, err, want)
+		}
+	}
+	if got, err := originURL("https://openrouter.ai/api/alpha/decisions", "/api/v1/key"); err != nil ||
+		got != "https://openrouter.ai/api/v1/key" {
+		t.Errorf("originURL = %q, %v", got, err)
+	}
+}
+
+// A `jev` lane pointed at OpenRouter still speaks TypeSafe's API: its key is
+// sent to the model list beside its endpoint, never to the broker's key route.
+func TestJevOnAnOpenRouterHostIsNotAskedTheBrokersKeyRoute(t *testing.T) {
+	host := &scriptedHost{t: t, answer: func(*http.Request) (int, string) { return http.StatusOK, `{"models":[]}` }}
+	probeProviderKey(context.Background(), decisionBound(providerJev, "https://openrouter.ai/api/v1/systemone"),
+		providerJev, cloudKeyFor(providerJev, "tk"), host.probes())
+	if !strings.HasPrefix(host.asked[0], "GET https://openrouter.ai/api/v1/models ") {
+		t.Fatalf("asked %v", host.asked)
+	}
+}
+
+// eu_hosted refuses to bind TypeSafe's own API or OpenRouter's decisions
+// endpoint; a test of either says so rather than reporting a key it could
+// never use as connected, and dials nothing.
+func TestEUHostedRefusesADecisionLaneItWouldNotBind(t *testing.T) {
+	for _, tc := range []struct{ provider, endpoint string }{
+		{providerJev, ""},
+		{providerJevCompatible, "https://openrouter.ai/api/alpha/decisions"},
+	} {
+		cfg := decisionBound(tc.provider, tc.endpoint)
+		cfg.Profile = ProfileEUHosted
+		got := probeProviderKey(context.Background(), cfg, tc.provider, cloudKeyFor(tc.provider, "k"), stubBuilder)
+		if got.Reason != KeyTestProfileForbids {
+			t.Errorf("%s at %q: got %+v, want profile_forbids", tc.provider, tc.endpoint, got)
+		}
 	}
 }
 
