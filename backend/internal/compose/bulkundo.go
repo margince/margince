@@ -108,6 +108,7 @@ func undoOne(
 ) (bulkApplied, crmcontracts.BulkSkip, error) {
 	var sample crmcontracts.BulkSampleRow
 	var leftBehind []storekit.LeftBehind
+	var restored storekit.RestoreReport
 	var err error
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:
@@ -118,18 +119,20 @@ func undoOne(
 		}
 	case crmcontracts.BulkVerbArchive:
 		var report storekit.RestoreReport
-		report, err = target.restore(ctx, tx, ids.UUID(item.Id), item.Version)
+		report, err = target.restore(ctx, tx, ids.UUID(item.Id), item.Version, change.pendingLinks)
 		sample = crmcontracts.BulkSampleRow{
 			Id: item.Id, Label: report.Label,
 			Before: crmcontracts.BulkRecordState{Archived: true},
 		}
 		leftBehind = report.LeftBehind
+		restored = report
 	}
 	if err != nil {
 		skip, classifyErr := undoSkipFor(err)
 		return bulkApplied{}, skip, classifyErr
 	}
 	applied, skip, err := appliedAt(ctx, tx, change.recordType, sample)
+	applied.restored = restored
 	for _, left := range leftBehind {
 		applied.leftBehind = append(applied.leftBehind, crmcontracts.BulkLeftBehind{
 			Id: item.Id, Kind: crmcontracts.BulkLeftBehindKind(left.Kind), RefId: openapi_types.UUID(left.ID),
@@ -191,4 +194,47 @@ func restoreSkip(refusal *storekit.RestoreRefusal) crmcontracts.BulkSkip {
 	}
 	code, message := string(refusal.Reason), refusal.Error()
 	return crmcontracts.BulkSkip{Reason: crmcontracts.BulkSkipReasonRefused, Code: &code, Message: &message}
+}
+
+// bulkLinks carries the links an undo's restores left behind because the
+// record at their other end was still archived. Rows are restored in id order,
+// so when two records of one change were linked, the earlier restore finds the
+// later one archived; the later restore tries the link again once it is live.
+type bulkLinks struct {
+	pending  []storekit.LeftBehind
+	relinked map[ids.UUID]bool
+}
+
+// settle takes one committed restore: what it brought back leaves the pending
+// set, and the links it left behind join it.
+func (l *bulkLinks) settle(report storekit.RestoreReport) {
+	if l.relinked == nil {
+		l.relinked = map[ids.UUID]bool{}
+	}
+	for _, id := range report.Relinked {
+		l.relinked[id] = true
+	}
+	pending := l.pending[:0]
+	for _, link := range l.pending {
+		if !l.relinked[link.ID] {
+			pending = append(pending, link)
+		}
+	}
+	for _, left := range report.LeftBehind {
+		if left.Kind == string(crmcontracts.BulkLeftBehindKindRelationship) {
+			pending = append(pending, left)
+		}
+	}
+	l.pending = pending
+}
+
+// stillBehind drops from left what a later restore brought back.
+func (l *bulkLinks) stillBehind(left []crmcontracts.BulkLeftBehind) []crmcontracts.BulkLeftBehind {
+	out := left[:0]
+	for _, entry := range left {
+		if !l.relinked[ids.UUID(entry.RefId)] {
+			out = append(out, entry)
+		}
+	}
+	return out
 }

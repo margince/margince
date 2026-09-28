@@ -54,12 +54,24 @@ type UnarchiveShape struct {
 // ChildRestore is the statement that brings back one row of Table.
 type ChildRestore struct{ Table, Statement string }
 
+// RestoreWith is what an un-archive needs from its caller besides the record.
+type RestoreWith struct {
+	// Erased is required: restoring from behind an erasure would bring back
+	// what the erasure certified gone.
+	Erased ErasedSince
+	// PendingLinks are links an earlier restore of the same change left
+	// behind because this record was still archived. Each is tried again once
+	// this record is live, and one that comes back is credited to it.
+	PendingLinks []LeftBehind
+}
+
 // Unarchive asks the refusals, and then writes the record, what it can of its
 // cascade, the restore audit row and the event. The authority gates are the
 // caller's: each module asks its own object and row gates before it gets here.
 func Unarchive(
-	ctx context.Context, tx pgx.Tx, shape UnarchiveShape, id ids.UUID, ifVersion *int64, erased ErasedSince,
+	ctx context.Context, tx pgx.Tx, shape UnarchiveShape, id ids.UUID, ifVersion *int64, with RestoreWith,
 ) (RestoreReport, error) {
+	erased := with.Erased
 	if erased == nil {
 		return RestoreReport{}, errors.New("store: an un-archive needs the erasure boundary to ask")
 	}
@@ -90,6 +102,9 @@ func Unarchive(
 		return RestoreReport{}, err
 	}
 	if report.LeftBehind, err = restoreCascade(ctx, tx, shape, id, archive.Cascade, *archivedAt); err != nil {
+		return RestoreReport{}, err
+	}
+	if report.Relinked, err = relink(ctx, tx, shape, with.PendingLinks); err != nil {
 		return RestoreReport{}, err
 	}
 	auditID, err := AuditWithEvidence(ctx, tx, "restore", shape.Table, id,
@@ -159,8 +174,14 @@ func restoreCascade(
 			if err != nil {
 				return nil, fmt.Errorf("restore %s %s: %w", child.Table, row, err)
 			}
+			// The record's own email or domain is part of the record: when a
+			// live record took it after refuseTakenValue looked, the whole
+			// restore is refused rather than committed without it.
+			if !back && child.Table == shape.TakenFrom {
+				return nil, &RestoreRefusal{Reason: RestoreValueTaken, Detail: shape.TakenField}
+			}
 			if !back {
-				left = append(left, LeftBehind{Kind: child.Table, ID: row})
+				left = append(left, LeftBehind{Kind: child.Table, ID: row, RetiredAt: archivedAt})
 			}
 		}
 	}
@@ -184,4 +205,25 @@ func restoreCascade(
 		}
 	}
 	return left, nil
+}
+
+// relink tries each pending link again now that this record is live, and
+// answers the ones that came back.
+func relink(ctx context.Context, tx pgx.Tx, shape UnarchiveShape, pending []LeftBehind) ([]ids.UUID, error) {
+	var back []ids.UUID
+	for _, link := range pending {
+		for _, child := range shape.Children {
+			if child.Table != link.Kind {
+				continue
+			}
+			restored, err := TryInSavepoint(ctx, tx, child.Statement, link.ID, link.RetiredAt)
+			if err != nil {
+				return nil, fmt.Errorf("restore %s %s: %w", link.Kind, link.ID, err)
+			}
+			if restored {
+				back = append(back, link.ID)
+			}
+		}
+	}
+	return back, nil
 }

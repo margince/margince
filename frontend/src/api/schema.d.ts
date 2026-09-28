@@ -3247,8 +3247,10 @@ export interface paths {
          *     it changed, each record it left alone with the reason, what an undo could not bring back,
          *     and the batches it undid or was undone by.
          *
-         *     Only the colleague who asked for the change, or an administrator, may read it. Anyone else is
-         *     answered `404`, the same as for a batch that does not exist.
+         *     Only the colleague who asked for the change (on the website or through any of their agents),
+         *     or an administrator, may read it. Anyone else is answered `404`, the same as for a batch that
+         *     does not exist. A record the reader can no longer see is left out of `skipped` and
+         *     `left_behind`, whatever the change said about it when it ran.
          */
         get: operations["getBulkChange"];
         put?: never;
@@ -3310,7 +3312,9 @@ export interface paths {
          *     (`erased`), when another live record has since taken its email or domain (`value_taken`),
          *     and when it had no owner before (`no_previous_owner`). A child row, membership or tag that
          *     cannot come back — a list or tag archived since, a link whose other end is archived — is
-         *     listed in `left_behind` while its record is restored.
+         *     listed in `left_behind` while its record is restored. A link between two records of the same
+         *     change comes back once both are live. A record the caller can no longer see is left out of
+         *     the answer rather than named.
          *
          *     Only the colleague who asked for the change, or an administrator, may undo it (`404`
          *     otherwise). A change is undone once; a second undo, or an undo of an undo, answers `409`.

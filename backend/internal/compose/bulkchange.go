@@ -62,6 +62,9 @@ type bulkChange struct {
 	previewed map[openapi_types.UUID]bool
 	// undo is set when this change reverses an earlier one (bulkundo.go).
 	undo *bulkUndoPlan
+	// pendingLinks are links earlier rows of this undo left behind, for this
+	// row's restore to try again.
+	pendingLinks []storekit.LeftBehind
 }
 
 // bulkEngine runs bulk changes over the three record types.
@@ -87,6 +90,9 @@ type bulkApplied struct {
 	sample     crmcontracts.BulkSampleRow
 	outcome    bulkOutcome
 	leftBehind []crmcontracts.BulkLeftBehind
+	// restored is an undo's un-archive report, whose links wait for the
+	// records after it (bulkLinks).
+	restored storekit.RestoreReport
 }
 
 // Preview answers what change would do, and writes nothing but the
@@ -105,7 +111,10 @@ func (e *bulkEngine) Preview(ctx context.Context, change bulkChange) (crmcontrac
 		if err != nil {
 			return err
 		}
-		out.Count, out.Affected, out.Excluded = len(run.changed), affectedIDs(run.changed), run.skipped
+		out.Count, out.Affected = len(run.changed), affectedIDs(run.changed)
+		if out.Excluded, _, err = shownOf(ctx, tx, change, run); err != nil {
+			return err
+		}
 		out.Sample = run.changed[:min(len(run.changed), bulkSampleSize)]
 		if out.Count == 0 {
 			return nil
@@ -131,6 +140,8 @@ func (e *bulkEngine) Execute(ctx context.Context, change bulkChange) (crmcontrac
 	batchID := ids.NewV7()
 	ctx = storekit.WithBatch(ctx, batchID)
 	var run bulkRun
+	var skipped []crmcontracts.BulkSkip
+	var leftBehind []crmcontracts.BulkLeftBehind
 	var reserved *auth.WriteReservation
 	err = e.transact(ctx, func(tx pgx.Tx) error {
 		// An attempt a deadlock aborted committed nothing, so what it reserved
@@ -140,7 +151,11 @@ func (e *bulkEngine) Execute(ctx context.Context, change bulkChange) (crmcontrac
 		if run, reserved, err = e.applyAndReserve(ctx, tx, records.target, change); err != nil {
 			return err
 		}
-		return recordBulkOperation(ctx, tx, batchID, change, run)
+		if err := recordBulkOperation(ctx, tx, batchID, change, run); err != nil {
+			return err
+		}
+		skipped, leftBehind, err = shownOf(ctx, tx, change, run)
+		return err
 	})
 	if err != nil {
 		reserved.Refund(ctx)
@@ -149,14 +164,26 @@ func (e *bulkEngine) Execute(ctx context.Context, change bulkChange) (crmcontrac
 	// The reservation already charged every changed record, so the door that
 	// charges a call's effects afterwards charges nothing more.
 	agentvolume.NoteEffects(ctx, 0)
-	out := crmcontracts.BulkChangeResult{BatchId: openapi_types.UUID(batchID), Changed: len(run.changed), Skipped: run.skipped}
-	if len(run.leftBehind) > 0 {
-		out.LeftBehind = &run.leftBehind
+	out := crmcontracts.BulkChangeResult{BatchId: openapi_types.UUID(batchID), Changed: len(run.changed), Skipped: skipped}
+	if len(leftBehind) > 0 {
+		out.LeftBehind = &leftBehind
 	}
 	if change.undo != nil {
 		out.UndoOf = wireOwner(&change.undo.batchID)
 	}
 	return out, nil
+}
+
+// shownOf is what an answer may name of a run's skips and left-behind entries.
+// A forward change names only records its caller just named; an undo's come
+// from a stored batch, so they pass the reader's current authority first.
+func shownOf(
+	ctx context.Context, tx pgx.Tx, change bulkChange, run bulkRun,
+) ([]crmcontracts.BulkSkip, []crmcontracts.BulkLeftBehind, error) {
+	if change.undo == nil {
+		return run.skipped, run.leftBehind, nil
+	}
+	return withholdUnseen(ctx, tx, change.recordType, run.skipped, run.leftBehind)
 }
 
 // applyAndReserve spends the confirmation, changes the rows it covers, and
@@ -243,8 +270,11 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 	items := slices.Clone(change.items)
 	slices.SortFunc(items, func(a, b crmcontracts.BulkItem) int { return strings.Compare(a.Id.String(), b.Id.String()) })
 	run := bulkRun{changed: []crmcontracts.BulkSampleRow{}, skipped: []crmcontracts.BulkSkip{}}
+	var links bulkLinks
 	for _, item := range items {
-		applied, skip, err := applyOneInSavepoint(ctx, tx, target, change, item)
+		rowChange := change
+		rowChange.pendingLinks = links.pending
+		applied, skip, err := applyOneInSavepoint(ctx, tx, target, rowChange, item)
 		switch {
 		case err != nil:
 			return bulkRun{}, err
@@ -254,8 +284,10 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 			run.changed = append(run.changed, applied.sample)
 			run.outcomes = append(run.outcomes, applied.outcome)
 			run.leftBehind = append(run.leftBehind, applied.leftBehind...)
+			links.settle(applied.restored)
 		}
 	}
+	run.leftBehind = links.stillBehind(run.leftBehind)
 	return run, nil
 }
 

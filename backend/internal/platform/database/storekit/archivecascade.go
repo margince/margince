@@ -35,6 +35,9 @@ const (
 	EvidenceKeyRestoresArchive = "restores_archive"
 	// EvidenceKeyLeftBehind lists, on a restore row, what could not come back.
 	EvidenceKeyLeftBehind = "left_behind"
+	// EvidenceKeyRelinked lists, on a restore row, links an earlier restore of
+	// the same change left behind that this one brought back.
+	EvidenceKeyRelinked = "relinked"
 )
 
 // ArchiveCascade is everything one archive changed besides the record's row.
@@ -191,12 +194,17 @@ func (e *RestoreRefusal) Unwrap() error { return apperrors.ErrConflict }
 type LeftBehind struct {
 	Kind string   `json:"kind"`
 	ID   ids.UUID `json:"id"`
+	// RetiredAt is the stamp the archive left on the row, which a later try
+	// matches on. It stays out of the audit evidence.
+	RetiredAt time.Time `json:"-"`
 }
 
 // RestoreReport is what one un-archive did beyond the record's own row.
 type RestoreReport struct {
 	Label      string
 	LeftBehind []LeftBehind
+	// Relinked are pending links of the same change this restore brought back.
+	Relinked []ids.UUID
 }
 
 // Evidence is what a restore row records: the archive it reversed, and what
@@ -205,6 +213,9 @@ func (r RestoreReport) Evidence(archive ids.UUID) map[string]any {
 	evidence := map[string]any{EvidenceKeyRestoresArchive: archive}
 	if len(r.LeftBehind) > 0 {
 		evidence[EvidenceKeyLeftBehind] = r.LeftBehind
+	}
+	if len(r.Relinked) > 0 {
+		evidence[EvidenceKeyRelinked] = r.Relinked
 	}
 	return evidence
 }

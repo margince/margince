@@ -86,26 +86,25 @@ var companyUnarchive = storekit.UnarchiveShape{
 }
 
 // RestoreContactTx brings an archived contact back on the caller's
-// transaction, conditioned on ifVersion. erased answers whether the contact was
-// erased after its archive, and is required: restoring from behind an erasure
-// would bring back what the erasure certified gone.
+// transaction, conditioned on ifVersion. with.Erased is required
+// (storekit.RestoreWith says why).
 func (s *Store) RestoreContactTx(
-	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, erased storekit.ErasedSince,
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
 	if err := ensureRestorable(ctx, tx, contactEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, erased)
+	return storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, with)
 }
 
 // RestoreCompanyTx is RestoreContactTx for a company.
 func (s *Store) RestoreCompanyTx(
-	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, erased storekit.ErasedSince,
+	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
 	if err := ensureRestorable(ctx, tx, companyEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, erased)
+	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
 }
 
 // ensureRestorable asks what the archive asks: the delete grant on the type

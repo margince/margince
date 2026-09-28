@@ -43,10 +43,9 @@ var dealUnarchive = storekit.UnarchiveShape{
 }
 
 // RestoreDealTx brings an archived deal back on the caller's transaction,
-// conditioned on ifVersion, behind the gates the archive asks. erased is
-// required, as it is for a contact: an erasure since the archive refuses it.
+// conditioned on ifVersion, behind the gates the archive asks.
 func (s *Store) RestoreDealTx(
-	ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, erased storekit.ErasedSince,
+	ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
 		return storekit.RestoreReport{}, err
@@ -56,5 +55,5 @@ func (s *Store) RestoreDealTx(
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, dealUnarchive, id.UUID, ifVersion, erased)
+	return storekit.Unarchive(ctx, tx, dealUnarchive, id.UUID, ifVersion, with)
 }

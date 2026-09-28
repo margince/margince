@@ -33,8 +33,9 @@ type bulkTarget interface {
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 	reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error
 	archive(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) error
-	// restore brings an archived record back, conditioned on version.
-	restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) (storekit.RestoreReport, error)
+	// restore brings an archived record back, conditioned on version, and
+	// tries again the links earlier restores of the same undo left behind.
+	restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind) (storekit.RestoreReport, error)
 }
 
 // bulkTargets builds the three adapters over the stores the REST handlers use.
@@ -68,8 +69,11 @@ func (t contactBulkTarget) archive(ctx context.Context, tx pgx.Tx, id ids.UUID, 
 	return t.store.ArchiveContactTx(ctx, tx, ids.From[ids.ContactKind](id), &version)
 }
 
-func (t contactBulkTarget) restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) (storekit.RestoreReport, error) {
-	return t.store.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](id), &version, archiveIsBehindErasure)
+func (t contactBulkTarget) restore(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
+) (storekit.RestoreReport, error) {
+	return t.store.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](id), &version,
+		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
 }
 
 type companyBulkTarget struct{ store *contacts.Store }
@@ -87,8 +91,11 @@ func (t companyBulkTarget) archive(ctx context.Context, tx pgx.Tx, id ids.UUID, 
 	return t.store.ArchiveCompanyTx(ctx, tx, ids.From[ids.CompanyKind](id), &version)
 }
 
-func (t companyBulkTarget) restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) (storekit.RestoreReport, error) {
-	return t.store.RestoreCompanyTx(ctx, tx, ids.From[ids.CompanyKind](id), &version, archiveIsBehindErasure)
+func (t companyBulkTarget) restore(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
+) (storekit.RestoreReport, error) {
+	return t.store.RestoreCompanyTx(ctx, tx, ids.From[ids.CompanyKind](id), &version,
+		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
 }
 
 type dealBulkTarget struct{ store *deals.Store }
@@ -106,6 +113,9 @@ func (t dealBulkTarget) archive(ctx context.Context, tx pgx.Tx, id ids.UUID, ver
 	return t.store.ArchiveDealTx(ctx, tx, ids.From[ids.DealKind](id), &version)
 }
 
-func (t dealBulkTarget) restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) (storekit.RestoreReport, error) {
-	return t.store.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](id), &version, archiveIsBehindErasure)
+func (t dealBulkTarget) restore(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
+) (storekit.RestoreReport, error) {
+	return t.store.RestoreDealTx(ctx, tx, ids.From[ids.DealKind](id), &version,
+		storekit.RestoreWith{Erased: archiveIsBehindErasure, PendingLinks: pending})
 }

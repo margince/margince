@@ -66,10 +66,12 @@ func recordBulkOperation(ctx context.Context, tx pgx.Tx, batchID ids.UUID, chang
 		undoOf = &change.undo.batchID
 	}
 	_, err = tx.Exec(ctx,
-		`INSERT INTO bulk_operation (id, record_type, verb, params, requested_by, passport_id, changed_count, skipped_count, result, undo_of)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		`INSERT INTO bulk_operation (id, record_type, verb, params, requested_by, passport_id, changed_count, skipped_count,
+		                             result, undo_of, requested_for)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		batchID, string(change.recordType), string(change.verb), params, actor.ID,
-		storekit.UUIDOrNil(actor.PassportID), len(run.changed), len(run.skipped), result, undoOf)
+		storekit.UUIDOrNil(actor.PassportID), len(run.changed), len(run.skipped), result, undoOf,
+		storekit.UUIDOrNil(humanBehind(actor)))
 	if storekit.IsUniqueViolation(err) {
 		return errBulkAlreadyUndone
 	}
@@ -106,7 +108,7 @@ type bulkOperation struct {
 	recordType   crmcontracts.BulkRecordType
 	verb         crmcontracts.BulkVerb
 	ownerID      *ids.UUID
-	requestedBy  string
+	requester    batchRequester
 	changedCount int
 	result       bulkResult
 	undoOf       *ids.UUID
@@ -121,16 +123,18 @@ func readBulkOperation(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkOperati
 	op := bulkOperation{id: id}
 	var params, result []byte
 	err := tx.QueryRow(ctx,
-		`SELECT record_type, verb, params, requested_by, changed_count, result, undo_of, undone_by, created_at
+		`SELECT record_type, verb, params, requested_by, requested_for, changed_count, result,
+		        undo_of, undone_by, created_at
 		   FROM bulk_operation WHERE id = $1`, id).
-		Scan(&op.recordType, &op.verb, &params, &op.requestedBy, &op.changedCount, &result, &op.undoOf, &op.undoneBy, &op.createdAt)
+		Scan(&op.recordType, &op.verb, &params, &op.requester.id, &op.requester.human,
+			&op.changedCount, &result, &op.undoOf, &op.undoneBy, &op.createdAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return bulkOperation{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return bulkOperation{}, fmt.Errorf("read bulk change %s: %w", id, err)
 	}
-	if !mayReadBatch(ctx, op.requestedBy) {
+	if !mayReadBatch(ctx, op.requester) {
 		return bulkOperation{}, apperrors.ErrNotFound
 	}
 	var named struct {
@@ -146,17 +150,25 @@ func readBulkOperation(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkOperati
 	return op, nil
 }
 
-// mayReadBatch admits the principal that asked, the human behind it (who may
-// ask an agent to undo what they did on the website), and an administrator.
-func mayReadBatch(ctx context.Context, requestedBy string) bool {
+// batchRequester is who asked for a batch, in each identity that can claim it.
+type batchRequester struct {
+	id    string
+	human *ids.UUID
+}
+
+// mayReadBatch admits the principal that asked; the human the change was made
+// for, on the website or through any of their agents — which is also what
+// admits an agent after an OAuth refresh has minted it a new passport; and an
+// administrator.
+func mayReadBatch(ctx context.Context, requester batchRequester) bool {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return false
 	}
-	if actor.ID == requestedBy {
+	switch {
+	case actor.ID == requester.id:
 		return true
-	}
-	if human, isHuman := principal.HumanUserID(requestedBy); isHuman && (actor.UserID == human || actor.OnBehalfOf == human) {
+	case requester.human != nil && humanBehind(actor) == *requester.human:
 		return true
 	}
 	return auth.RequireAdmin(ctx) == nil
@@ -165,21 +177,18 @@ func mayReadBatch(ctx context.Context, requestedBy string) bool {
 // Status answers one bulk change as GET /v1/bulk/{id} reads it.
 func (e *bulkEngine) Status(ctx context.Context, id ids.UUID) (crmcontracts.BulkOperation, error) {
 	var op bulkOperation
+	var skipped []crmcontracts.BulkSkip
+	var leftBehind []crmcontracts.BulkLeftBehind
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		op, err = readBulkOperation(ctx, tx, id)
+		if op, err = readBulkOperation(ctx, tx, id); err != nil {
+			return err
+		}
+		skipped, leftBehind, err = withholdUnseen(ctx, tx, op.recordType, op.result.Skipped, op.result.LeftBehind)
 		return err
 	})
 	if err != nil {
 		return crmcontracts.BulkOperation{}, err
-	}
-	leftBehind := op.result.LeftBehind
-	if leftBehind == nil {
-		leftBehind = []crmcontracts.BulkLeftBehind{}
-	}
-	skipped := op.result.Skipped
-	if skipped == nil {
-		skipped = []crmcontracts.BulkSkip{}
 	}
 	return crmcontracts.BulkOperation{
 		BatchId: openapi_types.UUID(op.id), RecordType: op.recordType, Verb: op.verb,

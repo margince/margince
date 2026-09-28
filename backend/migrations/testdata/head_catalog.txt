@@ -1348,6 +1348,7 @@ public.bulk_operation.params jsonb NOT NULL gen=- def='{}'::jsonb
 public.bulk_operation.passport_id uuid gen=- def=-
 public.bulk_operation.record_type text NOT NULL gen=- def=-
 public.bulk_operation.requested_by text NOT NULL gen=- def=-
+public.bulk_operation.requested_for uuid gen=- def=-
 public.bulk_operation.result jsonb NOT NULL gen=- def='{}'::jsonb
 public.bulk_operation.skipped_count integer NOT NULL gen=- def=-
 public.bulk_operation.undo_of uuid gen=- def=-
