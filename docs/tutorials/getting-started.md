@@ -111,5 +111,10 @@ missing — it never skips.
   reading order, how to add an endpoint or a migration).
 - Connect an AI agent: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md),
   then [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md).
+- Send mail: a rep's own mail needs a connected mailbox
+  ([how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md)); the privacy
+  notice, confirm links and password reset need the installation's SMTP relay,
+  which this stack does not have yet
+  ([how-to/set-up-outbound-mail.md](../how-to/set-up-outbound-mail.md)).
 - Every flag and environment variable: [reference/configuration.md](../reference/configuration.md).
 - Why the code is shaped the way it is: [explanation/architecture.md](../explanation/architecture.md).
