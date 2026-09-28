@@ -13,6 +13,7 @@
 // story, and no assertion fails to say so.
 
 import { describe, expect, it } from "vitest";
+import { outcomeErrors } from "./lib/story-outcome.mjs";
 import { needsStory } from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
@@ -163,6 +164,62 @@ describe("drainInOrder", () => {
       "ok 2",
       "ok 3",
       "ok 4",
+    ]);
+  });
+});
+
+const quiet = {
+  playFunctionThrewException: null,
+  storyThrewException: null,
+  storyErrored: null,
+  unhandledErrorsWhilePlaying: null,
+};
+
+describe("outcomeErrors", () => {
+  it("passes a story whose channel reported no failure", () => {
+    expect(outcomeErrors(quiet)).toEqual([]);
+  });
+
+  // The rejection is on the channel even when no console line reached the gate
+  // before the screenshot.
+  it("fails a play() that threw, once, on its first line", () => {
+    const error = {
+      name: "TestingLibraryElementError",
+      message: "Unable to find an element\n\n<body>…</body>",
+    };
+    expect(
+      outcomeErrors({
+        ...quiet,
+        playFunctionThrewException: error,
+        storyThrewException: error,
+      }),
+    ).toEqual([
+      "play() threw TestingLibraryElementError: Unable to find an element",
+    ]);
+  });
+
+  it("fails a render that threw or errored without a play()", () => {
+    expect(
+      outcomeErrors({
+        ...quiet,
+        storyThrewException: { name: "TypeError", message: "x is undefined" },
+        storyErrored: { title: "No component", description: "export one" },
+      }),
+    ).toEqual([
+      "the story threw TypeError: x is undefined",
+      "the story errored: No component — export one",
+    ]);
+  });
+
+  it("fails each error left unhandled while playing", () => {
+    expect(
+      outcomeErrors({
+        ...quiet,
+        unhandledErrorsWhilePlaying: [{ message: "a" }, { message: "b" }],
+      }),
+    ).toEqual([
+      "unhandled error while playing: a",
+      "unhandled error while playing: b",
     ]);
   });
 });

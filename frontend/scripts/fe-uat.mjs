@@ -21,6 +21,11 @@ import { availableParallelism } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  FAILURE_EVENTS,
+  outcomeErrors,
+  SETTLED_EVENTS,
+} from "./lib/story-outcome.mjs";
+import {
   buildStaticStorybook,
   loadPlaywright,
   readStoryIndex,
@@ -297,6 +302,25 @@ async function paintCensus(page) {
   }, DUMP_CHARS);
 }
 
+async function storyOutcome(page) {
+  return await page.evaluate(
+    (events) =>
+      Object.fromEntries(
+        events.map((event) => [
+          event,
+          globalThis.__STORYBOOK_ADDONS_CHANNEL__?.last(event)?.[0] ?? null,
+        ]),
+      ),
+    FAILURE_EVENTS,
+  );
+}
+
+async function renderPhase(page) {
+  return await page.evaluate(
+    () => globalThis.__STORYBOOK_PREVIEW__?.currentRender?.phase ?? "unknown",
+  );
+}
+
 const wantImportPaths = new Set(
   [...storyFiles].map((p) => `./${p.replace(/^frontend\//, "")}`),
 );
@@ -328,6 +352,25 @@ async function captureStory(page, port, story) {
       waitUntil: "networkidle",
     },
   );
+  // A play() whose query rejects reports after the root has painted, so the
+  // verdict waits for Storybook's own end of render, not for paint or a delay.
+  let settled = true;
+  try {
+    await page.waitForFunction(
+      (events) => {
+        const channel = globalThis.__STORYBOOK_ADDONS_CHANNEL__;
+        return events.some((event) => channel?.last(event) !== undefined);
+      },
+      SETTLED_EVENTS,
+      { timeout: 30_000 },
+    );
+  } catch {
+    settled = false;
+    errors.push(
+      `Storybook never reported the story rendered within the render deadline (phase: ${await renderPhase(page)})`,
+    );
+  }
+  if (settled) errors.push(...outcomeErrors(await storyOutcome(page)));
   let rendered = true;
   try {
     // Large histories can still be rendering after the network is idle.
@@ -339,17 +382,9 @@ async function captureStory(page, port, story) {
       `the story painted neither a visible #storybook-root child nor an open dialog within the render deadline — ${await paintCensus(page)}`,
     );
   }
-  // Let any play() interaction settle before the frame.
-  //
-  // Longer for a story that HAS one, and the reason is a defect this gate used
-  // to wave through: a play() whose query rejects — a canvas-scoped lookup for
-  // a node that portalled to document.body, say — reports about a second after
-  // the root fills, so at 250ms the screenshot and the verdict both landed
-  // first and a broken interaction passed. Two stories sat in that state, and
-  // one of them was capturing an un-armed confirm dialog under the name of an
-  // armed one. `play-fn` is Storybook's own automatic tag, so only the stories
-  // that can hit this pay for the wait.
-  await page.waitForTimeout(tags.includes("play-fn") ? 1_500 : 250);
+  // Effects a story starts on mount, a mocked query resolving say, can still
+  // paint after Storybook reports the render done.
+  await page.waitForTimeout(250);
   const png = join(outDir, `${story.id}.png`);
   await page.screenshot({ path: png });
   const pass = rendered && errors.length === 0;
