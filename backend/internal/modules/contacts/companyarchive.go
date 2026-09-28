@@ -163,7 +163,7 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 	// recorded on the archive's audit row, for an un-archive to put back.
 	var cascade storekit.ArchiveCascade
 	for _, retire := range []struct{ table, statement string }{
-		{"company_domain", `UPDATE company_domain SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
+		{tableCompanyDomain, `UPDATE company_domain SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
 		// ADR-0079's partner invariant runs over LIVE type rows, so the
 		// types retire with their parent.
 		{"company_relationship_type", `UPDATE company_relationship_type SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
@@ -171,8 +171,8 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 		// live, the extension and its type row disagree: the account is no
 		// longer a partner by relationship type while partner.go's own
 		// live-row reads still answer for it.
-		{"partner", `UPDATE partner SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
-		{"relationship", `UPDATE relationship SET archived_at = $2 WHERE (company_id = $1 OR counterparty_company_id = $1) AND archived_at IS NULL RETURNING id`},
+		{tablePartner, `UPDATE partner SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
+		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (company_id = $1 OR counterparty_company_id = $1) AND archived_at IS NULL RETURNING id`},
 	} {
 		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
 			return storekit.ArchiveCascade{}, fmt.Errorf("retire what hangs off the account: %w", err)

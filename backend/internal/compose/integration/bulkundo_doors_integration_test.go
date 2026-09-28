@@ -34,7 +34,8 @@ type undoDoor struct {
 }
 
 func undoDoors(e *apptest.AppEnv, doors []bulkDoor, client *apptest.MCPClient) []undoDoor {
-	httpDoor := undoDoor{bulkDoor: doors[0],
+	httpDoor := undoDoor{
+		bulkDoor: doors[0],
 		preview: func(t *testing.T, batchID string) (out bulkPreviewDTO, refusal string) {
 			return out, httpCall(t, e, "/v1/bulk/"+batchID+"/undo/preview", nil, &out)
 		},
@@ -55,7 +56,8 @@ func undoDoors(e *apptest.AppEnv, doors []bulkDoor, client *apptest.MCPClient) [
 		got.JSON(t, out)
 		return ""
 	}
-	mcpDoor := undoDoor{bulkDoor: doors[1],
+	mcpDoor := undoDoor{
+		bulkDoor: doors[1],
 		preview: func(t *testing.T, batchID string) (out bulkPreviewDTO, refusal string) {
 			return out, mcpCall(t, AnyMap{"mode": "undo_preview", "batch_id": batchID}, &out)
 		},

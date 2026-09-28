@@ -39,12 +39,18 @@ type bulkUndoPlan struct {
 }
 
 var (
-	errBulkAlreadyUndone = &httperr.DetailedError{Status: http.StatusConflict, Code: "bulk_already_undone",
-		Detail: "this bulk change was already undone; a change is undone once"}
-	errBulkUndoOfUndo = &httperr.DetailedError{Status: http.StatusConflict, Code: "bulk_undo_not_undoable",
-		Detail: "this is an undo; it is not undone in turn. Make the change again instead"}
-	errBulkNothingToUndo = &httperr.DetailedError{Status: http.StatusConflict, Code: "bulk_nothing_to_undo",
-		Detail: "this bulk change changed no record the undo can name, so there is nothing to put back"}
+	errBulkAlreadyUndone = &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "bulk_already_undone",
+		Detail: "this bulk change was already undone; a change is undone once",
+	}
+	errBulkUndoOfUndo = &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "bulk_undo_not_undoable",
+		Detail: "this is an undo; it is not undone in turn. Make the change again instead",
+	}
+	errBulkNothingToUndo = &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "bulk_nothing_to_undo",
+		Detail: "this bulk change changed no record the undo can name, so there is nothing to put back",
+	}
 )
 
 // PreviewUndo answers what undoing the change batchID would do.
@@ -113,8 +119,10 @@ func undoOne(
 	case crmcontracts.BulkVerbArchive:
 		var report storekit.RestoreReport
 		report, err = target.restore(ctx, tx, ids.UUID(item.Id), item.Version)
-		sample = crmcontracts.BulkSampleRow{Id: item.Id, Label: report.Label,
-			Before: crmcontracts.BulkRecordState{Archived: true}}
+		sample = crmcontracts.BulkSampleRow{
+			Id: item.Id, Label: report.Label,
+			Before: crmcontracts.BulkRecordState{Archived: true},
+		}
 		leftBehind = report.LeftBehind
 	}
 	if err != nil {
@@ -124,7 +132,8 @@ func undoOne(
 	applied, skip, err := appliedAt(ctx, tx, change.recordType, sample)
 	for _, left := range leftBehind {
 		applied.leftBehind = append(applied.leftBehind, crmcontracts.BulkLeftBehind{
-			Id: item.Id, Kind: crmcontracts.BulkLeftBehindKind(left.Kind), RefId: openapi_types.UUID(left.ID)})
+			Id: item.Id, Kind: crmcontracts.BulkLeftBehindKind(left.Kind), RefId: openapi_types.UUID(left.ID),
+		})
 	}
 	return applied, skip, err
 }

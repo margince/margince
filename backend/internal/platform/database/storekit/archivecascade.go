@@ -199,8 +199,8 @@ type RestoreReport struct {
 	LeftBehind []LeftBehind
 }
 
-// RestoreEvidence is what a restore row records: the archive it reversed, and
-// what did not come back.
+// Evidence is what a restore row records: the archive it reversed, and what
+// did not come back.
 func (r RestoreReport) Evidence(archive ids.UUID) map[string]any {
 	evidence := map[string]any{EvidenceKeyRestoresArchive: archive}
 	if len(r.LeftBehind) > 0 {

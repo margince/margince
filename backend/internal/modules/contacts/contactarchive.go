@@ -118,13 +118,13 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 	// audit row, which is what an un-archive reads to put it back.
 	var cascade storekit.ArchiveCascade
 	for _, retire := range []struct{ table, statement string }{
-		{"contact_email", `UPDATE contact_email SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
-		{"contact_phone", `UPDATE contact_phone SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
+		{tableContactEmail, `UPDATE contact_email SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
+		{tableContactPhone, `UPDATE contact_phone SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
 		// A live channel identity under an archived Contact would keep
 		// resolving inbound messages onto a record that has been
 		// soft-deleted; archived, the next message starts a fresh one.
 		{"contact_channel_identity", `UPDATE contact_channel_identity SET archived_at = $2 WHERE contact_id = $1 AND archived_at IS NULL RETURNING id`},
-		{"relationship", `UPDATE relationship SET archived_at = $2 WHERE (contact_id = $1 OR counterparty_contact_id = $1) AND archived_at IS NULL RETURNING id`},
+		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (contact_id = $1 OR counterparty_contact_id = $1) AND archived_at IS NULL RETURNING id`},
 	} {
 		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
 			return err

@@ -29,6 +29,15 @@ const restoreRelationship = `UPDATE relationship r SET archived_at = NULL
 	  AND NOT EXISTS (SELECT 1 FROM deal d WHERE d.id = r.deal_id AND d.archived_at IS NOT NULL)
 	  AND NOT EXISTS (SELECT 1 FROM project p WHERE p.id = r.project_id AND p.archived_at IS NOT NULL)`
 
+// The tables a company archive retires that no other file here names, and the
+// field an un-archive names when another record holds that value now.
+const (
+	tableCompanyDomain = "company_domain"
+	tablePartner       = "partner"
+	takenEmail         = "email"
+	takenDomain        = "domain"
+)
+
 // A membership or tag comes back only while its list or tag is live.
 const (
 	restoreMembership = `INSERT INTO list_member (list_id, entity_type, entity_id, added_by, created_at)
@@ -40,37 +49,37 @@ const (
 )
 
 var contactUnarchive = storekit.UnarchiveShape{
-	Table: "contact",
+	Table: contactEntity,
 	Lock:  `SELECT full_name, archived_at, merged_into_id IS NOT NULL, version FROM contact WHERE id = $1 FOR UPDATE`,
 	Taken: `SELECT e.email FROM contact_email e
 		WHERE e.id = ANY($1) AND e.archived_at = $2
 		  AND EXISTS (SELECT 1 FROM contact_email live WHERE live.email = e.email AND live.archived_at IS NULL)
 		LIMIT 1`,
-	TakenFrom: "contact_email", TakenField: "email",
+	TakenFrom: tableContactEmail, TakenField: takenEmail,
 	Children: []storekit.ChildRestore{
-		{Table: "contact_email", Statement: `UPDATE contact_email SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
-		{Table: "contact_phone", Statement: `UPDATE contact_phone SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
+		{Table: tableContactEmail, Statement: `UPDATE contact_email SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
+		{Table: tableContactPhone, Statement: `UPDATE contact_phone SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
 		{Table: "contact_channel_identity", Statement: `UPDATE contact_channel_identity SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
-		{Table: "relationship", Statement: restoreRelationship},
+		{Table: tableRelationship, Statement: restoreRelationship},
 	},
 	Membership: restoreMembership, Tag: restoreTag,
 	Restored: crmcontracts.PublicEventContactRestored{},
 }
 
 var companyUnarchive = storekit.UnarchiveShape{
-	Table: "company",
+	Table: companyEntity,
 	Lock:  `SELECT display_name, archived_at, merged_into_id IS NOT NULL, version FROM company WHERE id = $1 FOR UPDATE`,
 	Taken: `SELECT d.domain FROM company_domain d
 		WHERE d.id = ANY($1) AND d.archived_at = $2
 		  AND EXISTS (SELECT 1 FROM company_domain live WHERE live.domain = d.domain AND live.archived_at IS NULL)
 		LIMIT 1`,
-	TakenFrom: "company_domain", TakenField: "domain",
+	TakenFrom: tableCompanyDomain, TakenField: takenDomain,
 	// Types before the partner row: the partner invariant reads live types.
 	Children: []storekit.ChildRestore{
-		{Table: "company_domain", Statement: `UPDATE company_domain SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
+		{Table: tableCompanyDomain, Statement: `UPDATE company_domain SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
 		{Table: "company_relationship_type", Statement: `UPDATE company_relationship_type SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
-		{Table: "partner", Statement: `UPDATE partner SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
-		{Table: "relationship", Statement: restoreRelationship},
+		{Table: tablePartner, Statement: `UPDATE partner SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
+		{Table: tableRelationship, Statement: restoreRelationship},
 	},
 	Membership: restoreMembership, Tag: restoreTag,
 	Restored: crmcontracts.PublicEventCompanyRestored{},
@@ -83,7 +92,7 @@ var companyUnarchive = storekit.UnarchiveShape{
 func (s *Store) RestoreContactTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, erased storekit.ErasedSince,
 ) (storekit.RestoreReport, error) {
-	if err := ensureRestorable(ctx, tx, "contact", id.UUID); err != nil {
+	if err := ensureRestorable(ctx, tx, contactEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	return storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, erased)
@@ -93,7 +102,7 @@ func (s *Store) RestoreContactTx(
 func (s *Store) RestoreCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, erased storekit.ErasedSince,
 ) (storekit.RestoreReport, error) {
-	if err := ensureRestorable(ctx, tx, "company", id.UUID); err != nil {
+	if err := ensureRestorable(ctx, tx, companyEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, erased)
