@@ -40,18 +40,24 @@
 /* The run of open stages: one row, scrolled rather than wrapped. The inset is
    room for a focused rung's ring, which a scroller clips on both axes; the
    negative margin gives it back so the row sits where an unscrolled one did. */
-.stage-ladder-steps {
-  list-style: none;
+.stage-ladder-run {
   margin: calc(-1 * var(--space-1));
   padding: var(--space-1);
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
   min-inline-size: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   /* A rung reached by Tab stops clear of the faded edge, not under it. */
   scroll-padding-inline: var(--space-6);
+}
+
+.stage-ladder-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  inline-size: max-content;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .stage-ladder-exits {
@@ -182,7 +188,9 @@
 /* The run fades at an edge only while more of it lies past that edge: its
    scroll position drives the two fade widths. Without scroll timelines there
    is no fade, since the unguarded animation would settle on its last frame
-   and fade the first stage for good. */
+   and fade the first stage for good. Declared only where motion is welcome:
+   the fade is an animation that runs for as long as the run can scroll, and
+   under reduced motion nothing may be left running for the axe sweep. */
 @property --stage-ladder-fade-start {
   syntax: "<length>";
   inherits: false;
@@ -209,16 +217,22 @@
     --stage-ladder-fade-end: 0px;
   }
 }
-@supports (animation-timeline: scroll()) {
-  .stage-ladder-steps {
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      black var(--stage-ladder-fade-start),
-      black calc(100% - var(--stage-ladder-fade-end)),
-      transparent
-    );
-    animation: stage-ladder-fade linear both;
-    animation-timeline: scroll(self inline);
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .stage-ladder-run {
+      mask-image: linear-gradient(
+        to right,
+        transparent,
+        black var(--stage-ladder-fade-start),
+        black calc(100% - var(--stage-ladder-fade-end)),
+        transparent
+      );
+      animation: stage-ladder-fade linear both;
+      animation-timeline: scroll(self inline);
+    }
+    /* A mask clips the ring a focused region draws outside its box. */
+    .stage-ladder-run:focus-visible {
+      mask-image: none;
+    }
   }
 }

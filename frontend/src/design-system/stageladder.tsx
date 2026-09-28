@@ -27,7 +27,7 @@
  */
 
 import { type ReactNode, useLayoutEffect, useRef } from "react";
-import { Button } from "./atoms";
+import { Button, useScrollRegion } from "./atoms";
 import "./stageladder.css";
 
 export type StageStep = {
@@ -87,7 +87,10 @@ export function StageLadder({
 }>) {
   const run = steps.filter((step) => !step.terminal);
   const exits = steps.filter((step) => step.terminal);
-  const runRef = useRef<HTMLOListElement>(null);
+  const runRef = useRef<HTMLDivElement>(null);
+  // A refused ladder holds no rung that takes focus, so a run past its edge
+  // needs its own keyboard stop; the hook gives one only while it overflows.
+  const region = useScrollRegion(runRef, label);
   // The rung the run centres on: where the record stands, or — for a record
   // that has taken a way out — the last stage it climbed before it did. A
   // record the pipeline cannot place leaves the run at its start.
@@ -97,18 +100,18 @@ export function StageLadder({
       ? hereInRun
       : run.length - 1;
   useLayoutEffect(() => {
-    const list = runRef.current;
-    const rung = list?.children[settleOn];
-    if (!list || !rung) {
+    const scroller = runRef.current;
+    const rung = scroller?.firstElementChild?.children[settleOn];
+    if (!scroller || !rung) {
       return;
     }
-    // Measured against the list's own box, so no ancestor has to be
+    // Measured against the scroller's own box, so no ancestor has to be
     // positioned; the browser clamps past either end, so a ladder that fits
     // stays where it is.
     const rungBox = rung.getBoundingClientRect();
-    const listBox = list.getBoundingClientRect();
-    list.scrollLeft +=
-      (rungBox.left + rungBox.right - listBox.left - listBox.right) / 2;
+    const runBox = scroller.getBoundingClientRect();
+    scroller.scrollLeft +=
+      (rungBox.left + rungBox.right - runBox.left - runBox.right) / 2;
   }, [settleOn]);
   return (
     // A fieldset rather than a nav, and rather than a bare list: it IS a group
@@ -118,11 +121,15 @@ export function StageLadder({
     // not two more rungs.
     <fieldset className="stage-ladder" aria-label={label}>
       <div className="stage-ladder-track">
-        <ol className="stage-ladder-steps" ref={runRef}>
-          {run.map((step, index) => (
-            <LadderStep key={step.key} step={step} first={index === 0} />
-          ))}
-        </ol>
+        {/* The scroller is a box of its own because the region it may
+            become would otherwise replace the list's role. */}
+        <div className="stage-ladder-run" ref={runRef} {...region}>
+          <ol className="stage-ladder-steps">
+            {run.map((step, index) => (
+              <LadderStep key={step.key} step={step} first={index === 0} />
+            ))}
+          </ol>
+        </div>
         {exits.length > 0 && (
           <ul className="stage-ladder-exits">
             {exits.map((step, index) => (

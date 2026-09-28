@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
+
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StageLadder, type StageStep } from "./stageladder";
@@ -23,13 +25,14 @@ const OPEN = [
   "Signature",
 ];
 
-function pipeline(current: string | null): StageStep[] {
+function pipeline(current: string | null, refused = false): StageStep[] {
   const here = current === null ? -1 : OPEN.indexOf(current);
   const open = OPEN.map((label, index) => ({
     key: label,
     label,
     done: here >= 0 && index < here,
     current: label === current,
+    disabled: refused,
     onPick: () => undefined,
   }));
   const exits = ["Won", "Lost"].map((label) => ({
@@ -37,6 +40,7 @@ function pipeline(current: string | null): StageStep[] {
     label,
     terminal: true,
     current: label === current,
+    disabled: refused,
     onPick: () => undefined,
   }));
   return [...open, ...exits];
@@ -56,7 +60,7 @@ function rect(left: number, width: number) {
 beforeEach(() => {
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
     function (this: Element) {
-      if (this.tagName === "OL") {
+      if (this.firstElementChild?.tagName === "OL") {
         return rect(0, RUN_WIDTH);
       }
       const rung = Array.prototype.indexOf.call(
@@ -73,12 +77,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function show(current: string | null) {
-  render(<StageLadder label="Stage" steps={pipeline(current)} />);
+function show(current: string | null, refused = false) {
+  render(<StageLadder label="Stage" steps={pipeline(current, refused)} />);
   const [run, exits] = within(
     screen.getByRole("group", { name: "Stage" }),
   ).getAllByRole("list");
-  return { run, exits };
+  // The box that scrolls holds the run rather than being it.
+  return { run, exits, scroller: run.parentElement };
+}
+
+// A run holding four times the room it is given.
+function overflowing() {
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
+    RUN_WIDTH * 4,
+  );
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+    RUN_WIDTH,
+  );
 }
 
 // A rung's own words, without the track glyph that introduces it — decoration
@@ -106,20 +121,37 @@ describe("a long pipeline", () => {
   });
 
   it("comes to rest with the current stage in the middle of the run", () => {
-    const { run } = show("Negotiation");
+    const { scroller } = show("Negotiation");
 
-    expect(run.scrollLeft).toBe(centredOn(OPEN.indexOf("Negotiation")));
+    expect(scroller?.scrollLeft).toBe(centredOn(OPEN.indexOf("Negotiation")));
   });
 
   it("rests a record that took a way out on the last stage it climbed", () => {
-    const { run } = show("Won");
+    const { scroller } = show("Won");
 
-    expect(run.scrollLeft).toBe(centredOn(OPEN.length - 1));
+    expect(scroller?.scrollLeft).toBe(centredOn(OPEN.length - 1));
   });
 
   it("leaves a record the pipeline cannot place at the start", () => {
-    const { run } = show(null);
+    const { scroller } = show(null);
 
-    expect(run.scrollLeft).toBe(0);
+    expect(scroller?.scrollLeft).toBe(0);
+  });
+
+  // Every rung of a refused ladder is a disabled button, which no keyboard
+  // reaches — so the stages past the edge are reachable only by the run itself.
+  it("makes a run past its edge a keyboard stop named for the ladder", () => {
+    overflowing();
+    const { run } = show("Negotiation", true);
+
+    const region = screen.getByRole("region", { name: "Stage" });
+    expect(region.tabIndex).toBe(0);
+    expect(region).toContainElement(run);
+  });
+
+  it("adds no keyboard stop while the run fits", () => {
+    show("Negotiation", true);
+
+    expect(screen.queryByRole("region")).toBeNull();
   });
 });
