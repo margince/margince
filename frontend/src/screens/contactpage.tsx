@@ -769,8 +769,8 @@ function useBriefedMeeting(): [
 
 // The marks under the name: the relationship's standing (verdict and trend as
 // ONE badge, nothing when the touch dates are withheld from this reader) and
-// who may read the record, with its Share verb. Both are the values a rep
-// glances for before anything else, and both are pills, so they share a line.
+// who may read the record. Both are the values a rep glances for before
+// anything else, and both are pills, so they share a line.
 function ContactMarks({
   view,
   tab,

@@ -2108,8 +2108,9 @@ export const en = {
     "Only the people named below can read this.",
   // The one mark for who may read a thing, drawn on mail rows, in the drawer,
   // on a contact and on a limited note. "Team" never means the whole
-  // workspace (see above); "Only you" is a captured contact's owner-only
-  // state, which a message never has.
+  // workspace (see above); "Private" is a record's owner-only state, which a
+  // message never has, and names the state because a colleague it was shared
+  // with sees the same mark as its owner.
   "visibility.team": "Team",
   // A shared company or contact, where the audience IS the whole workspace —
   // no linked record narrows it the way one narrows a message. "Shared" pairs
@@ -2118,7 +2119,7 @@ export const en = {
   "visibility.workspace": "Shared",
   "visibility.participants": "Participants",
   "visibility.selected": "Selected",
-  "visibility.private": "Only you",
+  "visibility.private": "Private",
   "visibility.withheld": "Withheld",
   "email.access.unnamedMember": "Former user",
   "email.move.needsReply": "Needs reply",
@@ -3928,30 +3929,36 @@ export const en = {
   // where the contact half says "contact", because that is the word the rest
   // of the company page uses for itself.
   "recordAccess.contact.title": "Who can see this contact",
-  "recordAccess.contact.privateToYou":
-    "Private to its owner. No one else in the company can see this contact, including team members and administrators.",
   "recordAccess.contact.shared":
     "All users in the company can see this contact.",
-  "recordAccess.contact.privateTip":
-    "Only you can see this contact. Share it to make it visible to all users.",
-  "recordAccess.contact.share": "Share with all users",
+  "recordAccess.contact.privateYours":
+    "Only you and the users it was shared with can see this contact.",
+  "recordAccess.contact.privateOf":
+    "Private to {owner}. You can see this contact because it was shared with you or your team.",
+  "recordAccess.contact.privateOfOwner":
+    "Private to its owner. You can see this contact because it was shared with you or your team.",
   "recordAccess.contact.published": "This contact is now visible to all users.",
-  "recordAccess.contact.makePrivate": "Make private",
   "recordAccess.contact.madePrivate":
     "This contact is now private to its owner. Users it was shared with directly keep access.",
   "recordAccess.company.title": "Who can see this company",
-  "recordAccess.company.privateToYou":
-    "Private to its owner. No one else in the company can see this record, including team members and administrators.",
   "recordAccess.company.shared":
     "All users in the company can see this record.",
-  "recordAccess.company.privateTip":
-    "Only you can see this company. Share it to make it visible to all users.",
-  "recordAccess.company.share": "Share with all users",
+  "recordAccess.company.privateYours":
+    "Only you and the users it was shared with can see this company.",
+  "recordAccess.company.privateOf":
+    "Private to {owner}. You can see this company because it was shared with you or your team.",
+  "recordAccess.company.privateOfOwner":
+    "Private to its owner. You can see this company because it was shared with you or your team.",
   "recordAccess.company.published": "This company is now visible to all users.",
-  "recordAccess.company.makePrivate": "Make private",
   "recordAccess.company.madePrivate":
     "This company is now private to its owner. Deals, contacts and mail filed against it keep their own visibility.",
-  "recordAccess.whoHasAccess": "Who has access",
+  // The switch behind the header's access chip. The owner's answer carries
+  // what it does not take away, because a direct share outlives it.
+  "recordAccess.option.owner": "Only the owner",
+  "recordAccess.option.ownerHint":
+    "Users it is shared with directly keep access.",
+  "recordAccess.option.workspace": "All users in the company",
+  "recordAccess.manage": "Manage access",
   // The full answer on the share screen: every colleague who can open the
   // record, grouped by why, and the reader's own access on one line.
   "whoCanSee.title": "Who can see this record",

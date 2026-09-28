@@ -19,7 +19,6 @@ import {
 } from "../design-system/atoms";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
 import { Heading } from "../design-system/heading";
-import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -88,8 +87,6 @@ import {
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
   CompanyActionBadges,
-  CompanyLifecycleControl,
-  CompanyRelationshipBadges,
   displayHost,
   useCompanyVerbRefusal,
 } from "./companyheader";
@@ -104,6 +101,7 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
+import { CompanyMarks } from "./companymarks";
 import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
@@ -135,7 +133,6 @@ import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
 import { RecordSpine, WrittenBy } from "./record360";
-import { RecordAccess } from "./recordaccess";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -1292,18 +1289,8 @@ function CompanyPage({
         // What the account is, and the one way in every reader already knows,
         // on the name's own line, the contact record's own shape.
         nameBadge={<CompanySubtitle company={company} />}
-        // The account's standing: what it IS (CompanyRelationshipBadges) and
-        // where it STANDS (the editable lifecycle badge), both tags ON the
-        // record, so both share the pills row under the name.
-        pulse={
-          <IdentityLine separator="space">
-            <CompanyLifecycleControl company={company} />
-            <CompanyRelationshipBadges company={company} />
-            {/* Who may READ the account, on the same row the contact header
-                says it on, with the verb that changes it. */}
-            <RecordAccess key={company.id} kind="company" record={company} />
-          </IdentityLine>
-        }
+        // The account's standing, as the pills row under the name.
+        pulse={<CompanyMarks company={company} />}
         zone={recordZone}
         // The way in, who holds the account and when its own row was written,
         // as the facts strip every record page carries under its pulse.
@@ -1328,7 +1315,11 @@ function CompanyPage({
               for the same reason, so the reason belongs to the page rather than
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
-            {verbRefusal && <p id={archivedParagraphId}>{verbRefusal}</p>}
+            {verbRefusal && (
+              <p className="t-caption" id={archivedParagraphId}>
+                {verbRefusal}
+              </p>
+            )}
             <CompanyHeaderActions
               company={company}
               composerOpen={writingEmail}
