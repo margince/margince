@@ -64,10 +64,10 @@ type scoutItem struct {
 // RunDealScout runs one pass inside the caller's transaction, as the system
 // principal the job binds.
 func RunDealScout(ctx context.Context, tx pgx.Tx, now time.Time) (DealScoutPass, error) {
-	return runDealScout(ctx, tx, now, dealScoutCompanyCap)
+	return scoutPass(ctx, tx, now, dealScoutCompanyCap)
 }
 
-func runDealScout(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (DealScoutPass, error) {
+func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (DealScoutPass, error) {
 	var pass DealScoutPass
 	var err error
 	if pass.Superseded, err = deals.SupersedeStaleSuggestionsTx(ctx, tx); err != nil {

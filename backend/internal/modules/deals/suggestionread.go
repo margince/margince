@@ -87,7 +87,7 @@ func suggestionVisibleClause(ctx context.Context, arg func(any) int) (string, er
 // clause can AND in.
 func grantedSQL(ctx context.Context, object string) string {
 	if auth.Allows(ctx, object, principal.ActionRead) {
-		return "true"
+		return predicateAlways
 	}
 	return "false"
 }
@@ -95,7 +95,7 @@ func grantedSQL(ctx context.Context, object string) string {
 // orTrue reads an empty clause — the unbounded answer — as a predicate.
 func orTrue(clause string) string {
 	if clause == "" {
-		return "true"
+		return predicateAlways
 	}
 	return clause
 }

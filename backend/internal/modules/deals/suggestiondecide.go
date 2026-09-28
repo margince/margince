@@ -169,6 +169,9 @@ func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSugg
 // no acceptance opens a second deal beside one it could not see, and ordinary
 // deal creation takes no lock it did not already take.
 func supersedeIfCompanyTaken(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return false, err
+	}
 	var free bool
 	if err := tx.QueryRow(ctx, `
 		SELECT `+SuggestionCompanyFreeClause("c.id")+`

@@ -112,9 +112,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// deals.RecordSuggestionTx, never to a reader; a rep sees the suggestion
 	// only through deals' suggestion visibility clause, which applies the
 	// company's row scope and every evidence item's content gate.
-	"internal/compose:scoutMeetings":  "the held-meeting evidence read, under the deal-scout sweep's system principal: the company is the one a suggestion is filed against, handed to deals.RecordSuggestionTx and never to a reader",
-	"internal/compose:scoutSignals":   "the signal-pair evidence read, under the same system principal: the company is the signal's own resolved account, handed to deals.RecordSuggestionTx and never to a reader",
-	"internal/compose:scoutDocuments": "the sent-document evidence read, under the same system principal: the company is the one the capture filed the attachment against, handed to deals.RecordSuggestionTx and never to a reader",
+	"internal/compose:dealScoutSQL": "the scout's one read of meetings, signal pairs and sent documents, under the deal-scout sweep's system principal: every company it names is one a suggestion is filed against, handed to deals.RecordSuggestionTx and never to a reader",
 
 	// The company rollup's tree walk, found by the aliased-column pass:
 	// `parent_company_id` is an FK to company named for its role, so the

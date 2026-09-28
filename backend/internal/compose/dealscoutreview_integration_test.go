@@ -86,7 +86,7 @@ func TestTheCapChoosesAmongCompaniesWhoseEvidenceQualifies(t *testing.T) {
 	var pass DealScoutPass
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		pass, err = runDealScout(ctx, tx, e.now, 2)
+		pass, err = scoutPass(ctx, tx, e.now, 2)
 		return err
 	}); err != nil {
 		t.Fatalf("the scout pass: %v", err)

@@ -133,8 +133,8 @@ func SuggestionFloorExpr(company string) string {
 	    WHERE fd.company_id = ` + company + ` AND fd.status <> 'open' AND fd.archived_at IS NULL))`
 }
 
-// SuggestionCompanyFreeClause says the company has no open deal: the one
-// spelling the scout, the writer, the superseding pass and an acceptance read.
+// SuggestionCompanyFreeClause says the company has no open deal. The scout, the
+// writer, the superseding pass and an acceptance all compose it.
 // company is the SQL expression naming the company.
 func SuggestionCompanyFreeClause(company string) string {
 	return `NOT EXISTS (SELECT 1 FROM deal sod
