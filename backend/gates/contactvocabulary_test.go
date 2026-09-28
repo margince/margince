@@ -222,6 +222,7 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/screens/settings-chrome.test.tsx":        "the seats settings group",
 	"frontend/src/screens/license.stories.tsx":             "a page under the seats settings group",
 	"frontend/src/screens/licenseholder.stories.tsx":       "a page under the seats settings group",
+	"frontend/src/screens/roles-settings.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/screens/users-access.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/screens/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/screens/users-invite-form.stories.tsx":   "a page under the seats settings group",
