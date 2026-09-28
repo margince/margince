@@ -15,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -70,6 +71,10 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateContactInput{}, err
 	}
+	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
+	if err != nil {
+		return CreateContactInput{}, err
+	}
 	in := CreateContactInput{
 		FullName:     req.FullName,
 		FirstName:    req.FirstName,
@@ -77,6 +82,7 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		Title:        req.Title,
 		Source:       req.Source,
 		SourceSystem: req.SourceSystem,
+		Author:       author,
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		// The body's extra top-level keys (custom-field values); the
 		// store decides which land (active catalog columns only).
@@ -220,6 +226,10 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateCompanyInput{}, err
 	}
+	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
+	if err != nil {
+		return CreateCompanyInput{}, err
+	}
 	in := CreateCompanyInput{
 		DisplayName:     req.DisplayName,
 		LegalName:       req.LegalName,
@@ -227,6 +237,7 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		Industry:        req.Industry,
 		Source:          req.Source,
 		SourceSystem:    req.SourceSystem,
+		Author:          author,
 		OwnerID:         idArg[ids.UserKind](req.OwnerId),
 		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
 		CustomFields:    req.AdditionalProperties,
@@ -333,6 +344,10 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return CreateLeadInput{}, err
 	}
+	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
+	if err != nil {
+		return CreateLeadInput{}, err
+	}
 	in := CreateLeadInput{
 		FullName:            req.FullName,
 		Title:               req.Title,
@@ -342,6 +357,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		SourceSystem:        req.SourceSystem,
 		SourceID:            req.SourceId,
 		Source:              req.Source,
+		Author:              author,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
 		CustomFields:        req.AdditionalProperties,

@@ -85,6 +85,8 @@ type LogActivityInput struct {
 	ClaimsHostSlot bool
 	SourceSystem   *string
 	SourceID       *string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// SourceActivityID is the activity this one was derived FROM — the meeting
 	// whose transcript proposed a task. Nil on almost every activity.
 	SourceActivityID  *ids.UUID
@@ -327,19 +329,25 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 			return crmcontracts.Activity{}, false, err
 		}
 	}
-	_, err = tx.Exec(ctx,
-		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
-		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
-		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24)`,
+	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
-		in.SourceActivityID, in.Raw, in.DurationSeconds)
+		in.SourceActivityID, in.Raw, in.DurationSeconds,
+	})
+	_, err = tx.Exec(ctx,
+		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
+		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
+		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
+		                       source_activity_id, raw, duration_seconds`+authorCols+`)
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+`)`,
+		args...)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict

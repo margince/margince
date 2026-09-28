@@ -5,7 +5,7 @@ package deals
 
 // Putting the author of an imported deal on the wire.
 //
-// The write half is sourceauthor.go; this is what a reader sees. It is spelled
+// The importer's create writes the pair; this is what a reader sees. It is spelled
 // once per module rather than once per product because a module never imports a
 // sibling and the helper returns a contract type, which `internal/shared` may
 // not name — so `activities`, `contacts`, `projects` and this package each

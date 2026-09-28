@@ -13762,57 +13762,6 @@ func (e SiteReadStartedStatus) Valid() bool {
 	}
 }
 
-// Defines values for SourceAttributionRowObjectType.
-const (
-	SourceAttributionRowObjectTypeActivity SourceAttributionRowObjectType = "activity"
-	SourceAttributionRowObjectTypeCompany  SourceAttributionRowObjectType = "company"
-	SourceAttributionRowObjectTypeContact  SourceAttributionRowObjectType = "contact"
-	SourceAttributionRowObjectTypeDeal     SourceAttributionRowObjectType = "deal"
-	SourceAttributionRowObjectTypeLead     SourceAttributionRowObjectType = "lead"
-	SourceAttributionRowObjectTypeProject  SourceAttributionRowObjectType = "project"
-)
-
-// Valid indicates whether the value is a known member of the SourceAttributionRowObjectType enum.
-func (e SourceAttributionRowObjectType) Valid() bool {
-	switch e {
-	case SourceAttributionRowObjectTypeActivity:
-		return true
-	case SourceAttributionRowObjectTypeCompany:
-		return true
-	case SourceAttributionRowObjectTypeContact:
-		return true
-	case SourceAttributionRowObjectTypeDeal:
-		return true
-	case SourceAttributionRowObjectTypeLead:
-		return true
-	case SourceAttributionRowObjectTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SourceAttributionRowResultOutcome.
-const (
-	SourceAttributionRowResultOutcomeApplied   SourceAttributionRowResultOutcome = "applied"
-	SourceAttributionRowResultOutcomeSkipped   SourceAttributionRowResultOutcome = "skipped"
-	SourceAttributionRowResultOutcomeUnchanged SourceAttributionRowResultOutcome = "unchanged"
-)
-
-// Valid indicates whether the value is a known member of the SourceAttributionRowResultOutcome enum.
-func (e SourceAttributionRowResultOutcome) Valid() bool {
-	switch e {
-	case SourceAttributionRowResultOutcomeApplied:
-		return true
-	case SourceAttributionRowResultOutcomeSkipped:
-		return true
-	case SourceAttributionRowResultOutcomeUnchanged:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for StageSemantic.
 const (
 	StageSemanticLost StageSemantic = "lost"
@@ -19262,7 +19211,7 @@ type Activity struct {
 	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
-	// Author Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
@@ -21853,9 +21802,6 @@ type AttentionSubject struct {
 // AttentionSubjectType defines model for AttentionSubject.Type.
 type AttentionSubjectType string
 
-// AttributionRebuildResult Deliberately empty of counts. The edge table belongs to the search module and the composition layer does not read it, so a number here would be a second reader of somebody else's table, kept in step by hand, answering a question nobody asked. The status says the fold ran.
-type AttributionRebuildResult = map[string]interface{}
-
 // AudienceMember One user or team admitted to a message besides its participants. The same shape the
 // audience write takes and the presentation reads back, so an editor that renders the
 // current set submits it in the vocabulary it received.
@@ -23931,7 +23877,7 @@ type Company struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this company in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -26737,7 +26683,7 @@ type Contact struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this contact in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -28149,9 +28095,15 @@ type CreateActivityRequest struct {
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
-	SourceId     *string `json:"source_id,omitempty"`
-	SourceSystem *string `json:"source_system,omitempty"`
-	Subject      *string `json:"subject,omitempty"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+	SourceId         *string `json:"source_id,omitempty"`
+	SourceSystem     *string `json:"source_system,omitempty"`
+	Subject          *string `json:"subject,omitempty"`
 
 	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
 	ThreadKey *string `json:"thread_key,omitempty"`
@@ -28238,6 +28190,12 @@ type CreateCompanyRequest struct {
 	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
 	Source          string                        `json:"source"`
 
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -28280,6 +28238,12 @@ type CreateContactRequest struct {
 	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
 	Social    *map[string]interface{} `json:"social,omitempty"`
 	Source    string                  `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -28379,6 +28343,12 @@ type CreateDealRequest struct {
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 	Source    string              `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -28547,12 +28517,18 @@ type CreateLeadRequest struct {
 	FullName            *string              `json:"full_name,omitempty"`
 
 	// LinkedinUrl Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.
-	LinkedinUrl  *string             `json:"linkedin_url,omitempty"`
-	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
-	ProjectId    *openapi_types.UUID `json:"project_id,omitempty"`
-	Source       string              `json:"source"`
-	SourceId     *string             `json:"source_id,omitempty"`
-	SourceSystem *string             `json:"source_system,omitempty"`
+	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+	ProjectId   *openapi_types.UUID `json:"project_id,omitempty"`
+	Source      string              `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+	SourceId         *string `json:"source_id,omitempty"`
+	SourceSystem     *string `json:"source_system,omitempty"`
 
 	// Status The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
 	Status               *CreateLeadRequestStatus `json:"status,omitempty"`
@@ -28690,6 +28666,12 @@ type CreateProjectRequest struct {
 	Name        string              `json:"name"`
 	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 	Source      string              `json:"source"`
+
+	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -29065,7 +29047,7 @@ type Deal struct {
 	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
 	ArrSourceOfferId *openapi_types.UUID `json:"arr_source_offer_id,omitempty"`
 
-	// Author Who created this deal in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this deal in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -32478,7 +32460,7 @@ type KnowledgeDocumentList struct {
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this lead in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this lead in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -35105,7 +35087,7 @@ type ProductListResponse struct {
 type Project struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// Author Who created this project in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a project somebody entered here has no author but the one `captured_by` already names.
+	// Author Who created this project in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a project somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
@@ -38547,81 +38529,6 @@ type SiteReadStarted struct {
 
 // SiteReadStartedStatus The joined dossier state when a read is already in flight.
 type SiteReadStartedStatus string
-
-// SourceAttributionRequest One batch of author attributions. Every row names a record that already
-// exists here; nothing is created.
-type SourceAttributionRequest struct {
-	// BatchRef Names this RUN, for an operator reading the ledger months later
-	// ("hubspot-mirror-2026-09-17"). Not an id and not a foreign key: the
-	// repair keeps its history in `audit_log` with everything else.
-	//
-	// A LABEL, NOT A SENTENCE. Letters, digits, dot, underscore, colon
-	// and hyphen carry a date and a source system; the pattern keeps the
-	// column tidy and keeps a paragraph out of it.
-	//
-	// It does NOT make the label safe, and nothing here pretends
-	// otherwise: `alice-smith` satisfies the pattern and names a human.
-	// The label is free text an operator types, so it is cleared on any
-	// record whose content the Art. 17 erasure destroys, exactly as the
-	// author's name and its digest are. What survives an erasure is the
-	// ledger row and its revision, which is what stops a later run
-	// re-attributing the erased record.
-	BatchRef string `json:"batch_ref"`
-
-	// Rows Bounded at five hundred because each row is its own transaction and a batch is the unit an interrupted run resumes at. A larger batch buys nothing and takes longer to redo.
-	Rows []SourceAttributionRow `json:"rows"`
-}
-
-// SourceAttributionResult defines model for SourceAttributionResult.
-type SourceAttributionResult struct {
-	// Applied Records whose attribution this call wrote.
-	Applied int `json:"applied"`
-
-	// Rows One entry per row sent, in the order they were sent.
-	Rows []SourceAttributionRowResult `json:"rows"`
-
-	// Skipped Records not written; each carries its reason below.
-	Skipped int `json:"skipped"`
-
-	// Unchanged Records already carrying this answer, or a newer one.
-	Unchanged int `json:"unchanged"`
-}
-
-// SourceAttributionRow defines model for SourceAttributionRow.
-type SourceAttributionRow struct {
-	// ObjectId The record's id in THIS installation, not in the system it came from.
-	ObjectId openapi_types.UUID `json:"object_id"`
-
-	// ObjectType Which kind of record this row attributes. All six carry the same column pair, and each is written through its own module's store: activities through one that must also reckon with retention holds and message audiences, the five record types through simpler ones that have neither.
-	// The enum is enforced twice — here for a reader, and in the route, because the generated wrapper validates no enum. An unchecked type would be worse than cosmetic: the ledger is keyed on whatever the caller sent, so two rows naming one id under two types would edit one record while recording their revisions in different places, and the gate meant to refuse a stale answer would stop seeing it.
-	ObjectType SourceAttributionRowObjectType `json:"object_type"`
-
-	// SourceAuthorId The member who wrote it, when the author holds a seat here.
-	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
-
-	// SourceAuthorName The author's name as the source system spelled it, for somebody who never held a seat here. At least one of this and `source_author_id` must be given; sending neither is how a caller would silently clear an attribution, so it is refused.
-	SourceAuthorName *string `json:"source_author_name,omitempty"`
-
-	// SourceRevision A counter the caller raises whenever it changes its mind about a record. A row whose stored revision is greater than or equal to this answers `unchanged` and is not written, so a delayed retry of an old batch cannot overwrite a correction that landed after it.
-	SourceRevision int64 `json:"source_revision"`
-}
-
-// SourceAttributionRowObjectType Which kind of record this row attributes. All six carry the same column pair, and each is written through its own module's store: activities through one that must also reckon with retention holds and message audiences, the five record types through simpler ones that have neither.
-// The enum is enforced twice — here for a reader, and in the route, because the generated wrapper validates no enum. An unchecked type would be worse than cosmetic: the ledger is keyed on whatever the caller sent, so two rows naming one id under two types would edit one record while recording their revisions in different places, and the gate meant to refuse a stale answer would stop seeing it.
-type SourceAttributionRowObjectType string
-
-// SourceAttributionRowResult defines model for SourceAttributionRowResult.
-type SourceAttributionRowResult struct {
-	ObjectId   openapi_types.UUID                `json:"object_id"`
-	ObjectType string                            `json:"object_type"`
-	Outcome    SourceAttributionRowResultOutcome `json:"outcome"`
-
-	// Reason Why a row was skipped, in words an operator can act on — the record is not here, it is archived, it came from no source system, or the author names a seat this installation does not have. Null on the other two outcomes.
-	Reason *string `json:"reason,omitempty"`
-}
-
-// SourceAttributionRowResultOutcome defines model for SourceAttributionRowResult.Outcome.
-type SourceAttributionRowResultOutcome string
 
 // SourceAuthor Who wrote a record in the system it was imported from, when that is not
 // whoever recorded it here.
@@ -48947,9 +48854,6 @@ type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
 // UpdateRecordRoleJSONRequestBody defines body for UpdateRecordRole for application/json ContentType.
 type UpdateRecordRoleJSONRequestBody = UpdateRecordRoleRequest
 
-// RepairSourceAttributionJSONRequestBody defines body for RepairSourceAttribution for application/json ContentType.
-type RepairSourceAttributionJSONRequestBody = SourceAttributionRequest
-
 // CreateRecordAssignmentJSONRequestBody defines body for CreateRecordAssignment for application/json ContentType.
 type CreateRecordAssignmentJSONRequestBody = CreateRecordAssignmentRequest
 
@@ -51061,6 +50965,22 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -51152,6 +51072,20 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
 	}
 
 	if a.SourceSystem != nil {
@@ -51267,6 +51201,22 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -51359,6 +51309,20 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
 	}
 
 	if a.SourceSystem != nil {
@@ -51826,6 +51790,22 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -51965,6 +51945,20 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
 	}
 
 	if a.SourceSystem != nil {
@@ -52214,6 +52208,22 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
 	if raw, found := object["source_id"]; found {
 		err = json.Unmarshal(raw, &a.SourceId)
 		if err != nil {
@@ -52317,6 +52327,20 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
 	}
 
 	if a.SourceId != nil {
@@ -52800,6 +52824,22 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -52870,6 +52910,20 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
 	}
 
 	if a.SourceSystem != nil {
@@ -60697,12 +60751,6 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
-	// Record who authored imported records in the system they came from.
-	// (POST /records/attribution)
-	RepairSourceAttribution(w http.ResponseWriter, r *http.Request)
-	// Re-derive the interaction graph after a run of attribution repairs.
-	// (POST /records/attribution/rebuild)
-	RebuildAttributionGraph(w http.ResponseWriter, r *http.Request)
 	// The tags on one record, and who put them there.
 	// (GET /records/{entity_type}/{entity_id}/tags)
 	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -64444,18 +64492,6 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Record who authored imported records in the system they came from.
-// (POST /records/attribution)
-func (_ Unimplemented) RepairSourceAttribution(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Re-derive the interaction graph after a run of attribution repairs.
-// (POST /records/attribution/rebuild)
-func (_ Unimplemented) RebuildAttributionGraph(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -88195,46 +88231,6 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// RepairSourceAttribution operation middleware
-func (siw *ServerInterfaceWrapper) RepairSourceAttribution(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RepairSourceAttribution(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RebuildAttributionGraph operation middleware
-func (siw *ServerInterfaceWrapper) RebuildAttributionGraph(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RebuildAttributionGraph(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetRecordTags operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.Request) {
 
@@ -96437,12 +96433,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/records/attribution", wrapper.RepairSourceAttribution)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/records/attribution/rebuild", wrapper.RebuildAttributionGraph)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)

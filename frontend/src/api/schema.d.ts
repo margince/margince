@@ -11875,87 +11875,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/records/attribution": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record who authored imported records in the system they came from.
-         * @description Writes `source_author_id` / `source_author_name` onto records that already
-         *     exist here, from a source system that knows who wrote them. It creates
-         *     nothing: every row is named by the id it already has, and a row this
-         *     installation does not hold is reported as `skipped`, never conjured.
-         *
-         *     WHY THIS IS A ROUTE AND NOT A MIGRATION. The answer lives outside the
-         *     database — in a mirror of the system the records came from — so the
-         *     mapping has to be carried in by something that can read both. It arrives
-         *     in batches, over a network, across tens of thousands of records, which
-         *     means it will be interrupted and it will be re-run.
-         *
-         *     BOTH OF THOSE ARE CHEAP, and they are answered by two different things.
-         *     `source_revision` is a counter the caller stamps per record and only
-         *     ever increases; a row whose stored revision is greater than or equal to
-         *     the one offered is answered `unchanged` and nothing is written, so a
-         *     delayed retry of an old batch cannot overwrite a correction that landed
-         *     after it. Whether the answer DIFFERS from the one already on the record
-         *     is a separate question, and it is settled against the record's own
-         *     columns under its row lock — a clean re-run reports `unchanged` rather
-         *     than rewriting identical values and restamping the activity.
-         *
-         *     `captured_by` IS NOT TOUCHED and cannot be: it is stamped from the
-         *     authenticated principal and answers who recorded the row HERE. This
-         *     route answers the different question of who wrote it THERE. On an
-         *     imported record those are different colleagues, and the audit row this
-         *     writes names the caller — the repair is the caller's act, performed on
-         *     behalf of nobody.
-         *
-         *     NO IDEMPOTENCY KEY, deliberately. A replayed key pays back a recorded
-         *     response without re-running the write, and that is the wrong safety
-         *     here: `source_revision` already makes a retry a no-op per record, on the
-         *     record's own terms rather than on whether the caller reused a header. A
-         *     batch resent after a partial failure SHOULD re-execute — that is how a
-         *     resumed run finishes the records the first attempt never reached.
-         */
-        post: operations["repairSourceAttribution"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/records/attribution/rebuild": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Re-derive the interaction graph after a run of attribution repairs.
-         * @description The who-knows-whom graph is folded from participant rows, and a repair
-         *     that corrected thousands of them leaves the graph describing the old
-         *     answer. This re-derives it in one pass.
-         *
-         *     SEPARATE FROM THE WRITE, deliberately. Re-folding per batch would repeat
-         *     the same whole-table work for every five hundred records; and a repair
-         *     that succeeded followed by a rebuild that failed is a state an operator
-         *     must be able to see and re-run, not one hidden inside a write that
-         *     already committed. Calling it twice costs time and changes nothing.
-         */
-        post: operations["rebuildAttributionGraph"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -18171,78 +18090,6 @@ export interface components {
             deletes_at?: string;
         };
         /**
-         * @description One batch of author attributions. Every row names a record that already
-         *     exists here; nothing is created.
-         */
-        SourceAttributionRequest: {
-            /**
-             * @description Names this RUN, for an operator reading the ledger months later
-             *     ("hubspot-mirror-2026-09-17"). Not an id and not a foreign key: the
-             *     repair keeps its history in `audit_log` with everything else.
-             *
-             *     A LABEL, NOT A SENTENCE. Letters, digits, dot, underscore, colon
-             *     and hyphen carry a date and a source system; the pattern keeps the
-             *     column tidy and keeps a paragraph out of it.
-             *
-             *     It does NOT make the label safe, and nothing here pretends
-             *     otherwise: `alice-smith` satisfies the pattern and names a human.
-             *     The label is free text an operator types, so it is cleared on any
-             *     record whose content the Art. 17 erasure destroys, exactly as the
-             *     author's name and its digest are. What survives an erasure is the
-             *     ledger row and its revision, which is what stops a later run
-             *     re-attributing the erased record.
-             */
-            batch_ref: string;
-            /** @description Bounded at five hundred because each row is its own transaction and a batch is the unit an interrupted run resumes at. A larger batch buys nothing and takes longer to redo. */
-            rows: components["schemas"]["SourceAttributionRow"][];
-        };
-        SourceAttributionRow: {
-            /**
-             * @description Which kind of record this row attributes. All six carry the same column pair, and each is written through its own module's store: activities through one that must also reckon with retention holds and message audiences, the five record types through simpler ones that have neither.
-             *     The enum is enforced twice — here for a reader, and in the route, because the generated wrapper validates no enum. An unchecked type would be worse than cosmetic: the ledger is keyed on whatever the caller sent, so two rows naming one id under two types would edit one record while recording their revisions in different places, and the gate meant to refuse a stale answer would stop seeing it.
-             * @enum {string}
-             */
-            object_type: "activity" | "contact" | "company" | "deal" | "lead" | "project";
-            /**
-             * Format: uuid
-             * @description The record's id in THIS installation, not in the system it came from.
-             */
-            object_id: string;
-            /**
-             * Format: int64
-             * @description A counter the caller raises whenever it changes its mind about a record. A row whose stored revision is greater than or equal to this answers `unchanged` and is not written, so a delayed retry of an old batch cannot overwrite a correction that landed after it.
-             */
-            source_revision: number;
-            /**
-             * Format: uuid
-             * @description The member who wrote it, when the author holds a seat here.
-             */
-            source_author_id?: string | null;
-            /** @description The author's name as the source system spelled it, for somebody who never held a seat here. At least one of this and `source_author_id` must be given; sending neither is how a caller would silently clear an attribution, so it is refused. */
-            source_author_name?: string | null;
-        };
-        SourceAttributionResult: {
-            /** @description Records whose attribution this call wrote. */
-            applied: number;
-            /** @description Records already carrying this answer, or a newer one. */
-            unchanged: number;
-            /** @description Records not written; each carries its reason below. */
-            skipped: number;
-            /** @description One entry per row sent, in the order they were sent. */
-            rows: components["schemas"]["SourceAttributionRowResult"][];
-        };
-        SourceAttributionRowResult: {
-            object_type: string;
-            /** Format: uuid */
-            object_id: string;
-            /** @enum {string} */
-            outcome: "applied" | "unchanged" | "skipped";
-            /** @description Why a row was skipped, in words an operator can act on — the record is not here, it is archived, it came from no source system, or the author names a seat this installation does not have. Null on the other two outcomes. */
-            reason?: string | null;
-        };
-        /** @description Deliberately empty of counts. The edge table belongs to the search module and the composition layer does not read it, so a number here would be a second reader of somebody else's table, kept in step by hand, answering a question nobody asked. The status says the fold ran. */
-        AttributionRebuildResult: Record<string, never>;
-        /**
          * @description Who wrote a record in the system it was imported from, when that is not
          *     whoever recorded it here.
          *
@@ -20488,7 +20335,7 @@ export interface components {
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
             /**
-             * @description Who created this contact in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
+             * @description Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
@@ -20543,6 +20390,13 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /**
+             * Format: uuid
+             * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+             */
+            source_author_id?: string | null;
+            /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
+            source_author_name?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -20831,7 +20685,7 @@ export interface components {
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
             /**
-             * @description Who created this company in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
+             * @description Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
@@ -20878,6 +20732,13 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /**
+             * Format: uuid
+             * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+             */
+            source_author_id?: string | null;
+            /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
+            source_author_name?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -24521,7 +24382,7 @@ export interface components {
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
             /**
-             * @description Who created this deal in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
+             * @description Who created this deal in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
@@ -24593,6 +24454,13 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /**
+             * Format: uuid
+             * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+             */
+            source_author_id?: string | null;
+            /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
+            source_author_name?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -25076,7 +24944,7 @@ export interface components {
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
             /**
-             * @description Who created this project in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a project somebody entered here has no author but the one `captured_by` already names.
+             * @description Who created this project in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a project somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
@@ -25310,6 +25178,13 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /**
+             * Format: uuid
+             * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+             */
+            source_author_id?: string | null;
+            /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
+            source_author_name?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -26287,7 +26162,7 @@ export interface components {
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
             /**
-             * @description Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+             * @description Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
              *     WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
              */
@@ -26490,6 +26365,13 @@ export interface components {
             /** @enum {string|null} */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
             source_system?: string | null;
+            /**
+             * Format: uuid
+             * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+             */
+            source_author_id?: string | null;
+            /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
+            source_author_name?: string | null;
             source_id?: string | null;
             links?: {
                 /** @enum {string} */
@@ -27832,7 +27714,7 @@ export interface components {
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
             /**
-             * @description Who created this lead in the system it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
+             * @description Who created this lead in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
@@ -27869,6 +27751,13 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             source_system?: string | null;
+            /**
+             * Format: uuid
+             * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
+             */
+            source_author_id?: string | null;
+            /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
+            source_author_name?: string | null;
             source_id?: string | null;
             source: string;
         } & {
@@ -56455,55 +56344,6 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
-        };
-    };
-    repairSourceAttribution: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SourceAttributionRequest"];
-            };
-        };
-        responses: {
-            /** @description What happened to each named record, in the order they were sent. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SourceAttributionResult"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    rebuildAttributionGraph: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The graph was re-derived. */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AttributionRebuildResult"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
         };
     };
     claimRecord: {

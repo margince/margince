@@ -13,14 +13,10 @@ package compose
 // in the body, and that the value reaches the column. A handler that never
 // called DeclaredImporter would pass every unit test in this change.
 //
-// package compose, not compose/integration, because attributionrepair's
-// repair() helper drives the unexported attributionHandlers and the last case
-// here needs it.
-//
 // Four cases, each a different caller against the same body:
 //
 //   - a declared importer lands an activity and a lead inside the namespace,
-//     and the attribution repair then answers `applied`;
+//     and names who wrote the activity in the same create;
 //   - that human's AGENT, carrying the identical grants, is refused 422 — the
 //     HTTP-level proof that the type check is load-bearing;
 //   - a human WITHOUT import_run:create is refused 422;
@@ -140,15 +136,17 @@ func TestADeclaredImporterLandsRowsInsideItsNamespace(t *testing.T) {
 		t.Errorf("lead.source_system = %q, want mirror:hubspot", got)
 	}
 
-	// What the namespace is FOR: the row now ranks as captured history and the
-	// repair can name its author.
-	out := repair(t, e, recordHandlers(e), crmcontracts.SourceAttributionRequest{
-		BatchRef: "importer-door", Rows: []crmcontracts.SourceAttributionRow{
-			row(ids.UUID(activity.Id), "Mutaz Suleiman", 1),
-		},
-	})
-	if out.Applied != 1 {
-		t.Errorf("the repair answered %+v, want the imported activity attributed", out)
+	// What the namespace is FOR: the importer states who wrote the row in the
+	// create that lands it, not in a later rewrite.
+	authored := namespacedActivity()
+	authored.SourceId = strPtrIT("emails:901")
+	authored.SourceAuthorName = strPtrIT("Mutaz Suleiman")
+	status, written := postActivity(importer, t, e, authored)
+	if status != http.StatusCreated {
+		t.Fatalf("the authored activity answered %d, want 201", status)
+	}
+	if got := e.WsScalar(t, `SELECT source_author_name FROM activity WHERE id = $1`, ids.UUID(written.Id)); got != "Mutaz Suleiman" {
+		t.Errorf("activity.source_author_name = %q, want the name the importer sent", got)
 	}
 }
 
