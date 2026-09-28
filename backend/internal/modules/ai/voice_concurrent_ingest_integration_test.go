@@ -98,7 +98,7 @@ func (e *concurrentIngestEnv) seedBuiltProfile(t *testing.T) (context.Context, i
 	var profile ids.UUID
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO voice_profile (owner_id, scope, status, profile_version, source, captured_by)
-		VALUES ($1, 'user', 'ready', 3, 'ui', $2) RETURNING id`,
+		VALUES ($1, 'user', 'ready', 3, 'manual', $2) RETURNING id`,
 		owner, "human:"+owner.String()).Scan(&profile); err != nil {
 		t.Fatal(err)
 	}
