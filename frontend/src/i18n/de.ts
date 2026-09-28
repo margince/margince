@@ -4559,7 +4559,7 @@ export const de = {
     "Einschätzung vom {date} · entspricht den Belegen",
   "forecast.evidence": "Belege",
   "forecast.evidenceDetail": "Bestätigte Abschlussdaten",
-  "forecast.bestCaseAdds": "Best Case zusätzlich",
+  "forecast.bestCaseAdds": "Zusatz im Best Case",
   "forecast.makeup": "So setzt sich der Zeitraum zusammen",
   "forecast.alreadyWon": "Bereits gewonnen",
   "forecast.alreadyWonDetail": "In diesem Zeitraum abgeschlossen",

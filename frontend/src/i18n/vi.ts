@@ -4500,7 +4500,7 @@ export const vi = {
   "forecast.currentCallDetailEven": "Chốt ngày {date} · khớp với bằng chứng",
   "forecast.evidence": "Có bằng chứng hỗ trợ",
   "forecast.evidenceDetail": "Ngày chốt đã xác nhận",
-  "forecast.bestCaseAdds": "Khả quan nhất cộng thêm",
+  "forecast.bestCaseAdds": "Phần thêm khả quan nhất",
   "forecast.makeup": "Kỳ này gồm những gì",
   "forecast.alreadyWon": "Đã thắng",
   "forecast.alreadyWonDetail": "Đã chốt trong kỳ này",

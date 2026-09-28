@@ -4659,7 +4659,7 @@ export const en = {
   "forecast.currentCallDetailEven": "Called {date} · matches evidence",
   "forecast.evidence": "Evidence",
   "forecast.evidenceDetail": "Confirmed close dates",
-  "forecast.bestCaseAdds": "Best case adds",
+  "forecast.bestCaseAdds": "Best-case addition",
   "forecast.makeup": "How the period adds up",
   "forecast.alreadyWon": "Already won",
   "forecast.alreadyWonDetail": "Closed this period",
