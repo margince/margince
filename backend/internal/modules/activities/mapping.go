@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -283,6 +284,12 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if err := refuseReservedProvenance(req, adm); err != nil {
 		return LogActivityInput{}, err
 	}
+	// The importer's admission alone: the engine's reminder door stamps its own
+	// source identity and has no author to state.
+	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, adm.importer)
+	if err != nil {
+		return LogActivityInput{}, err
+	}
 	in := LogActivityInput{
 		Kind:         string(req.Kind),
 		Subject:      req.Subject,
@@ -293,6 +300,7 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		SourceSystem: req.SourceSystem,
 		SourceID:     req.SourceId,
 		Source:       req.Source,
+		Author:       author,
 		AssigneeID:   idArg[ids.UserKind](req.AssigneeId),
 	}
 	if err := optionalFieldsFrom(req, &in); err != nil {

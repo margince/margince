@@ -31,10 +31,9 @@ package activities
 //	attributed to a coin flip. A wrong edge is worse than a missing one: it
 //	tells someone to ask a colleague who has never met the contact.
 //
-//	Class 3 — an activity whose author was repaired from the system it was
-//	imported from (POST /records/attribution). It is EXCLUDED, and the reason
-//	is not that its participants are settled: nothing on the attribution path
-//	writes a participant row. It is that its `captured_by` names whoever ran
+//	Class 3 — an activity whose importer named its author in the system it
+//	came from. It is EXCLUDED, and the reason is not that its participants are
+//	settled: naming an author writes no participant row. It is that its `captured_by` names whoever ran
 //	the import rather than whoever wrote the message, so class 1 would attribute
 //	it to the importing seat — a wrong edge, which is the thing class 2 already
 //	refuses to guess at.

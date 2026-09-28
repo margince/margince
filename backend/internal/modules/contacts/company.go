@@ -35,6 +35,8 @@ type CreateCompanyInput struct {
 	// SourceSystem names the system an import took this company from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -177,6 +179,7 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		Domains:         in.Domains,
 		Source:          in.Source,
 		SourceSystem:    in.SourceSystem,
+		Author:          in.Author,
 		CapturedBy:      by,
 		CustomFields:    in.CustomFields,
 		Active:          active,

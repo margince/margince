@@ -31,6 +31,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	// set: an exemption matching nothing would otherwise sit on ratifying a
 	// target that no longer exists.
 	defer nonFieldTargets.AssertAllMatched(t)
+	defer createOnlyTargets.AssertAllMatched(t)
 	for object, build := range map[string]func(map[string]string) (created, patched map[string]bool){
 		migration.ObjectLead: func(fields map[string]string) (map[string]bool, map[string]bool) {
 			in := leadCreateFrom(fields, "import:csv", "ext-1", "src")
@@ -40,6 +41,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"email":        in.Email != nil,
 				"title":        in.Title != nil,
 				"company_name": in.CompanyName != nil,
+				"author":       in.Author.AuthorName != nil,
 			}
 			patched := map[string]bool{
 				"full_name":    up.FullName != nil,
@@ -59,6 +61,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"size_band":           in.SizeBand != nil,
 				"description":         in.Description != nil,
 				"domain":              len(in.Domains) > 0,
+				"author":              in.Author.AuthorName != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
 				"address.city":        in.Address != nil && in.Address.City != nil,
@@ -94,6 +97,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"last_name":           in.LastName != nil,
 				"title":               in.Title != nil,
 				"email":               len(in.Emails) > 0,
+				"author":              in.Author.AuthorName != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
 				"address.city":        in.Address != nil && in.Address.City != nil,
@@ -137,6 +141,10 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					// and reaching neither input on purpose. Naming the reason here
 					// is what stops a future target being exempted by accident —
 					// a target with no entry is held to the rule.
+					continue
+				}
+				if createOnlyTargets.Waived(t, target) {
+					assertCreateOnlyTarget(t, object, target, created, patched)
 					continue
 				}
 				if !created[target] {
@@ -540,6 +548,27 @@ var nonFieldTargets = gatekit.Waive(map[string]string{
 	csvTargetID:     "names the RECORD the row is — a selector, not a value",
 	csvEmployerName: "names an EDGE from the record to a company — written as a relationship, not a column",
 })
+
+// createOnlyTargets are columns the import writes when it creates a record and
+// never on a re-import's update. Held apart from nonFieldTargets, whose members
+// reach NEITHER input: filing a create-only target there would hide it being
+// dropped on create.
+var createOnlyTargets = gatekit.Waive(map[string]string{
+	csvTargetAuthor: "who wrote the record where it came from is fixed when it lands; a later file does not rewrite it",
+})
+
+func assertCreateOnlyTarget(t *testing.T, object, target string, created, patched map[string]bool) {
+	t.Helper()
+	if !isCreateOnlyTarget(target) {
+		t.Errorf("%s: %q is create-only here but the import's own isCreateOnlyTarget does not say so, so a re-import diffs it", object, target)
+	}
+	if !created[target] {
+		t.Errorf("%s: target %q is advertised but never reaches the create input", object, target)
+	}
+	if patched[target] {
+		t.Errorf("%s: target %q reached the update input — a re-import would rewrite who wrote the record", object, target)
+	}
+}
 
 // assertNonFieldTarget holds one exemption to what it promises: accepted as a
 // column, and reaching neither write input.

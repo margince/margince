@@ -21,7 +21,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -145,6 +148,170 @@ func TestSearchExcludesTheOwnCompany(t *testing.T) {
 	if len(page.Hits) != 1 || page.Hits[0].ID != customer {
 		t.Fatalf("search returned %+v, want only the customer %s — the installation's own company is not an account to find", page.Hits, customer)
 	}
+}
+
+// A partner is a PROPERTY of a company rather than something to search for, so
+// the marker rides the company hit and is derived from the partner row's
+// existence. Retired counts as none: a programme that has been wound up is not
+// one to badge an account with.
+func TestACompanyHitSaysWhetherTheAccountIsAPartner(t *testing.T) {
+	e := SetupSearch(t)
+	partner, none, retired := seedWismarAccounts(t, e)
+
+	reader := searchSeat(e, nil, principal.RowScopeAll, searchGrantsWithPartner())
+	page, err := partnerMarkingStore(e).Search(reader, search.Input{Query: "wismar", Types: []string{"company"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	marks := partnerMarks(t, page.Hits)
+	for _, want := range []struct {
+		name    string
+		company ids.UUID
+		marker  bool
+	}{
+		{"an account with a live programme", partner, true},
+		{"an account with no programme", none, false},
+		{"an account whose programme was retired", retired, false},
+	} {
+		got, ok := marks[want.company]
+		if !ok {
+			t.Errorf("%s produced no hit at all", want.name)
+			continue
+		}
+		if got == nil {
+			t.Errorf("%s is marked unknown, but this caller may read partner programmes", want.name)
+			continue
+		}
+		if *got != want.marker {
+			t.Errorf("%s is marked %t, want %t", want.name, *got, want.marker)
+		}
+	}
+}
+
+// A seat that may not read partner programmes keeps its company hits and gets
+// no marker on them — null, never a false it was refused the basis for.
+func TestThePartnerMarkerIsWithheldWithoutTheObjectGrant(t *testing.T) {
+	e := SetupSearch(t)
+	partner, _, _ := seedWismarAccounts(t, e)
+
+	denied := searchSeat(e, nil, principal.RowScopeAll, searchGrantsWithoutPartner())
+	page, err := partnerMarkingStore(e).Search(denied, search.Input{Query: "wismar", Types: []string{"company"}})
+	if err != nil {
+		t.Fatalf("a caller without the partner grant was refused their search: %v", err)
+	}
+
+	marks := partnerMarks(t, page.Hits)
+	if len(marks) != 3 {
+		t.Fatalf("the page carries %d company hit(s), want all three — the marker must not narrow the page", len(marks))
+	}
+	for company, marker := range marks {
+		if marker != nil {
+			t.Errorf("company %s is marked %t for a caller who may not read partner programmes", company, *marker)
+		}
+	}
+	if _, ok := marks[partner]; !ok {
+		t.Error("the partner account itself fell off the page")
+	}
+}
+
+// The reader re-derives the company's own read gate instead of trusting
+// whoever hands it the ids. A seat that may not see an account must not learn
+// from a marker that it is a partner — not through search, and not by calling
+// the reader directly with its id, which is what "exported" makes possible.
+func TestThePartnerMarkerNeverOutseesTheCompanyRowScope(t *testing.T) {
+	e := SetupSearch(t)
+	// Captured privately by a rep on the other team, so rep1 may not read it.
+	hidden := e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
+	                       VALUES ($1, 'Wismar Private AG', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
+	e.SeedID(t, `INSERT INTO partner (id, company_id, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, hidden)
+	rep := searchSeat(e, []ids.UUID{e.Team1}, principal.RowScopeTeam, searchGrantsWithPartner())
+
+	page, err := partnerMarkingStore(e).Search(rep, search.Input{Query: "wismar", Types: []string{"company"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := partnerMarks(t, page.Hits)[hidden]; ok {
+		t.Fatalf("search returned a company this seat may not read: %+v", page.Hits)
+	}
+
+	company := ids.From[ids.CompanyKind](hidden)
+	var live map[ids.CompanyID]bool
+	if err := e.DB().Tx(rep, func(tx pgx.Tx) error {
+		var readErr error
+		live, readErr = contacts.LivePartnerCompaniesBatch(rep, tx, []ids.CompanyID{company})
+		return readErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if live[company] {
+		t.Error("the reader marked a company outside this seat's row scope as a partner")
+	}
+}
+
+// seedWismarAccounts puts three accounts sharing one search term on the
+// workspace: one with a live partner programme, one with none, and one whose
+// programme was retired.
+func seedWismarAccounts(t *testing.T, e *SearchEnv) (partner, none, retired ids.UUID) {
+	t.Helper()
+	company := func(name string) ids.UUID {
+		return e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
+	}
+	partner, none, retired = company("Wismar Werft AG"), company("Wismar Freight GmbH"), company("Wismar Rigging KG")
+	e.SeedID(t, `INSERT INTO partner (id, company_id, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, partner)
+	e.SeedID(t, `INSERT INTO partner (id, company_id, source, captured_by, archived_at) VALUES ($1, $2, 'manual', 'human:x', now())`, retired)
+	return partner, none, retired
+}
+
+// partnerMarkingStore binds the real contacts reader, so what these suites
+// assert is the seam compose wires rather than a stand-in for it.
+func partnerMarkingStore(e *SearchEnv) *search.Store {
+	return search.NewStore(e.DB()).WithPartnerMarks(contacts.LivePartnerCompaniesBatch)
+}
+
+// partnerMarks keys one page's markers by the company each hit names.
+func partnerMarks(t *testing.T, hits []search.Hit) map[ids.UUID]*bool {
+	t.Helper()
+	marks := make(map[ids.UUID]*bool, len(hits))
+	for _, hit := range hits {
+		if hit.Type != "company" {
+			t.Fatalf("a company-only search returned a %s hit", hit.Type)
+		}
+		marks[hit.ID] = hit.IsPartner
+	}
+	return marks
+}
+
+// searchGrantsWithPartner and searchGrantsWithoutPartner are the two sides of
+// the axis the partner arms vary. Each states which it holds rather than
+// inheriting it from searchObjects, so a grant added there later cannot turn
+// the deny arm into a second copy of the allow arm without a word being said.
+func searchGrantsWithPartner() map[string]principal.ObjectGrant {
+	grants := searchReadGrants()
+	grants[objPartner] = principal.ObjectGrant{Read: true}
+	return grants
+}
+
+func searchGrantsWithoutPartner() map[string]principal.ObjectGrant {
+	grants := searchReadGrants()
+	delete(grants, objPartner)
+	return grants
+}
+
+// objPartner gates a partner programme — a property of a company rather than
+// one of the record types these suites search for, which is why the fixture's
+// own vocabulary does not carry it.
+const objPartner = "partner"
+
+// searchSeat is rep1 holding exactly these grants at this row scope, in the
+// teams given (nil for a seat no team bounds).
+func searchSeat(e *SearchEnv, teams []ids.UUID, scope principal.RowScope, grants map[string]principal.ObjectGrant) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		TeamIDs:     teams,
+		Permissions: principal.Permissions{Objects: grants, RowScope: scope},
+	})
 }
 
 func TestSearchRankedCursorWalksAllHitsOnce(t *testing.T) {
@@ -345,7 +512,7 @@ func TestTheSearchCeilingStillServesAnOrdinarySearch(t *testing.T) {
 func callSearch(t *testing.T, e *SearchEnv, budget time.Duration, q string) (int, string) {
 	t.Helper()
 	db := database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(budget)
-	h := search.NewHandlers(db, nil, nil)
+	h := search.NewHandlers(db, nil, nil, nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/search?q="+q, nil).WithContext(searchAs(e))
 	h.Search(rec, req, crmcontracts.SearchParams{Q: q})
