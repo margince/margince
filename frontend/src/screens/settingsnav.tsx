@@ -197,8 +197,8 @@ export function settingsRouteTab(route: Route): {
     // Only an ADMIN entry answers under the admin segment. A personal id here
     // resolves to nothing rather than to its page: the page already has an
     // address, and serving it under a second one puts a spelling in circulation
-    // that nothing mints and nothing rewrites. Unresolved, it falls back like any
-    // other address the register does not answer.
+    // that nothing mints and nothing rewrites. Unresolved, it meets the boundary
+    // like any other address the register does not answer.
     const deep = SETTINGS_TABS.find((candidate) => candidate.id === route.id2);
     return {
       tab: deep?.group === "admin" ? deep.id : undefined,

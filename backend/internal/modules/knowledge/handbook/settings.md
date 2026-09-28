@@ -367,7 +367,7 @@ matters: it may **add** — a consumer-mail domain the shipped list missed, for
 instance — and it may not change a setting or touch an entry that is already
 there. Changing what exists is Admin's and Ops's.
 
-The **company profile** is not a sales seat's on any installation. It is what
+The **company context** is not a sales seat's on any installation. It is what
 Margince's AI knows about your own company, so it is administered: only an Admin
 reads or changes it.
 
@@ -376,11 +376,12 @@ checks: administering members answers to `user_admin`, the audit log to
 `audit_log`, and the privacy queue to `privacy_request`. A custom role granted
 one of those reaches the page, and an Admin whose role lost it does not.
 
-Four things still ask for the literal Admin role rather than a permission, and
-two of them are not about recovery: **only an Admin may act on another Admin's
-account**, or hand out the Admin role, and **only an Admin reads or changes the
-company context**. The other two are the last-admin rule and deployment-level
-resets.
+A few things still ask for the literal Admin role rather than a permission. Two
+matter to most readers: **only an Admin may act on another Admin's account**, or
+hand out the Admin role, and **only an Admin reads or changes the company
+context**. Some repair and maintenance actions ask for the role too. Separately,
+the last Admin cannot be demoted or deactivated, so an installation always keeps
+one.
 
 ## Two things administrators should decide early
 

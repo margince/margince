@@ -902,6 +902,8 @@ describe("what the rail carries and what it leaves behind", () => {
     },
   });
 
+  // Company is absent: its profile is the admin's, and a rep holds neither
+  // grant that opens the page (the catalog's `company` entry).
   it("gives a rep the pages they work in, and only those", () => {
     const reach = settingsReach(seededRep);
     expect(reach.acts.map((page) => page.id)).toEqual([
@@ -914,9 +916,6 @@ describe("what the rail carries and what it leaves behind", () => {
       "agents",
       "connections",
       "capture-activity",
-      // Not the company page: its profile is the admin's, and a rep holds
-      // neither the installation write nor the rate read that open it.
-
       // The outcome-review questions. A rep holds `custom_field:read`, and this
       // page is read-only, so it is theirs to CONSULT — they are the ones asked
       // these questions when a deal closes, and the page is where they can see

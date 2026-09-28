@@ -609,9 +609,9 @@ describe("useBuiltinCommands", () => {
     return render(<Probe />);
   }
 
-  // Company profile opens on the installation write, and the profile card on
-  // it is the admin's alone. A `company` grant opens nothing here, whatever the
-  // installation says about the surface — the palette reads the rail's table.
+  // Company profile opens on the catalog's installation grants, and the profile
+  // card on it is the admin's alone. A `company` grant opens nothing here,
+  // whatever the installation says — the palette reads the rail's table.
   function renderProbeWithCompany(opts: { roles: string[]; allow: GrantSpec }) {
     vi.stubGlobal(
       "fetch",

@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import * as router from "../app/router";
 import { LocaleProvider } from "../i18n";
 import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
@@ -16,12 +18,20 @@ afterEach(() => {
 });
 
 // The readonly array the box takes, not the 28-element tuple `SETTINGS_PAGES`
-// is: a case narrowing the reader's pages hands it a filtered subset.
-function mount(pages: readonly SettingsPage[] = SETTINGS_PAGES) {
+// is: a case narrowing the reader's pages hands it a filtered subset. /me is
+// seeded rather than fetched, so the reader's role is settled before typing.
+function mount(
+  pages: readonly SettingsPage[] = SETTINGS_PAGES,
+  roles: string[] = [],
+) {
+  const client = new QueryClient();
+  client.setQueryData(["me"], meFixture({ roles }));
   return render(
-    <LocaleProvider initial="en">
-      <SettingsSearchBox pages={pages} />
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <SettingsSearchBox pages={pages} />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -46,6 +56,26 @@ describe("the settings search box", () => {
     ).toBe(true);
     expect(box().getAttribute("aria-expanded")).toBe("true");
   });
+
+  // The company-context card draws for an admin alone, so its words lead only
+  // an admin to Company profile; ops reaches the page and would find no VAT.
+  it.each([
+    [["admin"], true],
+    [["ops"], false],
+  ] as const)(
+    "sends %j to Company profile for vat: %s",
+    async (roles, sent) => {
+      const user = userEvent.setup();
+      mount(SETTINGS_PAGES, [...roles]);
+      await user.type(box(), "vat");
+
+      expect(
+        options().some((option) =>
+          option.textContent?.includes("Company profile"),
+        ),
+      ).toBe(sent);
+    },
+  );
 
   // The search is handed the reader's own pages, so it cannot offer one the
   // sidebar did not draw. Asserted through the CONTROL rather than only through
