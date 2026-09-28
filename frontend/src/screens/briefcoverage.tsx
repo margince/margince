@@ -16,11 +16,14 @@ import type { Worklist } from "./worklist.queries";
 // ranking factor a grant withheld cannot, and a button beside either would
 // promise a reader something pressing it will never give them.
 //
-// No live region. Two of the three are STANDING facts, true at first paint and
-// true tomorrow, and announcing them would read "part of your day is hidden"
-// aloud on every mount for as long as the grant stands. The attention feed
-// suppresses the permanent role case for that reason (unseen.go), and a
-// warning nobody can act on is how a reader learns to ignore the ones they can.
+// The same split decides what is ANNOUNCED, the distinction `Callout` draws
+// between an event and a standing fact. A failed source is an event: it can
+// arrive on a refetch and it brings a retry, so it is spoken. A withheld
+// source or factor is true at first paint and true tomorrow, and speaking it
+// would read "part of your day is hidden" aloud on every mount for as long as
+// the grant stands — the effect the attention feed suppresses for the same
+// reason (unseen.go). A warning nobody can act on is how a reader learns to
+// ignore the ones they can.
 export function BriefCoverage({
   day,
   run,
@@ -41,7 +44,10 @@ export function BriefCoverage({
   );
   if (missing.length === 0 && withheldFactors === null) return null;
   return (
-    <div className="brief-coverage">
+    <div
+      className="brief-coverage"
+      role={failed.length > 0 ? "status" : undefined}
+    >
       <ul>
         {missing.map((entry) => (
           <li key={entry.source}>{sourceUnavailableText(entry, t)}</li>

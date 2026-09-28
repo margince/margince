@@ -20,6 +20,28 @@ it("does not turn a bounded scan into a missing source", () => {
   const { container } = render(<BriefCoverage day={day} />);
   expect(container.innerHTML).toBe("");
 });
+// A failed read can arrive on a refetch and brings a retry, so it is spoken. A
+// grant that withheld a source is true on every mount, and speaking it would
+// say "part of your day is hidden" aloud forever.
+it("speaks a failed source and stays silent about a withheld one", () => {
+  const failing = readingsDay({}, []);
+  failing.sources_unavailable = [
+    { source: "task", reason: "failed", category: "tasks" },
+  ];
+  const { container: spoken } = render(<BriefCoverage day={failing} />);
+  expect(spoken.querySelector('[role="status"]')).not.toBeNull();
+  cleanup();
+
+  const withheld = readingsDay({}, []);
+  withheld.sources_unavailable = [{ source: "dsr", reason: "withheld" }];
+  const { container: silent } = render(
+    <BriefCoverage
+      day={withheld}
+      run={{ ...ranked, factors_omitted: ["warmth"] }}
+    />,
+  );
+  expect(silent.querySelector('[role="status"]')).toBeNull();
+});
 it("names a withheld source without dressing it as a fault", () => {
   const day = readingsDay({}, []);
   day.sources_unavailable = [{ source: "dsr", reason: "withheld" }];
