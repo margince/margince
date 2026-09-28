@@ -17,7 +17,6 @@ import { useT } from "../i18n";
 import {
   KeyTestButton,
   KeyTestOutcome,
-  keyTestable,
   useTestProviderKey,
 } from "./ai-provider-key-test";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -227,10 +226,9 @@ function ProviderKeyRow({
           </Badge>
           {!keyless && (
             <span className="ai-lane-open">
-              {(status.configured || status.optional) &&
-                keyTestable(status.provider) && (
-                  <KeyTestButton provider={status.provider} test={test} />
-                )}
+              {(status.configured || status.optional) && (
+                <KeyTestButton provider={status.provider} test={test} />
+              )}
               <Button
                 // Closing DROPS what was typed. The field holds a credential,
                 // and one left in state comes back the next time the row is

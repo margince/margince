@@ -61,9 +61,13 @@ func TestAnUnwiredKeyTestIsNotImplemented(t *testing.T) {
 // `model_count` and `reason` each describe one side of `ok`, and a client
 // reading the other side's field would be reading a zero that means nothing.
 func TestAKeyTestCarriesOnlyTheFieldsOfItsOutcome(t *testing.T) {
-	passed := toContractKeyTest(ai.KeyTest{Provider: "openai", OK: true, ModelCount: 0})
+	passed := toContractKeyTest(ai.KeyTest{Provider: "openai", OK: true, ModelCount: 0, Counted: true})
 	if !passed.Ok || passed.ModelCount == nil || *passed.ModelCount != 0 || passed.Reason != nil {
 		t.Fatalf("a pass carries its count, zero included, and no reason: %+v", passed)
+	}
+	uncounted := toContractKeyTest(ai.KeyTest{Provider: "jev_compatible", OK: true})
+	if !uncounted.Ok || uncounted.ModelCount != nil {
+		t.Fatalf("a pass that listed nothing carries no count: %+v", uncounted)
 	}
 	failed := toContractKeyTest(ai.KeyTest{Provider: "openai", Reason: ai.KeyTestAuthFailed})
 	want := crmcontracts.AiProviderKeyTestResultReasonAuthFailed

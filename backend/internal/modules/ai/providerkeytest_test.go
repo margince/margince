@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,9 +15,22 @@ import (
 )
 
 // stubBuilder binds adapters to an httptest server's loopback address, which
-// the production egress guard refuses by design.
-func stubBuilder(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
-	return selectBrainOn(cfg, keys, http.DefaultClient)
+// the production egress guard refuses by design. Decision adapters get a
+// transport that fails the test if it is dialled: a case that reaches one
+// belongs in decisionprobe_test.go, behind a scripted transport.
+var stubBuilder = keyProbes{
+	brain: func(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
+		return selectBrainOn(cfg, keys, http.DefaultClient)
+	},
+	decider: func(lane DecisionsConfig, keys config.Lookup) (*decisionClient, error) {
+		return selectDeciderOn(lane, keys, &http.Client{Transport: refuseDial{}})
+	},
+}
+
+type refuseDial struct{}
+
+func (refuseDial) RoundTrip(r *http.Request) (*http.Response, error) {
+	return nil, fmt.Errorf("unexpected dial to %s", r.URL)
 }
 
 // vendorAnswering is an OpenAI-wire vendor that answers every list request
@@ -46,7 +60,7 @@ func boundAt(provider, baseURL string) RoutingConfig {
 func TestAKeyTheVendorAcceptsReportsHowManyModelsItServes(t *testing.T) {
 	cfg := vendorAnswering(t, http.StatusOK)
 	got := probeProviderKey(context.Background(), cfg, providerOpenAI, cloudKeyFor(providerOpenAI, "k"), stubBuilder)
-	if !got.OK || got.ModelCount != 2 || got.Reason != "" {
+	if !got.OK || got.ModelCount != 2 || !got.Counted || got.Reason != "" {
 		t.Fatalf("an accepted key should pass with two models and no reason: %+v", got)
 	}
 }
@@ -104,10 +118,16 @@ func TestAKeyThatCannotBeTestedSaysWhy(t *testing.T) {
 			cloudKeyFor(providerAnthropic, "k"), KeyTestProfileForbids,
 		},
 		{
-			"a decision server publishes no list",
+			"a decision broker with no host",
+			RoutingConfig{Profile: ProfileCloudFrontier},
+			providerJevCompatible,
+			noCloudKeys(), KeyTestNoEndpoint,
+		},
+		{
+			"a decision vendor with no key",
 			RoutingConfig{Profile: ProfileCloudFrontier},
 			providerJev,
-			cloudKeyFor(providerJev, "k"), KeyTestNotPublished,
+			noCloudKeys(), KeyTestNoKey,
 		},
 		{
 			"an adapter this build does not carry",
@@ -129,7 +149,7 @@ func TestAKeyThatCannotBeTestedSaysWhy(t *testing.T) {
 // A client with no list endpoint cannot be tested by listing, and saying
 // "unreachable" would send a reader after a network fault that is not there.
 func TestAClientWithNoListIsNotPublished(t *testing.T) {
-	unlisted := func(ProviderConfig, config.Lookup) (model.Client, error) { return unlistedClient{}, nil }
+	unlisted := keyProbes{brain: func(ProviderConfig, config.Lookup) (model.Client, error) { return unlistedClient{}, nil }}
 	got := probeProviderKey(context.Background(), RoutingConfig{Profile: ProfileCloudFrontier}, providerOpenAI,
 		noCloudKeys(), unlisted)
 	if got.OK || got.Reason != KeyTestNotPublished {

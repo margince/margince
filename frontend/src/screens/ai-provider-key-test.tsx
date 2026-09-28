@@ -7,23 +7,16 @@ import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Whether a stored key works, asked of the vendor that issued it.
 //
 // The server makes the call with the key it already holds; nothing typed here
-// travels. What comes back is a closed reason, never the vendor's own words.
+// travels. What comes back is a closed reason, never the vendor's own words,
+// and a model count only where the test listed models — a broker's key
+// endpoint and the decision probe pass without one.
 
 type KeyTestResult = components["schemas"]["AiProviderKeyTestResult"];
-
-// A decision server publishes no model list, and listing is what the test
-// does — so a Test on these rows could only ever answer "not published".
-const UNTESTABLE: ReadonlySet<string> = new Set(DECISION_PROVIDERS);
-
-export function keyTestable(provider: string): boolean {
-  return !UNTESTABLE.has(provider);
-}
 
 export function useTestProviderKey() {
   return useMutation({
@@ -86,9 +79,11 @@ export function KeyTestOutcome({
       {result.ok ? (
         <>
           <Badge tone="success">{t("aiProviderKeys.connected")}</Badge>{" "}
-          {plural("aiProviderKeys.modelCount", result.model_count ?? 0, {
-            count: formatNumber(result.model_count ?? 0, locale),
-          })}
+          {result.model_count === undefined
+            ? t("aiProviderKeys.accepted")
+            : plural("aiProviderKeys.modelCount", result.model_count, {
+                count: formatNumber(result.model_count, locale),
+              })}
         </>
       ) : (
         <>

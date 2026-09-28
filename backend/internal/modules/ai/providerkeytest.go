@@ -48,18 +48,30 @@ const (
 )
 
 // KeyTest is one vendor's answer to the stored credential. Reason is empty
-// exactly when OK is true.
+// exactly when OK is true. Counted says ModelCount is a real list's length: a
+// vendor tested without listing (a broker's key endpoint, the decision wire)
+// passes with no count rather than with a zero.
 type KeyTest struct {
 	Provider   string
 	OK         bool
 	ModelCount int
+	Counted    bool
 	Reason     KeyTestReason
 }
 
 // clientBuilder turns a binding into a client; SelectBrain in production, and
 // a transport-injected twin in a test, whose stub listens where the egress
-// guard refuses to dial.
-type clientBuilder func(ProviderConfig, config.Lookup) (model.Client, error)
+// guard refuses to dial. deciderBuilder is the same seam for a decision lane.
+type (
+	clientBuilder  func(ProviderConfig, config.Lookup) (model.Client, error)
+	deciderBuilder func(DecisionsConfig, config.Lookup) (*decisionClient, error)
+)
+
+// keyProbes is the pair of builders a key test may use.
+type keyProbes struct {
+	brain   clientBuilder
+	decider deciderBuilder
+}
 
 // TestProviderKey asks provider's vendor whether the stored credential works.
 //
@@ -73,7 +85,7 @@ func (s *RoutingStore) TestProviderKey(ctx context.Context, provider string) (Ke
 	if err != nil {
 		return KeyTest{}, err
 	}
-	return probeProviderKey(ctx, cfg, provider, s.resolvedKeys(ctx), SelectBrain), nil
+	return probeProviderKey(ctx, cfg, provider, s.resolvedKeys(ctx), keyProbes{SelectBrain, selectDecider}), nil
 }
 
 // probeProviderKey is the test itself, over a routing document already read.
@@ -86,14 +98,17 @@ func probeProviderKey(
 	cfg RoutingConfig,
 	provider string,
 	keys config.Lookup,
-	build clientBuilder,
+	build keyProbes,
 ) KeyTest {
 	out := KeyTest{Provider: provider}
 	if refused := listRefusal(cfg.Profile, provider); refused != AvailabilityOK {
 		out.Reason = keyTestRefusal(refused)
 		return out
 	}
-	client, err := build(boundProviderConfig(cfg, provider, ""), keys)
+	if isDecisionProvider(provider) {
+		return probeDecisionKey(ctx, cfg, provider, keys, build.decider)
+	}
+	client, err := build.brain(boundProviderConfig(cfg, provider, ""), keys)
 	if err != nil {
 		out.Reason = keyTestRefusal(unavailableFor(err))
 		return out
@@ -110,7 +125,33 @@ func probeProviderKey(
 		out.Reason = keyTestFailure(err)
 		return out
 	}
-	out.OK, out.ModelCount = true, len(models)
+	out.OK, out.ModelCount, out.Counted = true, len(models), true
+	return out
+}
+
+// probeDecisionKey tests a decision adapter's key at the lane it would serve:
+// the stored binding when it names this adapter, else the adapter's default.
+func probeDecisionKey(
+	ctx context.Context,
+	cfg RoutingConfig,
+	provider string,
+	keys config.Lookup,
+	build deciderBuilder,
+) KeyTest {
+	out := KeyTest{Provider: provider}
+	client, err := build(boundDecisionLane(cfg, provider), keys)
+	if err != nil {
+		out.Reason = keyTestRefusal(unavailableFor(err))
+		return out
+	}
+	asked, cancel := context.WithTimeout(ctx, listTimeout)
+	defer cancel()
+	count, counted, err := client.probeKey(asked, provider)
+	if err != nil {
+		out.Reason = keyTestFailure(err)
+		return out
+	}
+	out.OK, out.ModelCount, out.Counted = true, count, counted
 	return out
 }
 

@@ -8638,6 +8638,7 @@ export const vi = {
   "aiProviderKeys.test": "Kiểm tra",
   "aiProviderKeys.testing": "Đang kiểm tra khóa…",
   "aiProviderKeys.connected": "Đã kết nối",
+  "aiProviderKeys.accepted": "Nhà cung cấp đã chấp nhận khóa.",
   "aiProviderKeys.testFailed": "Kiểm tra thất bại",
   "aiProviderKeys.modelCount_one": "Có {count} mô hình",
   "aiProviderKeys.modelCount_other": "Có {count} mô hình",
@@ -8651,7 +8652,7 @@ export const vi = {
   "aiProviderKeys.reason.profileForbids":
     "Hồ sơ triển khai này không cho phép truy cập nhà cung cấp này.",
   "aiProviderKeys.reason.notPublished":
-    "Không thể kiểm tra nhà cung cấp này bằng danh sách mô hình.",
+    "Phiên bản này không thể kiểm tra nhà cung cấp này.",
   "aiProviderKeys.reason.unreachable":
     "Nhà cung cấp không phản hồi. Hãy kiểm tra máy chủ và mạng.",
   "aiRouting.intro":

@@ -8711,6 +8711,7 @@ export const de = {
   "aiProviderKeys.test": "Testen",
   "aiProviderKeys.testing": "Schlüssel wird getestet …",
   "aiProviderKeys.connected": "Verbunden",
+  "aiProviderKeys.accepted": "Der Anbieter hat den Schlüssel akzeptiert.",
   "aiProviderKeys.testFailed": "Test fehlgeschlagen",
   "aiProviderKeys.modelCount_one": "{count} Modell verfügbar",
   "aiProviderKeys.modelCount_other": "{count} Modelle verfügbar",
@@ -8725,7 +8726,7 @@ export const de = {
   "aiProviderKeys.reason.profileForbids":
     "Dieses Installationsprofil erlaubt keinen Zugriff auf diesen Anbieter.",
   "aiProviderKeys.reason.notPublished":
-    "Dieser Anbieter lässt sich nicht über eine Modellliste testen.",
+    "Diese Version kann diesen Anbieter nicht testen.",
   "aiProviderKeys.reason.unreachable":
     "Der Anbieter hat nicht geantwortet. Prüfe den Host und das Netzwerk.",
   "aiRouting.intro":

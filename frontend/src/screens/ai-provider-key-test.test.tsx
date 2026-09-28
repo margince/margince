@@ -130,7 +130,7 @@ describe("testing a provider key", () => {
     ["no_endpoint", /no tier uses this provider yet/i],
     ["no_key", /no key is stored/i],
     ["profile_forbids", /does not allow access/i],
-    ["not_published", /cannot be tested/i],
+    ["not_published", /cannot test this provider/i],
   ])("names the reason a test failed: %s", async (reason, words) => {
     const user = userEvent.setup();
     vi.stubGlobal(
@@ -162,23 +162,46 @@ describe("testing a provider key", () => {
     expect(await within(row).findByText("Test failed")).toBeTruthy();
   });
 
-  // Nothing to test on a row with no key, and a decision server publishes no
-  // list — so neither offers the button rather than one that can only fail.
-  it("offers Test only where a listing call can answer", async () => {
+  // Every key the server can test gets the button — decision providers too,
+  // each tested at the route its host answers. A row with no key and none
+  // optional has nothing to test.
+  it("offers Test on every row that holds, or may skip, a key", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(READER, () => jsonResponse({})).fetchMock,
     );
     render();
 
-    const testable = await screen.findByTestId("ai-provider-key-gemini");
-    expect(
-      within(testable).getByRole("button", { name: /^test$/i }),
-    ).toBeTruthy();
-    for (const provider of ["openai", "jev", "jev_compatible"]) {
+    await screen.findByTestId("ai-provider-key-gemini");
+    for (const provider of ["gemini", "jev", "jev_compatible"]) {
       const row = screen.getByTestId(`ai-provider-key-${provider}`);
-      expect(within(row).queryByRole("button", { name: /^test$/i })).toBeNull();
+      expect(within(row).getByRole("button", { name: /^test$/i })).toBeTruthy();
     }
+    const unkeyed = screen.getByTestId("ai-provider-key-openai");
+    expect(
+      within(unkeyed).queryByRole("button", { name: /^test$/i }),
+    ).toBeNull();
+  });
+
+  // A broker's key endpoint and the decision probe answer yes or no and list
+  // nothing, so a pass says the key was accepted rather than "0 models".
+  it("says a key was accepted when the test listed no models", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(READER, () =>
+        jsonResponse({ provider: "jev_compatible", ok: true }),
+      ).fetchMock,
+    );
+    render();
+
+    const row = await testRow(user, "jev_compatible");
+
+    expect(await within(row).findByText("Connected")).toBeTruthy();
+    expect(
+      within(row).getByText("The provider accepted the key."),
+    ).toBeTruthy();
+    expect(within(row).queryByText(/models available/)).toBeNull();
   });
 
   // A result describes the key that was held when it ran; once that key is

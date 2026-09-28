@@ -10170,9 +10170,19 @@ export interface paths {
         put?: never;
         /**
          * Ask one vendor whether the stored credential works (admin/ops).
-         * @description Calls the vendor's own model-list endpoint with the credential this installation holds,
-         *     and says whether it answered. The answer to "is this key any good" is the vendor's, and
-         *     asking before a tier is bound to it is cheaper than finding out at the first call.
+         * @description Asks the vendor, with the credential this installation holds, the cheapest authenticated
+         *     question it answers, and says whether it answered. The answer to "is this key any good"
+         *     is the vendor's, and asking before a lane is bound to it is cheaper than finding out at
+         *     the first call. No call is billed:
+         *
+         *     - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
+         *       model list, and `model_count` is its length.
+         *     - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+         *     - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
+         *       public, so listing it would pass any key. It passes with no `model_count`.
+         *     - Any other decision endpoint is sent the decision request with an empty body. A 400 or
+         *       422 is a pass (the server let the caller in, then refused the body); 401 or 403 is a
+         *       refused key. It passes with no `model_count`.
          *
          *     No request body. The key is the STORED one, never a candidate sent here: a credential
          *     that travels only to be tested is still a credential in a request log. The host is the
@@ -17627,7 +17637,7 @@ export interface components {
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -17673,10 +17683,10 @@ export interface components {
             provider: string;
             /** @description Whether the vendor answered its model list with this credential. */
             ok: boolean;
-            /** @description How many models the vendor reported, present only when `ok`. */
+            /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
             model_count?: number;
             /**
-             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — the vendor has no list endpoint to test against (a decision server). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
              * @enum {string}
              */
             reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";

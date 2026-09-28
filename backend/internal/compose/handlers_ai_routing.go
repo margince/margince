@@ -348,13 +348,16 @@ func (h aiRoutingHandlers) TestAiProviderKey(w http.ResponseWriter, r *http.Requ
 	httperr.WriteJSON(w, http.StatusOK, toContractKeyTest(tested))
 }
 
-// toContractKeyTest maps a key test onto the wire, where `model_count` and
-// `reason` are each present only on the side of `ok` they describe.
+// toContractKeyTest maps a key test onto the wire. `reason` is present only on
+// a failure, and `model_count` only on a pass that listed models — a vendor
+// tested at a key endpoint passes with no count rather than with a zero.
 func toContractKeyTest(t ai.KeyTest) crmcontracts.AiProviderKeyTestResult {
 	out := crmcontracts.AiProviderKeyTestResult{Provider: t.Provider, Ok: t.OK}
 	if t.OK {
-		count := t.ModelCount
-		out.ModelCount = &count
+		if t.Counted {
+			count := t.ModelCount
+			out.ModelCount = &count
+		}
 		return out
 	}
 	reason := crmcontracts.AiProviderKeyTestResultReason(t.Reason)

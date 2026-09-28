@@ -20173,7 +20173,7 @@ type AiProviderKeyStatus struct {
 
 // AiProviderKeyTestResult One vendor's answer to the stored credential. `ok` with `model_count` when it answered; otherwise `reason` names why, and never the vendor's own words.
 type AiProviderKeyTestResult struct {
-	// ModelCount How many models the vendor reported, present only when `ok`.
+	// ModelCount How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one.
 	ModelCount *int `json:"model_count,omitempty"`
 
 	// Ok Whether the vendor answered its model list with this credential.
@@ -20182,11 +20182,11 @@ type AiProviderKeyTestResult struct {
 	// Provider The routing name of the vendor that was asked.
 	Provider string `json:"provider"`
 
-	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — the vendor has no list endpoint to test against (a decision server). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 	Reason *AiProviderKeyTestResultReason `json:"reason,omitempty"`
 }
 
-// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — the vendor has no list endpoint to test against (a decision server). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
 type AiProviderKeyTestResultReason string
 
 // AiRouteCandidate defines model for AiRouteCandidate.
@@ -22279,11 +22279,11 @@ type AvailableModelList struct {
 	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
 	RankedBy *string `json:"ranked_by,omitempty"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
 }
 
-// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.

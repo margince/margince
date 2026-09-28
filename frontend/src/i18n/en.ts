@@ -8859,6 +8859,7 @@ export const en = {
   "aiProviderKeys.test": "Test",
   "aiProviderKeys.testing": "Testing key…",
   "aiProviderKeys.connected": "Connected",
+  "aiProviderKeys.accepted": "The provider accepted the key.",
   "aiProviderKeys.testFailed": "Test failed",
   "aiProviderKeys.modelCount_one": "{count} model available",
   "aiProviderKeys.modelCount_other": "{count} models available",
@@ -8871,8 +8872,7 @@ export const en = {
     "No tier uses this provider yet, so there is no host to test. Bind a tier to it first.",
   "aiProviderKeys.reason.profileForbids":
     "This installation profile does not allow access to this provider.",
-  "aiProviderKeys.reason.notPublished":
-    "This provider cannot be tested with a model list.",
+  "aiProviderKeys.reason.notPublished": "This build cannot test this provider.",
   "aiProviderKeys.reason.unreachable":
     "The provider did not respond. Check the host and the network.",
   "aiRouting.intro":
