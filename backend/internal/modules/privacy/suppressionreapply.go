@@ -5,18 +5,10 @@ package privacy
 
 // Erased stays erased, whatever brought it back.
 //
-// An erasure ends a subject's data and records the identifier's hash on the
-// suppression list, which every ingest path consults so a re-capture cannot
-// resurrect them. That guards the door mail comes through. It does not guard
-// a RESTORE, which puts rows back underneath the door without passing it — and
-// a restored subject is the one failure in this area nobody notices, because
-// the record looks exactly like a record that was never erased.
-//
-// This is the reconciliation that answers it: the list is the standing
-// instruction, and anything live that matches it should not be. Deliberately
-// blind to HOW the row came back. A restore is the case the drill exercises,
-// but a re-import, a bulk load and a bug all resurrect the same way, and a
-// pass that only understood restores would miss the ones nobody scheduled.
+// The suppression list guards the door mail comes through; a restore puts rows
+// back underneath it. A resurrected subject is invisible because the record
+// looks exactly like one that was never erased, so the list is re-applied
+// blind to how the row arrived.
 
 import (
 	"context"
@@ -60,10 +52,7 @@ func (e *Eraser) ReapplySuppressions(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	// NOT an early return on an empty list any more. An empty list is exactly
-	// what a restore to a point before the erasures leaves behind, and it is
-	// the case the exported journal exists to answer — stopping here would
-	// skip the one situation this pass was written for.
+	// An empty list is the restore case the journal answers; keep scanning.
 	resurrected, err := e.contactsMatchingSuppression(ctx, suppressed)
 	if err != nil {
 		return 0, err
@@ -125,8 +114,18 @@ func (e *Eraser) suppressedEmailHashes(ctx context.Context) (map[string]struct{}
 // searched for: the list is the smaller side on a healthy installation, and
 // the comparison has to happen in Go anyway.
 func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map[string]struct{}) ([]ids.UUID, error) {
+	type candidate struct {
+		contact ids.UUID
+		hash    string
+	}
+	// The database read finishes before any of it is asked about. Probing the
+	// journal inside the cursor would hold one transaction open across a
+	// network round trip per address, so a slow store would keep a read
+	// transaction alive for as long as it took and a failing one would roll
+	// the whole scan back.
+	var matched []ids.UUID
+	var ask []candidate
 	seen := map[ids.UUID]struct{}{}
-	var found []ids.UUID
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT ce.contact_id, ce.email
@@ -147,25 +146,34 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				continue
 			}
 			hash := storekit.SuppressionHash(email)
-			if _, ok := suppressed[hash]; !ok {
-				// The database's own list does not name it. The exported
-				// journal might: that is the restore case, where the rows came
-				// back and the list that would have caught them rolled back
-				// with them.
-				journaled, err := e.journalSuppressed(ctx, "email", hash)
-				if err != nil {
-					return err
-				}
-				if !journaled {
-					continue
-				}
+			if _, ok := suppressed[hash]; ok {
+				seen[contactID] = struct{}{}
+				matched = append(matched, contactID)
+				continue
 			}
-			seen[contactID] = struct{}{}
-			found = append(found, contactID)
+			ask = append(ask, candidate{contact: contactID, hash: hash})
 		}
 		return rows.Err()
 	}); err != nil {
 		return nil, fmt.Errorf("privacy: looking for resurrected subjects: %w", err)
 	}
-	return found, nil
+
+	// Whatever the database's own list did not name, the exported journal
+	// might: that is the restore case, where the rows came back and the list
+	// that would have caught them rolled back with them.
+	for _, c := range ask {
+		if _, already := seen[c.contact]; already {
+			continue
+		}
+		journaled, err := e.journalSuppressed(ctx, "email", c.hash)
+		if err != nil {
+			return nil, err
+		}
+		if !journaled {
+			continue
+		}
+		seen[c.contact] = struct{}{}
+		matched = append(matched, c.contact)
+	}
+	return matched, nil
 }

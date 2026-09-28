@@ -455,15 +455,10 @@ const (
 	// hands back the ids of subjects an erasure already ended — a restore or a
 	// re-import having put them back.
 	//
-	// Unscoped ON PURPOSE, and it is the point rather than an omission. The
-	// suppression list has no tenant predicate and nothing for one to key on
-	// (storekit/suppression.go, ADR-0091 and ADR-0061), so the instruction it
-	// carries is installation-wide. A pass narrowed to the rows one seat may
-	// see would leave a resurrected subject standing everywhere that seat
-	// cannot reach — which is most of the installation, and precisely where a
-	// resurrection goes unnoticed, since the record looks exactly like one
-	// that was never erased. The reference never leaves: the ids go straight
-	// into EraseContact, which re-asks the object gate per subject under its
-	// own lock, and ReapplySuppressions asks it once before the walk begins.
+	// Unscoped ON PURPOSE. The suppression list has no tenant predicate and
+	// nothing for one to key on (storekit/suppression.go, ADR-0091 and
+	// ADR-0061), so narrowing the pass to one seat's rows would leave a
+	// resurrected subject standing everywhere that seat cannot reach. The
+	// reference never leaves: the ids go straight into EraseContact.
 	modulesTierUnscopedCeiling = 106
 )

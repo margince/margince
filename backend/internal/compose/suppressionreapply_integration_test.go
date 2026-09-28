@@ -5,8 +5,7 @@
 
 package compose
 
-// Erased stays erased, whatever brought it back. The suppression list guards
-// the door mail comes through; a restore puts rows back underneath it.
+// Erased stays erased, whatever brought it back.
 
 import (
 	"context"
