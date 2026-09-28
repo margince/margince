@@ -352,6 +352,7 @@ func (f attentionDealFacts) Figures(
 	for id, figures := range found {
 		out[id] = attention.DealFigures{
 			StageID:              figures.StageID,
+			StageWinProbability:  figures.StageWinProbability,
 			OwnerID:              figures.OwnerID,
 			AmountMinor:          figures.AmountMinor,
 			Currency:             figures.Currency,

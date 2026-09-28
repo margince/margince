@@ -90,10 +90,23 @@ type DealFigures struct {
 	CloseDateProvisional *bool
 	ForecastCategory     *string
 	StageID              ids.UUID
-	OwnerID              ids.UUID
-	AmountMinor          *int64
-	Currency             string
-	ExpectedCloseDate    *time.Time
+	// StageWinProbability is the probability recorded on the deal's stage, read
+	// in the one query this already performs rather than through a second call.
+	//
+	// A POINTER because 0 is a real probability and not an absence: a lost
+	// stage scores exactly 0, so a plain int would make "nobody said" and
+	// "certain to lose" the same answer. Today the schema fills it for every
+	// deal — `deal.stage_id` and `stage.win_probability` are both NOT NULL —
+	// so it arrives set; the pointer is what stops a future nullable column
+	// being reported as 0% of a deal nobody scored.
+	//
+	// It is NOT a weighting. Nothing here multiplies it into AmountMinor, and
+	// the contract forbids a reader doing so.
+	StageWinProbability *int
+	OwnerID             ids.UUID
+	AmountMinor         *int64
+	Currency            string
+	ExpectedCloseDate   *time.Time
 	// CloseOverdue is CloseIsOverdue's own verdict for this deal — the ONE
 	// place that comparison is made (closedate.go), called here rather than
 	// re-spelled. Meaningless where ExpectedCloseDate is nil.
@@ -104,6 +117,49 @@ type DealFigures struct {
 // and a caller that hands over more than this is asking a different question
 // than the one this answers.
 const figuresScanCap = 200
+
+// scanFigures reads the figures rows into out, keyed by deal id.
+//
+// Every column but the id is optional in the scan even where the schema fills
+// it: a LEFT JOIN and an outer read make a nullable shape the scan must accept,
+// and a pointer that is always set costs nothing while a wrong assumption costs
+// a panic on the first row that breaks it.
+func scanFigures(rows pgx.Rows, out map[ids.UUID]DealFigures, now time.Time, loc *time.Location) error {
+	for rows.Next() {
+		var (
+			id          ids.UUID
+			stage       *ids.UUID
+			owner       *ids.UUID
+			amount      *int64
+			code        *string
+			closes      *time.Time
+			provisional *bool
+			category    *string
+			winProb     *int
+		)
+		if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes, &provisional, &category, &winProb); err != nil {
+			return err
+		}
+		figures := DealFigures{
+			AmountMinor: amount, ExpectedCloseDate: closes, CloseDateProvisional: provisional,
+			ForecastCategory: category, StageWinProbability: winProb,
+		}
+		if closes != nil {
+			figures.CloseOverdue = CloseIsOverdue(*closes, now, loc)
+		}
+		if stage != nil {
+			figures.StageID = *stage
+		}
+		if owner != nil {
+			figures.OwnerID = *owner
+		}
+		if code != nil {
+			figures.Currency = *code
+		}
+		out[id] = figures
+	}
+	return rows.Err()
+}
 
 // Figures answers the stated figures of the given deals, keyed by id.
 //
@@ -150,8 +206,9 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			return err
 		}
 		query := storekit.SQLf(
-			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date, d.close_date_provisional, d.forecast_category
+			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date, d.close_date_provisional, d.forecast_category, s.win_probability
 			   FROM deal d
+			   LEFT JOIN stage s ON s.id = d.stage_id
 			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos,
 		)
 		if scope != "" {
@@ -162,37 +219,7 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			return err
 		}
 		defer rows.Close()
-		now := s.clock()
-		for rows.Next() {
-			var (
-				id          ids.UUID
-				stage       *ids.UUID
-				owner       *ids.UUID
-				amount      *int64
-				code        *string
-				closes      *time.Time
-				provisional *bool
-				category    *string
-			)
-			if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes, &provisional, &category); err != nil {
-				return err
-			}
-			figures := DealFigures{AmountMinor: amount, ExpectedCloseDate: closes, CloseDateProvisional: provisional, ForecastCategory: category}
-			if closes != nil {
-				figures.CloseOverdue = CloseIsOverdue(*closes, now, loc)
-			}
-			if stage != nil {
-				figures.StageID = *stage
-			}
-			if owner != nil {
-				figures.OwnerID = *owner
-			}
-			if code != nil {
-				figures.Currency = *code
-			}
-			out[id] = figures
-		}
-		if err := rows.Err(); err != nil {
+		if err := scanFigures(rows, out, s.clock(), loc); err != nil {
 			return err
 		}
 		return maskFigures(ctx, tx, out)

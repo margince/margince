@@ -21460,6 +21460,9 @@ type AttentionDealFacts struct {
 
 	// StageId The deal's current stage.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+
+	// WinProbability The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`.
+	WinProbability *int `json:"win_probability,omitempty"`
 }
 
 // AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -41678,9 +41681,9 @@ type WorklistCountCategory string
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
 // `amount_minor` converted to the installation's base currency — the only figure by
 // which two deals in different currencies may be compared. It is not weighted by
-// `win_probability`: the pipeline this row comes from does not read a deal's stage,
-// so the two fields are independent facts rather than one computed from the other,
-// and a reader must not multiply them together expecting the product to equal a
+// `win_probability`: the two are independent facts, one the deal's own money and the
+// other a property of the stage it sits in, rather than one computed from the other.
+// A reader must not multiply them together expecting the product to equal a
 // risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -41938,9 +41941,9 @@ type WorklistItem struct {
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by
 	// which two deals in different currencies may be compared. It is not weighted by
-	// `win_probability`: the pipeline this row comes from does not read a deal's stage,
-	// so the two fields are independent facts rather than one computed from the other,
-	// and a reader must not multiply them together expecting the product to equal a
+	// `win_probability`: the two are independent facts, one the deal's own money and the
+	// other a property of the stage it sits in, rather than one computed from the other.
+	// A reader must not multiply them together expecting the product to equal a
 	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
