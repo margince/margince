@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -102,4 +103,25 @@ func readGranted(ctx context.Context, object string) (bool, error) {
 		return false, nil
 	}
 	return err == nil, err
+}
+
+// bulkBatchStillSeen answers whether a replayed bulk answer may be handed back:
+// the caller may still read the batch, and every record its stored result
+// names is one they may still see. A replay is refused whole rather than
+// edited, because an edited body is one the product never produced.
+func bulkBatchStillSeen(ctx context.Context, db *database.DB, batchID ids.UUID) error {
+	return db.Tx(ctx, func(tx pgx.Tx) error {
+		op, err := readBulkOperation(ctx, tx, batchID)
+		if err != nil {
+			return err
+		}
+		skipped, left, err := withholdUnseen(ctx, tx, op.recordType, op.result.Skipped, op.result.LeftBehind)
+		if err != nil {
+			return err
+		}
+		if len(skipped) != len(op.result.Skipped) || len(left) != len(op.result.LeftBehind) {
+			return apperrors.ErrNotFound
+		}
+		return nil
+	})
 }

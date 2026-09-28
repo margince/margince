@@ -104,6 +104,11 @@ const (
 	// contract.
 	probeDealRoom = "deal_room"
 
+	// probeBulkBatch keys the bulk engine's own probe. A batch's answer names
+	// the records it left alone, and only the batch's stored result says
+	// which, so the probe reads it back (bulkwithhold.go).
+	probeBulkBatch = "bulk_batch"
+
 	// The fields a body names another record by, spelled where the table that
 	// uses them is.
 	offerDealField        = "deal_id"
@@ -207,12 +212,12 @@ var replayableOperations = map[string]replayTarget{
 	"PATCH /v1/projects/{id}":        {object: tableProject, table: tableProject, idPath: "id"},
 	"POST /v1/projects/{id}/advance": {object: tableProject, table: tableProject, idPath: "id"},
 	"POST /v1/bulk/execute": {
-		objectNote: "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
-		rowNote:    "the response is a batch id, a count and the ids the caller itself named with why each was left alone; it carries no record",
+		objectNote:  "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
+		moduleProbe: probeBulkBatch, idPath: "batch_id",
 	},
 	"POST /v1/bulk/{id}/undo": {
-		objectNote: "one route over three record types: the undo was gated per record on the caller's grant and write authority when it ran",
-		rowNote:    "the response is a batch id, a count, and the ids of records the caller's own change named, with why each was left alone or what did not come back; it carries no record",
+		objectNote:  "one route over three record types: the undo was gated per record on the caller's grant and write authority when it ran",
+		moduleProbe: probeBulkBatch, idPath: "batch_id",
 	},
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
