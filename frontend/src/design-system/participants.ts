@@ -61,7 +61,7 @@ export function contactsOn(
 
 /**
  * Their names, each once. Two records can carry one name, and a line that
- * printed it twice would read as a slip rather than as two people; a face
+ * printed it twice would read as a slip rather than as two contacts; a face
  * keeps the two apart by key.
  */
 export function namesOf(contacts: readonly ContactOn[]): string[] {
