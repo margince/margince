@@ -19,38 +19,28 @@ export function Meter({
   flat,
   dense,
   restTone,
-}: Readonly<{
-  value: number;
-  max: number;
-  label: string;
-  // What colour the FILL takes. The accent gradient by default; "warning" and
-  // "danger" for a reading the caller has decided is bad news at this value,
-  // whichever end that is — a coverage bar that has run low, an overdue bar
-  // that has run high.
-  tone?: "warning" | "danger";
-  // The gradient's second colour (`--warning`) reads as a warning creeping in at
-  // the high end, which is wrong for a reading with no low-is-bad meaning.
-  // `flat` keeps the accent solid instead of fading toward it.
-  flat?: boolean;
-  // The bar as a LABEL'S OWN bar rather than a block of its own: thinner, and
-  // with none of the vertical interval the default pays for standing alone. A
-  // row per dimension — the company rail's health readings, the growth-fit
-  // sub-scores — is two lines tall with this and three without.
-  //
-  // A size on the primitive rather than a height each caller sets, because two
-  // screen sheets independently reached into `.meterbar` for the same 6px and
-  // the same `margin: 0`, and a geometry with two authors drifts the first time
-  // either moves.
-  dense?: boolean;
-  // What the TRACK is. Unset, it is empty space — the part of the whole this
-  // reading has not reached, drawn recessed because it means nothing on its
-  // own. Set, the remainder is itself a value the caller names beside the bar
-  // (overdue against open: what is left is money that is simply not late yet),
-  // so it takes a colour and the bar reads as two facts rather than one fact
-  // and a gutter.
-  restTone?: "accent";
-}>) {
-  const filled = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
+  part,
+}: Readonly<
+  {
+    value: number;
+    max: number;
+    label: string;
+    // The bar as a LABEL'S OWN bar rather than a block of its own: thinner, and
+    // with none of the vertical interval the default pays for standing alone. A
+    // row per dimension — the company rail's health readings, the growth-fit
+    // sub-scores — is two lines tall with this and three without.
+    //
+    // A size on the primitive rather than a height each caller sets, because two
+    // screen sheets independently reached into `.meterbar` for the same 6px and
+    // the same `margin: 0`, and a geometry with two authors drifts the first time
+    // either moves.
+    dense?: boolean;
+  } & MeterFill
+>) {
+  const filled = percentOf(value, max);
+  // The part's share of the FILL, not of the track: it sits inside the value it
+  // is a part of, so a part larger than its whole is clamped to the whole.
+  const partFilled = part == null ? null : percentOf(part, value);
   // Not a native <meter>: its children are fallback content that a supporting
   // engine never renders, so the token-drawn fill below would simply vanish,
   // and the bar every engine draws in its place takes none of our colours —
@@ -59,20 +49,73 @@ export function Meter({
   return (
     // biome-ignore lint/a11y/useSemanticElements: <meter> discards the token-drawn fill and draws its own untokenised bar
     <div
-      className={meterClass({ tone, flat, dense, restTone })}
+      className={meterClass({
+        tone,
+        flat,
+        dense,
+        restTone,
+        part: partFilled != null,
+      })}
       role="meter"
       aria-label={label}
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={max}
     >
-      <span style={{ width: `${filled}%` }} />
+      <span style={{ width: `${filled}%` }}>
+        {partFilled != null && (
+          <span className="meterbar-part" style={{ width: `${partFilled}%` }} />
+        )}
+      </span>
     </div>
   );
 }
 
-// The bar's four independent choices — fill colour, gradient or solid, its
-// geometry, and whether the track carries a meaning — as one class string.
+// What the fill says. Either one reading coloured by what it means, or one
+// reading with a stricter measure inside it — never both: a tone on a bar that
+// already carries two figures would have to colour one of them, and neither
+// choice says which.
+type MeterFill =
+  | {
+      // What colour the FILL takes. The accent gradient by default; "warning"
+      // and "danger" for a reading the caller has decided is bad news at this
+      // value, whichever end that is — a coverage bar that has run low, an
+      // overdue bar that has run high.
+      tone?: "warning" | "danger";
+      // The gradient's second colour (`--warning`) reads as a warning creeping
+      // in at the high end, which is wrong for a reading with no low-is-bad
+      // meaning. `flat` keeps the accent solid instead of fading toward it.
+      flat?: boolean;
+      // What the TRACK is. Unset, it is empty space — the part of the whole this
+      // reading has not reached, drawn recessed because it means nothing on its
+      // own. Set, the remainder is itself a value the caller names beside the
+      // bar (overdue against open: what is left is money that is simply not
+      // late yet), so it takes a colour and the bar reads as two facts rather
+      // than one fact and a gutter.
+      restTone?: "accent";
+      part?: never;
+    }
+  | {
+      // A stricter measure the value CONTAINS — the weighted worth inside the
+      // open value, the median inside the 75th percentile — drawn as the solid
+      // head of the fill while the rest of the fill turns to a tint. One bar
+      // then carries both figures, so a reader never matches two bars by eye to
+      // learn that one is a share of the other.
+      part: number;
+      tone?: never;
+      flat?: never;
+      restTone?: never;
+    };
+
+// A share as a percentage of the track, clamped to it. A zero whole reads as
+// an empty bar instead of NaN.
+function percentOf(value: number, whole: number): number {
+  return whole > 0 ? Math.min(100, Math.max(0, (value / whole) * 100)) : 0;
+}
+
+// The bar's independent choices — fill colour, gradient or solid, its
+// geometry, whether the track carries a meaning, and whether the fill holds a
+// part — as one class string.
 // Spelled out here rather than nested in the element, where a third condition
 // turned a ternary into something nobody could read at a glance. Named rather
 // than positional: four optional arguments in a row is a call site where a
@@ -82,14 +125,18 @@ function meterClass({
   flat,
   dense,
   restTone,
+  part,
 }: Readonly<{
   tone?: "warning" | "danger";
   flat?: boolean;
   dense?: boolean;
   restTone?: "accent";
+  part: boolean;
 }>): string {
   const classes = ["meterbar"];
-  if (tone) {
+  if (part) {
+    classes.push("meterbar-has-part");
+  } else if (tone) {
     classes.push(`meterbar-${tone}`);
   } else if (flat) {
     classes.push("meterbar-flat");
@@ -282,3 +329,87 @@ export type BarListRow = Readonly<{
   amount: string;
   tone?: "warning" | "danger";
 }>;
+
+// Parts of ONE total laid end to end on one track, with a mark where a target
+// sits: what is already won, what is committed with a confirmed date, what is
+// best case, and the call they are measured against.
+//
+// The claim differs from `BarList`'s. A bar list's rows are separate readings
+// compared on one scale; these parts are DISJOINT, so their lengths add up to
+// the whole the track shows, and a caller passes only sets that do not
+// overlap — a part that contained another would be drawn twice. They run from
+// most to least certain, so their colour steps down ONE hue rather than cycling
+// through several, and three is the most a single hue tells apart.
+//
+// The track is aria-hidden and the legend carries every label and figure as
+// text, which also makes colour a second channel rather than the only one.
+// Amounts arrive formatted, for the reason `BarList`'s do.
+export function SegmentBar({
+  parts,
+  marker,
+  label,
+}: Readonly<{
+  parts: SegmentBarParts;
+  // A figure the parts are read against rather than one of them: a line across
+  // the track, drawn in ink so it never reads as a fourth part.
+  marker?: SegmentBarPart;
+  // What the legend is, for a reader who meets it as a list.
+  label: string;
+}>) {
+  const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
+  // The scale is whichever is larger, the parts or the mark: a call beyond what
+  // the parts reach leaves recessed track between them, which is the gap.
+  const scale = Math.max(total, marker?.value ?? 0);
+  return (
+    <div className="segbar">
+      <div className="segbar-track" aria-hidden="true">
+        {parts.map((part, step) => (
+          <span
+            key={part.key}
+            className={`segbar-part segbar-step-${step}`}
+            style={{ width: `${percentOf(part.value, scale)}%` }}
+          />
+        ))}
+        {marker && (
+          <span
+            className="segbar-marker"
+            style={{ left: `${percentOf(marker.value, scale)}%` }}
+          />
+        )}
+      </div>
+      <ul className="segbar-legend" aria-label={label}>
+        {parts.map((part, step) => (
+          <li key={part.key} className="segbar-key">
+            <span
+              className={`segbar-swatch segbar-step-${step}`}
+              aria-hidden="true"
+            />
+            {part.label}
+            <span className="segbar-amount t-num">{part.amount}</span>
+          </li>
+        ))}
+        {marker && (
+          <li className="segbar-key">
+            <span className="segbar-swatch-marker" aria-hidden="true" />
+            {marker.label}
+            <span className="segbar-amount t-num">{marker.amount}</span>
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+export type SegmentBarPart = Readonly<{
+  key: string;
+  label: string;
+  value: number;
+  amount: string;
+}>;
+
+// One to three parts, as a type: a fourth step of one hue is not told apart,
+// and a list that could hold one would colour it by cycling back to the first.
+export type SegmentBarParts =
+  | readonly [SegmentBarPart]
+  | readonly [SegmentBarPart, SegmentBarPart]
+  | readonly [SegmentBarPart, SegmentBarPart, SegmentBarPart];

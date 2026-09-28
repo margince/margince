@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Building2, Globe, Hash, Link2, MapPin, Users } from "lucide-react";
 import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
-import { BarList, Chip, Meter, Sparkline } from "./readings";
+import { BarList, Chip, Meter, SegmentBar, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
 const meta: Meta = {
@@ -214,4 +214,83 @@ export const BarsSingleRow: Story = {
 // a division by zero if nobody guarded it.
 export const BarsEmpty: Story = {
   render: () => <BarList label="Deals by stage" rows={[]} />,
+};
+
+// A fill holding a stricter measure inside it, on one scale per group: the
+// weighted worth inside the open value, the median inside the 75th percentile.
+// The last pair is the edge — a part equal to its whole fills the bar solid.
+export const MetersWithAPart: Story = {
+  render: () => (
+    <>
+      <div>
+        <p className="t-caption">Open value, weighted part solid</p>
+        <Meter
+          value={96_400}
+          part={19_280}
+          max={124_000}
+          label="Qualify"
+          dense
+        />
+        <Meter
+          value={124_000}
+          part={37_200}
+          max={124_000}
+          label="Discovery"
+          dense
+        />
+      </div>
+      <div>
+        <p className="t-caption">75th percentile, median part solid</p>
+        <Meter value={68} part={41} max={100} label="Won" dense />
+        <Meter value={90} part={90} max={100} label="Lost" dense />
+      </div>
+    </>
+  ),
+};
+
+// Disjoint parts of one total with a target marked across them. The call lands
+// inside the parts in the first frame and past them in the second, which leaves
+// recessed track between the last part and the mark.
+export const SegmentBars: Story = {
+  render: () => (
+    <>
+      <SegmentBar
+        label="How the period is made up"
+        parts={[
+          { key: "won", label: "Already won", value: 92_000, amount: "€92K" },
+          {
+            key: "evidence",
+            label: "Evidence",
+            value: 148_000,
+            amount: "€148K",
+          },
+          {
+            key: "best",
+            label: "Best case beyond evidence",
+            value: 112_000,
+            amount: "€112K",
+          },
+        ]}
+        marker={{
+          key: "call",
+          label: "Current call",
+          value: 200_000,
+          amount: "€200K",
+        }}
+      />
+      <SegmentBar
+        label="How the period is made up"
+        parts={[
+          { key: "won", label: "Already won", value: 40_000, amount: "€40K" },
+          { key: "evidence", label: "Evidence", value: 60_000, amount: "€60K" },
+        ]}
+        marker={{
+          key: "call",
+          label: "Current call",
+          value: 180_000,
+          amount: "€180K",
+        }}
+      />
+    </>
+  ),
 };

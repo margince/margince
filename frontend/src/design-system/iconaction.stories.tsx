@@ -7,6 +7,7 @@ import {
   PenLine,
   Phone,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "./atoms";
 import { IconAction } from "./iconaction";
 
@@ -113,4 +114,27 @@ export const Inline: Story = {
       <p>Proposal</p>
     </div>
   ),
+};
+
+// A glyph that OPENS the region under it, as a report's explain does: the
+// state is a disclosure, expanded or not, naming the region it controls.
+function DisclosureDemo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <IconAction
+        label="Explain this number"
+        icon={<Info aria-hidden="true" />}
+        disclosure={{ expanded: open, controls: "iconaction-derivation" }}
+        onClick={() => setOpen((value) => !value)}
+      />
+      <p id="iconaction-derivation" hidden={!open}>
+        Sum over 7 open deals, converted to EUR.
+      </p>
+    </div>
+  );
+}
+
+export const Disclosure: Story = {
+  render: () => <DisclosureDemo />,
 };
