@@ -3,8 +3,8 @@
 
 package compose
 
-// The one bulk-change engine behind POST /v1/bulk/preview, POST /v1/bulk/execute
-// and the bulk_update_records tool.
+// The one bulk-change engine behind the /v1/bulk routes and the
+// bulk_update_records tool. An undo is a bulk change of its own (bulkundo.go).
 //
 // A bulk change is the single-record write, N times, in one transaction. Rows
 // are locked in id order so two changes over overlapping selections queue
