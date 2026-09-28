@@ -282,9 +282,9 @@ func (h Handlers) GetAvailability(w http.ResponseWriter, r *http.Request, params
 	if params.DurationMinutes != nil {
 		duration = time.Duration(*params.DurationMinutes) * time.Minute
 	}
-	availability := h.store.Availability
+	availability, readsTheCalendar := h.store.Availability, false
 	if params.Reliable != nil && *params.Reliable {
-		availability = h.store.ReliableAvailability
+		availability, readsTheCalendar = h.store.ReliableAvailability, true
 	}
 	slots, truncated, err := availability(r.Context(), host, params.From, params.To, duration)
 	if err != nil {
@@ -296,11 +296,13 @@ func (h Handlers) GetAvailability(w http.ResponseWriter, r *http.Request, params
 		writeStoreErr(w, r, err)
 		return
 	}
-	// truncated and calendar_backing BOTH travel on both transports, because
-	// the cap is the store's and so is the obligation to admit it, and because
-	// a window says different things depending on what it was read from
-	// (ADR-0055: the two surfaces do not get to disagree about what an answer
-	// means). Without the backing an empty grid reads as an empty diary.
+	if !readsTheCalendar {
+		backing = calendarbacking.WithoutReadingTheCalendar(backing)
+	}
+	// truncated and calendar_backing BOTH travel on both transports: the cap is
+	// the store's and so is the obligation to admit it, and a window says
+	// different things depending on what it was read from. Without the backing
+	// an empty grid reads as an empty diary.
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{
 		"slots": slots, "truncated": truncated, "calendar_backing": backing,
 	})

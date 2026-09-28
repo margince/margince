@@ -85,3 +85,42 @@ func TestBothDoorsSayTheSameThingAboutWhatBacksAWindow(t *testing.T) {
 		})
 	}
 }
+
+// `calendar` is earned by the READ, not by the account.
+//
+// The reliable path consults the host's diary and may claim it; the default
+// path computes CRM-only slots and may not, however much the host has
+// connected. Told `calendar` over a CRM-derived window, a reader takes an empty
+// grid for an empty diary — which is the whole failure this field exists to
+// stop, arriving through the door that was supposed to close it.
+func TestOnlyAReadThatConsultedTheCalendarMayClaimIt(t *testing.T) {
+	t.Parallel()
+
+	seat := ids.NewV7()
+	host := ids.From[ids.UserKind](seat)
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: seat,
+	})
+	connected := calendarBacking(func(context.Context, ids.UserID) (bool, error) {
+		return true, nil
+	})
+
+	read, err := activities.CalendarConnected(connected).BackingFor(ctx, seat, host)
+	if err != nil {
+		t.Fatalf("the reliable read: %v", err)
+	}
+	if read != calendarbacking.Backed {
+		t.Errorf("a read that consulted the calendar reported %q, want %q — the claim it is "+
+			"entitled to make is the one being withheld", read, calendarbacking.Backed)
+	}
+	if unread := calendarbacking.WithoutReadingTheCalendar(read); unread != calendarbacking.Unknown {
+		t.Errorf("a CRM-only window over a connected host reported %q, want %q — it says the "+
+			"diary was read when it was not", unread, calendarbacking.Unknown)
+	}
+	// An account with no calendar says so either way: that is true of the
+	// account however the window was computed.
+	if got := calendarbacking.WithoutReadingTheCalendar(calendarbacking.Unbacked); got != calendarbacking.Unbacked {
+		t.Errorf("an unconnected host reported %q over a CRM-only window, want %q",
+			got, calendarbacking.Unbacked)
+	}
+}

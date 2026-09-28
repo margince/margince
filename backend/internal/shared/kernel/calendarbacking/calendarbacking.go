@@ -28,8 +28,28 @@ const (
 	// Unbacked: no calendar is connected for them, so the window is this CRM's
 	// own records and proves nothing about their diary.
 	Unbacked = "none"
-	// Unknown: the host is somebody else. Whether they have connected a
-	// calendar is not this answer's to report — and it is answered without
-	// reading anything, so it costs the same whatever they have.
+	// Unknown: this answer cannot say. Either the host is somebody else, whose
+	// connector state is not this answer's to report, or the window was
+	// computed without consulting a calendar at all — see
+	// WithoutReadingTheCalendar. A reader must not take it as proof that
+	// another host was even identified.
 	Unknown = "unknown"
 )
+
+// WithoutReadingTheCalendar is what an answer may claim when its window came
+// from this CRM's records alone.
+//
+// A host having connected a calendar is not the same fact as this read having
+// consulted it, and only the second one licenses `calendar`. Both doors take a
+// path that computes CRM-only slots, so both pass their answer through here —
+// a door that reported connector state instead would say the diary was read
+// when it was not, which is the one claim this vocabulary exists to stop.
+//
+// Unbacked survives: no calendar connected is true of the account however the
+// window was computed.
+func WithoutReadingTheCalendar(backing string) string {
+	if backing == Backed {
+		return Unknown
+	}
+	return backing
+}

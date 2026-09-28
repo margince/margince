@@ -86,10 +86,8 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	}
 	occurred := in.Start
 	durationSeconds := int(in.End.Sub(in.Start) / time.Second)
-	// Booking a meeting is what `booked` MEANS, and this is the door most
-	// meetings arrive through. Leaving the status NULL here left it saying
-	// nothing about what had just happened, so "how many did we book this
-	// week" answered zero while the calendar filled up.
+	// Booking a meeting is what `booked` MEANS, and every period question —
+	// how many did we book this week — counts the column rather than the row.
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
 	var activity crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {

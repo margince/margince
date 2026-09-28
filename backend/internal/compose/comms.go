@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -367,9 +368,11 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
-	if backing == agents.CalendarBacked {
-		backing = agents.CalendarBackingUnknown
-	}
+	// This surface reads the CRM-only path above, so it may not claim the
+	// diary whatever the host has connected. The REST door passes its own
+	// answer through the same helper.
+	backing = agents.CalendarBacking(
+		calendarbacking.WithoutReadingTheCalendar(string(backing)))
 	// truncated is not decoration on this surface. The walk stops at a cap, and
 	// a model handed a capped list with nothing marking it will tell a rep there
 	// is no later opening — the same failure AtRiskReport.Truncated and
