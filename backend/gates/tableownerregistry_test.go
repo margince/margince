@@ -375,6 +375,7 @@ var tableOwners = map[string]string{
 	// privacy (the erasure suppression list is the module's own state;
 	// its other writes are ratified waivers below)
 	"erasure_suppression": "internal/modules/privacy",
+	"restore_drill":       "internal/modules/continuity",
 	// customfields (the governed add-field engine's catalog)
 	"custom_field": "internal/modules/customfields",
 	// knowledge (the asked document corpus; the chunk is a derived artifact of
