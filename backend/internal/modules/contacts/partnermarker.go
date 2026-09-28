@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -20,13 +21,9 @@ import (
 // trip per hit, which a search page of 200 turns into 200 statements.
 //
 // The COMPANY's own read gate is re-derived here rather than taken on the
-// caller's word — its object grant, and its row-scope clause joined to a live
-// company row — so the marker never says more about an account than the
-// caller may already see of it, whoever hands it the ids. This is exported,
-// and an exported reader that trusts its caller is one call site away from
-// being the door a partner programme leaks through. partnerListWhere spells
-// the same company bound as an EXISTS because its keyset cursor forbids the
-// join, so a change to what a visible company means moves both.
+// caller's word — its object grant, and visibleCompanySQL joined to the row —
+// because this is exported, and an exported reader that trusts its caller is
+// one call site away from being the door a partner programme leaks through.
 //
 // Absent from the map means no live programme this caller may see; a caller
 // who may not read both partner programmes and companies is refused instead.
@@ -44,18 +41,17 @@ func LivePartnerCompaniesBatch(ctx context.Context, tx pgx.Tx, companyIDs []ids.
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos := arg(companyIDs)
-	scope, err := scopeOrAllRows(ctx, "company", "c", arg)
+	visible, err := visibleCompanySQL(ctx, "c", arg)
 	if err != nil {
-		return nil, fmt.Errorf("contacts: scoping live partner programmes: %w", err)
+		return nil, err
 	}
-	query := fmt.Sprintf(`
+	query := storekit.SQLf(`
 		SELECT p.company_id
 		  FROM partner p
 		  JOIN company c ON c.id = p.company_id
 		 WHERE p.company_id = ANY($%d)
 		   AND %s
-		   AND c.archived_at IS NULL
-		   AND (%s)`, idsPos, livePartnerSQL("p"), scope)
+		   AND %s`, idsPos, livePartnerSQL("p"), visible)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading live partner programmes: %w", err)

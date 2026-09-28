@@ -717,6 +717,7 @@ export const en = {
   "search.tier.unverified": "Unverified",
   "search.partner.badge": "Partner",
   "search.partner.open": "Open partner record",
+  "search.partner.openNamed": "Open partner record for {name}",
 
   "context.recentTouches": "Recent activity",
   "context.openTasks": "Open tasks",

@@ -6,7 +6,7 @@ import { type FormEvent, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import { navigate, routeHash } from "../app/router";
 import {
   SEARCH_HIT_GROUP_KEY,
   SEARCH_HIT_ORDER,
@@ -267,24 +267,22 @@ function SearchHit({
         {hit.trust_tier === "unverified" && (
           <Badge tone="warning">{t("search.tier.unverified")}</Badge>
         )}
-        {/* A partner is a fact about a company, not a kind of hit, so the
-            company row carries it — and carries the route too: a Badge is
-            never pressed, and a mark with nowhere to go leaves the reader
-            where they started, on a Partners screen reachable only by knowing
-            it exists. Only `true` on a company draws it; null is a marker
-            nobody took, not a company checked and found plain, and the type
-            is checked here too because the marker means nothing off a company
-            and the screen does not lean on the server for that. */}
+        {/* The route rides with the badge: a mark with nowhere to go leaves the
+            reader on a Partners screen reachable only by knowing it exists.
+            `true` alone draws it — null is a marker nobody took, not a company
+            checked and found plain. */}
         {hit.type === "company" && hit.is_partner === true && (
           <>
             <Badge>{t("search.partner.badge")}</Badge>
-            <button
-              type="button"
+            <a
               className="entity-link"
-              onClick={() => navigate(companyTabRoute(hit.id, "partner"))}
+              href={routeHash(companyTabRoute(hit.id, "partner"))}
+              aria-label={t("search.partner.openNamed", {
+                name: hit.title ?? hit.id,
+              })}
             >
               {t("search.partner.open")}
-            </button>
+            </a>
           </>
         )}
       </div>

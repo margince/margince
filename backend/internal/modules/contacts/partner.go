@@ -37,6 +37,19 @@ func livePartnerSQL(alias string) string {
 	return alias + ".archived_at IS NULL"
 }
 
+// visibleCompanySQL renders "this is a company the caller may read" — live,
+// and inside their row scope — for the aliased `company` row a partner read
+// hangs off. Shared, because the list correlates it as an EXISTS while the
+// batch marker joins it, and two spellings of what a visible company means
+// would let one of them mark an account the other hides.
+func visibleCompanySQL(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	scope, err := scopeOrAllRows(ctx, "company", alias, arg)
+	if err != nil {
+		return "", fmt.Errorf("contacts: scoping the partner's company: %w", err)
+	}
+	return fmt.Sprintf("%s.archived_at IS NULL AND (%s)", alias, scope), nil
+}
+
 const partnerColumns = `company_id, cert_status, partner_role, margin_tier,
 	certified_staff, retention_rate, relationship_stage, next_step, next_step_due_at,
 	served_segments, partner_fit_score, partner_fit_score_computed,

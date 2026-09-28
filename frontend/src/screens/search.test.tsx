@@ -503,10 +503,12 @@ describe("SearchScreen", () => {
     // The one badge on the row is the fact; the route beside it is a link,
     // because a badge is never pressed.
     expect(hitRow(container).querySelectorAll(".badge")).toHaveLength(1);
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "Open partner record" }));
-    expect(window.location.hash).toBe(
+    // Named for the account, so a page of partner rows does not announce the
+    // same "Open partner record" on every one of them.
+    const open = screen.getByRole("link", {
+      name: "Open partner record for Brandt GmbH",
+    });
+    expect(open.getAttribute("href")).toBe(
       "#/companies/01a05ebd-b03d-7183-b2fb-c00bcb58b419/partner",
     );
   });

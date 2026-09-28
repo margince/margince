@@ -40,12 +40,7 @@ type Store struct {
 	// ask): an email hit then carries no row, and the frontend renders it the
 	// generic way rather than showing a blank canonical one.
 	emailSummaries EmailSummaryReader
-	// partnerMarks answers which companies carry a live partner programme, for
-	// THIS caller. It is the contacts store's own reader, injected by compose
-	// because a module never imports a sibling — and because a partner is a
-	// property of a company rather than a record to find, so there is no branch
-	// here that could answer it.
-	//
+	// partnerMarks reads a company hit's live partner programme (PartnerMarker).
 	// Nil where nothing supplied it (a worker's store, a test that does not
 	// ask), and a company hit then carries no marker.
 	partnerMarks PartnerMarker

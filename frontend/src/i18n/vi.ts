@@ -709,6 +709,7 @@ export const vi = {
   "search.tier.unverified": "Chưa xác minh",
   "search.partner.badge": "Đối tác",
   "search.partner.open": "Mở hồ sơ đối tác",
+  "search.partner.openNamed": "Mở hồ sơ đối tác của {name}",
 
   "context.recentTouches": "Trao đổi gần đây",
   "context.openTasks": "Công việc đang mở",
