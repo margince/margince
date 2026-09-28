@@ -45,6 +45,16 @@ type IngestStats = components["schemas"]["VoiceIngestStats"];
 // is still inside its budget, and the failure names the test rather than the
 // poll that was slow (issue 1144).
 const POLL_WAITER_MS = 4000;
+// The count a dropped file produces is rendered at the END of a chain — read
+// the file, parse it, POST /sources, take the summary back, re-render — and
+// the default async-util timeout covers a render, not a round trip. Under the
+// sharded suite that chain outran 1000ms and the failure read as "Unable to
+// find an element with the text: 900 words", which is the count being late
+// rather than wrong: the panel is mounted in the dump, the number is simply
+// not there yet. Given the poll's allowance for the same reason the polls have
+// it — the assertion is about the VALUE, and what it waits on is somebody
+// else's latency.
+const INGEST_WAITER_MS = POLL_WAITER_MS;
 const BUILD_TEST_MS =
   POLL_WAITER_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
 
@@ -419,7 +429,9 @@ describe("the conversational voice act", () => {
 
     // The server's word count lands on the collect scene's own sources
     // list, not as a second bubble in the rail.
-    expect(await screen.findByText("900 words")).toBeTruthy();
+    expect(
+      await screen.findByText("900 words", {}, { timeout: INGEST_WAITER_MS }),
+    ).toBeTruthy();
     const body = (await requestsTo(calls, "/sources", "POST")[0]
       .clone()
       .json()) as Record<string, unknown>;
@@ -453,7 +465,9 @@ describe("the conversational voice act", () => {
     window.dispatchEvent(drop);
 
     expect(drop.defaultPrevented).toBe(true);
-    expect(await screen.findByText("900 words")).toBeTruthy();
+    expect(
+      await screen.findByText("900 words", {}, { timeout: INGEST_WAITER_MS }),
+    ).toBeTruthy();
     expect(requestsTo(calls, "/sources", "POST").length).toBe(1);
 
     // A text-selection drag is NOT claimed: the composer's native
@@ -518,7 +532,9 @@ describe("the conversational voice act", () => {
       }),
     ]);
 
-    expect(await screen.findByText("900 words")).toBeTruthy();
+    expect(
+      await screen.findByText("900 words", {}, { timeout: INGEST_WAITER_MS }),
+    ).toBeTruthy();
     const ingest = requestsTo(calls, "/sources", "POST");
     expect(ingest.length).toBe(1);
     const body = (await ingest[0].clone().json()) as Record<string, unknown>;
@@ -556,7 +572,13 @@ describe("the conversational voice act", () => {
     render(<VoiceHarness initial={collectingState()} />);
 
     await uploadFile("one.md", "First document.");
-    expect(await screen.findByText("500 of 800 words")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "500 of 800 words",
+        {},
+        { timeout: INGEST_WAITER_MS },
+      ),
+    ).toBeTruthy();
     // Below the floor the button still presses: the press names the floor
     // on the rail and starts nothing.
     await userEvent.click(
