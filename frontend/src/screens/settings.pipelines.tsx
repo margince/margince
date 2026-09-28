@@ -296,6 +296,7 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const canEdit = useCanWrite("pipeline", "update");
   const canRetire = useCanWrite("pipeline", "delete");
   const retired = Boolean(pipeline.archived_at);
+  const retireBlockedId = useId();
   return (
     <Panel
       title={pipeline.name}
@@ -340,13 +341,30 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
           <SettingList>
             <SettingRow
               label={retired ? t("pipeline.restore") : t("pipeline.retire")}
-              description={retired ? undefined : t("pipeline.retireNote")}
+              description={
+                retired ? undefined : (
+                  <>
+                    {t("pipeline.retireNote")}
+                    {/* Why the verb is refused sits in the description, which
+                        wraps; the control column is sized to its content. */}
+                    {pipeline.is_default && (
+                      <>
+                        {" "}
+                        <span id={retireBlockedId}>
+                          {t("pipeline.retireBlocked")}
+                        </span>
+                      </>
+                    )}
+                  </>
+                )
+              }
               control={
                 <span className="pipeline-standing">
                   <PipelineRetirement
                     pipeline={pipeline}
                     canRetire={canRetire}
                     canRestore={canEdit}
+                    blockedReasonId={retireBlockedId}
                   />
                 </span>
               }
