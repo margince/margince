@@ -175,6 +175,26 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 			"staged for, so it does not release it — that contact answers it themselves: %w",
 			apperrors.ErrPermissionDenied)
 	}
+	// AND A CONNECTED CREDENTIAL RELEASES NOTHING AN AGENT STAGED. The two
+	// rules above bind the credential and the human; between them sits the loan
+	// one human makes twice. Two connected agents of the SAME contact pass both:
+	// A stages, B releases, and the tier is satisfied with nobody having looked
+	// — the loop the rule above exists to stop, reached by lending two
+	// credentials instead of one.
+	//
+	// The line is the DECIDER'S grant, because presence is what the release
+	// asks for and the rule above already says where presence comes from: the
+	// app, "or a credential they had to be present to mint". Minting one by
+	// hand costs a human session; a connection does not, and nobody is present
+	// when the agent behind it answers. So a connected credential does not
+	// release an agent's proposal — whatever staged it, and whoever it was
+	// staged for — while a hand-minted one still does, which leaves that
+	// sentence true rather than withdrawing it.
+	if approve && p.ConnectionID != ids.Nil && a.PassportID != nil {
+		return fmt.Errorf("a connected credential does not release an action another credential "+
+			"staged — the contact answers it in the CRM, or on a credential they minted "+
+			"themselves: %w", apperrors.ErrPermissionDenied)
+	}
 	kind := a.Kind
 	// A step-up is a question ABOUT this credential — how much of what it may
 	// already read it may be handed (§2.4) — and it is the one decision no
