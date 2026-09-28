@@ -131,13 +131,16 @@ var relinkActivitiesCopy = toolCopy{
 }
 
 var bulkUpdateRecordsCopy = toolCopy{
-	Purpose: "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change.",
+	Purpose: "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one " +
+		"change — or undo such a change.",
 	Limits: "Call mode preview first and show the user what it says: how many records change, " +
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
-		"record is changed only if it still has the version you sent and you may change it.",
+		"record is changed only if it still has the version you sent and you may change it. To " +
+		"undo, pass the batch_id to undo_preview, show the user the answer, and call undo after " +
+		"they agree; a change is undone once, and records changed since are left alone.",
 	Instead: "update_record and archive_record change one record.",
-	Retain: "Above 10 records, execute needs the confirm_token preview answered, for exactly the " +
-		"same selection; it is good once. Keep batch_id from the answer.",
+	Retain: "Above 10 records, execute and undo need the confirm_token their preview answered; " +
+		"it is good once. Keep batch_id from the answer: undo names the change by it.",
 }
 
 var archiveRecordCopy = toolCopy{

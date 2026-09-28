@@ -83,6 +83,47 @@ func (h bulkHandlers) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// GetBulkChange answers one bulk change to the colleague who asked for it or an
+// administrator; anyone else gets the 404 a missing batch gets.
+func (h bulkHandlers) GetBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	out, err := h.engine.Status(r.Context(), ids.UUID(id))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h bulkHandlers) PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	out, err := h.engine.PreviewUndo(r.Context(), ids.UUID(id))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// UndoBulkChange leaves Idempotency-Key to the middleware, as ExecuteBulkChange
+// does: a retry replays the first undo's answer instead of meeting "already
+// undone".
+func (h bulkHandlers) UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, _ crmcontracts.UndoBulkChangeParams) {
+	var body crmcontracts.BulkUndoRequest
+	if err := httperr.DecodeOrRefusal(w, r, &body); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	var token string
+	if body.ConfirmToken != nil {
+		token = *body.ConfirmToken
+	}
+	out, err := h.engine.Undo(r.Context(), ids.UUID(id), token)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 func bulkOwner(wire *openapi_types.UUID) *ids.UUID {
 	if wire == nil {
 		return nil

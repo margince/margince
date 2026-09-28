@@ -119,6 +119,9 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:RestoreContactTx":     "the un-archive restores each child row its archive retired by id, and each statement is its own CAS: it matches only while archived_at still holds the archive's own stamp, and TryInSavepoint reads RowsAffected to report a row that moved as left behind. The contact row itself rides ApplyGuardedIn with the caller's version, under the FOR UPDATE the shape's Lock took first",
+	"internal/modules/contacts:RestoreCompanyTx":     "the company twin of RestoreContactTx: every child restore is a CAS on the archive's stamp with RowsAffected read, under the company row's FOR UPDATE and guarded patch",
+	"internal/modules/deals:RestoreDealTx":           "the deal twin of RestoreContactTx: each relationship restore is a CAS on the archive's stamp with RowsAffected read, under the deal row's FOR UPDATE and guarded patch",
 	"internal/modules/contacts:touchRevertedContact": "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct

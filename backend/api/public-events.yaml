@@ -78,6 +78,7 @@ components:
         - company.archived
         - company.merged
         - company.updated
+        - company.restored
         - lead.created
         - lead.disqualified
         - lead.promoted
@@ -912,10 +913,9 @@ components:
       x-entity-type: deal
       x-version: 1
       description: >-
-        Payload for deal.restored. Never emitted today (no restore path
-        exists for deal); the schema is published so the type is a valid
-        subscription target and the coverage gate can name it explicitly
-        rather than silently omitting it.
+        Payload for deal.restored — an archived deal was brought back, with
+        the relationships, list memberships and tags its archive took down
+        where they can still come back. Carries no data.
       additionalProperties: false
 
     PublicEventOfferCreated:
@@ -1362,10 +1362,10 @@ components:
       x-entity-type: contact
       x-version: 1
       description: >-
-        Payload for contact.restored. Never emitted today (no restore path
-        exists for contact); the schema is published so the type is a
-        valid subscription target and the coverage gate can name it
-        explicitly rather than silently omitting it.
+        Payload for contact.restored — an archived contact was brought back,
+        with the emails, phones, channel identities, relationships, list
+        memberships and tags its archive took down where they can still come
+        back. Carries no data.
       additionalProperties: false
 
     PublicEventConversationClaimCaptured:
@@ -1466,6 +1466,18 @@ components:
       x-entity-type: company
       x-version: 1
       description: Payload for company.archived — a company was archived. Carries no data.
+      additionalProperties: false
+
+    PublicEventCompanyRestored:
+      type: object
+      x-event-type: company.restored
+      x-entity-type: company
+      x-version: 1
+      description: >-
+        Payload for company.restored — an archived company was brought back,
+        with the domains, relationship types, partner programme,
+        relationships, list memberships and tags its archive took down where
+        they can still come back. Carries no data.
       additionalProperties: false
 
     PublicEventCompanyMerged:

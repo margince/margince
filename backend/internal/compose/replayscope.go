@@ -210,6 +210,10 @@ var replayableOperations = map[string]replayTarget{
 		objectNote: "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
 		rowNote:    "the response is a batch id, a count and the ids the caller itself named with why each was left alone; it carries no record",
 	},
+	"POST /v1/bulk/{id}/undo": {
+		objectNote: "one route over three record types: the undo was gated per record on the caller's grant and write authority when it ran",
+		rowNote:    "the response is a batch id, a count, and the ids of records the caller's own change named, with why each was left alone or what did not come back; it carries no record",
+	},
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},

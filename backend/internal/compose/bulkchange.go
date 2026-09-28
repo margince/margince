@@ -18,7 +18,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -61,6 +60,8 @@ type bulkChange struct {
 	// affected; nil when the change presented none. A record outside it is
 	// left alone, so a change never reaches further than the user was shown.
 	previewed map[openapi_types.UUID]bool
+	// undo is set when this change reverses an earlier one (bulkundo.go).
+	undo *bulkUndoPlan
 }
 
 // bulkEngine runs bulk changes over the three record types.
@@ -74,7 +75,18 @@ type bulkEngine struct {
 // bulkRun is what one pass over the rows produced.
 type bulkRun struct {
 	changed []crmcontracts.BulkSampleRow
-	skipped []crmcontracts.BulkSkip
+	// outcomes is changed as an undo needs it, in the same order.
+	outcomes   []bulkOutcome
+	skipped    []crmcontracts.BulkSkip
+	leftBehind []crmcontracts.BulkLeftBehind
+}
+
+// bulkApplied is one changed row: what the user is shown, and what an undo
+// needs to put it back.
+type bulkApplied struct {
+	sample     crmcontracts.BulkSampleRow
+	outcome    bulkOutcome
+	leftBehind []crmcontracts.BulkLeftBehind
 }
 
 // Preview answers what change would do, and writes nothing but the
@@ -137,7 +149,14 @@ func (e *bulkEngine) Execute(ctx context.Context, change bulkChange) (crmcontrac
 	// The reservation already charged every changed record, so the door that
 	// charges a call's effects afterwards charges nothing more.
 	agentvolume.NoteEffects(ctx, 0)
-	return crmcontracts.BulkChangeResult{BatchId: openapi_types.UUID(batchID), Changed: len(run.changed), Skipped: run.skipped}, nil
+	out := crmcontracts.BulkChangeResult{BatchId: openapi_types.UUID(batchID), Changed: len(run.changed), Skipped: run.skipped}
+	if len(run.leftBehind) > 0 {
+		out.LeftBehind = &run.leftBehind
+	}
+	if change.undo != nil {
+		out.UndoOf = wireOwner(&change.undo.batchID)
+	}
+	return out, nil
 }
 
 // applyAndReserve spends the confirmation, changes the rows it covers, and
@@ -172,8 +191,10 @@ func (e *bulkEngine) admit(ctx context.Context, change bulkChange) (bulkRecords,
 		return bulkRecords{}, httperr.Validation("record_type", "unknown_record_type",
 			fmt.Sprintf("record_type %q is none of contact, company or deal", change.recordType))
 	}
-	if err := validateBulkChange(change); err != nil {
-		return bulkRecords{}, err
+	if change.undo == nil {
+		if err := validateBulkChange(change); err != nil {
+			return bulkRecords{}, err
+		}
 	}
 	action := principal.ActionUpdate
 	if change.verb == crmcontracts.BulkVerbArchive {
@@ -223,14 +244,16 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 	slices.SortFunc(items, func(a, b crmcontracts.BulkItem) int { return strings.Compare(a.Id.String(), b.Id.String()) })
 	run := bulkRun{changed: []crmcontracts.BulkSampleRow{}, skipped: []crmcontracts.BulkSkip{}}
 	for _, item := range items {
-		row, skip, err := applyOneInSavepoint(ctx, tx, target, change, item)
+		applied, skip, err := applyOneInSavepoint(ctx, tx, target, change, item)
 		switch {
 		case err != nil:
 			return bulkRun{}, err
 		case skip != nil:
 			run.skipped = append(run.skipped, *skip)
 		default:
-			run.changed = append(run.changed, row)
+			run.changed = append(run.changed, applied.sample)
+			run.outcomes = append(run.outcomes, applied.outcome)
+			run.leftBehind = append(run.leftBehind, applied.leftBehind...)
 		}
 	}
 	return run, nil
@@ -240,26 +263,26 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 // the row was left alone.
 func applyOneInSavepoint(
 	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem,
-) (crmcontracts.BulkSampleRow, *crmcontracts.BulkSkip, error) {
+) (bulkApplied, *crmcontracts.BulkSkip, error) {
 	savepoint, err := tx.Begin(ctx)
 	if err != nil {
-		return crmcontracts.BulkSampleRow{}, nil, fmt.Errorf("open a savepoint for %s: %w", item.Id, err)
+		return bulkApplied{}, nil, fmt.Errorf("open a savepoint for %s: %w", item.Id, err)
 	}
-	row, skip, err := applyOne(ctx, savepoint, target, change, item)
+	applied, skip, err := applyOne(ctx, savepoint, target, change, item)
 	if err == nil && skip.Reason == "" {
 		if err := savepoint.Commit(ctx); err != nil {
-			return crmcontracts.BulkSampleRow{}, nil, fmt.Errorf("release the savepoint for %s: %w", item.Id, err)
+			return bulkApplied{}, nil, fmt.Errorf("release the savepoint for %s: %w", item.Id, err)
 		}
-		return row, nil, nil
+		return applied, nil, nil
 	}
 	if rollbackErr := savepoint.Rollback(ctx); rollbackErr != nil {
-		return crmcontracts.BulkSampleRow{}, nil, fmt.Errorf("roll back the savepoint for %s: %w", item.Id, rollbackErr)
+		return bulkApplied{}, nil, fmt.Errorf("roll back the savepoint for %s: %w", item.Id, rollbackErr)
 	}
 	if err != nil {
-		return crmcontracts.BulkSampleRow{}, nil, err
+		return bulkApplied{}, nil, err
 	}
 	skip.Id = item.Id
-	return crmcontracts.BulkSampleRow{}, &skip, nil
+	return bulkApplied{}, &skip, nil
 }
 
 // skipped is a row left alone for reason, with nothing further to say.
@@ -271,18 +294,21 @@ func skipped(reason crmcontracts.BulkSkipReason) crmcontracts.BulkSkip {
 // alone; an error nobody classified aborts the whole change.
 func applyOne(
 	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem,
-) (crmcontracts.BulkSampleRow, crmcontracts.BulkSkip, error) {
+) (bulkApplied, crmcontracts.BulkSkip, error) {
 	if change.previewed != nil && !change.previewed[item.Id] {
-		return crmcontracts.BulkSampleRow{}, skipped(crmcontracts.BulkSkipReasonNotPreviewed), nil
+		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNotPreviewed), nil
+	}
+	if change.undo != nil {
+		return undoOne(ctx, tx, target, change, item)
 	}
 	id := ids.UUID(item.Id)
 	row, err := target.lock(ctx, tx, id)
 	if err != nil {
 		skip, classifyErr := bulkSkipFor(err)
-		return crmcontracts.BulkSampleRow{}, skip, classifyErr
+		return bulkApplied{}, skip, classifyErr
 	}
 	if row.version != item.Version {
-		return crmcontracts.BulkSampleRow{}, skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
+		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
 	}
 	sample := crmcontracts.BulkSampleRow{
 		Id: item.Id, Label: row.label,
@@ -292,7 +318,7 @@ func applyOne(
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:
 		if row.ownerID != nil && *row.ownerID == *change.ownerID {
-			return crmcontracts.BulkSampleRow{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
+			return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
 		}
 		sample.After.OwnerId = wireOwner(change.ownerID)
 		err = target.reassign(ctx, tx, id, ids.From[ids.UserKind](*change.ownerID), item.Version)
@@ -302,9 +328,24 @@ func applyOne(
 	}
 	if err != nil {
 		skip, classifyErr := bulkSkipFor(err)
-		return crmcontracts.BulkSampleRow{}, skip, classifyErr
+		return bulkApplied{}, skip, classifyErr
 	}
-	return sample, crmcontracts.BulkSkip{}, nil
+	return appliedAt(ctx, tx, change.recordType, sample)
+}
+
+// appliedAt completes one changed row with the version the write left it at,
+// which is what an undo later compares against.
+func appliedAt(
+	ctx context.Context, tx pgx.Tx, recordType crmcontracts.BulkRecordType, sample crmcontracts.BulkSampleRow,
+) (bulkApplied, crmcontracts.BulkSkip, error) {
+	version, err := recordVersion(ctx, tx, string(recordType), ids.UUID(sample.Id))
+	if err != nil {
+		return bulkApplied{}, crmcontracts.BulkSkip{}, err
+	}
+	return bulkApplied{
+		sample:  sample,
+		outcome: bulkOutcome{ID: sample.Id, Version: version, OwnerBefore: sample.Before.OwnerId},
+	}, crmcontracts.BulkSkip{}, nil
 }
 
 // bulkSkipFor turns a row's refusal into why it is left alone. A refusal a
@@ -315,6 +356,10 @@ func applyOne(
 // reported as one row's fault.
 func bulkSkipFor(err error) (crmcontracts.BulkSkip, error) {
 	var anchor *contacts.AnchorProtectedError
+	var restore *storekit.RestoreRefusal
+	if errors.As(err, &restore) {
+		return restoreSkip(restore), nil
+	}
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound):
 		return skipped(crmcontracts.BulkSkipReasonNotFound), nil
@@ -338,32 +383,6 @@ func bulkSkipFor(err error) (crmcontracts.BulkSkip, error) {
 		skip.Params = &fault.Details
 	}
 	return skip, nil
-}
-
-// recordBulkOperation writes the change's own row: who asked, for what, and how
-// it went. The records it changed carry its id on their audit rows.
-func recordBulkOperation(ctx context.Context, tx pgx.Tx, batchID ids.UUID, change bulkChange, run bulkRun) error {
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
-	named := map[string]ids.UUID{}
-	if change.ownerID != nil {
-		named["owner_id"] = *change.ownerID
-	}
-	params, err := json.Marshal(named)
-	if err != nil {
-		return fmt.Errorf("record the change's parameters: %w", err)
-	}
-	_, err = tx.Exec(ctx,
-		`INSERT INTO bulk_operation (id, record_type, verb, params, requested_by, passport_id, changed_count, skipped_count)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		batchID, string(change.recordType), string(change.verb), params, actor.ID,
-		storekit.UUIDOrNil(actor.PassportID), len(run.changed), len(run.skipped))
-	if err != nil {
-		return fmt.Errorf("record the bulk change: %w", err)
-	}
-	return nil
 }
 
 func affectedIDs(changed []crmcontracts.BulkSampleRow) []openapi_types.UUID {

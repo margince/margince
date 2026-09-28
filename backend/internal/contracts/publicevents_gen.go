@@ -447,6 +447,7 @@ const (
 	CompanyArchived                       SubscribableEventType = "company.archived"
 	CompanyCreated                        SubscribableEventType = "company.created"
 	CompanyMerged                         SubscribableEventType = "company.merged"
+	CompanyRestored                       SubscribableEventType = "company.restored"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
@@ -584,6 +585,8 @@ func (e SubscribableEventType) Valid() bool {
 	case CompanyCreated:
 		return true
 	case CompanyMerged:
+		return true
+	case CompanyRestored:
 		return true
 	case CompanyUpdated:
 		return true
@@ -1060,6 +1063,9 @@ type PublicEventCompanyMerged struct {
 	MergedIntoId openapi_types.UUID `json:"merged_into_id"`
 }
 
+// PublicEventCompanyRestored Payload for company.restored — an archived company was brought back, with the domains, relationship types, partner programme, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
+type PublicEventCompanyRestored struct{}
+
 // PublicEventCompanyUpdated Payload for company.updated — an OPEN envelope: eight emit sites carry divergent shapes (a flat column patch, the anchor company save's field delta, the partner extension's nested delta, enrichment/deep-read applies, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
 type PublicEventCompanyUpdated struct {
 	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
@@ -1147,7 +1153,7 @@ type PublicEventContactMergedRelinkCounts struct {
 	Relationships int64 `json:"relationships"`
 }
 
-// PublicEventContactRestored Payload for contact.restored. Never emitted today (no restore path exists for contact); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
+// PublicEventContactRestored Payload for contact.restored — an archived contact was brought back, with the emails, phones, channel identities, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
 type PublicEventContactRestored struct{}
 
 // PublicEventContactUpdated Payload for contact.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat column patch, a lead-promotion conversion note, a signature-enrichment fill, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
@@ -1230,7 +1236,7 @@ type PublicEventDealOwnerChanged struct {
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
-// PublicEventDealRestored Payload for deal.restored. Never emitted today (no restore path exists for deal); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
+// PublicEventDealRestored Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
 type PublicEventDealRestored struct{}
 
 // PublicEventDealRoomArchived Payload for deal_room.archived — the room ended and buyer access is revoked.
@@ -2409,6 +2415,10 @@ func (PublicEventCompanyMerged) EventType() string { return "company.merged" }
 
 func (PublicEventCompanyMerged) EntityType() string { return "company" }
 
+func (PublicEventCompanyRestored) EventType() string { return "company.restored" }
+
+func (PublicEventCompanyRestored) EntityType() string { return "company" }
+
 func (PublicEventCompanyUpdated) EventType() string { return "company.updated" }
 
 func (PublicEventCompanyUpdated) EntityType() string { return "company" }
@@ -2843,6 +2853,7 @@ var PublicEventVersions = map[string]int{
 	"company.archived":                          1,
 	"company.created":                           1,
 	"company.merged":                            1,
+	"company.restored":                          1,
 	"company.updated":                           1,
 	"consent.changed":                           1,
 	"consent.suppressed":                        1,

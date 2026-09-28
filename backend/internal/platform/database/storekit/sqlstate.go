@@ -217,3 +217,10 @@ func IsStaleStatementCache(err error) bool {
 	return pgErr.Routine == staleStatementCacheRoutine ||
 		strings.Contains(pgErr.Message, staleStatementCacheMessage)
 }
+
+// isIntegrityRefusal detects any SQLSTATE of class 23: a unique, foreign-key,
+// check, not-null or exclusion constraint refused the statement.
+func isIntegrityRefusal(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && strings.HasPrefix(pgErr.Code, "23")
+}

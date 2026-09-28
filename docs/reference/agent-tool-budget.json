@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 78,
     "system_frame_tokens": 516,
-    "tokens": 25295,
+    "tokens": 25398,
     "median_tool_tokens": 274,
-    "mean_tool_tokens": 323
+    "mean_tool_tokens": 325
   },
   "agents": [
     {
@@ -151,6 +151,10 @@
       "tokens": 446
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 441
+    },
+    {
       "name": "compose_analytics_report",
       "tokens": 440
     },
@@ -201,10 +205,6 @@
     {
       "name": "advance_project_phase",
       "tokens": 340
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 338
     },
     {
       "name": "search_report_evidence",

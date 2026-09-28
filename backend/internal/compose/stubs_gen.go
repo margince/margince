@@ -467,6 +467,18 @@ func (stubs) PreviewBulkChange(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewBulkChange")
 }
 
+func (stubs) GetBulkChange(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetBulkChange")
+}
+
+func (stubs) UndoBulkChange(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.UndoBulkChangeParams) {
+	httperr.NotImplemented(w, r, "UndoBulkChange")
+}
+
+func (stubs) PreviewBulkUndo(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "PreviewBulkUndo")
+}
+
 func (stubs) ListMyCaptureActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMyCaptureActivityParams) {
 	httperr.NotImplemented(w, r, "ListMyCaptureActivity")
 }

@@ -80,13 +80,7 @@ func recordIsArchived(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 // The table name is the record type, which servesRecordType has already closed
 // to the six: no identifier reaches this statement from a request body.
 func recordVersionUnmoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, ifVersion int64) error {
-	if !servesRecordType(entityType) {
-		return fmt.Errorf("compose: undoability: %q is not a record type this path reads", entityType)
-	}
-	var version int64
-	err := tx.QueryRow(ctx,
-		`SELECT version FROM `+pgx.Identifier{entityType}.Sanitize()+` WHERE id = $1`,
-		id).Scan(&version)
+	version, err := recordVersion(ctx, tx, entityType, id)
 	if err != nil {
 		return err
 	}
@@ -94,6 +88,19 @@ func recordVersionUnmoved(ctx context.Context, tx pgx.Tx, entityType string, id 
 		return apperrors.ErrVersionSkew
 	}
 	return nil
+}
+
+// recordVersion reads one record's version, archived or not. The table name is
+// the record type, closed to the six servesRecordType names.
+func recordVersion(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) (int64, error) {
+	if !servesRecordType(entityType) {
+		return 0, fmt.Errorf("compose: %q is not a record type this path reads", entityType)
+	}
+	var version int64
+	err := tx.QueryRow(ctx,
+		`SELECT version FROM `+pgx.Identifier{entityType}.Sanitize()+` WHERE id = $1`,
+		id).Scan(&version)
+	return version, err
 }
 
 // recordIsVisibleToCaller is the row-scope gate every read of this record

@@ -814,6 +814,30 @@
           "expires_at": {
             "type": "string"
           },
+          "left_behind": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "ref_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "ref_id"
+              ]
+            }
+          },
           "record_type": {
             "type": "string"
           },
@@ -892,6 +916,10 @@
                 "reason"
               ]
             }
+          },
+          "undo_of": {
+            "type": "string",
+            "format": "uuid"
           },
           "verb": {
             "type": "string"

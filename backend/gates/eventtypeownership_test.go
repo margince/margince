@@ -377,8 +377,6 @@ func TestEveryEventTypeHasOneEmittingModule(t *testing.T) {
 // explain rather than passing on the ones it still can.
 var unemittedEventTypes = gatekit.Waive(map[string]string{
 	"audit.appended":              "deliberate and documented in the contract: no emit site and none planned. It exists so the catalog is completely covered by a payload schema, never carrying a subscribable type with no contract",
-	"deal.restored":               "documented in the contract as never emitted today — there is no restore path",
-	"contact.restored":            "the same, for the contact restore path that does not exist",
 	"deal_room.decision_recorded": "the buyer's approval of a document version was retired as a product decision — sharing a document with a buyer is sharing it, not submitting it for approval — so nothing writes a decision any more and nothing emits this. The deal_room_decision table went with it. The TYPE stays because the deal timeline still decodes events emitted before the retirement, which are on the bus whether or not the rows behind them survive",
 })
 

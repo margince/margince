@@ -3232,6 +3232,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bulk/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read what one bulk change did, and whether it was undone.
+         * @description The record of one executed bulk change or undo: its record type and verb, how many records
+         *     it changed, each record it left alone with the reason, what an undo could not bring back,
+         *     and the batches it undid or was undone by.
+         *
+         *     Only the colleague who asked for the change, or an administrator, may read it. Anyone else is
+         *     answered `404`, the same as for a batch that does not exist.
+         */
+        get: operations["getBulkChange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bulk/{id}/undo/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say what undoing one bulk change would do, without doing it.
+         * @description The first half of an undo, and the same shape as `previewBulkChange`: the records the undo
+         *     would put back (`affected`), the ones it would leave alone and why (`excluded`), up to three
+         *     before/after rows, and a `confirm_token`. Undoing more than 10 records needs that token.
+         *
+         *     Only the colleague who asked for the change, or an administrator, may undo it (`404`
+         *     otherwise). A change is undone once, and an undo is not itself undone (`409`).
+         */
+        post: operations["previewBulkUndo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bulk/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back what one bulk change did, record by record.
+         * @description A compensating bulk change with its own `batch_id`. A reassignment hands each record back to
+         *     the owner it had before; an archive brings each record back with the child rows, list
+         *     memberships and tags its archive took down. Each record gets its own audit row, carrying
+         *     the undo's `batch_id`, and its own event (`contact.restored`, `company.restored`,
+         *     `deal.restored` for an archive).
+         *
+         *     A record is skipped, not overwritten, when it changed after the batch
+         *     (`changed_since_batch`), when it was merged into another record (`merged`) or erased
+         *     (`erased`), when another live record has since taken its email or domain (`value_taken`),
+         *     and when it had no owner before (`no_previous_owner`). A child row, membership or tag that
+         *     cannot come back — a list or tag archived since, a link whose other end is archived — is
+         *     listed in `left_behind` while its record is restored.
+         *
+         *     Only the colleague who asked for the change, or an administrator, may undo it (`404`
+         *     otherwise). A change is undone once; a second undo, or an undo of an undo, answers `409`.
+         *     More than 10 records need the `confirm_token` from `previewBulkUndo`, exactly as
+         *     `executeBulkChange` does.
+         */
+        post: operations["undoBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/transfer-ownership": {
         parameters: {
             query?: never;
@@ -25382,9 +25474,14 @@ export interface components {
          *     `anchor_company`: it is the installation's own company, which is never archived.
          *     `not_previewed`: the preview whose token this execution presents did not list it.
          *     `refused`: a single-record rule refuses it; `code` says which.
+         *
+         *     An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+         *     `merged`: it was merged into another record. `erased`: its personal data was erased or
+         *     purged. `value_taken`: another live record now holds its email or domain.
+         *     `no_previous_owner`: it had no owner before the reassignment.
          * @enum {string}
          */
-        BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused";
+        BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused" | "changed_since_batch" | "merged" | "erased" | "value_taken" | "no_previous_owner";
         BulkSkip: {
             /** Format: uuid */
             id: string;
@@ -25446,6 +25543,60 @@ export interface components {
             changed: number;
             /** @description The records left alone, each with its reason. */
             skipped: components["schemas"]["BulkSkip"][];
+            /** @description What an undo restored a record without, because it could not come back. */
+            left_behind?: components["schemas"]["BulkLeftBehind"][];
+            /**
+             * Format: uuid
+             * @description For an undo, the change it put back.
+             */
+            undo_of?: string;
+        };
+        /**
+         * @description One thing an undo could not bring back with its record. `kind` names the child table, or
+         *     `list` and `tag` for a membership or tag; `ref_id` is that row, list or tag.
+         */
+        BulkLeftBehind: {
+            /**
+             * Format: uuid
+             * @description The record that was restored.
+             */
+            id: string;
+            /** @enum {string} */
+            kind: "contact_email" | "contact_phone" | "contact_channel_identity" | "relationship" | "company_domain" | "company_relationship_type" | "partner" | "list" | "tag";
+            /** Format: uuid */
+            ref_id: string;
+        };
+        BulkUndoRequest: {
+            /** @description The token `previewBulkUndo` returned. Required above 10 records. */
+            confirm_token?: string;
+        };
+        /** @description One executed bulk change or undo, as `getBulkChange` reads it. */
+        BulkOperation: {
+            /** Format: uuid */
+            batch_id: string;
+            record_type: components["schemas"]["BulkRecordType"];
+            verb: components["schemas"]["BulkVerb"];
+            /**
+             * Format: uuid
+             * @description The new owner a reassignment named.
+             */
+            owner_id?: string;
+            /** @description The number of records changed. */
+            changed: number;
+            skipped: components["schemas"]["BulkSkip"][];
+            left_behind: components["schemas"]["BulkLeftBehind"][];
+            /**
+             * Format: uuid
+             * @description Set on an undo: the change it put back.
+             */
+            undo_of?: string;
+            /**
+             * Format: uuid
+             * @description Set once the change was undone: the undo that put it back.
+             */
+            undone_by?: string;
+            /** Format: date-time */
+            created_at: string;
         };
         TransferProjectOwnershipResult: {
             /** @description Live projects the caller could write that moved; archived and unwritable ones are not counted. */
@@ -43571,6 +43722,115 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
             /** @description The change would take this agent past its write budget for the window. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getBulkChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bulk change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkOperation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewBulkUndo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the undo would do. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkChangePreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    undoBulkChange: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkUndoRequest"];
+            };
+        };
+        responses: {
+            /** @description What was put back and what was skipped. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkChangeResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The undo would take this agent past its write budget for the window. */
             429: {
                 headers: {
                     [name: string]: unknown;

@@ -464,6 +464,8 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/brief/items/{itemId}/unsnooze":                                {Op: "unsnoozeBriefItem", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/bulk/execute":                                                 {Op: "executeBulkChange", Access: "tool", Tool: "bulk_update_records", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/bulk/preview":                                                 {Op: "previewBulkChange", Access: "tool", Tool: "bulk_update_records", RecordType: "", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/bulk/{id}/undo":                                               {Op: "undoBulkChange", Access: "tool", Tool: "bulk_update_records", RecordType: "", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/bulk/{id}/undo/preview":                                       {Op: "previewBulkUndo", Access: "tool", Tool: "bulk_update_records", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/capture/blocked-domains/{domain}/reopen":                      {Op: "reopenWithheldDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/consumer-mail-domains":                                {Op: "addConsumerMailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/counterparty-holds":                                   {Op: "createCaptureCounterpartyHold", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

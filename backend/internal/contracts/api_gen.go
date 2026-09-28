@@ -2737,6 +2737,45 @@ func (e BriefDeliveryWeeklyDelivery) Valid() bool {
 	}
 }
 
+// Defines values for BulkLeftBehindKind.
+const (
+	BulkLeftBehindKindCompanyDomain           BulkLeftBehindKind = "company_domain"
+	BulkLeftBehindKindCompanyRelationshipType BulkLeftBehindKind = "company_relationship_type"
+	BulkLeftBehindKindContactChannelIdentity  BulkLeftBehindKind = "contact_channel_identity"
+	BulkLeftBehindKindContactEmail            BulkLeftBehindKind = "contact_email"
+	BulkLeftBehindKindContactPhone            BulkLeftBehindKind = "contact_phone"
+	BulkLeftBehindKindList                    BulkLeftBehindKind = "list"
+	BulkLeftBehindKindPartner                 BulkLeftBehindKind = "partner"
+	BulkLeftBehindKindRelationship            BulkLeftBehindKind = "relationship"
+	BulkLeftBehindKindTag                     BulkLeftBehindKind = "tag"
+)
+
+// Valid indicates whether the value is a known member of the BulkLeftBehindKind enum.
+func (e BulkLeftBehindKind) Valid() bool {
+	switch e {
+	case BulkLeftBehindKindCompanyDomain:
+		return true
+	case BulkLeftBehindKindCompanyRelationshipType:
+		return true
+	case BulkLeftBehindKindContactChannelIdentity:
+		return true
+	case BulkLeftBehindKindContactEmail:
+		return true
+	case BulkLeftBehindKindContactPhone:
+		return true
+	case BulkLeftBehindKindList:
+		return true
+	case BulkLeftBehindKindPartner:
+		return true
+	case BulkLeftBehindKindRelationship:
+		return true
+	case BulkLeftBehindKindTag:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BulkRecordType.
 const (
 	BulkRecordTypeCompany BulkRecordType = "company"
@@ -2761,12 +2800,17 @@ func (e BulkRecordType) Valid() bool {
 // Defines values for BulkSkipReason.
 const (
 	BulkSkipReasonAnchorCompany       BulkSkipReason = "anchor_company"
+	BulkSkipReasonChangedSinceBatch   BulkSkipReason = "changed_since_batch"
 	BulkSkipReasonChangedSincePreview BulkSkipReason = "changed_since_preview"
+	BulkSkipReasonErased              BulkSkipReason = "erased"
+	BulkSkipReasonMerged              BulkSkipReason = "merged"
 	BulkSkipReasonNoChange            BulkSkipReason = "no_change"
+	BulkSkipReasonNoPreviousOwner     BulkSkipReason = "no_previous_owner"
 	BulkSkipReasonNotFound            BulkSkipReason = "not_found"
 	BulkSkipReasonNotPreviewed        BulkSkipReason = "not_previewed"
 	BulkSkipReasonNotWritable         BulkSkipReason = "not_writable"
 	BulkSkipReasonRefused             BulkSkipReason = "refused"
+	BulkSkipReasonValueTaken          BulkSkipReason = "value_taken"
 )
 
 // Valid indicates whether the value is a known member of the BulkSkipReason enum.
@@ -2774,9 +2818,17 @@ func (e BulkSkipReason) Valid() bool {
 	switch e {
 	case BulkSkipReasonAnchorCompany:
 		return true
+	case BulkSkipReasonChangedSinceBatch:
+		return true
 	case BulkSkipReasonChangedSincePreview:
 		return true
+	case BulkSkipReasonErased:
+		return true
+	case BulkSkipReasonMerged:
+		return true
 	case BulkSkipReasonNoChange:
+		return true
+	case BulkSkipReasonNoPreviousOwner:
 		return true
 	case BulkSkipReasonNotFound:
 		return true
@@ -2785,6 +2837,8 @@ func (e BulkSkipReason) Valid() bool {
 	case BulkSkipReasonNotWritable:
 		return true
 	case BulkSkipReasonRefused:
+		return true
+	case BulkSkipReasonValueTaken:
 		return true
 	default:
 		return false
@@ -22582,8 +22636,14 @@ type BulkChangeResult struct {
 	// Changed The number of records changed.
 	Changed int `json:"changed"`
 
+	// LeftBehind What an undo restored a record without, because it could not come back.
+	LeftBehind *[]BulkLeftBehind `json:"left_behind,omitempty"`
+
 	// Skipped The records left alone, each with its reason.
 	Skipped []BulkSkip `json:"skipped"`
+
+	// UndoOf For an undo, the change it put back.
+	UndoOf *openapi_types.UUID `json:"undo_of,omitempty"`
 }
 
 // BulkItem One selected record and the version the caller was shown.
@@ -22592,6 +22652,45 @@ type BulkItem struct {
 
 	// Version The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.
 	Version int64 `json:"version"`
+}
+
+// BulkLeftBehind One thing an undo could not bring back with its record. `kind` names the child table, or
+// `list` and `tag` for a membership or tag; `ref_id` is that row, list or tag.
+type BulkLeftBehind struct {
+	// Id The record that was restored.
+	Id    openapi_types.UUID `json:"id"`
+	Kind  BulkLeftBehindKind `json:"kind"`
+	RefId openapi_types.UUID `json:"ref_id"`
+}
+
+// BulkLeftBehindKind defines model for BulkLeftBehind.Kind.
+type BulkLeftBehindKind string
+
+// BulkOperation One executed bulk change or undo, as `getBulkChange` reads it.
+type BulkOperation struct {
+	BatchId openapi_types.UUID `json:"batch_id"`
+
+	// Changed The number of records changed.
+	Changed    int              `json:"changed"`
+	CreatedAt  time.Time        `json:"created_at"`
+	LeftBehind []BulkLeftBehind `json:"left_behind"`
+
+	// OwnerId The new owner a reassignment named.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+	Skipped    []BulkSkip     `json:"skipped"`
+
+	// UndoOf Set on an undo: the change it put back.
+	UndoOf *openapi_types.UUID `json:"undo_of,omitempty"`
+
+	// UndoneBy Set once the change was undone: the undo that put it back.
+	UndoneBy *openapi_types.UUID `json:"undone_by,omitempty"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
 }
 
 // BulkRecordState The two facts a bulk change can move on a record.
@@ -22635,6 +22734,11 @@ type BulkSkip struct {
 	// `anchor_company`: it is the installation's own company, which is never archived.
 	// `not_previewed`: the preview whose token this execution presents did not list it.
 	// `refused`: a single-record rule refuses it; `code` says which.
+	//
+	// An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+	// `merged`: it was merged into another record. `erased`: its personal data was erased or
+	// purged. `value_taken`: another live record now holds its email or domain.
+	// `no_previous_owner`: it had no owner before the reassignment.
 	Reason BulkSkipReason `json:"reason"`
 }
 
@@ -22644,7 +22748,18 @@ type BulkSkip struct {
 // `anchor_company`: it is the installation's own company, which is never archived.
 // `not_previewed`: the preview whose token this execution presents did not list it.
 // `refused`: a single-record rule refuses it; `code` says which.
+//
+// An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+// `merged`: it was merged into another record. `erased`: its personal data was erased or
+// purged. `value_taken`: another live record now holds its email or domain.
+// `no_previous_owner`: it had no owner before the reassignment.
 type BulkSkipReason string
+
+// BulkUndoRequest defines model for BulkUndoRequest.
+type BulkUndoRequest struct {
+	// ConfirmToken The token `previewBulkUndo` returned. Required above 10 records.
+	ConfirmToken *string `json:"confirm_token,omitempty"`
+}
 
 // BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
 // `archive` retires it exactly as the single-record archive does.
@@ -43594,6 +43709,25 @@ type ExecuteBulkChangeParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// UndoBulkChangeParams defines parameters for UndoBulkChange.
+type UndoBulkChangeParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListMyCaptureActivityParams defines parameters for ListMyCaptureActivity.
 type ListMyCaptureActivityParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -48479,6 +48613,9 @@ type ExecuteBulkChangeJSONRequestBody = BulkChangeExecuteRequest
 
 // PreviewBulkChangeJSONRequestBody defines body for PreviewBulkChange for application/json ContentType.
 type PreviewBulkChangeJSONRequestBody = BulkChangePreviewRequest
+
+// UndoBulkChangeJSONRequestBody defines body for UndoBulkChange for application/json ContentType.
+type UndoBulkChangeJSONRequestBody = BulkUndoRequest
 
 // SetBlockedDomainJSONRequestBody defines body for SetBlockedDomain for application/json ContentType.
 type SetBlockedDomainJSONRequestBody = SetBlockedDomainRequest
@@ -59591,6 +59728,15 @@ type ServerInterface interface {
 	// Say what one change over a selection of records would do, without doing it.
 	// (POST /bulk/preview)
 	PreviewBulkChange(w http.ResponseWriter, r *http.Request)
+	// Read what one bulk change did, and whether it was undone.
+	// (GET /bulk/{id})
+	GetBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Put back what one bulk change did, record by record.
+	// (POST /bulk/{id}/undo)
+	UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UndoBulkChangeParams)
+	// Say what undoing one bulk change would do, without doing it.
+	// (POST /bulk/{id}/undo/preview)
+	PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
@@ -62018,6 +62164,24 @@ func (_ Unimplemented) ExecuteBulkChange(w http.ResponseWriter, r *http.Request,
 // Say what one change over a selection of records would do, without doing it.
 // (POST /bulk/preview)
 func (_ Unimplemented) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read what one bulk change did, and whether it was undone.
+// (GET /bulk/{id})
+func (_ Unimplemented) GetBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back what one bulk change did, record by record.
+// (POST /bulk/{id}/undo)
+func (_ Unimplemented) UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UndoBulkChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what undoing one bulk change would do, without doing it.
+// (POST /bulk/{id}/undo/preview)
+func (_ Unimplemented) PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69781,6 +69945,132 @@ func (siw *ServerInterfaceWrapper) PreviewBulkChange(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewBulkChange(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) GetBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBulkChange(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) UndoBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoBulkChangeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoBulkChange(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBulkUndo operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBulkUndo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBulkUndo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -95413,6 +95703,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/bulk/preview", wrapper.PreviewBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/bulk/{id}", wrapper.GetBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/{id}/undo", wrapper.UndoBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/{id}/undo/preview", wrapper.PreviewBulkUndo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/activity", wrapper.ListMyCaptureActivity)
