@@ -47,9 +47,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The reading keeps its step's ink: a secondary grey falls under AA on the
+   deeper shades, so the name stands out by weight rather than by colour. */
 .stage-strip-reading {
   font: var(--fontBodySmall);
-  color: var(--textSecondary);
 }
 
 /* The ways out, stacked at the end and set off from the run by a wider gap. */
@@ -83,9 +84,6 @@
   color: var(--dangerText);
   background: var(--dangerSurface);
   border-color: var(--dangerBorder);
-}
-.stage-strip-outcome .stage-strip-reading {
-  color: inherit;
 }
 
 /* Compact: a thin bar for a list row. Same shading, no words. */
