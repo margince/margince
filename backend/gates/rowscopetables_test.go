@@ -449,5 +449,16 @@ const (
 	// nullable contact id used to decide which entity an audit row hangs from.
 	// A match on two records takes the first and the stop is unaffected either
 	// way, because the suppression itself deliberately names no contact.
-	modulesTierUnscopedCeiling = 105
+	//
+	// 106: privacy.contactsMatchingSuppression walks every live contact_email
+	// in the installation, hashes it against the erasure-suppression list and
+	// hands back the ids of subjects an erasure already ended — a restore or a
+	// re-import having put them back.
+	//
+	// Unscoped ON PURPOSE. The suppression list has no tenant predicate and
+	// nothing for one to key on (storekit/suppression.go, ADR-0091 and
+	// ADR-0061), so narrowing the pass to one seat's rows would leave a
+	// resurrected subject standing everywhere that seat cannot reach. The
+	// reference never leaves: the ids go straight into EraseContact.
+	modulesTierUnscopedCeiling = 106
 )

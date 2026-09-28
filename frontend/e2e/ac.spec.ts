@@ -4,7 +4,7 @@ import { meFixture } from "../src/app/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
-import { mockApi } from "./seed";
+import { anna, mockApi } from "./seed";
 import { pageOverflow, textsOf } from "./waits";
 
 /**
@@ -3025,4 +3025,61 @@ test("the shared links drawer is worked by the keyboard alone", async ({
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
   await expect(trigger).toBeFocused();
+});
+
+// The contact header's access chip, OPEN. Its panel is portalled over the page
+// and carries the record's one radio group, so neither the closed-header sweeps
+// above nor the chip's own unit suite judges it: contrast of the sentence and
+// the switch on the popover ground, the group's name, and focus landing inside.
+// The route answers the contact as shared and owned by the session's own user,
+// who may write it: the case that draws the switch.
+test.describe("the contact's access panel, open", () => {
+  const schemes: readonly ("light" | "dark")[] = ["light", "dark"];
+  for (const colorScheme of schemes) {
+    test(`no AA violations with it open (${colorScheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme });
+      // A reader who may change it, so the switch is drawn and judged.
+      await page.route(/\/v1\/me$/, (route) =>
+        route.fulfill({
+          json: meFixture({ allow: { contact: ["read", "update"] } }),
+        }),
+      );
+      await page.route("**/contacts/p-anna/360", (route) =>
+        route.fulfill({
+          json: {
+            as_of: "2026-06-20T09:00:00Z",
+            contact: {
+              ...anna,
+              visibility: "workspace",
+              owner_id: meFixture().user.id,
+            },
+            sections_omitted: [],
+          },
+        }),
+      );
+      await page.goto("/#/contacts/p-anna");
+      await page.waitForLoadState("networkidle");
+      await expectShellRendered(page);
+      const title = new RegExp(de["recordAccess.contact.title"]);
+      const chip = page.getByRole("button", { name: title });
+      await chip.click();
+      const panel = page.getByRole("region", { name: title });
+      await expect(panel).toBeVisible();
+      // A press carries focus into the panel, onto its first answer.
+      await expect(
+        panel.getByRole("radio", { name: de["recordAccess.option.owner"] }),
+      ).toBeFocused();
+      await expect(
+        panel.getByRole("radio", { name: de["recordAccess.option.workspace"] }),
+      ).toBeChecked();
+      await settleAnimations(page);
+      await expectNoAaViolations(
+        page,
+        `contacts/p-anna access (${colorScheme})`,
+      );
+      await page.keyboard.press("Escape");
+      await expect(panel).toBeHidden();
+      await expect(chip).toBeFocused();
+    });
+  }
 });

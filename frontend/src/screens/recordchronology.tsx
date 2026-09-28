@@ -6,6 +6,7 @@ import { activityTimeline } from "../design-system/activitytimeline";
 import { EmptyState, PendingBody } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
 import { FilterPills } from "../design-system/filterpills";
+import type { RecordContact } from "../design-system/participants";
 import type { RecordTimeline } from "../design-system/recordtimeline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -84,15 +85,6 @@ export function ChronologyFilter({
   // threads alone, drawn as conversations rather than as chronicle rows.
   // Opt-in per page: the pill only stands where the page renders the cut.
   conversations?: boolean;
-  // Whether the caller has narrowed the exchanges — by kind, by words, by a
-  // date range. A narrowed read is a question about what was SAID, and a field
-  // edit is not a meeting: leaving the changes in answered a question nobody
-  // asked, and the reader who picked Meetings got a list of record edits with
-  // two meetings in it.
-  //
-  // It also stops the change read from being made at all, which is the honest
-  // consequence: a feed whose rows cannot appear should not be fetched.
-  narrowed?: boolean;
   onFilter: (next: TimelineFilter) => void;
 }>) {
   const t = useT();
@@ -169,6 +161,7 @@ export function useRecordChronology({
   renderActions,
   onOpenEmail,
   values,
+  about,
 }: Readonly<{
   kind: EntityKind;
   recordId: string;
@@ -203,6 +196,9 @@ export function useRecordChronology({
   // holds. One object because they travel together — a row that scaled its
   // money and still printed a uuid would be half-read.
   values: HistoryValueCtx;
+  // The contact whose chronology this is, when it is one: a message whose
+  // phrase names it draws its face on its record rather than on the phrase.
+  about?: RecordContact;
 }>): RecordChronology {
   const t = useT();
   const viewerId = useViewerId();
@@ -233,6 +229,7 @@ export function useRecordChronology({
           locale: values.locale,
         }
       : undefined,
+    about,
   ).map((entry) =>
     // Only an email has a drawer to open, and only when the caller has one to
     // open it in.

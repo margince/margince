@@ -2988,6 +2988,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 aside={dealContext(deal)}
                 asideOpen={details.open}
                 name={deal.name}
+                identity={deal.id}
                 // One rung under the record scale: the name is still the
                 // largest thing on the page, but beside a work column that
                 // opens on the reader's ask it no longer needs to be the size

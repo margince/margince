@@ -210,7 +210,7 @@ enforcement: the server checks again regardless.
 
 ### Why can't I see a record?
 When you cannot see a record in Margince, one of three things is true: the record is private to its owner, it is correspondence you were not part of, or the link names a record that does not exist. Margince answers all three with **not found**, so a leaked link reveals nothing.
-Ask the record's owner to share it with you (**Share** on the record) or to choose **Share with all users**. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
+Ask the record's owner to share it with you (**Share** on the record) or to choose **All users in the company** behind the access chip under the record's name. An administrator's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.
 
 ### How do I share a record with a colleague?
@@ -228,18 +228,19 @@ To take back a share in Margince, open the record, choose **Share**, find the co
 Also called: unshare, remove access.
 
 ### How do I make a contact or company visible to everyone?
-To make a private contact or company visible to the whole company, open it and use **Who can see this contact** (or **Who can see this company**) in its header, then choose **Share with all users**. To hide it again, choose **Make private**.
-A record set to owner-only with **no owner** is refused, because no seat could then read it.
+To make a private contact or company visible to the whole company, open it, press the access chip under its name (it reads **Private**), choose **All users in the company** and press **Save**. Nothing changes until you press **Save**, so moving through the answers with the arrow keys is safe. To hide it again, press the chip (it now reads **Shared**), choose **Only the owner** and press **Save**; users and teams it was shared with keep access. **Manage access** in the same panel opens the full list of who can open the record and why. The choice is offered only to someone who may change the record; anyone else, and anyone on an archived record, sees the reason instead.
+A record with **no owner** cannot be made owner-only, because no seat could then read it: **Only the owner** is greyed out with "Assign an owner first." If you are not the owner, **Only the owner** warns "You lose access unless it is shared with you or your team." and, if no share reaches you, Margince takes you back to the list.
 Also called: publish a contact, make public, make private.
 
 ## Who can see this record
 
-A contact and a company each carry the answer on their own header, in one
-place, with the control that changes it:
+A contact and a company each carry the answer under their own name, as one
+chip that reads **Shared** or **Private**. Pressing it opens one sentence saying
+who can see the record, the choice that changes it, and **Manage access**:
 
-- **Private to its owner**: "Private to its owner. No one else in the company
-  can see this contact, including team members and administrators."
-- **Shared with the company**: "All users in the company can see this contact."
+- **Private**, read by its owner: "Only you and the users or teams it was shared with can see this contact."
+- **Private**, read by anyone else who can open it, naming the owner: "Private to Mira Voss. You can see this contact because it was shared with you or your team." A private record reaches nobody else, an administrator included; a share is the only way in.
+- **Shared**: "All users in the company can see this contact."
 
 Both directions are ordinary edits on both record types. That matters most for
 a record capture created: a company created from a message nothing has judged
@@ -248,8 +249,8 @@ waiting for a machine to decide.
 
 Making a company private again does not re-hide what is filed against it: "This
 company is now private to its owner. Deals, contacts and mail filed against it
-keep their own visibility." Making a contact private keeps access for users it
-was shared with directly.
+keep their own visibility." Making a contact private keeps access for users and
+teams it was shared with.
 
 The write is also refused if your permission to make it lapsed while you were
 deciding, rather than landing on an answer you no longer hold.

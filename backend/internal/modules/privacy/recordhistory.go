@@ -224,10 +224,13 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		}
 		cursor, useCursor = c, true
 	}
-	mask := defaultFieldMasks[f.EntityType]
+	mask, err := withheldHistoryOf(ctx, f.EntityType)
+	if err != nil {
+		return RecordHistoryPage{}, err
+	}
 
 	page := RecordHistoryPage{Entries: []RecordHistoryEntry{}}
-	err := db.Tx(ctx, func(tx pgx.Tx) error {
+	err = db.Tx(ctx, func(tx pgx.Tx) error {
 		// activity carries no owner_id — it row-scopes through its links,
 		// so its visibility check dispatches to EnsureActivityContentVisible.
 		var visErr error

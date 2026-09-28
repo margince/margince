@@ -34,6 +34,8 @@ type CreateLeadInput struct {
 	SourceSystem        *string
 	SourceID            *string
 	Source              string
+	// Author is who wrote it in the system it came from; zero when unknown.
+	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (customfields.go).
@@ -203,14 +205,18 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	// The initial score is the §3 fit component — a fresh lead has no
 	// behavioral history yet; signal recompute moves it later.
 	fit := ScoreLeadDetail(deref(in.Title), intents.Of(in.Source), nil, time.Now().UTC())
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
+		return ids.LeadID{}, err
+	}
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 	})
+	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
-		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by`+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15`+cfHolders+`)`,
+		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by`+authorCols+cfCols+`)
+		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an

@@ -1,11 +1,17 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { RecordZoneProvider } from "../app/recordzone";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, useT } from "../i18n";
 import { LoadMoreButton } from "../screens/common";
 import { withEmailOpener } from "../screens/openemail";
 import { groupChronology } from "../screens/timelinegroups";
@@ -470,5 +476,40 @@ describe("a record timeline you can work in", () => {
     // And not the body: a message must not fall back to the raw text when the
     // server composed a preview for it.
     expect(screen.queryByText(/Long body with a signature/)).toBeNull();
+  });
+});
+
+describe("the contacts a row names", () => {
+  // Two records can carry one name: the line of names says it once, and the
+  // faces keep the two apart by record.
+  it("names two contacts who share a name once, and keeps both faces", () => {
+    const { result } = renderHook(() => useT(), {
+      wrapper: ({ children }) => (
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      ),
+    });
+    const [entry] = activityTimeline(
+      [
+        activity({
+          id: "a-3",
+          subject: "Depot visit",
+          occurred_at: "2026-08-12T09:00:00Z",
+          direction: "inbound",
+          links: [
+            { entity_type: "contact", entity_id: "p-ida" },
+            { entity_type: "contact", entity_id: "p-ida-2" },
+          ],
+        }),
+      ],
+      undefined,
+      undefined,
+      { nameOf: () => "Ida Keller", t: result.current, locale: "en" },
+    );
+
+    expect(entry.counterparts).toBe("Ida Keller");
+    expect(entry.counterpartContacts?.map((contact) => contact.key)).toEqual([
+      "p-ida",
+      "p-ida-2",
+    ]);
   });
 });

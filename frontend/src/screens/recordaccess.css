@@ -1,19 +1,12 @@
-.record-access .visibility-line {
-  align-items: center;
+/* The answer behind the access chip: who reads the record, the switch, and
+   the way to the full list, down the popover at one step apart. */
+.record-access-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
 }
 
-/* Reserve the action's space so hovering does not move the header. Keyboard
-   focus reveals it too; touch readers always get the visible action. */
-@media (hover: hover) and (pointer: fine) {
-  .record-access-action {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .record-access:hover .record-access-action,
-  .record-access:focus-within .record-access-action,
-  .record-access-action[aria-busy="true"] {
-    opacity: 1;
-    pointer-events: auto;
-  }
+.record-access-panel > p {
+  margin: 0;
 }

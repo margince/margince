@@ -82,7 +82,9 @@ export function CompanyHeaderActions({
         </p>
       )}
       {!archived && logGrantKnown && !canLog && (
-        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
+        <p className="t-caption" id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </p>
       )}
       <CompanyWriteEmail
         company={company}

@@ -692,6 +692,7 @@ export const vi = {
   "search.group.tag": "Tag",
   "search.kind.contact": "Liên hệ",
   "search.kind.company": "Tổ chức",
+  "search.kind.partnerCompany": "Tổ chức đối tác",
   "search.kind.deal": "Deal",
   "search.kind.project": "Dự án",
   "search.kind.product": "Sản phẩm",
@@ -706,6 +707,9 @@ export const vi = {
   "search.tag.carriedBy_other": "Trên {count} bản ghi",
   "search.tier.mirrored": "Từ hệ thống đã kết nối",
   "search.tier.unverified": "Chưa xác minh",
+  "search.partner.badge": "Đối tác",
+  "search.partner.open": "Mở hồ sơ đối tác",
+  "search.partner.openNamed": "Mở hồ sơ đối tác của {name}",
 
   "context.recentTouches": "Trao đổi gần đây",
   "context.openTasks": "Công việc đang mở",
@@ -2034,7 +2038,7 @@ export const vi = {
   "visibility.workspace": "Được chia sẻ",
   "visibility.participants": "Người tham gia",
   "visibility.selected": "Được chọn",
-  "visibility.private": "Chỉ bạn",
+  "visibility.private": "Riêng tư",
   "visibility.withheld": "Bị giữ lại",
   "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
@@ -3821,30 +3825,41 @@ export const vi = {
   "log.saving": "Đang ghi nhận…",
 
   "recordAccess.contact.title": "Ai xem được liên hệ này",
-  "recordAccess.contact.privateToYou":
-    "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
   "recordAccess.contact.shared":
     "Mọi người trong tổ chức đều xem được liên hệ này.",
-  "recordAccess.contact.privateTip":
-    "Chỉ bạn thấy được liên hệ này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
-  "recordAccess.contact.share": "Chia sẻ với tổ chức",
+  "recordAccess.contact.privateYours":
+    "Chỉ bạn và những người hoặc nhóm được chia sẻ mới xem được liên hệ này.",
+  "recordAccess.contact.privateOf":
+    "Riêng của {owner}. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.contact.privateOfOwner":
+    "Riêng của chủ sở hữu. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.contact.published": "Tổ chức đã xem được liên hệ này.",
-  "recordAccess.contact.makePrivate": "Đặt ở chế độ riêng tư",
   "recordAccess.contact.madePrivate":
-    "Liên hệ này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Những người hoặc nhóm đã được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.contact.leftYourAccess":
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
   "recordAccess.company.title": "Ai xem được công ty này",
-  "recordAccess.company.privateToYou":
-    "Riêng của bạn. Hộp thư của bạn đã tạo công ty này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
   "recordAccess.company.shared":
     "Mọi người trong tổ chức đều xem được công ty này.",
-  "recordAccess.company.privateTip":
-    "Chỉ bạn thấy được công ty này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
-  "recordAccess.company.share": "Chia sẻ với tổ chức",
+  "recordAccess.company.privateYours":
+    "Chỉ bạn và những người hoặc nhóm được chia sẻ mới xem được công ty này.",
+  "recordAccess.company.privateOf":
+    "Riêng của {owner}. Bạn xem được công ty này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.company.privateOfOwner":
+    "Riêng của chủ sở hữu. Bạn xem được công ty này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.company.published": "Tổ chức đã xem được công ty này.",
-  "recordAccess.company.makePrivate": "Đặt ở chế độ riêng tư",
   "recordAccess.company.madePrivate":
     "Công ty này thuộc về chủ sở hữu trở lại. Các deal, liên hệ và email đã lưu vào công ty vẫn giữ phạm vi hiển thị riêng của chúng.",
-  "recordAccess.whoHasAccess": "Ai có quyền truy cập",
+  "recordAccess.company.leftYourAccess":
+    "Công ty này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
+  "recordAccess.option.owner": "Chỉ chủ sở hữu",
+  "recordAccess.option.ownerHint":
+    "Những người hoặc nhóm được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.option.ownerHintNotYours":
+    "Bạn sẽ mất quyền truy cập, trừ khi nó được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.option.ownerNeeded": "Hãy chỉ định chủ sở hữu trước.",
+  "recordAccess.option.workspace": "Cả tổ chức",
+  "recordAccess.manage": "Quản lý quyền truy cập",
   "whoCanSee.title": "Ai xem được bản ghi này",
   "whoCanSee.group.owner": "Chủ sở hữu",
   "whoCanSee.group.shared": "Chia sẻ trực tiếp",

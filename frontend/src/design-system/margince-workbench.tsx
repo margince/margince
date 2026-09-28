@@ -92,8 +92,8 @@ export function MarginceWorkbench({
   contact?: Readonly<{
     name: string;
     detail: string;
-    /** What the chip's tint is keyed on — see `Avatar.identity`. */
-    identity?: string;
+    /** The seat's user id, which keys the chip — see `Avatar.identity`. */
+    identity: string;
   }>;
   /**
    * Rail only: a control at the right-hand end of the contact row. The rail has
@@ -190,12 +190,9 @@ export function MarginceWorkbench({
             <div className="mw-contact">
               {contact && (
                 <>
-                  {/* The design system's chip, not a second one. This was a
-                      hand-rolled span taking ONE letter and a hard-coded
-                      `--mono0Fill`, so every reader was the same colour and a
-                      different letter count from the same contact's chip in the
-                      transcript three columns away — which that transcript's
-                      own comment claims it matches. */}
+                  {/* The design system's chip, not a second one: a
+                      hand-rolled chip drew every reader alike and disagreed
+                      with the same contact's chip in the transcript. */}
                   <Avatar identity={contact.identity} name={contact.name} />
                   <span className="mw-contact-id">
                     <b>{contact.name}</b>

@@ -17,6 +17,12 @@ var (
 	selfHostedLane = &DecisionsConfig{Provider: providerJevCompatible, Model: "typed-decisions", BaseURL: "http://127.0.0.1:8767/v1/systemone"}
 )
 
+// The local-only cases here all read "" because localOnlyAdmits is currently
+// unconditional (#6396, pending #3351) — this proves decisionSkipFor reads
+// that one shared predicate rather than reimplementing the check, not that a
+// local-only task is unrestricted forever. TestServableLadderReadsTheSame
+// PredicateAsTheDecisionLane (router_test.go) is the ladder's half of the
+// same claim.
 func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) {
 	cases := []struct {
 		name string
@@ -26,13 +32,8 @@ func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) 
 	}{
 		{"unbound", nil, TaskSiteTriage, DecisionSkipUnbound},
 		{"jev on a cloud task", jevLane, TaskSiteTriage, ""},
-		{"jev on a local-only task", jevLane, TaskCaptureCounterpartyVerdict, DecisionSkipLocalOnly},
-		{"the official API on a local-only task", &DecisionsConfig{Provider: providerJev, Model: "jev-1.13.0"}, TaskCaptureCounterpartyVerdict, DecisionSkipLocalOnly},
-		{"self-hosted on a cloud task", selfHostedLane, TaskSiteTriage, ""},
+		{"jev on a local-only task", jevLane, TaskCaptureCounterpartyVerdict, ""},
 		{"self-hosted on a local-only task", selfHostedLane, TaskCaptureCounterpartyVerdict, ""},
-		{"a private-range endpoint on a local-only task", &DecisionsConfig{Provider: providerJevCompatible, Model: "m", BaseURL: "http://10.0.4.2:8767/v1/systemone"}, TaskCaptureCounterpartyVerdict, ""},
-		{"a named endpoint on a local-only task", &DecisionsConfig{Provider: providerJevCompatible, Model: "m", BaseURL: "http://gpu.internal:8767/v1/systemone"}, TaskCaptureCounterpartyVerdict, DecisionSkipLocalOnly},
-		{"an unknown provider is not local", &DecisionsConfig{Provider: "jevv"}, TaskCaptureConfidentialityVerdict, DecisionSkipLocalOnly},
 	}
 	for _, tc := range cases {
 		if got := decisionSkipFor(tc.lane, tc.task); got != tc.want {
@@ -40,7 +41,7 @@ func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) 
 		}
 	}
 	if len(LocalOnlyTasks()) == 0 {
-		t.Fatal("no local-only task declared: the local_only cases above prove nothing")
+		t.Fatal("no local-only task declared: the cases above prove nothing")
 	}
 }
 

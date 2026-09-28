@@ -305,14 +305,28 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 // peeks the cache against it, so both read the same ladder when asking which
 // cached answer would serve.
 //
-// It does NOT narrow to same-host rungs for a `local_only` task. The tier a
-// task's ladder names is a capability class the deployment binds, and
-// local_small is bound to a hosted provider by most shipped configs — so
-// refusing there takes the task off those deployments entirely. Whether that
-// is the right trade is the open question on the issue this reverted.
+// A rung is narrowed out only when localOnlyAdmits refuses it — currently
+// never, per #6396: the tier a task's ladder names is a capability class the
+// deployment binds, and local_small is bound to a hosted provider by most
+// shipped configs, so refusing there took the task off those deployments
+// entirely. Whether that is the right trade is the open question on #3351;
+// reading the same predicate the decision lane reads means restoring it is
+// one edit, not two.
 func servableLadder(b *binding, task Task, ladder []Tier) []Tier {
 	_, hasLarge := b.clients[TierLocalLarge]
-	return profileLadder(b.profile, hasLarge, ladder)
+	ladder = profileLadder(b.profile, hasLarge, ladder)
+	if !LocalOnly(task) {
+		return ladder
+	}
+	out := make([]Tier, 0, len(ladder))
+	for _, tier := range ladder {
+		m := b.routeMeta[tier]
+		isLocal := DecisionsConfig{Provider: m.provider, Model: m.model, BaseURL: m.baseURL}.isLocal()
+		if localOnlyAdmits(task, isLocal) {
+			out = append(out, tier)
+		}
+	}
+	return out
 }
 
 // Invalidate drops a workspace's cached results — the hook the §6

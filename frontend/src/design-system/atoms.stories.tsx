@@ -335,7 +335,7 @@ export const BadgeInsideUppercaseParent: Story = {
 };
 
 // The chip is an IDENTIFIER, so the states that matter are the ones where two
-// chips must be told apart or recognised as one record: every size, the tint a
+// chips must be told apart or recognised as one record: every size, the mesh a
 // record keeps on every page, and a name with no space in it.
 export const Avatars: Story = {
   render: () => (
@@ -343,23 +343,23 @@ export const Avatars: Story = {
       <div style={stack}>
         <span className="t-label">The four sizes</span>
         <div style={row}>
-          <Avatar name="Alice Müller" size="sm" />
-          <Avatar name="Alice Müller" size="md" />
-          <Avatar name="Alice Müller" size="lg" />
-          <Avatar name="Alice Müller" size="xl" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="sm" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="md" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="lg" />
+          <Avatar name="Alice Müller" identity="Alice Müller" size="xl" />
         </div>
       </div>
       <div style={stack}>
         <span className="t-label">
-          Six tones, picked from the record and never stored
+          A mesh per record, derived from its key and never stored
         </span>
         <div style={row}>
-          <Avatar name="Alice Müller" />
-          <Avatar name="Bob Schmidt" />
-          <Avatar name="Carol Wagner" />
-          <Avatar name="Voltaq Systems" />
-          <Avatar name="Northwind Handel" />
-          <Avatar name="Dara O'Brien" />
+          <Avatar name="Alice Müller" identity="Alice Müller" />
+          <Avatar name="Bob Schmidt" identity="Bob Schmidt" />
+          <Avatar name="Carol Wagner" identity="Carol Wagner" />
+          <Avatar name="Voltaq Systems" identity="Voltaq Systems" />
+          <Avatar name="Northwind Handel" identity="Northwind Handel" />
+          <Avatar name="Dara O'Brien" identity="Dara O'Brien" />
         </div>
       </div>
       <div style={stack}>
@@ -367,17 +367,16 @@ export const Avatars: Story = {
           The names a monogram rule usually gets wrong
         </span>
         <div style={row}>
-          <Avatar name="jane.doe@example.com" />
-          <Avatar name="Müller" />
-          <Avatar name="van der Berg" />
-          <Avatar name="李" />
-          <Avatar name="Ana-Sofía Ruiz" />
+          <Avatar name="jane.doe@example.com" identity="jane.doe@example.com" />
+          <Avatar name="Müller" identity="Müller" />
+          <Avatar name="van der Berg" identity="van der Berg" />
+          <Avatar name="李" identity="李" />
+          <Avatar name="Ana-Sofía Ruiz" identity="Ana-Sofía Ruiz" />
         </div>
       </div>
       <div style={stack}>
         <span className="t-label">
-          Same record, same colour — keyed on an id, so a rename does not move
-          it
+          Same record, same mesh — keyed on an id, so a rename does not move it
         </span>
         <div style={row}>
           <Avatar identity="company_7f3" name="Voltaq Systems" />
@@ -391,6 +390,7 @@ export const Avatars: Story = {
         <div style={row}>
           <Avatar
             name="Northwind Handel"
+            identity="Northwind Handel"
             size="md"
             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b7a53'/%3E%3C/svg%3E"
           />
@@ -401,6 +401,7 @@ export const Avatars: Story = {
               request as a story that did not render clean. */}
           <Avatar
             name="Northwind Handel"
+            identity="Northwind Handel"
             size="md"
             src="data:image/png;base64,AAAA"
           />
@@ -414,15 +415,15 @@ export const Avatars: Story = {
         <div style={row}>
           <AvatarStack
             contacts={[
-              { name: "Alice Müller" },
-              { name: "Bob Schmidt" },
-              { name: "Carol Wagner" },
-              { name: "Dara O'Brien" },
-              { name: "Eve Lindqvist" },
-              { name: "Frank Osei" },
+              { name: "Alice Müller", identity: "Alice Müller" },
+              { name: "Bob Schmidt", identity: "Bob Schmidt" },
+              { name: "Carol Wagner", identity: "Carol Wagner" },
+              { name: "Dara O'Brien", identity: "Dara O'Brien" },
+              { name: "Eve Lindqvist", identity: "Eve Lindqvist" },
+              { name: "Frank Osei", identity: "Frank Osei" },
             ]}
           />
-          <Avatar name="Alice Müller" />
+          <Avatar name="Alice Müller" identity="Alice Müller" />
         </div>
       </div>
     </div>

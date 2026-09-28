@@ -91,7 +91,7 @@ function Pane({
           />
           {/* The agent's own verb: it writes the draft, so the chip is tinted. */}
           <TodoRow
-            who="Lena Fischer"
+            who={{ name: "Lena Fischer", identity: "contact-lena" }}
             title={taskTitle}
             meta="Lena Fischer · promised 05/08"
             due={{ label: "19 days late", tone: "danger" }}
@@ -100,7 +100,7 @@ function Pane({
           {/* The same row shape for a commitment nobody automated: the verb
               opens the record and the hue stays out of it. */}
           <TodoRow
-            who="Tomas Beck"
+            who={{ name: "Tomas Beck", identity: "contact-tomas" }}
             title="Confirm the depot slot with facilities"
             meta="Tomas Beck · due 12/08"
             due={{ label: "in 3 days" }}

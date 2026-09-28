@@ -137,6 +137,38 @@ describe("ChoiceList", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("refuses one answer alone, reading its reason with it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ChoiceList
+        legend="Which conversations go into the CRM?"
+        value="only_chosen"
+        choices={[
+          {
+            ...CHOICES[0],
+            disabled: true,
+            description: "Connect a mailbox first.",
+          },
+          CHOICES[1],
+        ]}
+        onChange={onChange}
+      />,
+    );
+
+    const refused = screen.getByRole("radio", {
+      name: /Everyone I talk to.*Connect a mailbox first\./,
+    });
+    expect(refused.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen
+        .getByRole("radio", { name: /Only the contacts I choose/ })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+    await user.click(screen.getByText("Connect a mailbox first."));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("groups two lists apart, so one page's two questions are not one", () => {
     render(
       <>

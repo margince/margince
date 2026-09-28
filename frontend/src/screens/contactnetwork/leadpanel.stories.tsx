@@ -59,6 +59,7 @@ function Lead({ candidate }: Readonly<{ candidate: RouteCandidate }>) {
     <LeadPanel
       route={candidate}
       targetName="Dana Buyer"
+      targetId="contact-dana"
       blocked={availabilityLabel(candidate.availability, t)}
       onAsk={() => undefined}
     />

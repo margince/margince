@@ -305,7 +305,6 @@ function MarkPreview({
     <Avatar
       identity={profile.company_id}
       name={profile.display_name}
-      shape="company"
       size="xl"
     />
   );

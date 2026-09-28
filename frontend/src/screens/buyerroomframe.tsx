@@ -212,7 +212,10 @@ export function ContactCard({
     <Panel>
       <PanelBody>
         <div className="buyer-contact">
-          {stewardName ? <Avatar name={stewardName} size="md" /> : null}
+          {/* A buyer is sent no seat ids, so the steward's name is the key. */}
+          {stewardName ? (
+            <Avatar name={stewardName} identity={stewardName} size="md" />
+          ) : null}
           <div className="buyer-contact-id">
             <Eyebrow as="span">{t("buyer.contactEyebrow")}</Eyebrow>
             {stewardName ? <p className="t-h3">{stewardName}</p> : null}

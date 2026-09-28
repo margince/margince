@@ -4,6 +4,7 @@
 package privacy
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,7 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func strPtr(s string) *string { return &s }
@@ -281,10 +284,10 @@ func TestRecordHistoryEntryMasksBothPayloadSidesByOmission(t *testing.T) {
 		}
 	}
 
-	// The default mask is empty: the payload passes through whole.
-	entry = recordHistoryEntry(row, defaultFieldMasks["contact"])
+	// A reader whose role withholds nothing: the payload passes through whole.
+	entry = recordHistoryEntry(row, nil)
 	if entry.Before["iban"] != "DE01" || entry.After["iban"] != "DE02" {
-		t.Errorf("empty default mask must pass the payload through: before %v after %v", entry.Before, entry.After)
+		t.Errorf("an empty mask must pass the payload through: before %v after %v", entry.Before, entry.After)
 	}
 }
 
@@ -303,7 +306,7 @@ func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
 		},
 	}
 
-	entry := recordHistoryEntry(row, defaultFieldMasks["contact"])
+	entry := recordHistoryEntry(row, nil)
 	if entry.Before != nil || entry.After != nil {
 		t.Errorf("an edge entry carries before=%v after=%v; those are the LINK's columns, and on the "+
 			"record's own entry they read as fields the record never had", entry.Before, entry.After)
@@ -344,5 +347,77 @@ func TestRecordHistoryVerbsCoverTheAuditCheckVocabulary(t *testing.T) {
 	if len(missing) > 0 {
 		t.Errorf("recordHistoryVerbs is missing a rendering phrase for: %s (every verb the audit_log_action_check CHECK admits must have one)",
 			strings.Join(missing, ", "))
+	}
+}
+
+// A masked value is withheld from its own history, on BOTH images.
+//
+// Hiding the live value and hiding its history is one motion: an amount the
+// deal read withholds is otherwise recoverable from the audit diff of any edit
+// that touched it, which leaves the mask one read away from meaning nothing.
+// The before image matters as much as the after — a withheld figure is just as
+// readable from what it used to be.
+//
+// The group travels: a mask on the amount takes the currency and the ARR with
+// it, because the fields it drags belong to the field and not to whichever
+// reader noticed.
+func TestAMaskedFieldIsWithheldFromItsHistory(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x",
+		Permissions: principal.Permissions{
+			RowScope:   principal.RowScopeOwn,
+			FieldMasks: []principal.FieldMask{{Object: fieldmask.Deal, Field: "amount_minor"}},
+		},
+	})
+	mask, err := withheldHistoryOf(ctx, fieldmask.Deal)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	row := recordAuditRow{
+		actorType: actorTypeHuman, actorID: "human:x", action: "update",
+		before: map[string]any{
+			"amount_minor": 100, "expected_arr_minor": 1200, "currency": "EUR", "title": "Old",
+		},
+		after: map[string]any{
+			"amount_minor": 900, "expected_arr_minor": 9600, "currency": "USD", "title": "New",
+		},
+	}
+	entry := recordHistoryEntry(row, mask)
+
+	for _, side := range []struct {
+		name  string
+		image map[string]any
+	}{{"before", entry.Before}, {"after", entry.After}} {
+		// The three are SPELLED OUT rather than read back from
+		// fieldmask.Withheld: derived, a group that stopped including the
+		// currency would shrink the mask and this loop together, and the test
+		// would pass over an image still carrying it. Held against the group by
+		// TestMaskingEitherMoneyFigureWithholdsThePair, one package over.
+		for _, field := range []string{"amount_minor", "expected_arr_minor", "currency"} {
+			if _, present := side.image[field]; present {
+				t.Errorf("the %s image still carries %q: %v — a masked figure is readable from its "+
+					"own history", side.name, field, side.image)
+			}
+		}
+		if side.image["title"] == nil {
+			t.Errorf("the %s image dropped an unmasked field: %v", side.name, side.image)
+		}
+	}
+}
+
+// With nobody bound to the context, the history mask ERRORS rather than
+// answering "nothing is withheld".
+//
+// An empty mask is what a reader who withholds nothing gets, so returning one
+// for a caller nobody identified would hand a record's full before-and-after
+// images to a request that never proved who made it. The live value fails
+// closed here; its history has to agree.
+func TestTheHistoryMaskRefusesWhenNobodyIsAsking(t *testing.T) {
+	t.Parallel()
+
+	if _, err := withheldHistoryOf(context.Background(), fieldmask.Deal); err == nil {
+		t.Error("the history mask answered a context with no actor — an empty mask reads as " +
+			"\"withhold nothing\" and both audit images go out whole")
 	}
 }

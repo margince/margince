@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -32,41 +33,26 @@ import (
 // against every key below, and field_mask references that pair, so a mask
 // naming something nothing here withholds is refused where it is written
 // rather than going quietly inert where it is read.
-const maskObject = "deal"
+const maskObject = fieldmask.Deal
 
-// dealMaskableFields are the columns a mask may name on a deal, and how each
-// is withheld. Withholding is a deliberate act per field, not a reflective one
-// over the struct, and the set is therefore finite — which is why it can be
-// offered as a catalog: migrations/testdata/maskable_fields.txt is these keys
-// under maskObject, and the database will not store a mask outside it.
+// dealWithholders is how each field a mask may name is withheld on the wire.
+// WHICH fields those are, and what each drags with it, is the fieldmask
+// package's — every surface that meets a masked deal reads that one table, and
+// this is the half only the deal can do: nulling the struct.
 //
-// The keys are WIRE field names as a configured mask spells them, which is a
-// different vocabulary from the column constants they happen to coincide with:
-// renaming a column would not rename what an installation's stored mask says.
+// The keys are checked against the catalog by
+// TestEveryMaskableDealFieldHasSomethingThatWithholdsIt, so a field added
+// there and forgotten here fails rather than going quietly unenforced.
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary
-var dealMaskableFields = map[string]func(*crmcontracts.Deal){
-	// The money fields go together: a currency beside a withheld amount
-	// would read as a priced deal with its figure missing, and an ARR left
-	// standing beside a withheld one-off amount discloses the size of the
-	// deal the mask was meant to hide.
-	"amount_minor": func(d *crmcontracts.Deal) {
-		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
-	},
-	"expected_arr_minor": func(d *crmcontracts.Deal) {
-		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
-	},
-	"currency": func(d *crmcontracts.Deal) { d.Currency = nil },
-	// The three references. They are withheld by the same mechanism as a role
-	// mask because the reader needs the same thing from them: a null they can
-	// tell from an empty field. Which rows they are withheld ON is a different
-	// question, answered per row by unreadableReferences.
-	filterCompanyID: func(d *crmcontracts.Deal) { d.CompanyId = nil },
-	filterProjectID: func(d *crmcontracts.Deal) { d.ProjectId = nil },
-	// The attribution describes the partner it travels with, so a withheld
-	// partner takes it along: "sourced" beside a null partner would disclose
-	// that SOME partner brought the deal to a reader who may not know which.
-	filterPartnerCompanyID: func(d *crmcontracts.Deal) { d.PartnerCompanyId, d.PartnerAttribution = nil, nil },
+var dealWithholders = map[string]func(*crmcontracts.Deal){
+	"amount_minor":          func(d *crmcontracts.Deal) { d.AmountMinor = nil },
+	"expected_arr_minor":    func(d *crmcontracts.Deal) { d.ExpectedArrMinor = nil },
+	"currency":              func(d *crmcontracts.Deal) { d.Currency = nil },
+	filterCompanyID:         func(d *crmcontracts.Deal) { d.CompanyId = nil },
+	filterProjectID:         func(d *crmcontracts.Deal) { d.ProjectId = nil },
+	filterPartnerCompanyID:  func(d *crmcontracts.Deal) { d.PartnerCompanyId = nil },
+	partnerAttributionField: func(d *crmcontracts.Deal) { d.PartnerAttribution = nil },
 }
 
 // withheldFields is the ordered set of columns withheld from ONE row. Ordered
@@ -81,13 +67,19 @@ func (w *withheldFields) add(field string) {
 }
 
 // applyTo withholds every named field from the row and records the names on
-// it. A name with no withhold func in dealMaskableFields is dropped rather
-// than reported: naming a field in masked_fields while still sending its value
-// is a worse answer than either half alone.
+// it.
+//
+// The names are expanded through the catalog first, so both sources of a
+// withholding land on the same answer: a role mask on the amount and a partner
+// this reader cannot open each drag a field with them, and the drag belongs to
+// the field rather than to whichever pass noticed it. A name with no withhold
+// func is dropped rather than reported — naming a field in masked_fields while
+// still sending its value is a worse answer than either half alone.
 func (w withheldFields) applyTo(d *crmcontracts.Deal) {
-	named := make([]string, 0, len(w))
-	for _, field := range w {
-		withhold, known := dealMaskableFields[field]
+	withheld := fieldmask.Withheld(maskObject, w)
+	named := make([]string, 0, len(withheld))
+	for _, field := range withheld {
+		withhold, known := dealWithholders[field]
 		if !known {
 			continue
 		}
@@ -234,7 +226,7 @@ func refuseMaskedSort(ctx context.Context, sort *string) error {
 		return nil
 	}
 	field := strings.TrimPrefix(strings.TrimSpace(*sort), "-")
-	if _, maskable := dealMaskableFields[field]; !maskable {
+	if _, withholdable := dealWithholders[field]; !withholdable {
 		return nil
 	}
 	masked, err := auth.MasksAnyRowOf(ctx, "deal", field)

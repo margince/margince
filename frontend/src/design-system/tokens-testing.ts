@@ -362,7 +362,7 @@ export function linearToOklab(rgb: number[]): number[] {
   ];
 }
 
-function oklabToLinear(lab: number[]): number[] {
+export function oklabToLinear(lab: number[]): number[] {
   const l_ = lab[0] + 0.3963377774 * lab[1] + 0.2158037573 * lab[2];
   const m_ = lab[0] - 0.1055613458 * lab[1] - 0.0638541728 * lab[2];
   const s_ = lab[0] - 0.0894841775 * lab[1] - 1.291485548 * lab[2];
@@ -376,7 +376,7 @@ function oklabToLinear(lab: number[]): number[] {
 
 // Linear-light channels to the hex a browser would paint, gamut-clipped per
 // channel the way a browser clips an out-of-gamut lab().
-function hexOf(linear: number[]): string {
+export function hexOf(linear: number[]): string {
   const bytes = linear.map((channel) => {
     const clipped = Math.min(Math.max(channel, 0), 1);
     const encoded =

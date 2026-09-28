@@ -74,7 +74,9 @@ function CommentRow({
   const buyer = comment.author.side === "buyer";
   return (
     <li>
-      <Avatar name={comment.author.name} />
+      {/* The room shares no ids across the two sides, so the author's name
+          is the only key there is. */}
+      <Avatar name={comment.author.name} identity={comment.author.name} />
       <div className="thread-comment">
         <span className="t-caption thread-author">
           <span className="thread-author-name">{comment.author.name}</span>

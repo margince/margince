@@ -129,6 +129,7 @@ export function ContactNetworkTab({
         <LeadPanel
           route={read.lead}
           targetName={read.targetName}
+          targetId={contactId}
           blocked={availabilityLabel(read.lead.availability, t)}
           onAsk={setAsking}
           onOpenEmail={onOpenEmail}

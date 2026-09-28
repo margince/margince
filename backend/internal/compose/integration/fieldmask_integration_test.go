@@ -7,6 +7,7 @@ package integration
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -39,8 +40,14 @@ func TestARepReadsEveryDealButNotAnotherTeamsAmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a rep reading another team's deal: %v", err)
 	}
-	if got.AmountMinor != nil || got.Currency != nil || got.MaskedFields == nil || len(*got.MaskedFields) != 1 || (*got.MaskedFields)[0] != "amount_minor" {
-		t.Errorf("another team's deal for a rep = amount %v currency %v masked %v, want the money pair withheld and the amount named", got.AmountMinor, got.Currency, got.MaskedFields)
+	// Every withheld field is named, the currency included: a null it does not
+	// name reads as a deal nobody priced, which is the reading masked_fields
+	// exists to prevent — and it is the reading the mask itself creates.
+	moneyGroup := []string{"amount_minor", "expected_arr_minor", "currency"}
+	if got.AmountMinor != nil || got.Currency != nil || got.MaskedFields == nil ||
+		!slices.Equal(*got.MaskedFields, moneyGroup) {
+		t.Errorf("another team's deal for a rep = amount %v currency %v masked %v, want the money "+
+			"group withheld and every field of it named", got.AmountMinor, got.Currency, got.MaskedFields)
 	}
 	own, err := e.Deals.GetDeal(rep, ids.From[ids.DealKind](mine), 0)
 	if err != nil || own.AmountMinor == nil || *own.AmountMinor != amount || own.MaskedFields != nil {
