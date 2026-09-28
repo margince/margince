@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -1008,18 +1009,11 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // stand in for "ineligible" (ADR-0119).
     stubFetch(async () => jsonResponse({ ...lead, email: null }));
     render(<LeadScreen id="l-1" />);
-    // By test id: a folded section further down carries a verb of the same
-    // name, so a lookup by name finds the header's only while that section
-    // has yet to render.
     const button = await screen.findByTestId("lead-qualify");
-    await waitFor(() =>
-      expect((button as HTMLButtonElement).disabled).toBe(true),
-    );
+    await waitFor(() => expect(button).toBeDisabled());
     // The reason is wired to the control with aria-describedby, not stuffed
     // into a title a screen reader never announces on a disabled button.
-    const describedBy = button.getAttribute("aria-describedby");
-    expect(describedBy).toBeTruthy();
-    expect(document.getElementById(describedBy as string)?.textContent).toBe(
+    expect(button).toHaveAccessibleDescription(
       "Requires an email address and an open status.",
     );
   });
@@ -1505,9 +1499,9 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
   it("preserves the Qualify button and score/status/company badges", async () => {
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
-    expect(
-      (await screen.findByTestId("lead-qualify")).textContent?.trim(),
-    ).toBe("Qualify");
+    expect(await screen.findByTestId("lead-qualify")).toHaveTextContent(
+      "Qualify",
+    );
     // The score reads in the band AND on the folded score section's summary.
     expect(screen.getAllByText("Score: 72").length).toBeGreaterThan(0);
     // Status and company are READINGS in the band's strip, not pills among
@@ -1893,13 +1887,8 @@ describe("LeadScreen — status control (P-12)", () => {
     render(<LeadScreen id="l-1" />);
 
     // The fixture lead is already contacted; the next rung up is the click.
-    // Enabled, not merely drawn: the ladder renders refused until the page
-    // knows the reader may write, and a click before then moves nothing.
     await waitFor(() =>
-      expect(screen.getByTestId("lead-step-engaged")).toHaveProperty(
-        "disabled",
-        false,
-      ),
+      expect(screen.getByTestId("lead-step-engaged")).toBeEnabled(),
     );
     // Where the lead stands is a MARKER, not a control: the ladder offers no
     // way to set a lead to the step it is already on, rather than offering one
