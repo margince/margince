@@ -317,6 +317,33 @@ export const en = {
   "brief.coverage.source.conversation_claim": "Customer commitments",
   "brief.coverage.source.brief_item": "Deal updates",
   "brief.coverage.source.dedupe_candidate": "Duplicate candidates",
+  "brief.coverage.source.deal_suggestion": "Suggested deals",
+  "worklist.untitled.deal_suggestion": "A deal the evidence suggests",
+  "dealSuggestion.agent": "Deal Scout",
+  "dealSuggestion.companyTitle": "Suggested deal",
+  "dealSuggestion.open": "Open this deal",
+  "dealSuggestion.dismiss": "Not a deal",
+  "dealSuggestion.dismissed":
+    "Dismissed for everyone. It comes back only if newer evidence turns up.",
+  "dealSuggestion.decided":
+    "Someone already decided this suggestion. Reload to see where it stands.",
+  "dealSuggestion.failed": "That did not go through. Try again.",
+  "dealSuggestion.evidence.meeting": "Meeting held: {title}",
+  "dealSuggestion.evidence.signal": "Signal: {title}",
+  "dealSuggestion.evidence.attachment": "Sent: {title}",
+  "dealSuggestion.acceptTitle": "Open a deal with {company}",
+  "dealSuggestion.field.name": "Deal name",
+  "dealSuggestion.field.amount": "Amount",
+  "dealSuggestion.field.currency": "Currency",
+  "dealSuggestion.field.stage": "Stage",
+  "dealSuggestion.field.owner": "Owner",
+  "dealSuggestion.ownerMe": "Me",
+  "dealSuggestion.field.closeDate": "Expected close",
+  "dealSuggestion.closeDateHint": "Leave it empty if nobody has said when.",
+  "dealSuggestion.confirm": "Open deal",
+  "dealSuggestion.accepted": "Deal opened: {name}.",
+  "dealSuggestion.acceptedUnlinked":
+    "Deal opened: {name}. Some of the evidence stays where it was, because you may not move it.",
   "brief.team.commitmentRate":
     "{done} of {total} due commitments were completed.",
   "brief.team.meetingRate":

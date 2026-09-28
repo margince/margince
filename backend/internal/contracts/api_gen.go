@@ -1836,6 +1836,7 @@ const (
 	AttentionItemSourceConversationClaim   AttentionItemSource = "conversation_claim"
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
+	AttentionItemSourceDealSuggestion      AttentionItemSource = "deal_suggestion"
 	AttentionItemSourceDedupeCandidate     AttentionItemSource = "dedupe_candidate"
 	AttentionItemSourceDomainQuestion      AttentionItemSource = "domain_question"
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
@@ -1871,6 +1872,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceCustomerWaiting:
 		return true
 	case AttentionItemSourceDealAtRisk:
+		return true
+	case AttentionItemSourceDealSuggestion:
 		return true
 	case AttentionItemSourceDedupeCandidate:
 		return true
@@ -16762,6 +16765,7 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
@@ -16800,6 +16804,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDealSuggestion:
 		return true
 	case WorklistItemSourceDedupeCandidate:
 		return true
@@ -16897,6 +16903,7 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
@@ -16935,6 +16942,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDealSuggestion:
 		return true
 	case WorklistReachSourceDedupeCandidate:
 		return true
@@ -21568,6 +21577,9 @@ type AttentionCounts struct {
 
 	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
+
+	// DealSuggestionsOpen Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all.
+	DealSuggestionsOpen *int `json:"deal_suggestions_open,omitempty"`
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`

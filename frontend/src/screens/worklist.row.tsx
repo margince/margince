@@ -63,6 +63,7 @@ import {
 } from "./worklist.row.captions";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
+import { SuggestionDecision } from "./worklist.suggestion";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
 
@@ -547,18 +548,33 @@ const ANSWER_BY_SOURCE: Partial<
   },
 };
 
-function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
-  if (item.source === "weekly_commitment")
-    return { primary: <PlanWorkActions item={item} /> };
-  if (decidable(item)) {
-    return { primary: <RowDecision item={item} /> };
-  }
+// The answers too large for the row's own line, drawn UNDER it.
+function answerBelow(item: WorklistItem): RowPlacement | undefined {
   if (item.source === "dedupe_candidate" && item.pair) {
     // UNDER the row, not in it. Each of its two verbs names the record it
     // would keep and stands in the list entry that describes that record —
     // lifted out into a row of verbs, "Keep Acme GmbH" and "Keep Acme GmbH"
     // would be two identical buttons over an irreversible merge.
     return { below: <PairDecision item={item} /> };
+  }
+  // A suggestion's evidence is what a rep reads before opening a deal, and it
+  // does not fit on one line either. Never on a batch, which names no single
+  // suggestion.
+  if (item.source === "deal_suggestion" && !item.batch) {
+    return { below: <SuggestionDecision item={item} /> };
+  }
+  return undefined;
+}
+
+function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
+  if (item.source === "weekly_commitment")
+    return { primary: <PlanWorkActions item={item} /> };
+  if (decidable(item)) {
+    return { primary: <RowDecision item={item} /> };
+  }
+  const below = answerBelow(item);
+  if (below) {
+    return below;
   }
   // Never a BATCH: a group row stands for a pile and names no single record, so
   // every id-keyed answer below would act on the wrong one.

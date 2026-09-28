@@ -211,14 +211,16 @@ func dayOfEveryLane() crmcontracts.Attention {
 		Planned:            []crmcontracts.AttentionItem{item("task", "task")},
 		Bounces:            lane(item("bounce", "bounce")),
 		Undelivered:        lane(item("undelivered", "undelivered")),
-		NeedsYou:           []crmcontracts.AttentionItem{item("approval", "approval"), item("pair", "dedupe_candidate")},
-		RelationshipDecay:  lane(item("decay", "relationship_decay")),
-		CaptureHealth:      lane(item("capture", "capture_health")),
-		DomainQuestions:    lane(item("example.com", "domain_question")),
-		AiWorkHealth:       lane(item("ai", "ai_work_health")),
-		AutomationHealth:   lane(item("automation", "automation_run")),
-		Notices:            lane(item("notice", "notice")),
-		Introductions:      lane(item("introduction", "introduction_request")),
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("approval", "approval"), item("pair", "dedupe_candidate"), item("suggestion", "deal_suggestion"),
+		},
+		RelationshipDecay: lane(item("decay", "relationship_decay")),
+		CaptureHealth:     lane(item("capture", "capture_health")),
+		DomainQuestions:   lane(item("example.com", "domain_question")),
+		AiWorkHealth:      lane(item("ai", "ai_work_health")),
+		AutomationHealth:  lane(item("automation", "automation_run")),
+		Notices:           lane(item("notice", "notice")),
+		Introductions:     lane(item("introduction", "introduction_request")),
 	}
 }
 

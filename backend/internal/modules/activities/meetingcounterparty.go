@@ -14,8 +14,8 @@ import "github.com/margince/margince/backend/internal/shared/kernel/employment"
 //
 // It is its own walk, not CompanyReachSet. That set deliberately files nothing
 // through participants, because a signal filed against a Cc'd contact's
-// employer is a claim nobody made. A meeting is different: the people in the
-// room are the counterparty.
+// employer is a claim nobody made. A meeting is different: the contacts who
+// sat in it are the counterparty.
 //
 // "Outside" means a contact who is not a seat (user_id IS NULL) and whose
 // employer is not the installation's own company. A meeting among colleagues

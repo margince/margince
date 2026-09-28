@@ -38,7 +38,7 @@ func (h Handlers) ListDealSuggestions(w http.ResponseWriter, r *http.Request, pa
 	}
 	data := make([]crmcontracts.DealSuggestion, 0, len(list))
 	for _, s := range list {
-		data = append(data, suggestionWire(s))
+		data = append(data, SuggestionWire(s))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealSuggestionListResponse{Data: data, Page: page})
 }
@@ -68,7 +68,7 @@ func (h Handlers) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, i
 		unlinked = append(unlinked, openapi_types.UUID(activity))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealSuggestionAcceptance{
-		Suggestion: suggestionWire(out.Suggestion), DealId: openapi_types.UUID(out.DealID),
+		Suggestion: SuggestionWire(out.Suggestion), DealId: openapi_types.UUID(out.DealID),
 		UnlinkedActivityIds: unlinked, AcknowledgedSignals: out.Acknowledged,
 	})
 }
@@ -80,7 +80,7 @@ func (h Handlers) DismissDealSuggestion(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, suggestionWire(out))
+	httperr.WriteJSON(w, http.StatusOK, SuggestionWire(out))
 }
 
 func optionalUUID(id *openapi_types.UUID) *ids.UUID {
@@ -91,7 +91,9 @@ func optionalUUID(id *openapi_types.UUID) *ids.UUID {
 	return &converted
 }
 
-func suggestionWire(s Suggestion) crmcontracts.DealSuggestion {
+// SuggestionWire is a suggestion as the contract spells it, for every surface
+// that answers one.
+func SuggestionWire(s Suggestion) crmcontracts.DealSuggestion {
 	out := crmcontracts.DealSuggestion{
 		Id: openapi_types.UUID(s.ID), Kind: crmcontracts.DealSuggestionKind(s.Kind),
 		State: crmcontracts.DealSuggestionState(s.State), CompanyId: openapi_types.UUID(s.CompanyID),

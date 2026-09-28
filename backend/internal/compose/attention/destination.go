@@ -87,6 +87,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	// Judgements. Work waits on a contact deciding.
 	crmcontracts.WorklistItemSourceApproval:            destinationReview,
 	crmcontracts.WorklistItemSourceDedupeCandidate:     destinationReview,
+	crmcontracts.WorklistItemSourceDealSuggestion:      destinationReview,
 	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,
 	crmcontracts.WorklistItemSourceDsr:                 destinationReview,
 	crmcontracts.WorklistItemSourceNoticeCase:          destinationReview,

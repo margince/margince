@@ -331,6 +331,33 @@ export const vi = {
   "brief.coverage.source.conversation_claim": "Cam kết với khách hàng",
   "brief.coverage.source.brief_item": "Cập nhật giao dịch",
   "brief.coverage.source.dedupe_candidate": "Hồ sơ có thể trùng",
+  "brief.coverage.source.deal_suggestion": "Cơ hội được gợi ý",
+  "worklist.untitled.deal_suggestion": "Một cơ hội mà các dấu hiệu gợi ý",
+  "dealSuggestion.agent": "Trinh sát cơ hội",
+  "dealSuggestion.companyTitle": "Cơ hội được gợi ý",
+  "dealSuggestion.open": "Tạo cơ hội này",
+  "dealSuggestion.dismiss": "Không phải cơ hội",
+  "dealSuggestion.dismissed":
+    "Đã bỏ qua cho cả nhóm. Gợi ý chỉ quay lại khi có dấu hiệu mới hơn.",
+  "dealSuggestion.decided":
+    "Gợi ý này đã được quyết định. Hãy tải lại để xem tình trạng.",
+  "dealSuggestion.failed": "Chưa thực hiện được. Hãy thử lại.",
+  "dealSuggestion.evidence.meeting": "Đã họp: {title}",
+  "dealSuggestion.evidence.signal": "Tín hiệu: {title}",
+  "dealSuggestion.evidence.attachment": "Đã gửi: {title}",
+  "dealSuggestion.acceptTitle": "Tạo cơ hội với {company}",
+  "dealSuggestion.field.name": "Tên cơ hội",
+  "dealSuggestion.field.amount": "Giá trị",
+  "dealSuggestion.field.currency": "Tiền tệ",
+  "dealSuggestion.field.stage": "Giai đoạn",
+  "dealSuggestion.field.owner": "Phụ trách",
+  "dealSuggestion.ownerMe": "Tôi",
+  "dealSuggestion.field.closeDate": "Dự kiến chốt",
+  "dealSuggestion.closeDateHint": "Để trống nếu chưa ai nói thời điểm.",
+  "dealSuggestion.confirm": "Tạo cơ hội",
+  "dealSuggestion.accepted": "Đã tạo cơ hội: {name}.",
+  "dealSuggestion.acceptedUnlinked":
+    "Đã tạo cơ hội: {name}. Một số dấu hiệu vẫn ở chỗ cũ vì bạn không được phép chuyển chúng.",
   "brief.team.commitmentRate":
     "Đã hoàn thành {done} trên {total} cam kết đến hạn.",
   "brief.team.meetingRate":

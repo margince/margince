@@ -67,6 +67,13 @@ function isTeamBoardRead(url: string): boolean {
   return url.split("?")[0].endsWith("/worklist/team");
 }
 
+// The reads `stub`'s one optional answer is served to.
+const ANSWERED_READS = [
+  /\/automations\/runs\/[^/]+\/retry$/,
+  /\/approvals\/[^/]+$/,
+  /\/deal-suggestions$/,
+];
+
 /**
  * The queue, plus the one approval a decision row fetches whole. A row sends a
  * sentence; deciding needs the payload, the stager and the evidence, so the row
@@ -80,16 +87,14 @@ export function stub(day: Worklist, answer?: unknown) {
       if (isWorklistRead(url)) {
         return jsonResponse(day);
       }
-      // One optional answer, served to whichever of the two single-record
-      // endpoints a test drives. They cannot both be in play in one test: an
-      // approval read and a retry write sit on different rows.
+      // One optional answer, served to whichever of the single-record
+      // endpoints a test drives (or to the suggestions a suggestion row
+      // reads). They cannot all be in play in one test: an approval read and a
+      // retry write sit on different rows.
       if (
         answer &&
-        /\/automations\/runs\/[^/]+\/retry$/.test(url.split("?")[0])
+        ANSWERED_READS.some((path) => path.test(url.split("?")[0]))
       ) {
-        return jsonResponse(answer);
-      }
-      if (answer && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
         return jsonResponse(answer);
       }
       if (isTeamBoardRead(url)) {

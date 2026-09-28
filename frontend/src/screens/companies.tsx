@@ -119,6 +119,7 @@ import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
 import { ComposeModal } from "./compose";
 import { CreateAction } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
+import { CompanySuggestions } from "./dealsuggestion";
 import { useRoster } from "./entityref";
 import { RecordHistoryTab } from "./history";
 import {
@@ -1979,6 +1980,9 @@ function CompanyOverviewStack({
       {/* What Margince noticed on this account that nobody asked it to look
           for: promises made, blockers named, risks read out of meetings,
           mail and invoices. */}
+      {/* A deal the evidence says this account should have, when Deal Scout
+          found one: beside the signals it was partly read from. */}
+      <CompanySuggestions companyId={company.id} />
       <Panel className="co-signals">
         <SignalsSection companyId={company.id} />
       </Panel>

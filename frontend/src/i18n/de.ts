@@ -333,6 +333,35 @@ export const de = {
   "brief.coverage.source.conversation_claim": "Kundenzusagen",
   "brief.coverage.source.brief_item": "Deal-Updates",
   "brief.coverage.source.dedupe_candidate": "Mögliche Duplikate",
+  "brief.coverage.source.deal_suggestion": "Vorgeschlagene Deals",
+  "worklist.untitled.deal_suggestion": "Ein Deal, auf den die Hinweise deuten",
+  "dealSuggestion.agent": "Deal Scout",
+  "dealSuggestion.companyTitle": "Vorgeschlagener Deal",
+  "dealSuggestion.open": "Deal anlegen",
+  "dealSuggestion.dismiss": "Kein Deal",
+  "dealSuggestion.dismissed":
+    "Für alle verworfen. Der Vorschlag kommt nur mit neueren Hinweisen wieder.",
+  "dealSuggestion.decided":
+    "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
+  "dealSuggestion.failed":
+    "Das hat nicht geklappt. Versuch es noch einmal.",
+  "dealSuggestion.evidence.meeting": "Termin fand statt: {title}",
+  "dealSuggestion.evidence.signal": "Signal: {title}",
+  "dealSuggestion.evidence.attachment": "Gesendet: {title}",
+  "dealSuggestion.acceptTitle": "Deal mit {company} anlegen",
+  "dealSuggestion.field.name": "Name des Deals",
+  "dealSuggestion.field.amount": "Betrag",
+  "dealSuggestion.field.currency": "Währung",
+  "dealSuggestion.field.stage": "Phase",
+  "dealSuggestion.field.owner": "Verantwortlich",
+  "dealSuggestion.ownerMe": "Selbst",
+  "dealSuggestion.field.closeDate": "Voraussichtlicher Abschluss",
+  "dealSuggestion.closeDateHint":
+    "Leer lassen, solange niemand einen Termin genannt hat.",
+  "dealSuggestion.confirm": "Deal anlegen",
+  "dealSuggestion.accepted": "Deal angelegt: {name}.",
+  "dealSuggestion.acceptedUnlinked":
+    "Deal angelegt: {name}. Einige Hinweise bleiben, wo sie waren, weil du sie nicht verschieben darfst.",
   "brief.team.commitmentRate": "Erledigte fällige Zusagen: {done} von {total}.",
   "brief.team.meetingRate":
     "Termine mit erfasstem nächsten Schritt: {done} von {total}.",
