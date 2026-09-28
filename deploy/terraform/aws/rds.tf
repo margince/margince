@@ -27,10 +27,12 @@ resource "random_password" "margince_app" {
 # the next one that reuses the name. keepers ties the suffix to
 # var.db_final_snapshot_generation instead of to aws_db_instance.this
 # directly — deriving it from the instance would make the instance depend on
-# its own final_snapshot_identifier, a cycle Terraform refuses to plan. Bump
-# db_final_snapshot_generation before any deliberate destroy/recreate of the
-# instance; a replacement Terraform triggers itself (a ForceNew attribute
-# change) does not need a manual bump since that recreates this resource too.
+# its own final_snapshot_identifier, a cycle Terraform refuses to plan. The
+# suffix therefore changes ONLY when db_final_snapshot_generation changes:
+# bump it before EVERY destroy or replacement of the instance, including a
+# replacement Terraform plans on its own for a ForceNew attribute change.
+# Otherwise the second deletion reuses the first snapshot's name and fails
+# with DBSnapshotAlreadyExists.
 resource "random_id" "final_snapshot" {
   byte_length = 4
 
