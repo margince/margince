@@ -59,6 +59,8 @@ type csvWriters struct {
 	// file naming one employer on every row asks the database once. Nil until
 	// the first row needs it; bounded by the file, never by the estate.
 	employers map[string]employerCandidate
+	// authors caches the seat each author cell resolves to, per run.
+	authors authorSeats
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
 	// such outcome — so the count rides here and the report reads it.
@@ -98,6 +100,7 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		// commit over a word.
 		contextTag: parseContextTag(settled.ContextTag),
 		nativeIDs:  map[string]ids.UUID{},
+		authors:    authorSeats{},
 	}
 }
 
@@ -400,6 +403,9 @@ var errImportReplayed = errors.New("import: the record replayed under its natura
 func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
 	in := leadCreateFrom(textFields(row.Fields), csvSourceSystem(), row.ExternalID, w.provenanceOf(row.ExternalID))
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
+			return ids.UUID{}, err
+		}
 		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating lead %s: %w", row.ExternalID, err)
@@ -429,6 +435,9 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migr
 		return migration.EnsureResult{Skipped: true, SkipReason: "the mapped display_name is empty, so the row names no company"}, nil
 	}
 	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
+			return ids.UUID{}, err
+		}
 		company, err := w.contacts.CreateCompanyTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)

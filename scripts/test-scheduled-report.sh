@@ -153,6 +153,37 @@ expect_llm "a model lane that never drove a scenario is not reported as a bad an
 expect_llm "a scenario that drove and failed is reported as the use case failing" \
 	"scenario-failed" "$LLM_CASE_TITLE"
 
+# The body told a reader that case 6 was a known standing failure and to file a
+# case 6 red away as the existing finding. #6298 fixed case 6 — it passes 3 of 3
+# on the lane's default model — so that sentence pointed the one reader who was
+# looking straight past a regression. Asserted in BOTH directions: the new claim
+# is present, and the retired one is gone rather than reworded around.
+expect_llm_body() {
+	local name="$1" body
+	export ACTION_LOG="$stub_dir/actions"
+	export BODY_LOG="$stub_dir/body"
+	: >"$ACTION_LOG"
+	: >"$BODY_LOG"
+	OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
+		LLM_RESULT=failure LLM_OUTCOME=scenario-failed \
+		"$root/scripts/scheduled-report.sh" >/dev/null 2>&1
+	body="$(cat "$BODY_LOG" 2>/dev/null || true)"
+
+	if grep -qiF -- "known standing failure" <<<"$body"; then
+		echo "FAIL: $name — the body still calls a failure standing, and case 6 is fixed"
+		failures=$((failures + 1))
+		return
+	fi
+	if ! grep -qF -- "REGRESSION" <<<"$body"; then
+		echo "FAIL: $name — the body no longer tells a reader a case 6 red is a regression"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+
+expect_llm_body "a failing use case is reported as a regression, not a known finding"
+
 # A tracker of `n` open issues, none of them the reported one, newest first.
 noise() {
 	local n="$1" i

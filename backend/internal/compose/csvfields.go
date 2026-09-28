@@ -62,18 +62,19 @@ const leadStatusNew = "new"
 // paths. A target that only half works is worse than one the screen never
 // offers.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldTitle, "company_name"},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldTitle, companyNameField, csvTargetAuthor},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
-	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain}, recordAddressTargets...),
+	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, csvTargetAuthor}, recordAddressTargets...),
 	// `phone`, `social` and `owner_id` are deliberately absent. A contact's
 	// patch input carries no Phones member and no single-column spelling of
 	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
 	// storekit.OwnerOrActor already defaults it to whoever ran the import.
-	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle}, recordAddressTargets...),
+	// `author` differs: a name is an honest spelling (csvauthor.go).
+	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle, csvTargetAuthor}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -207,8 +208,9 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
 		// `id` names the record and the employer column names an edge; neither is
-		// a value the record holds. See isNonFieldTarget.
-		if isNonFieldTarget(field) {
+		// a value the record holds (isNonFieldTarget). The author is written on
+		// create only (isCreateOnlyTarget).
+		if isNonFieldTarget(field) || isCreateOnlyTarget(field) {
 			continue
 		}
 		if textOf(storedValue(current, field)) != canonicalFor(field, incoming) {
@@ -303,6 +305,7 @@ func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source s
 		SourceSystem: &sourceSystem,
 		SourceID:     &externalID,
 		Source:       source,
+		Author:       authorFrom(fields),
 	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
@@ -373,6 +376,9 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 // rather than on the spelling, so it is gated rather than stated.
 // Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 func unwritableReason(object string, fields map[string]string) string {
+	if reason := authorUnwritableReason(fields); reason != "" {
+		return reason
+	}
 	if object == migration.ObjectContact {
 		// A contact's addresses are parsed before the write transaction opens
 		// (parseContactContacts), so a malformed one refuses the row at commit.

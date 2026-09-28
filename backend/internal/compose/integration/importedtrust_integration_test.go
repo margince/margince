@@ -28,8 +28,8 @@ package integration
 // the ladder reads.
 //
 // THE AUTHOR COLUMNS WOULD BE THE WRONG TEST, which is why the cases below
-// cover a row that has none. The attribution repair skips an activity whose
-// author it cannot resolve, so an imported row can carry no author at all — and
+// cover a row that has none. An importer names an author only when its source
+// knows one, so an imported row can carry no author at all — and
 // testing for attribution rather than for provenance would hand exactly those
 // rows full human-statement trust.
 //

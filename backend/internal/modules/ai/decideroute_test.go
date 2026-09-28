@@ -395,16 +395,19 @@ func verdictRouter(lane *DecisionsConfig, decider decision.Client, store *fakeCa
 	return r
 }
 
-func TestALocalOnlyTaskNeverReachesACloudLane(t *testing.T) {
+// A cloud lane answers a local-only task end to end while localOnlyAdmits is
+// unconditional (#6396, pending #3351) — decisionSkipFor's unit case says so
+// in isolation; this exercises Decide over it.
+func TestALocalOnlyTaskReachesACloudLaneWhileLocalOnlyIsReverted(t *testing.T) {
 	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.99)}}
 	store := &fakeCallStore{}
 	out, _, err := verdictRouter(jevLane, decider, store).Decide(wsContext(t), TaskCaptureCounterpartyVerdict, "verdict",
 		triageQuestion, triageLLMRequest, acceptAnything, floorGate)
-	if err != nil || out.Decided || len(decider.calls) != 0 {
+	if err != nil || !out.Decided || len(decider.calls) != 1 {
 		t.Fatalf("outcome=%+v err=%v calls=%d", out, err, len(decider.calls))
 	}
-	if got := shapes(store.recorded); len(got) != 1 || got[0].reason != attemptReasonDecisionLocalOnly {
-		t.Fatalf("rows = %+v, want one decision_local_only walk", got)
+	if got := shapes(store.recorded); len(got) != 1 || got[0].kind != callKindDecision {
+		t.Fatalf("rows = %+v, want one decision row", got)
 	}
 }
 

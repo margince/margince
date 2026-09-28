@@ -217,6 +217,10 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateProjectInput{}, err
 	}
+	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
+	if err != nil {
+		return CreateProjectInput{}, err
+	}
 	in := CreateProjectInput{
 		Name:         name,
 		CompanyID:    pathID[ids.CompanyKind](req.CompanyId),
@@ -224,6 +228,7 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 		Description:  req.Description,
 		Source:       req.Source,
 		SourceSystem: req.SourceSystem,
+		Author:       author,
 		CustomFields: req.AdditionalProperties,
 	}
 	if req.StartedAt != nil {

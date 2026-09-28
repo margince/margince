@@ -71,4 +71,29 @@ func TestAHitWithoutOptionalMembersOmitsThem(t *testing.T) {
 	if bare.EmailSummary != nil {
 		t.Error("a non-email hit rendered an email summary")
 	}
+	if bare.IsPartner != nil {
+		t.Errorf("a company hit nobody marked rendered is_partner %v, which says the account was "+
+			"checked", *bare.IsPartner)
+	}
+}
+
+// The marker is tri-state on the wire, so a literal `false` has to survive the
+// render: a company checked and found to carry no programme is a different
+// answer from one nobody checked, and omitting the false collapses the two.
+func TestACompanyHitRendersTheLiteralPartnerMarker(t *testing.T) {
+	t.Parallel()
+	partner, notPartner := true, false
+	results := wireHits([]Hit{
+		{Type: "company", ID: ids.NewV7(), IsPartner: &partner},
+		{Type: "company", ID: ids.NewV7(), IsPartner: &notPartner},
+	})
+	if len(results) != 2 {
+		t.Fatalf("two hits rendered %d results", len(results))
+	}
+	if results[0].IsPartner == nil || !*results[0].IsPartner {
+		t.Errorf("a partner account rendered %v", results[0].IsPartner)
+	}
+	if results[1].IsPartner == nil || *results[1].IsPartner {
+		t.Errorf("a checked non-partner rendered %v, want a literal false", results[1].IsPartner)
+	}
 }

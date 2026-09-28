@@ -242,6 +242,21 @@ func TestApplyProfileRemapsFrontierUnderSovereign(t *testing.T) {
 	}
 }
 
+// servableLadder reads localOnlyAdmits, the same predicate decisionSkipFor
+// reads (TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal): a
+// local_only task's rung bound to a hosted provider survives here exactly
+// because that predicate currently admits it, not because this function
+// forgot to ask.
+func TestServableLadderReadsTheSamePredicateAsTheDecisionLane(t *testing.T) {
+	b := &binding{routeMeta: map[Tier]routeMeta{
+		TierLocalSmall: {provider: "gemini", model: "gemini-3.1-flash-lite"},
+	}}
+	got := servableLadder(b, TaskCaptureCounterpartyVerdict, []Tier{TierLocalSmall})
+	if len(got) != 1 || got[0] != TierLocalSmall {
+		t.Fatalf("a local-only task's rung on a hosted provider = %v, want [local_small] while localOnlyAdmits is unconditional", got)
+	}
+}
+
 // Economy mode steps one rung down, and frontier's step is premium — not
 // straight to a cheap tier, which would drop two capability classes at the
 // first sign of budget pressure.

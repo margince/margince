@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -128,6 +129,10 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateDealInput{}, err
 	}
+	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
+	if err != nil {
+		return CreateDealInput{}, err
+	}
 	// A deal is born INTO a stage of a pipeline, and neither is defaultable here:
 	// which pipeline a workspace means is a config question, and guessing would
 	// file deals somewhere nobody chose. Unchecked, both zero UUIDs travel to
@@ -148,6 +153,7 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 		StageID:          pathID[ids.StageKind](req.StageId),
 		Source:           req.Source,
 		SourceSystem:     req.SourceSystem,
+		Author:           author,
 		CompanyID:        idArg[ids.CompanyKind](req.CompanyId),
 		PartnerCompanyID: idArg[ids.CompanyKind](req.PartnerCompanyId),
 		ProjectID:        idArg[ids.ProjectKind](req.ProjectId),

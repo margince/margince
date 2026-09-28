@@ -58,9 +58,16 @@ type recordWire struct {
 	serve func(http.ResponseWriter, *http.Request)
 }
 
-// recordWires builds one namespaced create body per record wire. A deal needs
-// a pipeline and stage, and a project a company, so both are seeded first.
-func recordWires(t *testing.T, e *integration.Env) []recordWire {
+// wireAuthor is the author pair a create body carries; zero sends none.
+type wireAuthor struct {
+	id   *openapi_types.UUID
+	name *string
+}
+
+// recordWires builds one create body per record wire under `system`, carrying
+// `author`. A deal needs a pipeline and stage, and a project a company, so both
+// are seeded first.
+func recordWires(t *testing.T, e *integration.Env, system string, author wireAuthor) []recordWire {
 	t.Helper()
 	admin := e.Admin()
 	dealsStore := deals.NewStore(e.DB(), DealsInstallation())
@@ -72,7 +79,6 @@ func recordWires(t *testing.T, e *integration.Env) []recordWire {
 		t.Fatalf("default pipeline: %v", err)
 	}
 	company := openapi_types.UUID(e.SeedCompany(t, "Importer Anchor GmbH", nil))
-	system := "mirror:hubspot"
 	encode := func(body []byte, err error) []byte {
 		if err != nil {
 			t.Fatalf("encoding a create body: %v", err)
@@ -84,22 +90,28 @@ func recordWires(t *testing.T, e *integration.Env) []recordWire {
 	p := projects.HandlersOver(ProjectsStore(e.Pool))
 	return []recordWire{
 		{
-			"contact", "/v1/contacts", encode(json.Marshal(crmcontracts.CreateContactRequest{FullName: "Imported Contact", SourceSystem: &system})),
+			"contact", "/v1/contacts", encode(json.Marshal(crmcontracts.CreateContactRequest{
+				FullName: "Imported Contact", SourceSystem: &system, SourceAuthorId: author.id, SourceAuthorName: author.name,
+			})),
 			func(w http.ResponseWriter, r *http.Request) {
 				c.CreateContact(w, r, crmcontracts.CreateContactParams{})
 			},
 		},
 		{
-			"company", "/v1/companies", encode(json.Marshal(crmcontracts.CreateCompanyRequest{DisplayName: "Imported Company", SourceSystem: &system})),
+			"company", "/v1/companies", encode(json.Marshal(crmcontracts.CreateCompanyRequest{
+				DisplayName: "Imported Company", SourceSystem: &system, SourceAuthorId: author.id, SourceAuthorName: author.name,
+			})),
 			func(w http.ResponseWriter, r *http.Request) {
 				c.CreateCompany(w, r, crmcontracts.CreateCompanyParams{})
 			},
 		},
 		{"deal", "/v1/deals", encode(json.Marshal(crmcontracts.CreateDealRequest{
 			Name: "Imported Deal", PipelineId: pipeline.Id, StageId: (*pipeline.Stages)[0].Id, SourceSystem: &system,
+			SourceAuthorId: author.id, SourceAuthorName: author.name,
 		})), func(w http.ResponseWriter, r *http.Request) { d.CreateDeal(w, r, crmcontracts.CreateDealParams{}) }},
 		{"project", "/v1/projects", encode(json.Marshal(crmcontracts.CreateProjectRequest{
 			Name: "Imported Project", CompanyId: company, Source: "manual", SourceSystem: &system,
+			SourceAuthorId: author.id, SourceAuthorName: author.name,
 		})), func(w http.ResponseWriter, r *http.Request) {
 			p.CreateProject(w, r, crmcontracts.CreateProjectParams{})
 		}},
@@ -109,7 +121,7 @@ func recordWires(t *testing.T, e *integration.Env) []recordWire {
 func TestADeclaredImporterLandsEveryRecordInsideItsNamespace(t *testing.T) {
 	e := integration.Setup(t)
 	importer := e.As(e.AdminUser, nil, importerPerms())
-	for _, w := range recordWires(t, e) {
+	for _, w := range recordWires(t, e, "mirror:hubspot", wireAuthor{}) {
 		status, id := serveCreate(importer, t, w.path, w.body, w.serve)
 		if status != http.StatusCreated {
 			t.Errorf("%s answered %d, want 201: the importer may stamp its own namespace", w.table, status)
@@ -130,7 +142,7 @@ func TestTheRecordWiresStayClosedToEveryoneElse(t *testing.T) {
 		"agent with the grant":    e.AgentFor(t, e.AdminUser, nil, importerPerms()),
 		"human without the grant": e.As(e.AdminUser, nil, integration.AdminPerms),
 	}
-	for _, w := range recordWires(t, e) {
+	for _, w := range recordWires(t, e, "mirror:hubspot", wireAuthor{}) {
 		for who, as := range callers {
 			if status, _ := serveCreate(as, t, w.path, w.body, w.serve); status != http.StatusUnprocessableEntity {
 				t.Errorf("%s as %s answered %d, want 422 reserved_source_system", w.table, who, status)
