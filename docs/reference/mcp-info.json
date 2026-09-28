@@ -10,16 +10,16 @@
   "totals": {
     "tools": 78,
     "resources": 11,
-    "tool_catalog_bytes": 233706,
+    "tool_catalog_bytes": 233850,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 59471,
+    "approx_wire_tokens_total": 59507,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 59957,
-      "input_schema_bytes": 50074,
+      "input_schema_bytes": 50218,
       "output_schema_bytes": 106911,
-      "description_plus_input_schema_bytes": 110031
+      "description_plus_input_schema_bytes": 110175
     }
   },
   "tools": {
@@ -1161,6 +1161,21 @@
         "description": "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
+          "else": {
+            "required": [
+              "batch_id"
+            ]
+          },
+          "if": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "preview",
+                  "execute"
+                ]
+              }
+            }
+          },
           "properties": {
             "batch_id": {
               "description": "For undo_preview and undo: the batch_id execute answered",
@@ -1232,6 +1247,13 @@
           "required": [
             "mode"
           ],
+          "then": {
+            "required": [
+              "record_type",
+              "verb",
+              "items"
+            ]
+          },
           "type": "object"
         },
         "name": "bulk_update_records",

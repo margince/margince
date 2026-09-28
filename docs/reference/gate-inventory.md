@@ -354,6 +354,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `bulktoolschema_test.go` | H1 | bulk\_update\_records advertises one schema for four modes. |
 | `capturedbytyping_test.go` | H2 | `captured\_by` records the PRINCIPAL, and a principal is not a user row. |
 | `cursorrefusal_test.go` | H2 | A page token a caller hands back is either one this server minted or it is not, and that is ONE question with one answer on the wire: the contract's `422 code: malformed\_cursor`, which tells the caller to re-issue the request without the token. |
 | `domainclaimprobe_test.go` | H2 | A domain maps to at most one company (data-model §4.2), so "is this domain taken?" is one question — and answering it discloses something either way. |

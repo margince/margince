@@ -146,6 +146,9 @@ func (t bulkUpdateRecords) Spec() mcp.ToolSpec {
 			"owner_id":{"type":"string","format":"uuid","description":"The new owner, for reassign_owner"},
 			"confirm_token":{"type":"string","description":"The token preview or undo_preview answered; needed above 10 records"},
 			"batch_id":{"type":"string","format":"uuid","description":"For undo_preview and undo: the batch_id execute answered"}},
+			"if":{"properties":{"mode":{"enum":["preview","execute"]}}},
+			"then":{"required":["record_type","verb","items"]},
+			"else":{"required":["batch_id"]},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[BulkChangeAnswer](),
 	}

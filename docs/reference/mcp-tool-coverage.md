@@ -31,7 +31,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 41 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 13797 |
+| Prompt tokens spent on tools no case requires | 13833 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -416,9 +416,9 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `send_message` | 603 | — | — | — |
 | `progress_deal` | 505 | — | — | — |
 | `resolve_entities` | 493 | — | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` | — |
+| `bulk_update_records` | 477 | — | — | — |
 | `forecast_movement` | 453 | — | — | — |
 | `advance_deal` | 446 | — | — | — |
-| `bulk_update_records` | 441 | — | — | — |
 | `annotate_brief` | 417 | `agent_loop` | — | `morning_brief` |
 | `review_commitments` | 401 | — | `case41_close_the_project` | `overnight_at_risk_sweep` |
 | `prep_for_meeting` | 394 | — | `case23_find_us_a_slot`, `case5_before_the_meeting` | — |

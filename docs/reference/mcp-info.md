@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 78 |
 | Resources | 11 |
-| Tool catalog | 228.2 KB |
+| Tool catalog | 228.4 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 59471 |
+| Approx. wire tokens | 59507 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 104.4 KB | 45% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 58.6 KB | 25% | Yes, every step |
-| Input schemas | 48.9 KB | 21% | Yes, every step |
+| Input schemas | 49.0 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.4 KB | 7% | Partly |
-| **Description + input schema** | **107.5 KB** | **47%** | **the recurring cost** |
+| **Description + input schema** | **107.6 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -70,7 +70,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 4.2 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 4.4 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
@@ -1529,6 +1529,21 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
 ```json
 {
   "additionalProperties": false,
+  "else": {
+    "required": [
+      "batch_id"
+    ]
+  },
+  "if": {
+    "properties": {
+      "mode": {
+        "enum": [
+          "preview",
+          "execute"
+        ]
+      }
+    }
+  },
   "properties": {
     "batch_id": {
       "description": "For undo_preview and undo: the batch_id execute answered",
@@ -1600,6 +1615,13 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
   "required": [
     "mode"
   ],
+  "then": {
+    "required": [
+      "record_type",
+      "verb",
+      "items"
+    ]
+  },
   "type": "object"
 }
 ```
