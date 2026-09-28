@@ -343,8 +343,7 @@ export const de = {
     "Für alle verworfen. Der Vorschlag kommt nur mit neueren Hinweisen wieder.",
   "dealSuggestion.decided":
     "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
-  "dealSuggestion.failed":
-    "Das hat nicht geklappt. Versuch es noch einmal.",
+  "dealSuggestion.failed": "Das hat nicht geklappt. Versuch es noch einmal.",
   "dealSuggestion.evidence.meeting": "Termin fand statt: {title}",
   "dealSuggestion.evidence.signal": "Signal: {title}",
   "dealSuggestion.evidence.attachment": "Gesendet: {title}",
