@@ -329,7 +329,7 @@ To send a privacy notice in Margince, open the **Privacy notice owed** item on y
 1. Open the **Privacy notice owed** item.
 2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
 3. If they already know, or an exemption applies, press **End the duty…** and record why.
-The notice goes to the contact's own recorded address. The duty closes once the mail goes out.
+The notice goes to the contact's own recorded address. If it bounces, the duty is owed again.
 Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
 
 ### Why does Margince say "this installation cannot send mail"?

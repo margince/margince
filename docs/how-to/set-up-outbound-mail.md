@@ -69,8 +69,11 @@ Two more settings have to be in place:
   these messages are built on it. With a real sender configured it must be an
   https address a recipient can open; `MARGINCE_ENV=dev` admits the dev stack's
   `http://localhost`, which only you can open.
-- **The worker must run and read the same deployment file.** The api stages the
-  message; `cmd/worker` transmits it through the relay.
+- **Both the api and the worker read the same deployment file**, because they
+  split the work. The api sends password resets and invitations itself, at the
+  moment of the request. For the privacy notice and the confirm links, the api
+  only stages the message, and only when it has a relay configured; `cmd/worker`
+  then transmits it. The worker also sends the weekly review and morning brief.
 
 The api does not reload its configuration. Restart both processes (`make dev`
 on a dev stack). The api's boot log then prints
