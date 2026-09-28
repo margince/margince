@@ -14,7 +14,7 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
-import { useCompany } from "../screens/installationcompany";
+import { useMe } from "../screens/common";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
@@ -115,13 +115,11 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
    * whether there is a company name above it. Temporary, and betabadge.tsx
    * carries the list of what its deletion takes. */
   const marker = <BetaBadge />;
-  // The installation's own company (ADR-0061: one installation, one
-  // company), OBSERVED on the entry the onboarding gate already filled.
-  // A disabled observer: it never fetches, so it cannot re-trigger the gate's
-  // read and walk the app back through its splash, but it does re-render when
-  // the company card writes a new mark into the entry — a plain cache peek
-  // left the rail wearing the old face until something else re-rendered it.
-  const installation = useCompany(false).data ?? undefined;
+  // The installation's own name and marks (ADR-0061: one installation, one
+  // company), from /me, which carries them to every seat — the full company
+  // profile is an admin's read. A disabled observer: the auth gate already
+  // fetched /me, and this re-renders when a company save refreshes it.
+  const installation = useMe(false).data?.installation_brand;
   // Whose product this is, above whose product it runs on. The reader works
   // for the company named here and not for us, so the company is the heading
   // and the product is the line under it.
@@ -199,8 +197,9 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             its deterministic monogram underneath, and a company whose site
             declared no icon has a face rather than a gap. */}
         <span className="ws-chip ws-chip-company">
+          {/* The brand read carries no company id, so the name keys the chip. */}
           <Avatar
-            identity={installation.company_id}
+            identity={installation.display_name}
             name={installation.display_name}
           />
         </span>

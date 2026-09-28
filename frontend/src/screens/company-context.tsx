@@ -43,7 +43,7 @@ import {
 } from "./common";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
-import { useCompany } from "./installationcompany";
+import { storeCompany, useCompany } from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
@@ -168,7 +168,7 @@ export function ManualCompanySetup() {
       return data;
     },
     onSuccess: (profile) => {
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       navigate({ screen: "home" });
     },
   });
@@ -360,7 +360,7 @@ export function CompanyContextCard() {
       return data;
     },
     onSuccess: (profile) => {
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       // Committing is what the dialog was opened for, so a landed save closes
       // it and leaves the confirmation on the card behind — where the rows the
       // save changed are. A refused save keeps the dialog open with what was
@@ -495,7 +495,7 @@ export function CompanyContextCard() {
       // which owns that state — so this only writes what the applied refresh
       // ENDS: the read the reviewer was working through, and the choices they
       // made in it.
-      queryClient.setQueryData(["company"], profile);
+      storeCompany(queryClient, profile);
       setReadID(null);
       setResolutions({});
     },

@@ -20,6 +20,7 @@ import {
   useInstallationSetup,
   usePlatformDeclined,
 } from "../installation-setup";
+import { storeCompany } from "../installationcompany";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import {
   changeDraftField,
@@ -382,8 +383,7 @@ export function CompanyAct({
   // transition can never drift between the two callers.
   const finishConfirm = useCallback(
     (profileData: CompanyProfile) => {
-      // The shell's onboarding gate reads the same ["company"] cache entry.
-      queryClient.setQueryData(["company"], profileData);
+      storeCompany(queryClient, profileData);
       // Checkpoint the confirmed company so the classic coordinator resumes
       // at the right step and role if the user switches shells.
       void persist({

@@ -11,6 +11,7 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
+import { storeCompany } from "./installationcompany";
 import "./companymark.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -47,11 +48,9 @@ export function CompanyMark({
   const t = useT();
   const client = useQueryClient();
   // The response IS the new profile, so it is written straight into the entry
-  // the shell's brand block and this card both read. A refetch would ask the
-  // server a question it just answered, and the rail would wear the old mark
-  // until it came back.
+  // this card reads, and /me is refreshed so the rail wears the new mark.
   const settle = (next: CompanyProfile) => {
-    client.setQueryData(["company"], next);
+    storeCompany(client, next);
   };
   const wide = useMarkWrites("/v1/company/logo", deleteWideMark, settle);
   const icon = useMarkWrites("/v1/company/logo/icon", deleteIconMark, settle);

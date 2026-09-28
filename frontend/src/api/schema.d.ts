@@ -29431,6 +29431,7 @@ export interface components {
             teams: string[];
             authorization?: components["schemas"]["Authorization"];
             settings_availability?: components["schemas"]["SettingsAvailability"];
+            installation_brand?: components["schemas"]["InstallationBrand"];
             /**
              * @deprecated
              * @description Always null. This endpoint is reachable only by a human session: a passport bearer is admitted as an agent principal and never binds the session identity this operation reads, so an agent receives 401 here rather than a passport claim. The field is retained because removing a response property breaks published clients; a client MUST NOT branch on it. An agent's own scopes are what the MCP surface advertises in tools/list, which is the honest place to ask.
@@ -30342,6 +30343,15 @@ export interface components {
              * @enum {string}
              */
             row_scope: "own" | "team" | "all";
+        };
+        /** @description The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it. */
+        InstallationBrand: {
+            /** @description What the company is called day to day. */
+            display_name: string;
+            /** @description The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries. Absent when the company wears none, or when this caller holds no read on companies and so could not load it; a client draws the company's monogram instead. */
+            logo_url?: string;
+            /** @description The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent on the same terms as `logo_url`. A client without one draws the wide mark. */
+            logo_icon_url?: string;
         };
         /**
          * @description Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.

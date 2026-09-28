@@ -272,20 +272,25 @@ func logoHeldByHuman(ctx context.Context, tx pgx.Tx, id ids.CompanyID, slot Logo
 	return wearsMark, nil
 }
 
+// requireLogoReadable is the gate the logo stream holds. A logo is part of the
+// record, so reading its bytes is a read of the record and carries the record's
+// gate. AnchorBrand asks it too, so it never hands out a URL this refuses.
+func requireLogoReadable(ctx context.Context, tx pgx.Tx, id ids.CompanyID) error {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return err
+	}
+	return auth.EnsureVisible(ctx, tx, "company", id.UUID)
+}
+
 // CompanyLogoKey answers where one slot's logo bytes live, for a caller
 // that streams them. It returns ErrNotFound both when the company is
 // invisible or absent and when it simply wears no mark in that slot: to the
 // client those are the same answer — draw the monogram — and distinguishing
 // them would leak which companies exist.
 func (s *Store) CompanyLogoKey(ctx context.Context, id ids.CompanyID, slot LogoSlot) (string, error) {
-	// A logo is part of the record, so reading its location is a read of the
-	// record and carries the record's gate.
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
-		return "", err
-	}
 	var key *string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "company", id.UUID); err != nil {
+		if err := requireLogoReadable(ctx, tx, id); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, companyLogoKeyRead, id, slot.wide()).Scan(&key)

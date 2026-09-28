@@ -39896,6 +39896,8 @@ components:
           $ref: '#/components/schemas/Authorization'
         settings_availability:
           $ref: '#/components/schemas/SettingsAvailability'
+        installation_brand:
+          $ref: '#/components/schemas/InstallationBrand'
         passport:
           type: [object, 'null']
           deprecated: true
@@ -41318,6 +41320,31 @@ components:
             This does not let a client decide which rows it gets — the server's scope clauses
             do that on every query. It is what a client needs to EXPLAIN the answer it got, and
             to label a setting as reaching only the reader, their team, or the company.
+
+    InstallationBrand:
+      type: object
+      additionalProperties: false
+      required: [display_name]
+      description: >
+        The installation's own company as every seat already sees it on screen: its name and
+        its marks, for the app's brand block. Absent until the installation has described
+        itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`)
+        is an administrator's read, and this projection is not a way around it.
+      properties:
+        display_name:
+          type: string
+          description: What the company is called day to day.
+        logo_url:
+          type: string
+          description: >
+            The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries.
+            Absent when the company wears none, or when this caller holds no read on companies
+            and so could not load it; a client draws the company's monogram instead.
+        logo_icon_url:
+          type: string
+          description: >
+            The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent
+            on the same terms as `logo_url`. A client without one draws the wide mark.
 
     SettingsAvailability:
       type: object

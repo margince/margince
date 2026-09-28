@@ -31856,6 +31856,18 @@ type InputCheckStatus string
 // InputCheckSubjectKind defines model for InputCheck.SubjectKind.
 type InputCheckSubjectKind string
 
+// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
+type InstallationBrand struct {
+	// DisplayName What the company is called day to day.
+	DisplayName string `json:"display_name"`
+
+	// LogoIconUrl The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent on the same terms as `logo_url`. A client without one draws the wide mark.
+	LogoIconUrl *string `json:"logo_icon_url,omitempty"`
+
+	// LogoUrl The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries. Absent when the company wears none, or when this caller holds no read on companies and so could not load it; a client draws the company's monogram instead.
+	LogoUrl *string `json:"logo_url,omitempty"`
+}
+
 // InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
@@ -33292,6 +33304,9 @@ type MeResponse struct {
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
+
+	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
+	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
 
 	// NonProduction True when the installation runs a non-production posture (MARGINCE_ENV=dev|test). DEPRECATED as the gate for the "Reset data" action — read `data_reset_available` instead. A deployment being non-production is not consent to purge its tenant data, and inferring one from the other is why a `staging` installation full of real internal users could be wiped through the API.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
