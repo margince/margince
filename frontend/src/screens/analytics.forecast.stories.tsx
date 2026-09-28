@@ -82,6 +82,14 @@ function routes(data: Readings): RouteMap {
     "GET /me": meRoute({}),
     "GET /forecast": () => jsonResponse(data),
     "GET /forecast/assurance": () => jsonResponse({}, 404),
+    "GET /forecast/assurance/preview": () =>
+      jsonResponse({
+        started: false,
+        eligible_deals: data.eligible_count,
+        findings: [],
+        readiness: "ready",
+        sources: [],
+      }),
   };
 }
 
