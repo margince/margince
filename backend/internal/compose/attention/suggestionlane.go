@@ -63,17 +63,16 @@ func (s *Service) openSuggestionItems(ctx context.Context, depth int) ([]crmcont
 
 // suggestionItem renders one suggestion. Its subject is the company, which is
 // where `open` leads; `decide` opens the deal and `dismiss` records that it is
-// not one.
+// not one. It carries no title: the client words the row from its source and
+// the company's name, so the row repeats no text from the evidence.
 func suggestionItem(suggestion crmcontracts.DealSuggestion) crmcontracts.AttentionItem {
 	kind := string(suggestion.Kind)
-	title := suggestion.Name
 	confidence := suggestion.Confidence
 	occurred := suggestion.CreatedAt
 	return crmcontracts.AttentionItem{
 		Id:         suggestion.Id.String(),
 		Source:     crmcontracts.AttentionItemSource(sourceDealSuggestion),
 		Kind:       &kind,
-		Title:      &title,
 		Confidence: &confidence,
 		OccurredAt: &occurred,
 		Subject:    &crmcontracts.AttentionSubject{Type: subjectCompany, Id: suggestion.CompanyId},

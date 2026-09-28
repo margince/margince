@@ -66,7 +66,9 @@ func (e SuggestionEvidence) ref() ids.UUID {
 // SuggestionDraft is what the scout proposes for one company.
 type SuggestionDraft struct {
 	CompanyID ids.UUID
-	Name      string
+	// NameHint is which evidence leads, as a code: the suggested deal is named
+	// after the company and this hint, never after text read out of a message.
+	NameHint string
 	// AmountMinor and Currency travel together or not at all: an amount is
 	// proposed only when a finished document reading stated both.
 	AmountMinor *int64
@@ -74,6 +76,15 @@ type SuggestionDraft struct {
 	Confidence  float64
 	Evidence    []SuggestionEvidence
 }
+
+// The name hints, which the deal_suggestion_name_hint_check CHECK repeats.
+const (
+	HintProposalSent        = "proposal_sent"
+	HintOpportunitySignaled = "opportunity_signalled"
+	HintMeetingHeld         = "meeting_held"
+)
+
+var nameHints = map[string]bool{HintProposalSent: true, HintOpportunitySignaled: true, HintMeetingHeld: true}
 
 // ErrSuggestionDraftInvalid refuses a draft that breaks the suggestion's own
 // shape. The scout builds drafts, so this is a defect in the scout, not input.
@@ -92,7 +103,7 @@ func suggestionFingerprint(companyID ids.UUID, evidence []SuggestionEvidence) st
 }
 
 func validDraft(d SuggestionDraft) error {
-	if d.CompanyID.IsZero() || strings.TrimSpace(d.Name) == "" || len(d.Evidence) == 0 {
+	if d.CompanyID.IsZero() || !nameHints[d.NameHint] || len(d.Evidence) == 0 {
 		return ErrSuggestionDraftInvalid
 	}
 	if moneyPairError(d.AmountMinor, nil, d.Currency) != nil || d.Confidence < 0 || d.Confidence > 1 {
@@ -122,6 +133,14 @@ func SuggestionFloorExpr(company string) string {
 	    WHERE fd.company_id = ` + company + ` AND fd.status <> 'open' AND fd.archived_at IS NULL))`
 }
 
+// SuggestionCompanyFreeClause says the company has no open deal: the one
+// spelling the scout, the writer, the superseding pass and an acceptance read.
+// company is the SQL expression naming the company.
+func SuggestionCompanyFreeClause(company string) string {
+	return `NOT EXISTS (SELECT 1 FROM deal sod
+	          WHERE sod.company_id = ` + company + ` AND sod.status = 'open' AND sod.archived_at IS NULL)`
+}
+
 // SuggestableCompanyClause is the condition a company must meet to be offered
 // a suggestion: live, not the installation's own, with no open deal and no
 // open suggestion. The scout reads candidates through it and the writer
@@ -129,8 +148,7 @@ func SuggestionFloorExpr(company string) string {
 func SuggestableCompanyClause(company string) string {
 	return `(EXISTS (SELECT 1 FROM company sco
 	          WHERE sco.id = ` + company + ` AND sco.archived_at IS NULL AND NOT sco.is_anchor)
-	  AND NOT EXISTS (SELECT 1 FROM deal sod
-	          WHERE sod.company_id = ` + company + ` AND sod.status = 'open' AND sod.archived_at IS NULL)
+	  AND ` + SuggestionCompanyFreeClause(company) + `
 	  AND NOT EXISTS (SELECT 1 FROM deal_suggestion sos
 	          WHERE sos.company_id = ` + company + ` AND sos.state = 'open'))`
 }
@@ -182,7 +200,7 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 	}
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
-		INSERT INTO deal_suggestion (company_id, pipeline_id, proposed_stage_id, proposed_name,
+		INSERT INTO deal_suggestion (company_id, pipeline_id, proposed_stage_id, name_hint,
 		       proposed_amount_minor, currency, confidence, fingerprint, evidence_count,
 		       evidence_through, captured_by)
 		SELECT $1::uuid, $2::uuid, $3::uuid, $4::text, $5::bigint, $6::text, $7::numeric, $8::text,
@@ -190,7 +208,7 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 		 WHERE `+SuggestableCompanyClause("$1::uuid")+`
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		d.CompanyID, pipelineID, stageID, strings.TrimSpace(d.Name), d.AmountMinor, d.Currency,
+		d.CompanyID, pipelineID, stageID, d.NameHint, d.AmountMinor, d.Currency,
 		d.Confidence, suggestionFingerprint(d.CompanyID, d.Evidence), len(d.Evidence), through, by,
 	).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -229,33 +247,26 @@ func insertSuggestionEvidence(ctx context.Context, tx pgx.Tx, suggestion ids.UUI
 }
 
 // SupersedeStaleSuggestionsTx retires every open suggestion that no longer
-// stands, and reports how many. A suggestion stands while its company is live
-// with no open deal and every piece of its evidence is still there and still
-// live: an archived or erased message behind it retires it. System-only,
-// for the same reason recording is.
+// stands, and reports how many. A suggestion stands while its company has no
+// open deal and the suggestion visibility clause, read under the system
+// principal, still admits it: the company live, and every piece of evidence
+// there and live — a message cited by a signal included. A suggestion that
+// clause hides from everybody would otherwise block its company for good.
+// System-only, for the same reason recording is.
 func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	var args []any
+	stands, err := suggestionVisibleClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
 		return 0, err
 	}
 	rows, err := tx.Query(ctx, `
 		UPDATE deal_suggestion s SET state = 'superseded', decided_at = now()
 		 WHERE s.state = 'open'
-		   AND (EXISTS (SELECT 1 FROM deal d
-		                 WHERE d.company_id = s.company_id AND d.status = 'open' AND d.archived_at IS NULL)
-		     OR NOT EXISTS (SELECT 1 FROM company c WHERE c.id = s.company_id AND c.archived_at IS NULL)
-		     OR (SELECT count(*) FROM deal_suggestion_evidence e WHERE e.suggestion_id = s.id) <> s.evidence_count
-		     OR EXISTS (SELECT 1 FROM deal_suggestion_evidence e
-		           LEFT JOIN activity ea ON ea.id = e.activity_id
-		           LEFT JOIN signal es ON es.id = e.signal_id
-		           LEFT JOIN attachment eat ON eat.id = e.attachment_id
-		           LEFT JOIN activity aa ON aa.id = eat.activity_id
-		          WHERE e.suggestion_id = s.id AND NOT (
-		               (e.kind = 'meeting' AND ea.id IS NOT NULL
-		                 AND ea.archived_at IS NULL AND ea.restricted_at IS NULL)
-		            OR (e.kind = 'signal' AND es.id IS NOT NULL AND es.archived_at IS NULL)
-		            OR (e.kind = 'attachment' AND eat.id IS NOT NULL AND eat.archived_at IS NULL
-		                 AND aa.id IS NOT NULL AND aa.archived_at IS NULL AND aa.restricted_at IS NULL))))
-		RETURNING s.id`)
+		   AND (NOT `+SuggestionCompanyFreeClause("s.company_id")+` OR NOT `+stands+`)
+		RETURNING s.id`, args...)
 	if err != nil {
 		return 0, fmt.Errorf("deals: superseding suggestions: %w", err)
 	}
@@ -264,14 +275,8 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
 		return 0, fmt.Errorf("deals: reading superseded suggestions: %w", err)
 	}
 	for _, id := range retired {
-		auditID, err := storekit.Audit(ctx, tx, "update", suggestionEntity, id,
-			map[string]any{columnState: SuggestionOpen},
-			map[string]any{columnState: SuggestionSuperseded})
-		if err != nil {
-			return 0, fmt.Errorf("deals: auditing a superseded suggestion: %w", err)
-		}
-		if err := storekit.EmitPipelinePayload(ctx, tx, auditID, crmcontracts.InternalEventDealSuggestionSuperseded{}); err != nil {
-			return 0, fmt.Errorf("deals: emitting deal_suggestion.superseded: %w", err)
+		if err := recordSuperseded(ctx, tx, id); err != nil {
+			return 0, err
 		}
 	}
 	return len(retired), nil
@@ -279,3 +284,31 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
 
 // columnState is the audited name of the lifecycle column.
 const columnState = "state"
+
+// supersedeTx retires one open suggestion the caller holds locked.
+func supersedeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	tag, err := tx.Exec(ctx, `
+		UPDATE deal_suggestion SET state = 'superseded', decided_at = now()
+		 WHERE id = $1 AND state = 'open'`, id)
+	if err != nil {
+		return fmt.Errorf("deals: superseding a suggestion: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	return recordSuperseded(ctx, tx, id)
+}
+
+// recordSuperseded writes the audit row and the event for one retirement.
+func recordSuperseded(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	auditID, err := storekit.Audit(ctx, tx, "update", suggestionEntity, id,
+		map[string]any{columnState: SuggestionOpen},
+		map[string]any{columnState: SuggestionSuperseded})
+	if err != nil {
+		return fmt.Errorf("deals: auditing a superseded suggestion: %w", err)
+	}
+	if err := storekit.EmitPipelinePayload(ctx, tx, auditID, crmcontracts.InternalEventDealSuggestionSuperseded{}); err != nil {
+		return fmt.Errorf("deals: emitting deal_suggestion.superseded: %w", err)
+	}
+	return nil
+}

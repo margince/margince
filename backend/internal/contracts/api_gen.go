@@ -8038,6 +8038,27 @@ func (e DealSuggestionKind) Valid() bool {
 	}
 }
 
+// Defines values for DealSuggestionNameHint.
+const (
+	DealSuggestionNameHintMeetingHeld          DealSuggestionNameHint = "meeting_held"
+	DealSuggestionNameHintOpportunitySignalled DealSuggestionNameHint = "opportunity_signalled"
+	DealSuggestionNameHintProposalSent         DealSuggestionNameHint = "proposal_sent"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionNameHint enum.
+func (e DealSuggestionNameHint) Valid() bool {
+	switch e {
+	case DealSuggestionNameHintMeetingHeld:
+		return true
+	case DealSuggestionNameHintOpportunitySignalled:
+		return true
+	case DealSuggestionNameHintProposalSent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealSuggestionState.
 const (
 	DealSuggestionStateAccepted   DealSuggestionState = "accepted"
@@ -19249,8 +19270,13 @@ type AcceptDealSuggestionRequest struct {
 	// CloseDate A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
 	CloseDate *openapi_types.Date `json:"close_date,omitempty"`
 	Currency  *string             `json:"currency,omitempty"`
-	Name      *string             `json:"name,omitempty"`
-	OwnerId   *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Name Without one the deal is named after the company.
+	Name *string `json:"name,omitempty"`
+
+	// NoAmount Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.
+	NoAmount *bool               `json:"no_amount,omitempty"`
+	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// StageId Any open stage; the deal opens in that stage's pipeline.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
@@ -30053,9 +30079,9 @@ type DealSuggestion struct {
 	// Kind Only open_deal is suggested today.
 	Kind DealSuggestionKind `json:"kind"`
 
-	// Name The proposed deal name.
-	Name       string             `json:"name"`
-	PipelineId openapi_types.UUID `json:"pipeline_id"`
+	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+	NameHint   DealSuggestionNameHint `json:"name_hint"`
+	PipelineId openapi_types.UUID     `json:"pipeline_id"`
 
 	// StageId The stage the deal would open in: the default pipeline's first open stage.
 	StageId openapi_types.UUID  `json:"stage_id"`
@@ -30064,6 +30090,9 @@ type DealSuggestion struct {
 
 // DealSuggestionKind Only open_deal is suggested today.
 type DealSuggestionKind string
+
+// DealSuggestionNameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+type DealSuggestionNameHint string
 
 // DealSuggestionState defines model for DealSuggestion.State.
 type DealSuggestionState string

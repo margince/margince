@@ -26,9 +26,15 @@ import (
 // its company and EVERY piece of its evidence: a meeting through the activity
 // content gate, a signal through the signal scope and the content gate of each
 // message it cites, an attachment through the content gate of the message it
-// came on. Every cited record must still be live, and every evidence row the
-// suggestion was written with must still exist — so an erasure hides a
-// suggestion rather than leaving it to a wider audience than it had.
+// came on. Reading a meeting or a document needs the activity grant and
+// reading a signal the signal grant, so a reader without one sees no
+// suggestion citing that kind. Every cited record must still be live, and every
+// evidence row the suggestion was written with must still exist — so an
+// erasure hides a suggestion rather than leaving it to a wider audience than it
+// had.
+//
+// Under the system principal it is the liveness rule alone, which is how the
+// superseding pass reads it: one spelling of "this suggestion still stands".
 //
 // Every caller names deal_suggestion "s" in its outer query.
 func suggestionVisibleClause(ctx context.Context, arg func(any) int) (string, error) {
@@ -55,23 +61,35 @@ func suggestionVisibleClause(ctx context.Context, arg func(any) int) (string, er
 	if err != nil {
 		return "", err
 	}
+	// A kind the reader holds no grant for admits no evidence of that kind.
+	activityGranted := grantedSQL(ctx, "activity")
+	signalGranted := grantedSQL(ctx, "signal")
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM company sc
 	         WHERE sc.id = %[1]s.company_id AND sc.archived_at IS NULL AND %[2]s)
 	 AND (SELECT count(*) FROM deal_suggestion_evidence e WHERE e.suggestion_id = %[1]s.id) = %[1]s.evidence_count
 	 AND NOT EXISTS (SELECT 1 FROM deal_suggestion_evidence e
 	   WHERE e.suggestion_id = %[1]s.id AND NOT (
-	     (e.kind = 'meeting' AND EXISTS (SELECT 1 FROM activity ea
+	     (e.kind = 'meeting' AND %[7]s AND EXISTS (SELECT 1 FROM activity ea
 	        WHERE ea.id = e.activity_id AND ea.archived_at IS NULL AND %[3]s))
-	  OR (e.kind = 'signal' AND EXISTS (SELECT 1 FROM signal es
+	  OR (e.kind = 'signal' AND %[8]s AND %[7]s AND EXISTS (SELECT 1 FROM signal es
 	        WHERE es.id = e.signal_id AND es.archived_at IS NULL AND %[4]s
 	          AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(es.evidence) cite
 	            WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
 	              WHERE ca.id::text = cite->>'source_id' AND ca.archived_at IS NULL AND %[5]s))))
-	  OR (e.kind = 'attachment' AND EXISTS (SELECT 1 FROM attachment eat
+	  OR (e.kind = 'attachment' AND %[7]s AND EXISTS (SELECT 1 FROM attachment eat
 	        JOIN activity aa ON aa.id = eat.activity_id
 	        WHERE eat.id = e.attachment_id AND eat.archived_at IS NULL
 	          AND aa.archived_at IS NULL AND %[6]s)))))`,
-		"s", orTrue(company), meeting, orTrue(signal), cited, carrier), nil
+		"s", orTrue(company), meeting, orTrue(signal), cited, carrier, activityGranted, signalGranted), nil
+}
+
+// grantedSQL is the reader's object grant to read one kind, as a literal the
+// clause can AND in.
+func grantedSQL(ctx context.Context, object string) string {
+	if auth.Allows(ctx, object, principal.ActionRead) {
+		return "true"
+	}
+	return "false"
 }
 
 // orTrue reads an empty clause — the unbounded answer — as a predicate.
@@ -100,7 +118,7 @@ type Suggestion struct {
 	CompanyName string
 	PipelineID  ids.UUID
 	StageID     ids.UUID
-	Name        string
+	NameHint    string
 	AmountMinor *int64
 	Currency    *string
 	CloseDate   *time.Time
@@ -139,13 +157,13 @@ type suggestionCursor struct {
 }
 
 const suggestionColumns = `s.id, s.kind, s.state, s.company_id, c.display_name, s.pipeline_id,
-	       s.proposed_stage_id, s.proposed_name, s.proposed_amount_minor, s.currency,
+	       s.proposed_stage_id, s.name_hint, s.proposed_amount_minor, s.currency,
 	       s.proposed_close_date, s.confidence::float8, s.created_at`
 
 func scanSuggestion(row pgx.Row) (Suggestion, error) {
 	var s Suggestion
 	err := row.Scan(&s.ID, &s.Kind, &s.State, &s.CompanyID, &s.CompanyName, &s.PipelineID,
-		&s.StageID, &s.Name, &s.AmountMinor, &s.Currency, &s.CloseDate, &s.Confidence, &s.CreatedAt)
+		&s.StageID, &s.NameHint, &s.AmountMinor, &s.Currency, &s.CloseDate, &s.Confidence, &s.CreatedAt)
 	return s, err
 }
 

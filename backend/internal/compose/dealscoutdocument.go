@@ -7,13 +7,14 @@ package compose
 // decision is the file's type and the WORDS of its name, never a substring: a
 // "Newsletter_Angebote.pdf" carries the word newsletter, and "Vertragsnummer"
 // inside a longer word is not a contract.
+//
+// The matcher is SQL, so the scout can tell which companies qualify before it
+// caps how many it reads. The vocabularies stay here, in one place, and reach
+// the statement as bound arrays.
 
 import (
-	"path"
+	"fmt"
 	"strings"
-	"unicode"
-
-	"golang.org/x/text/unicode/norm"
 )
 
 // proposalWords are the file-name words that name a proposal, a quote or a
@@ -39,95 +40,52 @@ var (
 // documentTypes are the content types a proposal arrives as. Images are left
 // out on purpose: an image on an outbound mail is almost always a logo or a
 // signature part.
-var documentTypes = map[string]bool{
-	"application/pdf":    true,
-	"application/msword": true,
-	"application/rtf":    true,
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   true,
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         true,
-	"application/vnd.openxmlformats-officedocument.presentationml.presentation": true,
-	"application/vnd.ms-excel":                        true,
-	"application/vnd.ms-powerpoint":                   true,
-	"application/vnd.oasis.opendocument.text":         true,
-	"application/vnd.oasis.opendocument.spreadsheet":  true,
-	"application/vnd.oasis.opendocument.presentation": true,
+var documentTypes = []string{
+	"application/pdf", "application/msword", "application/rtf",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	"application/vnd.ms-excel", "application/vnd.ms-powerpoint",
+	"application/vnd.oasis.opendocument.text",
+	"application/vnd.oasis.opendocument.spreadsheet",
+	"application/vnd.oasis.opendocument.presentation",
 }
 
 // documentExtensions stand in for a content type the provider did not send.
-var documentExtensions = map[string]bool{
-	".pdf": true, ".doc": true, ".docx": true, ".rtf": true, ".odt": true,
-	".xls": true, ".xlsx": true, ".ods": true, ".ppt": true, ".pptx": true, ".odp": true,
+var documentExtensions = []string{
+	".pdf", ".doc", ".docx", ".rtf", ".odt", ".xls", ".xlsx", ".ods", ".ppt", ".pptx", ".odp",
 }
 
-// isProposalDocument reports whether an attachment is a document whose name
-// says it is a proposal or a contract.
-func isProposalDocument(filename, contentType string) bool {
-	contentType = strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
-	ext := strings.ToLower(path.Ext(filename))
-	if !documentTypes[contentType] && (contentType != "" || !documentExtensions[ext]) {
-		return false
-	}
-	words := " " + strings.Join(filenameWords(strings.TrimSuffix(filename, path.Ext(filename))), " ") + " "
-	return !namesAny(words, billingWords) && !namesAny(words, marketingWords) && namesAny(words, proposalWords)
+// filenameWordsSQL folds a file name's stem to lower-case ASCII words framed by
+// spaces: accents are dropped after NFD decomposition (the Vietnamese đ is a
+// letter of its own and is mapped by hand), and every separator and every
+// change between letters and digits splits a word, so "Angebot2026_v2.pdf"
+// reads " angebot 2026 v 2 ".
+func filenameWordsSQL(filename string) string {
+	stem := `regexp_replace(` + filename + `, '\.[^./]*$', '')`
+	folded := `lower(translate(regexp_replace(normalize(` + stem + `, NFD), '[̀-ͯ]', '', 'g'), 'đĐ', 'dd'))`
+	split := `regexp_replace(regexp_replace(` + folded + `, '([[:alpha:]])([[:digit:]])', '\1 \2', 'g'), '([[:digit:]])([[:alpha:]])', '\1 \2', 'g')`
+	return `(' ' || btrim(regexp_replace(` + split + `, '[^[:alnum:]]+', ' ', 'g')) || ' ')`
 }
 
-// namesAny reports whether the space-framed word string holds any of the
-// words, a two-word entry as two neighbours.
-func namesAny(words string, vocabulary []string) bool {
-	for _, word := range vocabulary {
-		if strings.Contains(words, " "+word+" ") {
-			return true
-		}
-	}
-	return false
+// proposalDocumentSQL is the condition that an attachment is a document whose
+// name says it is a proposal or a contract. arg binds the vocabularies.
+func proposalDocumentSQL(filename, contentType string, arg func(any) int) string {
+	words := filenameWordsSQL(filename)
+	bareType := `lower(btrim(split_part(coalesce(` + contentType + `, ''), ';', 1)))`
+	ext := `lower(coalesce(substring(` + filename + ` from '\.[^./]*$'), ''))`
+	outranking := append(append([]string{}, billingWords...), marketingWords...)
+	return fmt.Sprintf(`((%[1]s = ANY($%[3]d) OR (%[1]s = '' AND %[2]s = ANY($%[4]d)))
+	   AND %[5]s LIKE ANY($%[6]d) AND NOT %[5]s LIKE ANY($%[7]d))`,
+		bareType, ext, arg(documentTypes), arg(documentExtensions),
+		words, arg(likeWords(proposalWords)), arg(likeWords(outranking)))
 }
 
-// filenameWords folds a name to lower-case letters without accents and splits
-// it into words at every separator and at each change between letters and
-// digits, so "Angebot2026_v2" is angebot, 2026, v, 2.
-func filenameWords(name string) []string {
-	var words []string
-	var current []rune
-	lastDigit := false
-	flush := func() {
-		if len(current) > 0 {
-			words = append(words, string(current))
-			current = current[:0]
-		}
+// likeWords frames each vocabulary entry as a whole-word LIKE pattern.
+func likeWords(words []string) []string {
+	out := make([]string, 0, len(words))
+	for _, word := range words {
+		out = append(out, "% "+strings.TrimSpace(word)+" %")
 	}
-	for _, r := range foldAccents(name) {
-		switch {
-		case unicode.IsLetter(r) || unicode.IsDigit(r):
-			digit := unicode.IsDigit(r)
-			if len(current) > 0 && digit != lastDigit {
-				flush()
-			}
-			current = append(current, unicode.ToLower(r))
-			lastDigit = digit
-		default:
-			flush()
-		}
-	}
-	flush()
-	return words
-}
-
-// foldAccents drops combining marks, so "Báo giá" reads as "Bao gia" and
-// "Broschüre" as "Broschure". The Vietnamese đ is a letter of its own rather
-// than a d with a mark, so it is mapped by hand.
-func foldAccents(s string) string {
-	var b strings.Builder
-	for _, r := range norm.NFD.String(s) {
-		switch {
-		case unicode.Is(unicode.Mn, r):
-			continue
-		case r == 'đ':
-			b.WriteRune('d')
-		case r == 'Đ':
-			b.WriteRune('D')
-		default:
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
+	return out
 }

@@ -200,6 +200,12 @@ func (e *scoutEnv) stored(t *testing.T, company ids.UUID, state string) int {
 
 func (e *scoutEnv) daysAgo(n int) time.Time { return e.now.AddDate(0, 0, -n) }
 
+// signalReader is an admin who also holds the signal grant a suggestion citing
+// signals needs.
+func (e *scoutEnv) signalReader() context.Context {
+	return e.As(e.AdminUser, nil, integration.AdminWithSignals)
+}
+
 func TestAHeldMeetingWithSomebodyAtACompanySuggestsOneDeal(t *testing.T) {
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
@@ -215,8 +221,8 @@ func TestAHeldMeetingWithSomebodyAtACompanySuggestsOneDeal(t *testing.T) {
 		t.Fatalf("after two passes the company shows %d suggestions, want exactly 1", len(shown))
 	}
 	got := shown[0]
-	if got.Name != "Acme GmbH" || got.AmountMinor != nil || len(got.Evidence) != 1 {
-		t.Fatalf("suggestion = %+v, want the company's name, no amount, one piece of evidence", got)
+	if got.NameHint != deals.HintMeetingHeld || got.CompanyName != "Acme GmbH" || got.AmountMinor != nil || len(got.Evidence) != 1 {
+		t.Fatalf("suggestion = %+v, want Acme with the meeting hint, no amount, one piece of evidence", got)
 	}
 	if ev := got.Evidence[0]; ev.Kind != deals.EvidenceMeeting || *ev.ActivityID != meeting || ev.Title != "Scoping workshop" {
 		t.Fatalf("evidence = %+v, want the meeting by its subject", ev)
@@ -309,7 +315,7 @@ func TestTheTwoSignalsWithinThirtyDaysSuggestADeal(t *testing.T) {
 	e.signal(t, "commitment_made", initech, e.email(t, "Yes", "inbound", initech, mailAt), e.daysAgo(4), e.Rep1)
 
 	e.pass(t)
-	shown := e.suggestions(e.Admin(), t, acme)
+	shown := e.suggestions(e.signalReader(), t, acme)
 	if len(shown) != 1 || len(shown[0].Evidence) != 2 {
 		t.Fatalf("Acme shows %+v, want one suggestion citing both signals", shown)
 	}
@@ -348,8 +354,13 @@ func TestASentProposalSuggestsADeal(t *testing.T) {
 
 	e.pass(t)
 	shown := e.suggestions(e.Admin(), t, acme)
-	if len(shown) != 1 || shown[0].Name != "Acme GmbH – Angebot_2026" {
-		t.Fatalf("Acme shows %+v, want one suggestion named after the proposal", shown)
+	if len(shown) != 1 || shown[0].NameHint != deals.HintProposalSent {
+		t.Fatalf("Acme shows %+v, want one suggestion led by the proposal", shown)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_suggestion s
+		  LEFT JOIN deal_suggestion_evidence ev ON ev.suggestion_id = s.id
+		 WHERE row_to_json(s)::text ILIKE '%angebot%' OR row_to_json(ev)::text ILIKE '%angebot%'`); n != 0 {
+		t.Fatalf("%d stored rows repeat the file name; a suggestion stores no text from the evidence", n)
 	}
 	if ev := shown[0].Evidence; len(ev) != 1 || *ev[0].AttachmentID != proposal {
 		t.Fatalf("evidence = %+v, want the proposal document", ev)

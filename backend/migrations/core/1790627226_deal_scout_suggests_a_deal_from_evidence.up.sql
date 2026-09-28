@@ -16,7 +16,10 @@ CREATE TABLE deal_suggestion (
     company_id uuid NOT NULL,
     pipeline_id uuid NOT NULL,
     proposed_stage_id uuid NOT NULL,
-    proposed_name text NOT NULL,
+    -- What kind of evidence leads, as a code a reader's client words. The
+    -- proposed deal's name is the company's name and this hint, so nothing
+    -- here is text copied out of a message.
+    name_hint text NOT NULL,
     proposed_amount_minor bigint,
     currency text,
     proposed_close_date date,
@@ -49,7 +52,7 @@ CREATE TABLE deal_suggestion (
     CONSTRAINT deal_suggestion_amount_nonnegative CHECK (proposed_amount_minor IS NULL OR proposed_amount_minor >= 0),
     CONSTRAINT deal_suggestion_confidence_check CHECK (confidence >= 0 AND confidence <= 1),
     CONSTRAINT deal_suggestion_evidence_count_check CHECK (evidence_count > 0),
-    CONSTRAINT deal_suggestion_name_check CHECK (length(btrim(proposed_name)) > 0)
+    CONSTRAINT deal_suggestion_name_hint_check CHECK (name_hint IN ('proposal_sent', 'opportunity_signalled', 'meeting_held'))
 );
 
 CREATE TABLE deal_suggestion_evidence (

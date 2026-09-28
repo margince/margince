@@ -335,7 +335,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			Domain: "mckinsey.com", Reason: "Nothing on the site named a company.",
 			AskedAt: readInstant,
 		}}}).
-		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("Acme – Angebot")}})
+		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}})
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)

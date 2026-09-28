@@ -67,10 +67,40 @@ func (e *SuggestionDecidedError) MessageFault() (code, message string) {
 
 func (e *SuggestionDecidedError) Unwrap() error { return apperrors.ErrConflict }
 
+// SuggestionSupersededError is an acceptance that found the company already
+// has an open deal. The suggestion is retired rather than opening a second
+// deal. It answers 409.
+type SuggestionSupersededError struct{}
+
+func (e *SuggestionSupersededError) Error() string {
+	return "deals: the company already has an open deal"
+}
+
+// MessageFault says why nothing was opened.
+func (e *SuggestionSupersededError) MessageFault() (code, message string) {
+	return "suggestion_superseded", "This company already has an open deal, so the suggestion was retired. Open the deal instead."
+}
+
+func (e *SuggestionSupersededError) Unwrap() error { return apperrors.ErrConflict }
+
+// NoAmountConflictError is a request that both drops the amount and names one.
+type NoAmountConflictError struct{}
+
+func (e *NoAmountConflictError) Error() string {
+	return "deals: no_amount cannot be sent with an amount or a currency"
+}
+
+// FieldFault names the flag the caller must drop, or the amount.
+func (e *NoAmountConflictError) FieldFault() (field, code, message string) {
+	return "no_amount", "conflicting_amount", "Send no_amount alone, or an amount with its currency."
+}
+
 // AcceptSuggestionInput is the rep's corrections. A nil field keeps the
-// suggestion's own value; the amount and currency travel as a pair.
+// suggestion's own value; the amount and currency travel as a pair, and
+// NoAmount drops the suggested amount.
 type AcceptSuggestionInput struct {
 	Name        *string
+	NoAmount    bool
 	AmountMinor *int64
 	Currency    *string
 	StageID     *ids.UUID
@@ -98,9 +128,13 @@ func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSugg
 		return SuggestionAcceptance{}, errors.New("deals: accepting a suggestion needs its effects wired")
 	}
 	var out SuggestionAcceptance
+	superseded := false
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		current, err := openSuggestionForDecision(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		if superseded, err = supersedeIfCompanyTaken(ctx, tx, current); err != nil || superseded {
 			return err
 		}
 		birth, err := s.acceptedDealInput(ctx, tx, current, in)
@@ -119,7 +153,32 @@ func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSugg
 		out.Suggestion.State = SuggestionAccepted
 		return recordDecision(ctx, tx, current.ID, SuggestionAccepted, &out.DealID)
 	})
+	if err == nil && superseded {
+		return SuggestionAcceptance{}, &SuggestionSupersededError{}
+	}
 	return out, err
+}
+
+// supersedeIfCompanyTaken retires the suggestion, and reports so, when its
+// company has an open deal by now — opened by hand since the last pass.
+//
+// The company row is locked FOR UPDATE first. Every deal insert naming the
+// company takes a key-share lock on that row for its foreign key, which this
+// lock conflicts with: a deal created by hand concurrently either committed
+// before the check below sees it, or waits for this acceptance to finish. So
+// no acceptance opens a second deal beside one it could not see, and ordinary
+// deal creation takes no lock it did not already take.
+func supersedeIfCompanyTaken(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
+	var free bool
+	if err := tx.QueryRow(ctx, `
+		SELECT `+SuggestionCompanyFreeClause("c.id")+`
+		  FROM company c WHERE c.id = $1 FOR UPDATE OF c`, current.CompanyID).Scan(&free); err != nil {
+		return false, fmt.Errorf("deals: locking the suggestion's company: %w", err)
+	}
+	if free {
+		return false, nil
+	}
+	return true, supersedeTx(ctx, tx, current.ID)
 }
 
 // DismissSuggestion records that the evidence is not a deal. The decision is
@@ -157,12 +216,17 @@ func openSuggestionForDecision(ctx context.Context, tx pgx.Tx, id ids.UUID) (Sug
 
 // acceptedDealInput folds the rep's corrections over the suggestion.
 func (s *Store) acceptedDealInput(ctx context.Context, tx pgx.Tx, current Suggestion, in AcceptSuggestionInput) (CreateDealInput, error) {
-	name := current.Name
+	name := current.CompanyName
 	if in.Name != nil && strings.TrimSpace(*in.Name) != "" {
 		name = strings.TrimSpace(*in.Name)
 	}
 	amount, currency := current.AmountMinor, current.Currency
-	if in.AmountMinor != nil || in.Currency != nil {
+	switch {
+	case in.NoAmount && (in.AmountMinor != nil || in.Currency != nil):
+		return CreateDealInput{}, &NoAmountConflictError{}
+	case in.NoAmount:
+		amount, currency = nil, nil
+	case in.AmountMinor != nil || in.Currency != nil:
 		amount, currency = in.AmountMinor, in.Currency
 	}
 	pipeline, stage := &current.PipelineID, &current.StageID

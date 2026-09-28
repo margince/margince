@@ -34,9 +34,9 @@ func (s *stubSuggestions) CountOpen(context.Context) (int, error) {
 	return len(s.rows), nil
 }
 
-func suggestionRow(name string) crmcontracts.DealSuggestion {
+func suggestionRow(hint crmcontracts.DealSuggestionNameHint) crmcontracts.DealSuggestion {
 	return crmcontracts.DealSuggestion{
-		Id: openapi_types.UUID(ids.NewV7()), Kind: "open_deal", State: "open", Name: name,
+		Id: openapi_types.UUID(ids.NewV7()), Kind: "open_deal", State: "open", NameHint: hint,
 		CompanyId: openapi_types.UUID(ids.NewV7()), CompanyName: "Acme", Confidence: 0.8,
 		CreatedAt: readInstant,
 	}
@@ -45,7 +45,7 @@ func suggestionRow(name string) crmcontracts.DealSuggestion {
 func suggestionRows(n int) []crmcontracts.DealSuggestion {
 	rows := make([]crmcontracts.DealSuggestion, 0, n)
 	for range n {
-		rows = append(rows, suggestionRow("a suggested deal"))
+		rows = append(rows, suggestionRow("meeting_held"))
 	}
 	return rows
 }
@@ -89,13 +89,13 @@ func TestAFloodOfSuggestionsBuriesNeitherDecisionsNorPairs(t *testing.T) {
 }
 
 func TestASuggestionRowOffersItsVerbsAndNamesTheCompany(t *testing.T) {
-	row := suggestionRow("Acme – Angebot")
+	row := suggestionRow("proposal_sent")
 	item := suggestionItem(row)
 	if item.Subject == nil || item.Subject.Type != subjectCompany || item.Subject.Id != row.CompanyId {
 		t.Fatalf("subject = %+v, want the suggestion's company", item.Subject)
 	}
-	if item.Title == nil || *item.Title != "Acme – Angebot" {
-		t.Fatalf("title = %v, want the proposed deal's name", item.Title)
+	if item.Title != nil {
+		t.Fatalf("title = %q, want none: the client words the row, so it repeats no evidence text", *item.Title)
 	}
 	if len(item.Actions) != 3 || item.Actions[0] != "decide" || item.Actions[1] != actionDismiss {
 		t.Fatalf("actions = %v, want decide, dismiss and open", item.Actions)

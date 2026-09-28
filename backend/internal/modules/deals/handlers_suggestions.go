@@ -53,7 +53,8 @@ func (h Handlers) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, i
 	}
 	in := AcceptSuggestionInput{
 		Name: req.Name, AmountMinor: req.AmountMinor, Currency: req.Currency,
-		StageID: optionalUUID(req.StageId), OwnerID: optionalUUID(req.OwnerId),
+		NoAmount: req.NoAmount != nil && *req.NoAmount,
+		StageID:  optionalUUID(req.StageId), OwnerID: optionalUUID(req.OwnerId),
 	}
 	if req.CloseDate != nil {
 		in.CloseDate = &req.CloseDate.Time
@@ -98,7 +99,7 @@ func SuggestionWire(s Suggestion) crmcontracts.DealSuggestion {
 		Id: openapi_types.UUID(s.ID), Kind: crmcontracts.DealSuggestionKind(s.Kind),
 		State: crmcontracts.DealSuggestionState(s.State), CompanyId: openapi_types.UUID(s.CompanyID),
 		CompanyName: s.CompanyName, PipelineId: openapi_types.UUID(s.PipelineID),
-		StageId: openapi_types.UUID(s.StageID), Name: s.Name, AmountMinor: s.AmountMinor,
+		StageId: openapi_types.UUID(s.StageID), NameHint: crmcontracts.DealSuggestionNameHint(s.NameHint), AmountMinor: s.AmountMinor,
 		Currency: s.Currency, Confidence: float32(s.Confidence), CreatedAt: s.CreatedAt,
 		Evidence: make([]crmcontracts.DealSuggestionEvidence, 0, len(s.Evidence)),
 	}

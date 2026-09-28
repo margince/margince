@@ -4,9 +4,6 @@
 package compose
 
 import (
-	"path"
-	"strings"
-
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
@@ -21,96 +18,39 @@ const (
 	scoutConfidenceCeiling  = 0.95
 )
 
-// draftSuggestion applies the rule to one company's evidence, newest first,
-// and answers the draft when the rule fires. The rule fires on a held meeting,
-// on a proposal document, or on the two signals within signalPairWindow; a
-// lone signal is not enough.
-func draftSuggestion(company []scoutItem) (deals.SuggestionDraft, bool) {
-	var meetings, documents []scoutItem
-	var opportunities, commitments []scoutItem
+// draftSuggestion turns one chosen company's cited evidence, newest first, into
+// the draft deals records. Which evidence counts was decided by the read; this
+// only names the lead kind, weighs the kinds present, and takes the amount of
+// the newest document whose reading stated one with its currency.
+func draftSuggestion(company []scoutItem) deals.SuggestionDraft {
+	draft := deals.SuggestionDraft{CompanyID: company[0].company}
+	present := map[string]bool{}
 	for _, it := range company {
-		switch {
-		case it.evidence.Kind == deals.EvidenceMeeting:
-			meetings = appendCapped(meetings, it)
-		case it.evidence.Kind == deals.EvidenceAttachment:
-			documents = appendCapped(documents, it)
-		case it.signalKind == "new_opportunity":
-			opportunities = append(opportunities, it)
-		case it.signalKind == "commitment_made":
-			commitments = append(commitments, it)
-		}
-	}
-	pair := signalPair(opportunities, commitments)
-	cited := append(append(append([]scoutItem{}, documents...), pair...), meetings...)
-	if len(cited) == 0 {
-		return deals.SuggestionDraft{}, false
-	}
-	draft := deals.SuggestionDraft{
-		CompanyID:  company[0].company,
-		Name:       suggestionName(company[0].companyName, documents),
-		Confidence: scoutConfidence(presentWeights(documents, pair, meetings)),
-	}
-	for _, it := range cited {
+		present[it.evidence.Kind] = true
 		draft.Evidence = append(draft.Evidence, it.evidence)
-	}
-	for _, doc := range documents {
-		if doc.amountMinor != nil && doc.currency != nil {
-			draft.AmountMinor, draft.Currency = doc.amountMinor, doc.currency
-			break
+		if draft.AmountMinor == nil && it.amountMinor != nil && it.currency != nil {
+			draft.AmountMinor, draft.Currency = it.amountMinor, it.currency
 		}
 	}
-	return draft, true
-}
-
-// presentWeights lists the weight of each kind of evidence that is present.
-func presentWeights(documents, pair, meetings []scoutItem) []float64 {
 	var weights []float64
 	for _, kind := range []struct {
-		items  []scoutItem
-		weight float64
-	}{{documents, scoutConfidenceDocument}, {pair, scoutConfidenceSignals}, {meetings, scoutConfidenceMeeting}} {
-		if len(kind.items) > 0 {
-			weights = append(weights, kind.weight)
+		evidence, hint string
+		weight         float64
+	}{
+		{deals.EvidenceAttachment, deals.HintProposalSent, scoutConfidenceDocument},
+		{deals.EvidenceSignal, deals.HintOpportunitySignaled, scoutConfidenceSignals},
+		{deals.EvidenceMeeting, deals.HintMeetingHeld, scoutConfidenceMeeting},
+	} {
+		if !present[kind.evidence] {
+			continue
 		}
-	}
-	return weights
-}
-
-func appendCapped(list []scoutItem, it scoutItem) []scoutItem {
-	if len(list) >= dealScoutItemCap {
-		return list
-	}
-	return append(list, it)
-}
-
-// signalPair answers the newest new_opportunity with a commitment_made within
-// signalPairWindow of it, as the two items to cite, or nothing.
-func signalPair(opportunities, commitments []scoutItem) []scoutItem {
-	for _, opportunity := range opportunities {
-		for _, commitment := range commitments {
-			gap := opportunity.evidence.OccurredAt.Sub(commitment.evidence.OccurredAt)
-			if gap < 0 {
-				gap = -gap
-			}
-			if gap <= signalPairWindow {
-				return []scoutItem{opportunity, commitment}
-			}
+		if draft.NameHint == "" {
+			draft.NameHint = kind.hint
 		}
+		weights = append(weights, kind.weight)
 	}
-	return nil
-}
-
-// suggestionName is the company's name, followed by the newest proposal's
-// file name when one was sent: the rep sees at once which piece of work it is.
-func suggestionName(company string, documents []scoutItem) string {
-	if len(documents) == 0 {
-		return company
-	}
-	stem := strings.TrimSpace(strings.TrimSuffix(documents[0].filename, path.Ext(documents[0].filename)))
-	if stem == "" {
-		return company
-	}
-	return company + " – " + stem
+	draft.Confidence = scoutConfidence(weights)
+	return draft
 }
 
 // scoutConfidence is the strongest kind's weight, raised for each further kind

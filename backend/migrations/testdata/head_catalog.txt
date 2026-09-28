@@ -3494,7 +3494,7 @@ public.deal_suggestion.deal_suggestion_decided_shape CHECK (((state = 'open'::te
 public.deal_suggestion.deal_suggestion_evidence_count_check CHECK ((evidence_count > 0))
 public.deal_suggestion.deal_suggestion_kind_check CHECK ((kind = ANY (ARRAY['open_deal'::text, 'advance_stage'::text, 'revive'::text])))
 public.deal_suggestion.deal_suggestion_money_pair CHECK (((proposed_amount_minor IS NULL) = (currency IS NULL)))
-public.deal_suggestion.deal_suggestion_name_check CHECK ((length(btrim(proposed_name)) > 0))
+public.deal_suggestion.deal_suggestion_name_hint_check CHECK ((name_hint = ANY (ARRAY['proposal_sent'::text, 'opportunity_signalled'::text, 'meeting_held'::text])))
 public.deal_suggestion.deal_suggestion_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
 public.deal_suggestion.deal_suggestion_pkey PRIMARY KEY (id)
 public.deal_suggestion.deal_suggestion_proposed_stage_id_fkey FOREIGN KEY (proposed_stage_id) REFERENCES stage(id) ON DELETE CASCADE
@@ -3506,10 +3506,10 @@ public.deal_suggestion.evidence_through timestamp with time zone NOT NULL gen=- 
 public.deal_suggestion.fingerprint text NOT NULL gen=- def=-
 public.deal_suggestion.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_suggestion.kind text NOT NULL gen=- def='open_deal'::text
+public.deal_suggestion.name_hint text NOT NULL gen=- def=-
 public.deal_suggestion.pipeline_id uuid NOT NULL gen=- def=-
 public.deal_suggestion.proposed_amount_minor bigint gen=- def=-
 public.deal_suggestion.proposed_close_date date gen=- def=-
-public.deal_suggestion.proposed_name text NOT NULL gen=- def=-
 public.deal_suggestion.proposed_stage_id uuid NOT NULL gen=- def=-
 public.deal_suggestion.state text NOT NULL gen=- def='open'::text
 public.deal_suggestion.trg_deal_suggestion_updated CREATE TRIGGER trg_deal_suggestion_updated BEFORE UPDATE ON public.deal_suggestion FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
