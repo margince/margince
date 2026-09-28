@@ -19,6 +19,7 @@ const (
 	pgQueryCanceled       = "57014"
 	pgLockNotAvailable    = "55P03"
 	pgProgramLimitExceed  = "54000"
+	pgDeadlockDetected    = "40P01"
 
 	// 0A000 is "the server will not do that", and almost every member of it is
 	// a defect in the statement WE sent — an unsupported clause, a write to a
@@ -55,6 +56,14 @@ func pgViolation(err error, code string) (constraint string, ok bool) {
 func IsLockTimeout(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == pgLockNotAvailable
+}
+
+// IsDeadlock detects a 40P01: Postgres broke a lock cycle by aborting this
+// transaction. Nothing it wrote survives, so running the whole transaction again
+// is safe, and the second run usually meets the other side already committed.
+func IsDeadlock(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgDeadlockDetected
 }
 
 // IsUniqueViolation detects the 23505 dedupe path (409 + existing id).

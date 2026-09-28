@@ -219,15 +219,23 @@ A **team** (`team` table) is a named group; **`team_membership`** joins users to
    wants standing write access among colleagues authors a custom role at `team` scope, and the
    predicate still renders the arm for it.
 
+**Only a literal admin changes who is on a team**: adding or removing a member, archiving or
+restoring the team, or inviting a member onto one (`identity/teams.go`,
+`refuseTeamMembershipUnlessAdmin`, 403 `team_membership_requires_admin`). Membership widens or
+ends a member's team reach and decides who leads and coaches them, which is role authority, and
+`team_admin` is not. A holder of `team_admin` creates and renames teams; neither changes anybody's
+reach.
+
 Teams do **not** carry their own permissions — a team is not a role. (A role *assignment* can be
 scoped to a team, but the grants still come from the role.)
 
 3. **They answer "may I speak into this colleague's work?"** — a question row scope cannot answer,
    because it is not about which rows may be read. Two surfaces ask it: raising a coaching notice
    into somebody's Worklist, and the coaching layer on their meeting brief. Both ask it the same
-   way and in the same order — `auth.RequireCoach` for the SEAT (a human holding `admin`,
-   `management` or `manager`; `rep` is excluded deliberately, or a rep on a team would coach their
-   teammates), then a live shared team for the EDGE, through one membership seam so the two cannot
+   way and in the same order — `auth.RequireCoach` for the SEAT (a human holding
+   `team_lead.create`, seeded to `admin`, `management` and `manager`; `rep` holds nothing on it
+   deliberately, or a rep on a team would coach their teammates), then a live shared team for the
+   EDGE, through one membership seam so the two cannot
    drift. Membership resolves through `team_membership` and live teams only; the parent hierarchy
    is not walked, matching row scope.
 
@@ -242,9 +250,9 @@ scoped to a team, but the grants still come from the role.)
    week on, so Home never offers a week the server refuses. The Worklist's `team` scope is the
    team's live work and stays on row scope. Every arm needs `deal.read`, because the week carries
    deal totals. A seat holding `team_oversight.read` (seeded to `admin` and `management`) opens
-   every team. A coaching seat, as `auth.RequireCoach` defines it, opens a team it is a live
-   member of — `team_membership` records who is on a team, not who leads it, so the coaching role
-   is what says "lead". Every other seat, and every own-scoped seat, is refused with 403. A lead
+   every team. A human seat holding `team_lead.read` opens a team it is a live member of —
+   `team_membership` records who is on a team, not who leads it, so the `team_lead` grant is what
+   says "lead". Because it is a grant, a custom role can lead a team. Every other seat, and every own-scoped seat, is refused with 403. A lead
    asking about a team they are not on gets 404, so a team id cannot be probed for existence.
 
 ## A user with no role sees nothing

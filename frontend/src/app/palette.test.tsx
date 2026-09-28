@@ -14,7 +14,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
-import { meFixture } from "./mefixture";
+import { type GrantSpec, meFixture } from "./mefixture";
 import { CREATE_ID } from "./nav";
 import {
   type Command,
@@ -609,43 +609,25 @@ describe("useBuiltinCommands", () => {
     return render(<Probe />);
   }
 
-  // The company page rides a deployment flag as well as a grant, and the
-  // palette used to answer that half of the question differently from the rail:
-  // it passed `probeCompanyFlag: false` to avoid a network read, so the flag
-  // resolved to false here and to its real value there. One installation, two
-  // answers, and no test could see it because each surface was asserted alone.
-  //
-  // These three hold the claim that they now agree. The knob is the same
-  // `meFixture` field `settings-nav.test.tsx` drives, so a predicate that
-  // stopped reading it fails on both sides at once.
-  function renderProbeWithCompany(opts: {
-    companyContext: boolean | null;
-    roles?: string[];
-  }) {
+  // Company profile opens on the catalog's installation grants, and the profile
+  // card on it is the admin's alone. A `company` grant opens nothing here,
+  // whatever the installation says — the palette reads the rail's table.
+  function renderProbeWithCompany(opts: { roles: string[]; allow: GrantSpec }) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        jsonResponse(
-          meFixture({
-            roles: opts.roles ?? [],
-            // The write, which is what Company profile asks: the read is held
-            // by every seat and stopped opening the page when the four
-            // configuration pages moved off the reads.
-            allow: { company: ["read", "update"] },
-            settingsAvailability:
-              opts.companyContext === null
-                ? null
-                : { company_context: opts.companyContext },
-          }),
-        ),
+        jsonResponse(meFixture({ roles: opts.roles, allow: opts.allow })),
       ),
     );
     return render(<Probe />);
   }
+  const INSTALLATION_WRITER: GrantSpec = {
+    installation_settings: ["read", "update"],
+  };
 
-  it("offers the company shortcut when the installation has that surface", async () => {
+  it("offers the company shortcut to the installation's writer", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: true });
+    renderProbeWithCompany({ roles: ["ops"], allow: INSTALLATION_WRITER });
     // Typed by its OLD name, which the palette keeps as a keyword: the page is
     // "Company profile" now, and a reader who learnt "General" should still
     // find it rather than concluding it was removed.
@@ -655,34 +637,32 @@ describe("useBuiltinCommands", () => {
     });
   });
 
-  it("withholds it when the installation does not, matching the rail", async () => {
+  it("withholds it from a company writer while the rollout is on", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: false });
-    // The grant is held and the flag is not, which is exactly the state the old
-    // palette got wrong: it never read the flag, so it fell back to the grants
-    // beside it and offered a page this installation may not have.
-    await user.type(screen.getByRole("searchbox"), "general");
-    await waitFor(() => {
-      expect(screen.queryByText("Company profile")).toBeNull();
+    renderProbeWithCompany({
+      roles: ["rep"],
+      allow: {
+        company: ["create", "read", "update"],
+        // The witness: Capture rules proves /me has answered before the
+        // absence below is read.
+        capture_settings: ["read"],
+      },
     });
-  });
-
-  it("withholds it when /me carries no availability at all", async () => {
-    const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: null });
-    await user.type(screen.getByRole("searchbox"), "general");
-    await waitFor(() => {
-      expect(screen.queryByText("Company profile")).toBeNull();
-    });
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "capture");
+    await screen.findByText("Capture rules");
+    await user.clear(box);
+    await user.type(box, "general");
+    expect(screen.queryByText("Company profile")).toBeNull();
   });
 
   // Reading the company's own website is Company profile's job, so no seat is
   // offered a separate action for it.
-  it.each([["admin"], ["rep"]])(
+  it.each([["admin"], ["ops"]])(
     "offers %s no separate read-a-company action",
     async (role) => {
       const user = userEvent.setup();
-      renderProbeWithCompany({ companyContext: true, roles: [role] });
+      renderProbeWithCompany({ roles: [role], allow: INSTALLATION_WRITER });
       await user.type(screen.getByRole("searchbox"), "company");
       await screen.findByText("Company profile");
       expect(screen.queryByText("Read a company")).toBeNull();
@@ -691,7 +671,7 @@ describe("useBuiltinCommands", () => {
 
   it("reaches Company profile by its refresh button's words for an admin", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: true, roles: ["admin"] });
+    renderProbeWithCompany({ roles: ["admin"], allow: INSTALLATION_WRITER });
     await user.type(screen.getByRole("searchbox"), "website");
     await waitFor(() => {
       expect(destinationRows()[0].textContent).toContain("Company profile");
@@ -700,11 +680,11 @@ describe("useBuiltinCommands", () => {
     expect(window.location.hash).toBe("#/settings/company");
   });
 
-  // Any other seat's Company profile draws no website card, so "website"
-  // leads it nowhere, though the page itself is still theirs to find.
-  it("does not send a rep to Company profile for the website", async () => {
+  // Ops reaches Company profile for the installation and the rates, and its
+  // copy of the page draws no website card, so "website" leads it nowhere.
+  it("does not send ops to Company profile for the website", async () => {
     const user = userEvent.setup();
-    renderProbeWithCompany({ companyContext: true, roles: ["rep"] });
+    renderProbeWithCompany({ roles: ["ops"], allow: INSTALLATION_WRITER });
     const box = screen.getByRole("searchbox");
     await user.type(box, "company");
     await screen.findByText("Company profile");

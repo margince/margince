@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { BusyMark } from "./atoms";
+import { useSinglePress } from "./presslatch";
 import "./switch.css";
 
 // Switch: a setting that takes effect when you flip it.
@@ -136,6 +137,7 @@ export function Switch({
   // them their write is going through and that they were never allowed to make
   // it, in the same row.
   const busy = pending === true && disabled !== true && !refused;
+  const singlePress = useSinglePress();
 
   return (
     <div className="switchrow">
@@ -164,9 +166,9 @@ export function Switch({
         onClick={
           busy
             ? (event) => event.stopPropagation()
-            : () => {
+            : singlePress(() => {
                 onChange(!on);
-              }
+              })
         }
       >
         {/* The track's knob. Decorative: the state is already on aria-checked,

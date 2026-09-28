@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 77 |
+| Tools | 78 |
 | Resources | 11 |
-| Tool catalog | 224.0 KB |
+| Tool catalog | 227.6 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 58377 |
+| Approx. wire tokens | 59304 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 102.2 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 57.8 KB | 25% | Yes, every step |
-| Input schemas | 47.8 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.2 KB | 7% | Partly |
-| **Description + input schema** | **105.6 KB** | **47%** | **the recurring cost** |
+| Output schemas | 104.2 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 58.4 KB | 25% | Yes, every step |
+| Input schemas | 48.7 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.4 KB | 7% | Partly |
+| **Description + input schema** | **107.1 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -59,7 +59,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/handoff.html`](#handoff_view) — Delivery handoff
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 
-### Tools (77)
+### Tools (78)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -70,6 +70,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 3.6 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
@@ -1433,6 +1434,309 @@ Record a meeting against linked CRM records without sending an invitation. Reser
       "required": [
         "id"
       ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### bulk_update_records
+
+**Change many records at once**
+
+Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. update_record and archive_record change one record. Above 10 records, execute needs the confirm_token preview answered, for exactly the same selection; it is good once. Keep batch_id from the answer. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "confirm_token": {
+      "description": "The token preview answered; needed above 10 records",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version"
+        ],
+        "type": "object"
+      },
+      "maxItems": 500,
+      "minItems": 1,
+      "type": "array"
+    },
+    "mode": {
+      "description": "preview says what would change; execute changes it",
+      "enum": [
+        "preview",
+        "execute"
+      ],
+      "type": "string"
+    },
+    "owner_id": {
+      "description": "The new owner, for reassign_owner",
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_type": {
+      "enum": [
+        "contact",
+        "company",
+        "deal"
+      ],
+      "type": "string"
+    },
+    "verb": {
+      "enum": [
+        "reassign_owner",
+        "archive"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode",
+    "record_type",
+    "verb",
+    "items"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "affected": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "batch_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "changed": {
+          "type": "integer"
+        },
+        "confirm_token": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "excluded": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "record_type": {
+          "type": "string"
+        },
+        "requires_confirmation": {
+          "type": "boolean"
+        },
+        "sample": {
+          "items": {
+            "properties": {
+              "after": {
+                "properties": {
+                  "archived": {
+                    "type": "boolean"
+                  },
+                  "owner_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "archived"
+                ],
+                "type": "object"
+              },
+              "before": {
+                "properties": {
+                  "archived": {
+                    "type": "boolean"
+                  },
+                  "owner_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "archived"
+                ],
+                "type": "object"
+              },
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "after",
+              "before",
+              "id",
+              "label"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "skipped": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "verb": {
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "evidence": {

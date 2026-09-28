@@ -29,10 +29,10 @@
     }
   ],
   "catalog": {
-    "tools": 77,
+    "tools": 78,
     "system_frame_tokens": 516,
-    "tokens": 24957,
-    "median_tool_tokens": 273,
+    "tokens": 25295,
+    "median_tool_tokens": 274,
     "mean_tool_tokens": 323
   },
   "agents": [
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 77,
+      "of_served_tools": 78,
       "tokens": 3551,
       "listing_tokens": 1746,
       "step_schema_tokens": 1288,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 77,
+      "of_served_tools": 78,
       "tokens": 4908,
       "listing_tokens": 2585,
       "step_schema_tokens": 1807,
@@ -201,6 +201,10 @@
     {
       "name": "advance_project_phase",
       "tokens": 340
+    },
+    {
+      "name": "bulk_update_records",
+      "tokens": 338
     },
     {
       "name": "search_report_evidence",

@@ -25,7 +25,7 @@ const contact: View["contact"] = {
   first_name: "Dana",
   last_name: "Buyer",
   owner_id: "u-1",
-  source: "ui",
+  source: "manual",
   captured_by: "human:u-1",
   created_at: "2026-08-01T09:00:00Z",
   updated_at: "2026-08-12T09:00:00Z",

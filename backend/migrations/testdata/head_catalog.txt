@@ -1195,6 +1195,7 @@ public.audit_log.audit_log_images_are_absent_or_present CHECK (((before <> 'null
 public.audit_log.audit_log_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
 public.audit_log.audit_log_pkey PRIMARY KEY (id)
 public.audit_log.authorization_rule text gen=- def=-
+public.audit_log.batch_id uuid gen=- def=-
 public.audit_log.before jsonb gen=- def=-
 public.audit_log.entity_id uuid NOT NULL gen=- def=-
 public.audit_log.entity_type text NOT NULL gen=- def=-
@@ -1324,6 +1325,32 @@ public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
 public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
 public.brief_run.user_id uuid NOT NULL gen=- def=-
 public.brief_run_pkey CREATE UNIQUE INDEX brief_run_pkey ON public.brief_run USING btree (id)
+public.bulk_confirmation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.bulk_confirmation.affected uuid[] NOT NULL gen=- def=-
+public.bulk_confirmation.binding bytea NOT NULL gen=- def=-
+public.bulk_confirmation.bulk_confirmation_expiry_after_creation CHECK ((expires_at > created_at))
+public.bulk_confirmation.bulk_confirmation_pkey PRIMARY KEY (token_hash)
+public.bulk_confirmation.consumed_at timestamp with time zone gen=- def=-
+public.bulk_confirmation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.bulk_confirmation.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.bulk_confirmation.requested_by text NOT NULL gen=- def=-
+public.bulk_confirmation.token_hash bytea NOT NULL gen=- def=-
+public.bulk_confirmation_pkey CREATE UNIQUE INDEX bulk_confirmation_pkey ON public.bulk_confirmation USING btree (token_hash)
+public.bulk_operation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.bulk_operation.bulk_operation_counts_check CHECK (((changed_count >= 0) AND (skipped_count >= 0)))
+public.bulk_operation.bulk_operation_pkey PRIMARY KEY (id)
+public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text])))
+public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text])))
+public.bulk_operation.changed_count integer NOT NULL gen=- def=-
+public.bulk_operation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.bulk_operation.id uuid NOT NULL gen=- def=uuidv7()
+public.bulk_operation.params jsonb NOT NULL gen=- def='{}'::jsonb
+public.bulk_operation.passport_id uuid gen=- def=-
+public.bulk_operation.record_type text NOT NULL gen=- def=-
+public.bulk_operation.requested_by text NOT NULL gen=- def=-
+public.bulk_operation.skipped_count integer NOT NULL gen=- def=-
+public.bulk_operation.verb text NOT NULL gen=- def=-
+public.bulk_operation_pkey CREATE UNIQUE INDEX bulk_operation_pkey ON public.bulk_operation USING btree (id)
 public.capture_alias_sighting acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_alias_sighting.capture_alias_sighting_once_per_message UNIQUE (user_id, value, source)
 public.capture_alias_sighting.capture_alias_sighting_pkey PRIMARY KEY (id)
@@ -3955,6 +3982,7 @@ public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_ex
 public.idx_attachment_extraction_latest CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC)
 public.idx_audit_actor CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC)
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
+public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log USING btree (batch_id) WHERE (batch_id IS NOT NULL)
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
 public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash)
@@ -3967,6 +3995,9 @@ public.idx_brief_item_deal CREATE INDEX idx_brief_item_deal ON public.brief_item
 public.idx_brief_item_run CREATE INDEX idx_brief_item_run ON public.brief_item USING btree (brief_run_id, rank)
 public.idx_brief_item_state CREATE INDEX idx_brief_item_state ON public.brief_item USING btree (brief_run_id, state, state_at)
 public.idx_brief_run_user CREATE INDEX idx_brief_run_user ON public.brief_run USING btree (user_id, generated_at DESC)
+public.idx_bulk_confirmation_expires CREATE INDEX idx_bulk_confirmation_expires ON public.bulk_confirmation USING btree (expires_at)
+public.idx_bulk_operation_created CREATE INDEX idx_bulk_operation_created ON public.bulk_operation USING btree (created_at)
+public.idx_bulk_operation_requested_by CREATE INDEX idx_bulk_operation_requested_by ON public.bulk_operation USING btree (requested_by, created_at)
 public.idx_capture_auto_enrich_due CREATE INDEX idx_capture_auto_enrich_due ON public.capture_auto_enrich_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_capture_backfill_conn CREATE INDEX idx_capture_backfill_conn ON public.capture_backfill USING btree (connection_id, created_at DESC)
 public.idx_capture_connection CREATE INDEX idx_capture_connection ON public.capture_connection USING btree (provider, status) WHERE (archived_at IS NULL)

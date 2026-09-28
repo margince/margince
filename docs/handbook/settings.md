@@ -107,11 +107,12 @@ and whether you can change them, follows your role — see the table at the end.
 ## Company profile
 
 The Company profile page in Settings (group **Company**) holds your own
-company's name, currency and business context. Sign-in methods and the Google
+company's name, currency and business context. It is an administrator's page:
+Admin and Ops reach it, and a sales seat does not. Sign-in methods and the Google
 and Microsoft apps have their own **Sign-in and apps** page in the same group.
 
 **Installation** and **Currency** — the company's name, timezone and base
-currency. **Currency rates** — "Exchange rates that convert foreign-currency amounts to
+currency, which Admin and Ops change. **Currency rates** — "Exchange rates that convert foreign-currency amounts to
 the base currency. New rates take effect today or later; past rates never
 change." That last clause is the point: setting a rate today cannot rewrite what
 last quarter reported. Seeing the rates takes the exchange-rate read permission
@@ -119,7 +120,8 @@ last quarter reported. Seeing the rates takes the exchange-rate read permission
 given it too.
 
 **Company context** — what Margince knows about your own company, where it read
-it from, and a place to tell it directly.
+it from, and a place to tell it directly. Only an Admin sees this card and edits
+it; Ops finds the page without it.
 
 ## Members, Teams, and Seats and license
 
@@ -349,34 +351,38 @@ records.
 
 | You are | You can change | You can also look up |
 |---|---|---|
-| A sales seat | Your own five pages, Products and offers, Outcome reviews, Company profile, Capture rules (adding only) | The rest of the Sales group, and Knowledge |
+| A sales seat | Your own five pages, Products and offers, Outcome reviews, Capture rules (adding only) | The rest of the Sales group, and Knowledge |
 | A team lead | The same | The same |
 | Management | The same | The above plus AI usage, model calls, seat counts and the sign-in status — all of them readable and none of them theirs to change |
 | Ops | Most of the operational catalog, including the model rates | The rest, the extension inventory among them — Ops reads it and cannot change the grants |
 | Admin | Everything the deployment has armed | — |
 
 That first row surprises readers, so it is worth saying plainly: a sales seat
-reaches **Capture rules** and the **company profile**, because those cards ask
-for a permission every sales role holds. If that is not what you want, the fix is
-the permission, not the page.
+reaches **Capture rules**, because one card there asks for a permission every
+sales role holds. If that is not what you want, the fix is the permission, not
+the page.
 
 What a sales seat can do there is narrower than "edit", and the difference
 matters: it may **add** — a consumer-mail domain the shipped list missed, for
 instance — and it may not change a setting or touch an entry that is already
 there. Changing what exists is Admin's and Ops's.
 
-On an installation without the company-context capability, a sales seat has no
-writable card on the company profile.
+The **company context** is not a sales seat's on any installation. It is what
+Margince's AI knows about your own company, so it is administered: only an Admin
+reads or changes it.
 
 Nearly everything is a permission now, including the three that used to be role
 checks: administering members answers to `user_admin`, the audit log to
 `audit_log`, and the privacy queue to `privacy_request`. A custom role granted
 one of those reaches the page, and an Admin whose role lost it does not.
 
-Three things still ask for the literal Admin role rather than a permission, and
-one of them is not about recovery: **only an Admin may act on another Admin's
-account**, or hand out the Admin role. The other two are the last-admin rule and
-deployment-level resets.
+A few things still ask for the literal Admin role rather than a permission. Two
+matter to most readers: **only an Admin may act on another Admin's account**, or
+hand out the Admin role, and **only an Admin reads or changes the company
+context**. Changing who is on a team and widening a role are the Admin's too
+([Seats, roles and who can see what](seats-roles-and-access.md) has the rules),
+and some repair and maintenance actions ask for the role. Separately, the last
+Admin cannot be demoted or deactivated, so an installation always keeps one.
 
 ## Two things administrators should decide early
 

@@ -110,7 +110,7 @@ func (r *Registry) chargeAnswer(ctx context.Context, spec mcp.ToolSpec, served i
 		return err
 	}
 	if act := agentvolume.CounterFor(spec); act != agentvolume.Reads {
-		return r.charge(ctx, spec, act, 1)
+		return r.charge(ctx, spec, act, agentvolume.ActsCharged(ctx))
 	}
 	return nil
 }
@@ -259,7 +259,8 @@ func (r *Registry) ChargeRedeemedCall(ctx context.Context, spec mcp.ToolSpec) {
 }
 
 // ChargeEffect records a completed mutating REST call against the counter its
-// kind names. It takes no record count: the REST read path is charged
+// kind names: one act, or the records a bulk change said it changed. It takes no
+// count of records served: the REST read path is charged
 // separately and per record where records leave that surface, and a mutation's
 // own read-back is not this call's to count twice.
 //
@@ -275,7 +276,7 @@ func (r *Registry) ChargeEffect(ctx context.Context, spec mcp.ToolSpec) {
 	if act == agentvolume.Reads {
 		return
 	}
-	if err := r.volume.Consume(ctx, act, 1); err != nil {
+	if err := r.volume.Consume(ctx, act, agentvolume.ActsCharged(ctx)); err != nil {
 		slog.ErrorContext(ctx, "recording a completed REST effect against its quota failed",
 			"tool", spec.Name, "counter", string(act), "err", err)
 	}

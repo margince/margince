@@ -46,7 +46,7 @@ function resultVersion(
     model_provider: "routed",
     model_name: "gemini-3.1-flash-lite",
     builder_version: "voicebuilder/1",
-    source: "ui",
+    source: "manual",
     captured_by: "agent:voice-builder",
     evaluation: {
       held_out_prompts: 5,

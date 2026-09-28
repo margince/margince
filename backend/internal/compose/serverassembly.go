@@ -102,6 +102,10 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
+		// The SAME seam the check_availability tool reads, so the two doors
+		// answer one question one way: whether a window was read off the host's
+		// own diary or derived from this CRM's records.
+		WithCalendarConnected(activities.CalendarConnected(calendarBackingResolver(pool))).
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
@@ -170,6 +174,18 @@ func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 // cannot be refused here while an export of the same list accepts it.
 func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
+}
+
+// wireSurfaces binds the handler sets built after the literal, each over a
+// dependency the literal had to build first.
+func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
+	s.wireStagedSurfaces(pool)
+	s.wireAnalyticsSurface(pool)
+	s.wireCaptureSettingsSurface(pool)
+	s.wireExportSurface(pool, log)
+	s.wireOnboardingSurface(pool)
+	s.wireSystemOfRecordReads(pool)
+	s.wireBulkSurface(pool)
 }
 
 // wireStagedSurfaces binds the two surfaces that read the staged queue. They

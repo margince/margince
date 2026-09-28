@@ -113,6 +113,11 @@ type ToolSpec struct {
 	// RequiredScope are meaningless on a HumanOnly spec and must be left at
 	// their zero value by whatever registers one.
 	HumanOnly bool
+	// ConfirmsInConversation marks a tool whose confirmation happens in the
+	// conversation that asked for it, never in the approval inbox. An exhausted
+	// volume budget refuses such a call outright instead of asking the connecting
+	// human for a release, so no inbox question is ever opened on its behalf.
+	ConfirmsInConversation bool
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second

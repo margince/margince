@@ -128,8 +128,8 @@ const MULTILINE_FIELDS = new Set<keyof CompanyInput>([
   "history",
 ]);
 
-// The rollout answer every surface that gates on the flag shares — the page
-// here, the onboarding entry, and the settings nav. Named so a caller can ask
+// The rollout answer every surface that gates on the flag shares — the card
+// here and the onboarding journey. Named so a caller can ask
 // the cache whether the answer has LANDED, which is a different question from
 // whether the request went out.
 export const companyContextCapabilitiesQueryKey = [
@@ -302,9 +302,8 @@ export function CompanyContextCard() {
   const canEdit = useCanUpsert("company");
   // The installation's own profile is administered, not read on a grant:
   // useCompany asks only from an admin seat, and for any other this card draws
-  // nothing (below). The settings tab it sits on opens on
-  // installation_settings:read, which four roles hold, and the two cards beside
-  // this one are theirs to see; this one simply is not.
+  // nothing (below). The settings page it sits on opens for readers who are not
+  // admins too (settingscatalog.ts, the `company` entry); this card is not theirs.
   const isAdmin = useHoldsAdminRole();
   const company = useCompany(true);
   const [form, setForm] = useState<CompanyInput | null>(null);

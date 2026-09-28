@@ -26,8 +26,8 @@
  * has to try before learning it does nothing.
  */
 
-import type { ReactNode } from "react";
-import { Button } from "./atoms";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
+import { Button, useScrollRegion } from "./atoms";
 import "./stageladder.css";
 
 export type StageStep = {
@@ -69,6 +69,12 @@ export type StageStep = {
  * drawn once under the ladder and given an id, it is what every rung's
  * `reasonId` names — which is how a ladder refused for one cause says it once
  * rather than under each rung in turn.
+ *
+ * A pipeline is the workspace's to lengthen, so the open stages never wrap —
+ * a wrapped ladder reads as two sentences and, on a phone, buries the record
+ * under rows of pills. They hold one row that scrolls and comes to rest on
+ * the current stage. The ways out stand outside the scroll: closing a deal
+ * from its own page is what the rungs are for, and a scroll may not hide it.
  */
 export function StageLadder({
   label,
@@ -79,56 +85,114 @@ export function StageLadder({
   steps: readonly StageStep[];
   hint?: ReactNode;
 }>) {
+  const run = steps.filter((step) => !step.terminal);
+  const exits = steps.filter((step) => step.terminal);
+  const runRef = useRef<HTMLDivElement>(null);
+  // A refused ladder holds no rung that takes focus, so a run past its edge
+  // needs its own keyboard stop; the hook gives one only while it overflows.
+  const region = useScrollRegion(runRef, label);
+  // The rung the run centres on: where the record stands, or — for a record
+  // that has taken a way out — the last stage it climbed before it did. A
+  // record the pipeline cannot place leaves the run at its start.
+  const hereInRun = run.findIndex((step) => step.current);
+  const settleOn =
+    hereInRun >= 0 || !exits.some((step) => step.current)
+      ? hereInRun
+      : run.length - 1;
+  useLayoutEffect(() => {
+    const scroller = runRef.current;
+    if (!scroller) {
+      return;
+    }
+    const rung = scroller.firstElementChild?.children[settleOn];
+    if (!rung) {
+      scroller.scrollLeft = 0;
+      return;
+    }
+    // Measured against the scroller's own box, so no ancestor has to be
+    // positioned; the browser clamps past either end, so a ladder that fits
+    // stays where it is.
+    const rungBox = rung.getBoundingClientRect();
+    const runBox = scroller.getBoundingClientRect();
+    scroller.scrollLeft +=
+      (rungBox.left + rungBox.right - runBox.left - runBox.right) / 2;
+  }, [settleOn]);
   return (
     // A fieldset rather than a nav, and rather than a bare list: it IS a group
     // of controls acting on one record, and the native element says so without
     // a role. `<ol>` inside it carries the one thing the shape claims — that
-    // the stages have an order.
+    // the stages have an order. The ways out are a `<ul>`: two alternatives,
+    // not two more rungs.
     <fieldset className="stage-ladder" aria-label={label}>
-      <ol className="stage-ladder-steps">
-        {steps.map((step, index) => (
-          <li
-            key={step.key}
-            className={[
-              "stage-ladder-step",
-              step.done ? "is-done" : "",
-              step.terminal ? "is-terminal" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {/* The chevron belongs to the step that FOLLOWS it and sits inside
-                that step's own item, so a ladder that wraps takes the mark
-                down with its step rather than ending a row on one. */}
-            {index > 0 && (
-              <span aria-hidden="true" className="stage-ladder-sep">
-                ›
-              </span>
-            )}
-            {step.current ? (
-              // "You are here" belongs to the element that IS here — the
-              // marker, not the item around it. The item also holds the
-              // chevron introducing it, and a decorative mark inside the
-              // element making the claim puts it in the claim's own text.
-              <span className="stage-ladder-here" aria-current="step">
-                {step.label}
-              </span>
-            ) : (
-              <Button
-                variant="ghost"
-                data-testid={step.testId}
-                disabled={step.disabled}
-                reason={step.reason}
-                reasonId={step.reasonId}
-                onClick={step.onPick}
-              >
-                {step.label}
-              </Button>
-            )}
-          </li>
-        ))}
-      </ol>
+      <div className="stage-ladder-track">
+        {/* The scroller is a box of its own because the region it may
+            become would otherwise replace the list's role. */}
+        <div className="stage-ladder-run" ref={runRef} {...region}>
+          <ol className="stage-ladder-steps">
+            {run.map((step, index) => (
+              <LadderStep key={step.key} step={step} first={index === 0} />
+            ))}
+          </ol>
+        </div>
+        {exits.length > 0 && (
+          <ul className="stage-ladder-exits">
+            {exits.map((step, index) => (
+              <LadderStep
+                key={step.key}
+                step={step}
+                first={run.length === 0 && index === 0}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
       {hint && <p className="t-caption stage-ladder-hint">{hint}</p>}
     </fieldset>
+  );
+}
+
+function LadderStep({
+  step,
+  first,
+}: Readonly<{ step: StageStep; first: boolean }>) {
+  return (
+    <li
+      className={[
+        "stage-ladder-step",
+        step.done ? "is-done" : "",
+        step.terminal ? "is-terminal" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {/* The chevron belongs to the step that FOLLOWS it and sits inside
+          that step's own item, so the ways out, dropped to a line of their
+          own in a narrow ladder, can shed the one that would open it. */}
+      {!first && (
+        <span aria-hidden="true" className="stage-ladder-sep">
+          ›
+        </span>
+      )}
+      {step.current ? (
+        // "You are here" belongs to the element that IS here — the
+        // marker, not the item around it. The item also holds the
+        // chevron introducing it, and a decorative mark inside the
+        // element making the claim puts it in the claim's own text.
+        <span className="stage-ladder-here" aria-current="step">
+          {step.label}
+        </span>
+      ) : (
+        <Button
+          variant="ghost"
+          data-testid={step.testId}
+          disabled={step.disabled}
+          reason={step.reason}
+          reasonId={step.reasonId}
+          onClick={step.onPick}
+        >
+          {step.label}
+        </Button>
+      )}
+    </li>
   );
 }

@@ -33,9 +33,11 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 
 	// A coach who may coach, so nothing else in the chain can be the refusal.
 	ctx := principal.WithActor(context.Background(), principal.Principal{
-		Type:        principal.PrincipalHuman,
-		UserID:      ids.MustParse("01a05500-0000-7000-8000-000000000001"),
-		Permissions: principal.Permissions{RoleKeys: []string{"manager"}},
+		Type:   principal.PrincipalHuman,
+		UserID: ids.MustParse("01a05500-0000-7000-8000-000000000001"),
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
+			"team_lead": {Create: true, Read: true},
+		}},
 	})
 
 	var store *Store

@@ -220,27 +220,26 @@ Also called: save a segment, keep an advanced search.
 ## Selecting several records
 
 ### How do I select several records at once?
-To select several records in Margince, open **Leads** or **Deals** as a **Table** and tick the checkbox at the start of each row. A bar appears above the rows saying "{count} selected" with the actions for that list.
-There is no select-all box: tick each row. Only open rows have a checkbox: a closed or archived deal, and a qualified or disqualified lead, cannot be selected.
-**Contacts**, **Companies** and **Projects** have no bulk selection: change those one at a time.
+To select several records in Margince, open **Contacts**, **Companies**, **Leads** or **Deals** as a **Table** and tick the checkbox at the start of each row. A bar appears above the rows saying "{count} selected" with the actions for that list.
+There is no select-all box: tick each row. Archived rows have no checkbox, nor do closed deals or qualified and disqualified leads.
+**Projects** have no bulk selection: change those one at a time.
 Also called: multi-select, bulk edit, mass update, select all.
 
-### How do I reassign several deals or leads to a colleague?
-To reassign several deals or leads at once in Margince, tick them on the **Deals** or **Leads** table, pick the new owner in the bulk bar, and press **Assign**.
-1. Pick the colleague: **Pick an owner** on Deals, **Choose owner** on Leads.
-2. Press **Assign**. Rows that went through leave the selection.
-3. Refused rows stay ticked under "{count} not applied:" with a reason, such as "no permission to reassign". Press **Assign** to retry.
-Leads assigned away leave **Mine**; the notice offers **Show all**.
-Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their deals.
+### How do I reassign several contacts, companies or deals to a colleague?
+To reassign several records at once in Margince, tick them on the **Contacts**, **Companies** or **Deals** table, choose **Pick an owner** in the bulk bar, and press **Assign owner**.
+1. A window shows how many records will change, up to three examples, and each record left unchanged with its reason, such as "No permission to change" or "Changed since the list loaded".
+2. Press **Change owner**. A message says how many changed and how many were left unchanged.
+On **Leads**, pick the colleague under **Choose owner** and press **Assign**.
+Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their contacts.
 
-### What can I do to several deals or leads at once?
-The bulk bar on the Margince **Deals** table offers **Assign** (a new owner), **Move to stage** (open stages only) and **Archive**; the bulk bar on the **Leads** table offers **Assign** and **Disqualify** (with a **Reason**).
-Archiving deals in bulk asks "Archive {count} deals?" and warns "Archived deals leave every list and report and cannot be restored here." You cannot win or lose deals in bulk, and bulk disqualified leads are reopened one at a time.
+### What can I do to several records at once?
+The bulk bar on **Contacts** and **Companies** offers **Assign owner** and **Archive**; on **Deals** also **Move to stage** (open stages only); on **Leads** **Assign** and **Disqualify** (with a **Reason**).
+**Archive** first shows what it will do; your own company is never archived. A change of more than 10 records carries a "Large change" warning. You cannot win or lose deals in bulk.
 Nothing else can be changed in bulk, such as tags or custom fields.
 Also called: bulk actions, mass archive, bulk disqualify.
 
 ### Can I tag several records at once?
-No. Margince has no bulk tagging: the bulk bar on the **Deals** table offers only **Assign**, **Move to stage** and **Archive**, the one on **Leads** only **Assign** and **Disqualify**, and **Contacts** and **Companies** have no bulk selection. To tag several records, open each one and choose **Add tag** in its **Tags** panel.
+No. Margince has no bulk tagging: the bulk bars offer only owner changes, archiving, stage moves on **Deals** and disqualifying on **Leads**. To tag several records, open each one and choose **Add tag** in its **Tags** panel.
 To work with the tagged records afterwards, use **Filter** → **Tags** on the list.
 Also called: bulk tag, mass tag, tag many contacts, label several deals at once.
 

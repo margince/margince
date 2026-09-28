@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -38,6 +39,8 @@ function Served({ children }: Readonly<{ children: ReactNode }>) {
         ],
         page: { has_more: false, next_cursor: null },
       }),
+    "GET /users/assignable-roles": () =>
+      jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
     "GET /users/access-preview": () =>
       jsonResponse({
         objects: {

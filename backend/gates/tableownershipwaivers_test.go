@@ -157,9 +157,9 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	// deals' archive purges the archived deal's collection memberships in
 	// the same transaction — a dangling list/tag row would resurrect the
 	// deal in segment queries.
-	"internal/modules/deals:list_member:dealarchive.go:Store.ArchiveDeal:DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = $1":                "archiving a deal removes its list memberships in the archive transaction",
-	"internal/modules/deals:taggable:dealarchive.go:Store.ArchiveDeal:DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1":                      "archiving a deal removes its tag rows in the archive transaction",
-	"internal/modules/deals:relationship:dealarchive.go:Store.ArchiveDeal:UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL": "archiving a deal archives its stakeholder relationships in the archive transaction — a live relationship to an archived deal would leak it into row-scope walks",
+	"internal/modules/deals:list_member:dealarchive.go:archiveDealInTx:DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = $1":                "archiving a deal removes its list memberships in the archive transaction",
+	"internal/modules/deals:taggable:dealarchive.go:archiveDealInTx:DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1":                      "archiving a deal removes its tag rows in the archive transaction",
+	"internal/modules/deals:relationship:dealarchive.go:archiveDealInTx:UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL": "archiving a deal archives its stakeholder relationships in the archive transaction — a live relationship to an archived deal would leak it into row-scope walks",
 	// The project's archive carries the same three, for the same reasons: the
 	// edges are attributes of the grouping being archived, and each must go in
 	// the SAME transaction or a reader sees a live edge to a record that no

@@ -35,12 +35,12 @@ var eur = "EUR"
 func defineContactFieldPerType(t *testing.T, f cfvFixture) []string {
 	t.Helper()
 	specs := []customfields.FieldSpec{
-		{Object: "contact", Label: "Secret Note", Type: customfields.TypeText, Source: "ui"},
-		{Object: "contact", Label: "Risk Score", Type: customfields.TypeNumber, Source: "ui"},
-		{Object: "contact", Label: "Birthday", Type: customfields.TypeDate, Source: "ui"},
-		{Object: "contact", Label: "Net Worth", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"},
-		{Object: "contact", Label: "Tier Band", Type: customfields.TypePicklist, Options: []string{"gold", "silver"}, Source: "ui"},
-		{Object: "contact", Label: "Is Vip", Type: customfields.TypeBoolean, Source: "ui"},
+		{Object: "contact", Label: "Secret Note", Type: customfields.TypeText, Source: "manual"},
+		{Object: "contact", Label: "Risk Score", Type: customfields.TypeNumber, Source: "manual"},
+		{Object: "contact", Label: "Birthday", Type: customfields.TypeDate, Source: "manual"},
+		{Object: "contact", Label: "Net Worth", Type: customfields.TypeCurrency, Currency: &eur, Source: "manual"},
+		{Object: "contact", Label: "Tier Band", Type: customfields.TypePicklist, Options: []string{"gold", "silver"}, Source: "manual"},
+		{Object: "contact", Label: "Is Vip", Type: customfields.TypeBoolean, Source: "manual"},
 	}
 	cols := make([]string, len(specs))
 	for i, spec := range specs {
@@ -120,7 +120,7 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 	f := setupCFV(t)
 	contactCols := defineContactFieldPerType(t, f)
 	leadCol := f.defineField(t, customfields.FieldSpec{
-		Object: "lead", Label: "Private Remark", Type: customfields.TypeText, Source: "ui",
+		Object: "lead", Label: "Private Remark", Type: customfields.TypeText, Source: "manual",
 	})
 
 	contactID := seedSubject(t, f.e)
@@ -142,7 +142,7 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 	// A retired field's column keeps its stored value, so the scrub must
 	// cover retired columns too — retire one AFTER its value landed.
 	retiredField, err := f.svc.Create(f.ctx, customfields.FieldSpec{
-		Object: "contact", Label: "Legacy Code", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Legacy Code", Type: customfields.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the to-be-retired field: %v", err)
@@ -220,13 +220,13 @@ func assertEraseTombstoneShape(t *testing.T, e *Env, contactID ids.UUID) {
 func TestSARExportsCustomFieldValues(t *testing.T) {
 	f := setupCFV(t)
 	segmentCol := f.defineField(t, customfields.FieldSpec{
-		Object: "contact", Label: "Segment", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Segment", Type: customfields.TypeText, Source: "manual",
 	})
 	volumeCol := f.defineField(t, customfields.FieldSpec{
-		Object: "contact", Label: "Annual Volume", Type: customfields.TypeNumber, Source: "ui",
+		Object: "contact", Label: "Annual Volume", Type: customfields.TypeNumber, Source: "manual",
 	})
 	legacyField, err := f.svc.Create(f.ctx, customfields.FieldSpec{
-		Object: "contact", Label: "Legacy Code", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Legacy Code", Type: customfields.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the to-be-retired field: %v", err)

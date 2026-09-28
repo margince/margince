@@ -35,7 +35,7 @@ type RbacAction = components["schemas"]["RbacAction"];
  * to tell them apart: the first is not a destination at all, the second is a
  * destination that explains itself.
  */
-export type SettingsAvailabilityKey = "company_context" | "embedding_reindex";
+export type SettingsAvailabilityKey = "embedding_reindex";
 
 /**
  * What a page requires, as a value.
@@ -192,7 +192,6 @@ import {
   allOf,
   always,
   anyOf,
-  available,
   composedUnits,
   destroys,
   flagged,
@@ -313,30 +312,19 @@ export const SETTINGS_PAGES = [
     id: "company",
     group: "company",
     scope: "installation",
-    // The union of what the three cards on it ask for, and each arm is the verb
-    // that card's controls perform.
+    // What the installation and currency cards ask for. `installation_settings`
+    // is asked as the UPDATE: every seeded role reads it for the base currency,
+    // and only admin and ops may change it.
     //
-    // `installation_settings` is asked as the UPDATE, not the read. Every
-    // seeded role reads it — a rep needs the base currency to render a deal —
-    // so the read arm opened the installation's own facts to the whole
-    // workspace. Only admin and ops may change them.
-    //
-    // The company profile is different and stays a write a rep really holds:
-    // `company:update` is hers, and the profile the AI reads is a thing
-    // she legitimately edits. Its second condition is a deployment FLAG rather
-    // than a permission, so the grant ANDs with it — the surface may simply not
-    // exist on this installation.
+    // The company profile adds no arm. The server administers it — read and
+    // write both ask the admin ROLE, which no grant here can spell — so its card
+    // asks the role itself and draws nothing for anyone else on this page.
     requires: anyOf(
       writes("installation_settings", ["update"]),
-      allOf(writes("company"), available("company_context")),
       reads("fx_rate"),
     ),
-    // The three cards, by the verb each performs. InstallationSettingsCard and
-    // FxRatesCard both write; CompanyContextCard asks `useCanUpsert("company")`,
-    // which is create-or-update plus the seat — spelled here as `writes`.
     changes: acts(
       writes("installation_settings", ["update"]),
-      allOf(writes("company"), available("company_context")),
       writes("fx_rate"),
     ),
   },

@@ -214,7 +214,7 @@ how each connects are on their own page:
 ### How do I archive a contact, company, deal or project?
 To archive a record in Margince, open it, choose **More actions**, then the archive entry: **Archive** on a contact or company, **Archive deal** on a deal, **Archive project** on a project.
 Confirm the dialog. For contacts and companies it reads "Archive this record? There is no undo."
-Several deals can be archived at once with **Archive** in the Deals list's bulk bar. A lead is not archived; disqualify it instead.
+Several contacts, companies or deals can be archived at once with **Archive** in the list's bulk bar. A lead is not archived; disqualify it instead.
 An archived record leaves the live list; turn on **Show archived** on the list to see it again. It becomes read-only.
 Also called: remove, hide, deactivate a record.
 

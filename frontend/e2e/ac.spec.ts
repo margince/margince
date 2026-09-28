@@ -179,12 +179,12 @@ const CORE_SCREENS = [
 /**
  * The settings page the address named is the one on screen.
  *
- * `useVisibleSettingsTabs` falls back to the first tab a principal can see, so
- * an address naming a tab this mock's grants do not cover lands on Account and
- * renders perfectly — clean axe, no overflow, and the census one page longer
- * than the tree it actually read. Two of the three pages this list gained were
- * doing exactly that. The active row in the settings level carries the tab it
- * points at, which is the cheapest thing on screen that can tell the two apart.
+ * An address naming a page this mock's grants do not cover lands on the access
+ * boundary and renders perfectly — clean axe, no overflow, and the census one
+ * page longer than the tree it actually read. Two of the three pages this list
+ * gained were doing exactly that. The active row in the settings level carries
+ * the tab it points at, which is the cheapest thing on screen that can tell the
+ * two apart.
  */
 async function expectSettingsViewLanded(page: Page, view: string) {
   if (!view.startsWith("settings/")) {

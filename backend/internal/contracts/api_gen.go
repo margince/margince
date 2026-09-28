@@ -2737,6 +2737,78 @@ func (e BriefDeliveryWeeklyDelivery) Valid() bool {
 	}
 }
 
+// Defines values for BulkRecordType.
+const (
+	BulkRecordTypeCompany BulkRecordType = "company"
+	BulkRecordTypeContact BulkRecordType = "contact"
+	BulkRecordTypeDeal    BulkRecordType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the BulkRecordType enum.
+func (e BulkRecordType) Valid() bool {
+	switch e {
+	case BulkRecordTypeCompany:
+		return true
+	case BulkRecordTypeContact:
+		return true
+	case BulkRecordTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkSkipReason.
+const (
+	BulkSkipReasonAnchorCompany       BulkSkipReason = "anchor_company"
+	BulkSkipReasonChangedSincePreview BulkSkipReason = "changed_since_preview"
+	BulkSkipReasonNoChange            BulkSkipReason = "no_change"
+	BulkSkipReasonNotFound            BulkSkipReason = "not_found"
+	BulkSkipReasonNotPreviewed        BulkSkipReason = "not_previewed"
+	BulkSkipReasonNotWritable         BulkSkipReason = "not_writable"
+	BulkSkipReasonRefused             BulkSkipReason = "refused"
+)
+
+// Valid indicates whether the value is a known member of the BulkSkipReason enum.
+func (e BulkSkipReason) Valid() bool {
+	switch e {
+	case BulkSkipReasonAnchorCompany:
+		return true
+	case BulkSkipReasonChangedSincePreview:
+		return true
+	case BulkSkipReasonNoChange:
+		return true
+	case BulkSkipReasonNotFound:
+		return true
+	case BulkSkipReasonNotPreviewed:
+		return true
+	case BulkSkipReasonNotWritable:
+		return true
+	case BulkSkipReasonRefused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BulkVerb.
+const (
+	BulkVerbArchive       BulkVerb = "archive"
+	BulkVerbReassignOwner BulkVerb = "reassign_owner"
+)
+
+// Valid indicates whether the value is a known member of the BulkVerb enum.
+func (e BulkVerb) Valid() bool {
+	switch e {
+	case BulkVerbArchive:
+		return true
+	case BulkVerbReassignOwner:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureConnectionMailPosture.
 const (
 	CaptureConnectionMailPostureClassified CaptureConnectionMailPosture = "classified"
@@ -3121,36 +3193,6 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 	case ChangeContractStatusRequestStatusExpired:
 		return true
 	case ChangeContractStatusRequestStatusSuperseded:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ChangeUserRoleRequestRole.
-const (
-	ChangeUserRoleRequestRoleAdmin      ChangeUserRoleRequestRole = "admin"
-	ChangeUserRoleRequestRoleManagement ChangeUserRoleRequestRole = "management"
-	ChangeUserRoleRequestRoleManager    ChangeUserRoleRequestRole = "manager"
-	ChangeUserRoleRequestRoleOps        ChangeUserRoleRequestRole = "ops"
-	ChangeUserRoleRequestRoleReadOnly   ChangeUserRoleRequestRole = "read_only"
-	ChangeUserRoleRequestRoleRep        ChangeUserRoleRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the ChangeUserRoleRequestRole enum.
-func (e ChangeUserRoleRequestRole) Valid() bool {
-	switch e {
-	case ChangeUserRoleRequestRoleAdmin:
-		return true
-	case ChangeUserRoleRequestRoleManagement:
-		return true
-	case ChangeUserRoleRequestRoleManager:
-		return true
-	case ChangeUserRoleRequestRoleOps:
-		return true
-	case ChangeUserRoleRequestRoleReadOnly:
-		return true
-	case ChangeUserRoleRequestRoleRep:
 		return true
 	default:
 		return false
@@ -9124,36 +9166,6 @@ func (e ForecastSufficiencyBasis) Valid() bool {
 	}
 }
 
-// Defines values for FormerMemberRequestRole.
-const (
-	FormerMemberRequestRoleAdmin      FormerMemberRequestRole = "admin"
-	FormerMemberRequestRoleManagement FormerMemberRequestRole = "management"
-	FormerMemberRequestRoleManager    FormerMemberRequestRole = "manager"
-	FormerMemberRequestRoleOps        FormerMemberRequestRole = "ops"
-	FormerMemberRequestRoleReadOnly   FormerMemberRequestRole = "read_only"
-	FormerMemberRequestRoleRep        FormerMemberRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the FormerMemberRequestRole enum.
-func (e FormerMemberRequestRole) Valid() bool {
-	switch e {
-	case FormerMemberRequestRoleAdmin:
-		return true
-	case FormerMemberRequestRoleManagement:
-		return true
-	case FormerMemberRequestRoleManager:
-		return true
-	case FormerMemberRequestRoleOps:
-		return true
-	case FormerMemberRequestRoleReadOnly:
-		return true
-	case FormerMemberRequestRoleRep:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -9745,36 +9757,6 @@ func (e IntroRequestStatus) Valid() bool {
 	case IntroRequestStatusIntroRequestStatusRequested:
 		return true
 	case IntroRequestStatusIntroRequestStatusSuggestOther:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for InviteUserRequestRole.
-const (
-	InviteUserRequestRoleAdmin      InviteUserRequestRole = "admin"
-	InviteUserRequestRoleManagement InviteUserRequestRole = "management"
-	InviteUserRequestRoleManager    InviteUserRequestRole = "manager"
-	InviteUserRequestRoleOps        InviteUserRequestRole = "ops"
-	InviteUserRequestRoleReadOnly   InviteUserRequestRole = "read_only"
-	InviteUserRequestRoleRep        InviteUserRequestRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the InviteUserRequestRole enum.
-func (e InviteUserRequestRole) Valid() bool {
-	switch e {
-	case InviteUserRequestRoleAdmin:
-		return true
-	case InviteUserRequestRoleManagement:
-		return true
-	case InviteUserRequestRoleManager:
-		return true
-	case InviteUserRequestRoleOps:
-		return true
-	case InviteUserRequestRoleReadOnly:
-		return true
-	case InviteUserRequestRoleRep:
 		return true
 	default:
 		return false
@@ -12571,6 +12553,27 @@ func (e RightsCaseReceiptKind) Valid() bool {
 	}
 }
 
+// Defines values for RoleRowScope.
+const (
+	RoleRowScopeAll  RoleRowScope = "all"
+	RoleRowScopeOwn  RoleRowScope = "own"
+	RoleRowScopeTeam RoleRowScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the RoleRowScope enum.
+func (e RoleRowScope) Valid() bool {
+	switch e {
+	case RoleRowScopeAll:
+		return true
+	case RoleRowScopeOwn:
+		return true
+	case RoleRowScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RowTagColor.
 const (
 	RowTagColorAmber  RowTagColor = "amber"
@@ -14947,6 +14950,27 @@ func (e UpdateRelationshipRequestStartedPrecision) Valid() bool {
 	case UpdateRelationshipRequestStartedPrecisionDay:
 		return true
 	case UpdateRelationshipRequestStartedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateRoleRequestRowScope.
+const (
+	UpdateRoleRequestRowScopeAll  UpdateRoleRequestRowScope = "all"
+	UpdateRoleRequestRowScopeOwn  UpdateRoleRequestRowScope = "own"
+	UpdateRoleRequestRowScopeTeam UpdateRoleRequestRowScope = "team"
+)
+
+// Valid indicates whether the value is a known member of the UpdateRoleRequestRowScope enum.
+func (e UpdateRoleRequestRowScope) Valid() bool {
+	switch e {
+	case UpdateRoleRequestRowScopeAll:
+		return true
+	case UpdateRoleRequestRowScopeOwn:
+		return true
+	case UpdateRoleRequestRowScopeTeam:
 		return true
 	default:
 		return false
@@ -17410,6 +17434,27 @@ func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	}
 }
 
+// Defines values for GetAvailability200JSONResponseBodyCalendarBacking.
+const (
+	GetAvailability200JSONResponseBodyCalendarBackingCalendar GetAvailability200JSONResponseBodyCalendarBacking = "calendar"
+	GetAvailability200JSONResponseBodyCalendarBackingNone     GetAvailability200JSONResponseBodyCalendarBacking = "none"
+	GetAvailability200JSONResponseBodyCalendarBackingUnknown  GetAvailability200JSONResponseBodyCalendarBacking = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the GetAvailability200JSONResponseBodyCalendarBacking enum.
+func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
+	switch e {
+	case GetAvailability200JSONResponseBodyCalendarBackingCalendar:
+		return true
+	case GetAvailability200JSONResponseBodyCalendarBackingNone:
+		return true
+	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BookMeetingJSONBodyLinksEntityType.
 const (
 	BookMeetingJSONBodyLinksEntityTypeCompany BookMeetingJSONBodyLinksEntityType = "company"
@@ -18916,36 +18961,6 @@ func (e ListSignalsParamsResolutionState) Valid() bool {
 	}
 }
 
-// Defines values for PreviewAccessParamsRole.
-const (
-	PreviewAccessParamsRoleAdmin      PreviewAccessParamsRole = "admin"
-	PreviewAccessParamsRoleManagement PreviewAccessParamsRole = "management"
-	PreviewAccessParamsRoleManager    PreviewAccessParamsRole = "manager"
-	PreviewAccessParamsRoleOps        PreviewAccessParamsRole = "ops"
-	PreviewAccessParamsRoleReadOnly   PreviewAccessParamsRole = "read_only"
-	PreviewAccessParamsRoleRep        PreviewAccessParamsRole = "rep"
-)
-
-// Valid indicates whether the value is a known member of the PreviewAccessParamsRole enum.
-func (e PreviewAccessParamsRole) Valid() bool {
-	switch e {
-	case PreviewAccessParamsRoleAdmin:
-		return true
-	case PreviewAccessParamsRoleManagement:
-		return true
-	case PreviewAccessParamsRoleManager:
-		return true
-	case PreviewAccessParamsRoleOps:
-		return true
-	case PreviewAccessParamsRoleReadOnly:
-		return true
-	case PreviewAccessParamsRoleRep:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetWeeklyPlanCommitmentStateJSONBodyState.
 const (
 	SetWeeklyPlanCommitmentStateJSONBodyStateDone    SetWeeklyPlanCommitmentStateJSONBodyState = "done"
@@ -19133,7 +19148,7 @@ type AcceptedExtractionField struct {
 // AcceptedExtractionFieldProvenance defines model for AcceptedExtractionField.Provenance.
 type AcceptedExtractionFieldProvenance string
 
-// AccessPreview What a seat with this role and these teams may do — computed by the server from the evaluated policy, the same one the gates read, so the screen never interprets the role a second way. Used before an invite (`POST /users/access-preview`) and for an existing member (`GET /users/{id}/access`).
+// AccessPreview What a seat with this role and these teams may do — computed by the server from the evaluated policy, the same one the gates read, so the screen never interprets the role a second way. Used before an invite (`GET /users/access-preview`) and for an existing member (`GET /users/{id}/access`).
 type AccessPreview struct {
 	FieldMasks []struct {
 		Condition AccessPreviewFieldMasksCondition `json:"condition"`
@@ -20867,6 +20882,23 @@ type AssignNoticeCase struct {
 	OwnerUserId openapi_types.UUID `json:"owner_user_id"`
 }
 
+// AssignableRole defines model for AssignableRole.
+type AssignableRole struct {
+	// IsSystem True for a role the product ships.
+	IsSystem bool `json:"is_system"`
+
+	// Key The role key an invite or a role change sends.
+	Key string `json:"key"`
+
+	// Name The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this.
+	Name string `json:"name"`
+}
+
+// AssignableRoleDirectory defines model for AssignableRoleDirectory.
+type AssignableRoleDirectory struct {
+	Roles []AssignableRole `json:"roles"`
+}
+
 // AssignmentRecordType The kind of record an assignment hangs on.
 type AssignmentRecordType string
 
@@ -21932,6 +21964,9 @@ type AuditLogEntry struct {
 	// AuthorizationRule Which RBAC/scope rule allowed it.
 	AuthorizationRule *string `json:"authorization_rule,omitempty"`
 
+	// BatchId The bulk change that wrote this row; null for a change made on its own.
+	BatchId *openapi_types.UUID `json:"batch_id,omitempty"`
+
 	// Before The record image before the change. For an `activity` row this read
 	// REDACTS content the caller's audience does not admit. What survives
 	// is what the activity READ surface answers on a withheld row — the
@@ -22483,6 +22518,143 @@ type BriefSnoozeRequest struct {
 	// the future.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
+
+// BulkChangeExecuteRequest defines model for BulkChangeExecuteRequest.
+type BulkChangeExecuteRequest struct {
+	// ConfirmToken The token a preview of exactly this selection returned. Required above 10 records.
+	ConfirmToken *string    `json:"confirm_token,omitempty"`
+	Items        []BulkItem `json:"items"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangePreview defines model for BulkChangePreview.
+type BulkChangePreview struct {
+	// Affected The records the change would alter.
+	Affected []openapi_types.UUID `json:"affected"`
+
+	// ConfirmToken Present when the change would alter at least one record. Required above 10 records; below that, presenting it holds the execution to `affected`.
+	ConfirmToken *string `json:"confirm_token,omitempty"`
+
+	// Count The number of records the change would alter.
+	Count int `json:"count"`
+
+	// Excluded The records the change would leave alone, each with its reason.
+	Excluded []BulkSkip `json:"excluded"`
+
+	// ExpiresAt When `confirm_token` stops being accepted.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// RequiresConfirmation True above 10 records: executing needs `confirm_token`.
+	RequiresConfirmation bool            `json:"requires_confirmation"`
+	Sample               []BulkSampleRow `json:"sample"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangePreviewRequest defines model for BulkChangePreviewRequest.
+type BulkChangePreviewRequest struct {
+	Items []BulkItem `json:"items"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
+}
+
+// BulkChangeResult defines model for BulkChangeResult.
+type BulkChangeResult struct {
+	// BatchId The id every audit row of this change carries as `batch_id`.
+	BatchId openapi_types.UUID `json:"batch_id"`
+
+	// Changed The number of records changed.
+	Changed int `json:"changed"`
+
+	// Skipped The records left alone, each with its reason.
+	Skipped []BulkSkip `json:"skipped"`
+}
+
+// BulkItem One selected record and the version the caller was shown.
+type BulkItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Version The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.
+	Version int64 `json:"version"`
+}
+
+// BulkRecordState The two facts a bulk change can move on a record.
+type BulkRecordState struct {
+	Archived bool                `json:"archived"`
+	OwnerId  *openapi_types.UUID `json:"owner_id"`
+}
+
+// BulkRecordType The kind of record a bulk change acts on. One change acts on one kind.
+type BulkRecordType string
+
+// BulkSampleRow One record the change would alter, as it is and as it would be.
+type BulkSampleRow struct {
+	// After The two facts a bulk change can move on a record.
+	After BulkRecordState `json:"after"`
+
+	// Before The two facts a bulk change can move on a record.
+	Before BulkRecordState    `json:"before"`
+	Id     openapi_types.UUID `json:"id"`
+
+	// Label The record's name as its list shows it.
+	Label string `json:"label"`
+}
+
+// BulkSkip defines model for BulkSkip.
+type BulkSkip struct {
+	// Code Which single-record rule refused the record, when the reason is `refused` — the same
+	// code the single-record operation answers, for example `sole_project_company`.
+	Code *string            `json:"code,omitempty"`
+	Id   openapi_types.UUID `json:"id"`
+
+	// Message The refusal in English, for a code the client does not know.
+	Message *string `json:"message,omitempty"`
+
+	// Params The values the rule named, when it named any.
+	Params *map[string]interface{} `json:"params,omitempty"`
+
+	// Reason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+	// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+	// its version moved since the caller read it. `no_change`: it already has this owner.
+	// `anchor_company`: it is the installation's own company, which is never archived.
+	// `not_previewed`: the preview whose token this execution presents did not list it.
+	// `refused`: a single-record rule refuses it; `code` says which.
+	Reason BulkSkipReason `json:"reason"`
+}
+
+// BulkSkipReason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
+// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
+// its version moved since the caller read it. `no_change`: it already has this owner.
+// `anchor_company`: it is the installation's own company, which is never archived.
+// `not_previewed`: the preview whose token this execution presents did not list it.
+// `refused`: a single-record rule refuses it; `code` says which.
+type BulkSkipReason string
+
+// BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+// `archive` retires it exactly as the single-record archive does.
+type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
 // is open and the list can be worked. `closed` — the deal is done; everything
@@ -23281,11 +23453,9 @@ type ChangeContractStatusRequestStatus string
 
 // ChangeUserRoleRequest defines model for ChangeUserRoleRequest.
 type ChangeUserRoleRequest struct {
-	Role ChangeUserRoleRequestRole `json:"role"`
+	// Role A live role's key; see `InviteUserRequest.role`.
+	Role string `json:"role"`
 }
-
-// ChangeUserRoleRequestRole defines model for ChangeUserRoleRequest.Role.
-type ChangeUserRoleRequestRole string
 
 // ChannelConnection One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds.
 type ChannelConnection struct {
@@ -28620,6 +28790,15 @@ type CreateRetentionPolicyRequest struct {
 	Scope RetentionScope `json:"scope"`
 }
 
+// CreateRoleRequest defines model for CreateRoleRequest.
+type CreateRoleRequest struct {
+	// CopyFrom The key of the live role the new one starts as a copy of.
+	CopyFrom string `json:"copy_from"`
+
+	// Name The new role's name. Unique among live roles, ignoring case.
+	Name string `json:"name"`
+}
+
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
 	Name  string                 `json:"name"`
@@ -30857,15 +31036,12 @@ type FormerMemberRequest struct {
 	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
 	LeftAt *time.Time `json:"left_at,omitempty"`
 
-	// Role Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
-	Role *FormerMemberRequestRole `json:"role,omitempty"`
+	// Role A live role's key. Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
+	Role *string `json:"role,omitempty"`
 
 	// Source Where this record came from, for an operator reading the audit trail later ("hubspot-mirror-2026-09-17").
 	Source *string `json:"source,omitempty"`
 }
-
-// FormerMemberRequestRole Defaults to `rep`. A deactivated seat exercises no authority whatever its role, so this records what they were rather than granting anything — but the caller may still not name a role they could not assign themselves.
-type FormerMemberRequestRole string
 
 // FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
@@ -32007,15 +32183,12 @@ type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
-	// Role System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
-	Role InviteUserRequestRole `json:"role"`
+	// Role A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out.
+	Role string `json:"role"`
 
 	// TeamIds The teams the member joins on arrival, in the same transaction as the seat and the role. A team-scoped role (`manager`, `rep`) with no team sees and edits only its own records; the access preview says what a given role + teams will see before the invite is sent.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 }
-
-// InviteUserRequestRole System role key (ADR-0110). Keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power.
-type InviteUserRequestRole string
 
 // IssuePassportRequest defines model for IssuePassportRequest.
 type IssuePassportRequest struct {
@@ -34409,7 +34582,7 @@ type OpenDealRoomThreadRequest struct {
 	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
-	// Source Provenance. Defaults to `ui` on the public edge.
+	// Source Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product.
 	Source *string `json:"source,omitempty"`
 }
 
@@ -36926,6 +37099,9 @@ type RightsCaseReceiptKind string
 
 // Role One role as `role.permissions` stores it. This is a ROLE's document, not a principal's — unlike `Authorization.objects` nothing here is merged, because the thing being edited is the single role.
 type Role struct {
+	// ArchivedAt When the role was archived. Absent or null for a live role.
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
 	// IsSystem True for a role the workspace bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
 	IsSystem bool `json:"is_system"`
 
@@ -36938,11 +37114,17 @@ type Role struct {
 	// Objects This role's grants, keyed by RBAC object name, verbatim from the stored document. An ABSENT key means the role grants nothing on that object — the same denial an all-false grant expresses, so a client must render a missing key as "no access" rather than as unknown. May carry names outside `RbacObject` and outside any enabled extension; see `listRoles`.
 	Objects map[string]RbacObjectGrant `json:"objects"`
 
+	// RowScope Whose records the grants reach: the holder's own, those of everyone sharing a live team with them, or every record. A document storing none reads as `own`, the narrowest, which is how authentication reads it too.
+	RowScope RoleRowScope `json:"row_scope"`
+
 	// Version The row's optimistic-concurrency version (`RowVersion` semantics, data-model §1.3a). Spelled inline rather than as a `$ref` because this one is REQUIRED and a `$ref` renders optional in the generated clients: the editor must always have a version to echo in `If-Match`, and an optional one would let a client omit the guard by accident rather than by decision.
 	Version int64 `json:"version"`
 }
 
-// RoleDirectory Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (five seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
+// RoleRowScope Whose records the grants reach: the holder's own, those of everyone sharing a live team with them, or every record. A document storing none reads as `own`, the narrowest, which is how authentication reads it too.
+type RoleRowScope string
+
+// RoleDirectory Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 }
@@ -40057,6 +40239,15 @@ type UpdateRetentionSettingsRequest struct {
 	// RetainOnly Turn the retain-only posture on or off.
 	RetainOnly *bool `json:"retain_only,omitempty"`
 }
+
+// UpdateRoleRequest A sparse patch. An absent field is left as it is.
+type UpdateRoleRequest struct {
+	Name     *string                    `json:"name,omitempty"`
+	RowScope *UpdateRoleRequestRowScope `json:"row_scope,omitempty"`
+}
+
+// UpdateRoleRequestRowScope defines model for UpdateRoleRequest.RowScope.
+type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
@@ -43202,6 +43393,9 @@ type ListAuditLogParams struct {
 	EntityType *string             `form:"entity_type,omitempty" json:"entity_type,omitempty"`
 	EntityId   *openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 
+	// BatchId Only the rows one bulk change wrote (`executeBulkChange` answers the id).
+	BatchId *openapi_types.UUID `form:"batch_id,omitempty" json:"batch_id,omitempty"`
+
 	// Action One of the AuditLogEntry.action values.
 	Action *string    `form:"action,omitempty" json:"action,omitempty"`
 	From   *time.Time `form:"from,omitempty" json:"from,omitempty"`
@@ -43299,6 +43493,9 @@ type GetAvailabilityParams struct {
 	DurationMinutes *int                `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 }
 
+// GetAvailability200JSONResponseBodyCalendarBacking defines parameters for GetAvailability.
+type GetAvailability200JSONResponseBodyCalendarBacking string
+
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
 	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
@@ -43358,6 +43555,25 @@ type BookMeetingParams struct {
 
 // BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
 type BookMeetingJSONBodyLinksEntityType string
+
+// ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
+type ExecuteBulkChangeParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
 
 // ListMyCaptureActivityParams defines parameters for ListMyCaptureActivity.
 type ListMyCaptureActivityParams struct {
@@ -47059,6 +47275,22 @@ type ReleaseRestrictedActivityParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListRolesParams defines parameters for ListRoles.
+type ListRolesParams struct {
+	// IncludeArchived True also lists archived roles, each carrying `archived_at`.
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// UpdateRoleParams defines parameters for UpdateRole.
+type UpdateRoleParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // SetRoleObjectGrantParams defines parameters for SetRoleObjectGrant.
 type SetRoleObjectGrantParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -47489,12 +47721,10 @@ type ListUsersParams struct {
 
 // PreviewAccessParams defines parameters for PreviewAccess.
 type PreviewAccessParams struct {
-	Role    PreviewAccessParamsRole `form:"role" json:"role"`
-	TeamIds *[]openapi_types.UUID   `form:"team_ids,omitempty" json:"team_ids,omitempty"`
+	// Role A live role's key — a seeded one or one made with `createRole`.
+	Role    string                `form:"role" json:"role"`
+	TeamIds *[]openapi_types.UUID `form:"team_ids,omitempty" json:"team_ids,omitempty"`
 }
-
-// PreviewAccessParamsRole defines parameters for PreviewAccess.
-type PreviewAccessParamsRole string
 
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
@@ -48180,6 +48410,12 @@ type AnnotateMorningBriefJSONRequestBody = AnnotateBriefRequest
 // SnoozeBriefItemJSONRequestBody defines body for SnoozeBriefItem for application/json ContentType.
 type SnoozeBriefItemJSONRequestBody = BriefSnoozeRequest
 
+// ExecuteBulkChangeJSONRequestBody defines body for ExecuteBulkChange for application/json ContentType.
+type ExecuteBulkChangeJSONRequestBody = BulkChangeExecuteRequest
+
+// PreviewBulkChangeJSONRequestBody defines body for PreviewBulkChange for application/json ContentType.
+type PreviewBulkChangeJSONRequestBody = BulkChangePreviewRequest
+
 // SetBlockedDomainJSONRequestBody defines body for SetBlockedDomain for application/json ContentType.
 type SetBlockedDomainJSONRequestBody = SetBlockedDomainRequest
 
@@ -48743,6 +48979,12 @@ type ReleaseRestrictedActivityJSONRequestBody = RetentionOverrideRequest
 
 // UpdateRetentionSettingsJSONRequestBody defines body for UpdateRetentionSettings for application/json ContentType.
 type UpdateRetentionSettingsJSONRequestBody = UpdateRetentionSettingsRequest
+
+// CreateRoleJSONRequestBody defines body for CreateRole for application/json ContentType.
+type CreateRoleJSONRequestBody = CreateRoleRequest
+
+// UpdateRoleJSONRequestBody defines body for UpdateRole for application/json ContentType.
+type UpdateRoleJSONRequestBody = UpdateRoleRequest
 
 // SetRoleObjectGrantJSONRequestBody defines body for SetRoleObjectGrant for application/json ContentType.
 type SetRoleObjectGrantJSONRequestBody = SetRoleObjectGrantRequest
@@ -59126,6 +59368,12 @@ type ServerInterface interface {
 	// Take back a snooze — the item returns to the queue immediately.
 	// (POST /brief/items/{itemId}/unsnooze)
 	UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
+	// Apply one change to a selection of records, record by record.
+	// (POST /bulk/execute)
+	ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams)
+	// Say what one change over a selection of records would do, without doing it.
+	// (POST /bulk/preview)
+	PreviewBulkChange(w http.ResponseWriter, r *http.Request)
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
@@ -60527,12 +60775,24 @@ type ServerInterface interface {
 	// Set the installation's retention posture (admin/ops).
 	// (PATCH /retention/settings)
 	UpdateRetentionSettings(w http.ResponseWriter, r *http.Request)
-	// List the workspace's roles with their object grants. Admin-only, human-only.
+	// List the workspace's roles with their object grants and row scope. Human-only.
 	// (GET /roles)
-	ListRoles(w http.ResponseWriter, r *http.Request)
+	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
+	// Create a role by copying an existing one. Human-only.
+	// (POST /roles)
+	CreateRole(w http.ResponseWriter, r *http.Request)
+	// Rename a role or change its row scope. Human-only.
+	// (PATCH /roles/{key})
+	UpdateRole(w http.ResponseWriter, r *http.Request, key string, params UpdateRoleParams)
+	// Archive a custom role nobody who can sign in holds. Human-only.
+	// (POST /roles/{key}/archive)
+	ArchiveRole(w http.ResponseWriter, r *http.Request, key string)
 	// Set one role's CRUD grant on one RBAC object. Admin-only, human-only.
 	// (PATCH /roles/{key}/objects/{object})
 	SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key string, object string, params SetRoleObjectGrantParams)
+	// Restore an archived role. Human-only.
+	// (POST /roles/{key}/restore)
+	RestoreRole(w http.ResponseWriter, r *http.Request, key string)
 	// The caller's own messages waiting to be sent.
 	// (GET /scheduled-sends)
 	ListScheduledSends(w http.ResponseWriter, r *http.Request, params ListScheduledSendsParams)
@@ -60668,10 +60928,10 @@ type ServerInterface interface {
 	// List workspace teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
-	// Create a team. Admin only.
+	// Create a team. Needs `team_admin.create`.
 	// (POST /teams)
 	CreateTeam(w http.ResponseWriter, r *http.Request)
-	// Rename, archive or restore a team. Admin only.
+	// Rename, archive or restore a team.
 	// (PATCH /teams/{id})
 	UpdateTeam(w http.ResponseWriter, r *http.Request, id Id)
 	// Take a member off a team. Admin only; idempotent.
@@ -60689,6 +60949,9 @@ type ServerInterface interface {
 	// What a seat with this role and these teams will see and may do.
 	// (GET /users/access-preview)
 	PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams)
+	// The live roles this caller may hand out when inviting or re-roling a member.
+	// (GET /users/assignable-roles)
+	ListAssignableRoles(w http.ResponseWriter, r *http.Request)
 	// Record a colleague who has already left. Admin-only, human-only.
 	// (POST /users/former)
 	CreateFormerMember(w http.ResponseWriter, r *http.Request)
@@ -61526,6 +61789,18 @@ func (_ Unimplemented) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, i
 // Take back a snooze — the item returns to the queue immediately.
 // (POST /brief/items/{itemId}/unsnooze)
 func (_ Unimplemented) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply one change to a selection of records, record by record.
+// (POST /bulk/execute)
+func (_ Unimplemented) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, params ExecuteBulkChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what one change over a selection of records would do, without doing it.
+// (POST /bulk/preview)
+func (_ Unimplemented) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -64331,15 +64606,39 @@ func (_ Unimplemented) UpdateRetentionSettings(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's roles with their object grants. Admin-only, human-only.
+// List the workspace's roles with their object grants and row scope. Human-only.
 // (GET /roles)
-func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a role by copying an existing one. Human-only.
+// (POST /roles)
+func (_ Unimplemented) CreateRole(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename a role or change its row scope. Human-only.
+// (PATCH /roles/{key})
+func (_ Unimplemented) UpdateRole(w http.ResponseWriter, r *http.Request, key string, params UpdateRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a custom role nobody who can sign in holds. Human-only.
+// (POST /roles/{key}/archive)
+func (_ Unimplemented) ArchiveRole(w http.ResponseWriter, r *http.Request, key string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set one role's CRUD grant on one RBAC object. Admin-only, human-only.
 // (PATCH /roles/{key}/objects/{object})
 func (_ Unimplemented) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request, key string, object string, params SetRoleObjectGrantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Restore an archived role. Human-only.
+// (POST /roles/{key}/restore)
+func (_ Unimplemented) RestoreRole(w http.ResponseWriter, r *http.Request, key string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -64613,13 +64912,13 @@ func (_ Unimplemented) ListTeams(w http.ResponseWriter, r *http.Request, params 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a team. Admin only.
+// Create a team. Needs `team_admin.create`.
 // (POST /teams)
 func (_ Unimplemented) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Rename, archive or restore a team. Admin only.
+// Rename, archive or restore a team.
 // (PATCH /teams/{id})
 func (_ Unimplemented) UpdateTeam(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -64652,6 +64951,12 @@ func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
 // What a seat with this role and these teams will see and may do.
 // (GET /users/access-preview)
 func (_ Unimplemented) PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The live roles this caller may hand out when inviting or re-roling a member.
+// (GET /users/assignable-roles)
+func (_ Unimplemented) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68195,6 +68500,19 @@ func (siw *ServerInterfaceWrapper) ListAuditLog(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "batch_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "batch_id", r.URL.Query(), &params.BatchId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "batch_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "batch_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "action" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "action", r.URL.Query(), &params.Action, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -69175,6 +69493,77 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnsnoozeBriefItem(w, r, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExecuteBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) ExecuteBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExecuteBulkChangeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExecuteBulkChange(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBulkChange(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -89124,6 +89513,45 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionSettings(w http.ResponseWriter
 // ListRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRolesParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRoles(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRole operation middleware
+func (siw *ServerInterfaceWrapper) CreateRole(w http.ResponseWriter, r *http.Request) {
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -89131,7 +89559,95 @@ func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Requ
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListRoles(w, r)
+		siw.Handler.CreateRole(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateRole operation middleware
+func (siw *ServerInterfaceWrapper) UpdateRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateRoleParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateRole(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveRole operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveRole(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -89197,6 +89713,38 @@ func (siw *ServerInterfaceWrapper) SetRoleObjectGrant(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetRoleObjectGrant(w, r, key, object, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreRole operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRole(w, r, key)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91587,6 +92135,26 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewAccess(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAssignableRoles operation middleware
+func (siw *ServerInterfaceWrapper) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAssignableRoles(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -94542,6 +95110,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/brief/items/{itemId}/unsnooze", wrapper.UnsnoozeBriefItem)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/execute", wrapper.ExecuteBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/preview", wrapper.PreviewBulkChange)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/activity", wrapper.ListMyCaptureActivity)
 	})
 	r.Group(func(r chi.Router) {
@@ -95946,7 +96520,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/roles", wrapper.ListRoles)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles", wrapper.CreateRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/roles/{key}", wrapper.UpdateRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles/{key}/archive", wrapper.ArchiveRole)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/roles/{key}/objects/{object}", wrapper.SetRoleObjectGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles/{key}/restore", wrapper.RestoreRole)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduled-sends", wrapper.ListScheduledSends)
@@ -96103,6 +96689,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/access-preview", wrapper.PreviewAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/assignable-roles", wrapper.ListAssignableRoles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/former", wrapper.CreateFormerMember)

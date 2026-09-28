@@ -2001,7 +2001,7 @@ function dealRowSelection({
             }
             return next;
           }),
-        label: (deal) => t("deals.bulkSelectRow", { name: deal.name }),
+        label: (deal) => t("bulk.selectRow", { name: deal.name }),
         bar: (
           <DealBulkBar
             deals={selectedRows}

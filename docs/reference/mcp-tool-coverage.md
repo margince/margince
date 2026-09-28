@@ -26,12 +26,12 @@ This page does not grade single steps or name a best model per site — that is
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 77 |
+| Tools the assistant is offered | 78 |
 | … some case requires | 36 |
 | … some case requires as one of a set | 1 |
-| … **no case requires** | 40 |
+| … **no case requires** | 41 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 13356 |
+| Prompt tokens spent on tools no case requires | 13694 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -58,7 +58,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A — MCP | Surface B — scheduled agents |
 |---|---|---|
 | Who drives it | a contact, watching | a job on a timer, unattended |
-| Menu | 77 tools, the whole catalog | 5 tools, declared per agent |
+| Menu | 78 tools, the whole catalog | 5 tools, declared per agent |
 | A wrong reach | the contact corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -404,7 +404,7 @@ and the case's pass rate belongs to the set rather than to this row — which is
 corpus tests the tool anyway — that lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 40 tools no use case requires, **9 are graded elsewhere** and 31 are untried by any lane.
+So of the 41 tools no use case requires, **9 are graded elsewhere** and 32 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -426,6 +426,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `catch_me_up_on` | 348 | `agent_loop` | `case23_find_us_a_slot`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case5_before_the_meeting`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `describe_record_fields` | 345 | — | — | — |
 | `book_meeting` | 344 | — | — | — |
+| `bulk_update_records` | 338 | — | — | — |
 | `search_report_evidence` | 335 | — | — | — |
 | `forecast_input_checks` | 324 | — | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | — |
 | `demote_lead` | 317 | — | — | — |

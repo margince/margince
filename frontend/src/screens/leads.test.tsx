@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -1008,15 +1009,11 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // stand in for "ineligible" (ADR-0119).
     stubFetch(async () => jsonResponse({ ...lead, email: null }));
     render(<LeadScreen id="l-1" />);
-    const button = await screen.findByRole("button", { name: "Qualify" });
-    await waitFor(() =>
-      expect((button as HTMLButtonElement).disabled).toBe(true),
-    );
+    const button = await screen.findByTestId("lead-qualify");
+    await waitFor(() => expect(button).toBeDisabled());
     // The reason is wired to the control with aria-describedby, not stuffed
     // into a title a screen reader never announces on a disabled button.
-    const describedBy = button.getAttribute("aria-describedby");
-    expect(describedBy).toBeTruthy();
-    expect(document.getElementById(describedBy as string)?.textContent).toBe(
+    expect(button).toHaveAccessibleDescription(
       "Requires an email address and an open status.",
     );
   });
@@ -1502,7 +1499,9 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
   it("preserves the Qualify button and score/status/company badges", async () => {
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
-    expect(await screen.findByRole("button", { name: "Qualify" })).toBeTruthy();
+    expect(await screen.findByTestId("lead-qualify")).toHaveTextContent(
+      "Qualify",
+    );
     // The score reads in the band AND on the folded score section's summary.
     expect(screen.getAllByText("Score: 72").length).toBeGreaterThan(0);
     // Status and company are READINGS in the band's strip, not pills among
@@ -1889,7 +1888,7 @@ describe("LeadScreen — status control (P-12)", () => {
 
     // The fixture lead is already contacted; the next rung up is the click.
     await waitFor(() =>
-      expect(screen.getByTestId("lead-step-engaged")).toBeTruthy(),
+      expect(screen.getByTestId("lead-step-engaged")).toBeEnabled(),
     );
     // Where the lead stands is a MARKER, not a control: the ladder offers no
     // way to set a lead to the step it is already on, rather than offering one

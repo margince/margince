@@ -62,7 +62,7 @@ function aiRateReaderBackend() {
           allow: {
             // What opens both pages. The price grant authors the table on one
             // of them but reaches neither on its own, so a fixture without this
-            // would be testing the fallback to Account.
+            // would be testing the access boundary.
             //
             // NOT `ai_diagnostics:read`, which is what the cards check — that
             // is the whole fixture: reach the page, be refused the card. The

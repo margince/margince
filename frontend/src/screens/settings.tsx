@@ -154,7 +154,6 @@ import {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsReach,
   useSettingsSection,
   useVisibleSettingsPages,
@@ -171,7 +170,6 @@ export {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsSection,
 };
 
@@ -516,9 +514,8 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // Back would land on the address that redirects and trap them there.
   //
   // Keyed on the entry the route RESOLVED to rather than on the segment it
-  // carried, so a rewrite never invents an address: a rep following a link to
-  // an admin page falls back to their first visible entry, and this rewrites to
-  // THAT, which is where they actually are.
+  // carried, so a rewrite never invents an address: a legacy link to a page the
+  // reader may not open is left as typed, and the boundary answers it.
   useEffect(() => {
     if (legacy) {
       navigateReplacing(settingsHref(active.id));

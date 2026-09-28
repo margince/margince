@@ -130,6 +130,16 @@ var relinkActivitiesCopy = toolCopy{
 	Retain:  "The answer lists the ids moved.",
 }
 
+var bulkUpdateRecordsCopy = toolCopy{
+	Purpose: "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change.",
+	Limits: "Call mode preview first and show the user what it says: how many records change, " +
+		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
+		"record is changed only if it still has the version you sent and you may change it.",
+	Instead: "update_record and archive_record change one record.",
+	Retain: "Above 10 records, execute needs the confirm_token preview answered, for exactly the " +
+		"same selection; it is good once. Keep batch_id from the answer.",
+}
+
 var archiveRecordCopy = toolCopy{
 	Purpose: "Retire a record that should no longer be worked — a duplicate, a dead company, a " +
 		"project that ended.",

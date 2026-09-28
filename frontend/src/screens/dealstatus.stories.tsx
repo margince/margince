@@ -25,7 +25,7 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
             ? {}
             : {
                 subject: "Meeting slots",
-                source: "ui",
+                source: "manual",
                 request_activity_id: "demo-mail",
               },
         evidence: [

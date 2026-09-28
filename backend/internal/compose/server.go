@@ -291,12 +291,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
 	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
-	srv.wireStagedSurfaces(pool)
-	srv.wireAnalyticsSurface(pool)
-	srv.wireCaptureSettingsSurface(pool)
-	srv.wireExportSurface(pool, log)
-	srv.wireOnboardingSurface(pool)
-	srv.wireSystemOfRecordReads(pool)
+	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//
 	// The tool registry is NOT built here: newServer returns by value and New

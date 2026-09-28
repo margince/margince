@@ -110,6 +110,9 @@ var managerObjects = grid(crud, map[string]grant{
 	objOauthApplication:       none,
 	objSeatUsage:              none,
 	objTeamOversight:          none,
+
+	// The Team Lead leads the teams they are on; management inherits it.
+	objTeamLead: createRead,
 })
 
 // managementObjects is managerObjects with the administration reads a
@@ -177,6 +180,7 @@ var defaults = map[string]Document{
 			objAuthenticationPolicy: readUpdate,
 			objSeatUsage:            readOnly,
 			objTeamOversight:        readOnly,
+			objTeamLead:             createRead,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -295,6 +299,7 @@ var defaults = map[string]Document{
 			objOauthApplication:       none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
+			objTeamLead:               none,
 		}),
 		RowScope: principal.RowScopeOwn,
 	},
@@ -336,6 +341,7 @@ var defaults = map[string]Document{
 			objOauthApplication:       none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
+			objTeamLead:               none,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -381,6 +387,7 @@ var defaults = map[string]Document{
 			// Ops runs the installation and leads nobody, so it reads no
 			// team's coaching week.
 			objTeamOversight: none,
+			objTeamLead:      none,
 			// Ops configures the rules and does not send under them. Directing
 			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has

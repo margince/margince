@@ -209,6 +209,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
 	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})
+	RegisterBulkTool(r, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
 	}, nil)
@@ -275,6 +276,14 @@ func (inertLifecycle) AdvanceProjectPhase(context.Context, ids.UUID, string, *st
 }
 
 func (inertLifecycle) EnrichCompany(context.Context, ids.UUID, string, EnrichDepth) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) PreviewBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) ExecuteBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
 	return nil, nil
 }
 

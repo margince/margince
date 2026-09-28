@@ -219,6 +219,14 @@ func (seamProbeLifecycle) EnrichCompany(context.Context, ids.UUID, string, Enric
 	return nil, errSeamReached
 }
 
+func (seamProbeLifecycle) PreviewBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) ExecuteBulkChange(context.Context, BulkChangeCommand) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
 // seamProbeInbox answers every queue door by reaching its seam, so a walk that
 // runs handlers proves the arguments got there rather than stopping short.
 type seamProbeInbox struct{}
@@ -299,6 +307,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterLifecycleTools(r, seamProbeProvider{},
 		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})
+	RegisterBulkTool(r, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{}, errSeamReached
 	}, nil)

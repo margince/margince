@@ -459,6 +459,14 @@ func (stubs) UnsnoozeBriefItem(w nethttp.ResponseWriter, r *nethttp.Request, ite
 	httperr.NotImplemented(w, r, "UnsnoozeBriefItem")
 }
 
+func (stubs) ExecuteBulkChange(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ExecuteBulkChangeParams) {
+	httperr.NotImplemented(w, r, "ExecuteBulkChange")
+}
+
+func (stubs) PreviewBulkChange(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewBulkChange")
+}
+
 func (stubs) ListMyCaptureActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMyCaptureActivityParams) {
 	httperr.NotImplemented(w, r, "ListMyCaptureActivity")
 }
@@ -2327,12 +2335,28 @@ func (stubs) UpdateRetentionSettings(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "UpdateRetentionSettings")
 }
 
-func (stubs) ListRoles(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListRoles(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRolesParams) {
 	httperr.NotImplemented(w, r, "ListRoles")
+}
+
+func (stubs) CreateRole(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateRole")
+}
+
+func (stubs) UpdateRole(w nethttp.ResponseWriter, r *nethttp.Request, key string, params crmcontracts.UpdateRoleParams) {
+	httperr.NotImplemented(w, r, "UpdateRole")
+}
+
+func (stubs) ArchiveRole(w nethttp.ResponseWriter, r *nethttp.Request, key string) {
+	httperr.NotImplemented(w, r, "ArchiveRole")
 }
 
 func (stubs) SetRoleObjectGrant(w nethttp.ResponseWriter, r *nethttp.Request, key string, object string, params crmcontracts.SetRoleObjectGrantParams) {
 	httperr.NotImplemented(w, r, "SetRoleObjectGrant")
+}
+
+func (stubs) RestoreRole(w nethttp.ResponseWriter, r *nethttp.Request, key string) {
+	httperr.NotImplemented(w, r, "RestoreRole")
 }
 
 func (stubs) ListScheduledSends(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListScheduledSendsParams) {
@@ -2541,6 +2565,10 @@ func (stubs) InviteUser(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) PreviewAccess(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PreviewAccessParams) {
 	httperr.NotImplemented(w, r, "PreviewAccess")
+}
+
+func (stubs) ListAssignableRoles(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListAssignableRoles")
 }
 
 func (stubs) CreateFormerMember(w nethttp.ResponseWriter, r *nethttp.Request) {

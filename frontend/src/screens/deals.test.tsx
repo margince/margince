@@ -376,6 +376,7 @@ function stubBackend(
     single?: Deal;
     onPatch?: (body: unknown, ifMatch: string | null) => void;
     onDelete?: () => void;
+    onBulk?: (path: string, body: unknown) => void;
     onDealsUrl?: (url: string) => void;
     pipelines?: components["schemas"]["Pipeline"][];
     agentTools?: components["schemas"]["AgentTool"][];
@@ -478,6 +479,15 @@ function stubBackend(
         columns: [],
         rows: opts.stageTotalsRows ?? [],
       });
+    }
+    if (method === "POST" && url.includes("/bulk/")) {
+      const body = request ? await request.json() : {};
+      opts.onBulk?.(new URL(url).pathname, body);
+      return jsonResponse(
+        url.includes("/preview")
+          ? { ...body, count: 1, affected: [], excluded: [], sample: [] }
+          : { batch_id: "b-1", changed: 1, skipped: [] },
+      );
     }
     if (method === "POST" && url.includes("/advance")) {
       const body = request
@@ -909,11 +919,10 @@ describe("DealsScreen", () => {
     expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
   });
 
-  // A bulk verb is a fan-out of each row's own write, so every row must carry
-  // ITS OWN version. One version copied across the selection would conflict on
-  // every row but the one it came from.
-  it("assigning an owner in bulk sends each row's own version", async () => {
-    const patches: { body: unknown; ifMatch: string | null }[] = [];
+  // Owner and archive run as ONE preview and ONE change on the server, each
+  // deal carrying its own version rather than one copied across the selection.
+  it("a bulk owner change previews and runs once, with each row's own version", async () => {
+    const bulk: { path: string; body: unknown }[] = [];
     vi.stubGlobal(
       "fetch",
       stubBackend(
@@ -921,7 +930,7 @@ describe("DealsScreen", () => {
           deal({ id: "d1", name: "First", version: 3 }),
           deal({ id: "d2", name: "Second", version: 9 }),
         ],
-        { onPatch: (body, ifMatch) => patches.push({ body, ifMatch }) },
+        { onBulk: (path, body) => bulk.push({ path, body }) },
       ),
     );
     const user = userEvent.setup();
@@ -937,11 +946,25 @@ describe("DealsScreen", () => {
       screen.getByRole("combobox", { name: "New owner" }),
       "Me",
     );
-    await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      await within(dialog).findByRole("button", { name: "Change owner" }),
+    );
 
-    await waitFor(() => expect(patches.length).toBe(2));
-    expect(patches.map((patch) => patch.ifMatch).sort()).toEqual(["3", "9"]);
-    expect((patches[0].body as { owner_id: string }).owner_id).toBe("u-me");
+    await waitFor(() => expect(bulk).toHaveLength(2));
+    expect(bulk.map((call) => call.path)).toEqual([
+      "/v1/bulk/preview",
+      "/v1/bulk/execute",
+    ]);
+    expect(bulk[1].body).toMatchObject({
+      verb: "reassign_owner",
+      owner_id: "u-me",
+      items: [
+        { id: "d1", version: 3 },
+        { id: "d2", version: 9 },
+      ],
+    });
   });
 
   // The server treats every advance as a transition — it writes a stage-history
@@ -979,36 +1002,6 @@ describe("DealsScreen", () => {
 
     // One write, for the row that actually moves.
     await waitFor(() => expect(advances.length).toBe(1));
-  });
-
-  // Archiving many deals at once is the most destructive thing this bar does,
-  // and every other archive in the product asks first.
-  it("bulk archive asks before it removes anything", async () => {
-    let deleted = 0;
-    vi.stubGlobal(
-      "fetch",
-      stubBackend([deal({ id: "d1", name: "First" })], {
-        onDelete: () => {
-          deleted += 1;
-        },
-      }),
-    );
-    const user = userEvent.setup();
-    render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
-    await user.click(
-      await screen.findByRole("checkbox", { name: "Select First" }),
-    );
-
-    await user.click(screen.getByRole("button", { name: "Archive" }));
-    expect(deleted).toBe(0);
-    // One deal reads as one deal, not "1 deals".
-    expect(screen.getByText("Archive this deal?")).toBeTruthy();
-
-    // The dialog's own Archive button, not the bar's.
-    const dialog = screen.getByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: "Archive" }));
-    await waitFor(() => expect(deleted).toBe(1));
   });
 
   // A closed deal takes no bulk write: archiving it is done or meaningless,

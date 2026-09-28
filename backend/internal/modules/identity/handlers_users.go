@@ -101,7 +101,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a user with this email already exists in this company; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
-		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
+		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
 	h.sendInvite(r, email.String(), rawToken)
@@ -169,10 +169,10 @@ func (h Handlers) ReactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 		// names both rather than guessing: an INVITED member has simply never
 		// set a password, and a SUSPENDED one is held for a reason that
 		// reactivating would quietly clear.
-		httperr.Write(w, r, conflictIf(err, errNotDeactivated, "not_deactivated",
+		httperr.Write(w, r, archivedRoleRefusal(conflictIf(err, errNotDeactivated, "not_deactivated",
 			"only a deactivated user can be reactivated, and this one is not; an invited "+
 				"user is still waiting to set their password, and a suspended user needs "+
-				"whatever caused the suspension resolved instead"))
+				"whatever caused the suspension resolved instead")))
 		return
 	}
 	h.writeUserByID(w, r, ids.UserID{UUID: ids.UUID(id)}, http.StatusOK)
@@ -247,7 +247,7 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 			})
 			return
 		}
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, archivedRoleRefusal(err))
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.IssuePasswordLinkResponse{
@@ -268,6 +268,13 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 // matching sentences.
 func conflictIf(err, cause error, code, detail string) error {
 	return refuseAs(err, cause, http.StatusConflict, code, detail)
+}
+
+// archivedRoleRefusal names the refusal every verb that hands an account back
+// answers for a member still holding an archived role.
+func archivedRoleRefusal(err error) error {
+	return conflictIf(err, errArchivedRoleHeld, "archived_role_held",
+		"this user still holds an archived role; an admin gives them a live role first")
 }
 
 // unknownRoleRefusal separates the two 404s this surface can answer: an unknown

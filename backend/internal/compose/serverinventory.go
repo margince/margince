@@ -59,6 +59,7 @@ type Server struct {
 	commissionsHandlers
 	activitiesHandlers
 	approvalsHandlers
+	bulkHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers

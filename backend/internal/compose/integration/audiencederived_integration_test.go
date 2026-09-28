@@ -548,7 +548,7 @@ func TestNarrowingLeavesAFieldAContactCorrected(t *testing.T) {
 	if _, err := e.Owner.Exec(ctx, `
 		INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by, source)
 		VALUES ('contact', $1, 'profile_field',
-		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone', 'ui')`,
+		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone', 'manual')`,
 		contact); err != nil {
 		t.Fatal(err)
 	}

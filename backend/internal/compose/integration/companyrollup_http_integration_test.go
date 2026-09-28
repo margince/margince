@@ -76,7 +76,7 @@ type companyRollupFxProblem struct {
 // optionally hanging it under parentID (empty = a root).
 func createCompanyRollupCompany(t *testing.T, e *apptest.AppEnv, name, parentID string) string {
 	t.Helper()
-	body := AnyMap{"display_name": name, "source": "ui"}
+	body := AnyMap{"display_name": name, "source": "manual"}
 	if parentID != "" {
 		body["parent_company_id"] = parentID
 	}
@@ -132,7 +132,7 @@ func createCompanyRollupOpenDeal(t *testing.T, e *apptest.AppEnv, pipelineID, st
 		"pipeline_id":  pipelineID,
 		"stage_id":     stageID,
 		"company_id":   companyID,
-		"source":       "ui",
+		"source":       "manual",
 	}, nil, &deal)
 	if status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)

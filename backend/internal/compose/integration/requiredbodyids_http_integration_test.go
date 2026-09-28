@@ -293,7 +293,7 @@ func seedDealForRequiredIDs(t *testing.T, e *apptest.AppEnv) string {
 	}
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Advance probe", "pipeline_id": pipeline.ID, "stage_id": open,
-		"currency": "EUR", "amount_minor": 1000, "source": "ui",
+		"currency": "EUR", "amount_minor": 1000, "source": "manual",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal → %d", status)
 	}
