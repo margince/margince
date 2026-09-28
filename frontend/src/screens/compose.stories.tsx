@@ -473,6 +473,7 @@ export const Default: Story = {
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.type(dialog.getByRole("searchbox"), "Acme");
+    await dialog.findByRole("button", { name: "Acme renewal" });
   },
 };
 

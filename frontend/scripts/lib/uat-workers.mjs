@@ -16,7 +16,6 @@ export function requestedWorkers(override, cpus) {
   return Number(override);
 }
 
-// workersFor never opens a page that would find the queue already empty.
 export function workersFor(requested, stories) {
   return Math.min(requested, stories);
 }
@@ -38,4 +37,13 @@ export async function drainInOrder(items, lanes, task, recover) {
   };
   await Promise.all(lanes.map(lane));
   return results;
+}
+
+// One crash then fails the item it happened on, not every item its lane draws
+// after it.
+export function renewingBroken(task, { isBroken, renew }) {
+  return async (item, lane) => {
+    if (isBroken(lane)) await renew(lane);
+    return await task(item, lane);
+  };
 }

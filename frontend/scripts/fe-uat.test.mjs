@@ -1,26 +1,18 @@
-// What the render gate (fe-uat.mjs) counts as a shipped component, asked of the
-// rule itself.
-//
-// The failure that prompted the location rule: the gate reported
-// `src/app/testing/shellharness.tsx` as "a changed component no story renders".
-// It is a test harness — it mounts the shell for a suite and exports the queries
-// those tests ask it — so the story it demanded would have documented nothing a
-// reader ships, and the only ways past a gate like that are a waiver flag or a
-// story written to satisfy it.
-//
-// The rule has to stay CLOSED in the other direction, which is the half worth a
-// test: a skip keyed too widely reports PASS over a component that lost its
-// story, and no assertion fails to say so.
+// The render gate's (fe-uat.mjs) rules, asked of the rules themselves: the gate
+// is a script that talks to git and a browser as it loads.
 
 import { describe, expect, it } from "vitest";
-import { outcomeErrors } from "./lib/story-outcome.mjs";
+import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
 import { needsStory } from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
+  renewingBroken,
   requestedWorkers,
   workersFor,
 } from "./lib/uat-workers.mjs";
 
+// A skip keyed too widely reports PASS over a component that lost its story, so
+// the rule staying closed is the half worth a test.
 describe("needsStory", () => {
   it("skips a harness by the directory it sits in", () => {
     expect(needsStory("frontend/src/app/testing/x.tsx")).toBe(false);
@@ -111,11 +103,12 @@ describe("drainInOrder", () => {
   it("runs one item per lane at a time, on every lane", async () => {
     const busy = new Set();
     const used = new Set();
+    const overlaps = [];
     await drainInOrder(
       [0, 1, 2, 3, 4, 5],
       ["a", "b", "c"],
       async (item, lane) => {
-        expect(busy.has(lane)).toBe(false);
+        if (busy.has(lane)) overlaps.push(`${lane} took ${item} while busy`);
         busy.add(lane);
         used.add(lane);
         await settleAfter(item + 1);
@@ -123,6 +116,7 @@ describe("drainInOrder", () => {
       },
       () => "recovered",
     );
+    expect(overlaps).toEqual([]);
     expect([...used].sort()).toEqual(["a", "b", "c"]);
   });
 
@@ -168,12 +162,7 @@ describe("drainInOrder", () => {
   });
 });
 
-const quiet = {
-  playFunctionThrewException: null,
-  storyThrewException: null,
-  storyErrored: null,
-  unhandledErrorsWhilePlaying: null,
-};
+const quiet = Object.fromEntries(FAILURE_EVENTS.map((event) => [event, null]));
 
 describe("outcomeErrors", () => {
   it("passes a story whose channel reported no failure", () => {
@@ -190,8 +179,8 @@ describe("outcomeErrors", () => {
     expect(
       outcomeErrors({
         ...quiet,
-        playFunctionThrewException: error,
-        storyThrewException: error,
+        playFunctionThrewException: [error],
+        storyThrewException: [error],
       }),
     ).toEqual([
       "play() threw TestingLibraryElementError: Unable to find an element",
@@ -202,8 +191,8 @@ describe("outcomeErrors", () => {
     expect(
       outcomeErrors({
         ...quiet,
-        storyThrewException: { name: "TypeError", message: "x is undefined" },
-        storyErrored: { title: "No component", description: "export one" },
+        storyThrewException: [{ name: "TypeError", message: "x is undefined" }],
+        storyErrored: [{ title: "No component", description: "export one" }],
       }),
     ).toEqual([
       "the story threw TypeError: x is undefined",
@@ -215,11 +204,64 @@ describe("outcomeErrors", () => {
     expect(
       outcomeErrors({
         ...quiet,
-        unhandledErrorsWhilePlaying: [{ message: "a" }, { message: "b" }],
+        unhandledErrorsWhilePlaying: [[{ message: "a" }, { message: "b" }]],
       }),
     ).toEqual([
       "unhandled error while playing: a",
       "unhandled error while playing: b",
     ]);
+  });
+
+  // A module that throws at import emits nothing but this, with or without the
+  // story it could not load.
+  it("fails a story Storybook could not load", () => {
+    expect(
+      outcomeErrors({ ...quiet, storyMissing: ["compose--default"] }),
+    ).toEqual([
+      "Storybook could not load the story (compose--default): its module failed to import or no longer exports it",
+    ]);
+    expect(outcomeErrors({ ...quiet, storyMissing: [] })).toEqual([
+      "Storybook could not load the story: its module failed to import or no longer exports it",
+    ]);
+  });
+});
+
+describe("renewingBroken", () => {
+  it("gives a broken lane a fresh resource, so one crash fails one item", async () => {
+    const lanes = [
+      { name: "a", broken: false, renewals: 0 },
+      { name: "b", broken: false, renewals: 0 },
+    ];
+    const results = await drainInOrder(
+      [0, 1, 2, 3, 4, 5],
+      lanes,
+      renewingBroken(
+        async (item, lane) => {
+          if (lane.broken) throw new Error("page crashed");
+          if (item === 1) {
+            lane.broken = true;
+            throw new Error("page crashed");
+          }
+          return await settleAfter(1, `ok ${item}`);
+        },
+        {
+          isBroken: (lane) => lane.broken,
+          renew: async (lane) => {
+            lane.broken = false;
+            lane.renewals++;
+          },
+        },
+      ),
+      (item, error) => `failed ${item}: ${error.message}`,
+    );
+    expect(results).toEqual([
+      "ok 0",
+      "failed 1: page crashed",
+      "ok 2",
+      "ok 3",
+      "ok 4",
+      "ok 5",
+    ]);
+    expect(lanes.reduce((sum, lane) => sum + lane.renewals, 0)).toBe(1);
   });
 });

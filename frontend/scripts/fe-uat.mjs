@@ -34,6 +34,7 @@ import {
 import { needsStory } from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
+  renewingBroken,
   requestedWorkers,
   workersFor,
 } from "./lib/uat-workers.mjs";
@@ -308,7 +309,7 @@ async function storyOutcome(page) {
       Object.fromEntries(
         events.map((event) => [
           event,
-          globalThis.__STORYBOOK_ADDONS_CHANNEL__?.last(event)?.[0] ?? null,
+          globalThis.__STORYBOOK_ADDONS_CHANNEL__?.last(event) ?? null,
         ]),
       ),
     FAILURE_EVENTS,
@@ -392,8 +393,33 @@ async function captureStory(page, port, story) {
   return { id: story.id, pass, png: relative(repoRoot, png), errors };
 }
 
+async function openPage(browser, lane) {
+  lane.page = await browser.newPage({
+    viewport: DESKTOP,
+    deviceScaleFactor: 2,
+  });
+  lane.crashed = false;
+  lane.page.once("crash", () => {
+    lane.crashed = true;
+  });
+  return lane;
+}
+
+function messageOf(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function captureOnLane(lane, port, story) {
+  try {
+    return await captureStory(lane.page, port, story);
+  } catch (error) {
+    if (!lane.crashed) throw error;
+    throw new Error(`the page crashed: ${messageOf(error)}`, { cause: error });
+  }
+}
+
 function captureThrew(story, error) {
-  const message = `capture threw: ${error instanceof Error ? error.message : String(error)}`;
+  const message = `capture threw: ${messageOf(error)}`;
   console.log(`✗ ${story.id} — ${message}`);
   return { id: story.id, pass: false, png: null, errors: [message] };
 }
@@ -457,16 +483,18 @@ if (storyFiles.size > 0) {
     const started = performance.now();
     const browser = await chromium.launch();
     try {
-      const pages = [];
-      for (let lane = 0; lane < workers; lane++) {
-        pages.push(
-          await browser.newPage({ viewport: DESKTOP, deviceScaleFactor: 2 }),
-        );
+      const lanes = [];
+      for (let count = 0; count < workers; count++) {
+        lanes.push(await openPage(browser, {}));
       }
       results = await drainInOrder(
         inScope,
-        pages,
-        (story, page) => captureStory(page, port, story),
+        lanes,
+        renewingBroken((story, lane) => captureOnLane(lane, port, story), {
+          isBroken: (lane) => lane.crashed || lane.page.isClosed(),
+          // The crashed page is left to browser.close(): its renderer is gone.
+          renew: (lane) => openPage(browser, lane),
+        }),
         captureThrew,
       );
     } finally {
