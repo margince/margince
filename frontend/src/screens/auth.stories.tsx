@@ -372,7 +372,7 @@ export const ResetPasswordRefused: Story = {
   render: () => <ResetStory failure={422} />,
   play: async ({ canvasElement }) => {
     await submitNewPassword(canvasElement);
-    await within(canvasElement).findByText(/that password was refused/i);
+    await within(canvasElement).findByText(/the password was refused/i);
   },
 };
 
@@ -403,6 +403,6 @@ export const ResetServerFault: Story = {
   render: () => <ResetStory failure="transport" />,
   play: async ({ canvasElement }) => {
     await submitNewPassword(canvasElement);
-    await within(canvasElement).findByText(/your link is still valid/i);
+    await within(canvasElement).findByText(/the link is still valid/i);
   },
 };
