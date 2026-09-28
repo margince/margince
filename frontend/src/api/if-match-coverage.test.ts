@@ -42,7 +42,6 @@ const UNPINNED_WRITES: readonly string[] = [
   "screens/relationshiprows.tsx DELETE /relationships/{id}",
   "screens/contractwrites.ts PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",
-  "screens/extension-access.tsx PATCH /roles/{key}/objects/{object}",
   "screens/settings.stages.tsx DELETE /stages/{id}",
   "screens/share.tsx DELETE /record-grants/{id}",
   "screens/voice-dna.tsx DELETE /voice-profiles/{id}/sources/{sourceId}",

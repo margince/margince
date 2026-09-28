@@ -129,6 +129,7 @@ import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
+import { RolesSettings } from "./roles-settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
@@ -237,6 +238,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
       // (RowScopeTeam) — so this is also where an admin decides whose records a
       // Team Lead's membership hands over, which is not the roster's question.
       return <TeamsCard />;
+    case "roles":
+      return <RolesSettings />;
     case "seats":
       return <LicenseCard />;
 

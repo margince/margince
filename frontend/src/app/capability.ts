@@ -228,6 +228,10 @@ export function useCanUpsert(object: RbacObject): boolean {
  * grant on it could never restore it — so the role is their honest predicate
  * rather than a stand-in for one.
  *
+ * The role editor holds it for the same reason: creating and restoring a role,
+ * and turning a right on, are the admin's alone (identity/roles.go
+ * refuseWideningUnlessAdmin), and no grant stands for them.
+ *
  * One more surface holds it for the opposite reason: the agent's cost figure
  * on the rail. The server serves it on `automation:update`, a grant wider than
  * the administrator — ops holds it, and an edited role may — so there the role

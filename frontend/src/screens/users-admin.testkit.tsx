@@ -32,7 +32,7 @@ export function jsonResponse(body: unknown, status = 200) {
 // Typed as the contract's members, so `allowed_actions` stays the enum.
 type Member = components["schemas"]["User"];
 export const ROSTER: {
-  data: Member[];
+  data: Omit<Member, "timezone">[];
   page: { next_cursor: null; has_more: boolean };
 } = {
   data: [

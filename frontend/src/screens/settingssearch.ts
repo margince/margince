@@ -74,6 +74,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   ],
   members: ["users", "contacts", "invite", "seat", "deactivate", "roles"],
   teams: ["team", "group", "manager"],
+  roles: ["role", "permission", "access", "rights", "scope", "grant"],
   seats: ["license", "licence", "entitlement", "capacity", "headcount"],
   pipelines: ["stage", "deal", "funnel", "won", "lost"],
   leads: ["lead", "source", "vocabulary", "qualification"],

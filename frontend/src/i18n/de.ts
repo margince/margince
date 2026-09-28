@@ -7446,6 +7446,8 @@ export const de = {
     "Alle, die einen Platz haben, und worauf sie jeweils zugreifen können.",
   "settings.page.teams.sub":
     "Teammitgliedschaft, die den teambezogenen Zugriff auf Datensätze bestimmt.",
+  "settings.page.roles.sub":
+    "Was jede Rolle darf und wessen Datensätze sie erreicht.",
   "settings.page.seats.sub":
     "Belegte Plätze im Verhältnis zum Lizenzumfang dieser Installation.",
   "settings.page.stageautomation.sub":
@@ -7506,6 +7508,7 @@ export const de = {
   "settings.tab.authentication": "Anmeldung und Apps",
   "settings.tab.members": "Mitglieder",
   "settings.tab.teams": "Teams",
+  "settings.tab.roles": "Rollen und Berechtigungen",
   "settings.tab.seats": "Plätze und Lizenz",
   "settings.tab.stageautomation": "Phasenautomatisierung",
   "settings.tab.pipelines": "Pipelines",
@@ -8069,6 +8072,69 @@ export const de = {
     "Eingereiht. Diese Seite aktualisiert sich, wenn der Aufbau abgeschlossen ist.",
   "settings.voice.buildStatus.pending":
     "Aufbau läuft noch. Diese Seite aktualisiert sich, wenn der Aufbau abgeschlossen ist.",
+  "roles.title": "Rollen",
+  "roles.sub":
+    "Eine Rolle legt fest, was ihre Mitglieder mit jeder Art von Datensatz und Einstellung tun dürfen und wessen Datensätze sie ändern dürfen. Vorgegebene Rollen bringt Margince mit; eine neue Rolle beginnt als Kopie einer bestehenden.",
+  "roles.readOnly": "Deine Rolle darf Rollen lesen, aber nicht ändern.",
+  "roles.showArchived": "Archivierte Rollen anzeigen",
+  "roles.showArchivedSub":
+    "Eine archivierte Rolle gewährt nichts und kann niemandem zugewiesen werden.",
+  "roles.system": "Vorgegeben",
+  "roles.archived": "Archiviert",
+  "roles.open": "Öffnen",
+  "roles.openNamed": "{name} öffnen",
+  "roles.empty": "Keine Rollen vorhanden.",
+  "roles.new": "Neue Rolle",
+  "roles.newTitle": "Neue Rolle",
+  "roles.newFrom": "Rechte kopieren von",
+  "roles.newFromHint":
+    "Die neue Rolle beginnt mit genau den Rechten dieser Rolle.",
+  "roles.newName": "Name",
+  "roles.newSubmit": "Rolle anlegen",
+  "roles.notCreated": "Rolle nicht angelegt",
+  "roles.created": "{name} angelegt",
+  "roles.detailSub":
+    "Eine Änderung gilt für alle Mitglieder mit dieser Rolle ab ihrer nächsten Anfrage.",
+  "roles.rename": "Umbenennen",
+  "roles.renameTitle": "Rolle umbenennen",
+  "roles.nameLabel": "Name",
+  "roles.renameSubmit": "Name speichern",
+  "roles.scopeTitle": "Wessen Datensätze Mitglieder ändern",
+  "roles.scopeSub":
+    "Kontakte, Unternehmen, Leads und Deals bleiben für jede Rolle lesbar, die sie lesen darf. Diese Einstellung legt fest, was Mitglieder ändern dürfen und welche Projekte sie sehen.",
+  "roles.scope.own": "Eigene",
+  "roles.scope.ownSub": "Datensätze, die dem Mitglied gehören.",
+  "roles.scope.team": "Die ihrer Teams",
+  "roles.scope.teamSub":
+    "Datensätze, die jemandem aus den Teams des Mitglieds gehören.",
+  "roles.scope.all": "Alle",
+  "roles.scope.allSub": "Jeder Datensatz im Unternehmen.",
+  "roles.grantsSub": "Jeder Schalter speichert sofort.",
+  "roles.grantsCore": "Datensätze und Einstellungen",
+  "roles.grantsExtensions": "Erweiterungen",
+  "roles.objectColumn": "Objekt",
+  "roles.preview": "Vorschau, was diese Rolle sieht",
+  "roles.archive": "Rolle archivieren",
+  "roles.restore": "Rolle wiederherstellen",
+  "roles.archivedNote":
+    "Diese Rolle ist archiviert. Die Rolle gewährt nichts, und niemand kann sie erhalten, bis sie wiederhergestellt ist.",
+  "roles.archivedToast": "{name} archiviert",
+  "roles.restoredToast": "{name} wiederhergestellt",
+  "roles.notSaved": "Änderung nicht gespeichert",
+  "roles.refusal.widening":
+    "Nur ein Admin kann eine Rolle anlegen oder wiederherstellen, ein Recht einschalten oder erweitern, wessen Datensätze sie erreicht. Du kannst eine Rolle umbenennen, einschränken oder archivieren.",
+  "roles.refusal.versionSkew":
+    "Jemand anderes hat diese Rolle geändert, während sie geöffnet war. Die Rolle zeigt jetzt diese Änderung; nimm deine erneut vor, falls sie noch zutrifft.",
+  "roles.refusal.inUse":
+    "Mitglieder, die sich anmelden können, haben diese Rolle noch. Gib ihnen zuerst eine andere Rolle und archiviere sie dann.",
+  "roles.refusal.archivedHeld":
+    "Ein Mitglied hat noch eine archivierte Rolle. Gib diesem Mitglied zuerst eine aktive Rolle.",
+  "roles.refusal.system":
+    "Eine vorgegebene Rolle kann nicht archiviert werden.",
+  "roles.refusal.adminFloor":
+    "Die Admin-Rolle behält ihre Rechte, Nutzende, Rollen und Teams zu verwalten, damit das Unternehmen immer verwaltet werden kann.",
+  "roles.refusal.nameTaken":
+    "Eine andere Rolle hat bereits diesen Namen. Wähle einen anderen.",
   "extAccess.title": "Erweiterungen und Zugriff",
   "extAccess.sub":
     "Was jede Erweiterungseinheit dieser Installation hinzufügt und welche Rollen sie nutzen dürfen. Nur für Admins.",

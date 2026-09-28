@@ -403,16 +403,17 @@ export const SETTINGS_PAGES = [
     // which is a read, so it does not make this page the reader's to change.
     changes: acts(writes("team_admin")),
   },
-  // `roles` is NOT here, and its absence is the point.
-  //
-  // The plan gives it a full page — role definitions, row scope, field masks,
-  // extension grants, preview-as-role — and none of that is built. A catalog
-  // entry would put a "Roles & permissions" row in front of every admin and ops
-  // seat, because `role_admin:read` OPENS the page rather than closing it, and
-  // the row would lead to a blank column.
-  //
-  // A destination becomes reachable when it is complete, not when its id is
-  // decided. It joins the table in the change that builds it.
+  {
+    id: "roles",
+    group: "people",
+    scope: "workspace",
+    // `GET /roles` asks `role_admin:read`, and the role list IS the page, so
+    // the read opens it even for a reader who may change nothing.
+    requires: reads("role_admin"),
+    // Create is POST /roles, a rename, row scope or grant edit is update, and
+    // archive and restore are delete (identity/rolelifecycle.go).
+    changes: acts(writes("role_admin"), destroys("role_admin")),
+  },
   {
     id: "seats",
     group: "people",

@@ -7635,6 +7635,8 @@ export const en = {
     "Everyone with a seat, and what each can access.",
   "settings.page.teams.sub":
     "Team membership, which decides team-scoped record access.",
+  "settings.page.roles.sub":
+    "What each role may do, and whose records it reaches.",
   "settings.page.seats.sub":
     "Seats in use against this installation’s entitlement.",
   "settings.page.stageautomation.sub":
@@ -7691,6 +7693,7 @@ export const en = {
   "settings.tab.authentication": "Sign-in and apps",
   "settings.tab.members": "Members",
   "settings.tab.teams": "Teams",
+  "settings.tab.roles": "Roles and permissions",
   "settings.tab.seats": "Seats and license",
   "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
@@ -8229,6 +8232,67 @@ export const en = {
     "Queued. This page updates when the build finishes.",
   "settings.voice.buildStatus.pending":
     "Still building. This page updates when the build finishes.",
+  "roles.title": "Roles",
+  "roles.sub":
+    "A role decides what its members may do with each kind of record and setting, and whose records they may change. Built-in roles come with Margince; a new role starts as a copy of one.",
+  "roles.readOnly": "Your role can read roles but not change them.",
+  "roles.showArchived": "Show archived roles",
+  "roles.showArchivedSub":
+    "An archived role grants nothing and cannot be given to anyone.",
+  "roles.system": "Built-in",
+  "roles.archived": "Archived",
+  "roles.open": "Open",
+  "roles.openNamed": "Open {name}",
+  "roles.empty": "No roles to show.",
+  "roles.new": "New role",
+  "roles.newTitle": "New role",
+  "roles.newFrom": "Copy rights from",
+  "roles.newFromHint":
+    "The new role starts with exactly the rights of this role.",
+  "roles.newName": "Name",
+  "roles.newSubmit": "Create role",
+  "roles.notCreated": "Role not created",
+  "roles.created": "{name} created",
+  "roles.detailSub":
+    "A change applies to every member holding this role from their next request.",
+  "roles.rename": "Rename",
+  "roles.renameTitle": "Rename role",
+  "roles.nameLabel": "Name",
+  "roles.renameSubmit": "Save name",
+  "roles.scopeTitle": "Whose records members change",
+  "roles.scopeSub":
+    "Contacts, companies, leads and deals stay readable to every role allowed to read them. This decides what members may change, and which projects they see.",
+  "roles.scope.own": "Their own",
+  "roles.scope.ownSub": "Records the member owns.",
+  "roles.scope.team": "Their teams’",
+  "roles.scope.teamSub": "Records owned by anyone on the member’s teams.",
+  "roles.scope.all": "Everyone’s",
+  "roles.scope.allSub": "Every record in the company.",
+  "roles.grantsSub": "Each switch saves at once.",
+  "roles.grantsCore": "Records and settings",
+  "roles.grantsExtensions": "Extensions",
+  "roles.objectColumn": "Object",
+  "roles.preview": "Preview what this role sees",
+  "roles.archive": "Archive role",
+  "roles.restore": "Restore role",
+  "roles.archivedNote":
+    "This role is archived. It grants nothing, and nobody can be given it until it is restored.",
+  "roles.archivedToast": "{name} archived",
+  "roles.restoredToast": "{name} restored",
+  "roles.notSaved": "Change not saved",
+  "roles.refusal.widening":
+    "Only an admin can create or restore a role, turn a right on, or widen whose records it reaches. You can rename a role, narrow it or archive it.",
+  "roles.refusal.versionSkew":
+    "Someone else changed this role while it was open. It now shows their change; make yours again if it still applies.",
+  "roles.refusal.inUse":
+    "Members who can sign in still hold this role. Give them another role first, then archive it.",
+  "roles.refusal.archivedHeld":
+    "A member still holds an archived role. Give them a live role first.",
+  "roles.refusal.system": "A built-in role cannot be archived.",
+  "roles.refusal.adminFloor":
+    "The admin role keeps its rights to manage users, roles and teams, so the company can always be administered.",
+  "roles.refusal.nameTaken":
+    "Another role already has this name. Choose a different one.",
   "extAccess.title": "Extensions and access",
   "extAccess.sub":
     "What each extension unit adds to this installation, and which roles may use it. Administrators only.",

@@ -7389,6 +7389,7 @@ export const vi = {
     "M\u1ecdi ng\u01b0\u1eddi c\u00f3 gh\u1ebf, v\u00e0 m\u1ed7i ng\u01b0\u1eddi t\u1edbi \u0111\u01b0\u1ee3c \u0111\u00e2u.",
   "settings.page.teams.sub":
     "Ai l\u00e0m vi\u1ec7c c\u00f9ng nhau \u2014 \u0111\u00f3 l\u00e0 c\u0103n c\u1ee9 c\u1ee7a ph\u1ea1m vi h\u00e0ng.",
+  "settings.page.roles.sub": "Mỗi vai trò được làm gì và với bản ghi của ai.",
   "settings.page.seats.sub":
     "Bao nhi\u00eau gh\u1ebf \u0111ang d\u00f9ng so v\u1edbi quy\u1ec1n c\u1ee7a b\u1ea3n tri\u1ec3n khai n\u00e0y.",
   "settings.page.stageautomation.sub":
@@ -7454,6 +7455,7 @@ export const vi = {
   "settings.tab.authentication": "Đăng nhập & ứng dụng",
   "settings.tab.members": "Thành viên",
   "settings.tab.teams": "Nhóm",
+  "settings.tab.roles": "Vai trò và quyền",
   "settings.tab.seats": "Giấy phép & chỗ ngồi",
   "settings.tab.stageautomation": "T\u1ef1 \u0111\u1ed9ng giai \u0111o\u1ea1n",
   "settings.tab.pipelines": "Quy trình",
@@ -8003,6 +8005,69 @@ export const vi = {
     "Đã xếp hàng — sẽ xong trong chốc lát và tự cập nhật.",
   "settings.voice.buildStatus.pending":
     "Vẫn đang dựng — việc này có thể mất một lát; xong sẽ tự cập nhật ở đây.",
+  "roles.title": "Vai trò",
+  "roles.sub":
+    "Vai trò quyết định thành viên được làm gì với từng loại bản ghi và cài đặt, và được thay đổi bản ghi của ai. Margince có sẵn các vai trò mặc định; vai trò mới bắt đầu là bản sao của một vai trò có sẵn.",
+  "roles.readOnly":
+    "Vai trò của bạn được xem vai trò nhưng không được thay đổi.",
+  "roles.showArchived": "Hiện vai trò đã lưu trữ",
+  "roles.showArchivedSub":
+    "Vai trò đã lưu trữ không cấp quyền nào và không thể gán cho ai.",
+  "roles.system": "Mặc định",
+  "roles.archived": "Đã lưu trữ",
+  "roles.open": "Mở",
+  "roles.openNamed": "Mở {name}",
+  "roles.empty": "Không có vai trò nào.",
+  "roles.new": "Vai trò mới",
+  "roles.newTitle": "Vai trò mới",
+  "roles.newFrom": "Sao chép quyền từ",
+  "roles.newFromHint":
+    "Vai trò mới bắt đầu với đúng các quyền của vai trò này.",
+  "roles.newName": "Tên",
+  "roles.newSubmit": "Tạo vai trò",
+  "roles.notCreated": "Chưa tạo được vai trò",
+  "roles.created": "Đã tạo {name}",
+  "roles.detailSub":
+    "Thay đổi áp dụng cho mọi thành viên giữ vai trò này từ yêu cầu tiếp theo của họ.",
+  "roles.rename": "Đổi tên",
+  "roles.renameTitle": "Đổi tên vai trò",
+  "roles.nameLabel": "Tên",
+  "roles.renameSubmit": "Lưu tên",
+  "roles.scopeTitle": "Thành viên được thay đổi bản ghi của ai",
+  "roles.scopeSub":
+    "Liên hệ, công ty, lead và deal vẫn đọc được với mọi vai trò có quyền đọc chúng. Mục này quyết định thành viên được thay đổi gì và thấy những dự án nào.",
+  "roles.scope.own": "Của chính họ",
+  "roles.scope.ownSub": "Bản ghi do thành viên sở hữu.",
+  "roles.scope.team": "Của nhóm họ",
+  "roles.scope.teamSub":
+    "Bản ghi do bất kỳ ai trong các nhóm của thành viên sở hữu.",
+  "roles.scope.all": "Của tất cả",
+  "roles.scope.allSub": "Mọi bản ghi trong công ty.",
+  "roles.grantsSub": "Mỗi công tắc lưu ngay lập tức.",
+  "roles.grantsCore": "Bản ghi và cài đặt",
+  "roles.grantsExtensions": "Tiện ích mở rộng",
+  "roles.objectColumn": "Đối tượng",
+  "roles.preview": "Xem trước những gì vai trò này thấy",
+  "roles.archive": "Lưu trữ vai trò",
+  "roles.restore": "Khôi phục vai trò",
+  "roles.archivedNote":
+    "Vai trò này đã được lưu trữ. Nó không cấp quyền nào và không ai được gán nó cho đến khi được khôi phục.",
+  "roles.archivedToast": "Đã lưu trữ {name}",
+  "roles.restoredToast": "Đã khôi phục {name}",
+  "roles.notSaved": "Chưa lưu thay đổi",
+  "roles.refusal.widening":
+    "Chỉ quản trị viên mới được tạo hoặc khôi phục vai trò, bật một quyền, hoặc mở rộng phạm vi bản ghi của nó. Bạn có thể đổi tên, thu hẹp hoặc lưu trữ vai trò.",
+  "roles.refusal.versionSkew":
+    "Vai trò này đã được thay đổi ở nơi khác khi nó đang mở. Trang hiện hiển thị thay đổi đó; hãy thực hiện lại thay đổi của bạn nếu vẫn cần.",
+  "roles.refusal.inUse":
+    "Vẫn còn thành viên có thể đăng nhập đang giữ vai trò này. Hãy gán cho họ vai trò khác trước, rồi lưu trữ nó.",
+  "roles.refusal.archivedHeld":
+    "Một thành viên vẫn giữ vai trò đã lưu trữ. Hãy gán cho họ một vai trò đang dùng trước.",
+  "roles.refusal.system": "Không thể lưu trữ vai trò mặc định.",
+  "roles.refusal.adminFloor":
+    "Vai trò quản trị giữ quyền quản lý thành viên, vai trò và nhóm, để công ty luôn được quản trị.",
+  "roles.refusal.nameTaken":
+    "Đã có vai trò khác mang tên này. Hãy chọn tên khác.",
   "extAccess.title": "Tiện ích mở rộng & quyền truy cập",
   "extAccess.sub":
     "Mỗi đơn vị tiện ích đã ghép vào bản cài đặt này mang theo những gì, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",

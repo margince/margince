@@ -210,8 +210,10 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
+    // The role read that completes the card is also the whole gate on the
+    // role editor, so that page opens beside it.
     await waitFor(() =>
-      expect(offeredPages()).toEqual(floorPlus("extensions")),
+      expect(offeredPages()).toEqual(floorPlus("roles", "extensions")),
     );
     cleanup();
 

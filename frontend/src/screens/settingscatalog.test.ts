@@ -103,6 +103,8 @@ describe("the scope each page declares", () => {
     // One workspace's state.
     members: "workspace",
     teams: "workspace",
+    // PATCH /roles/{key} and its siblings — one workspace's roles.
+    roles: "workspace",
     pipelines: "workspace",
     stageautomation: "workspace",
     leads: "workspace",
@@ -210,6 +212,9 @@ describe("what each page lets a reader change", () => {
     members:
       "all(full-seat, any(any(user_admin:update, user_admin:create), user_admin:delete))",
     teams: "all(full-seat, any(any(team_admin:update, team_admin:create)))",
+    // Create, edit, and archive or restore, which the server gates on delete.
+    roles:
+      "all(full-seat, any(any(role_admin:update, role_admin:create), role_admin:delete))",
     seats: "same-as-requires",
 
     pipelines:

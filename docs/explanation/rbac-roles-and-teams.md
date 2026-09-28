@@ -37,7 +37,7 @@ workspace. Its `permissions` JSONB holds two things:
   [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 - **`row_scope`** — `own` | `team` | `all` (see below).
 
-A fresh workspace is seeded with five **system roles** (`is_system = true`), whose exact grants are
+A fresh workspace is seeded with six **system roles** (`is_system = true`), whose exact grants are
 compiled in and are the source of truth — do not transcribe the full matrix elsewhere, it will
 drift. Read it in **`backend/internal/modules/identity/internal/policy/policy.go`** (`defaults`), or
 cell by cell in [reference/rbac-matrix.md](../reference/rbac-matrix.md), which is rendered from those
@@ -46,6 +46,7 @@ same values by a test and so cannot drift from them. The shape:
 | Role | Posture | Row scope |
 |---|---|---|
 | `admin` | Full CRUD on everything (config included). | `all` |
+| `management` | The `manager` object grid, over every row: the sales leader. | `all` |
 | `ops` | Same CRUD reach as admin — the operations counterpart. | `all` |
 | `manager` | CRUD on records; **read-only** on most config (pipeline, automation, custom_field); **no access at all** to the admin-only sheets (`fx_rate`, `ai_model_rate`, `embedding_reindex`, `import_run`). | `team` |
 | `rep` | Create/read/update records (delete only where it's routine, e.g. disqualify a lead); **read-only** on config. | `own` |
@@ -64,7 +65,9 @@ Two things surprise contacts:
   is why a `rep` gets `pipeline.read: permission denied`-adjacent behaviour only when they have **no
   role at all** — with the `rep` role they *can* read pipelines; they just can't edit them.
 
-Custom roles are additive on the same shape. When a user holds several roles, permissions **merge to
+Custom roles are additive on the same shape. An admin makes one in **Settings → Roles and
+permissions** by copying an existing role, then renames it, moves its row scope and switches its
+object grants there; archiving takes it out of use while nobody who can sign in holds it. When a user holds several roles, permissions **merge to
 the widest** held (object grants union; row scope takes the widest — `all` > `team` > `own`); see
 `policy.Merge`.
 

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Info, KeyRound, Route, Timer } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanMutate } from "../app/capability";
 import {
@@ -13,16 +12,10 @@ import {
   findExtension,
 } from "../app/extensions";
 import { routeHash } from "../app/router";
-import {
-  Badge,
-  Disclosure,
-  EmptyState,
-  TableScroll,
-} from "../design-system/atoms";
+import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import {
   isVersionSkew,
@@ -31,10 +24,21 @@ import {
   QueryGate,
   type QueryLike,
   QueryStates,
-  throwProblem,
   useMe,
 } from "./common";
 import "./extension-access.css";
+import {
+  EXTENSIONS_KEY,
+  type ExtensionUnit,
+  useExtensions,
+} from "./extensions.queries";
+import { GrantMatrix, type GrantMatrixRow, grantOf } from "./grantmatrix";
+import {
+  ROLES_KEY,
+  type Role,
+  useRoles,
+  useSetRoleGrant,
+} from "./roles.queries";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -52,24 +56,10 @@ import "./extension-access.css";
 // possibly hold a grant on — every core object already comes granted by the
 // bootstrap matrix.
 
-// The wire shapes, read straight off the generated contract — this screen was
-// written against hand-written copies while /roles and /extensions were landing
-// in parallel, and they are gone now that the contract carries both. Everything
-// below goes through the typed client, like every other screen.
-//
-// `RbacAction` is the contract's own verb enum, so the column set here cannot
-// drift from the one the server accepts.
-export type CrudAction = components["schemas"]["RbacAction"];
-
-// The four booleans a role holds on one object. Shared with /me's effective
-// grants (same schema), which is exactly why an absent key has to read the same
-// way in both places.
-export type ObjectGrant = components["schemas"]["RbacObjectGrant"];
-
-// `Role.version` is an int64 in the contract, NOT a string: it is a RowVersion,
-// and it rides back out as `If-Match` — stringified at the call, since the
-// header is a string like every other versioned write in the product.
-export type ExtensionRole = components["schemas"]["Role"];
+// The wire shapes, read straight off the generated contract. `Role.version` is
+// an int64 RowVersion, NOT a string: it rides back out as `If-Match`,
+// stringified at the call.
+export type ExtensionRole = Role;
 
 // One entry per OPERATION, not per path: the inventory is deduplicated by
 // (path, method) server-side precisely so a DELETE cannot hide behind a GET on
@@ -77,114 +67,6 @@ export type ExtensionRole = components["schemas"]["Role"];
 // operator reading this screen has to be able to see that a unit's route can
 // delete.
 export type ExtensionRoute = components["schemas"]["ComposedExtensionRoute"];
-
-export type ExtensionUnit = components["schemas"]["ComposedExtension"];
-
-// The four verbs, in the order an operator reads them: read first, because it
-// is the one that decides whether the extension's screens render at all, and
-// the one whose absence produces the confusing empty state.
-const CRUD: readonly CrudAction[] = ["read", "create", "update", "delete"];
-
-const ROLES_KEY = ["extension-access", "roles"] as const;
-const EXTENSIONS_KEY = ["extension-access", "extensions"] as const;
-
-// Both reads go through the typed client: same same-origin /v1 base, same
-// session cookie, same RFC-7807 body on refusal, and now the same generated
-// types as every other screen.
-//
-// `roles` and `extensions` are REQUIRED in their envelopes, so the `?? []` is
-// not defending against a server that omits them — it narrows `data`, which
-// openapi-fetch types as possibly-undefined on the error branch that
-// `throwProblem` has already left.
-function useRoles(enabled: boolean) {
-  return useQuery({
-    queryKey: ROLES_KEY,
-    enabled,
-    queryFn: async (): Promise<readonly ExtensionRole[]> => {
-      const { data, error } = await api.GET("/roles");
-      if (error) {
-        throwProblem(error);
-      }
-      return data?.roles ?? [];
-    },
-  });
-}
-
-function useExtensions(enabled: boolean) {
-  return useQuery({
-    queryKey: EXTENSIONS_KEY,
-    enabled,
-    queryFn: async (): Promise<readonly ExtensionUnit[]> => {
-      const { data, error } = await api.GET("/extensions");
-      if (error) {
-        throwProblem(error);
-      }
-      return data?.extensions ?? [];
-    },
-  });
-}
-
-// The PATCH takes the whole grant, not a delta, so the request states the
-// grant the operator is looking at rather than an edit against a version of it
-// the server may no longer hold. `If-Match` carries the version of the role
-// that grant was read from: the contract makes the header optional only because
-// every versioned write here is, and a client that omits it is asking the
-// server to overwrite a row it never looked at.
-function useSetGrant() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: {
-      roleKey: string;
-      object: string;
-      grant: ObjectGrant;
-      version: number;
-    }): Promise<ExtensionRole | undefined> => {
-      const { data, error } = await api.PATCH("/roles/{key}/objects/{object}", {
-        params: {
-          path: { key: input.roleKey, object: input.object },
-          // Stringified because the header is text and the version is an
-          // int64 — the same spelling every other If-Match write here uses.
-          header: { "If-Match": String(input.version) },
-        },
-        body: input.grant,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    // The server answers with the whole updated role, so the cache takes it
-    // verbatim: a refetch would repaint the matrix a beat later and a local
-    // merge would invent a grant the server never confirmed.
-    onSuccess: (role) => {
-      if (!role) {
-        return;
-      }
-      queryClient.setQueryData<readonly ExtensionRole[]>(ROLES_KEY, (roles) =>
-        (roles ?? []).map((existing) =>
-          existing.key === role.key ? role : existing,
-        ),
-      );
-      // The matrix is not the only reader of this grant. If the role just
-      // edited is one the OPERATOR holds, every `useCan("ext_…")` affordance in
-      // the app is now answering from a /me snapshot that predates the change —
-      // for up to five minutes, or until a window focus. Re-reading the
-      // snapshot is cheap and is the only way the rest of the app learns.
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
-    // A refused write leaves the checkbox showing the state the server holds
-    // (nothing was applied locally), but another admin's concurrent change is
-    // the likelier reason for a refusal here — so re-read rather than trust
-    // the snapshot the failure was computed against. On a version skew that
-    // re-read is the whole remedy: it repaints the matrix with what the other
-    // admin left, and the message beside it says the tick did not apply. The
-    // write is never replayed against the fresh version — that would apply an
-    // intent the operator formed against grants they had not seen.
-    onError: () => {
-      void queryClient.invalidateQueries({ queryKey: ROLES_KEY });
-    },
-  });
-}
 
 // What the two reads answer together. Named because the lead card and the unit
 // cards read the same merged result: the lead card renders its pending/error
@@ -226,29 +108,6 @@ function useExtensionAccess(enabled: boolean): QueryLike<ComposedAccess> {
       void roles.refetch();
     },
   };
-}
-
-// The grant a role holds on an object, with an absent key resolving to the
-// zero grant — the same fail-closed reading the capability hook applies to
-// /me, and the reason a freshly composed extension shows an empty matrix
-// instead of a row of ticks nobody granted.
-const NO_GRANT: ObjectGrant = {
-  read: false,
-  create: false,
-  update: false,
-  delete: false,
-};
-
-// The lookup is widened to `| undefined` on the way in, because the generated
-// index signature cannot say what the contract's prose does: an object a role
-// was never granted is ABSENT from the map, and `{[key: string]: Grant}` types
-// every key as present. Reading it as the zero grant is the fail-closed
-// behaviour /me gets too — without this widening the `??` would look like dead
-// code and be deleted, turning a missing key into `undefined.read` at runtime.
-function grantOf(role: ExtensionRole, object: string): ObjectGrant {
-  const objects: Readonly<Record<string, ObjectGrant | undefined>> =
-    role.objects;
-  return objects[object] ?? NO_GRANT;
 }
 
 export function ExtensionAccessCard() {
@@ -580,32 +439,9 @@ function BringsRow({
 }
 
 /**
- * One object's role × CRUD matrix.
- *
- * A real `<table>`, not a grid of divs: the two axes ARE the meaning here, and
- * a screen-reader user landing on a tick in the middle of it has to be able to
- * ask which role and which verb it belongs to. `scope="col"` / `scope="row"`
- * is what answers that, and `labelledBy` names which object the whole grid is
- * about — a table announced as "read create update delete" with no subject is
- * unreadable however many ticks it contains. The name is the row's own label
- * rather than a `<caption>`, because the stacked `SettingRow` already draws
- * that sentence directly above the grid and a caption would repeat it.
- *
- * Every cell is a `Switch`, not a `Checkbox`, and the difference is the whole
- * point of this grid: flipping one WRITES an RBAC grant. A checkbox states an
- * intent something later submits, so a reader who was told "checkbox" has been
- * told their next click is safe until they press Save — and there is no Save.
- * `role="switch"` is what says the click IS the change.
- *
- * Each carries its own full sentence as its accessible name ("Allow Rep to read
- * ext_notes_note"), because the header association alone is a hint, not a name:
- * a control has to be identifiable out of context, and it is the only thing a
- * user hears when tabbing straight to it. The name is `labelHidden`, so the
- * visible cell is the track alone.
- *
- * A seat that may not write gets the reason as the switch's own `reason`, which
- * `aria-describedby` attaches to the control — the block above states it once
- * for the eye, this states it to every reader who lands on a single cell.
+ * One object's role × CRUD matrix: the shared grant grid with a row per role.
+ * Its name is the stacked row's own label rather than a `<caption>`, which
+ * would repeat the sentence drawn directly above it.
  */
 function ObjectMatrix({
   object,
@@ -620,7 +456,7 @@ function ObjectMatrix({
   labelledBy: string;
 }>) {
   const t = useT();
-  const setGrant = useSetGrant();
+  const setGrant = useSetRoleGrant();
   // The same reading of a 409 the record edit form makes, through the same
   // helper: only a ProblemError carries a server code, so a rejected fetch can
   // never be mistaken for a concurrent edit.
@@ -632,97 +468,48 @@ function ObjectMatrix({
   // from anywhere else in the product. Said plainly, next to the toggles that
   // fix it.
   const nobodyReads = roles.every((role) => !grantOf(role, object).read);
+  const rows = roles.map((role): GrantMatrixRow => {
+    const grant = grantOf(role, object);
+    return {
+      key: role.key,
+      name: role.name,
+      note: role.is_system ? t("extAccess.systemRole") : undefined,
+      grant,
+      cellLabel: (action) =>
+        t("extAccess.cell", {
+          role: role.name,
+          action: t(`extAccess.action.${action}`),
+          object,
+        }),
+      // Scoped to the role whose grant is being written: the write carries the
+      // role's WHOLE grant record, so every action in that row is in flight,
+      // and no other row is.
+      pending: setGrant.isPending && setGrant.variables?.roleKey === role.key,
+      onChange: (action, next) =>
+        setGrant.mutate({
+          roleKey: role.key,
+          object,
+          grant: { ...grant, [action]: next },
+          // The version of the role THIS cell was read from, not one fetched
+          // at write time: the server compares against what the operator saw.
+          version: role.version,
+        }),
+    };
+  });
 
   return (
     // `.settingrow-measure` is the stacked row's own contract for a control
-    // that owns its width: `.settingrow-control` is a flex row, so without the
-    // `min-width: 0` it carries, the matrix's scroll box would grow to the
-    // grid's full width and push the card sideways. The inset panel this
-    // replaces was separating one object's grants from the next; the
-    // `SettingList` hairline between the rows does that now, and two edges
-    // around one grid read as a box inside a box.
+    // that owns its width: without its `min-width: 0` the grid's scroll box
+    // would grow to the grid's full width and push the card sideways.
     <div className="settingrow-measure ext-object">
-      {/* `TableScroll` rather than a wrapper of this screen's own: five CRUD
-          columns beside a role name overrun a 720px settings column, and the
-          box that scrolls sideways — keyboard-reachable, announced — is one
-          spelling for every table in the product (atoms.tsx). Named by the
-          object rather than by a translated phrase: the object IS the grid's
-          subject, which is the same thing `labelledBy` says to the table. */}
-      <TableScroll label={object}>
-        <table className="ext-matrix" aria-labelledby={labelledBy}>
-          <thead>
-            <tr>
-              <th scope="col">{t("extAccess.roleColumn")}</th>
-              {CRUD.map((action) => (
-                <th scope="col" key={action}>
-                  {t(`extAccess.action.${action}`)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {roles.map((role) => {
-              const grant = grantOf(role, object);
-              return (
-                <tr key={role.key}>
-                  <th scope="row">
-                    <span className="ext-role-name">{role.name}</span>
-                    {role.is_system ? (
-                      <span className="t-caption ext-role-note">
-                        {t("extAccess.systemRole")}
-                      </span>
-                    ) : null}
-                  </th>
-                  {CRUD.map((action) => (
-                    <td key={action} className="ext-cell">
-                      <Switch
-                        labelHidden
-                        label={t("extAccess.cell", {
-                          role: role.name,
-                          action: t(`extAccess.action.${action}`),
-                          object,
-                        })}
-                        checked={grant[action]}
-                        disabled={!canManage}
-                        // Scoped to the role whose grant is actually being
-                        // written. `setGrant` is one mutation for the whole
-                        // matrix, so a bare `isPending` set every cell for
-                        // every role turning and announcing itself — a claim
-                        // about writes nobody made. Role granularity rather
-                        // than cell, because the write carries the role's WHOLE
-                        // grant record: every action in that row really is in
-                        // flight.
-                        pending={
-                          setGrant.isPending &&
-                          setGrant.variables?.roleKey === role.key
-                        }
-                        // Only the PERMISSION denial gets a reason. A write in
-                        // flight is the other way this is disabled, and it
-                        // wants no words at all — a sentence that appeared for
-                        // 200ms on every toggle would be noise, not an
-                        // explanation.
-                        reason={canManage ? undefined : t("extAccess.readOnly")}
-                        onChange={(next) =>
-                          setGrant.mutate({
-                            roleKey: role.key,
-                            object,
-                            grant: { ...grant, [action]: next },
-                            // The version of the role THIS cell was read from,
-                            // not a version fetched at write time: that is the
-                            // whole guarantee — the server compares against
-                            // what the operator was looking at.
-                            version: role.version,
-                          })
-                        }
-                      />
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </TableScroll>
+      <GrantMatrix
+        rowHeader={t("extAccess.roleColumn")}
+        rows={rows}
+        canManage={canManage}
+        readOnlyReason={t("extAccess.readOnly")}
+        labelledBy={labelledBy}
+        scrollLabel={object}
+      />
       {nobodyReads ? (
         // `warning` is exactly the claim: nothing is broken, and something will go
         // wrong if nobody acts — every screen this unit ships renders "you do
