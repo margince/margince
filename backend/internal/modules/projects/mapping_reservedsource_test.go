@@ -26,7 +26,7 @@ func TestProjectCreateInputRefusesTheImporterNamespace(t *testing.T) {
 
 	var onSystem *provenance.ReservedError
 	if _, err := projectCreateInput(crmcontracts.CreateProjectRequest{
-		Name: "Planted", CompanyId: company, Source: "ui", SourceSystem: &reserved,
+		Name: "Planted", CompanyId: company, Source: "manual", SourceSystem: &reserved,
 	}); !errors.As(err, &onSystem) {
 		t.Fatalf("source_system: err = %v, want the namespace refused", err)
 	} else if onSystem.Field != "source_system" {
@@ -50,7 +50,7 @@ func TestProjectCreateInputCarriesAnOrdinarySourceSystem(t *testing.T) {
 	in, err := projectCreateInput(crmcontracts.CreateProjectRequest{
 		Name:         "Real",
 		CompanyId:    openapi_types.UUID(ids.NewV7()),
-		Source:       "ui",
+		Source:       "manual",
 		SourceSystem: &ordinary,
 	})
 	if err != nil {
@@ -67,7 +67,7 @@ func TestProjectCreateInputCarriesAnOrdinarySourceSystem(t *testing.T) {
 func TestProjectImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	body := func(system string) crmcontracts.CreateProjectRequest {
 		return crmcontracts.CreateProjectRequest{
-			Name: "Imported", CompanyId: openapi_types.UUID(ids.NewV7()), Source: "ui", SourceSystem: &system,
+			Name: "Imported", CompanyId: openapi_types.UUID(ids.NewV7()), Source: "manual", SourceSystem: &system,
 		}
 	}
 	in, err := projectCreateInputFromImporter(body("mirror:hubspot"))
