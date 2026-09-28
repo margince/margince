@@ -29114,7 +29114,7 @@ type Deal struct {
 	// LostReason Required when status=lost.
 	LostReason *string `json:"lost_reason,omitempty"`
 
-	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Sorting or filtering the list by a masked field is refused (422).
+	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
 	MaskedFields *[]string           `json:"masked_fields,omitempty"`
 	Name         string              `json:"name"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`

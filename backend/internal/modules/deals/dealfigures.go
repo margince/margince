@@ -81,7 +81,7 @@ func maskFigures(ctx context.Context, tx pgx.Tx, figures map[ids.UUID]DealFigure
 }
 
 // dealAmountField is the masked field this read can actually withhold. The
-// others in dealMaskableFields name columns it does not select.
+// others the catalog offers name columns it does not select.
 const dealAmountField = "amount_minor"
 
 // DealFigures is one deal's commercial face: what it is worth, when it was

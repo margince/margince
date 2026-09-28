@@ -182,10 +182,12 @@ func (s *Store) SameDayNextSteps(ctx context.Context, firstDay, endDay time.Time
 // moneyMasked reports whether any mask this caller carries on a deal withholds
 // its amount or currency, the two the material bar is priced from, on any row.
 //
-// Which masks those are is read off dealMaskableFields by what each withholds,
-// so a money mask added there joins this test by existing.
+// Which masks those are is read off dealWithholders by what each withholds, so
+// a money mask added there joins this test by existing. MasksAnyRowOf answers
+// for the whole group, so a mask configured on the ARR is found through the
+// amount it withholds with.
 func moneyMasked(ctx context.Context) (bool, error) {
-	for field, withhold := range dealMaskableFields {
+	for field, withhold := range dealWithholders {
 		minor, currency := int64(1), "EUR"
 		probe := crmcontracts.Deal{AmountMinor: &minor, Currency: &currency}
 		withhold(&probe)

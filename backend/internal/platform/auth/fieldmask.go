@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -24,7 +25,21 @@ import (
 // withheld on a row it may or may not change. An unbounded principal and the
 // system principal read every column; a mask conditioned on write authority
 // lifts on a row the caller could write.
+//
+// The answer is what the mask WITHHOLDS, not what it is configured as: a mask
+// on the amount withholds the currency and the ARR beside it, and every caller
+// here is deciding what to null or leave out. Expanding at the one place they
+// all ask is what stopped four surfaces each answering a narrower question —
+// see the fieldmask package.
 func MaskedFields(p principal.Principal, object string, writable bool) []string {
+	return fieldmask.Withheld(object, configuredMasks(p, object, writable))
+}
+
+// configuredMasks is the raw set an administrator wrote, before the grouping.
+// Nothing outside this file wants it: a caller asking which fields are masked
+// is about to withhold them, and withholding the configured name alone is the
+// defect this package exists to have fixed.
+func configuredMasks(p principal.Principal, object string, writable bool) []string {
 	if Unbounded(p) {
 		return nil
 	}
@@ -53,12 +68,10 @@ func MasksAnyRowOf(ctx context.Context, object, field string) (bool, error) {
 	if Unbounded(p) {
 		return false, nil
 	}
-	for _, m := range p.Permissions.FieldMasks {
-		if m.Object == object && m.Field == field {
-			return true, nil
-		}
-	}
-	return false, nil
+	// Masked on ANY row means either condition applies somewhere, so the
+	// unconditioned set is the one to ask about: a mask that lifts where the
+	// caller may write still withholds everywhere they may not.
+	return fieldmask.Covers(object, configuredMasks(p, object, false), field), nil
 }
 
 // WritableSubset answers, in ONE statement, which of the given rows of a
@@ -265,7 +278,11 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 	}
 	clause, masked := "", false
 	for _, m := range p.Permissions.FieldMasks {
-		if m.Object != object || m.Field != field {
+		// A mask reaches this column when it WITHHOLDS it, not only when it
+		// names it: an aggregate over the amount is taken over figures the
+		// reader may not read if a mask on the ARR beside it is matched by
+		// spelling. MaskedColumnSQL and MaskedExpressionSQL read this too.
+		if m.Object != object || !fieldmask.Covers(object, []string{m.Field}, field) {
 			continue
 		}
 		masked = true
