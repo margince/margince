@@ -319,3 +319,56 @@ func clearSuppressionList(t *testing.T) {
 		t.Fatalf("rolling the suppression list back: %v", err)
 	}
 }
+
+// failingBlobs answers every question with an outage. Not ErrNotFound — the
+// difference between "no such object" and "could not ask" is the whole point
+// of the two tests below.
+type failingBlobs struct{ err error }
+
+func (f failingBlobs) Put(context.Context, string, io.Reader, int64, string) error { return f.err }
+
+func (f failingBlobs) Get(context.Context, string) (io.ReadCloser, blobstore.Object, error) {
+	return nil, blobstore.Object{}, f.err
+}
+func (f failingBlobs) Delete(context.Context, string) error              { return f.err }
+func (f failingBlobs) DeletePrefix(context.Context, string) (int, error) { return 0, f.err }
+func (f failingBlobs) Health(context.Context) error                      { return f.err }
+
+// A store that cannot answer is not a "no".
+//
+// Reporting one would let an outage read as "this subject was never erased",
+// which is the exact failure this whole path exists to prevent — and it would
+// do it silently, leaving a resurrected subject standing and the pass
+// reporting a clean run.
+func TestAnUnreachableJournalIsNotAnAnswerThatNobodyWasErased(t *testing.T) {
+	e := integration.Setup(t)
+	outage := errors.New("the object store is unreachable")
+	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(failingBlobs{err: outage})
+
+	// A live subject the database's own list does not name, so the pass has to
+	// ask the journal about them — and the journal cannot answer.
+	resurrected := seedContactWithEmail(t, e, "Die Betroffene", resurrectedAddress)
+
+	_, err := eraser.ReapplySuppressions(e.Admin())
+	if err == nil {
+		t.Fatal("an unreachable journal reported a clean run")
+	}
+	// And nothing was destroyed on the strength of an answer nobody gave.
+	if live := liveEmails(t, e, resurrected); live != 1 {
+		t.Fatalf("a subject was erased while the list could not be read: %d address(es)", live)
+	}
+}
+
+// An export that could not write is not an export. Saying it succeeded would
+// leave somebody relying on a list that is not there, which is worse than
+// having no export at all — they would stop checking.
+func TestAnExportThatCannotWriteSaysSo(t *testing.T) {
+	e := integration.Setup(t)
+	seedSuppressedEmail(t, resurrectedAddress)
+	eraser := privacy.NewEraser(InstallationDB(e.Pool)).
+		WithBlobstore(failingBlobs{err: errors.New("the object store is full")})
+
+	if _, err := eraser.ExportSuppressions(e.Admin()); err == nil {
+		t.Fatal("an export that wrote nothing reported success")
+	}
+}
