@@ -24,7 +24,7 @@ const suggestion: DealSuggestion = {
   company_name: "Acme GmbH",
   pipeline_id: "pl",
   stage_id: "s1",
-  name: "Acme GmbH – Angebot_2026",
+  name_hint: "proposal_sent",
   amount_minor: null,
   currency: null,
   confidence: 0.8,
@@ -47,7 +47,6 @@ function suggestionRow(id = "sg-1") {
     level: 6,
     consequence: "data_drifts",
     destination: "review",
-    title: "Acme GmbH – Angebot_2026",
     actions: ["decide", "dismiss", "open"],
     subject: { type: "company", id: "co-1", label: "Acme GmbH" },
   });

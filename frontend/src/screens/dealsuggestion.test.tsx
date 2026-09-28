@@ -35,7 +35,7 @@ const suggestion: DealSuggestion = {
   company_name: "Acme GmbH",
   pipeline_id: "pl",
   stage_id: "s1",
-  name: "Acme GmbH – Angebot_2026",
+  name_hint: "proposal_sent",
   amount_minor: 1_250_000,
   currency: "EUR",
   confidence: 0.9,
@@ -220,7 +220,7 @@ afterEach(() => {
 
 describe("what an acceptance sends", () => {
   const untouched = {
-    name: suggestion.name,
+    name: "Acme GmbH: proposal sent",
     amountMinor: 1_250_000,
     currency: "EUR",
     stageId: "s1",
@@ -228,20 +228,27 @@ describe("what an acceptance sends", () => {
     closeDate: "",
   };
 
-  it("sends nothing the reader left as the suggestion had it", () => {
+  it("sends only the name where the reader changed nothing else", () => {
     expect(
       acceptBody(
-        { ...suggestion, amount_minor: null },
-        {
-          ...untouched,
-          amountMinor: 0,
-        },
+        { ...suggestion, amount_minor: null, currency: null },
+        { ...untouched, amountMinor: 0 },
       ),
-    ).toEqual({});
+    ).toEqual({ name: "Acme GmbH: proposal sent" });
+  });
+
+  // Omitting the amount keeps the suggested one on the server, so an amount
+  // the reader cleared has to be said out loud.
+  it("drops the suggested amount when the reader empties the field", () => {
+    expect(acceptBody(suggestion, { ...untouched, amountMinor: 0 })).toEqual({
+      name: "Acme GmbH: proposal sent",
+      no_amount: true,
+    });
   });
 
   it("sends the amount only with its currency", () => {
     expect(acceptBody(suggestion, { ...untouched, currency: "USD" })).toEqual({
+      name: "Acme GmbH: proposal sent",
       amount_minor: 1_250_000,
       currency: "USD",
     });
@@ -271,7 +278,7 @@ describe("a suggestion's card", () => {
   it("names the deal, its amount and every piece of evidence", async () => {
     vi.stubGlobal("fetch", stubBackend({ suggestions: [] }));
     draw(<DealSuggestionCard suggestion={suggestion} />);
-    expect(screen.getByText("Acme GmbH – Angebot_2026")).toBeTruthy();
+    expect(screen.getByText("Acme GmbH: proposal sent")).toBeTruthy();
     expect(screen.getByText("€12,500.00")).toBeTruthy();
     expect(screen.getByText("Sent: Angebot_2026.pdf")).toBeTruthy();
     expect(screen.getByText("Meeting held: Scoping workshop")).toBeTruthy();
@@ -355,7 +362,7 @@ describe("a suggestion on the pipeline board", () => {
   it("draws the suggestion in the stage it would open in", async () => {
     const { column } = await columnFigures([suggestion]);
     expect(
-      await within(column).findByText("Acme GmbH – Angebot_2026"),
+      await within(column).findByText("Acme GmbH: proposal sent"),
     ).toBeTruthy();
     const proposal = screen.getByRole("region", { name: "Proposal" });
     expect(within(proposal).queryByTestId("deal-suggestion")).toBeNull();

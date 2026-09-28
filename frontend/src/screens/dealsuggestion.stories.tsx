@@ -26,7 +26,7 @@ const suggestion: DealSuggestion = {
   company_name: "Acme GmbH",
   pipeline_id: "01a0e9f1-0000-7000-8000-0000000000p1",
   stage_id: "01a0e9f1-0000-7000-8000-0000000000s1",
-  name: "Acme GmbH – Angebot_2026",
+  name_hint: "proposal_sent",
   amount_minor: 1250000,
   currency: "EUR",
   confidence: 0.9,
@@ -50,7 +50,7 @@ const suggestion: DealSuggestion = {
 const unpriced: DealSuggestion = {
   ...suggestion,
   id: "01a0e9f1-0000-7000-8000-000000000002",
-  name: "Globex",
+  name_hint: "opportunity_signalled",
   amount_minor: null,
   currency: null,
   confidence: 0.7,

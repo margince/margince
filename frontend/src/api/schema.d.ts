@@ -3075,9 +3075,12 @@ export interface paths {
          *     caller may not move stays where it is and is listed in
          *     `unlinked_activity_ids`. Every field of the body is optional; an omitted
          *     one keeps the suggestion's value, and `amount_minor` and `currency` travel
-         *     together. `409 suggestion_decided` when the suggestion was already
-         *     accepted, dismissed or superseded; a replay under the same
-         *     Idempotency-Key answers the first result.
+         *     together; `no_amount` drops the suggested amount. `409
+         *     suggestion_decided` when the suggestion was already accepted, dismissed
+         *     or superseded, and `409 suggestion_superseded` when the company has an
+         *     open deal by now: the suggestion is retired and no second deal is
+         *     opened. A replay under the same Idempotency-Key answers the first
+         *     result.
          */
         post: operations["acceptDealSuggestion"];
         delete?: never;
@@ -19183,8 +19186,11 @@ export interface components {
              * @description The stage the deal would open in: the default pipeline's first open stage.
              */
             stage_id: string;
-            /** @description The proposed deal name. */
-            name: string;
+            /**
+             * @description Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+             * @enum {string}
+             */
+            name_hint: "proposal_sent" | "opportunity_signalled" | "meeting_held";
             /**
              * Format: int64
              * @description Proposed only when a finished reading of a cited document stated both an amount and a currency.
@@ -19226,9 +19232,12 @@ export interface components {
         };
         /** @description The caller's corrections. An omitted field keeps the suggestion's value. */
         AcceptDealSuggestionRequest: {
+            /** @description Without one the deal is named after the company. */
             name?: string;
             /** Format: int64 */
             amount_minor?: number;
+            /** @description Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency. */
+            no_amount?: boolean;
             currency?: string;
             /**
              * Format: uuid

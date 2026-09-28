@@ -85,7 +85,7 @@ export function DealSuggestionCard({
           <ConfidenceMeter level={confidenceLevel(suggestion.confidence)} />
         </Row>
         <p className="proposal-value">
-          <span className="staged-value">{suggestion.name}</span>
+          <span className="staged-value">{suggestedName(suggestion, t)}</span>
         </p>
         {suggestion.amount_minor != null && suggestion.currency && (
           <p className="dealsuggestion-amount t-caption">
@@ -184,9 +184,24 @@ type Draft = {
   closeDate: string;
 };
 
-function draftOf(suggestion: DealSuggestion): Draft {
+/**
+ * The name a suggested deal is offered under: the company's, and the kind of
+ * evidence that leads, worded here. The server stores only the kind, so no
+ * text read out of a message reaches a suggestion.
+ */
+export function suggestedName(
+  suggestion: DealSuggestion,
+  t: ReturnType<typeof useT>,
+): string {
+  return t("dealSuggestion.name", {
+    company: suggestion.company_name,
+    hint: t(`dealSuggestion.hint.${suggestion.name_hint}` as const),
+  });
+}
+
+function draftOf(suggestion: DealSuggestion, name: string): Draft {
   return {
-    name: suggestion.name,
+    name,
     amountMinor: suggestion.amount_minor ?? 0,
     currency: suggestion.currency ?? "EUR",
     stageId: suggestion.stage_id,
@@ -196,9 +211,10 @@ function draftOf(suggestion: DealSuggestion): Draft {
 }
 
 /**
- * What the request carries: only what the reader changed or set. An omitted
- * field keeps the suggestion's own value on the server, and the amount travels
- * with its currency or not at all.
+ * What the request carries: the name, and whatever else the reader changed or
+ * set. An omitted field keeps the suggestion's own value on the server, and the
+ * amount travels with its currency or not at all — so an amount the reader
+ * emptied is sent as `no_amount`, or the server would keep the one it proposed.
  */
 export function acceptBody(
   suggestion: DealSuggestion,
@@ -206,12 +222,14 @@ export function acceptBody(
 ): AcceptDealSuggestionBody {
   const body: AcceptDealSuggestionBody = {};
   const name = draft.name.trim();
-  if (name && name !== suggestion.name) {
+  if (name) {
     body.name = name;
   }
   if (draft.amountMinor > 0) {
     body.amount_minor = draft.amountMinor;
     body.currency = draft.currency;
+  } else if (suggestion.amount_minor != null) {
+    body.no_amount = true;
   }
   if (draft.stageId && draft.stageId !== suggestion.stage_id) {
     body.stage_id = draft.stageId;
@@ -235,7 +253,9 @@ export function AcceptSuggestionDialog({
   // ONE key per dialog, held across retries: a response lost after the deal
   // was opened replays that acceptance rather than being refused as a second.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
-  const [draft, setDraft] = useState(() => draftOf(suggestion));
+  const [draft, setDraft] = useState(() =>
+    draftOf(suggestion, suggestedName(suggestion, t)),
+  );
   const accept = useAcceptDealSuggestion();
   const owners = useAssignableUserOptions();
   const pipelines = usePipelines();
@@ -260,7 +280,7 @@ export function AcceptSuggestionDialog({
               out.unlinked_activity_ids.length > 0
                 ? "dealSuggestion.acceptedUnlinked"
                 : "dealSuggestion.accepted",
-              { name: draft.name.trim() || suggestion.name },
+              { name: draft.name.trim() || suggestion.company_name },
             ),
           );
           onClose();
