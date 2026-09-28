@@ -50,3 +50,26 @@ describe("a glyph verb that needs a second sentence", () => {
     expect(control.getAttribute("aria-describedby")).toBeNull();
   });
 });
+
+// The one-line box is the HOST's, so the square keeps its size while the line
+// it joins keeps its height; a verb in a row of verbs keeps its own box.
+describe("a glyph verb inside a line of text", () => {
+  it("draws its host as the one-line box only when inline", () => {
+    render(
+      <>
+        <IconAction
+          inline
+          label="Explain"
+          icon={<span aria-hidden="true">i</span>}
+        />
+        <IconAction label="Pin" icon={<span aria-hidden="true">*</span>} />
+      </>,
+    );
+    const host = (name: string) =>
+      screen.getByRole("button", { name }).parentElement;
+    expect(host("Explain")?.classList.contains("icon-action-inline")).toBe(
+      true,
+    );
+    expect(host("Pin")?.classList.contains("icon-action-inline")).toBe(false);
+  });
+});

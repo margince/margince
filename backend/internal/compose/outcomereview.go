@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // OutcomeReviews joins the deal's closing to the review written about it.
@@ -85,7 +86,7 @@ func (o *OutcomeReviews) Write(ctx context.Context, dealID ids.DealID, req crmco
 			ChoiceAnswers:   reviewChoices(req.ChoiceAnswers),
 			TemplateVersion: req.TemplateVersion,
 			Body:            req.Body,
-			Source:          "ui",
+			Source:          provenance.RecordSourceManual,
 		})
 		return err
 	})

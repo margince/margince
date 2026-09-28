@@ -72,9 +72,7 @@ var fixtureMemberOnlyInTheView = gatekit.Waive(map[string]string{})
 // Declared rather than skipped. A missing fixture is otherwise indistinguishable
 // from a deleted one, and deleting a fixture would drop its view out of this
 // check with nothing to notice — a census counting down in silence.
-var viewsWithoutAFixture = gatekit.Waive(map[string]string{
-	"check_location_support": "the geo probe renders no record and answers no tool's result: it reports whether THIS host lets a view read the device's position, which is a fact about the client rather than a payload. There is no shape for a fixture to model. It is also meant to be deleted once the host matrix is filled in, which its own catalog entry says",
-})
+var viewsWithoutAFixture = gatekit.Waive(map[string]string{})
 
 // appFixtureFloor is the number of views the sweep must find. Below it the
 // derivation has stopped reaching the catalog, and a sweep that judges nothing
@@ -106,9 +104,6 @@ func TestEveryAppViewFixtureMatchesItsToolsOutputSchema(t *testing.T) {
 			// skipping the missing one means deleting a fixture silently drops
 			// its view out of the check — with the floor still met by the
 			// others, which is a census counting down without saying so.
-			//
-			// The geo probe does not reach here: it declares no output schema
-			// and is excluded above, because it answers no tool's result.
 			if !viewsWithoutAFixture.Waived(t, spec.Name) {
 				t.Errorf("%s carries the view at %s and declares an output schema, but %s does not "+
 					"exist — a view whose payload nothing models is one no test has drawn the real "+

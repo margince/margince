@@ -85,9 +85,20 @@ A tenant-supplied host must never probe the deployment's own network; classifies
 - `RefusePrivate(network, address, rawConn)` — a `net.Dialer.Control`; `PublicIP(ip) bool`.
 - **Reach for it when:** building an HTTP client that fetches a tenant-supplied URL — set `Dialer.Control = netguard.RefusePrivate`.
 
-### `platform/ratelimit` — in-process fixed-window limiter
-For unauthenticated endpoints (login brute-force, workspace-bootstrap).
-- `New(limit, window)`, `Allow(key)`, `Record(key)`, `Blocked(key)`, `NewWithClock(...)` (inject a clock in tests).
+### `platform/ratelimit` — fixed-window limiter, one ceiling across replicas
+For unauthenticated endpoints (login brute-force, workspace-bootstrap) and for
+pacing an authenticated surface.
+- `New(name, kind, limit, window)`, `Allow(key)`, `Record(key)`, `Blocked(key)`, `NewWithClock(...)` (inject a clock in tests).
+- `name` is the bucket in the store replicas share, in `area/subject` form. Two
+  limiters that name one thing are one ceiling spent by both, which is invisible
+  at either site — `backend/gates/ratelimitnames_test.go` fails a collision.
+- `kind` says what the limiter answers when it cannot count: `FailClosed`
+  refuses, `FailOpen` admits. Choose on what one unmetered window buys that
+  cannot be taken back — a guessed password, a minted link, a provider account
+  throttled for the day — against what one refused window costs.
+- Counts live in this process until a role calls `ShareProcess(rdb)` at boot —
+  `cmd/api` and `cmd/worker` both do. Without it each replica enforces its own
+  copy of every ceiling, so N replicas admit N times the configured rate.
 - **Reach for it when:** throttling an expensive unauthenticated endpoint by key (IP/email).
 
 ### `platform/dbmigrate` — the migration runner
@@ -169,9 +180,12 @@ is a property of content, never whitespace or key order.
 - **Reach for it when:** comparing or binding a staged payload by content.
 
 ### `shared/schema` — structured-output JSON Schema builder
-Composable `Object`/`Array`/`String`/… builders rendering the `model.Request.ResponseSchema` value, so
-every structured-output schema is compile-checked and built one way (objects are CLOSED —
-`additionalProperties: false`).
+Composable `Record`/`Object`/`Array`/`String`/`Integer`/`Enum`/`Optional`/… builders rendering the
+`model.Request.ResponseSchema` value, so every structured-output schema is compile-checked and built
+one way. Objects are CLOSED (`additionalProperties: false`); `Record` also requires every field and
+keeps the declared field order, and `Optional` spells an absent value as null. The vocabulary stops
+at the strict structured-output profile: value bounds (`maxLength`, `maxItems`, `minimum`, …) are
+not emitted, because Anthropic and strict mode refuse them — the site's validator enforces them.
 - **Reach for it when:** constraining a model call to a JSON shape — never hand-write the schema string.
 
 ### `shared/ports/*` — the frozen seam interfaces

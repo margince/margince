@@ -39,8 +39,8 @@ type publicPreferenceLimiters struct {
 
 func newPublicPreferenceLimiters() publicPreferenceLimiters {
 	return publicPreferenceLimiters{
-		perIP:    ratelimit.New(60, time.Minute),
-		perToken: ratelimit.New(20, time.Minute),
+		perIP:    ratelimit.New("public-preferences/per-ip", ratelimit.FailClosed, 60, time.Minute),
+		perToken: ratelimit.New("public-preferences/per-token", ratelimit.FailClosed, 20, time.Minute),
 	}
 }
 

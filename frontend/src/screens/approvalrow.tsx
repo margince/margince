@@ -15,12 +15,14 @@ import {
   DecisionStatusChip,
   type DecisionStatusLabels,
 } from "../design-system/decisioncard";
+import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
+import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
   DecideOutcome,
@@ -28,11 +30,7 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import {
-  approvalKindLabel,
-  resolveDisplay,
-  stagedDayFormatter,
-} from "./approvalkind";
+import { approvalKindLabel } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
 import {
@@ -81,22 +79,16 @@ export function useDecisionSink(): {
   const [alreadyDecided, setAlreadyDecided] = useState(false);
   const onAlreadyDecided = useCallback(() => setAlreadyDecided(true), []);
   const decidedNote = alreadyDecided ? (
-    <Card
-      as="div"
-      inset
-      style={{
-        marginTop: "var(--space-3)",
-        display: "flex",
-        gap: "var(--space-2)",
-        alignItems: "center",
-      }}
-    >
-      <p style={{ color: "var(--dangerText)", flex: 1 }}>
+    <Card as="div" inset className="approval-decided">
+      <ErrorLine
+        actions={
+          <Button onClick={() => setAlreadyDecided(false)}>
+            {t("decision.dismiss")}
+          </Button>
+        }
+      >
         {t("decision.alreadyDecided")}
-      </p>
-      <Button onClick={() => setAlreadyDecided(false)}>
-        {t("decision.dismiss")}
-      </Button>
+      </ErrorLine>
     </Card>
   ) : null;
   return { onAlreadyDecided, decidedNote };

@@ -38,7 +38,7 @@ const proposal: Proposal = {
 describe("StagedProposal (B-EP09.3a)", () => {
   it("renders staged as visibly not-yet-real: staging style, agent provenance, confidence, evidence", () => {
     render(<StagedProposal proposal={proposal} />);
-    const card = screen.getByRole("region", { name: "staged proposal" });
+    const card = screen.getByRole("region", { name: "Proposed value" });
     expect(card.className).toContain("staging-card");
     expect(screen.getByText("Automated by capture")).toBeTruthy();
     expect(screen.getByText("medium")).toBeTruthy();
@@ -54,7 +54,7 @@ describe("StagedProposal (B-EP09.3a)", () => {
       outcome: "accepted",
       value: "€48.000",
     });
-    const card = screen.getByRole("region", { name: "resolved value" });
+    const card = screen.getByRole("region", { name: "Resolved value" });
     expect(card.className).toContain("real-card");
     expect(card.className).not.toContain("staging-card");
     expect(screen.getByText("Automated by capture")).toBeTruthy();
@@ -87,7 +87,7 @@ describe("StagedProposal (B-EP09.3a)", () => {
 
     expect(onResolve).toHaveBeenCalledWith({ outcome: "dismissed" });
     expect(screen.queryByText(/€48.000/)).toBeNull();
-    expect(screen.getByText("Suggestion dismissed.")).toBeTruthy();
+    expect(screen.getByText("Suggestion dismissed")).toBeTruthy();
   });
 });
 

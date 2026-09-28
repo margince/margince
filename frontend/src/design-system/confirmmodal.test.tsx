@@ -97,7 +97,7 @@ describe("ConfirmModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a danger-styled error message when error is set", () => {
+  it("announces the error message when error is set", () => {
     rtlRender(
       <ConfirmModal
         open
@@ -110,9 +110,7 @@ describe("ConfirmModal", () => {
         <p>Body copy</p>
       </ConfirmModal>,
     );
-    const message = screen.getByText("archive failed");
-    expect(message.getAttribute("role")).toBe("alert");
-    expect(message.getAttribute("style")).toContain("var(--dangerText)");
+    expect(screen.getByRole("alert").textContent).toBe("archive failed");
   });
 
   it("renders no error paragraph when error is null", () => {
@@ -128,7 +126,7 @@ describe("ConfirmModal", () => {
         <p>Body copy</p>
       </ConfirmModal>,
     );
-    expect(screen.queryByText("archive failed")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   // Both buttons refuse the press while the act is in flight, and they refuse
@@ -202,8 +200,8 @@ describe("ConfirmModal", () => {
       <ConfirmModal
         open
         onClose={() => undefined}
-        title="Fulfil erasure request"
-        confirmLabel="Erase + suppress"
+        title="Fulfill erasure request"
+        confirmLabel="Erase and suppress"
         confirmVariant="danger"
         confirmDisabled
         onConfirm={onConfirm}
@@ -212,7 +210,7 @@ describe("ConfirmModal", () => {
       </ConfirmModal>,
     );
 
-    const confirm = screen.getByRole("button", { name: "Erase + suppress" });
+    const confirm = screen.getByRole("button", { name: "Erase and suppress" });
     expect((confirm as HTMLButtonElement).disabled).toBe(true);
     // An unmet precondition is not a write in flight. The two used to share
     // one `disabled` on this control, so "type ERASE first" was drawn exactly

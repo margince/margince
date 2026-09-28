@@ -189,7 +189,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "de",
 			subject:  "Deine Woche",
-			labels:   []string{"Aufgaben erledigt", "7 von 9", "Von dir entschieden", "Morgen-Liste", "Übernommen", "gewonnen"},
+			labels:   []string{"Aufgaben erledigt", "7 von 9", "Entschiedene Vorschläge", "Einträge im Morgenbericht", "Übertragen", "gewonnen"},
 		},
 		{
 			language: "vi",
@@ -202,7 +202,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 			// more to its reader than no summary.
 			language: "fr",
 			subject:  "Your week",
-			labels:   []string{"Tasks delivered", "You decided", "Morning queue", "Carried over", "won"},
+			labels:   []string{"Tasks delivered", "Proposals decided", "Morning brief items", "Carried over", "won"},
 		},
 	} {
 		t.Run(c.language, func(t *testing.T) {

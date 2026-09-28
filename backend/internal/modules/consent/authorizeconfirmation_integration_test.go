@@ -15,9 +15,11 @@ package consent
 // route around every refusal the engine makes.
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -100,5 +102,72 @@ func TestAConfirmationLinkDoesNotSupportTheOtherKind(t *testing.T) {
 		t.Error("a record-confirmation link supports a CONSENT confirmation, so an installation " +
 			"that asked somebody to check their details may also mail them for an opt-in they " +
 			"never asked about")
+	}
+}
+
+// plantNarrowObjection writes a contact's marketing_objection scoped to ONE
+// consent_purpose, bypassing every writer this package has today.
+//
+// No writer gives a CONTACT a narrow stop yet — only a LEAD gets one, through
+// StopForCredentialTx's named-purpose press (withdrawalpress.go). This is the
+// same planted-row pattern lift_integration_test.go's plantSuppression and
+// reviewcontext's fixtures already use to reach a state no door produces: the
+// row shape communication_suppression.purpose_id defines is real regardless of
+// which writer will eventually mint one for a contact, and the reader under
+// test — validateOptOutAcknowledgement — must answer it correctly today.
+func plantNarrowObjection(t *testing.T, e *resolveEnv, contact ids.ContactID) {
+	t.Helper()
+	purpose := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
+		VALUES ($1, 'narrow-newsletter', 'Narrow Newsletter', false)`, purpose); err != nil {
+		t.Fatalf("seeding the purpose a narrow stop names: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression
+		    (contact_id, purpose_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, $3, 'test', 'human:x', $4)`,
+		contact, purpose, commsauthz.ReasonObjection, string(commsauthz.LevelSubject)); err != nil {
+		t.Fatalf("planting the narrow objection: %v", err)
+	}
+}
+
+// TestANarrowObjectionStillOwesTheSubjectLevelAcknowledgement pins the
+// EXISTS's deliberate blindness to purpose_id: a marketing_objection scoped to
+// one newsletter is still a marketing_objection, and Decree 91 Art. 16 owes an
+// acknowledgement of THAT REFUSAL regardless of which newsletter it named. A
+// reader that started matching on purpose (rowPurpose equals the send's
+// resolved purpose, the rule applySuppression uses to BIND a send) would
+// answer unsupported here — refusing the confirmation the subject is owed
+// because it asked the wrong question of the wrong kind of row.
+func TestANarrowObjectionStillOwesTheSubjectLevelAcknowledgement(t *testing.T) {
+	e := setupResolve(t)
+	plantNarrowObjection(t, e, e.contact)
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryOptoutConfirmation})
+
+	if !got.Supported {
+		t.Fatalf("a narrow-purpose objection resolved unsupported (%q) — the acknowledgement is "+
+			"subject-level and purpose does not narrow it", got.Reason)
+	}
+	if got.Basis != commsauthz.BasisLegalObligation {
+		t.Errorf("basis %q, want legal_obligation", got.Basis)
+	}
+}
+
+// TestNoLiveStopOwesNoAcknowledgement is the other direction: a contact who
+// never objected is owed no confirmation that a refusal was received, because
+// none was. Held beside the narrow-stop case so a reader that answered
+// unconditionally true — the failure mode on the OTHER side of the same
+// mistake — is caught here instead of by a contact receiving mail about a
+// refusal they never made.
+func TestNoLiveStopOwesNoAcknowledgement(t *testing.T) {
+	e := setupResolve(t)
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryOptoutConfirmation})
+
+	if got.Supported {
+		t.Error("a contact with no live stop resolved SUPPORTED for an opt-out acknowledgement — " +
+			"there is no refusal on record for this message to confirm")
 	}
 }

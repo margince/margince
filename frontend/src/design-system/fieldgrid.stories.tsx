@@ -75,7 +75,7 @@ export const ReadOnly: Story = {
   render: () => (
     <FieldGrid>
       <FieldRow label="Legal name">Brandt Automotive GmbH</FieldRow>
-      <FieldRow label="Account lifecycle">Customer</FieldRow>
+      <FieldRow label="Lifecycle">Customer</FieldRow>
       <FieldRow label="Owner">Mira Voss</FieldRow>
       <FieldRow label="Domain">brandt.example</FieldRow>
     </FieldGrid>

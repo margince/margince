@@ -304,8 +304,8 @@ func TestALaneThatBreaksLeavesTheRulesAdviceStanding(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
 	got := readOnce(rep, t, svc, company, &queued)
-	if got.State != crmcontracts.CompanyScanStateDegraded || got.DegradeReason == nil || !strings.Contains(*got.DegradeReason, "did not answer") {
-		t.Errorf("state %q reason %v; want degraded because the model did not answer usably", got.State, got.DegradeReason)
+	if got.State != crmcontracts.CompanyScanStateDegraded || got.DegradeReason == nil || !strings.Contains(*got.DegradeReason, "didn't match the records") {
+		t.Errorf("state %q reason %v; want degraded because the model's answer did not match the records", got.State, got.DegradeReason)
 	}
 	if lane.calls == 0 {
 		t.Error("the lane was never asked")

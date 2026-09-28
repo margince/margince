@@ -46,20 +46,3 @@
    * otherwise nudge the row on each edit. */
   font-variant-numeric: tabular-nums;
 }
-
-/* Asked and refused. The reason and the retry are in the results card, the only
- * row wide enough for both. */
-.filters-count-failed {
-  color: var(--dangerText);
-}
-
-/* The export sits under the builder, because it takes the filter as its
- * argument. Empty until the filter is one the engine would accept, so it holds
- * no space of its own then. */
-/* An export that failed, beside the button that failed — a reader waiting for a
- * file has to be told there isn't one. It wraps rather than clipping: the reason
- * comes from the server and can be a full sentence, and a truncated reason is
- * one a reader cannot act on. */
-.filters-export-error {
-  color: var(--dangerText);
-}

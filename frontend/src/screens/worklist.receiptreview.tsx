@@ -6,8 +6,9 @@ import { api } from "../api/client";
 import { ifMatch } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { RefusalLine, throwProblem } from "./common";
+import { throwProblem } from "./common";
 import { type Receipt, worklistKey } from "./worklist.queries";
 import { ReceiptUndo } from "./worklist.receiptundo";
 
@@ -81,7 +82,7 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
           {t("brief.changes.accept")}
         </Button>
       )}
-      {decide.error && <RefusalLine error={decide.error} />}
+      <ErrorLine error={decide.error} />
     </div>
   );
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -82,6 +83,24 @@ func workerModelPathSpec(cfg workerConfig, deployCfg deployconfig.Config) modelP
 		seeds:           deployCfg.Seeds,
 		capturePayloads: deployCfg.AI.CapturePayloads,
 	}
+}
+
+// openBus opens this role's bus client and moves every ceiling this process
+// holds into the store its replicas count in.
+//
+// The two are one step because separating them has exactly one outcome and it
+// is silent: a worker that reached Redis but left its ceilings in memory paces
+// one mailbox at N times the rate the provider was promised, N being however
+// many replicas the deployment happens to run, and both ends look correct.
+// This role serves no public edge, but the send job's pacing is a ceiling all
+// the same.
+func openBus(ctx context.Context, cfg workerConfig) (*redis.Client, error) {
+	rdb, err := events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
+	if err != nil {
+		return nil, err
+	}
+	ratelimit.ShareProcess(rdb)
+	return rdb, nil
 }
 
 // closeBus releases the bus client at shutdown, reporting a close fault rather

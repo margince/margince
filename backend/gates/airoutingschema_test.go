@@ -150,8 +150,16 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 	sch := compiledRoutingSchema(t)
 
 	const broker = "provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'"
+	// cloud_frontier, because this compares the per-binding shape. Under
+	// eu_hosted the parser also asks every broker lane for an EU `only:` pin —
+	// a rule across the profile and each lane that ai.EURegionPinGap owns, and
+	// that the editor schema does not repeat.
 	tiered := func(binding string) string {
-		return "profile: eu_hosted\ntiers:\n  premium: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
+		return "profile: cloud_frontier\ntiers:\n  premium: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
+	}
+	embedded := func(routing string) string {
+		return "profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\n" +
+			"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', " + routing + "}\n"
 	}
 	for name, tc := range map[string]struct {
 		yaml  string
@@ -200,10 +208,21 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 		"a block on the wire pointed elsewhere": {
 			tiered("provider: openai_compatible, model: m, base_url: 'https://api.mistral.ai', routing: {sort: throughput}"), false,
 		},
-		// The embeddings lane has no tail to bound.
-		"a block on the embeddings lane": {
-			"profile: eu_hosted\ntiers:\n  premium: {" + broker + "}\n" +
-				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {sort: throughput}}\n", false,
+		// The embeddings lane has no tail to bound, so a tail preference is
+		// refused there — but WHICH hosts may read the text is a question it
+		// shares with every chat tier, and a residency pin must reach it.
+		"a tail preference on the embeddings lane": {embedded("routing: {sort: throughput}"), false},
+		"a host pin on the embeddings lane":        {embedded("routing: {only: [mistral/eu]}"), true},
+		"a host blocklist on the embeddings lane":  {embedded("routing: {ignore: [deepinfra], allow_fallbacks: false}"), true},
+		"an effort cap on the embeddings lane":     {embedded("routing: {reasoning_effort: low}"), false},
+		// The embeddings lane shares the chat tiers' host rule: a direct vendor
+		// on the OpenAI wire fronts one host, so a pin there has nothing to pick.
+		"a host pin on an embeddings lane pointed elsewhere": {
+			"profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\n" +
+				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://api.mistral.ai', routing: {only: [x]}}\n", false,
+		},
+		"a host pin on a native embeddings lane": {
+			"profile: cloud_frontier\ntiers:\n  premium: {" + broker + "}\nembeddings: {provider: gemini, model: e, routing: {only: [x]}}\n", false,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -219,6 +238,55 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 				t.Errorf("the EDITOR accepts=%v, want %v — an operator is told the wrong thing hours before boot", schemaAccepts, tc.legal)
 			}
 			if parserAccepts != tc.legal {
+				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)
+			}
+		})
+	}
+}
+
+// The `thinking_level` acceptance matrix, editor and runtime together. Its
+// legality depends on the provider, so like `routing:` it is a conditional that
+// can be inverted while its enum still matches.
+//
+// The parser also refuses it on a model that predates the field, which a schema
+// cannot see from a model id; that refusal is the ai package's own test.
+//
+// Held by: TestTheSchemaAndTheParserAgreeOnEveryThinkingLevel (backend/gates/airoutingschema_test.go) — this test.
+func TestTheSchemaAndTheParserAgreeOnEveryThinkingLevel(t *testing.T) {
+	t.Parallel()
+	sch := compiledRoutingSchema(t)
+
+	tiered := func(binding string) string {
+		return "profile: cloud_frontier\ntiers:\n  cheap_cloud: {" + binding + "}\nembeddings: {provider: gemini, model: e}\n"
+	}
+	for name, tc := range map[string]struct {
+		yaml  string
+		legal bool
+	}{
+		"omitted":                       {tiered("provider: gemini, model: gemini-3.1-flash-lite"), true},
+		"low on a flash-lite":           {tiered("provider: gemini, model: gemini-3.1-flash-lite, thinking_level: low"), true},
+		"minimal":                       {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: minimal"), true},
+		"high":                          {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: high"), true},
+		"an unknown level":              {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: lots"), false},
+		"an effort word Gemini lacks":   {tiered("provider: gemini, model: gemini-3.5-flash, thinking_level: none"), false},
+		"on a provider without it":      {tiered("provider: anthropic, model: m, thinking_level: low"), false},
+		"on the OpenAI-compatible wire": {tiered("provider: openai_compatible, base_url: https://x, model: m, thinking_level: low"), false},
+		"on the embeddings lane": {
+			"profile: cloud_frontier\ntiers:\n  cheap_cloud: {provider: gemini, model: m}\n" +
+				"embeddings: {provider: gemini, model: e, thinking_level: low}\n", false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var doc any
+			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+				t.Fatalf("test yaml is not yaml: %v", err)
+			}
+			schemaAccepts := sch.Validate(doc) == nil
+			_, parseErr := ai.ParseRouting([]byte(tc.yaml))
+			if schemaAccepts != tc.legal {
+				t.Errorf("the EDITOR accepts=%v, want %v", schemaAccepts, tc.legal)
+			}
+			if parserAccepts := parseErr == nil; parserAccepts != tc.legal {
 				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)
 			}
 		})

@@ -47,8 +47,8 @@ expect:
     it was briefed to write.
 
     Full marks for a short English note that says who is writing, refers to the
-    K5 meeting and nothing more about it, asks for the call, carries no sign-off
-    or sender name, and reads as somebody's first message rather than the
+    K5 meeting and nothing more about it, asks for the call, carries no sign-off,
+    and reads as somebody's first message rather than the
     continuation of one.
   bands:
     certified_min: 70

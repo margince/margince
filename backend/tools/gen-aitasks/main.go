@@ -72,10 +72,15 @@ func main() {
 
 // siteDef is one entry of a task's sites[]: the named model-invocation site
 // the build registers. Written either as a bare name (kind defaults to
-// one_shot) or as a mapping when the kind differs.
+// one_shot) or as a mapping when the kind differs. Tools is what an
+// agent_loop site attaches, and is refused on any other kind. Thinking is the
+// level the router asks this site's requests to think at; its vocabulary is
+// the ai package's, and that package's tests hold it there.
 type siteDef struct {
-	Name string `yaml:"name"`
-	Kind string `yaml:"kind"`
+	Name     string   `yaml:"name"`
+	Kind     string   `yaml:"kind"`
+	Tools    []string `yaml:"tools"`
+	Thinking string   `yaml:"thinking"`
 }
 
 // UnmarshalYAML accepts both spellings so the common case — a one-shot site —
@@ -86,13 +91,15 @@ func (s *siteDef) UnmarshalYAML(node *yaml.Node) error {
 		return nil
 	}
 	var raw struct {
-		Name string `yaml:"name"`
-		Kind string `yaml:"kind"`
+		Name     string   `yaml:"name"`
+		Kind     string   `yaml:"kind"`
+		Tools    []string `yaml:"tools"`
+		Thinking string   `yaml:"thinking"`
 	}
 	if err := decodeMapping(node, &raw); err != nil {
 		return fmt.Errorf("site: %w", err)
 	}
-	s.Name, s.Kind = raw.Name, raw.Kind
+	s.Name, s.Kind, s.Tools, s.Thinking = raw.Name, raw.Kind, raw.Tools, raw.Thinking
 	if s.Kind == "" {
 		s.Kind = kindOneShot
 	}
@@ -179,17 +186,18 @@ type embedDef struct {
 // cost-unit rule name), and an optional doc string carried through
 // to the generated constant's comment.
 type taskDef struct {
-	Ladder            []string            `yaml:"ladder"`
-	ExecutionMode     string              `yaml:"execution_mode"`
-	OnBudgetExhausted string              `yaml:"on_budget_exhausted"`
-	Status            string              `yaml:"status"`
-	Sites             []siteDef           `yaml:"sites"`
-	Agents            map[string]agentDef `yaml:"agents"`
-	NoPayload         bool                `yaml:"no_payload"`
-	CompanyContext    *companyContextDef  `yaml:"company_context"`
-	CostUnit          string              `yaml:"cost_unit"`
-	Doc               string              `yaml:"doc"`
-	DisplayName       string              `yaml:"display_name"`
+	Ladder            []string           `yaml:"ladder"`
+	ExecutionMode     string             `yaml:"execution_mode"`
+	OnBudgetExhausted string             `yaml:"on_budget_exhausted"`
+	Status            string             `yaml:"status"`
+	Sites             []siteDef          `yaml:"sites"`
+	NoPayload         bool               `yaml:"no_payload"`
+	LocalOnly         bool               `yaml:"local_only"`
+	Decision          bool               `yaml:"decision"`
+	CompanyContext    *companyContextDef `yaml:"company_context"`
+	CostUnit          string             `yaml:"cost_unit"`
+	Doc               string             `yaml:"doc"`
+	DisplayName       string             `yaml:"display_name"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its

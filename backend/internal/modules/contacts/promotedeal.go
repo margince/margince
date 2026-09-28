@@ -111,7 +111,7 @@ func seatContactOnQualifiedDeal(ctx context.Context, tx pgx.Tx, contactID ids.Co
 	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
 		return err
 	}
-	anchorObject, _ := relationshipAnchor("deal_stakeholder")
+	anchorObject, _ := relationshipAnchor(dealStakeholderKind)
 	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
 		return err
 	}

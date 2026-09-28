@@ -5,7 +5,11 @@ package ai
 
 import (
 	"encoding/json"
+	"os"
+	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestLogicalCallAppendKeepsExactlyOneTerminal proves the invariant every
@@ -99,5 +103,40 @@ func TestNewConfigSnapshotCarriesTheConfiguredEmbedDimensionAndChangesHash(t *te
 	other := newConfigSnapshot("routing-hash", 1536)
 	if other.Hash == snap.Hash {
 		t.Fatal("two snapshots with different configured embed dimensions must not collide onto the same Hash")
+	}
+}
+
+// The wire leaves attempt_reason a free string, so its description is the
+// only place a client learns the vocabulary; every reason a row can carry
+// must be named there.
+func TestTheAttemptReasonDescriptionNamesEveryReason(t *testing.T) {
+	raw, err := os.ReadFile("../../../api/crm.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract struct {
+		Components struct {
+			Schemas struct {
+				Attempt struct {
+					Properties struct {
+						Reason struct {
+							Description string `yaml:"description"`
+						} `yaml:"attempt_reason"`
+					} `yaml:"properties"`
+				} `yaml:"AiCallAttempt"` //nolint:tagliatelle // a schema name in crm.yaml, PascalCase as the contract spells it
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(raw, &contract); err != nil {
+		t.Fatal(err)
+	}
+	description := contract.Components.Schemas.Attempt.Properties.Reason.Description
+	if description == "" || len(attemptReasons) == 0 {
+		t.Fatalf("nothing to compare: description %q, %d reasons", description, len(attemptReasons))
+	}
+	for _, reason := range attemptReasons {
+		if !strings.Contains(description, reason) {
+			t.Errorf("AiCallAttempt.attempt_reason does not name %q", reason)
+		}
 	}
 }

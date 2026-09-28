@@ -98,6 +98,9 @@ func analyticsQueryToolRunner(db *database.DB) agents.AnalyticsQueryRunner {
 			Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
 			SchemaVersion: answer.SchemaVersion,
 		}
+		if answer.PopulationNarrowed != "" {
+			out.PopulationNarrowed = &answer.PopulationNarrowed
+		}
 		if runID != nil {
 			s := runID.String()
 			out.RunID = &s

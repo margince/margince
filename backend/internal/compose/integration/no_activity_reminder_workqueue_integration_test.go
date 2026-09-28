@@ -94,6 +94,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	backdateCreatedAt(t, owner, "deal", dealID, staleTouch)
 
 	seedTaskCreatePermission(t, owner, e.WS, sam)
+	connectCaughtUpMailbox(t, e, sam)
 	params := json.RawMessage(fmt.Sprintf(`{"no_activity_days":%d}`, noActivityDays))
 	seedOwnedAutomation(t, owner, "no_activity_reminder", "No Activity Reminder",
 		`{"schedule":"clock"}`, `{"kind":"create_task"}`, params, sam)
@@ -154,7 +155,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	taskID := reminderTaskID(t, e, dealID)
 
 	samCtx := e.As(sam, []ids.UUID{e.Team1}, repPermsWithActivity())
-	samTasks, _, err := e.Activities.ListActivities(samCtx, activities.ListActivitiesInput{Kind: strPtr("task")})
+	samTasks, _, err := e.Activities.ListActivities(samCtx, activities.ListActivitiesInput{Kind: StrPtr("task")})
 	if err != nil {
 		t.Fatalf("Sam listing his own tasks: %v", err)
 	}
@@ -169,7 +170,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	// holding the deal grant. The queue is scoped by the linked records,
 	// not by who authored the automation.
 	strangerCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, repPermsWithActivity())
-	strangerTasks, _, err := e.Activities.ListActivities(strangerCtx, activities.ListActivitiesInput{Kind: strPtr("task")})
+	strangerTasks, _, err := e.Activities.ListActivities(strangerCtx, activities.ListActivitiesInput{Kind: StrPtr("task")})
 	if err != nil {
 		t.Fatalf("an unrelated rep listing tasks: %v", err)
 	}

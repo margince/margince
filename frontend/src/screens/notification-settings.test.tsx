@@ -128,7 +128,7 @@ describe("NotificationSettingsCard", () => {
     render(<NotificationSettingsCard />);
 
     await user.click(
-      await screen.findByRole("combobox", { name: /colleague's nudge/i }),
+      await screen.findByRole("combobox", { name: /colleague’s nudge/i }),
     );
     const listbox = screen.getByRole("listbox");
     expect(within(listbox).queryByRole("option", { name: "Off" })).toBeNull();
@@ -267,6 +267,61 @@ describe("NotificationSettingsCard", () => {
       screen.getByRole("combobox", { name: /Automations that ran/i })
         .textContent,
     ).toContain("In the app");
+  });
+
+  // ONE WRITE FREEZES ONE ROW. The mutation is shared so a single error surface
+  // can name the class that failed, and a wait spread across all six would stop
+  // a reader changing a second class while the first is still in the air —
+  // which is exactly what the hook's scope is there to serialise.
+  it("freezes only the class being written", async () => {
+    let answer = () => {};
+    const inFlight = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(meFixture({}));
+        }
+        if (req.method === "PUT") {
+          await inFlight;
+        }
+        return jsonResponse({ items: everyClass() });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+      "Daily digest",
+    );
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("combobox", { name: /Automations that ran/i })
+          .hasAttribute("disabled"),
+      ).toBe(true),
+    );
+    expect(
+      screen
+        .getByRole("combobox", { name: /Approvals waiting on you/i })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+
+    answer();
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("combobox", { name: /Automations that ran/i })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
   });
 
   it("reads the rows in the reader's own language", async () => {

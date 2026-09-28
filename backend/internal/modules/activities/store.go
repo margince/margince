@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -21,6 +22,10 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	calendar        SchedulingCalendar
+	schedulingBrand SchedulingBrand
+	meetingVault    keyvault.Vault
+
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// ownDomains tells a colleague's message from a customer's for the waiting
@@ -101,6 +106,9 @@ type Store struct {
 	// reviewLookup answers which review stands over a held message, so a row
 	// can offer a route to the work that would unstop it.
 	reviewLookup ReviewLookup
+	// ownerMailbox lets the quiet-record scan ask whether an owner's mail is
+	// visible; nil scans without asking (WithOwnerMailbox).
+	ownerMailbox *OwnerMailbox
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time

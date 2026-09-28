@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -242,5 +244,47 @@ func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 		if reading := meter.Read(ctx, c); reading.Exceeded || reading.Observed != 0 {
 			t.Errorf("spending egress moved %s to %+v", c, reading)
 		}
+	}
+}
+
+// The signal an operator alerts on, against a real store and a dead one.
+//
+// It follows the LAST attempt in both directions, and the recovery edge is the
+// half worth a test: an alert that never clears is an alert somebody turns off.
+// Asserted here rather than in the unit suite because the failing edge needs a
+// store that is genuinely unreachable, and constructing a client to point at
+// nothing is exactly what the unit lane refuses.
+func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
+	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	ctx := meteredCall(t, aWorkspace(), aPassport())
+
+	// A read against the live store, which is what sets the signal: before any
+	// attempt the meter reports what its composition says, not what it knows.
+	if reading := meter.Read(ctx, Reads); reading.Exceeded {
+		t.Fatalf("a fresh Passport read %+v against a live store; nothing has been charged", reading)
+	}
+	if reach := meter.Answerable(); !reach.Bound || !reach.Reachable {
+		t.Fatalf("after a successful read the bound reports %+v, want it bound and answerable", reach)
+	}
+
+	// The store goes away. The meter must refuse — it does that already — and
+	// say that it is refusing, which is the part an operator could not see.
+	meter.rdb = redis.NewClient(&redis.Options{Addr: "127.0.0.1:1"})
+	if reading := meter.Read(ctx, Reads); !reading.Exceeded {
+		t.Fatal("a meter that cannot reach its store reported headroom; the bound must fail closed")
+	}
+	if reach := meter.Answerable(); !reach.Bound || reach.Reachable {
+		t.Errorf("while refusing every agent read the bound reports %+v, want it bound and unanswerable", reach)
+	}
+
+	// And back. Nothing is cleared by hand: the next successful read is what
+	// stops the alert.
+	meter.rdb = redistest.Client(t)
+	if reading := meter.Read(ctx, Reads); reading.Exceeded {
+		t.Fatalf("after the store came back the meter read %+v, want headroom again", reading)
+	}
+	if reach := meter.Answerable(); !reach.Reachable {
+		t.Error("the bound still reports itself unanswerable after a read succeeded; the alert would never clear")
 	}
 }

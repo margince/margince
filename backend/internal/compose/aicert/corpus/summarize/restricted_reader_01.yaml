@@ -16,6 +16,7 @@ fixture:
     - label: last_email
       kind: email
       subject: "Re: proposal — coming back to you after the board meeting"
+      direction: inbound
       at: "2026-07-10T09:00:00Z"
 expect:
   outcome: accepted

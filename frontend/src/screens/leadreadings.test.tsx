@@ -114,3 +114,84 @@ describe("the score's breakdown", () => {
     expect(machine?.querySelector(".factlist-note")).toBeNull();
   });
 });
+
+// Every reading states its own absence and its own ending in words. The four
+// slots were borrowing them: a create form's label over the company, a badge's
+// lower-case word under the score, and the ladder word overwritten by the
+// filing that followed it.
+describe("what each reading says when the lead is not simply open", () => {
+  it("keeps the ladder word as the reading and the ending under it", async () => {
+    withReadings(<LeadReadings lead={{ ...lead, status: "promoted" }} />);
+
+    const status = (await screen.findByText(en["lead.statusPromoted"])).closest(
+      ".stat-card",
+    );
+    expect(status?.textContent).toContain(en["lead.readings.archived"]);
+  });
+
+  // A merge leaves `status` where it stood, so the ending is the only thing
+  // that says the lead is not still being worked.
+  it("says a merged lead went somewhere, without claiming where", async () => {
+    withReadings(<LeadReadings lead={{ ...lead, merged_into_id: "l-2" }} />);
+
+    const status = (
+      await screen.findByText(en["lead.readings.merged"])
+    ).closest(".stat-card");
+    expect(status?.textContent).toContain(en["lead.readings.mergedInto"]);
+  });
+
+  it("says a lead has no company, in a reading's words and not a form's", async () => {
+    withReadings(<LeadReadings lead={lead} />);
+
+    const company = (
+      await screen.findByText(en["lead.readings.company"])
+    ).closest(".stat-card");
+    expect(company?.textContent).toContain(en["lead.readings.noCompany"]);
+  });
+
+  // A StatCard value is a non-empty string by contract, so a name the server
+  // sent as whitespace is a name it does not have. Letting it through draws a
+  // slot that reads as a reading which failed to load.
+  it("reads a blank company name as no company", async () => {
+    withReadings(<LeadReadings lead={{ ...lead, company_name: "   " }} />);
+
+    const company = (
+      await screen.findByText(en["lead.readings.company"])
+    ).closest(".stat-card");
+    expect(company?.textContent).toContain(en["lead.readings.noCompany"]);
+  });
+
+  it("writes the override as a line of its own, not as the header's badge", async () => {
+    withReadings(
+      <LeadReadings
+        lead={{ ...lead, score_override_reason: "Strong buying signal" }}
+      />,
+    );
+
+    expect(
+      await screen.findByText(en["lead.readings.scoreManual"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["lead.overriddenBadge"])).toBeNull();
+  });
+
+  // "On time" is a verdict on a response nobody has sent. What is true is
+  // that it is owed, and the deadline under it says the rest.
+  it("calls an unanswered lead inside its target owed, not on time", async () => {
+    withReadings(
+      <LeadReadings
+        lead={{
+          ...lead,
+          sla_state: "within_target",
+          sla_deadline_at: "2026-06-05T08:00:00Z",
+        }}
+      />,
+    );
+
+    const response = (
+      await screen.findByText(en["lead.readings.firstResponse"])
+    ).closest(".stat-card");
+    expect(response?.textContent).toContain(en["lead.readings.owed"]);
+    expect(response?.textContent).toMatch(/Due /);
+    expect(screen.queryByText(en["lead.sla.withinTarget"])).toBeNull();
+  });
+});

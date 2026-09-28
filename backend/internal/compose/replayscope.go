@@ -151,6 +151,8 @@ const (
 // (workspace + request digest) before the header's promise can be honored;
 // until then the slot's natural key refuses a duplicate booking.
 var replayableOperations = map[string]replayTarget{
+	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},
@@ -199,11 +201,15 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/deals/{id}/stage-progressions/{approvalId}/revert": {
 		object: tableDeal, table: tableDeal, idPath: "id",
 	},
-	"POST /v1/contracts":                   {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"},
-	"POST /v1/deal-rooms":                  {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
-	"POST /v1/projects":                    {object: tableProject, table: tableProject, idPath: "id"},
-	"PATCH /v1/projects/{id}":              {object: tableProject, table: tableProject, idPath: "id"},
-	"POST /v1/projects/{id}/advance":       {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/contracts":             {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"},
+	"POST /v1/deal-rooms":            {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
+	"POST /v1/projects":              {object: tableProject, table: tableProject, idPath: "id"},
+	"PATCH /v1/projects/{id}":        {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/projects/{id}/advance": {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/bulk/execute": {
+		objectNote: "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
+		rowNote:    "the response is a batch id, a count and the ids the caller itself named with why each was left alone; it carries no record",
+	},
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},
@@ -278,6 +284,19 @@ var replayableOperations = map[string]replayTarget{
 		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
 	},
 	"POST /v1/retention/restrictions/{activityId}/pin": {
+		object:  objectRetentionPolicy,
+		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
+	},
+	// The two legal-hold decisions. Same shape as the pair above and for the
+	// same reasons: 204 with no body, so a replay re-serves the same empty
+	// answer, and the decision was gated on the retention authority when it
+	// first ran. The RECORD's own write gate ran too — each owning module takes
+	// the delete grant on its table — but that is not what a replay re-checks.
+	"POST /v1/retention/legal-holds/{entityType}/{recordId}/place": {
+		object:  objectRetentionPolicy,
+		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
+	},
+	"POST /v1/retention/legal-holds/{entityType}/{recordId}/lift": {
 		object:  objectRetentionPolicy,
 		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
 	},

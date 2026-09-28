@@ -35,3 +35,12 @@ export const CarriageBlocked: Story = {
     </StoryProviders>
   ),
 };
+
+// A channel that carries no files at all, with one attachment: the singular.
+export const CarriesNoFiles: Story = {
+  render: () => (
+    <StoryProviders>
+      <CarriageNotice channel="SMS" blocks={[{ kind: "carries", count: 1 }]} />
+    </StoryProviders>
+  ),
+};

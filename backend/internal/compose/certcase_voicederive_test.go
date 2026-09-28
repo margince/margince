@@ -48,7 +48,7 @@ func voiceDeriveCorpusFixture() voiceDeriveFixture {
 		Personality: "Blunt, never hedges.",
 		Samples: []ai.VoiceSample{
 			voiceDeriveSample("S1", "email", voiceDeriveEmailOpening),
-			voiceDeriveSample("S2", "chat", voiceDeriveChatOpening),
+			voiceDeriveSample("S2", "general", voiceDeriveChatOpening),
 		},
 	}
 }
@@ -94,9 +94,9 @@ func voiceDeriveFixtureJSON(t *testing.T, f voiceDeriveFixture) json.RawMessage 
 	return raw
 }
 
-func voiceDeriveExpectationJSON(t *testing.T, sampleIDs ...string) json.RawMessage {
+func voiceDeriveExpectationJSON(t *testing.T, registers ...string) json.RawMessage {
 	t.Helper()
-	raw, err := json.Marshal(sampleIDs)
+	raw, err := json.Marshal(registers)
 	if err != nil {
 		t.Fatalf("encoding the expectation: %v", err)
 	}
@@ -152,14 +152,14 @@ func TestVoiceDeriveCaseReportsWhatTheBuildRefused(t *testing.T) {
 	runVoiceDeriveOutcomeCases(t, []voiceDeriveOutcomeCase{
 		{
 			name:       "a reply that is not the required JSON",
-			expected:   []string{"S1"},
+			expected:   []string{"email"},
 			reply:      "The voice profile is ready.",
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "voice build returned invalid JSON",
 		},
 		{
 			name:     "a profile with nothing said about how the author thinks",
-			expected: []string{"S1"},
+			expected: []string{"email"},
 			reply: voiceDeriveReply(t, func() ai.VoiceInference {
 				inference := voiceDeriveProfile()
 				inference.ThinkingPattern = "   "
@@ -173,14 +173,14 @@ func TestVoiceDeriveCaseReportsWhatTheBuildRefused(t *testing.T) {
 			// the author never wrote is invention, and the build refuses the
 			// profile rather than the move.
 			name:       "a move citing a source that is not in the corpus",
-			expected:   []string{"S1"},
+			expected:   []string{"email"},
 			reply:      voiceDeriveGroundedReply(t, "S9", voiceDeriveEmailOpening),
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: `cited unknown sample "S9"`,
 		},
 		{
 			name:       "a move quoting words the cited source does not contain",
-			expected:   []string{"S1"},
+			expected:   []string{"email"},
 			reply:      voiceDeriveGroundedReply(t, "S1", "I will circle back next week."),
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: `quote is not verbatim in sample "S1"`,
@@ -195,14 +195,14 @@ func TestVoiceDeriveCaseSeparatesAGroundedProfileFromOneThatMissedIt(t *testing.
 	runVoiceDeriveOutcomeCases(t, []voiceDeriveOutcomeCase{
 		{
 			name:       "a profile grounded where the style lives",
-			expected:   []string{"S1"},
+			expected:   []string{"email"},
 			reply:      voiceDeriveGroundedReply(t, "S1", voiceDeriveEmailOpening),
 			wantResult: aitasks.OutcomeAccepted,
 			wantDetail: "grounds its signature moves in S1",
 		},
 		{
 			name:     "a profile that read both registers",
-			expected: []string{"S1", "S2"},
+			expected: []string{"email", "general"},
 			reply: voiceDeriveReply(t, voiceDeriveProfile(
 				ai.VoiceSignatureMove{Move: "Dates first", Quote: voiceDeriveEmailOpening, SampleID: "S1"},
 				ai.VoiceSignatureMove{Move: "Verdict first", Quote: voiceDeriveChatOpening, SampleID: "S2"},
@@ -212,22 +212,67 @@ func TestVoiceDeriveCaseSeparatesAGroundedProfileFromOneThatMissedIt(t *testing.
 		},
 		{
 			name:       "a profile grounded in the other register",
-			expected:   []string{"S2"},
+			expected:   []string{"general"},
 			reply:      voiceDeriveGroundedReply(t, "S1", voiceDeriveEmailOpening),
 			wantResult: aitasks.OutcomeWrongAnswer,
-			wantDetail: "grounds no signature move in S2",
+			wantDetail: "grounds no signature move in the general register",
 		},
 		{
 			// The citation rules have nothing to check on a profile with no
 			// signature move, so the build keeps it: it is prose about an author
 			// with no proof it was ever read.
 			name:       "a profile that points at nothing",
-			expected:   []string{"S1"},
+			expected:   []string{"email"},
 			reply:      voiceDeriveReply(t, voiceDeriveProfile()),
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: "it cites no sample",
 		},
 	})
+}
+
+// Two samples in one register carry one style, so either proves the register
+// was read — and quoting both of them still reads only half the author.
+func TestVoiceDeriveCaseAsksForOneCitationPerRegister(t *testing.T) {
+	const secondChatOpening = "Deadline stands: Friday, end of day."
+	fixture := voiceDeriveVariant(func(f *voiceDeriveFixture) {
+		f.Samples = append(f.Samples, voiceDeriveSample("S3", "general", secondChatOpening))
+	})
+	for _, tc := range []struct {
+		name       string
+		moves      []ai.VoiceSignatureMove
+		wantResult string
+		wantDetail string
+	}{
+		{
+			name: "the register's other sample stands in for the first",
+			moves: []ai.VoiceSignatureMove{
+				{Move: "Dates first", Quote: voiceDeriveEmailOpening, SampleID: "S1"},
+				{Move: "Holds the line", Quote: secondChatOpening, SampleID: "S3"},
+			},
+			wantResult: aitasks.OutcomeAccepted,
+			wantDetail: "S1, S3",
+		},
+		{
+			name: "every citation in one register",
+			moves: []ai.VoiceSignatureMove{
+				{Move: "Verdict first", Quote: voiceDeriveChatOpening, SampleID: "S2"},
+				{Move: "Holds the line", Quote: secondChatOpening, SampleID: "S3"},
+			},
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: "grounds no signature move in the email register",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			outcome, _ := runVoiceDeriveCase(t, fixture, voiceDeriveExpectationJSON(t, "email", "general"),
+				voiceDeriveReply(t, voiceDeriveProfile(tc.moves...)))
+			if outcome.Result != tc.wantResult {
+				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
+			}
+			if !strings.Contains(outcome.Detail, tc.wantDetail) {
+				t.Errorf("Detail = %q, want it to name %q", outcome.Detail, tc.wantDetail)
+			}
+		})
+	}
 }
 
 // An expectation the site could never satisfy, and a corpus the build could never
@@ -241,51 +286,57 @@ func TestVoiceDeriveCaseRefusesWhatThisSiteCannotMeasure(t *testing.T) {
 		want     string
 	}{
 		{
-			name:     "an expectation that is not a list of sample ids",
+			name:     "an expectation that is not a list of registers",
 			fixture:  voiceDeriveCorpusFixture(),
-			expected: json.RawMessage(`{"sample_id":"S1"}`),
-			want:     "not a list of corpus sample ids",
+			expected: json.RawMessage(`{"register":"email"}`),
+			want:     "not a list of corpus registers",
 		},
 		{
-			name:     "an expectation that names no sample",
+			name:     "an expectation that names no register",
 			fixture:  voiceDeriveCorpusFixture(),
 			expected: voiceDeriveExpectationJSON(t),
 			want:     "asserts nothing",
 		},
 		{
-			name:     "a sample the corpus never carried",
+			name:     "a register the corpus never carried",
 			fixture:  voiceDeriveCorpusFixture(),
-			expected: voiceDeriveExpectationJSON(t, "S9"),
-			want:     "never supplies",
+			expected: voiceDeriveExpectationJSON(t, "spoken"),
+			want:     "no sample the fixture supplies is written in",
 		},
 		{
-			name:     "a sample the prompt's word cap drops",
+			name:     "a register the prompt's word cap drops",
 			fixture:  voiceDeriveCrowdedFixture(),
-			expected: voiceDeriveExpectationJSON(t, "S1"),
-			want:     "word cap drops that sample",
+			expected: voiceDeriveExpectationJSON(t, "general"),
+			want:     "word cap drops every sample of it",
 		},
 		{
 			name:     "a corpus under the floor the build refuses at",
 			fixture:  voiceDeriveStarterShortFixture(),
-			expected: voiceDeriveExpectationJSON(t, "S1"),
+			expected: voiceDeriveExpectationJSON(t, "email"),
 			want:     "at least 800",
 		},
 		{
 			name:     "the same source id twice",
 			fixture:  voiceDeriveVariant(func(f *voiceDeriveFixture) { f.Samples[1].ID = f.Samples[0].ID }),
-			expected: voiceDeriveExpectationJSON(t, "S1"),
+			expected: voiceDeriveExpectationJSON(t, "email"),
 			want:     "twice",
 		},
 		{
 			name:     "a source whose declared length is not its own",
 			fixture:  voiceDeriveVariant(func(f *voiceDeriveFixture) { f.Samples[0].WordCount += 40 }),
-			expected: voiceDeriveExpectationJSON(t, "S1"),
+			expected: voiceDeriveExpectationJSON(t, "email"),
 			want:     "budgets the prompt on the declared count",
+		},
+		{
+			name:     "a register ingest never stores",
+			fixture:  voiceDeriveVariant(func(f *voiceDeriveFixture) { f.Samples[1].Register = "internal_chat" }),
+			expected: voiceDeriveExpectationJSON(t, "email"),
+			want:     "which ingest never stores",
 		},
 		{
 			name:     "a source with no id to cite",
 			fixture:  voiceDeriveVariant(func(f *voiceDeriveFixture) { f.Samples[0].ID = " " }),
-			expected: voiceDeriveExpectationJSON(t, "S2"),
+			expected: voiceDeriveExpectationJSON(t, "general"),
 			want:     "no id",
 		},
 	}
@@ -322,14 +373,14 @@ func voiceDeriveStarterShortFixture() voiceDeriveFixture {
 	}
 }
 
-// voiceDeriveCrowdedFixture is a corpus whose chat source — the first the
+// voiceDeriveCrowdedFixture is a corpus whose email source — the first the
 // selector reaches — fills the prompt's whole word budget on its own, which is
-// how the email source ends up outside the call the build makes.
+// how the general source ends up outside the call the build makes.
 func voiceDeriveCrowdedFixture() voiceDeriveFixture {
 	whole := strings.TrimSpace(strings.Repeat("word ", 12_001))
 	fixture := voiceDeriveCorpusFixture()
-	fixture.Samples[1].Text = whole
-	fixture.Samples[1].WordCount = ai.WordCount(whole)
+	fixture.Samples[0].Text = whole
+	fixture.Samples[0].WordCount = ai.WordCount(whole)
 	return fixture
 }
 
@@ -339,7 +390,7 @@ func voiceDeriveCrowdedFixture() voiceDeriveFixture {
 func TestVoiceDeriveCaseKeepsTheCorpusOutOfTheInstructions(t *testing.T) {
 	fixture := voiceDeriveCorpusFixture()
 
-	_, trace := runVoiceDeriveCase(t, fixture, voiceDeriveExpectationJSON(t, "S1"),
+	_, trace := runVoiceDeriveCase(t, fixture, voiceDeriveExpectationJSON(t, "email"),
 		voiceDeriveGroundedReply(t, "S1", voiceDeriveEmailOpening))
 
 	if len(trace.Requests) != 1 {
@@ -393,7 +444,7 @@ func TestVoiceDeriveCaseRunsWhatProductionRuns(t *testing.T) {
 			artifact, productionErr := ai.DeriveVoice(
 				context.Background(), brain, fixture.Personality, hash, fixture.Samples)
 
-			outcome, trace := runVoiceDeriveCase(t, fixture, voiceDeriveExpectationJSON(t, "S1"), tc.reply)
+			outcome, trace := runVoiceDeriveCase(t, fixture, voiceDeriveExpectationJSON(t, "email"), tc.reply)
 
 			if outcome.Result != tc.wantResult {
 				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)

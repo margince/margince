@@ -136,7 +136,7 @@ const (
 // The trace's own spelling of it, shared by the reader that explains the
 // classifier's backlog and by the verdict rung in another module — two places
 // that were two literals. `ClassifyBacklogPredicate` still inlines the same set
-// in SQL, because it is one constant string a query embeds verbatim; the
+// in SQL, because it is one string a query embeds verbatim; the
 // agreement test over both callers is what holds those two together.
 //
 // The reason any of this is shared: a ledger status added later would otherwise

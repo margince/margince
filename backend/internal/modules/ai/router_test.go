@@ -403,6 +403,8 @@ func TestRouterCacheKeyDistinguishesEveryExternalBinding(t *testing.T) {
 	withContext := base
 	withContext.ContextScopes = []string{"identity"}
 	withContext.ContextFingerprint = strings.Repeat("a", 64)
+	withSite := base
+	withSite.Site = "summary"
 
 	wsID := ids.New[ids.WorkspaceKind]()
 	baseKey, err := cacheKey(wsID, TaskSummarize, base)
@@ -410,7 +412,7 @@ func TestRouterCacheKeyDistinguishesEveryExternalBinding(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, req := range map[string]model.Request{
-		"model override": withModel, "response schema": withSchema, "company context": withContext,
+		"model override": withModel, "response schema": withSchema, "company context": withContext, "site": withSite,
 	} {
 		key, err := cacheKey(wsID, TaskSummarize, req)
 		if err != nil {

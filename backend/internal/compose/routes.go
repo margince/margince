@@ -79,7 +79,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		BaseURL: httpserver.BaseURL,
 		Middlewares: []crmcontracts.MiddlewareFunc{
 			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
-			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)))),
+			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool))), schedulingReplayRestore(sendStore(pool, srv.send))),
 			// Outermost, so the measurement covers the admission gate and the
 			// idempotency replay rather than only the handler underneath them. A 403 from the gate IS this route's
 			// latency as a client experiences it, and a refusal that cost a

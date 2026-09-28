@@ -188,3 +188,46 @@ func AgentToolTiers() map[string][]string {
 	}
 	return out
 }
+
+// AgentHumanOnlyRoutes answers which contract operations the gate refuses an
+// agent outright, as operationId → the route key it is refused under.
+//
+// Exported for one reader — the gate holding the contract's
+// `x-agent-access: human-only` annotation against the table generated from it.
+// `make drift` proves the committed table is what the generator produces; it
+// cannot prove the generator carried the annotation faithfully, because a
+// generator that dropped it would regenerate the same smaller table and drift
+// would pass. That correspondence is the gate's subject and this is what it
+// reads.
+//
+// The ROUTE comes back beside the operation because the two are what the gate
+// uses separately: agentGate looks a call up by route, and only the operation
+// carries the annotation. A set of operation ids alone cannot see a route that
+// has drifted onto the wrong policy — both ids stay present, the set matches,
+// and the human-only route is admitted under a tool policy. The caller binds
+// the pair rather than trusting either half.
+//
+// EVERY route an operation is refused under, not the last one read. The table
+// is keyed by route and an operationId is what both sides look each other up
+// by, so collapsing to one would let a contract carrying the same id twice
+// compare fewer pairs than exist and report PASS over the ones it dropped.
+//
+// The key's `/v1` is the generator's, not the contract's, and this does not
+// strip it: a reader that reconstructed the prefix to compare would hold a
+// second copy of that decision and agree with itself whatever the generator
+// did. The caller matches on the contract path as a SUFFIX and checks the one
+// prefix is the same for every row, which asks the question without owning the
+// answer.
+func AgentHumanOnlyRoutes() map[string][]string {
+	routes := make(map[string][]string, len(agentPolicies))
+	for route, policy := range agentPolicies {
+		if policy.Access != accessHumanOnly {
+			continue
+		}
+		routes[policy.Op] = append(routes[policy.Op], route)
+	}
+	for _, claimed := range routes {
+		sort.Strings(claimed)
+	}
+	return routes
+}

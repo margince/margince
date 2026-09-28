@@ -181,7 +181,7 @@ export function FileDropzoneControl({
               reader just chose is a confirmation, not an interruption. */}
       <span
         aria-live="polite"
-        className={chosenLabel ? "fdz-label" : "fdz-label"}
+        className={chosenLabel ? "fdz-label chosen" : "fdz-label"}
       >
         {chosenLabel || emptyLabel}
       </span>

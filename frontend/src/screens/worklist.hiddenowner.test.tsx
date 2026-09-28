@@ -60,7 +60,7 @@ describe("the hidden-backlog panel is about the reader", () => {
     // The endpoint answers about the authenticated principal, so a request made
     // from a colleague's page is already the wrong question; the drawn panel is
     // only where the wrong answer would have shown up.
-    expect(screen.queryByText("What the queue is not showing")).toBeNull();
+    expect(screen.queryByText("Hidden from the Worklist")).toBeNull();
     expect(hiddenRequests()).toEqual([]);
   });
 
@@ -91,7 +91,7 @@ describe("the hidden-backlog panel is about the reader", () => {
     // sibling case above hit.
     await screen.findByText("Nothing is waiting on you.");
 
-    expect(screen.queryByText("What the queue is not showing")).toBeNull();
+    expect(screen.queryByText("Hidden from the Worklist")).toBeNull();
     expect(hiddenRequests()).toEqual([]);
   });
 
@@ -102,9 +102,7 @@ describe("the hidden-backlog panel is about the reader", () => {
     await screen.findByText("Nothing is waiting on you.");
     expect(hiddenRequests()).toEqual([]);
     await user.click(screen.getAllByRole("button", { name: "All" })[0]);
-    expect(
-      await screen.findByText("What the queue is not showing"),
-    ).toBeTruthy();
+    expect(await screen.findByText("Hidden from the Worklist")).toBeTruthy();
     await waitFor(() => expect(hiddenRequests().length).toBeGreaterThan(0));
   });
 });

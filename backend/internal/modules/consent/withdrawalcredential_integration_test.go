@@ -45,6 +45,21 @@ func mintWithdrawal(t *testing.T, e *channelConsentEnv, in WithdrawalMintInput) 
 	return token
 }
 
+// pressCtx is the edge a mailed link is actually pressed on: the system
+// principal compose binds to the public preferences routes, not a seat.
+//
+// The press is unauthenticated — possession of the link is the authority — and
+// a seat's context would answer a question production never asks: a fixture
+// holding grants no presser has can pass a press that a real one could not, and
+// the direction that hides is the one this file exists to catch.
+func pressCtx(e *channelConsentEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:public_preferences",
+	})
+}
+
 // TestAWithdrawalLinkSurvivesTheReadTokensRotation is the whole slice in one
 // test: the preference token rotates and dies, and the withdrawal link written
 // into the same mail still withdraws.
@@ -323,8 +338,14 @@ func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
 		LeadID:  ids.From[ids.LeadKind](leadID),
 		Scope:   WithdrawalScopeAllMarketing,
 	})
-	if err := e.store.StopForCredential(e.ctx, token); err != nil {
+	stopped, err := e.store.StopForCredential(e.ctx, token)
+	if err != nil {
 		t.Fatalf("the lead's press did not record a stop: %v", err)
+	}
+	if !stopped {
+		t.Error("the press answered that it moved nothing, which is what the public " +
+			"handler turns into \"you were already unsubscribed\" — said to somebody " +
+			"who just unsubscribed")
 	}
 
 	var stops int
@@ -340,8 +361,13 @@ func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
 
 	// A REPLAY CHANGES NOTHING. Mailbox providers retry, and two live rows of
 	// one kind would mean the second lift re-enables mail the first refused.
-	if err := e.store.StopForCredential(e.ctx, token); err != nil {
+	replayed, err := e.store.StopForCredential(e.ctx, token)
+	if err != nil {
 		t.Fatalf("the replayed press errored: %v", err)
+	}
+	if replayed {
+		t.Error("the replayed press claimed to have moved something; a retry by the " +
+			"mailbox provider changes nothing and the answer has to say so")
 	}
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM communication_suppression
@@ -545,46 +571,6 @@ func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
 	}
 }
 
-// A NAMED-PURPOSE LINK HELD BY A LEAD STOPS NOTHING RATHER THAN EVERYTHING.
-//
-// communication_suppression binds by KIND and carries no purpose column, so
-// the only stop it can record for a lead is a broad one. Writing that for a
-// link minted to leave a single list would stop every marketing message —
-// more than the recipient asked for and more than the link was issued to do.
-func TestANamedPurposeLeadLinkDoesNotStopAllMarketing(t *testing.T) {
-	e := setupChannelConsent(t)
-	seedMarketingPurpose(t, e)
-	purpose := marketingPurposeID(t, e)
-	var leadID ids.UUID
-	if err := e.owner.QueryRow(context.Background(),
-		`INSERT INTO lead (full_name, email, source, captured_by)
-		 VALUES ('Narrow Lead', $1, 'test', 'human:x') RETURNING id`,
-		"narrow-lead@example.test").Scan(&leadID); err != nil {
-		t.Fatalf("seeding the lead: %v", err)
-	}
-	token := mintWithdrawal(t, e, WithdrawalMintInput{
-		Address:   "narrow-lead@example.test",
-		LeadID:    ids.From[ids.LeadKind](leadID),
-		Scope:     WithdrawalScopeNamedPurpose,
-		PurposeID: purpose.UUID,
-	})
-
-	if err := e.store.StopForCredential(e.ctx, token); err != nil {
-		t.Fatalf("the press errored: %v", err)
-	}
-
-	var stops int
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM communication_suppression
-		  WHERE lead_id = $1 AND revoked_at IS NULL`, leadID).Scan(&stops); err != nil {
-		t.Fatalf("counting: %v", err)
-	}
-	if stops != 0 {
-		t.Errorf("a link for one subscription wrote %d broad stop(s) — the lead asked to "+
-			"leave one list and every marketing message would stop", stops)
-	}
-}
-
 // THE OBJECT GRANT EACH DOOR ASKS FOR, which is the half no row probe answers.
 //
 // The two doors ask for different grants, and that difference IS the split: a
@@ -782,7 +768,8 @@ func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
 // A link may be minted against an address with no lead and no contact behind it
 // — a recipient the send path knew only as a header. There is nothing to audit
 // the stop against, so the suppression row carries the whole of it: the address,
-// the kind, and the source that says an unauthenticated press wrote it.
+// the kind, and the source that says an unauthenticated press wrote it. The
+// press still reports that it moved something, because it did.
 func TestAPressOnAnAddressNoRecordHoldsStillStops(t *testing.T) {
 	e := setupChannelConsent(t)
 	token := mintWithdrawal(t, e, WithdrawalMintInput{
@@ -790,8 +777,13 @@ func TestAPressOnAnAddressNoRecordHoldsStillStops(t *testing.T) {
 		Scope:   WithdrawalScopeAllMarketing,
 	})
 
-	if err := e.store.StopForCredential(e.ctx, token); err != nil {
+	stopped, err := e.store.StopForCredential(pressCtx(e), token)
+	if err != nil {
 		t.Fatalf("the press errored: %v", err)
+	}
+	if !stopped {
+		t.Error("the press answered that it moved nothing, though it wrote the only record of " +
+			"this stop there will ever be")
 	}
 
 	var source string
@@ -816,14 +808,20 @@ func TestAPressOnAnAddressNoRecordHoldsStillStops(t *testing.T) {
 func TestAWithdrawalRefNamingNobodyIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		return e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
+	var stopped bool
+	err := e.store.db.Tx(pressCtx(e), func(tx pgx.Tx) error {
+		var err error
+		stopped, err = e.store.StopForCredentialTx(pressCtx(e), tx, WithdrawalRef{
 			Scope: WithdrawalScopeAllMarketing,
 		})
+		return err
 	})
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a ref naming neither a lead nor an address answered %v, want not-found", err)
+	}
+	if stopped {
+		t.Error("the refused press reported that it moved something")
 	}
 }
 
@@ -831,9 +829,14 @@ func TestAWithdrawalRefNamingNobodyIsRefused(t *testing.T) {
 //
 // A withdrawal link minted for a bare address has no per-purpose state behind
 // it, so OneClickUnsubscribe routes to the stop rather than to the withdrawal.
-// The body is an EMPTY list: a stop is one row rather than a set of purposes,
-// and there are no names to count — the page says the recipient is
-// unsubscribed either way.
+//
+// ONE ENTRY, not an empty list. A stop is one row rather than a set of
+// purposes, so there are no NAMES to carry — but an empty list is this
+// endpoint's own word for "nothing moved", which is how a contact's replayed
+// press reads. Answering it for a press that had just written the row said the
+// recipient was already unsubscribed when they had only now become so. The
+// body carries the anonymous placeholder instead, and the replay below is what
+// pins the two apart: same door, same token, one answer each way.
 func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 	e := setupChannelConsent(t)
 	address := "one-click-" + e.ws.String() + "@example.test"
@@ -844,8 +847,15 @@ func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 
 	answered := pressUnsubscribe(t, e, token, nil, "List-Unsubscribe=One-Click")
 
-	if len(answered) != 0 {
-		t.Errorf("the press answered %v, want [] — a stop names no purposes", answered)
+	if len(answered) != 1 {
+		t.Errorf("the press answered %v, want one entry — it wrote the stop, and an empty "+
+			"list is this endpoint's word for nothing moved", answered)
+	}
+	for _, key := range answered {
+		if key != withdrawalStoppedPlaceholder {
+			t.Errorf("the press answered %q, which tells its holder something about the "+
+				"recipient's state that a withdrawal credential may not read", key)
+		}
 	}
 	var live int
 	if err := e.owner.QueryRow(context.Background(), `
@@ -855,6 +865,12 @@ func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 	}
 	if live != 1 {
 		t.Errorf("the press left %d live stop(s) for %s, want 1 — it answered 200 either way", live, address)
+	}
+
+	// The mailbox provider's retry. It moved nothing, and the body says so.
+	replayed := pressUnsubscribe(t, e, token, nil, "List-Unsubscribe=One-Click")
+	if len(replayed) != 0 {
+		t.Errorf("the replay answered %v, want [] — the stop was already standing", replayed)
 	}
 }
 
@@ -867,11 +883,14 @@ func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 func TestAContactsCredentialIsRefusedByTheAddressStop(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		return e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
+	var stopped bool
+	err := e.store.db.Tx(pressCtx(e), func(tx pgx.Tx) error {
+		var err error
+		stopped, err = e.store.StopForCredentialTx(pressCtx(e), tx, WithdrawalRef{
 			ContactID: e.contact,
 			Scope:     WithdrawalScopeAllMarketing,
 		})
+		return err
 	})
 
 	if err == nil {
@@ -879,6 +898,9 @@ func TestAContactsCredentialIsRefusedByTheAddressStop(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "withdraws their purposes") {
 		t.Errorf("refused with %v, which does not say what to do instead", err)
+	}
+	if stopped {
+		t.Error("the refused press reported that it moved something")
 	}
 }
 
@@ -894,15 +916,21 @@ func TestAPressWithNoActorBoundRecordsNothing(t *testing.T) {
 	address := "no-actor-" + e.ws.String() + "@example.test"
 	unattributed := principal.WithWorkspaceID(context.Background(), e.ws)
 
+	var stopped bool
 	err := e.store.db.Tx(unattributed, func(tx pgx.Tx) error {
-		return e.store.StopForCredentialTx(unattributed, tx, WithdrawalRef{
+		var err error
+		stopped, err = e.store.StopForCredentialTx(unattributed, tx, WithdrawalRef{
 			Address: address,
 			Scope:   WithdrawalScopeAllMarketing,
 		})
+		return err
 	})
 
 	if err == nil {
 		t.Fatal("a press with no principal recorded a stop; captured_by would name nobody")
+	}
+	if stopped {
+		t.Error("the refused press reported that it moved something")
 	}
 	var live int
 	if queryErr := e.owner.QueryRow(context.Background(), `

@@ -1,0 +1,40 @@
+name: a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet
+task: weekly_review
+site: narrative
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  week_start: "2026-07-06"
+  counts:
+    tasks_due: 2
+    tasks_done: 2
+    tasks_carried_over: 0
+    deals_moved: 0
+    deals_won: 0
+    deals_lost: 0
+    proposals_accepted: 1
+    proposals_rejected: 0
+    brief_items_acted: 2
+    brief_items_dismissed: 1
+  deals: []
+expect:
+  outcome: accepted
+  answer:
+    must_mention: []
+    # The failure this case exists for: inventing significance to fill the
+    # space. "No deal moved or closed" is true here and the prompt invites it,
+    # so "closed" is no failure; momentum, a breakthrough or a deal won is a
+    # week that did not happen.
+    must_not_mention:
+      ["won", "lost", "breakthrough", "momentum", "Weber"]
+  bands: { certified_min: 70, degraded_min: 50, floor: 40 }
+  # The counts are not all zero, so the product forbids calling this week
+  # "quiet" and its validator refuses the phrase; the rubric grades the same.
+  rubric: >
+    One sentence is enough. It must say what little happened — one proposal
+    accepted, both promised tasks kept — without inventing significance.
+    Saying no deal moved is true and allowed. Claiming a deal moved, closed or
+    was won is wrong: the summary carries none. Calling the week quiet or
+    saying nothing happened contradicts the counts the reader sees beside it,
+    and congratulating the rep breaks the product's "state it" rule; either
+    caps the score at degraded.

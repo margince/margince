@@ -92,6 +92,10 @@ otherwise pay to rediscover.
   next session starts from your evidence rather than from nothing.
 - **Not actually broken** — close it and say why the verdict was wrong. A claim
   left open over a green `main` stops somebody looking at a real failure later.
+- **Somebody else fixed the cause** — close it and name the pull request that
+  did. The rule above only releases a claim its own change fixes, so a claim
+  whose cause another change fixed stays open with nothing to merge it away, and
+  a dead problem sits at the top of the list the next session reads first.
 
 ## When two sessions claim the same thing
 

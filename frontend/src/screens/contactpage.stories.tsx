@@ -31,6 +31,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  stubWithSession,
 } from "./story-utils";
 
 // The contact record page V2 (ADR-0096) — its own gallery, one per surface the
@@ -447,8 +448,7 @@ const thinRelationshipMoment: components["schemas"]["ContactMoment"] = {
   rule: "thin_relationship",
   rule_version: "v1",
   headline: "No interactions recorded",
-  why_now:
-    "No interactions or colleague connections were found in the records available to you.",
+  why_now: "No interactions or colleagues found in the records you can see.",
   confidence: "observed_fact",
   evidence: [],
   recommended_action: {
@@ -479,7 +479,7 @@ const nothingNeededMoment: components["schemas"]["ContactMoment"] = {
   ],
   recommended_action: {
     kind: "open_record",
-    label: "Open the record",
+    label: "Open record",
     destination: {
       surface: "record",
       entity_type: "contact",
@@ -693,7 +693,7 @@ function Page({
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
 
 // A provider is connected and nobody has looked this contact up, so the tab
-// strip carries a dot on "Data & tools". The dot is decorative — the panel
+// strip carries a dot on "Data and tools". The dot is decorative — the panel
 // behind it says the same thing in words — so this story is about whether the
 // invitation is VISIBLE from a page the reader is already on.
 const neverBought: View = {
@@ -827,6 +827,85 @@ export const LeadMomentLadder: Story = {
       </div>
     </StoryProviders>
   ),
+};
+
+// The rung the ladder above never reaches, on the shape that makes the panel
+// say one thing once: the server writes a promise's headline FROM the task,
+// and the same task is on the record's own list. The move names it, the chip
+// under the move would name it a second time and the list a third, so the
+// card keeps the ask and drops both copies.
+const openPromiseMoment: components["schemas"]["ContactMoment"] = {
+  claim_key: "open_promise:p-1:a-9",
+  evidence_fingerprint: "fp-openpromise-1",
+  rule: "open_promise",
+  rule_version: "v1",
+  headline: "You owe them: send the retrofit quote",
+  why_now: "A commitment with a date on it, still open.",
+  confidence: "observed_fact",
+  freshness_at: "2026-08-13T09:00:00Z",
+  evidence: [{ type: "task", id: "a-9", label: "Send the retrofit quote" }],
+  recommended_action: {
+    kind: "complete_task",
+    label: "Open the task",
+    state: "available",
+    destination: { surface: "task", entity_type: "activity", entity_id: "a-9" },
+  },
+};
+
+const promised: View = {
+  ...populated,
+  moment: openPromiseMoment,
+  next_steps: {
+    data: [
+      {
+        id: "a-9",
+        kind: "task",
+        subject: "Send the retrofit quote",
+        occurred_at: "2026-08-10T09:00:00Z",
+        due_at: "2026-08-14T09:00:00Z",
+        is_done: false,
+        source: "manual",
+        captured_by: "human:u1",
+        created_at: "2026-08-10T09:00:00Z",
+        updated_at: "2026-08-10T09:00:00Z",
+      },
+      {
+        id: "a-8",
+        kind: "task",
+        subject: "Book the depot walkthrough",
+        occurred_at: "2026-08-09T09:00:00Z",
+        is_done: false,
+        source: "manual",
+        captured_by: "human:u1",
+        created_at: "2026-08-09T09:00:00Z",
+        updated_at: "2026-08-09T09:00:00Z",
+      },
+    ],
+    page,
+  },
+};
+
+export const LeadMomentPromised: Story = {
+  name: "Lead moment · a promise already on the list",
+  render: () => {
+    // The only lead-moment story with a task row under the move, so it is the
+    // only one whose verb reads the session. Routed here because the card is
+    // rendered on its own: the stub's list-shaped fallback reads as a
+    // malformed session, which closes every grant and draws a refused button
+    // instead of the one this story is about.
+    installFetchStub({ "GET /me": meRoute({ activity: ["read", "update"] }) });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <ContactToday
+            view={promised}
+            moment={openPromiseMoment}
+            onAction={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
 };
 
 // --- Rail --------------------------------------------------------------------
@@ -1141,11 +1220,7 @@ const emptyBand: View = {
 
 export const BriefStates: Story = {
   render: () => {
-    // These render the cards directly rather than the page, so nothing else
-    // routes the session for them. A component that reads it gets the stub's
-    // list-shaped fallback otherwise, which reads as a malformed session and
-    // draws a branch the story is not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    stubWithSession({}, {});
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
@@ -1184,11 +1259,7 @@ export const BriefStates: Story = {
 
 export const OverviewPanels: Story = {
   render: () => {
-    // These render the cards directly rather than the page, so nothing else
-    // routes the session for them. A component that reads it gets the stub's
-    // list-shaped fallback otherwise, which reads as a malformed session and
-    // draws a branch the story is not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    stubWithSession({}, {});
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>
@@ -1471,11 +1542,7 @@ const foldedActivities: View = {
 // and the memory panel's full channel set plus its empty state.
 export const OverviewGaps: Story = {
   render: () => {
-    // These render the cards directly rather than the page, so nothing else
-    // routes the session for them. A component that reads it gets the stub's
-    // list-shaped fallback otherwise, which reads as a malformed session and
-    // draws a branch the story is not named for.
-    installFetchStub({ "GET /me": meRoute({}) });
+    stubWithSession({}, {});
     return (
       <StoryProviders>
         <div className="record-stack" style={{ maxWidth: 720 }}>

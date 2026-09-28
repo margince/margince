@@ -211,3 +211,61 @@ func TestCrowdingNeverMovesARowUpThePage(t *testing.T) {
 		}
 	}
 }
+
+// The focus card is where the rule has to be visible, and for a long time was
+// the one place it could not fire.
+//
+// The card draws focusLimit rows. While the lead was a hand-picked 8 against a
+// card of 6, every slot the card drew sat inside the lead group: a reader with
+// eight overdue commitments got six of them, three bounces waited below, and
+// nothing on the card said the morning had another shape. The queue was right
+// and the card — the part most readers act on — was monopolised.
+//
+// `bounce` ranks below `conversation_claim` here, which is what makes this a
+// test of crowding rather than of ranking: nothing but the demotion of the
+// sixth claim can lift a bounce into the card.
+func TestTheFocusCardIsNotAllOneKindWhileAnotherKindWaits(t *testing.T) {
+	claims := laneOf("conversation_claim", focusLimit+4)
+	bounces := laneOf("bounce", 3)
+
+	out := pageOfDay(crmcontracts.Attention{
+		AsOf: rankInstant, Commitments: &claims, Bounces: lane(bounces...),
+	})
+
+	if out.Focus == nil {
+		t.Fatal("no focus card at all")
+	}
+	if len(out.Focus.Items) != focusLimit {
+		t.Fatalf("the card drew %d rows, want %d — this test says nothing about a short card",
+			len(out.Focus.Items), focusLimit)
+	}
+	kinds := map[crmcontracts.WorklistItemSource]int{}
+	for _, row := range out.Focus.Items {
+		kinds[row.Source]++
+	}
+	if len(kinds) < 2 {
+		t.Errorf("every row of the focus card is %v while %d bounces wait below — the reader meets one lane, not their day",
+			kinds, len(bounces))
+	}
+	// The dominant lane still leads it. A card that answered this by showing
+	// one claim and five bounces would pass the check above and be a worse
+	// page: the rule demotes a monopoly, it does not invert the ranking.
+	if kinds["conversation_claim"] != crowdLead {
+		t.Errorf("the card carries %d claims, want the %d the lead allows: %v",
+			kinds["conversation_claim"], crowdLead, kinds)
+	}
+}
+
+// The lead is DERIVED from the card, and this is what that buys: widening the
+// card cannot silently restore the gap the test above closed.
+//
+// Stated as the relationship rather than as two numbers, because the failure it
+// guards is not a wrong value — it is a value that was right when written and
+// stopped being right when something else moved.
+func TestTheLeadLeavesRoomOnTheFocusCard(t *testing.T) {
+	if crowdLead >= focusLimit {
+		t.Fatalf("crowdLead %d leaves no room on a focus card of %d: every slot the card draws "+
+			"sits inside the lead group, so the anti-monopoly rule cannot fire anywhere the card can see it",
+			crowdLead, focusLimit)
+	}
+}

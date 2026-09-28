@@ -39,7 +39,12 @@ import {
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelPlate } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelIntro,
+  PanelPlate,
+} from "../design-system/panel";
 import {
   PassportSelect,
   ScopeChips,
@@ -77,6 +82,7 @@ import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { CaptureSendersCard } from "./capture-senders";
 import { CaptureSettingsCard } from "./capture-settings";
+import { CaptureHealthCard } from "./capturehealth";
 import {
   LoadMoreButton,
   problemMessageOf,
@@ -113,6 +119,7 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
+import { MeetingSettings } from "./meeting-settings";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
@@ -132,7 +139,6 @@ import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
-import { WorkingHoursCard } from "./working-hours";
 import "./settings.css";
 
 import { ProvidersStat, SpendStat } from "./ai-settings";
@@ -149,7 +155,6 @@ import {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsReach,
   useSettingsSection,
   useVisibleSettingsPages,
@@ -166,7 +171,6 @@ export {
   SETTINGS_TABS,
   settingsAddress,
   settingsRouteTab,
-  useSettingsEntryVisibility,
   useSettingsSection,
 };
 
@@ -182,16 +186,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return (
-        <>
-          <AccountCard />
-          {/* When this contact is bookable. Under the identity because it is a
-              statement about this reader rather than about the workspace: their
-              own week is theirs to set, and an admin setting it for them is the
-              shape the design refuses. */}
-          <WorkingHoursCard />
-        </>
-      );
+      return <AccountCard />;
+    case "meetings":
+      return <MeetingSettings />;
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
@@ -370,10 +367,9 @@ export function tabContent(id: SettingsPageId): ReactNode {
               page. */}
           <EmbedReindexCard />
           <JobHealthCard />
-          {/* Beside the queue reading rather than under Extensions: both
-              answer "is something broken in the background", and an operator
-              chasing a quiet feed should not have to know that a connector is
-              an extension to find out. */}
+          {/* Beside the queue reading, not under Capture or Extensions: each
+              answers "is something broken in the background". */}
+          <CaptureHealthCard />
           <ExtensionIngestHealthCard />
         </>
       );
@@ -525,9 +521,8 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // Back would land on the address that redirects and trap them there.
   //
   // Keyed on the entry the route RESOLVED to rather than on the segment it
-  // carried, so a rewrite never invents an address: a rep following a link to
-  // an admin page falls back to their first visible entry, and this rewrites to
-  // THAT, which is where they actually are.
+  // carried, so a rewrite never invents an address: a legacy link to a page the
+  // reader may not open is left as typed, and the boundary answers it.
   useEffect(() => {
     if (legacy) {
       navigateReplacing(settingsHref(active.id));
@@ -929,11 +924,9 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       return data;
     },
     onSuccess: (saved) => {
-      // The DRAFT holds the saved answer until `/me` catches up. Clearing it
-      // here would fall back to the cached snapshot, which still carries the
-      // old name — the field would visibly revert for as long as the refetch
-      // takes, and stay reverted if the refetch itself fails.
+      // Keep the saved name visible if the account refetch is delayed or fails.
       setDraft(saved?.display_name ?? null);
+      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
       toast.show(t("settings.saved"));
       void queryClient.invalidateQueries({ queryKey: ["me"] });
     },
@@ -1208,18 +1201,10 @@ function PassportCard() {
       }
     >
       <PanelBody>
-        {/* The card's prose, and BOTH sentences of it, above the rows: what a
-            passport is, and how it differs from a connection's own credential.
-            The second sentence used to be a `panel-foot` band under the list,
-            which gave one card three
-            different intervals — a body, a row list, and a ruled band — where
-            its neighbours have two. Every card on this page now reads the same
-            way: title, prose, rows. No `form-stack` either: the paragraph's own
-            margin is the interval to the list, and the flex gap on top of it
-            made this card's prose sit 28px off its rows against the 16px the
-            connected-agents card next to it keeps. */}
-        <p className="settings-panel-sub">{t("settings.passportsSub")}</p>
-        <p className="settings-panel-sub">{t("settings.passportsLendHint")}</p>
+        {/* Both sentences above the rows, neither as a `panel-foot` band: every
+            card on this page reads title, prose, rows. */}
+        <PanelIntro>{t("settings.passportsSub")}</PanelIntro>
+        <PanelIntro>{t("settings.passportsLendHint")}</PanelIntro>
         <SettingList>
           {/* Only what this human MINTED, each credential its own row: the name
               on the left, what it currently IS on the right — masked token,
@@ -1547,11 +1532,8 @@ function AgentToolsCard() {
 
   return (
     <Panel title={t("tools.title")}>
-      {/* No `form-stack`: the description's own margin is the interval to the
-          rows, and the flex gap on top of it gave this card 28px where the
-          card above it has 16. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("tools.sub")}</p>
+        <PanelIntro>{t("tools.sub")}</PanelIntro>
         <SettingList>
           {/* The dial FIRST, then the inventory it narrows — the posture before
               the judgements that read it. Absent, not disabled, while this human
@@ -1769,7 +1751,7 @@ function ResetDataCard() {
       className="settings-danger"
     >
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("settings.dangerZoneSub")}</p>
+        <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
         <SettingList>
           {/* One row, because there is one act: what it does on the left, the
               verb that does it on the right. This verb opens the question and
@@ -1798,6 +1780,7 @@ function ResetDataCard() {
           </p>
         )}
         {summary?.drain_timed_out && (
+          // ds:ignore a warning in --warningText, not a refusal
           <p className="settings-danger-warning" role="alert">
             {t("settings.resetDataDrainWarning")}
           </p>
@@ -1857,11 +1840,8 @@ function AutonomyCard() {
   const t = useT();
   return (
     <Panel title={t("settings.autonomy")}>
-      {/* No `form-stack`: the description's own margin is the interval to the
-          rows. See PassportCard — the flex gap on top of that margin is what
-          gave the cards on this page two different intervals. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.autonomySub")}</p>
+        <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
         {/* Four rows in the page's own language, even though none of them is
             settable: what the tier COVERS reads left as prose, and the tier it
             runs at — the dot, and on the locked row the badge saying the answer
@@ -2205,6 +2185,7 @@ function AuditLogEntries({
     return (
       <EmptyState>
         <p>{t("common.error")}</p>
+        {/* ds:ignore the cause under an EmptyState's headline */}
         <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
         <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
       </EmptyState>
@@ -2246,11 +2227,8 @@ export function AuditLogCard() {
   const asked = useSettledAuditLogFilters(filters);
   return (
     <Panel title={t("settings.auditEntries")}>
-      {/* No `form-stack`: the description's own margin is the interval to the
-          rows, and the flex gap on top of it is the second spelling that made
-          the settings cards disagree about that interval. */}
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.auditSub")}</p>
+        <PanelIntro>{t("settings.auditSub")}</PanelIntro>
         <SettingList>
           {/* The dials are the card's SECONDARY half — a reader arrives to read
               what happened, and narrows it second — so they sit in a

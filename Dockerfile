@@ -47,7 +47,7 @@
 # The base always runs on the build platform and cross-compiles to the target:
 # in a multi-platform bake only the thin runtime stages run emulated, never
 # the toolchains.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS gobase
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS gobase
 
 RUN apk add --no-cache git ca-certificates
 
@@ -190,7 +190,15 @@ WORKDIR /app
 # stay correct: `--frozen-lockfile` fails outright for any member the lockfile
 # records and the image has not copied yet, so the first unit to grow a screen
 # would have broken this build with an error about a missing importer.
-COPY pnpm-lock.yaml ./
+#
+# pnpm-workspace.yaml IS copied, and it is not a package manifest: it is where
+# pnpm keeps `overrides`, which `pnpm fetch` checks against the lockfile's own
+# recorded copy. Without it the lockfile's `overrides: {js-yaml: ...}` is
+# compared against an empty config and the fetch aborts with
+# ERR_PNPM_LOCKFILE_CONFIG_MISMATCH. The check only runs when the store is cold
+# AND this layer is invalidated by a lockfile edit, so a warm cache hides it.
+# It lists `frontend` alone, so it names no member this layer has not copied.
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
     pnpm fetch --store-dir /pnpm-store
 

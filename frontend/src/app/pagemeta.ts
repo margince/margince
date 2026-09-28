@@ -56,7 +56,6 @@ export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
 // current tab, filter or segment belongs beside that control, where it changes
 // with it; the page heading cannot see those and would go stale.
 export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
-  ai: "ai.sub",
   // What the whole surface is for, not what the current object tab holds: the
   // sentence is true of a contact filter and a deal filter alike, which is the
   // test a page-level subtitle has to pass.

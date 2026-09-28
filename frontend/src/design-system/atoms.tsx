@@ -12,7 +12,6 @@ import {
   type ElementType,
   type FormEventHandler,
   type InputHTMLAttributes,
-  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type RefObject,
   useEffect,
@@ -25,8 +24,9 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
-import { useDialogFocus } from "./dialogfocus";
+import { coveredByDialog, useDialogFocus } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
+import { swallowWhileBusy, useSinglePress } from "./presslatch";
 import "./atoms.css";
 import "./evidencemark.css";
 
@@ -82,20 +82,6 @@ export function BusyMark({ className }: Readonly<{ className?: string }>) {
       aria-hidden="true"
     />
   );
-}
-
-// A press that lands on a control already waiting for its own answer. Both
-// halves are load bearing: `preventDefault` is what stops a `type="submit"`
-// button posting the form a second time (a plain early return does not — the
-// browser submits on the click, not on the handler), and `stopPropagation`
-// stops a clickable row underneath treating the press as a click on itself.
-//
-// Aliased on import because this file also uses the DOM's own `MouseEvent`,
-// for the document-level listener `OverflowMenu` attaches; the unaliased React
-// type shadows it and that listener stops compiling.
-function swallowWhileBusy(event: ReactMouseEvent<HTMLButtonElement>) {
-  event.preventDefault();
-  event.stopPropagation();
 }
 
 export function Button({
@@ -211,6 +197,7 @@ export function Button({
 }) {
   const ownReasonId = useId();
   const busyLabelId = useId();
+  const singlePress = useSinglePress();
   const classes = [
     "btn",
     `btn-${variant}`,
@@ -264,7 +251,7 @@ export function Button({
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
       aria-describedby={describedBy}
-      onClick={busy ? swallowWhileBusy : onClick}
+      onClick={busy ? swallowWhileBusy : singlePress(onClick)}
     >
       {busy && <BusyMark />}
       {/* The children stay, ALWAYS. An icon-only control has no room for two
@@ -347,7 +334,13 @@ function ButtonSentences({
   return (
     <span className={reason === undefined ? "btn-shell" : "btn-with-reason"}>
       {children}
-      {reason !== undefined && <span id={reasonId}>{reason}</span>}
+      {/* `t-caption` is the supporting line's role: one size and one ink for
+          every refusal, and the class atoms.css's dialog rule selects. */}
+      {reason !== undefined && (
+        <span id={reasonId} className="t-caption">
+          {reason}
+        </span>
+      )}
       {/* Rendered whether or not the write is out, and emptied rather than
           removed. A description that arrives together with the element holding
           it is frequently missed; one that is already there and CHANGES is what
@@ -937,15 +930,6 @@ const PENDING_LINES = [
 /**
  * The pending state of a surface — the ONE spelling of it in this product.
  *
- * Four grew before this: `QueryStates`' three inline-styled bars, `SurfaceState`'s
- * single silent 32px bar, `ListTable`'s five unanimated bone rows, and a page's
- * worth of hand-rolled bars and "Loading…" lines. They disagreed about the shape,
- * about the height, about whether the pulse ran at all, and — the part that
- * mattered — about whether a reader who cannot see the bars is told anything.
- * Three call sites had already bolted their own `sr-only` line beside one of
- * these, which is the tell that the primitive was missing something rather than
- * that those screens were special.
- *
  * `label` is REQUIRED and not defaulted. A placeholder carries no text, so the
  * spoken line is the only thing a screen reader has; making it a required prop
  * is what stops the next pending state from being silent. It is also the caller
@@ -1343,48 +1327,6 @@ export function TableScroll({
   );
 }
 
-export function DataTable<Row>({
-  columns,
-  rows,
-  rowKey,
-  onRowClick,
-  label,
-}: Readonly<{
-  columns: { key: string; header: string; render: (row: Row) => ReactNode }[];
-  rows: Row[];
-  rowKey: (row: Row) => string;
-  onRowClick?: (row: Row) => void;
-  /** What the scroll region is called once the table is wider than its box. */
-  label: string;
-}>) {
-  return (
-    <TableScroll label={label}>
-      <table className="table">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key}>{column.header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              className={onRowClick ? "rowlink" : undefined}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-            >
-              {columns.map((column) => (
-                <td key={column.key}>{column.render(row)}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </TableScroll>
-  );
-}
-
 /**
  * Disclosure is a section the reader opens when they want it.
  *
@@ -1428,7 +1370,7 @@ function isSetting(item: Element): boolean {
 // The children are the caller's own action components (each opening its own
 // confirm flow), so the menu owns only the disclosure: it closes on Escape, on
 // a click outside, and on an item being chosen — with the two exceptions
-// `isSetting` and the `.overlay` test below name, an item that SETS rather than
+// `isSetting` and `coveredByDialog` below name, an item that SETS rather than
 // does, and one that put a dialog up which now owns the screen and the focus.
 //
 // The children are not rendered until the menu is first opened. They are
@@ -1488,10 +1430,10 @@ export function OverflowMenu({
   // strand the reader on <body>. Which of the two happened is not knowable
   // while the item's own handler is running: the dialog is not in the document
   // until React has committed the state that handler set. So the press records
-  // that it happened, and this effect — after that commit — reads the same
-  // `.overlay` the Escape handler reads and answers accordingly.
+  // that it happened, and this effect — after that commit — asks the same
+  // `coveredByDialog` the Escape handler asks and answers accordingly.
   useEffect(() => {
-    if (chosen === 0 || document.querySelector(".overlay")) {
+    if (chosen === 0 || coveredByDialog(trigger.current)) {
       return;
     }
     setOpen(false);
@@ -1529,7 +1471,7 @@ export function OverflowMenu({
       // both layers on one keypress would take the reader back past the menu
       // they were choosing from, and they would have to reopen it to pick
       // something else.
-      if (document.querySelector(".overlay")) {
+      if (coveredByDialog(trigger.current)) {
         return;
       }
       setOpen(false);

@@ -99,7 +99,7 @@ func TestAnAssignedPromiseKeepsItsHolderThroughTheSection(t *testing.T) {
 		t.Fatal("the task came back unassigned — the card then tells every reader they owe a " +
 			"colleague's promise, and the frontend has nothing to tell them apart with")
 	}
-	if page.Moment == nil || page.Moment.Headline != "Owed to them: Send the signed contract" {
+	if page.Moment == nil || page.Moment.Headline != "Your team owes them: Send the signed contract" {
 		t.Errorf("headline = %v, want the promise attributed to the desk that holds it", page.Moment)
 	}
 }

@@ -1,0 +1,76 @@
+{
+  "task": "account_scan",
+  "provider": "vllm",
+  "served_model": "mlx-community/Qwen3-14B-4bit",
+  "env_class": "sovereign",
+  "prompt_version": "p561955522a5570cfc8ff1485ae4ba262",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 6,
+  "passed": 6,
+  "reliability": 1,
+  "reported_accepted": 6,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": [
+    "identity"
+  ],
+  "judge_score_p50": 97,
+  "judge_score_min": 20,
+  "latency_p50": 18680,
+  "latency_p95": 27365,
+  "mean_tokens": 1738,
+  "mean_tokens_in": 1620,
+  "mean_tokens_out": 118,
+  "mean_cached_tokens": 776,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "openai/gpt-oss-120b",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "judge_upstream": {
+    "only": null,
+    "ignore": null,
+    "quantizations": [
+      "fp16",
+      "bf16"
+    ],
+    "sort": "throughput",
+    "require_parameters": true,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-09-25T02:11:25Z",
+  "scenarios": [
+    {
+      "scenario": "scan_finds_the_promise_we_did_not_keep",
+      "site": "company_scan",
+      "stamp": "e4a2b1ff677c2413c4d3682116ec08ef9ab6bf532a3c5fd73e01346080312bdf5e319fbe3047230e21589dfda26c79263172cea30a0e5bca45724667ce407634fcd5de653a040fa71230e2d2c099f296b4c499dbe4b2f61f2d1d119e47759b16",
+      "verdict": "not_supported",
+      "judge_band": "not_supported",
+      "runs": 3,
+      "passed": 3,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "scan_finds_the_question_nobody_answered",
+      "site": "company_scan",
+      "stamp": "240aad2c1d74d8cab18a980b65e302d6a28a1530040e74a6182b23c4bb420c322dfd1f1dde258eeec323781bc41c7afd0d4d50d4319b70a7780739b35322173855c300d06106b75f9ebd04aaaa04cac60a01b32692be002d47a6b68ee6ada09d",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

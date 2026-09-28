@@ -10,6 +10,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { TodayOnThisAccount } from "./companytoday";
 
 // The leading card's own promise: whenever it names something the reader
@@ -85,12 +86,15 @@ function show(
 // Scoped to the moment's own row: the account may draw a second "Draft" verb
 // of its own (manualMoveRows' generic "write to them" row), and a query
 // against the whole page cannot tell the leading card's verb from that one.
-function leadingCard() {
-  const card = document.querySelector(".co-move-lead");
-  if (!card) {
+// Found by the headline it leads with, because the moment is drawn by the
+// same `FoundMove` as every other move in the list and the class alone no
+// longer tells them apart.
+function leadingCard(headline: string) {
+  const card = screen.getByText(headline).closest(".co-move");
+  if (!(card instanceof HTMLElement)) {
     throw new Error("the leading card did not render");
   }
-  return within(card as HTMLElement);
+  return within(card);
 }
 
 describe("the leading card's own fallback verb", () => {
@@ -113,12 +117,15 @@ describe("the leading card's own fallback verb", () => {
       },
       { onOpenTask: opened, onLogActivity: vi.fn() },
     );
-    const verb = leadingCard().getByRole("button", { name: "Open task" });
+    const verb = leadingCard(MOMENT_NO_DESTINATION.headline).getByRole(
+      "button",
+      { name: en["today.moment.act.openTask"] },
+    );
     fireEvent.click(verb);
     expect(opened).toHaveBeenCalledWith("a-9");
     // The secondary verb rides beside it once the caller offers a place to
     // log one — the same shape the contact page's moment column draws.
-    expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en["log.title"] })).toBeTruthy();
   });
 
   it("drafts a reply to the strongest contact when we owe one and no task is named", () => {
@@ -159,7 +166,10 @@ describe("the leading card's own fallback verb", () => {
       },
       { onDraftTo: drafted },
     );
-    const verb = leadingCard().getByRole("button", { name: "Draft" });
+    const verb = leadingCard(MOMENT_NO_DESTINATION.headline).getByRole(
+      "button",
+      { name: en["today.draft.act"] },
+    );
     fireEvent.click(verb);
     expect(drafted).toHaveBeenCalledWith("p-1");
   });

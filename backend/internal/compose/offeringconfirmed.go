@@ -8,12 +8,10 @@ package compose
 
 import (
 	"context"
-	"errors"
 
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // offeringConfirmed reports whether this installation has described what it
@@ -31,18 +29,22 @@ import (
 // with the reason spelled out — not a broken panel.
 func offeringConfirmed(store *contacts.Store) companydossier.SelfOffering {
 	return func(ctx context.Context) (companydossier.Offering, error) {
-		company, err := store.GetAnchorCompany(ctx)
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return companydossier.Offering{}, nil
-		}
+		// The STANDING, not the profile. The growth fit is a reading aid any
+		// human seat opens, and the administered profile read is an
+		// administrator's — asking it here would refuse the page to every
+		// other seat, for a fact that is a yes/no about ourselves.
+		exists, complete, err := store.AnchorProfileStanding(ctx)
 		if err != nil {
 			return companydossier.Offering{}, err
+		}
+		if !exists {
+			return companydossier.Offering{}, nil
 		}
 		fingerprint, err := offeringFingerprint(ctx, store)
 		if err != nil {
 			return companydossier.Offering{}, err
 		}
-		return companydossier.Offering{Confirmed: company.MinimumComplete, Fingerprint: fingerprint}, nil
+		return companydossier.Offering{Confirmed: complete, Fingerprint: fingerprint}, nil
 	}
 }
 

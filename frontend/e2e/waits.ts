@@ -28,6 +28,26 @@ export async function itemsOf(locator: Locator): Promise<Locator[]> {
 }
 
 /**
+ * Why the rail never arrived, when the answer is the STACK and not the page.
+ *
+ * The app gates every authed route on onboarding (App.tsx) and draws no rail
+ * while the installation's journey is unfinished, so on a freshly seeded stack
+ * both waits below expire on `nav.rail`. That reads as "the app never loaded"
+ * and sends the next reader into the page, which is fine — it is the wrong
+ * page. Re-raised with the URL the gate chose, so the message names the
+ * precondition it is actually about.
+ */
+function railAbsence(page: Page, cause: unknown): Error {
+  if (!page.url().includes("/onboarding")) {
+    return cause instanceof Error ? cause : new Error(String(cause));
+  }
+  return new Error(
+    `signed in, but this stack sends every route to onboarding (${page.url()}) — finish it before a live run, or the specs measure the onboarding surface instead of the page they name`,
+    { cause },
+  );
+}
+
+/**
  * Sign in as the dev bootstrap admin, unless the session is already up.
  *
  * A dev stack that has been logged into already redirects /#/login straight to
@@ -51,7 +71,11 @@ export async function signIn(page: Page): Promise<void> {
   // the specs depends on — anchoring here rather than on a URL change means
   // the wait describes the state the tests need.
   const rail = page.locator("nav.rail").first();
-  await expect(email.or(rail)).toBeVisible();
+  try {
+    await expect(email.or(rail)).toBeVisible();
+  } catch (cause) {
+    throw railAbsence(page, cause);
+  }
   if (await rail.isVisible()) {
     return;
   }
@@ -61,5 +85,53 @@ export async function signIn(page: Page): Promise<void> {
     .first()
     .fill(process.env.E2E_PASSWORD ?? "demo-password-123");
   await page.locator('button[type="submit"]').first().click();
-  await expect(rail).toBeVisible();
+  try {
+    await expect(rail).toBeVisible();
+  } catch (cause) {
+    throw railAbsence(page, cause);
+  }
+}
+
+// Below the waits, and not one: the MEASURE two specs share. It lives here
+// rather than in either of them because a second copy of it would be a second
+// answer to whether the page pans sideways.
+
+/**
+ * How far the PAGE scrolls sideways, and which scroller does it.
+ *
+ * NOT `document.body.scrollWidth`, which is what this sweep used to read. The
+ * shell pins `.main` to `overflow: hidden` (shell.css) and gives `.scroll` an
+ * `overflow-y: auto` that computes `overflow-x` to `auto` with it, so wide
+ * content scrolls INSIDE the page's own scroller and the body never grows a
+ * pixel. Measured across all twelve settings tabs the body reported 0 while
+ * `.scroll` itself overflowed by up to 273px — the assertion was structurally
+ * incapable of failing, whatever the layout did.
+ *
+ * So this reads the two elements that actually scroll the page: the document,
+ * and the shell's content column. Anything a screen spills — a header row, a
+ * card, a table — spills into one of them, and it is the reader panning THOSE
+ * that §3.8 forbids.
+ *
+ * A component that declares a horizontal scroll region of its own is not this
+ * and is deliberately not measured: `.table-scroll` around a table too wide for
+ * a phone (atoms.css) is the sanctioned answer to wide content, and it is
+ * bounded by its card, so the page around it never moves.
+ */
+export async function pageOverflow(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const scrollers: { name: string; element: Element }[] = [
+      { name: "the document", element: document.documentElement },
+      ...Array.from(document.querySelectorAll(".scroll")).map((element) => ({
+        name: "the shell content scroller (.scroll)",
+        element,
+      })),
+    ];
+    return scrollers
+      .map(({ name, element }) => ({
+        name,
+        overflow: element.scrollWidth - element.clientWidth,
+      }))
+      .filter(({ overflow }) => overflow > 0)
+      .map(({ name, overflow }) => `${name}: ${overflow}px past the viewport`);
+  });
 }

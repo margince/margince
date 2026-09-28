@@ -33,22 +33,22 @@ func TestSidecarCommandsStageTheCompanyWithTheOperandInTheSummary(t *testing.T) 
 	}{
 		{
 			"confirm_fact",
-			NewConfirmFactCall(unreadableProvider{}, ConfirmFactCommand{ID: companyID, FactKey: "named_customer:acme-inc"}),
+			NewConfirmFactCall(unreadableProvider{}, nil, ConfirmFactCommand{ID: companyID, FactKey: "named_customer:acme-inc"}),
 			"named_customer:acme-inc",
 		},
 		{
 			"update_fact",
-			NewUpdateFactCall(unreadableProvider{}, UpdateFactCommand{ID: companyID, FactKey: "named_customer:acme-inc"}),
+			NewUpdateFactCall(unreadableProvider{}, nil, UpdateFactCommand{ID: companyID, FactKey: "named_customer:acme-inc"}),
 			"named_customer:acme-inc",
 		},
 		{
 			"confirm_profile_field",
-			NewConfirmProfileFieldCall(unreadableProvider{}, ConfirmProfileFieldCommand{ID: companyID, Field: "icp"}),
+			NewConfirmProfileFieldCall(unreadableProvider{}, nil, ConfirmProfileFieldCommand{ID: companyID, Field: "icp"}),
 			"icp",
 		},
 		{
 			"update_profile_field",
-			NewUpdateProfileFieldCall(unreadableProvider{}, UpdateProfileFieldCommand{ID: companyID, Field: "icp"}),
+			NewUpdateProfileFieldCall(unreadableProvider{}, nil, UpdateProfileFieldCommand{ID: companyID, Field: "icp"}),
 			"icp",
 		},
 	}
@@ -83,10 +83,10 @@ func TestSidecarCommandsRefuseAnUnreadableCompany(t *testing.T) {
 		name string
 		call GovernedCall
 	}{
-		{"confirm_fact", NewConfirmFactCall(unreadableProvider{}, ConfirmFactCommand{ID: id, FactKey: "k"})},
-		{"update_fact", NewUpdateFactCall(unreadableProvider{}, UpdateFactCommand{ID: id, FactKey: "k"})},
-		{"confirm_profile_field", NewConfirmProfileFieldCall(unreadableProvider{}, ConfirmProfileFieldCommand{ID: id, Field: "icp"})},
-		{"update_profile_field", NewUpdateProfileFieldCall(unreadableProvider{}, UpdateProfileFieldCommand{ID: id, Field: "icp"})},
+		{"confirm_fact", NewConfirmFactCall(unreadableProvider{}, nil, ConfirmFactCommand{ID: id, FactKey: "k"})},
+		{"update_fact", NewUpdateFactCall(unreadableProvider{}, nil, UpdateFactCommand{ID: id, FactKey: "k"})},
+		{"confirm_profile_field", NewConfirmProfileFieldCall(unreadableProvider{}, nil, ConfirmProfileFieldCommand{ID: id, Field: "icp"})},
+		{"update_profile_field", NewUpdateProfileFieldCall(unreadableProvider{}, nil, UpdateProfileFieldCommand{ID: id, Field: "icp"})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -106,10 +106,10 @@ func TestSidecarCommandsRefuseACompanyHeldElsewhere(t *testing.T) {
 		name string
 		call GovernedCall
 	}{
-		{"confirm_fact", NewConfirmFactCall(elsewhereProvider{}, ConfirmFactCommand{ID: id, FactKey: "k"})},
-		{"update_fact", NewUpdateFactCall(elsewhereProvider{}, UpdateFactCommand{ID: id, FactKey: "k"})},
-		{"confirm_profile_field", NewConfirmProfileFieldCall(elsewhereProvider{}, ConfirmProfileFieldCommand{ID: id, Field: "icp"})},
-		{"update_profile_field", NewUpdateProfileFieldCall(elsewhereProvider{}, UpdateProfileFieldCommand{ID: id, Field: "icp"})},
+		{"confirm_fact", NewConfirmFactCall(elsewhereProvider{}, nil, ConfirmFactCommand{ID: id, FactKey: "k"})},
+		{"update_fact", NewUpdateFactCall(elsewhereProvider{}, nil, UpdateFactCommand{ID: id, FactKey: "k"})},
+		{"confirm_profile_field", NewConfirmProfileFieldCall(elsewhereProvider{}, nil, ConfirmProfileFieldCommand{ID: id, Field: "icp"})},
+		{"update_profile_field", NewUpdateProfileFieldCall(elsewhereProvider{}, nil, UpdateProfileFieldCommand{ID: id, Field: "icp"})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestSidecarCommandsRefuseACompanyHeldElsewhere(t *testing.T) {
 func TestSidecarCommandsAdmitAReadableCompany(t *testing.T) {
 	id := ids.NewV7()
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityCompany, id, true)}
-	call := NewConfirmFactCall(provider, ConfirmFactCommand{ID: id, FactKey: "k"})
+	call := NewConfirmFactCall(provider, nil, ConfirmFactCommand{ID: id, FactKey: "k"})
 	if err := call.Guards(context.Background()); err != nil {
 		t.Fatalf("guarding a readable, authoritative company answered %v, want it admitted", err)
 	}

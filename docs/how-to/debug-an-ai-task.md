@@ -31,7 +31,7 @@ make ai-probe ARGS='list'
 ```text
 SITE                                  KIND        SCOPE            LADDER                   CORPUS
 rate_extract/pricing                  one_shot    full_invocation  premium,cheap_cloud      yes
-agent_loop/loop                       agent_loop  single_turn      cheap_cloud,premium      yes
+agent_loop/morning_brief              agent_loop  single_turn      cheap_cloud,premium      yes
 capture_classify/classify             one_shot    full_invocation  local_small,cheap_cloud  yes
 ```
 
@@ -235,8 +235,9 @@ every run so a green probe is never read as more coverage than it bought.
 
 - `full_invocation` — the whole production invocation (`rate_extract/*`, `site_extract/profile`,
   `draft_reply/reply`, `enrich/signature`, `offer_draft/draft`, `voice_build/*`, …)
-- `single_turn` — the fixture seeds the window and one reply is graded (`agent_loop/loop`,
-  the `cold_start` multi-turn sites)
+- `single_turn` — the fixture seeds the window and one reply is graded (each `agent_loop`
+  site — one scheduled agent, graded on its own goal and tools — and the `cold_start`
+  multi-turn sites)
 - `single_call` — one of several calls the site makes (`capture_classify/classify`,
   `capture_counterparty_verdict/verdict`)
 

@@ -31,6 +31,23 @@ package activities
 //	attributed to a coin flip. A wrong edge is worse than a missing one: it
 //	tells someone to ask a colleague who has never met the contact.
 //
+//	Class 3 — an activity whose author was repaired from the system it was
+//	imported from (POST /records/attribution). It is EXCLUDED, and the reason
+//	is not that its participants are settled: nothing on the attribution path
+//	writes a participant row. It is that its `captured_by` names whoever ran
+//	the import rather than whoever wrote the message, so class 1 would attribute
+//	it to the importing seat — a wrong edge, which is the thing class 2 already
+//	refuses to guess at.
+//
+//	The cost is stated rather than hidden: those rows get participants from
+//	nowhere. Nothing else builds them, and this test — "does it carry an
+//	author" — cannot tell a row this job must not answer for from one it simply
+//	has not reached. An importer that records an author AND leaves participant
+//	reconstruction to this job would be skipped silently. What that wants is a
+//	completion marker written by whoever decided the participants, the way the
+//	replay pass keeps one; it belongs with that importer rather than ahead of
+//	it, because only the importer knows what its own silence means.
+//
 // Deliberately NOT recovered here: parsing raw From/To/attendee headers out of
 // the stored originals. That is the pass that would recover calendar history,
 // and it is a different kind of work — it reads message bodies, needs its own
@@ -152,8 +169,11 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		       AND a.kind IN (`+relstrength.ParticipantKindSQLList()+`)
 		       AND NOT EXISTS (
 		           SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id)
-		       -- Class 3 (see the doc comment): a row already attributed from
-		       -- its own source is finished, and its silence is an answer.
+		       -- Class 3: a row whose author was repaired from its own source.
+		       -- Its captured_by names whoever ran the IMPORT, so class 1 would
+		       -- read that seat as the author and write an edge to the wrong
+		       -- human. Skipped because this job cannot answer for it — not
+		       -- because the work is done.
 		       AND a.source_author_id IS NULL
 		       AND a.source_author_name IS NULL
 		     ORDER BY a.id

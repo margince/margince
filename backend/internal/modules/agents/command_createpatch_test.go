@@ -32,7 +32,7 @@ import (
 // TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite below, on
 // createRecord.StageInfo itself, before the command is ever built.
 func TestCreateStagesARecordTypeTheResolverHasNoOpinionOn(t *testing.T) {
-	call := NewCreateCall(CreateCommand{RecordType: "custom_field", Fields: json.RawMessage(`{"name":"x"}`)})
+	call := NewCreateCall(nil, CreateCommand{RecordType: "custom_field", Fields: json.RawMessage(`{"name":"x"}`)})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite(t *testing.T) {
 // A `fields` key the record type does not accept is refused by name, not
 // silently dropped.
 func TestCreateGuardsRefuseAnUnknownField(t *testing.T) {
-	call := NewCreateCall(CreateCommand{RecordType: "contact", Fields: json.RawMessage(`{"nickname":"Bob"}`)})
+	call := NewCreateCall(nil, CreateCommand{RecordType: "contact", Fields: json.RawMessage(`{"nickname":"Bob"}`)})
 
 	err := call.Guards(context.Background())
 	var badArgs *BadArgsError
@@ -85,7 +85,7 @@ func TestCreateGuardsRefuseAnUnknownField(t *testing.T) {
 // A served create stages the record TYPE with no id and no pin: the row does
 // not exist yet, so there is nothing for either to describe.
 func TestCreateStagesAServedTypeWithNoTargetID(t *testing.T) {
-	call := NewCreateCall(CreateCommand{RecordType: "contact", Fields: json.RawMessage(`{"full_name":"Ada"}`)})
+	call := NewCreateCall(nil, CreateCommand{RecordType: "contact", Fields: json.RawMessage(`{"full_name":"Ada"}`)})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
@@ -106,7 +106,7 @@ func TestCreateStagesAServedTypeWithNoTargetID(t *testing.T) {
 // A `fields` key the record type does not accept is refused before the
 // target is ever read — the same order updateRecord.StageInfo always used.
 func TestPatchGuardsRefuseAnUnknownField(t *testing.T) {
-	call := NewPatchCall(unreadableProvider{}, PatchCommand{
+	call := NewPatchCall(unreadableProvider{}, nil, PatchCommand{
 		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"nickname":"Bob"}`),
 	})
 
@@ -123,7 +123,7 @@ func TestPatchGuardsRefuseAnUnknownField(t *testing.T) {
 // A target the caller cannot see is refused BEFORE anything is staged, the
 // same row-scope answer archive's own Guards gives.
 func TestPatchGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
-	call := NewPatchCall(unreadableProvider{}, PatchCommand{
+	call := NewPatchCall(unreadableProvider{}, nil, PatchCommand{
 		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
 	})
 
@@ -135,7 +135,7 @@ func TestPatchGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
 // A target whose authority lives in another system of record can never have
 // an approval released for it.
 func TestPatchGuardsRefuseATargetHeldElsewhere(t *testing.T) {
-	call := NewPatchCall(elsewhereProvider{}, PatchCommand{
+	call := NewPatchCall(elsewhereProvider{}, nil, PatchCommand{
 		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
 	})
 
@@ -149,7 +149,7 @@ func TestPatchGuardsRefuseATargetHeldElsewhere(t *testing.T) {
 func TestPatchStagesAServedRecordAndID(t *testing.T) {
 	id := ids.NewV7()
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityContact, id, true)}
-	call := NewPatchCall(provider, PatchCommand{
+	call := NewPatchCall(provider, nil, PatchCommand{
 		RecordType: "contact", ID: id, Fields: json.RawMessage(`{"full_name":"Ada"}`),
 	})
 
@@ -175,7 +175,7 @@ func TestPatchStagesAServedRecordAndID(t *testing.T) {
 // on a lenient stub.
 func TestPatchStagesATypeTheRecordSeamDoesNotServe(t *testing.T) {
 	id := ids.NewV7()
-	call := NewPatchCall(unreadableProvider{}, PatchCommand{
+	call := NewPatchCall(unreadableProvider{}, nil, PatchCommand{
 		RecordType: "webhook_subscription", ID: id, Fields: json.RawMessage(`{"state":"paused"}`),
 	})
 
@@ -196,7 +196,7 @@ func TestPatchStagesATypeTheRecordSeamDoesNotServe(t *testing.T) {
 // patch costs is Guards' own.
 func TestPatchReadsItsTargetOnceAcrossGuardsAndSubject(t *testing.T) {
 	provider := &countingProvider{}
-	call := NewPatchCall(provider, PatchCommand{
+	call := NewPatchCall(provider, nil, PatchCommand{
 		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
 	})
 

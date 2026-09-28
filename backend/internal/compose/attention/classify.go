@@ -366,6 +366,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		waitingDays: days,
 		waitingRank: orderingAge(days),
 		occurredAt:  waiting.Since,
+		// Whether this message is in a conversation, which decides what the
+		// reader is offered: two of the three dispositions are keyed on the
+		// thread and a threadless row can perform neither.
+		threaded: waiting.Threaded,
 		// Who owes the reply, so the scope filters can judge this row the way
 		// they judge a deal-bearing one. A wait carries no deal on the wire, and
 		// without this it is a row the filters cannot place: a named owner's

@@ -220,12 +220,14 @@ var (
 			// narrower than AccountRepPerms, which already carries both.
 			"tag":  {Create: true, Read: true, Update: true, Delete: true},
 			"list": {Create: true, Read: true, Update: true, Delete: true},
-			// forecast is create+read for admin in the real seed and nothing
-			// else: a reading is written by the nightly pass and never edited,
-			// which is what createRead means there. The same drift tag and list
-			// had, found the same way — three forecast tools were unreachable
-			// in the conformance lane for want of a grant production gives.
-			"forecast": {Create: true, Read: true},
+			// forecast is create+read+update for admin in the real seed. The
+			// update is not an edit of a reading — one is written by the
+			// nightly pass and superseded rather than rewritten — it is the
+			// grant `assurance.Store.Resolve` spends to ANSWER an input-check
+			// finding. The same drift tag and list had, found the same way:
+			// three forecast tools were unreachable in the conformance lane
+			// for want of a grant production gives.
+			"forecast": {Create: true, Read: true, Update: true},
 			// data_coverage is read-only for admin in the real seed — how much
 			// of the pipeline a forecast could see is computed, never edited.
 			//
@@ -256,6 +258,8 @@ var (
 			"authentication_policy": {Read: true, Update: true},
 			"oauth_application":     {Create: true, Read: true, Update: true, Delete: true},
 			"seat_usage":            {Read: true},
+			"team_oversight":        {Read: true},
+			"team_lead":             {Create: true, Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
@@ -291,6 +295,10 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 		"privacy_request",
 		"audit_log",
 		"system_reset",
+		// Not governance, but authority all the same: ops leads nobody, so it
+		// reads no team's coaching week and coaches nobody.
+		"team_oversight",
+		"team_lead",
 	} {
 		delete(out, object)
 	}

@@ -1,0 +1,5 @@
+/* The question stands off the body it asks about: the Modal spaces nothing
+   inside itself, so without this the title and the first line read as one. */
+.confirm-title {
+  margin-bottom: var(--space-3);
+}

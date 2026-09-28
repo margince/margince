@@ -79,7 +79,7 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Co
 		Rule:                crmcontracts.ContactMomentRuleMissingNextStep,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            "No next step with them on an open deal",
+		Headline:            "No next step on the open deal",
 		// The seat this contact actually holds, named — not "the contact whose
 		// seat decides it", which the record does not say. The rung fires on
 		// ANY recorded stakeholder role, and the vocabulary distinguishes the
@@ -90,7 +90,7 @@ func missingNextStepMoment(_ context.Context, _ time.Time, page *crmcontracts.Co
 		// The rung is not narrowed to the deciding roles instead, because a
 		// deal with no next step is worth saying whoever the seat belongs to —
 		// what was wrong was the sentence, not the trigger.
-		WhyNow: fmt.Sprintf("The deal is live and nothing is scheduled with them. They are %s on it.",
+		WhyNow: fmt.Sprintf("The deal is open and nothing is scheduled with them. They're %s on it.",
 			recordedSeat(page.Commercial.Role)),
 		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:          evidence,
@@ -153,7 +153,7 @@ func thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.C
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            "No interactions recorded",
-		WhyNow:              "No interactions or colleague connections were found in the records available to you.",
+		WhyNow:              "No interactions or colleagues found in the records you can see.",
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		RecommendedAction:   logInteraction(),
@@ -175,24 +175,10 @@ func dealRecord(dealID openapi_types.UUID) *crmcontracts.ContactMomentDestinatio
 	}
 }
 
-// bookMeeting offers the move this rung is actually about, and blocks it.
-//
-// Pointing "Book a meeting" at the deal record would satisfy every check —
-// a real surface, a real entity id, a client that navigates — and still lie.
-// The reader presses a button that says it books a meeting and lands on a deal
-// page, which is a worse kind of dead button than one that does nothing: it
-// does something, and something else.
-//
-// Nothing in the destination vocabulary opens a scheduler, so blocked is the
-// honest state. Opening the deal stays offered beside it, under its own label,
-// where it is true.
 func bookMeeting() crmcontracts.ContactMomentAction {
-	reason := "Booking a meeting from this card is not available yet"
 	return crmcontracts.ContactMomentAction{
-		Kind:          crmcontracts.ContactMomentActionKindScheduleMeeting,
-		Label:         "Book a meeting",
-		State:         crmcontracts.ContactMomentActionStateBlocked,
-		BlockedReason: &reason,
+		Kind:  crmcontracts.ContactMomentActionKindScheduleMeeting,
+		Label: "Book a meeting", State: crmcontracts.ContactMomentActionStateAvailable, Destination: &crmcontracts.ContactMomentDestination{Surface: "booking"},
 	}
 }
 

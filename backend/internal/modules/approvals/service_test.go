@@ -626,11 +626,11 @@ func TestTargetVisibleAnswersEachStagedShape(t *testing.T) {
 }
 
 func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
-	// The inbox is a SHARED surface, and for almost every kind that is the
-	// point. A LinkedIn match is the exception: it names third parties out of
-	// one member's imported address book, contacts who never agreed to be in
-	// this CRM. Routing it through the shared queue without this predicate
-	// handed every admin a readable copy of a colleague's contact list.
+	// A held draft is one rep's message leaving one rep's mailbox: releasing it
+	// stamps the sending identity from the APPROVING human, so a colleague who
+	// approved somebody else's draft would not have authorised that rep's
+	// message — they would have sent their own, signed by themselves, into a
+	// customer thread they were never part of.
 	mine := ids.NewV7()
 	theirs := ids.NewV7()
 	subject := ids.From[ids.UserKind](mine)
@@ -643,12 +643,9 @@ func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	}
 
-	staged := row{Kind: "linkedin_match", OnBehalfOf: &subject}
-	if requireDecisionGrants(admin, staged) == nil && !selfOnlyKinds[staged.Kind] {
-		t.Fatal("the fixture is vacuous: linkedin_match is not registered as self-only")
-	}
-	if !selfOnlyKinds["linkedin_match"] {
-		t.Fatal("linkedin_match is not self-only — a colleague's imported network is readable from the inbox")
+	staged := row{Kind: kindHeldDraft, OnBehalfOf: &subject}
+	if !selfOnlyKinds[staged.Kind] {
+		t.Fatalf("the fixture is vacuous: %s is not registered as self-only", staged.Kind)
 	}
 
 	// The production predicate itself, not a copy of it: a re-spelled rule in a
@@ -656,14 +653,53 @@ func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
 	// target-filtered readers had no self-only narrowing at all.
 	selfOnly := func(p principal.Principal, a row) bool { return !withheldFromOtherSeats(p, a) }
 	if selfOnly(admin, staged) {
-		t.Error("an all-scope admin can decide a LinkedIn match staged for somebody else")
+		t.Errorf("an all-scope admin can decide a %s staged for somebody else", staged.Kind)
 	}
 	if !selfOnly(owner, staged) {
-		t.Error("the member whose network produced the match cannot decide it")
+		t.Errorf("the member a %s was staged for cannot decide it", staged.Kind)
 	}
 	// A proposal with no recorded subject is nobody's to read, not everybody's.
-	if selfOnly(owner, row{Kind: "linkedin_match"}) {
+	if selfOnly(owner, row{Kind: kindHeldDraft}) {
 		t.Error("a self-only proposal with no subject was treated as decidable")
+	}
+}
+
+// A LinkedIn match is decided by anyone with access, which is the founder
+// decision and the opposite of what this module enforced.
+//
+// It was narrowed to the member whose export produced it, on the reading that a
+// match discloses a colleague's address book. It does not: the ghost in a match
+// proposal has ALREADY been identified as a contact on file, and the inbox only
+// shows the proposal to somebody who can see that contact. What is disclosed is
+// that a contact already on file appears in a colleague's network, which is
+// workspace-shared who-knows-whom metadata the contact's own network card
+// already draws. The count-never-a-list rule that argued for the narrowing governs the
+// reach view, whose rows are unmatched ghosts — the case this is not.
+//
+// So the two halves of the ordinary inbox rule are the whole rule here, and the
+// second half is what keeps the disclosure bounded: the grant deciding needs,
+// and visibility of the contact.
+func TestALinkedInMatchIsDecidedByAnySeatThatCanSeeTheContact(t *testing.T) {
+	stager := ids.From[ids.UserKind](ids.NewV7())
+	colleague := principal.Principal{
+		UserID:      ids.NewV7(),
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	}
+	staged := row{Kind: kindLinkedInMatch, OnBehalfOf: &stager}
+
+	if withheldFromOtherSeats(colleague, staged) {
+		t.Error("a colleague is refused a LinkedIn match staged by somebody else; anyone with access decides one")
+	}
+	// And a proposal recording no stager at all, which the self-only arm used
+	// to withhold from everybody: there is no seat to be, so nothing narrows.
+	if withheldFromOtherSeats(colleague, row{Kind: kindLinkedInMatch}) {
+		t.Error("a LinkedIn match with no recorded stager was withheld; the narrowing it was withheld by is gone")
+	}
+	// The grant that DOES bound it is still asked for, and it is the contact
+	// write the applied effect performs. Without this the test above would pass
+	// on a kind nothing gates at all.
+	if grants := decisionGrants[kindLinkedInMatch]; len(grants) == 0 {
+		t.Fatal("deciding a LinkedIn match requires no grant at all, so any seat that can see the inbox can apply one")
 	}
 }
 

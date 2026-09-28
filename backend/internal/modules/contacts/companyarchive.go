@@ -87,6 +87,21 @@ func (s *Store) ArchiveCompany(
 	return out, err
 }
 
+// ArchiveCompanyTx is ArchiveCompany on the caller's transaction, for a bulk
+// change that archives many companies in one commit. It asks every gate
+// ArchiveCompany asks and answers nothing: the caller already knows which row
+// it archived.
+func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64) error {
+	if err := auth.Require(ctx, "company", principal.ActionDelete); err != nil {
+		return err
+	}
+	if err := auth.EnsureWritable(ctx, tx, "company", id.UUID); err != nil {
+		return err
+	}
+	_, err := archiveCompanyTx(ctx, tx, id, ifVersion, nil)
+	return err
+}
+
 // archiveCompanyTx is the archive itself, on the caller's transaction: the
 // refusals, the guarded patch, the cascade, the audit and the event.
 //
@@ -163,10 +178,13 @@ func archiveCompanyTx(
 	return readCompany(ctx, tx, id, storekit.IncludeArchived, active)
 }
 
-const companyColumns = `id, display_name, legal_name, description, industry, size_band, owner_id, visibility,
+// A var rather than a const, for the reason contactColumns is one.
+var companyColumns = `id, display_name, legal_name, description, industry, size_band, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
 	lifecycle, relevance, parent_company_id, merged_into_id, logo_object_key, linkedin_url, source, captured_by,
-	version, created_at, updated_at, archived_at, is_anchor, last_activity_at`
+	source_system, source_author_id, source_author_name,
+	` + sourceAuthorSeatNameSQL("company") + `,
+	version, created_at, updated_at, archived_at, is_anchor, last_activity_at, legal_hold`
 
 // readCompany resolves one company row; active names the
 // custom-field columns to carry alongside the core ones — nil for

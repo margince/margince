@@ -269,7 +269,7 @@ describe("FilePreview", () => {
     serving(() => Promise.resolve(new Response("no", { status: 403 })));
     const { dialog } = await openPreview("GR-2026-0092.pdf");
     expect(
-      await within(dialog).findByText("This file cannot be shown here"),
+      await within(dialog).findByText("File cannot be previewed"),
     ).toBeTruthy();
     expect(dialog.textContent).not.toContain("403");
     // The one move left is still in the band above the sentence, and Print is

@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -47,25 +48,27 @@ type RetireCustomFieldCommand struct {
 // answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRetireCustomFieldCall(records datasource.SystemOfRecordProvider, cmd RetireCustomFieldCommand) GovernedCall {
+func NewRetireCustomFieldCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RetireCustomFieldCommand) GovernedCall {
 	return bind[RetireCustomFieldCommand](retireCustomFieldResolver{
-		target: routedRecordTarget{records: records, recordType: customFieldRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: customFieldRecordType},
 	}, cmd)
 }
 
 type retireCustomFieldResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the custom field by id — the seam has no row for it to read
 // a better label from (routedRecordTarget.refuse stands down every time),
 // the same as an archive of the six record-seam-unserved archivable types
 // (command.go).
-func (r retireCustomFieldResolver) Subject(_ context.Context, cmd RetireCustomFieldCommand) (StageInfo, error) {
+func (r retireCustomFieldResolver) Subject(ctx context.Context, cmd RetireCustomFieldCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: customFieldRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Retire custom field %s", cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).retireCustomField, cmd.ID),
 	}, nil
 }
 
@@ -92,22 +95,24 @@ type UpdateCustomFieldOptionsCommand struct {
 // resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewUpdateCustomFieldOptionsCall(records datasource.SystemOfRecordProvider, cmd UpdateCustomFieldOptionsCommand) GovernedCall {
+func NewUpdateCustomFieldOptionsCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd UpdateCustomFieldOptionsCommand) GovernedCall {
 	return bind[UpdateCustomFieldOptionsCommand](updateCustomFieldOptionsResolver{
-		target: routedRecordTarget{records: records, recordType: customFieldRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: customFieldRecordType},
 	}, cmd)
 }
 
 type updateCustomFieldOptionsResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject, Guards: the same shape as retireCustomFieldResolver's.
-func (r updateCustomFieldOptionsResolver) Subject(_ context.Context, cmd UpdateCustomFieldOptionsCommand) (StageInfo, error) {
+func (r updateCustomFieldOptionsResolver) Subject(ctx context.Context, cmd UpdateCustomFieldOptionsCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: customFieldRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Update options for custom field %s", cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).customFieldOptions, cmd.ID),
 	}, nil
 }
 
@@ -133,14 +138,16 @@ type SetStakeholderCommand struct {
 // writes through.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewSetStakeholderCall(records datasource.SystemOfRecordProvider, cmd SetStakeholderCommand) GovernedCall {
+func NewSetStakeholderCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd SetStakeholderCommand) GovernedCall {
 	return bind[SetStakeholderCommand](setStakeholderResolver{
-		target: routedRecordTarget{records: records, recordType: projectRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: projectRecordType},
 	}, cmd)
 }
 
 type setStakeholderResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the PROJECT the approval binds to — a stakeholder edge has
@@ -149,11 +156,11 @@ type setStakeholderResolver struct {
 // the BODY here, and the body's own fields are what the inbox shows beside
 // this line (proposed_change), the same reasoning patchResolver's own
 // Subject gives for not repeating a patch's values.
-func (r setStakeholderResolver) Subject(_ context.Context, cmd SetStakeholderCommand) (StageInfo, error) {
+func (r setStakeholderResolver) Subject(ctx context.Context, cmd SetStakeholderCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Set a stakeholder on project %s", cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).setStakeholder, cmd.ID),
 	}, nil
 }
 
@@ -178,25 +185,27 @@ type RemoveStakeholderCommand struct {
 // for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRemoveStakeholderCall(records datasource.SystemOfRecordProvider, cmd RemoveStakeholderCommand) GovernedCall {
+func NewRemoveStakeholderCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RemoveStakeholderCommand) GovernedCall {
 	return bind[RemoveStakeholderCommand](removeStakeholderResolver{
-		target: routedRecordTarget{records: records, recordType: projectRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: projectRecordType},
 	}, cmd)
 }
 
 type removeStakeholderResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the PROJECT the approval binds to, with the contact being
 // detached carried into the summary: the door-agnostic line
 // GovernedCall.Subject owes this operation, distinct per contact, even
 // though no door renders it today (confirmFactResolver's own doc says why).
-func (r removeStakeholderResolver) Subject(_ context.Context, cmd RemoveStakeholderCommand) (StageInfo, error) {
+func (r removeStakeholderResolver) Subject(ctx context.Context, cmd RemoveStakeholderCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Remove stakeholder %s from project %s", cmd.ContactID, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).removeStakeholder, cmd.ContactID, cmd.ID),
 	}, nil
 }
 
@@ -221,23 +230,25 @@ type SetCompanyCommand struct {
 // answers for it, reading through the record seam the project writes through.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewSetCompanyCall(records datasource.SystemOfRecordProvider, cmd SetCompanyCommand) GovernedCall {
+func NewSetCompanyCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd SetCompanyCommand) GovernedCall {
 	return bind[SetCompanyCommand](setCompanyResolver{
-		target: routedRecordTarget{records: records, recordType: projectRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: projectRecordType},
 	}, cmd)
 }
 
 type setCompanyResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the PROJECT the approval binds to — a company edge has no row
 // of its own on the seam, exactly as a stakeholder edge has none.
-func (r setCompanyResolver) Subject(_ context.Context, cmd SetCompanyCommand) (StageInfo, error) {
+func (r setCompanyResolver) Subject(ctx context.Context, cmd SetCompanyCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Put a company on project %s", cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).setCompany, cmd.ID),
 	}, nil
 }
 
@@ -258,23 +269,25 @@ type RemoveCompanyCommand struct {
 // NewRemoveCompanyCall binds one detach to the resolver that answers for it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRemoveCompanyCall(records datasource.SystemOfRecordProvider, cmd RemoveCompanyCommand) GovernedCall {
+func NewRemoveCompanyCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RemoveCompanyCommand) GovernedCall {
 	return bind[RemoveCompanyCommand](removeCompanyResolver{
-		target: routedRecordTarget{records: records, recordType: projectRecordType},
+		language: language,
+		target:   routedRecordTarget{records: records, recordType: projectRecordType},
 	}, cmd)
 }
 
 type removeCompanyResolver struct {
-	target routedRecordTarget
+	target   routedRecordTarget
+	language baselanguage.Resolver
 }
 
 // Subject names the PROJECT, with the company being taken off carried into the
 // summary: the door-agnostic line this operation owes, distinct per company.
-func (r removeCompanyResolver) Subject(_ context.Context, cmd RemoveCompanyCommand) (StageInfo, error) {
+func (r removeCompanyResolver) Subject(ctx context.Context, cmd RemoveCompanyCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Take company %s off project %s", cmd.CompanyID, cmd.ID),
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).removeCompany, cmd.CompanyID, cmd.ID),
 	}, nil
 }
 

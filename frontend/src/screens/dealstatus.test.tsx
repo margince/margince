@@ -322,7 +322,7 @@ describe("Deal360's brief discloses the machine that wrote it", () => {
     // The verb that asks for another reading is the machine's own, drawn quiet
     // because it sits inside the panel the machine already wrote.
     expect(
-      screen.getByRole("button", { name: "Write it again" }).className,
+      screen.getByRole("button", { name: "Regenerate" }).className,
     ).toContain("btn-aiQuiet");
   });
 
@@ -337,7 +337,7 @@ describe("Deal360's brief discloses the machine that wrote it", () => {
     const brief = within(briefPanel(container));
     expect(briefPanel(container).classList).toContain("panel-ai");
     expect(brief.getByText("AI-assisted")).toBeInTheDocument();
-    expect(brief.getByText("Assembled from your records")).toBeInTheDocument();
+    expect(brief.getByText("Compiled from CRM records")).toBeInTheDocument();
     expect(brief.queryByText("Written by Margince")).toBeNull();
   });
 });

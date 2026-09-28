@@ -258,7 +258,8 @@ func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserve
 	if res.RetryKey == "" {
 		return
 	}
-	book := context.WithoutCancel(ctx)
+	book, release := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
+	defer release()
 	if runErr != nil {
 		if err := r.claims.Fail(book, spec.Name, res.RetryKey, attempt, safeFailureReason(runErr)); err != nil {
 			slog.ErrorContext(book, "recording a failed call against its idempotency key failed; a retry of "+
@@ -308,7 +309,8 @@ func (r *Registry) releaseUnrunKey(ctx context.Context, spec mcp.ToolSpec, res r
 	if res.RetryKey == "" {
 		return
 	}
-	book := context.WithoutCancel(ctx)
+	book, release := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
+	defer release()
 	if err := r.claims.Release(book, spec.Name, res.RetryKey, attempt); err != nil {
 		slog.ErrorContext(book, "releasing an unrun call's idempotency claim failed; the key stays held "+
 			"until the retention sweep reaches it", "tool", spec.Name, "err", err)

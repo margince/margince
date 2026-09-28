@@ -23,6 +23,7 @@ import {
   Textarea,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
@@ -41,15 +42,12 @@ import {
   useRoster,
   useRosterPartial,
 } from "./entityref";
+import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
 import "./share.css";
 
-// AS-3/4/5 — the record-share screen (A52/ADR-0039): grant a user/team
-// read/write on exactly this one record, list who currently has manual
-// access to it, revoke a grant. The base (owner/team/all) scope is NOT
-// rendered here — this is only the *manual* grants layered on top of it
-// (per listRecordGrants' description). The 🟡 agent-proposed-grant card
-// from the mockup is deliberately deferred — this screen is the human
-// compose/list/revoke path only.
+// The record-share screen: grant a user or team read/write on this one record,
+// list and revoke the manual grants. For a contact or company, the panel above
+// the grants lists everyone who can see the record and why.
 
 type RecordGrant = components["schemas"]["RecordGrant"];
 type CreateRecordGrantRequest =
@@ -365,15 +363,15 @@ function RosterPicker({
   if (usersQuery.isError || teamsQuery.isError) {
     return (
       <div data-testid="share-roster-error">
-        <p className="share-error">
+        <ErrorLine>
           {usersQuery.isError && teamsQuery.isError
             ? t("share.rosterErrorBoth")
             : usersQuery.isError
               ? t("share.rosterErrorUsers")
               : t("share.rosterErrorTeams")}
-        </p>
+        </ErrorLine>
         <Button
-          style={{ marginTop: "var(--space-2)" }}
+          className="share-roster-retry"
           onClick={() => {
             if (usersQuery.isError) usersQuery.refetch();
             if (teamsQuery.isError) teamsQuery.refetch();
@@ -832,12 +830,13 @@ function ShareScreenBody({
             </p>
           )}
 
-          {grantErrorMessage && (
-            <p className="share-error">{grantErrorMessage}</p>
-          )}
+          {grantErrorMessage && <ErrorLine>{grantErrorMessage}</ErrorLine>}
         </PanelBody>
       </Panel>
 
+      {isAccessKind(recordType) && (
+        <WhoCanSeePanel kind={recordType} recordId={recordId} />
+      )}
       <Panel title={t("share.whoHasAccess")}>
         <QueryGate
           query={grantsQuery}

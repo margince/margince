@@ -15,7 +15,7 @@
 // approval".
 
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
@@ -112,7 +112,7 @@ export function NotificationSettingsCard() {
   return (
     <Panel title={t("notifications.title")}>
       <PanelBody className="form-stack">
-        <p className="settings-panel-sub">{t("notifications.sub")}</p>
+        <PanelIntro>{t("notifications.sub")}</PanelIntro>
         <QueryGate pendingLabel={t("notifications.title")} query={preferences}>
           {(list) => <DeliveryChoices rows={list.items} />}
         </QueryGate>
@@ -134,7 +134,12 @@ function DeliveryChoices({
             key={row.class}
             row={row}
             onPick={(delivery) => save.mutate({ class: row.class, delivery })}
-            saving={save.isPending}
+            // THIS row's write, not any row's. The mutation is shared so one
+            // error surface can name the class that failed, and a bare
+            // `isPending` spread that wait across all six — freezing five
+            // dropdowns nobody touched, and hiding the queued second change the
+            // hook's own scope exists to serialise.
+            saving={save.isPending && save.variables?.class === row.class}
           />
         ))}
       </SettingList>

@@ -88,7 +88,14 @@ func (h Handlers) CreateContact(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := contactCreateInput(req)
+	// A declared importer (a HUMAN holding import_run:create) may stamp the
+	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// grants included, gets the closed door.
+	mapInput := contactCreateInput
+	if auth.DeclaredImporter(r.Context()) {
+		mapInput = contactCreateInputFromImporter
+	}
+	in, err := mapInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

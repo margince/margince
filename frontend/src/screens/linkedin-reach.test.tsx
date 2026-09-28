@@ -84,7 +84,7 @@ it("shows, per account reached, how many connections work there and how many are
   // Two listed of nine reached: where the list stops is stated, not implied.
   expect(
     screen.getByText(
-      "Showing 2 of 9 accounts. 1,420 connections work somewhere that is not an account on file yet.",
+      "Showing 2 of 9 companies. 1,420 connections work at companies not on file yet.",
     ),
   ).toBeInTheDocument();
 });

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -67,14 +68,16 @@ const winEvidenceProperties = `,
 	"won_without_contract_detail":{"type":"string","maxLength":500,"description":"What the reason was, required when it is other"}`
 
 type advanceDeal struct {
-	p      datasource.SystemOfRecordProvider
-	stages StageResolver
+	p        datasource.SystemOfRecordProvider
+	stages   StageResolver
+	language baselanguage.Resolver
 }
 
 func (t advanceDeal) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "advance_deal", Title: "Advance a deal to a stage", Version: toolVersionV1,
 		Description:   advanceDealCopy.render(),
+		Instead:       advanceDealCopy.Instead,
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierDynamic,
 		TierResolver:  advanceDealTier,
@@ -112,7 +115,7 @@ func (t advanceDeal) StageInfo(ctx context.Context, in json.RawMessage) (StageIn
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewAdvanceDealCall(t.p, t.stages, AdvanceDealCommand{
+	return StageSubject(ctx, NewAdvanceDealCall(t.p, t.stages, t.language, AdvanceDealCommand{
 		DealID:    args.DealID,
 		ToStageID: args.ToStageID,
 	}))

@@ -2,12 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
-import { Badge, DataTable, EmptyState } from "../design-system/atoms";
+import { Badge, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
-import { Panel, PanelBody } from "../design-system/panel";
+import { DataTable } from "../design-system/datatable";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
+import { tierLabel } from "./ai-decision-labels";
 import { QueryGate, throwProblem, useMe } from "./common";
 
 // Whether the model lanes are answering.
@@ -62,7 +64,7 @@ export function AiHealthCard() {
     return (
       <Panel title={t("aiHealth.title")}>
         <PanelBody>
-          <p className="settings-panel-sub">{t("aiHealth.sub")}</p>
+          <PanelIntro>{t("aiHealth.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("aiHealth.title")}>
             {() => <EmptyState>{t("aiHealth.withheld")}</EmptyState>}
           </QueryGate>
@@ -74,7 +76,7 @@ export function AiHealthCard() {
   return (
     <Panel title={t("aiHealth.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("aiHealth.sub")}</p>
+        <PanelIntro>{t("aiHealth.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("aiHealth.title")}>
           {(health) =>
             health.rungs.length === 0 ? (
@@ -102,6 +104,7 @@ function RungTable({
   hours,
 }: Readonly<{ rungs: RungHealth[]; hours: number }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
   return (
@@ -113,7 +116,7 @@ function RungTable({
         {
           key: "tier",
           header: t("aiHealth.colTier"),
-          render: (row) => row.tier,
+          render: (row) => tierLabel(row.tier, t),
         },
         {
           key: "state",
@@ -133,8 +136,8 @@ function RungTable({
           render: (row) =>
             // Both numbers, because "12 calls" beside a red badge leaves a
             // reader working out how many of them failed.
-            t("aiHealth.callCounts", {
-              calls: formatNumber(row.calls, locale),
+            plural("aiHealth.callCounts", row.calls, {
+              count: formatNumber(row.calls, locale),
               failures: formatNumber(row.failures, locale),
             }),
         },

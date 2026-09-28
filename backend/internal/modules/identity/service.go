@@ -56,6 +56,14 @@ type Service struct {
 	// module identity never imports. Nil ⟹ nothing caps seats, which is what
 	// a role that resolved no license posture means.
 	seatCeiling SeatCeiling
+	// installationDescribed answers whether the anchor company exists, injected
+	// because contacts owns it (installationdescribed.go). Nil refuses every seat.
+	installationDescribed InstallationDescribed
+	// captureReaper destroys the provider secrets a deactivation's withdrawal
+	// left in the vault, injected because capture owns it (capturereaper.go).
+	// Nil leaves them for capture's own sweep; the withdrawal itself has
+	// already committed either way.
+	captureReaper CaptureCredentialReaper
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -104,9 +112,9 @@ type Identity struct {
 	Permissions        principal.Permissions
 }
 
-// systemRoles is the seeded default role set (data-model §2.4, ADR-0110);
-// custom roles beyond these are a code extension, not a runtime builder.
-// The keys are wire vocabulary and diverge from the product names on purpose:
+// systemRoles is the seeded default role set (ADR-0110).
+// An operator makes further roles at runtime by copying one of these
+// (CreateRole), under a generated custom_ key. The keys are wire vocabulary and diverge from the product names on purpose:
 // `manager` is the Team Lead, `rep` the User — renaming the keys would churn
 // the contract enum, every historical migration and three locales to change a
 // string the UI already indirects through i18n. A migration carries each rename
@@ -187,26 +195,47 @@ func (in *BootstrapInput) normalize() error {
 	return nil
 }
 
-// seedSystemRoles lays down the compiled-in role set for a fresh
-// workspace and assigns the admin role to its first user — part of the
-// Bootstrap transaction, so a partial role set can never survive.
-func seedSystemRoles(ctx context.Context, tx pgx.Tx, adminUserID ids.UserID) error {
+// SeedSystemRoles lays down the compiled-in role set, and assigns nothing.
+//
+// Exported for the integration harness, which builds its workspace row by row
+// rather than through Bootstrap and so reaches no role at all. What a fixture
+// must not invent is the POLICY DOCUMENT: a hand-written one drifts from the
+// shipped defaults silently, and every test resting on it then proves
+// something about the fixture. This is the shipped set or nothing.
+//
+// The ASSIGNMENT is the caller's, deliberately. Bootstrap gives its first user
+// the admin role below, because that is what provisioning means; a fixture
+// gives out roles one at a time, because which seat holds what is the thing
+// most of its cases are about. Folding the two would hand every harness seat
+// an authority no test asked for — and the tests that use an UNGRANTED seat on
+// purpose, to prove one ungranted seat does not cost a workspace its morning,
+// would quietly stop testing that.
+func SeedSystemRoles(ctx context.Context, tx pgx.Tx) (adminRoleID ids.UUID, err error) {
 	// note: role is not a first-class entity in the id kind vocabulary, so
 	// its ids stay ids.UUID (kernel gap — no RoleKind to assert).
-	var adminRoleID ids.UUID
 	for _, role := range systemRoles {
 		var roleID ids.UUID
 		err := tx.QueryRow(ctx,
 			`INSERT INTO role (key, name, is_system, permissions) VALUES ($1, $2, true, $3) RETURNING id`,
 			role.key, role.name, policy.MustDefaultJSON(role.key)).Scan(&roleID)
 		if err != nil {
-			return err
+			return ids.Nil, err
 		}
 		if role.key == "admin" {
 			adminRoleID = roleID
 		}
 	}
-	_, err := tx.Exec(ctx,
+	return adminRoleID, nil
+}
+
+// seedSystemRolesForBootstrap is the provisioning half: the role set, plus the
+// admin role on the workspace's first user.
+func seedSystemRolesForBootstrap(ctx context.Context, tx pgx.Tx, adminUserID ids.UserID) error {
+	adminRoleID, err := SeedSystemRoles(ctx, tx)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx,
 		`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
 		adminRoleID, adminUserID)
 	return err

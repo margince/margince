@@ -1,0 +1,18 @@
+name: overnight_sweep_reads_what_is_slipping_before_it_logs
+task: agent_loop
+site: overnight_at_risk_sweep
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: overnight_at_risk_sweep:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding: []
+expect:
+  outcome: accepted
+  answer: whats_slipping_this_week
+  near_misses:
+    - log_activity
+    - list_records
+  judge: none
+  judge_none_reason: >
+    The answer is the turn's first tool call, which the check reads off the
+    replayed loop. The rubric asked for that call and graded nothing else.

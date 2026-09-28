@@ -93,7 +93,7 @@ func seedVoiceLifecycleHistory(t *testing.T, e *apptest.AppEnv, profileID string
 		VALUES ($1, 1, 'active', 'active version 1',
 		        '{"document":"active version 1"}', '{"avg_sentence_words":8}',
 		        'active-hash', 1, 'manual', 'test', 'test-model', 'test-builder', '1',
-		        $2::jsonb, '{}', now(), 'ui', $3, now())`,
+		        $2::jsonb, '{}', now(), 'manual', $3, now())`,
 		profileID, voiceLifecycleEvaluation, capturedBy); err != nil {
 		t.Fatal(err)
 	}

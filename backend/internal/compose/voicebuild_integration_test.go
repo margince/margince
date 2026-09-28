@@ -590,8 +590,8 @@ func TestReplyDraftCarriesVoiceProvenanceEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.AIGenerated || result.AIDisclosure == nil {
-		t.Fatalf("voiced draft must carry the Art. 50 stamp: %+v", result)
+	if !result.AIGenerated || result.AIProvenanceNotice == nil {
+		t.Fatalf("voiced draft must carry the AI provenance notice: %+v", result)
 	}
 	if result.VoiceProfileVersion == nil {
 		t.Fatalf("voiced draft must name the profile version that styled it: %+v", result)

@@ -404,6 +404,11 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	// sender judged on an earlier tick, or by a door whose own release could not
 	// finish, still has mail a posture is holding for a question that has an
 	// answer.
+	// Before the widening, which then releases the mail of a contact this
+	// publishes on the same tick.
+	if err := w.engine.PublishAnsweredContactsWorkspace(wsCtx); err != nil {
+		return err
+	}
 	if err := w.engine.WidenClearedSendersWorkspace(wsCtx); err != nil {
 		return err
 	}

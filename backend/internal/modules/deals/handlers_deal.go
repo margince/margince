@@ -9,6 +9,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -88,7 +89,14 @@ func (h Handlers) CreateDeal(w http.ResponseWriter, r *http.Request, _ crmcontra
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := dealCreateInput(req)
+	// A declared importer (a HUMAN holding import_run:create) may stamp the
+	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// grants included, gets the closed door.
+	mapInput := dealCreateInput
+	if auth.DeclaredImporter(r.Context()) {
+		mapInput = dealCreateInputFromImporter
+	}
+	in, err := mapInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -133,7 +133,10 @@ type API interface {
 	// Delta resumes a folder's delta from a stored deltaLink and returns the
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
-	Delta(ctx context.Context, accessToken, deltaLink string) (ids []string, newDeltaLink string, err error)
+	// Delta returns the ids added or changed since deltaLink, the ids Graph
+	// TOMBSTONED in the same round, and the link to resume from. A tombstone is
+	// the mailbox owner deleting their own copy; it carries no message.
+	Delta(ctx context.Context, accessToken, deltaLink string) (ids, removed []string, newDeltaLink string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
 	// reports the subscription that now covers this mailbox.
@@ -172,6 +175,9 @@ type API interface {
 	// folder, against which a message's ParentFolderID identifies mail the
 	// authenticated owner sent.
 	SentFolderID(ctx context.Context, accessToken string) (string, error)
+	// ListFolders returns the mailbox's folders — what an owner may pick from
+	// to keep one out of capture.
+	ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, error)
 
 	// SendMIME transmits one complete RFC822 message as the signed-in user.
 	// Microsoft acknowledges the submission without naming a message id, so

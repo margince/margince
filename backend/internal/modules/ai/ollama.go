@@ -27,6 +27,8 @@ type ollamaClient struct {
 	// attachmentMIMEs is what THIS binding carries: the wire's own carriage,
 	// narrowed by any `input:` the operator declared (inputmodality.go).
 	attachmentMIMEs []string
+	// thinks is what /api/show listed each model as accepting for `think`.
+	thinks perModelFacts[[]json.RawMessage]
 }
 
 type ollamaWire struct {
@@ -35,6 +37,9 @@ type ollamaWire struct {
 	Tools    []ollamaToolWire `json:"tools,omitempty"`
 	Stream   bool             `json:"stream"`
 	Options  *ollamaOptions   `json:"options,omitempty"`
+	// Think is what ollamathink.go resolves for the model; absent means the
+	// model does not think.
+	Think json.RawMessage `json:"think,omitempty"`
 	// Format constrains decoding to a JSON Schema (Ollama's structured-output
 	// mode). Sent only when the request carries a ResponseSchema; omitted
 	// otherwise so ordinary free-text calls are unaffected.
@@ -63,11 +68,11 @@ type ollamaEmbedOptions struct {
 	NumCtx int `json:"num_ctx"`
 }
 
-// ollamaMaxTokensDefault caps a request that didn't set MaxTokens, the same
-// answer anthropic and gemini give the same gap. The window below is sized from
-// this number, so leaving it unset would make the output allowance an accident
-// of the arithmetic rather than a stated budget.
-const ollamaMaxTokensDefault = 1024
+// ollamaMaxTokensDefault caps a request that didn't set MaxTokens: the ceiling
+// every adapter gives the same gap. Named here as well because the window below
+// is sized from it, so leaving it unset would make the output allowance an
+// accident of the arithmetic rather than a stated budget.
+const ollamaMaxTokensDefault = unsetMaxOutputTokens
 
 // ollamaContextFloor is Ollama's own default window. The adapter never asks for
 // less, so a short request cannot come out worse than saying nothing at all.
@@ -123,11 +128,11 @@ const ollamaContextBucket = 4096
 // it, and neither is visible from the runner:
 //
 //   - ollamaWindowFor rounds a request UP by a whole bucket, so the largest
-//     estimate not clamped back to the cap is 32,767, not 32,768. Subtracting
+//     estimate not clamped back to the cap is 40,959, not 40,960. Subtracting
 //     alone gives a window one token too high.
 //   - contextWindow's estimate is BIGGER than a caller's for the same prompt.
-//     It also counts each message's role, an 8-byte per-message frame, and the
-//     response schema in `Format` — several hundred tokens on a long transcript.
+//     It also counts each message's role and an 8-byte per-message frame — a
+//     few hundred tokens on a long transcript.
 //
 // Trimming the slack trades a silent truncation — the completion cut inside a
 // reasoning model's thinking, which returns well-formed empty content and reads
@@ -222,8 +227,8 @@ func ollamaWindowFor(tokens int) int {
 // says done_reason: "length"; an embedding past its window is computed from the
 // head of the text and returns a vector of the right width that no caller can
 // tell apart from a whole one. And the window ALONE cannot say how much was
-// lost — it saturates at the cap, so a document at 33k tokens and one at a
-// million both report the same 32768. What was asked for is the half that
+// lost — it saturates at the cap, so a document at 41k tokens and one at a
+// million both report the same 40960. What was asked for is the half that
 // carries the magnitude, so both leave this function.
 func embedContextWindow(inputs []string) (window, estimatedTokens int) {
 	longest := 0
@@ -253,9 +258,16 @@ type ollamaChatEvent struct {
 	Message struct {
 		Content string `json:"content"`
 	} `json:"message"`
-	Done            bool `json:"done"`
-	PromptEvalCount int  `json:"prompt_eval_count"`
-	EvalCount       int  `json:"eval_count"`
+	Done bool `json:"done"`
+	// DoneReason is already the port's vocabulary: "length" when num_predict
+	// or the window cut the reply off, "stop" when it finished.
+	DoneReason      string `json:"done_reason"`
+	PromptEvalCount int    `json:"prompt_eval_count"`
+	// PromptEvalCachedCount is the part of PromptEvalCount read from the
+	// runner's prompt cache rather than evaluated; absent from a runner that
+	// predates it, which reads as no cache.
+	PromptEvalCachedCount int `json:"prompt_eval_cached_count"`
+	EvalCount             int `json:"eval_count"`
 }
 
 func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
@@ -273,7 +285,9 @@ func (c *ollamaClient) Complete(ctx context.Context, req model.Request) (model.R
 		Text:         out.Message.Content,
 		InputTokens:  out.PromptEvalCount,
 		OutputTokens: out.EvalCount,
+		CachedTokens: cacheReadWithin(out.PromptEvalCount, out.PromptEvalCachedCount),
 		ServedModel:  out.Model,
+		FinishReason: out.DoneReason,
 	}, nil
 }
 
@@ -282,7 +296,7 @@ func (c *ollamaClient) Stream(ctx context.Context, req model.Request) (model.Tok
 	if err != nil {
 		return nil, err
 	}
-	return &ollamaStream{body: body, scanner: streamLineScanner(body)}, nil
+	return &ollamaStream{body: body, scanner: streamLineScanner(body), end: streamEnd{wire: providerOllama}}, nil
 }
 
 func (c *ollamaClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -305,7 +319,7 @@ func (c *ollamaClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 			"model", embedModel, "estimated_tokens", estimatedTokens,
 			"window_tokens", window, "inputs", len(req.Inputs))
 	}
-	payload, _, err := sendablePayload(ctx,
+	payload, _, err := SendablePayload(ctx,
 		ollamaEmbedWire{Model: embedModel, Input: req.Inputs, Options: &ollamaEmbedOptions{NumCtx: window}}, nil)
 	if err != nil {
 		return model.Embeddings{}, err
@@ -369,6 +383,11 @@ func (c *ollamaClient) sendChat(ctx context.Context, req model.Request, stream b
 	if wire.Model == "" {
 		wire.Model = c.defaultModel
 	}
+	think, err := c.think(ctx, wire.Model, req)
+	if err != nil {
+		return nil, err
+	}
+	wire.Think = think
 	if len(req.ResponseSchema) > 0 {
 		wire.Format = req.ResponseSchema
 	}
@@ -396,7 +415,7 @@ func (c *ollamaClient) sendChat(ctx context.Context, req model.Request, stream b
 	// Sized last: the window has to account for the messages, tools and schema
 	// just assembled, so this cannot move above them.
 	wire.Options = &ollamaOptions{NumPredict: maxTokens, NumCtx: wire.contextWindow(maxTokens)}
-	payload, _, err := sendablePayload(ctx, wire, req.SecretStripper)
+	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
 	}
@@ -418,39 +437,63 @@ func (c *ollamaClient) post(ctx context.Context, path string, payload []byte) (i
 		defer func() { _ = resp.Body.Close() }()
 		raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		if readErr != nil {
-			return nil, fmt.Errorf("ai: ollama: http %d", resp.StatusCode)
+			return nil, providerRefusal(resp, "", &ollamaStatusError{code: resp.StatusCode})
 		}
-		return nil, fmt.Errorf("ai: ollama: http %d: %s", resp.StatusCode, bytes.TrimSpace(raw))
+		// Ollama's {"error": "..."} is one free-text sentence with no code, so
+		// it is logged redacted and never read as a rejected request.
+		return nil, providerRefusal(resp, "", &ollamaStatusError{code: resp.StatusCode, body: safeProviderText(ctx, string(raw))})
 	}
 	return resp.Body, nil
 }
 
-// ollamaStream reads the JSON-lines chat stream.
+// ollamaStatusError is a non-200 reply, kept typed so a caller can tell a
+// server that does not have an endpoint from one that refused the request.
+type ollamaStatusError struct {
+	code int
+	body string
+}
+
+func (e *ollamaStatusError) Error() string {
+	if e.body == "" {
+		return fmt.Sprintf("ai: ollama: http %d", e.code)
+	}
+	return fmt.Sprintf("ai: ollama: http %d: %s", e.code, e.body)
+}
+
+// ollamaStream reads the JSON-lines chat stream. The reply's terminal is the
+// done event's done_reason, already in the port's vocabulary as Complete reads
+// it; a body that closes before a done event dropped mid-generation.
 type ollamaStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
+	end     streamEnd
 }
 
 func (s *ollamaStream) Next(ctx context.Context) (string, bool, error) {
-	for s.scanner.Scan() {
+	for !s.end.read && s.scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return "", false, err
 		}
-		var ev ollamaChatEvent
+		var ev struct {
+			ollamaChatEvent
+			// Error is Ollama's report that generation failed after the 200
+			// went out: a runner that crashed or ran out of memory mid-reply.
+			Error string `json:"error"`
+		}
 		if err := json.Unmarshal(s.scanner.Bytes(), &ev); err != nil {
 			return "", false, fmt.Errorf("ai: ollama: stream event: %w", err)
 		}
+		if ev.Error != "" {
+			return "", false, fmt.Errorf("ai: ollama: stream error: %s", safeProviderText(ctx, ev.Error))
+		}
 		if ev.Done {
-			return "", false, nil
+			s.end.finish(ev.DoneReason)
 		}
 		if ev.Message.Content != "" {
 			return ev.Message.Content, true, nil
 		}
 	}
-	if err := s.scanner.Err(); err != nil {
-		return "", false, fmt.Errorf("ai: ollama: stream: %w", err)
-	}
-	return "", false, nil
+	return s.end.outcome(s.scanner.Err())
 }
 
 func (s *ollamaStream) Close() error { return s.body.Close() }

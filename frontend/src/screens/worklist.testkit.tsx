@@ -138,6 +138,18 @@ export function stubWalk(pages: readonly Worklist[]) {
   );
 }
 
+/**
+ * The panel a heading belongs to. Panel draws a bare <section> with no
+ * accessible name, so the heading is the only handle a test has on it.
+ */
+export function panelNamed(heading: HTMLElement): HTMLElement {
+  const panel = heading.closest("section");
+  if (!panel) {
+    throw new Error(`no panel around the heading "${heading.textContent}"`);
+  }
+  return panel;
+}
+
 export function renderWorklist(
   locale: Locale = "en",
   opensOn?: string,

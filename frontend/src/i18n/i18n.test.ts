@@ -101,7 +101,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "oauthApp.tenant",
   "oauthApp.tenantPlaceholder",
   // A URL, which is the same string in every language.
+  "scheduling.locationExample",
   "aiRouting.baseUrl.placeholder",
+  "aiRouting.baseUrl.placeholder.jev",
+  "aiRouting.baseUrl.placeholder.jevCompatible",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
@@ -123,6 +126,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Two phase names and an arrow.
   "project.history.moved",
   "brief.digestPhaseChange",
+  // Two relationship-band names and an arrow, on the contact strip's latest
+  // change. Same shape, same reason as the two above.
+  "contact.intro.change.buckets",
   // A filename and the server's own refusal, separated by a colon. It is one
   // line of a list whose heading says what the list is, and both halves arrive
   // already in the reader's own words.
@@ -167,14 +173,16 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "tab.deals",
   "deals.pipeline",
   "deal.fcPipeline",
+  "filters.field.pipeline_id",
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
-  // The singular of the same noun, on the account facts strip and on the
-  // overnight scan's tally. Both are the borrowed word beside a numeral, so
-  // there is nothing left in either string for Vietnamese to translate.
-  "co.facts.deals_one",
+  // The singular of the same noun, on the overnight scan's tally and on the
+  // forecast tile's deal count. Both are the borrowed word beside a numeral, so there is nothing left in any
+  // of them for Vietnamese to translate. Only the `_one` arms land here: the
+  // `_other` arms differ because English pluralises and Vietnamese does not.
   "today.scan.readDeals_one",
+  "analytics.forecastDeals_one",
   "deals.unit",
   "contracts.renew.deal",
   "contracts.deal",
@@ -191,7 +199,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "restricted.kind.email",
   "timeline.filters.kind.email",
   "auth.email",
-  "contact.identity.email",
   "contact.action.email",
   "contact.memory.email",
   "contact.memory.channelEmail",
@@ -262,6 +269,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.deal",
   "search.kind.lead",
   "search.kind.tag",
+  // The same loanword naming the tag field on Filters and views.
+  "filters.field.tag",
   // The lead rail's own deal card title, the same singular loanword as
   // search.kind.deal above it.
   "lead.rail.deal.title",

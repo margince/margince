@@ -34,6 +34,10 @@ type Explain struct {
 	// Group binds the cell's group keys — one entry per GroupBy dimension, in
 	// the same order. Empty for an ungrouped answer, which has one cell.
 	Group []any
+	// AllCells explains every cell at once: the question keeps its grouping,
+	// and with it every narrowing the grouping brings, and only the one-cell
+	// restriction is dropped. Group must then be empty.
+	AllCells bool
 }
 
 // ExplainPlan is the compiled drill-through.
@@ -67,7 +71,14 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 	if err := in.Query.Validate(schema); err != nil {
 		return ExplainPlan{}, err
 	}
-	if len(in.Group) != len(in.Query.GroupBy) {
+	if in.AllCells && len(in.Group) > 0 {
+		return ExplainPlan{}, &RefusalError{
+			Kind:    RefusalInvalid,
+			Message: "an explanation of every cell names no single cell",
+			Suggest: "name one cell, or ask for every cell with no group",
+		}
+	}
+	if !in.AllCells && len(in.Group) != len(in.Query.GroupBy) {
 		return ExplainPlan{}, &RefusalError{
 			Kind: RefusalInvalid,
 			Message: fmt.Sprintf(
@@ -96,6 +107,9 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 	// — which is never true — so a cell whose group is "unset" resolves to the
 	// rows that have nothing there rather than to none at all.
 	for i, name := range in.Query.GroupBy {
+		if in.AllCells {
+			break
+		}
 		expr := entity.Fields[name].Expr
 		if in.Group[i] == nil {
 			where = append(where, expr+" IS NULL")
@@ -125,8 +139,8 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 	// Ordered by id and bounded. Deterministic because a reader who pages
 	// through an explanation twice must see the same records in the same
 	// order, and an order over a measure re-sorts the moment a record changes.
-	sql := fmt.Sprintf("SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %s",
+	sql := fmt.Sprintf("SELECT %s FROM %s%s ORDER BY t.id LIMIT %s",
 		strings.Join(selects, ", "), entity.From,
-		strings.Join(where, " AND "), bind(ExplainRowLimit))
+		whereSQL(where), bind(ExplainRowLimit))
 	return ExplainPlan{SQL: sql, Args: args, Columns: columns}, nil
 }

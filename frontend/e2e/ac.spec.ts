@@ -1,10 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { meFixture } from "../src/app/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
 import { mockApi } from "./seed";
-import { textsOf } from "./waits";
+import { pageOverflow, textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -178,12 +179,12 @@ const CORE_SCREENS = [
 /**
  * The settings page the address named is the one on screen.
  *
- * `useVisibleSettingsTabs` falls back to the first tab a principal can see, so
- * an address naming a tab this mock's grants do not cover lands on Account and
- * renders perfectly — clean axe, no overflow, and the census one page longer
- * than the tree it actually read. Two of the three pages this list gained were
- * doing exactly that. The active row in the settings level carries the tab it
- * points at, which is the cheapest thing on screen that can tell the two apart.
+ * An address naming a page this mock's grants do not cover lands on the access
+ * boundary and renders perfectly — clean axe, no overflow, and the census one
+ * page longer than the tree it actually read. Two of the three pages this list
+ * gained were doing exactly that. The active row in the settings level carries
+ * the tab it points at, which is the cheapest thing on screen that can tell the
+ * two apart.
  */
 async function expectSettingsViewLanded(page: Page, view: string) {
   if (!view.startsWith("settings/")) {
@@ -218,46 +219,6 @@ async function expectShellRendered(page: Page) {
 }
 
 /**
- * How far the PAGE scrolls sideways, and which scroller does it.
- *
- * NOT `document.body.scrollWidth`, which is what this sweep used to read. The
- * shell pins `.main` to `overflow: hidden` (shell.css) and gives `.scroll` an
- * `overflow-y: auto` that computes `overflow-x` to `auto` with it, so wide
- * content scrolls INSIDE the page's own scroller and the body never grows a
- * pixel. Measured across all twelve settings tabs the body reported 0 while
- * `.scroll` itself overflowed by up to 273px — the assertion was structurally
- * incapable of failing, whatever the layout did.
- *
- * So this reads the two elements that actually scroll the page: the document,
- * and the shell's content column. Anything a screen spills — a header row, a
- * card, a table — spills into one of them, and it is the reader panning THOSE
- * that §3.8 forbids.
- *
- * A component that declares a horizontal scroll region of its own is not this
- * and is deliberately not measured: `.table-scroll` around a table too wide for
- * a phone (atoms.css) is the sanctioned answer to wide content, and it is
- * bounded by its card, so the page around it never moves.
- */
-async function pageOverflow(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const scrollers: { name: string; element: Element }[] = [
-      { name: "the document", element: document.documentElement },
-      ...Array.from(document.querySelectorAll(".scroll")).map((element) => ({
-        name: "the shell content scroller (.scroll)",
-        element,
-      })),
-    ];
-    return scrollers
-      .map(({ name, element }) => ({
-        name,
-        overflow: element.scrollWidth - element.clientWidth,
-      }))
-      .filter(({ overflow }) => overflow > 0)
-      .map(({ name, overflow }) => `${name}: ${overflow}px past the viewport`);
-  });
-}
-
-/**
  * The one account affordance, at the foot of the sidebar.
  *
  * Scoped to the top bar's trailing cluster rather than found by name alone:
@@ -281,13 +242,12 @@ function accountTrigger(page: Page) {
 const primaryDestinations = [
   "Startseite",
   "Kontakte",
-  "Firmen",
+  "Unternehmen",
   "Leads",
   "Deals",
   "Projekte",
-  "Filter & Ansichten",
-  "Analytics",
-  "Margince fragen",
+  "Filter und Ansichten",
+  "Analysen",
 ];
 
 // settleAnimations' own case, because the gap it closes is invisible to every
@@ -356,10 +316,10 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
     "aria-label",
     "Deals",
   );
-  await page.locator('nav.rail a[aria-label="Analytics"]').click();
+  await page.locator('nav.rail a[aria-label="Analysen"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Analytics",
+    "Analysen",
   );
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
 });
@@ -395,7 +355,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await page.goto("/#/settings/privacy");
   const settingsHeading = page.getByRole("heading", { level: 1 });
   await expect(settingsHeading).toHaveCount(1);
-  await expect(settingsHeading).toHaveText("Datenschutz & Aufbewahrung");
+  await expect(settingsHeading).toHaveText("Datenschutz und Aufbewahrung");
   await expect(page.locator(".rail .navheading").first()).toHaveText(
     "Einstellungen",
   );
@@ -416,6 +376,20 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
   await input.fill("Pipeline");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#\/deals$/);
+});
+
+// A dialog makes the rest of the app unreachable, the palette with it. Raised
+// over one, Escape closed the dialog underneath and left the palette standing.
+test("AC-shell-3: ⌘K does nothing while a dialog is up", async ({ page }) => {
+  await page.goto("/#/deals/new");
+  const form = page.getByRole("dialog", { name: "Neuer Deal" });
+  await expect(form).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.press("Escape");
+  await expect(form).toHaveCount(0);
+  await expect(
+    page.getByRole("searchbox", { name: "Befehlspalette" }),
+  ).toHaveCount(0);
 });
 
 test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
@@ -454,10 +428,8 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
   ).toHaveAttribute("href", "#/settings");
-  // ONE row in here navigates. Counted as anchors rather than by the link role:
-  // inside a `role="menu"` every row carries `role="menuitem"`, which is what a
-  // menu's keyboard contract needs and what replaces the implicit link role.
-  await expect(menu.locator("a[href]")).toHaveCount(1);
+  await expect(menu.getByRole("menuitem", { name: de["scheduling.myLink"] })).toHaveAttribute("href", "#/book");
+  await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
   // Appearance is a submenu, not a control sitting open in the menu: three
@@ -485,7 +457,9 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   await page.goto("/#/settings/account");
   // The card the language row sits in: password, sign-off and language are one
   // account card now rather than a Preferences card of their own.
-  await expect(page.getByRole("heading", { name: "Ihr Konto" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
+  ).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
   // The surface around the control follows the choice, not just the control's
@@ -506,7 +480,9 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
   page,
 }) => {
   await page.goto("/#/settings/account");
-  await expect(page.getByRole("heading", { name: "Ihr Konto" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
+  ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
   await expect(
     page.getByRole("combobox", { name: "Darstellung" }),
@@ -970,7 +946,7 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
   await card.dragTo(won);
-  await expect(page.getByText("Nach Won verschieben?")).toBeVisible();
+  await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
   // The first Confirm is REFUSED, and that is the criterion rather than a
   // detour: this deal carries no signed contract, and a win without paper has
@@ -1018,14 +994,11 @@ test("AC-inbox: the staged decision is on the day's queue", async ({
   ).toBeVisible();
 });
 
-test("AC-book: the booking page renders rail-less with live slots", async ({
-  page,
-}) => {
+test("AC-book: the reusable booking link is available for sharing and signatures", async ({ page }) => {
   await page.goto("/#/book");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: /06\.07\.2026/ }).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: de["scheduling.myLink"] })).toHaveValue("https://crm.example.test/#/book/host-1");
+  await expect(page.getByRole("button", { name: de["scheduling.copyLink"] })).toBeEnabled();
 });
 
 test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enable is the deliberate second step", async ({
@@ -1051,7 +1024,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   // The outcome lands on the CARD: by the time it is true the dialog that
   // produced it is gone.
   await expect(
-    page.getByText("Pausiert angelegt — es läuft nichts, bis du aktivierst."),
+    page.getByText("Pausiert angelegt. Nichts läuft, bis sie aktiviert ist."),
   ).toBeVisible();
   const row = page.locator('[data-automation="au-2"]');
   // The row states its status on the control that changes it, rather than on a
@@ -1101,7 +1074,11 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // never the label — attribution exists so somebody can be asked about a
   // change, and an identifier cannot be asked anything.
   await page.goto("/#/settings/audit");
-  await expect(page.getByText("Du", { exact: true })).toBeVisible();
+  // The settings sidebar's own group heading also reads "Du", so the actor
+  // label is read inside the trail's panel — the count-0 below proves the
+  // filter dropped the ROW rather than that the sidebar went missing.
+  const trail = page.getByRole("region", { name: "Audit-Log" });
+  await expect(trail.getByText("Du", { exact: true })).toBeVisible();
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
   await expect(page.getByText("über einen Agenten")).toBeVisible();
   // The agent's own identifier is not shown at all when a human stands behind it.
@@ -1122,12 +1099,14 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
     .click();
   // The actor filter still speaks the API's `type:id` vocabulary, which is the
   // spelling the column itself carries.
-  await page.getByRole("textbox", { name: "Akteur" }).fill("agent:runner");
+  await page
+    .getByRole("textbox", { name: de["settings.auditActor"] })
+    .fill("agent:runner");
   // The matching row stays AND both non-matching rows go. Asserting only that
   // the agent row is still visible would pass on a filter that did nothing —
   // it was already on screen before the filter was typed.
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
-  await expect(page.getByText("Du", { exact: true })).toHaveCount(0);
+  await expect(trail.getByText("Du", { exact: true })).toHaveCount(0);
   await expect(page.getByText("connector:gmail", { exact: true })).toHaveCount(
     0,
   );
@@ -1154,65 +1133,41 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   await expect(page.getByText(/mgp_/)).toHaveCount(0);
 });
 
-test("AC-book-public (B-EP09.14): consent gates booking and the policy passes through verbatim", async ({
-  page,
-}) => {
+test("AC-book-public: consent gates calendar invitation and its wording passes through verbatim", async ({ page }) => {
   await page.goto("/#/book/host-1");
   await expect(page.locator("nav.rail")).toHaveCount(0);
-  const slot = page.getByRole("button", { name: /06\.07\.2026/ }).first();
-  await expect(slot).toBeDisabled();
-  await page.getByRole("textbox", { name: "Dein Name" }).fill("Jonas Beispiel");
-  await page
-    .getByRole("textbox", { name: "Deine E-Mail" })
-    .fill("jonas@beispiel.example");
-  await expect(slot).toBeDisabled();
-  await page.getByRole("checkbox").check();
-  await expect(slot).toBeEnabled();
-  const wording = page.locator("[data-consent-wording]");
-  // The assert above waited on the SLOT; this is a different element, and a
-  // bare textContent would answer null on the tick before it paints.
-  await expect(wording).toBeVisible();
-  const shownWording = await wording.textContent();
-  const requestPromise = page.waitForRequest(
-    (request) =>
-      request.method() === "POST" &&
-      request.url().includes("/public/booking/host-1"),
-  );
-  await slot.click();
+  const submit = page.getByRole("button", { name: de["scheduling.book"] });
+  await expect(submit).toBeDisabled();
+  await page.getByRole("button", { name: /06\.07\.2026/ }).first().click();
+  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
+  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
+  await expect(submit).toBeDisabled();
+  const consent = page.getByRole("checkbox", { name: de["book.consentWording"] });
+  await consent.check();
+  await expect(submit).toBeEnabled();
+  const shownWording = await page.getByText(de["book.consentWording"], { exact: true }).textContent();
+  const requestPromise = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/public/booking/host-1"));
+  await submit.click();
   const request = await requestPromise;
   const body = request.postDataJSON();
-  // the wording the visitor SAW is byte-for-byte what was submitted
   expect(body.consent.wording).toBe(shownWording);
   expect(body.consent.policy_version).toBeTruthy();
-  // And NO purpose id. Purpose ids are per-installation uuids minted at seed
-  // time with no anonymous read of them, so anything an anonymous page put here
-  // would be a value it was never given — which is what a stand-in id did, on
-  // every installation, until the door learned to resolve its own lane. The
-  // page names the wording it showed and nothing the server already knows.
   expect(body.consent.purpose_id).toBeUndefined();
-  // Exact: this build transmits nothing, so the card confirms the slot and
-  // promises nothing beyond it. A substring is satisfied by a longer sentence
-  // that does promise something, which is the claim this copy had removed.
-  await expect(page.getByText("Gebucht.", { exact: true })).toBeVisible();
+  expect(request.headers()["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/#\/book\/manage-guest-booking$/);
+  await expect(page.getByRole("heading", { name: de["scheduling.pending"] })).toBeVisible();
+  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
 });
 
-test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({
-  page,
-}) => {
+test("AC-book-public-409: a taken slot degrades honestly — no fabricated confirmation", async ({ page }) => {
   await page.goto("/#/book/host-1");
-  await page.getByRole("textbox", { name: "Dein Name" }).fill("Jonas Beispiel");
-  await page
-    .getByRole("textbox", { name: "Deine E-Mail" })
-    .fill("jonas@beispiel.example");
+  await page.getByRole("textbox", { name: de["book.name"], exact: true }).fill("Jonas Beispiel");
+  await page.getByRole("textbox", { name: de["book.email"] }).fill("jonas@beispiel.example");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /12:00/ }).click();
-  await expect(
-    page.getByText(
-      "Die Buchung ging nicht durch — es wurde nichts eingetragen.",
-    ),
-  ).toBeVisible();
+  await page.getByRole("button", { name: de["scheduling.book"] }).click();
   await expect(page.getByText("slot no longer available")).toBeVisible();
-  await expect(page.getByText("Gebucht.")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: de["scheduling.confirmed"] })).toHaveCount(0);
 });
 
 test("AC-onboarding-1: onboarding is the rail-less conversational shell", async ({
@@ -1235,9 +1190,9 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   await page.goto("/#/onboarding");
   await expect(page.locator("nav.rail")).toHaveCount(0);
   await expect(page.locator(".stepper")).toHaveCount(0);
-  await expect(page.getByLabel("Deine Website-Adresse")).toBeVisible();
+  await expect(page.getByLabel("Website-Adresse")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Meine Website lesen" }),
+    page.getByRole("button", { name: "Website lesen" }),
   ).toBeVisible();
   // The thread belongs to the working view, not the gate.
   await expect(
@@ -1388,7 +1343,7 @@ test.describe("§3.8: 390px mobile", () => {
       // merely the first control the row happens to lay out.
       //
       // Taking the first match was wrong in the way that matters: on an
-      // approval row the first control is the evidence link ("Freigabe-Detail"),
+      // approval row the first control is the evidence link ("Details zur Freigabe"),
       // which sits well above the Accept and Reject buttons that actually
       // answer the row. The test passed while the verb a rep presses was still
       // below the fold — a measurement of the wrong control is a green that
@@ -1534,74 +1489,112 @@ test.describe("§3.8: 390px mobile", () => {
     expect(tall).toEqual([]);
   });
 
-  // The queue is WORKABLE with a thumb, not merely present.
-  //
-  // What stood here asserted that one text node was visible at 390px, and it
-  // passed for as long as the screen was unusable: the row is a three-column
-  // line whose verbs never yield width, so the title column was squeezed to a
-  // few characters while three buttons held their full size beside it. A test
-  // that cannot tell that from a working screen is part of the defect.
-  //
-  // So this measures the row itself — every row, not the first — and the
-  // targets a rep presses.
-  test("S-E11.2: the day's queue is workable with a thumb at 390px", async ({
-    page,
-  }) => {
-    await page.goto("/#/worklist");
-    await page.waitForLoadState("networkidle");
-    await expect(
-      page.getByText(/Send the follow-up to Anna Weber/).first(),
-    ).toBeVisible();
+  // A THUMB, not a mouse aimed at a phone-sized window. Every touch floor in
+  // this product is declared under `@media (pointer: coarse)`, and Chromium
+  // resolves that off touch emulation rather than off the viewport — so a run
+  // without it measures the desktop sizes and reports them as a phone's.
+  test.describe("under a coarse pointer", () => {
+    test.use({ hasTouch: true });
 
-    // Nothing runs off the side. The row wraps instead of pushing the page
-    // wider, which is the difference between a stacked layout and a squeezed
-    // one.
-    expect(await pageOverflow(page)).toEqual([]);
-
-    // The text column is wide enough to read a sentence in. Half the viewport
-    // is a low bar deliberately: it is the one this layout FAILED, at roughly a
-    // quarter, and a ceiling tuned to today's rows would break on tomorrow's
-    // longer verb.
-    const narrow = await page.evaluate(() => {
-      const floor = 390 / 2;
-      return Array.from(document.querySelectorAll(".worklist-row-text"))
-        .map((element) => ({
-          width: element.getBoundingClientRect().width,
-          text: (element.textContent ?? "").slice(0, 40),
-        }))
-        .filter(({ width }) => width < floor)
-        .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
-    });
-    expect(narrow).toEqual([]);
-
-    // Every verb in the QUEUE is a real target — the rows and the focus card
-    // above them, which is the work this screen exists for. The focus CTA is a
-    // full-size `.btn` and already clears the floor through `--controlHeight`; it
-    // is measured anyway, because a rule that holds only where somebody
-    // remembered to look is not a floor.
+    // The queue is WORKABLE with a thumb, not merely present.
     //
-    // The readings strip above is deliberately NOT measured. Its "open this
-    // lane" link is a 24px target on a phone and genuinely too small, but it
-    // belongs to the design system's StatCard rather than to this screen —
-    // fixing it here would size every reading card in the product from the
-    // worklist's stylesheet. Filed as #3961.
+    // What stood here asserted that one text node was visible at 390px, and it
+    // passed for as long as the screen was unusable: the row is a three-column
+    // line whose verbs never yield width, so the title column was squeezed to a
+    // few characters while three buttons held their full size beside it. A test
+    // that cannot tell that from a working screen is part of the defect.
     //
-    // Visible controls only: the page carries collapsed panels whose buttons
-    // lay out at zero height, and those are not targets a thumb can miss.
-    const small = await page.evaluate(() => {
-      const controls = document.querySelectorAll(
-        ".worklist-list button, .worklist-list a.btn, .worklist-list .link-button",
-      );
-      return Array.from(controls)
-        .filter((element) => element.getBoundingClientRect().height > 0)
-        .map((element) => ({
-          height: element.getBoundingClientRect().height,
-          label: (element.textContent ?? "").trim(),
-        }))
-        .filter(({ height }) => height < 44)
-        .map(({ height, label }) => `${label}: ${Math.round(height)}px`);
+    // So this measures the row itself — every row, not the first — and the
+    // targets a rep presses.
+    test("the day's queue is workable with a thumb at 390px", async ({
+      page,
+    }) => {
+      await page.goto("/#/worklist");
+      await page.waitForLoadState("networkidle");
+      await expect(
+        page.getByText(/Send the follow-up to Anna Weber/).first(),
+      ).toBeVisible();
+
+      // Nothing runs off the side. The row wraps instead of pushing the page
+      // wider, which is the difference between a stacked layout and a squeezed
+      // one.
+      expect(await pageOverflow(page)).toEqual([]);
+
+      // The text column is wide enough to read a sentence in. Half the viewport
+      // is a low bar deliberately: it is the one this layout FAILED, at roughly a
+      // quarter, and a ceiling tuned to today's rows would break on tomorrow's
+      // longer verb.
+      const narrow = await page.evaluate(() => {
+        const floor = 390 / 2;
+        return Array.from(document.querySelectorAll(".worklist-row-text"))
+          .map((element) => ({
+            width: element.getBoundingClientRect().width,
+            text: (element.textContent ?? "").slice(0, 40),
+          }))
+          .filter(({ width }) => width < floor)
+          .map(({ width, text }) => `${Math.round(width)}px: ${text}`);
+      });
+      expect(narrow).toEqual([]);
+
+      // Every control this screen is FOR is a real target: the queue's rows and
+      // the readings strip above them, whose "Open →" is the way into a lane.
+      // The strip used to be left out of this sweep on the argument that its
+      // door belongs to the design system's StatCard rather than to this screen
+      // — true of where the fix goes, and no reason for the screen to stop
+      // measuring a control a rep presses on it.
+      //
+      // TWO censuses, not one list, and each reports what it FOUND before it
+      // reports what was too small. A selector that matches nothing returns an
+      // empty list of offenders — the same value a clean screen returns — so a
+      // renamed class would leave this sweep measuring half the page and still
+      // green. Counting first is what makes a region going missing a red.
+      //
+      // Both spellings of the strip are named: this route draws the Brief's
+      // readings today and the worklist's own strip is the same component in
+      // the same place, so whichever is present is the one a rep presses.
+      //
+      // Visible controls only: the page carries collapsed panels whose buttons
+      // lay out at zero height, and those are not targets a thumb can miss.
+      const targets = await page.evaluate(() => {
+        const census = (scopes: readonly string[]) => {
+          const found = scopes.flatMap((scope) =>
+            Array.from(
+              document.querySelectorAll(
+                `${scope} button, ${scope} a.btn, ${scope} .link-button`,
+              ),
+            ),
+          );
+          // One control can answer to two of those selectors (a `.link-button`
+          // that is a `<button>`), and a census that counted it twice would
+          // report a page busier than it is.
+          const visible = Array.from(new Set(found)).filter(
+            (element) => element.getBoundingClientRect().height > 0,
+          );
+          return {
+            counted: visible.length,
+            small: visible
+              .map((element) => ({
+                height: element.getBoundingClientRect().height,
+                label: (element.textContent ?? "").trim(),
+              }))
+              .filter(({ height }) => height < 44)
+              .map(({ height, label }) => `${label}: ${Math.round(height)}px`),
+          };
+        };
+        return {
+          readings: census([".brief-readings", ".worklist-readings"]),
+          queue: census([".worklist-list"]),
+          main: census([".main"]),
+        };
+      });
+
+      expect(targets.readings.counted).toBeGreaterThan(0);
+      expect(targets.readings.small).toEqual([]);
+      expect(targets.queue.counted).toBeGreaterThan(0);
+      expect(targets.queue.small).toEqual([]);
+      expect(targets.main.counted).toBeGreaterThan(0);
+      expect(targets.main.small).toEqual([]);
     });
-    expect(small).toEqual([]);
   });
 
   // The bar's centre cell and the panel it opens, neither of which exists above
@@ -1860,6 +1853,7 @@ const ADDRESSED_VIEWS = [
   "companies/o-brandt/tasks",
   "analytics/forecast",
   "analytics/pipeline",
+  "analytics/questions",
   // The three record headers whose verbs are icon-only: the name a sighted
   // reader gets on hover is not the name axe checks, so what is swept here is
   // the other half — that every square carries an accessible name at all, and
@@ -1996,6 +1990,125 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");
+  });
+
+  // A report row's explain drawer, with the permission notice in it: the
+  // closed page sweeps only the icon-only trigger, never what it opens.
+  test("no AA violations with a report row's explain drawer open", async ({
+    page,
+  }) => {
+    await page.goto("/#/analytics/performance");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page
+      .getByRole("button", {
+        name: de["explain.cell"].replace("{figure}", "Qualify"),
+      })
+      .click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer.getByText(de["explain.excluded_one"])).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "analytics — a row's explain drawer open");
+  });
+
+  // The Questions section with a question asked and one of its rows opened:
+  // the builder's rows of pickers, the answer table and the drawer it opens
+  // are three surfaces the closed tab never draws. The engine's three routes
+  // are stubbed here because the shared mock answers no analytics question.
+  test("no AA violations on an asked question with its drawer open", async ({
+    page,
+  }) => {
+    const json = (body: unknown) => ({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+    await page.route("**/analytics/schema", (route) =>
+      route.fulfill(
+        json({
+          version: "v1",
+          entities: [
+            {
+              name: "deals-by-stage",
+              group_by: ["currency", "stage_id", "status"],
+              measures: ["amount_minor"],
+            },
+          ],
+        }),
+      ),
+    );
+    await page.route("**/analytics/query", (route) =>
+      route.fulfill(
+        json({
+          columns: ["count"],
+          rows: [{ count: 12, _withheld: false }],
+          withheld: false,
+          total_safe: true,
+          schema_version: "v1",
+        }),
+      ),
+    );
+    await page.route("**/analytics/explain", (route) =>
+      route.fulfill(
+        json({
+          columns: ["id", "status"],
+          rows: [{ id: "d-fleet", status: "open" }],
+          withheld: false,
+          truncated: false,
+        }),
+      ),
+    );
+    await page.goto("/#/analytics/questions");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page
+      .getByRole("combobox", { name: de["analytics.q.population"] })
+      .click();
+    await page
+      .getByRole("option", { name: de["analytics.reportDealsByStage"] })
+      .click();
+    await page.getByRole("button", { name: de["analytics.q.ask"] }).click();
+    await page
+      .getByRole("button", {
+        name: de["explain.cell"].replace(
+          "{figure}",
+          de["analytics.q.allRecords"],
+        ),
+      })
+      .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(
+      page,
+      "analytics — an asked question's drawer open",
+    );
+  });
+
+  // The forecast's Shared links drawer with rows in it, and the confirmation a
+  // row's Close link stacks over it: the closed page sweeps only the trigger.
+  // The mock's admin holds no forecast grant, so this reader is given one.
+  test("no AA violations with the shared links drawer open", async ({
+    page,
+  }) => {
+    await openSharedLinks(page);
+    const drawer = page.getByRole("dialog", {
+      name: de["analytics.share.listTitle"],
+    });
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "analytics/forecast — shared links open");
+
+    // By the keyboard: a pointer left over the pressed row would start its
+    // hover transition back as the confirmation covers it, mid-sweep.
+    await drawer
+      .getByRole("button", { name: de["analytics.share.revoke"] })
+      .first()
+      .focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      page.getByRole("dialog", { name: de["analytics.share.closeTitle"] }),
+    ).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "analytics/forecast — close link asked");
   });
 
   // A list header FOLDS its verbs into one overflow menu below 1100px
@@ -2197,7 +2310,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
         await expect(
           page.getByRole("heading", {
             level: 1,
-            name: "Hallo, ich bin Margince.",
+            name: "Das ist Margince.",
           }),
         ).toBeVisible();
         const overflow = await page.evaluate(
@@ -2284,7 +2397,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
       await expect(
         page.getByRole("heading", {
           level: 1,
-          name: "Hallo, ich bin Margince.",
+          name: "Das ist Margince.",
         }),
       ).toBeAttached();
       // The class, not the tag: see the note beside the other `.auth-task`
@@ -2324,7 +2437,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     const headings = page.getByRole("heading", { level: 1 });
     await expect(headings).toHaveCount(1);
     await expect(
-      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
+      page.getByRole("heading", { level: 1, name: "Das ist Margince." }),
     ).toBeAttached();
     await expect(
       page.getByRole("heading", { level: 2, name: "Bei Margince anmelden" }),
@@ -2410,7 +2523,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     // The rail-less surface has no shell to check for; its own h1 is the proof
     // the screen rendered, and the block above already asserts that.
     await expect(
-      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
+      page.getByRole("heading", { level: 1, name: "Das ist Margince." }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "login");
@@ -2501,7 +2614,7 @@ test.describe("filters and views", () => {
   async function authorIndustryIs(page: Page) {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await page.getByRole("combobox", { name: "Feld" }).click();
-    await page.getByRole("option", { name: "industry" }).click();
+    await page.getByRole("option", { name: "Branche" }).click();
     await page.getByRole("combobox", { name: "Operator" }).click();
     await page.getByRole("option", { name: "ist", exact: true }).click();
     await page.getByRole("textbox", { name: "Wert" }).fill("automotive");
@@ -2516,26 +2629,26 @@ test.describe("filters and views", () => {
     // Before anything is authored the count says so, rather than showing a zero
     // that would read as "no companies match".
     await expect(
-      page.getByText("Bedingung hinzufügen, um die Treffer zu sehen"),
+      page.getByText("Bedingung hinzufügen, um Treffer anzuzeigen"),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
 
     // The field picker is the SERVER's vocabulary, not a list this screen keeps:
-    // `industry` and `lifecycle` are company fields, `tag` is the leaf that
-    // is an EXISTS over a join rather than a column, and none of them is
-    // spelled anywhere in the frontend.
+    // `industry` and `lifecycle` are company fields and `tag` is the leaf that
+    // is an EXISTS over a join rather than a column. The screen only names each
+    // field the server sends, in the reader's language.
     await page.getByRole("combobox", { name: "Feld" }).click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
-      "owner id",
-      "industry",
-      "lifecycle",
-      "tag",
+      "Zuständig",
+      "Branche",
+      "Lebenszyklus",
+      "Tag",
       // The custom field, and it sorts after the core ones — a reader scanning
       // for a column they added finds it in one place rather than interleaved.
       "fleet size",
     ]);
-    await page.getByRole("option", { name: "industry" }).click();
+    await page.getByRole("option", { name: "Branche" }).click();
 
     // And the operator set is the FIELD's. `industry` is text, so `enthält` is
     // offered; the tag clause in AC-4 proves the narrowing by its absence.
@@ -2553,7 +2666,7 @@ test.describe("filters and views", () => {
 
     // The count is the SERVER's — 812 is the fixture's match_count, a number no
     // arithmetic on the two returned rows could produce.
-    await expect(page.getByText("812 Firmen treffen zu")).toBeVisible();
+    await expect(page.getByText("Passende Unternehmen: 812")).toBeVisible();
   });
 
   // #1286 made custom fields and tags selectable beside core fields, and the
@@ -2600,15 +2713,18 @@ test.describe("filters and views", () => {
     // The join control is present before a second clause exists, because it is a
     // property of the GROUP rather than of having two of anything.
     const joins = page.getByRole("group", {
-      name: "Wie diese Gruppe ihre Bedingungen verknüpft",
+      name: "Verknüpfungsmodus",
     });
     await expect(joins).toHaveCount(1);
     await expect(
-      joins.getByRole("button", { name: "ALLE · UND", pressed: true }),
+      joins.getByRole("button", { name: "Alle (UND)", pressed: true }),
     ).toBeVisible();
-    await joins.getByRole("button", { name: "BELIEBIGE · ODER" }).click();
+    await joins.getByRole("button", { name: "Mindestens eine (ODER)" }).click();
     await expect(
-      joins.getByRole("button", { name: "BELIEBIGE · ODER", pressed: true }),
+      joins.getByRole("button", {
+        name: "Mindestens eine (ODER)",
+        pressed: true,
+      }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
@@ -2619,7 +2735,7 @@ test.describe("filters and views", () => {
     // operators — `enthält` is gone, and a picker that offered it would produce
     // a 422 the reader could not interpret.
     await page.getByRole("combobox", { name: "Feld" }).first().click();
-    await page.getByRole("option", { name: "tag" }).click();
+    await page.getByRole("option", { name: "Tag", exact: true }).click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
@@ -2665,7 +2781,7 @@ test.describe("filters and views", () => {
     // the reader is told this is a sample rather than the selection.
     await expect(
       page.getByText(
-        "Die erste Seite der Treffer — genug, um den Filter zu prüfen, nicht die gesamte Auswahl.",
+        "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
       ),
     ).toBeVisible();
   });
@@ -2676,7 +2792,7 @@ test.describe("filters and views", () => {
     await page.goto("/#/filters/deals");
     await expectShellRendered(page);
     const objects = page.getByRole("group", {
-      name: "Welche Datensätze gefiltert werden",
+      name: "Datensatztyp",
     });
     await expect(
       objects.getByRole("button", { name: "Deals", pressed: true }),
@@ -2811,7 +2927,7 @@ test.describe("stage automation, in German", () => {
 
     // The way back is a deliberate act with its own confirmation, not a
     // toggle: lifting a safety stop by mis-click is the failure this guards.
-    await page.getByRole("button", { name: "Wieder starten" }).click();
+    await page.getByRole("button", { name: "Fortsetzen" }).click();
     await expect(
       page.getByText(/überspringt die Schwelle nicht/),
     ).toBeVisible();
@@ -2824,11 +2940,89 @@ test.describe("stage automation, in German", () => {
     await page.goto("/#/settings/stageautomation");
     await page.waitForLoadState("networkidle");
 
-    // "Rückgängig", with the window a contact actually has. A screen that
+    // "Rückgängig machen", with the window a contact actually has. A screen that
     // offered undo without saying how long it lasts leaves somebody to find
     // out by trying it too late.
     await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();
     // And nothing about a stop, because there is none.
-    await expect(page.getByText("Margince hat das gestoppt")).toBeHidden();
+    await expect(page.getByText("Von Margince ausgesetzt")).toBeHidden();
   });
+});
+
+const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
+  id: `share-${index}`,
+  kind: index === 1 ? "snapshot" : "live",
+  target: "forecast",
+  scope_kind: "workspace",
+  created_at: `2026-03-0${index + 1}T09:00:00Z`,
+  expires_at: `2026-04-0${index + 1}T09:00:00Z`,
+}));
+
+// The analytics forecast for a reader who may share it, with the drawer open
+// from its trigger by the KEYBOARD, so every caller starts from the same place.
+async function openSharedLinks(page: Page) {
+  await page.route(/\/v1\/me$/, (route) =>
+    route.fulfill({ json: meFixture({ allow: { forecast: ["create"] } }) }),
+  );
+  await page.route(/\/v1\/forecast\/shares$/, (route) =>
+    route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
+  );
+  await page.goto("/#/analytics/forecast");
+  await page.waitForLoadState("networkidle");
+  await expectShellRendered(page);
+  const trigger = page.getByRole("button", {
+    name: de["analytics.share.listOpen"],
+  });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page
+      .getByRole("dialog", { name: de["analytics.share.listTitle"] })
+      .getByRole("button", { name: de["analytics.share.revoke"] }),
+  ).toHaveCount(SHARED_LINK_ROWS.length);
+  return trigger;
+}
+
+test("the shared links drawer is worked by the keyboard alone", async ({
+  page,
+}) => {
+  const trigger = await openSharedLinks(page);
+  const drawer = page.getByRole("dialog", {
+    name: de["analytics.share.listTitle"],
+  });
+  const closeLinks = drawer.getByRole("button", {
+    name: de["analytics.share.revoke"],
+  });
+
+  // Focus moved in: onto the drawer itself, which opened while its list was
+  // still loading, and from there Tab reaches the first link's Close link.
+  const focusInDrawer = () =>
+    page.evaluate(
+      () => document.activeElement?.closest('[role="dialog"]') !== null,
+    );
+  expect(await focusInDrawer()).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(closeLinks.first()).toBeFocused();
+  // Tab walks the other rows and the way out, then comes back round inside.
+  for (let press = 0; press < SHARED_LINK_ROWS.length; press += 1) {
+    await page.keyboard.press("Tab");
+    expect(await focusInDrawer()).toBe(true);
+  }
+  await page.keyboard.press("Tab");
+  await expect(closeLinks.first()).toBeFocused();
+
+  // Close link opens its confirmation, and Escape there leaves the drawer.
+  await page.keyboard.press("Enter");
+  const confirm = page.getByRole("dialog", {
+    name: de["analytics.share.closeTitle"],
+  });
+  await expect(confirm).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(confirm).toBeHidden();
+  await expect(closeLinks.first()).toBeFocused();
+
+  // Escape on the drawer closes it and hands focus back to its trigger.
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
 });

@@ -12,7 +12,8 @@ import "errors"
 // Provenance says where a value came from and which actor put it there.
 type Provenance struct {
 	// Source identifies the originating record or surface,
-	// e.g. "gmail:msg-18c2…", "ui:contact-form", "api".
+	// e.g. "gmail:msg-18c2…", "ui:contact-form", "api" — a namespaced surface
+	// name, never the record's own source column (RecordSourceManual).
 	Source string
 
 	// CapturedBy identifies the writing actor,

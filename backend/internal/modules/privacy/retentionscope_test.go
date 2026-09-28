@@ -62,6 +62,7 @@ func TestParseRetentionScopeSplitsObjectTypeFromCategory(t *testing.T) {
 		"deal/won":                   {ObjectType: "deal", Category: "won"},
 		"ai_call_payload/content":    {ObjectType: "ai_call_payload", Category: "content"},
 		"raw_capture":                {ObjectType: "raw_capture"},
+		"deal_risk_day":              {ObjectType: "deal_risk_day"},
 	}
 	if len(cases) != len(retentionSelectors) {
 		t.Fatalf("this table covers %d scopes, the selector table has %d — a new selector needs its pair pinned here",
@@ -233,6 +234,7 @@ func TestTheContractEnumAndTheSelectorTableAreTheSameSet(t *testing.T) {
 		crmcontracts.RetentionScopeDealwon,
 		crmcontracts.RetentionScopeAiCallPayloadcontent,
 		crmcontracts.RetentionScopeRawCapture,
+		crmcontracts.RetentionScopeDealRiskDay,
 	}
 	if len(enumMembers) != len(authorable) {
 		t.Fatalf("the contract enum has %d members and the selector table %d — "+

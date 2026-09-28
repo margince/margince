@@ -155,8 +155,91 @@ func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) er
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return ErrNoWorkspace
 	}
-
+	// A read composed from many statements binds ONE snapshot to the context
+	// and every store beneath it lands here; joining that snapshot is what
+	// makes the composition cost one transaction instead of forty.
+	if tx, joined := snapshotOf(ctx); joined {
+		return fn(tx)
+	}
 	return runTx(ctx, pool, fn)
+}
+
+// snapshotKey is the context key the ambient read snapshot travels under. A
+// package-private zero-size type, so nothing outside this file can reach the
+// transaction or plant one.
+type snapshotKey struct{}
+
+// snapshotOf answers the snapshot bound to ctx, if any.
+//
+//nolint:ireturn // pgx.Tx is this driver's transaction: an interface with no struct behind it to return.
+func snapshotOf(ctx context.Context) (pgx.Tx, bool) {
+	tx, ok := ctx.Value(snapshotKey{}).(pgx.Tx)
+	return tx, ok
+}
+
+// WithWorkspaceSnapshot runs fn against ONE read-only snapshot, which every
+// WithWorkspaceTx reached beneath it joins instead of opening its own.
+//
+// FOR A READ WHOSE ANSWER IS COMPOSED FROM MANY STATEMENTS, and the worklist is
+// the largest in the product: it assembles six fixed lanes and sixteen optional
+// ones, and before this each of those ~40 dependency calls paid BEGIN + SELECT
+// + COMMIT of its own — ~120 sequential round trips, which is most of the
+// 400 ms that surface answered in (margince#4912).
+//
+// THE CORRECTNESS ARGUMENT IS THE STRONGER ONE. Those lanes were reading in
+// twenty-odd different snapshots, so two lanes could disagree inside a single
+// answer — a deal that closed between lane 3 and lane 11 appeared in one and
+// not the other, and nothing on the response said so. REPEATABLE READ is what
+// makes one assembled day one instant.
+//
+// NOT READ-ONLY, deliberately, and the reason is connection count rather than
+// permissiveness. These reads are not pure: the brief lane resurfaces expired
+// snoozes and records the open as it reads. Under a READ ONLY snapshot each
+// such write has to open a transaction of its own, which it can only do while
+// the snapshot is still held — so every request would hold TWO pooled
+// connections at once, and at MaxConns 16 that many concurrent readers all wait
+// on each other for a seventeenth. One transaction per request is the whole
+// point; a guard that forces a second connection defeats it.
+//
+// What the writes get instead is the page's own fate: they commit with the
+// assembled day or not at all. That is the better reading of all three of them
+// — a brief whose page never rendered was not opened, and a walk nobody was
+// shown does not need freezing.
+//
+// A write whose failure must NOT take the page down with it still takes
+// Detached below, because a joined statement that errors aborts the whole
+// transaction and no swallow upstream can undo that.
+//
+// Nesting JOINS rather than opening a second transaction, so a composed read
+// that calls another composed read still costs one.
+func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
+		return ErrNoWorkspace
+	}
+	if _, joined := snapshotOf(ctx); joined {
+		return fn(ctx)
+	}
+	return runTxWith(ctx, pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, func(tx pgx.Tx) error {
+		return fn(context.WithValue(ctx, snapshotKey{}, tx))
+	})
+}
+
+// Detached returns ctx with no ambient snapshot on it, so a call made with it
+// opens its own transaction and commits on its own terms.
+//
+// FOR A CALL WHOSE FAILURE MUST NOT TAKE THE COMPOSED READ WITH IT, and that is
+// the only reason to reach for it. A joined statement that errors leaves the
+// shared transaction aborted, so a caller that swallows its own error and
+// carries on would poison every lane after it — the swallow reads as "this was
+// survivable" and the page dies anyway, two lanes later, somewhere else.
+//
+// It costs a second pooled connection held alongside the snapshot, so the
+// reason belongs at the call site and the call had better be rare.
+func Detached(ctx context.Context) context.Context {
+	if _, joined := snapshotOf(ctx); !joined {
+		return ctx
+	}
+	return context.WithValue(ctx, snapshotKey{}, nil)
 }
 
 // WithInfraTx runs fn in a transaction for the narrow infra paths that run

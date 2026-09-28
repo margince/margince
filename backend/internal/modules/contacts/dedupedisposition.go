@@ -167,7 +167,7 @@ func (s *Store) executeDedupeMergeTx(
 		_, err := mergeCompanyTx(ctx, tx, ids.From[ids.CompanyKind](loser), ids.From[ids.CompanyKind](winner), active)
 		return err
 	case entityLead:
-		_, err := mergeLeadTx(ctx, tx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner), active, capturedBy, s.stopCarrier)
+		_, err := s.mergeLeadTx(ctx, tx, ids.From[ids.LeadKind](loser), ids.From[ids.LeadKind](winner), active, capturedBy)
 		return err
 	default:
 		return fmt.Errorf("contacts: unmergeable entity type %q", entityType)

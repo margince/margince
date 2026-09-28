@@ -1,14 +1,10 @@
 # Editing records while other work is running
 
-The **Details** editors for companies, contacts, deals, and leads allow
-independent changes to the same record. For example, setting a company's
-Customer tier still saves if website research refreshes its logo in the meantime.
-No installation setting or database migration is required.
-
-Only the fields changed in the form are sent. A concurrent edit to another
-field is preserved. If somebody changes the same field, the save is refused;
-close the form, reload the record, review its current value, and edit again.
-The refusal does not partially apply the form.
+The **Details** editors for companies, contacts, deals and leads save only the
+fields a user changed, so independent edits to one record both land. What a user
+sees, including the refusal when a colleague saved the same field first, is in
+the handbook, [records.md](../handbook/records.md). This page is how the editors
+do it.
 
 Email, phone, domain, and relationship-type lists are each treated as one
 field because their endpoints replace the complete list. Address and social

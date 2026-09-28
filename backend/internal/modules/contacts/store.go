@@ -69,6 +69,11 @@ type Store struct {
 	// binds the consent store. Nil REFUSES the merge — see stopcarry.go: a
 	// merge that quietly dropped a stop resumes mail somebody refused.
 	stopCarrier StopCarrier
+	// consentCarrier and introCarrier move the links, bases and asks other
+	// modules keep about a retiring subject; nil refuses a merge that would
+	// strand one — see satellitecarry.go.
+	consentCarrier ConsentSatelliteCarrier
+	introCarrier   IntroCarrier
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a

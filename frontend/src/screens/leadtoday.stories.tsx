@@ -55,7 +55,7 @@ function Today({
   const recordZone = useRecordZone();
   return (
     <>
-      <TodayPanel onOpenTasks={() => {}} tasksLabel={t("lead.today.openTasks")}>
+      <TodayPanel onOpenTasks={() => {}} tasksLabel={t("today.workQueue")}>
         {leadTodoRows(
           lead(over),
           t,

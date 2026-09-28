@@ -168,13 +168,18 @@ func (w *briefGenerateWorker) mailTheMorning(
 		return fmt.Errorf("listing the runs still owed a message: %w", err)
 	}
 	for _, run := range awaiting {
-		repCtx, err := w.repContext(ctx, wsID, run.UserID)
+		repCtx, live, err := w.repContext(ctx, wsID, run.UserID)
 		if err != nil {
 			// The rep's authority is what the claim and the preference read run
 			// under. A seat that cannot be resolved is one this pass cannot mail
 			// for, and it must not take the others down with it.
 			w.log.WarnContext(ctx, "the morning brief was not mailed: the rep's authority did not resolve",
 				"user", run.UserID, "cause", err)
+			continue
+		}
+		if !live {
+			// A seat archived since its run was written has nobody left to read
+			// the message, and its unmailed run stays unmailed.
 			continue
 		}
 		w.mailMorning(repCtx, run, now, pass.hour)
@@ -187,7 +192,7 @@ func (w *briefGenerateWorker) mailTheMorning(
 // colleague's records on their behalf.
 func (w *briefGenerateWorker) repContext(
 	ctx context.Context, wsID, userID ids.UUID,
-) (context.Context, error) {
+) (context.Context, bool, error) {
 	return seatContext(ctx, w.users, wsID, userID)
 }
 
@@ -202,9 +207,14 @@ func (w *briefGenerateWorker) repContext(
 // once the whole workspace is assembled — mailTheMorning says why, and the short
 // version is that a run may be mailed hours after it is written.
 func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.UUID, now time.Time) error {
-	repCtx, err := w.repContext(ctx, wsID, userID)
+	repCtx, live, err := w.repContext(ctx, wsID, userID)
 	if err != nil {
 		return err
+	}
+	if !live {
+		// A seat archived between the roster read and its turn has no morning
+		// left to assemble, and it must not fail the workspace's pass.
+		return nil
 	}
 	// The run itself is not read back here. SnapshotRun writes it, and the
 	// mailing pass reads whatever is still unmailed for the day — including

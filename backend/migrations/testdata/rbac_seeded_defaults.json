@@ -155,7 +155,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": true,
@@ -324,6 +324,18 @@
         "delete": false,
         "read": true,
         "update": true
+      },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "team_oversight": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "user_admin": {
         "create": true,
@@ -508,7 +520,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": false,
@@ -676,6 +688,18 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "team_oversight": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "user_admin": {
@@ -861,7 +885,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": false,
@@ -1026,6 +1050,18 @@
         "update": false
       },
       "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_lead": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "team_oversight": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1214,7 +1250,7 @@
         "create": true,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": true,
@@ -1379,6 +1415,18 @@
         "update": true
       },
       "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_lead": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_oversight": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1737,6 +1785,18 @@
         "read": false,
         "update": false
       },
+      "team_lead": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_oversight": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "user_admin": {
         "create": false,
         "delete": false,
@@ -1920,7 +1980,7 @@
         "create": false,
         "delete": false,
         "read": true,
-        "update": false
+        "update": true
       },
       "fx_rate": {
         "create": false,
@@ -2085,6 +2145,18 @@
         "update": false
       },
       "team_admin": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_lead": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "team_oversight": {
         "create": false,
         "delete": false,
         "read": false,

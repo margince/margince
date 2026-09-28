@@ -3,23 +3,17 @@
 
 package attention
 
-// How the day is ORDERED.
+// How the day is ORDERED. The lane feed answers "which producers have rows?";
+// this answers "what should I do next?", which needs a rule rather than a layout.
 //
-// The lane feed answers "which producers have rows?". This answers "what should
-// I do next?", which is a different question and needs a rule rather than a
-// layout: fourteen lanes leave a reader comparing the position of one panel with
-// another to work out that an item several screens down matters more.
+// HARD LEVELS first, tie-breaks only inside a level. A product decision and not
+// a score, because a score lets a large enough pile of cheap work outrank a
+// customer waiting: sixty duplicate merges never reach the top, one unanswered
+// buyer always does.
 //
-// The rule is HARD LEVELS first, tie-breaks only inside a level. That ordering
-// is a product decision and not a score, because a score lets a large enough
-// pile of cheap work outrank a customer waiting — which is exactly the failure
-// the ranked queue exists to end. Sixty duplicate merges never reach the top;
-// one unanswered buyer always does.
-//
-// Inside a level the tie-breaks run deadline → expected revenue → waiting days →
-// relationship → occurrence. Deadline leads because a date somebody agreed to is
-// the one fact on the page that expires; a bigger deal closing in nine months
-// can wait a day, and a smaller one closing tomorrow cannot.
+// Inside a level: deadline → expected revenue → waiting days → relationship →
+// occurrence. Deadline leads because a date somebody agreed to is the one fact
+// on the page that expires.
 
 import (
 	"time"
@@ -101,6 +95,13 @@ type ranked struct {
 	// both published the bounded number as though it were the real one: a row
 	// saying "waiting 180 days" while its own explanation compared 30 against
 	// 20, which is a reason nobody can check.
+	// threaded says the message behind a waiting row belongs to a conversation.
+	//
+	// Carried on the ranked row rather than on the wire item, because it is not
+	// a fact a client needs — what a client needs is the dispositions it
+	// produces, which is what travels. Zero for every other source, and read
+	// only where the source is waiting.
+	threaded bool
 	// pinned says the reader put this row at the top, and semanticLevel is the
 	// level its own classifier gave it before the pin overwrote item.Level.
 	//
@@ -252,7 +253,7 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// classifier, so a source added later carries a primary action by
 		// arriving in this loop instead of by its author remembering to.
 		if item.Source == sourceWaiting {
-			offered := waitingDispositions()
+			offered := waitingDispositions(row.threaded)
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)

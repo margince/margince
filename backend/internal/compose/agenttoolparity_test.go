@@ -209,6 +209,11 @@ var composedIntents = map[string]bool{
 	// document is composed from the contract shapes, so it names nothing about
 	// a workspace at all.
 	"describe_record_fields": true,
+	// search_report_evidence composes explainReportRunCell's drill-through
+	// with the search module's bounded ranking and classification, so no one
+	// operation declares it. Read-only; every listed record is read back
+	// through the provider under the caller's own grants.
+	"search_report_evidence": true,
 	// search_context ranks across record types through the retrieval index,
 	// which no single list operation is: `GET /search` is the lexical half
 	// alone and answers no vector lane, and the records the sweep names are
@@ -226,16 +231,6 @@ var composedIntents = map[string]bool{
 	// a different question from "who does this payload name". Read-only, and
 	// every record it names is read back through the datasource seam.
 	"resolve_entities": true,
-	// check_location_support composes over NOTHING, which makes it the odd entry
-	// in this map and worth saying rather than filing quietly. It reads no
-	// record and no principal: it answers what this build ASKED its host for,
-	// and the finding itself is produced in the browser by the card beside it.
-	// There is no operation to declare it because there is no operation — a
-	// second door onto it would be a door onto nothing.
-	//
-	// TEMPORARY. It answers one question per chat host, and it and its view
-	// should be deleted once the matrix is filled in (see apps.GeoProbeURI).
-	"check_location_support": true,
 }
 
 // An intent may write inside the workspace; it may NOT reach outside it.

@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
@@ -65,7 +64,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
 	authH := identity.NewHandlers(identitySvc).
-		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames())
+		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
+		WithInstallationDescribed(installationDescribed(contacts.NewStore(InstallationDB(pool))))
 
 	// The transport directory, loaded on the REAL assembly path rather than in
 	// newServer: route-level tests construct that one directly with a pool that
@@ -83,6 +83,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	// Bound here for the same reason, and on the same Server: deactivation has
+	// to be able to destroy the provider secrets it withdrew.
+	installCaptureCredentialReaper(&srv, log)
 	// Wired unconditionally, not inside WithKeyvault: a role composed with no
 	// vault still serves /installation/setup (every step reads "not
 	// configured"), and the anonymous capabilities probe must report the same
@@ -185,8 +188,13 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// original destroys the parsed text while an Art. 15 export serves the
 		// verbatim copy back. Left to an option, a role that forgot it would
 		// answer success to a release that erased half a record.
+		// The hold seam is wired HERE and not left to an option for the reason
+		// the purger above is not: a role that forgot it would answer 404 to a
+		// controller placing a litigation hold, which reads as "no such record"
+		// rather than as "this installation cannot hold one".
 		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)).
-			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))),
+			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
+			WithLegalHoldWriter(NewLegalHoldSeam(pool)),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the
@@ -238,6 +246,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		strengthHandlers: strengthHandlers{
 			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},
+		recordAccessHandlers: recordAccessHandlers{access: NewRecordAccessReads(pool)},
 		// The schema-change pool is boot-optional; nil
 		// here means Create/SetOptions stay their generated 501 until the
 		// api role's WithSchemaPool rebuilds this over the real pool.
@@ -282,20 +291,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
 	srv.approvalsHandlers = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
-	// The day's surface reads the SAME approvals engine the inbox decides
-	// through, so a card here and a row there are one queue rather than two
-	// readings of it.
-	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool))
-	// The machinery's receipt: what ran without being asked, in the window since
-	// the reader last looked. It reads the same clock the rest of the surface
-	// does, so "since your brief" means the same instant everywhere.
-	srv.magicService = newMagicService(pool, time.Now)
-	srv.magicHandlers = magic.NewHandlers(srv.magicService)
-	srv.wireAnalyticsSurface(pool)
-	srv.wireCaptureSettingsSurface(pool)
-	srv.wireExportSurface(pool, log)
-	srv.wireOnboardingSurface(pool)
-	srv.wireSystemOfRecordReads(pool)
+	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//
 	// The tool registry is NOT built here: newServer returns by value and New

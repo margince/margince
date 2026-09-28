@@ -59,10 +59,11 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/quietmailbox.go:quietRecordOwner":            "the owner arm of the cold-queue selector: the deal's owner_id — a USER id, not deal content — decides whether that seat's mailbox is visible enough to call the deal quiet. Nothing of the deal is selected; its only effect is to WITHHOLD a queue entry, never to surface one",
 	"internal/compose/company360/contacts.go:contactDealRoles":                "the roster's deal-role column: `r.contact_id, r.deal_id, r.role` off the relationship table, with the deal joined only for its row scope so a seat on a deal the caller may not open is absent. The projection is the EDGE, and the deal id it carries is one the row scope already admitted",
 	"internal/compose/company360/roleproposalwrite.go:ownWords":               "the quoted sentence a role proposal rests on — who said it and what they said — with the deal joined to bound which conversations count. The projection is an activity's subject and body under the activity grants; no deal column is selected",
 	"internal/compose/contact360/nextmeeting.go:nextMeetingSection":           "the contact's next meeting: `a.id, a.occurred_at, a.subject`, with the deal joined only to reach the meetings that hang off one. Activity columns under the activity grant, and removing the join would widen the meetings considered",
-	"internal/compose/dealownerseam.go:dealOwner":                             "reads `owner_id` — a USER id, the colleague who owns the deal — so a seam can route work to them. No deal column is selected and what the caller learns is who to ask",
+	"internal/compose/dealownerseam.go:lockedDealOwner":                       "reads `owner_id` — a USER id, the colleague who owns the deal — so a seam can route work to them. No deal column is selected and what the caller learns is who to ask",
 	"internal/compose/network/companycoverage.go:companyStakeholderEdge":      "the stakeholder-edge predicate inside the account coverage read: whether a contact holds a seat on a live deal at this account. The deal appears only inside the join condition, and what the coverage answers is about CONTACTS, under the grants that read owns",
 	"internal/compose/reportprojects.go":                                      "the project report's deal sums, `sum(d.amount_minor_base)` over a project's open and won deals. Aggregates rather than rows, composed by the report the project grant admits, and the figures are the project's own commercial size",
 	"internal/compose/signalscan.go:scanGhostedThreads":                       "the ghosted-thread scan asks which OPEN deals have gone quiet so a signal can be raised. It runs on the scan's schedule and what it writes is a signal row; the signal is then read through the signal grant, which SignalScopeClause resolves back to the subject's own visibility",
@@ -127,6 +128,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/magic/undoversion.go":                                "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
 	"internal/compose/briefs/briefcontinuity.go:previousRanking":           "the previous run's ranking, so a brief can say what moved. The briefs package asks the deal object gate at its own entry points",
 	"internal/compose/briefs/brieflineage.go:briefLineage":                 "a brief item's lineage across runs, behind those same gated entry points",
 	"internal/compose/briefs/briefreads.go:briefCandidates":                "the candidate deals a brief ranks, behind the gated brief entry",
@@ -150,7 +152,7 @@ var calleeGatedDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/changereviews.go:readAppliedChangeReviews":     "the applied change reviews for a set of deals, behind the review surfaces that ask the deal object gate at their entry",
 	"internal/modules/deals/closingoccurrence.go:currentClosingOccurrence": "the closing occurrence a stage move is about, read inside the advance's own transaction past the deal gate its entry points take",
 	"internal/modules/deals/correctionimage.go:currentCorrectedValues":     "`to_jsonb(d)` — the before-image a correction audits against, read inside the correcting write. Its callers ask the deal object gate and the image goes into the audit row, not to a caller",
-	"internal/modules/deals/deal_read.go:readDeal":                         "the shared single-row deal read, and the spine every deal surface goes through — get, create, update, advance, the merge survivor. Each entry point asks auth.Require for the deal object and most take a row probe as well",
+	"internal/modules/deals/deal_singleread.go:readDeal":                   "the shared single-row deal read, and the spine every deal surface goes through — get, create, update, advance, the merge survivor. Each entry point asks auth.Require for the deal object and most take a row probe as well",
 	"internal/modules/deals/dealcommercial.go:lockedAcquisitionSource":     "the acquisition source held under the deal's lock, so a write cannot silently change where the deal came from. Inside the gated commercial write",
 	"internal/modules/deals/forecasthistory.go:recordForecastMovement":     "records a forecast movement against the deal it belongs to, reading the prior standing so the series carries forward. Reached from the advance, past its own gate",
 	"internal/modules/deals/health.go:healthExpectedPace":                  "the expected pace a deal's health is judged against, from the stage history. Its callers are the health reads, each asking the deal object gate at their entry",
@@ -165,7 +167,9 @@ var calleeGatedDealReads = gatekit.Waive(map[string]string{
 })
 
 // ruledDealReads: a DISCLOSING read the product has ruled needs no deal grant.
-var ruledDealReads = gatekit.Waive(map[string]string{})
+var ruledDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/legalholdlist.go": "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+})
 
 // deferredDealReads: a DISCLOSING read that is still ungated, each naming
 // the issue that will close it.

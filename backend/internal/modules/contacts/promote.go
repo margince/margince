@@ -137,6 +137,12 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		// loser re-reads status=promoted and answers 409 instead of
 		// minting a second contact. IncludeArchived keeps the re-promote
 		// 409-with-pointer diagnostic reachable.
+		//
+		// The lead's stop lock comes before even that, for the reason
+		// mergeContactTx gives.
+		if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, commsauthz.LeadStopSubject(id)); err != nil {
+			return err
+		}
 		if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived); err != nil {
 			return err
 		}
@@ -168,6 +174,11 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 			commsauthz.LeadStopSubject(id),
 			commsauthz.ContactStopSubject(contactID)); err != nil {
 			return fmt.Errorf("carry the lead's stops: %w", err)
+		}
+		if err := s.carryConsentSatellitesTx(ctx, tx,
+			commsauthz.LeadStopSubject(id),
+			commsauthz.ContactStopSubject(contactID)); err != nil {
+			return fmt.Errorf("carry the lead's consent links: %w", err)
 		}
 		carried, err := carryLeadActivities(ctx, tx, id, contactID)
 		if err != nil {

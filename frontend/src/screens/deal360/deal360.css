@@ -24,6 +24,12 @@
   gap: var(--space-2);
 }
 
+/* The terminal-stage warning sits closer to the question it qualifies than the
+   paragraph rhythm would put it. */
+.advance-terminal {
+  margin-top: var(--space-2);
+}
+
 /* Outcome review — what a closed deal recorded about how it went. One block per
    review, the question above its answer, because a reader scans the questions
    to find the one they came for. */
@@ -51,4 +57,20 @@
 .review-template-questions {
   margin: var(--space-2) 0 0;
   padding-left: var(--space-5);
+}
+
+/* The stages a closed deal can be reopened into, one button each. */
+.d360-reopen-stages {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: var(--space-3) 0;
+}
+
+/* The collapsed brief. The line count stays with the render, which also
+   decides whether the text is long enough to clamp at all. */
+.d360-brief-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

@@ -65,13 +65,23 @@ function Panel({ entries }: Readonly<{ entries: CommissionEntry[] }>) {
   );
 }
 
-// Money still owed in two currencies: two cards, never one sum. The accrued
-// row offers its decisions; the paid one is settled and offers nothing.
+// Money still owed in two currencies: two cards, never one sum. Each card's
+// detail counts the entries behind its own figure, and where paying actually
+// happens is said once over the whole panel instead of on every card. The
+// unsettled rows offer their decisions; the paid one is settled and offers
+// nothing.
 export const OwedInTwoCurrencies: Story = {
   render: () => (
     <Panel
       entries={[
         entry({}),
+        entry({
+          id: "c-4",
+          deal_id: "d-2",
+          status: "approved",
+          basis_amount_minor: 2_000_000,
+          amount_minor: 400_000,
+        }),
         entry({
           id: "c-2",
           deal_id: "d-2",
@@ -105,3 +115,13 @@ export const AllSettled: Story = {
 };
 
 export const NothingEarned: Story = { render: () => <Panel entries={[]} /> };
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+export const OwedInTwoCurrenciesPhone: Story = {
+  ...OwedInTwoCurrencies,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

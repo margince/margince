@@ -2,6 +2,7 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { Button, EmptyState } from "../design-system/atoms";
 import { useT } from "../i18n";
+import "./errorboundary.css";
 
 // The app-level error boundary (architecture/frontend, "the data layer").
 // Without one, a single throw during render unmounts the whole tree and the
@@ -21,8 +22,8 @@ function RenderFailure({ onRetry }: Readonly<{ onRetry: () => void }>) {
         <p>{t("app.errorBody")}</p>
         <Button
           variant="primary"
+          className="errorboundary-retry"
           onClick={onRetry}
-          style={{ marginTop: "var(--space-3)" }}
         >
           {t("app.errorRetry")}
         </Button>

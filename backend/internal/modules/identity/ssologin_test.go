@@ -360,7 +360,7 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 		oidcProviders: map[string]OIDCProviderSource{
 			"google": FixedOIDCProvider(OIDCProvider{Config: OIDCProviderConfig{Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"}}),
 		},
-		oidcPerIP: ratelimit.New(30, time.Minute),
+		oidcPerIP: ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(disabled)
 
 	start := httptest.NewRecorder()
@@ -398,7 +398,7 @@ func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
 		oidcProviders: map[string]OIDCProviderSource{
 			"google": FixedOIDCProvider(OIDCProvider{Config: OIDCProviderConfig{Key: "google", Label: "Continue with Google", ClientID: "cid", AuthURL: "https://accounts.example/auth"}}),
 		},
-		oidcPerIP: ratelimit.New(30, time.Minute),
+		oidcPerIP: ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return nil, errors.New("the settings row is unreachable")
 	})
@@ -421,7 +421,7 @@ func TestAProviderWithoutAClientIsNeitherOfferedNorStarted(t *testing.T) {
 	none := func(context.Context) (OIDCProvider, bool, error) { return OIDCProvider{}, false, nil }
 	h := Handlers{
 		oidcProviders: map[string]OIDCProviderSource{"google": none},
-		oidcPerIP:     ratelimit.New(30, time.Minute),
+		oidcPerIP:     ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil
 	})
@@ -446,7 +446,7 @@ func TestAFailedClientResolutionDoesNotReadAsAnAbsentProvider(t *testing.T) {
 	}
 	h := Handlers{
 		oidcProviders: map[string]OIDCProviderSource{"google": sealed},
-		oidcPerIP:     ratelimit.New(30, time.Minute),
+		oidcPerIP:     ratelimit.New(oidcPerIPLimiter, ratelimit.FailClosed, 30, time.Minute),
 	}.WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil
 	})

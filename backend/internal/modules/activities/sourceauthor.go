@@ -30,38 +30,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// SourceAuthorInput is one record's answer: who wrote it, in whichever of the
-// two spellings the source could give.
-type SourceAuthorInput struct {
-	// AuthorID is the member who wrote it, when the author holds a seat here.
-	AuthorID *ids.UUID
-	// AuthorName is the source system's own spelling, for an author who never
-	// held one. At least one of the two must be set; see SetSourceAuthorTx.
-	AuthorName *string
-}
-
-// SourceAuthorOutcome is what happened to one record, in the words the wire
-// reports them.
-type SourceAuthorOutcome string
-
-// The three answers this store gives.
-//
-// `unchanged` was once the caller's to decide, from a digest it read before
-// calling here. That was wrong twice over, and both ways were found in review.
-// The decision needs the row lock this function takes, or a concurrent write
-// lands between the reading and the skipping and the two records disagree
-// forever. And it needs the visibility check this function makes, or a caller
-// outside an activity's audience learns whether its author matches a guess —
-// a refusal for a wrong guess, `unchanged` for a right one — without ever being
-// allowed to read the row.
-//
-// So it is answered HERE, under both. Whether the answer is NEWER than the one
-// on record is still the ledger's question and still the caller's.
-const (
-	SourceAuthorApplied   SourceAuthorOutcome = "applied"
-	SourceAuthorSkipped   SourceAuthorOutcome = "skipped"
-	SourceAuthorUnchanged SourceAuthorOutcome = "unchanged"
-)
+// The input, the three outcomes and the "is this already the answer" comparison
+// live in storekit, because five more record tables across three other modules
+// now write the same two columns and a module never imports a sibling. What
+// stays here is what is genuinely an ACTIVITY's: the retention hold, the
+// audience check, and the savepoint that keeps one held row from taking a batch
+// of five hundred down with it.
 
 // SetSourceAuthorTx records the author on one activity, inside the caller's
 // transaction, and answers what it did.
@@ -91,8 +65,8 @@ const (
 // write below reaches the restricted-mutation trigger on its own terms, and if
 // the estate disagrees the trigger says so rather than this function guessing.
 func (s *Store) SetSourceAuthorTx(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in SourceAuthorInput,
-) (SourceAuthorOutcome, string, error) {
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in storekit.SourceAuthorInput,
+) (storekit.SourceAuthorOutcome, string, error) {
 	// The object grant is `activity:update`, the same one an ordinary edit
 	// takes, and that is the right object: this writes a column on an activity
 	// and the RBAC vocabulary has no finer name for "rewrite attribution".
@@ -103,27 +77,27 @@ func (s *Store) SetSourceAuthorTx(
 	// nobody by itself. Both halves are needed: this one bounds WHAT may be
 	// written, that one bounds WHO may ask.
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return SourceAuthorSkipped, "", err
+		return storekit.SourceAuthorSkipped, "", err
 	}
-	if in.AuthorID == nil && (in.AuthorName == nil || *in.AuthorName == "") {
+	if !in.Named() {
 		// Refused rather than treated as "clear it". A caller that sends
 		// neither has lost its answer somewhere upstream, and silently emptying
 		// an attribution it previously wrote is the one outcome nobody could
 		// have intended.
-		return SourceAuthorSkipped, "no author given: send source_author_id, source_author_name, or both", nil
+		return storekit.SourceAuthorSkipped, storekit.SourceAuthorUnnamedReason, nil
 	}
 
 	held, reason, err := reachableForWrite(ctx, tx, id.UUID)
 	if err != nil || reason != "" {
-		return SourceAuthorSkipped, reason, err
+		return storekit.SourceAuthorSkipped, reason, err
 	}
 
 	beforeID, beforeName, reason, err := attributableNow(ctx, tx, id.UUID, in)
 	if err != nil {
-		return SourceAuthorSkipped, "", err
+		return storekit.SourceAuthorSkipped, "", err
 	}
 	if reason != "" {
-		return SourceAuthorSkipped, reason, nil
+		return storekit.SourceAuthorSkipped, reason, nil
 	}
 
 	// DID ANYTHING ACTUALLY CHANGE? Asked here rather than by the caller, and
@@ -140,8 +114,8 @@ func (s *Store) SetSourceAuthorTx(
 	// Comparing them needs no second table and cannot race: a concurrent
 	// erasure or a rival batch must wait for this lock before it can make the
 	// comparison stale.
-	if sameAuthor(beforeID, beforeName, in) {
-		return SourceAuthorUnchanged, "", nil
+	if (storekit.SourceAuthorBefore{ID: beforeID, Name: beforeName}).Same(in) {
+		return storekit.SourceAuthorUnchanged, "", nil
 	}
 
 	p := storekit.NewPatch()
@@ -157,10 +131,10 @@ func (s *Store) SetSourceAuthorTx(
 	// guarantee is the lock rather than an absent comparison.
 	lock, err := storekit.LockRow(ctx, tx, "activity", id.UUID, activityArchivedFilter(held))
 	if err != nil {
-		return SourceAuthorSkipped, "", err
+		return storekit.SourceAuthorSkipped, "", err
 	}
 	if reason, err := applyThroughSavepoint(ctx, tx, p, lock); err != nil || reason != "" {
-		return SourceAuthorSkipped, reason, err
+		return storekit.SourceAuthorSkipped, reason, err
 	}
 	// The audit goes on the OUTER transaction, not the savepoint: it belongs
 	// with the ledger row the caller writes next, and both must stand or fall
@@ -168,9 +142,9 @@ func (s *Store) SetSourceAuthorTx(
 	if _, err := storekit.Audit(ctx, tx, "import", "activity", id.UUID,
 		map[string]any{"source_author_id": beforeID, "source_author_name": beforeName},
 		map[string]any{"source_author_id": in.AuthorID, "source_author_name": in.AuthorName}); err != nil {
-		return SourceAuthorSkipped, "", fmt.Errorf("activities: auditing the attribution: %w", err)
+		return storekit.SourceAuthorSkipped, "", fmt.Errorf("activities: auditing the attribution: %w", err)
 	}
-	return SourceAuthorApplied, "", nil
+	return storekit.SourceAuthorApplied, "", nil
 }
 
 // applyThroughSavepoint writes the patch inside a SAVEPOINT and answers a skip
@@ -247,25 +221,6 @@ func reachableForWrite(ctx context.Context, tx pgx.Tx, id ids.UUID) (held bool, 
 	return held, "", nil
 }
 
-// sameAuthor reports whether the row already carries exactly this answer.
-//
-// Both halves must match. An offer naming only a name, against a row carrying
-// a name AND a seat id, is a different answer — it drops the seat — so it is a
-// write rather than a no-op.
-func sameAuthor(beforeID *ids.UUID, beforeName *string, in SourceAuthorInput) bool {
-	switch {
-	case (beforeID == nil) != (in.AuthorID == nil):
-		return false
-	case beforeID != nil && *beforeID != *in.AuthorID:
-		return false
-	case (beforeName == nil) != (in.AuthorName == nil):
-		return false
-	case beforeName != nil && *beforeName != *in.AuthorName:
-		return false
-	}
-	return true
-}
-
 // attributableNow reads the row's current answer and decides whether this one
 // may replace it: the before-image for the audit, and a reason when it may not.
 //
@@ -274,7 +229,7 @@ func sameAuthor(beforeID *ids.UUID, beforeName *string, in SourceAuthorInput) bo
 // an author at all, and each arm of it answers with words an operator can act
 // on rather than a constraint violation.
 func attributableNow(
-	ctx context.Context, tx pgx.Tx, id ids.UUID, in SourceAuthorInput,
+	ctx context.Context, tx pgx.Tx, id ids.UUID, in storekit.SourceAuthorInput,
 ) (beforeID *ids.UUID, beforeName *string, reason string, err error) {
 	var sourceSystem *string
 	if err := tx.QueryRow(ctx, `

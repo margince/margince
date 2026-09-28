@@ -7,8 +7,9 @@ import { createPortal } from "react-dom";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import {
   LoadMoreButton,
   problemMessageOf,
@@ -43,36 +44,45 @@ import "./notificationbell.css";
 
 export function NotificationBell() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const notices = useNotifications();
+  // BOTH SETTLES OUTLIVE THE PANEL. The centre renders only while open, so a
+  // refusal declared inside it is thrown away by the dismissal that follows the
+  // press — and a write still in flight loses the listener its invalidation
+  // rides on, stranding the badge on a figure the server has already moved past.
+  const settleAll = useMarkAllNoticesRead();
+  // ONE hook for every row rather than one per row, because one hook is what
+  // lets one error surface speak for whichever row failed. The row still sends
+  // its OWN id as the variable, and `settle.variables` is what that id comes
+  // back as — so the pending mark stays on the button that was pressed instead
+  // of spreading to all of them.
+  const settle = useNoticeRead([NOTIFICATIONS_KEY, worklistKey]);
 
   // The count is the FIRST page's, which is the whole unread set: the endpoint
   // answers the reader's total beside every page rather than that page's share,
   // so paging back through history never moves the badge.
   const unread = notices.data?.pages[0]?.unread_count ?? 0;
 
-  /**
-   * Close, and put focus back where it can be used.
-   *
-   * Only when the panel actually HELD it — an outside click usually lands on
-   * something focusable of its own, and pulling focus onto the bell afterwards
-   * would undo what the click just did. The same rule the account menu keeps,
-   * because they are two instances of one popover.
-   */
-  const dismiss = useCallback(() => {
-    const held = panel.current?.contains(document.activeElement) ?? false;
-    setOpen(false);
-    if (held) {
-      trigger.current?.focus();
-    }
-  }, []);
+  const dismiss = useCallback(() => setOpen(false), []);
   // One dismissal for every popover in the chrome (app/popover.ts): Escape from
   // anywhere inside, any outside click, and the opening click deferred past.
   usePopoverDismiss(open, panel, dismiss);
+  // Focus, shared with every other portalled panel (design-system/portalfocus.ts):
+  // into the panel on the press that opened it, back to the bell if the close
+  // dropped it, and Tab measured from where the bell sits in the strip. At the
+  // body the panel is no longer the bell's next sibling, so none of the three
+  // happens by adjacency. The bell has no hover door, so a press is the only way in.
+  const panelFocus = usePortalPanelFocus({
+    open,
+    openedBy: "press",
+    trigger,
+    panel,
+  });
 
   return (
     <div className="notifbell">
@@ -85,7 +95,7 @@ export function NotificationBell() {
         // are waiting is the entire reason somebody presses this.
         aria-label={
           unread > 0
-            ? t("notifications.bellWaiting", {
+            ? plural("notifications.bellWaiting", unread, {
                 count: formatNumber(unread, locale),
               })
             : t("notifications.bell")
@@ -107,8 +117,7 @@ export function NotificationBell() {
         <Bell aria-hidden />
         {/* A ZERO IS NOT A COUNT WORTH DRAWING: a badge reading "0" is a mark
             the eye stops on to learn there is nothing, which an unmarked bell
-            already says. The spelling is the rail's, so the two counts in the
-            chrome are one badge. */}
+            already says. */}
         {unread > 0 && (
           <span className="notifbell-count">
             <Badge variant="primary" tone="accent">
@@ -121,8 +130,19 @@ export function NotificationBell() {
           panel drawn inside the bar would be cut off at its own first row. */}
       {open &&
         createPortal(
-          <div className="notifbell-loose" ref={panel} id={panelId}>
-            <NotificationCentre query={notices} />
+          <div
+            className="notifbell-loose"
+            ref={panel}
+            id={panelId}
+            {...panelFocus}
+          >
+            <NotificationCentre
+              query={notices}
+              unread={unread}
+              settleAll={settleAll}
+              settle={settle}
+              onActivate={dismiss}
+            />
           </div>,
           document.body,
         )}
@@ -132,29 +152,39 @@ export function NotificationBell() {
 
 function NotificationCentre({
   query,
-}: Readonly<{ query: ReturnType<typeof useNotifications> }>) {
+  unread,
+  settleAll,
+  settle,
+  onActivate,
+}: Readonly<{
+  query: ReturnType<typeof useNotifications>;
+  unread: number;
+  settleAll: ReturnType<typeof useMarkAllNoticesRead>;
+  settle: ReturnType<typeof useNoticeRead>;
+  /** Dismiss the panel, for a row that both acts and closes. */
+  onActivate: () => void;
+}>) {
   const t = useT();
-  const settleAll = useMarkAllNoticesRead();
-  // ONE hook for every row rather than one per row, because one hook is what
-  // lets one error surface speak for whichever row failed. The row still sends
-  // its OWN id as the variable, and `settle.variables` is what that id comes
-  // back as — so the pending mark stays on the button that was pressed instead
-  // of spreading to all of them.
-  const settle = useNoticeRead([NOTIFICATIONS_KEY, worklistKey]);
   const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
   return (
     <Panel
       title={t("notifications.centre")}
+      // OFFERED ONLY WHILE SOMETHING IS UNREAD. The verb sits above the states
+      // below it, so a centre that has never held anything would otherwise hand
+      // the reader an enabled button whose whole effect is a write with nothing
+      // to settle.
       titleAction={
-        <Button
-          pending={settleAll.isPending}
-          onClick={() => settleAll.mutate()}
-        >
-          {/* No number, deliberately. The server settles more than this panel
-              ever showed — a reader's own stage-move notices among them — so
-              any figure quoted here would be about a set they never saw. */}
-          {t("notifications.markAllRead")}
-        </Button>
+        unread > 0 ? (
+          <Button
+            pending={settleAll.isPending}
+            onClick={() => settleAll.mutate()}
+          >
+            {/* No number, deliberately. The server settles more than this panel
+                ever showed — a reader's own stage-move notices among them — so
+                any figure quoted here would be about a set they never saw. */}
+            {t("notifications.markAllRead")}
+          </Button>
+        ) : undefined
       }
     >
       <PanelBody>
@@ -199,6 +229,7 @@ function NotificationCentre({
                     key={notice.id}
                     notice={notice}
                     onSettle={settle.mutate}
+                    onActivate={onActivate}
                     settling={
                       settle.isPending && settle.variables === notice.id
                     }
@@ -229,10 +260,18 @@ function agentAuthored(notice: NotificationItem): boolean {
 function NoticeRow({
   notice,
   onSettle,
+  onActivate,
   settling,
 }: Readonly<{
   notice: NotificationItem;
   onSettle: (id: string) => void;
+  /**
+   * Dismiss the centre, because the subject is a destination: the panel is
+   * chrome over the page the link is about to replace, and one left standing
+   * covers the record it just opened. Inside clicks are the popover's business
+   * to ignore (app/popover.ts), so a row that closes says so here.
+   */
+  onActivate: () => void;
   /** Whether the write in flight is THIS row's, rather than any row's. */
   settling: boolean;
 }>) {
@@ -243,7 +282,11 @@ function NoticeRow({
     <li className={settled ? "notifrow notifrow-settled" : "notifrow"}>
       <div className="notifrow-head">
         {route ? (
-          <a className="notifrow-subject" href={routeHash(route)}>
+          <a
+            className="entity-link notifrow-subject"
+            href={routeHash(route)}
+            onClick={onActivate}
+          >
             {notice.subject}
           </a>
         ) : (

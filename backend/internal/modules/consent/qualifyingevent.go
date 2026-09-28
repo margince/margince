@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -125,7 +126,11 @@ func (s *Store) RecordInquiry(
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return RecordSubjectInquiry(ctx, tx, contactID.String(), QualifyingEvent{
+		holder, err := holdSurvivingContact(ctx, tx, contactID)
+		if err != nil {
+			return err
+		}
+		return RecordSubjectInquiry(ctx, tx, holder.String(), QualifyingEvent{
 			Kind: KindInquiry,
 			// WHEN THEY ASKED, which is now — not when the meeting they booked
 			// is scheduled for. A booking is routinely made for a date weeks
@@ -143,6 +148,28 @@ func (s *Store) RecordInquiry(
 			SourceEntityID:   activityID.String(),
 		}, by)
 	})
+}
+
+// holdSurvivingContact locks the contact a door named, or the survivor a merge
+// has since retired them into, and answers which one it holds. Held to commit,
+// so a merge still to come waits for the write and carries it.
+//
+// One hop, as survivingSubject: a survivor later merged away has its rows
+// carried by that merge.
+func holdSurvivingContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (ids.ContactID, error) {
+	err := auth.LockSubjectLive(ctx, tx, entityContact, contactID.UUID)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		return contactID, err
+	}
+	surviving, err := survivingSubject(ctx, tx, contactID.UUID)
+	if err != nil {
+		return ids.ContactID{}, err
+	}
+	if surviving == contactID.UUID {
+		return ids.ContactID{}, apperrors.ErrNotFound
+	}
+	survivor := ids.From[ids.ContactKind](surviving)
+	return survivor, auth.LockSubjectLive(ctx, tx, entityContact, survivor.UUID)
 }
 
 // RecordQualifyingEvent writes the exchange and returns it as it now stands.
@@ -208,8 +235,9 @@ func (s *Store) RecordQualifyingEvent(
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The row-scope probe first: this changes what may be SENT to a contact,
 		// which is a change to their record however little of the row it
-		// touches.
-		if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+		// touches. Held to commit, so a merge of this contact carries the row
+		// rather than committing before it lands on the retired record.
+		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		// The same exchange, re-sent, is one exchange. A retry — a double click,

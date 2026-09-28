@@ -207,6 +207,7 @@ function EvidencePlate({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const ev = route.evidence;
   const receipts = route.receipts ?? [];
@@ -235,7 +236,7 @@ function EvidencePlate({
       {receipts.length > 0 ? (
         <div className="pn-evidence-receipts">
           <Eyebrow as="h4">
-            {t("contact.intro.factReceipts", {
+            {plural("contact.intro.factReceipts", receipts.length, {
               count: formatNumber(receipts.length, locale),
             })}
           </Eyebrow>

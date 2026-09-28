@@ -3,8 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Button, Card, DataTable, Disclosure, TextInput } from "./atoms";
+import { Button, Card, Disclosure, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
+import { DataTable } from "./datatable";
 import { Select } from "./select";
 import { SettingList, SettingRow } from "./settingrow";
 import { Switch } from "./switch";

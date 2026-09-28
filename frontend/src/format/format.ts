@@ -1,6 +1,7 @@
 import type { Locale, Translator } from "../i18n";
 import { middayInstant } from "./calendarday";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
+import { formatMoneyOrWord } from "./moneyword";
 import {
   dateTimePreferences,
   formatPreferredDate,
@@ -73,10 +74,15 @@ export function formatMoneyOrAbsent(
   currency: string | null | undefined,
   locale: Locale,
 ): string {
-  if (amountMinor == null || !currency) {
-    return MONEY_ABSENT;
-  }
-  return formatMoney(amountMinor, currency, locale);
+  // The dash is one WORD for the absence among several, so both spellings run
+  // on one guard rather than agreeing twice about what "no money here" means.
+  return formatMoneyOrWord(
+    amountMinor,
+    currency,
+    locale,
+    MONEY_ABSENT,
+    formatMoney,
+  );
 }
 
 /**

@@ -9,8 +9,8 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // holding no rows — and no client file read it. Headings were inferred from the
 // rows instead, which can say everything except the one thing the field exists
 // for: a band with nothing under it draws nothing, so a reader whose Now band
-// is empty is told the same as a reader whose page simply started at Build
-// pipeline.
+// is empty is told the same as a reader whose page simply started at
+// Prospecting.
 //
 // "Nothing needs you today" is an answer. Inferring headings from rows cannot
 // give it, because the absence leaves no row to hang it on.
@@ -67,7 +67,7 @@ export function bandSections(
  * Slot each declared band the loaded rows never reached into its own place.
  *
  * Walked against the DECLARED order rather than appended, so an empty Now sits
- * above a drawn Build pipeline instead of after everything. A band the rows
+ * above a drawn Prospecting instead of after everything. A band the rows
  * name and the server did not declare keeps its place in the run order: it is
  * real work, and a heading this build cannot place must not reorder the rest.
  */
@@ -99,7 +99,7 @@ function withDeclaredEmpties(
  *
  * Only when the whole day is loaded. The queue arrives band-sorted, so a band
  * missing from page one may hold rows on page three — telling a reader
- * "nothing needs you now" while a Show more button sits below the fold would be
+ * "nothing needs you now" while a Load more button sits below the fold would be
  * the page claiming to have looked at work it has not fetched.
  */
 export function canReportEmptyBands(hasMore: boolean): boolean {

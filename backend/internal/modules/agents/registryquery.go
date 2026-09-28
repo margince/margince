@@ -13,7 +13,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
+	"slices"
 	"sort"
+	"strings"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -83,8 +87,9 @@ func (r *Registry) Spec(name string) (mcp.ToolSpec, bool) {
 // A json.RawMessage is a slice, so returning the registered one shares its
 // backing array: a caller that wrote through it would rewrite what tools/list
 // advertises and what results are validated against, for every later request,
-// from outside the lock. The schemas are the two members that can be written
-// through; everything else on a ToolSpec is copied by the assignment.
+// from outside the lock. Every reference-typed member — the two schemas, the
+// view declaration and the unkeyed-argument declaration — is copied below;
+// everything else on a ToolSpec is copied by the assignment.
 func copySchemas(spec mcp.ToolSpec) mcp.ToolSpec {
 	spec.InputSchema = bytes.Clone(spec.InputSchema)
 	spec.OutputSchema = bytes.Clone(spec.OutputSchema)
@@ -93,6 +98,9 @@ func copySchemas(spec mcp.ToolSpec) mcp.ToolSpec {
 	// what it registered could rewrite the URI a host is told to fetch — and the
 	// audience it is told to offer the tool to — for every later request, from
 	// outside the lock and after the boot-time gate that validated it.
+	// And the unkeyed-argument declaration, a map: shared, a caller writing
+	// through it could clear the one statement keeping a tool from an agent.
+	spec.UnkeyedArguments = maps.Clone(spec.UnkeyedArguments)
 	if spec.UI != nil {
 		ui := *spec.UI
 		ui.Visibility = append([]string(nil), ui.Visibility...)
@@ -107,10 +115,31 @@ func (r *Registry) Specs() []mcp.ToolSpec {
 	defer r.mu.RUnlock()
 	out := make([]mcp.ToolSpec, 0, len(r.specs))
 	for _, spec := range r.specs {
-		out = append(out, copySchemas(spec))
+		served := copySchemas(spec)
+		served.InsteadTools = r.insteadTools(spec)
+		out = append(out, served)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// insteadTools lists the other registered tools a spec's Instead names, read
+// at listing time rather than at registration, because the neighbour a
+// sentence names may register after the tool naming it. The caller holds r.mu.
+func (r *Registry) insteadTools(spec mcp.ToolSpec) []string {
+	var named []string
+	for _, word := range strings.FieldsFunc(spec.Instead, outsideToolName) {
+		if _, registered := r.specs[word]; registered && word != spec.Name && !slices.Contains(named, word) {
+			named = append(named, word)
+		}
+	}
+	return named
+}
+
+// outsideToolName reports a rune no tool name carries: names are lower-case
+// snake_case, so anything else ends one.
+func outsideToolName(c rune) bool {
+	return c != '_' && !unicode.IsLower(c) && !unicode.IsDigit(c)
 }
 
 // Offered is the surface THIS caller may invoke: the catalog both the external

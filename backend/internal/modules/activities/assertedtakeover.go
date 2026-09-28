@@ -44,18 +44,22 @@ import (
 //
 // The ROW-level authority is established BEFORE this is reached, and it is
 // ResolveBindableIdentity: capture holds this row's id only because that
-// function answered with it, and it answers only for a row the SAME SEAT
-// captured. So the row being rewritten is the acting seat's own import.
-// Capture enforces that by calling this only for an id the resolve returned —
-// a natural-key collision reaches replayClaimIsProvenTx instead, because that
-// id was never vetted against a seat.
+// function answered with it. Capture enforces that by calling this only for an
+// id the resolve returned — a natural-key collision reaches
+// replayClaimIsProvenTx instead, because that id was never vetted against a
+// seat.
 //
-// Restamping captured_by costs that seat nothing, which is what makes the
-// rewrite safe rather than merely authorized. Every scope clause reading the
+// The resolve says yes two ways. The SAME SEAT captured the row, and then
+// restamping captured_by costs that seat nothing, which is what makes the
+// rewrite safe rather than merely authorized: every scope clause reading the
 // column matches on the trailing user id (auth/activitywritescope.go,
-// auth/inheritedscope.go), so `human:<seat>` becoming
-// `connector:gmail:<seat>` keeps the same seat's read and write authority over
-// their own row.
+// auth/inheritedscope.go), so `human:<seat>` becoming `connector:gmail:<seat>`
+// keeps the same seat's read and write authority over their own row. Or the row
+// is an IMPORT naming an address the arriving seat has proven is theirs, which
+// ResolveBindableIdentityProving admits and compose injects on the capture door
+// only. That arm does move authority between seats, which is why the proof
+// behind it is deliberately narrow — provider-attested labels alone, stated in
+// SeatProvedAddressTx.
 //
 // Two gates that look right here are deliberately not used:
 //
@@ -84,6 +88,16 @@ func TakeOverAssertedActivityTx(
 	// ResolveBindableIdentity already refused an archived holder, so this
 	// closes the window between that read and this write rather than repeating
 	// it.
+	//
+	// This is ALSO the statutory-hold refusal, which is why no
+	// `restricted_at IS NULL` predicate follows it. The
+	// activity_restricted_is_archived CHECK makes held-but-live a state the
+	// table cannot hold, so every held row is archived and LiveOnly refuses it —
+	// and both writers that place a hold (privacy.PinToFloor and the erasure's
+	// restrict arm) archive in the same statement for that reason. Adding the
+	// predicate would be a fourth refusal behind three, unreachable by
+	// construction, and a reader would take it for the one doing the work.
+	// TestAMessageUnderAStatutoryHoldIsNotTakenOver holds the outcome.
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
 		return err
 	}

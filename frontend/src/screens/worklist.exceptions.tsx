@@ -20,7 +20,7 @@
 // to be asked for: this is a reading a lead came to the page FOR, and the
 // first thing they would do with the control is open it.
 
-import { DataTable } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";

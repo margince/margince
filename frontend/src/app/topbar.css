@@ -242,3 +242,15 @@
     display: none;
   }
 }
+
+/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
+   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
+   shared control height must not be capped by this floor. Declared under
+   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
+   still a mouse — the floor is about what a thumb can hit, not about how much
+   room there is. */
+@media (pointer: coarse) {
+  .topbar-search {
+    min-height: max(var(--controlHeight), 44px);
+  }
+}

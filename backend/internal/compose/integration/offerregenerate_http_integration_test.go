@@ -162,8 +162,8 @@ func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotal
 	if regenerated.AiGenerated == nil || !*regenerated.AiGenerated {
 		t.Fatalf("ai_generated = %v, want true (the candidate grounds)", regenerated.AiGenerated)
 	}
-	if regenerated.AiDisclosure == nil || *regenerated.AiDisclosure != draftfloor.AIDisclosure(textlang.English) {
-		t.Fatalf("ai_disclosure = %v, want the Art.50 disclosure", regenerated.AiDisclosure)
+	if regenerated.AiDisclosure == nil || *regenerated.AiDisclosure != draftfloor.AIProvenanceNotice(textlang.English) {
+		t.Fatalf("ai_disclosure = %v, want the AI provenance notice", regenerated.AiDisclosure)
 	}
 	if regenerated.DiffFromPrevious == nil || len(regenerated.DiffFromPrevious.Added) != 1 ||
 		regenerated.DiffFromPrevious.Added[0].Description != "Kickoff workshop" {

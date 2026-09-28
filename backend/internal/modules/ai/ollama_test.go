@@ -19,9 +19,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
+// newOllamaForTest serves handler for every path except /api/show, which it
+// answers as a model that does not think, so a chat-only test sees no `think`
+// field on the wire.
 func newOllamaForTest(t *testing.T, handler http.HandlerFunc) model.Client {
 	t.Helper()
-	srv := httptest.NewServer(handler)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/show" {
+			if _, err := w.Write([]byte(`{"capabilities":["completion"]}`)); err != nil {
+				t.Errorf("writing fixture show response: %v", err)
+			}
+			return
+		}
+		handler(w, r)
+	}))
 	t.Cleanup(srv.Close)
 	client, err := SelectBrain(ProviderConfig{Provider: "ollama", Model: "gemma3", BaseURL: srv.URL}, noCloudKeys())
 	if err != nil {

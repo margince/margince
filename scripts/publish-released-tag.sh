@@ -29,7 +29,7 @@ tag="${1-}"
 revision="${2-}"
 remote="${3:-origin}"
 
-if [ -z "$tag" ] || [ -z "$revision" ]; then
+if [[ -z "$tag" ]] || [[ -z "$revision" ]]; then
 	echo "usage: publish-released-tag.sh <tag> <revision> [remote]" >&2
 	exit 2
 fi
@@ -47,7 +47,7 @@ remote_value() {
 
 attempt() {
 	local current="$1"
-	if [ -z "$current" ]; then
+	if [[ -z "$current" ]]; then
 		# No tag yet: the lease is "it does not exist", which --force-with-lease
 		# spells as an empty expected value.
 		git push --force-with-lease="refs/tags/$tag:" "$remote" "$target:refs/tags/$tag"
@@ -63,7 +63,7 @@ attempt() {
 		echo "publish-released-tag: $tag names $current, which this checkout cannot resolve — not moving it" >&2
 		exit 1
 	fi
-	if [ "$current_commit" = "$target" ]; then
+	if [[ "$current_commit" = "$target" ]]; then
 		echo "publish-released-tag: $tag already names $target"
 		return
 	fi

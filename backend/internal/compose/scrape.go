@@ -17,13 +17,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -46,6 +49,8 @@ type scrapeEngine struct {
 	extract   evidenceExtractor
 	contacts  *contacts.Store
 	approvals *approvals.Service
+	// pool reads the installation's base language the card is written in.
+	pool *pgxpool.Pool
 }
 
 // Propose resolves the URL to read (override, else the company's domain — both
@@ -113,7 +118,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     enrichTargetType,
 		TargetID:       companyID,
-		Summary:        "Enrichment of " + rawURL,
+		Summary:        fmt.Sprintf(approvalSummaryCopyOver(ctx, e.pool).enrichmentOf, rawURL),
 	})
 	if err != nil {
 		return crmcontracts.EnrichmentProposal{}, err
@@ -173,7 +178,7 @@ func (h scrapeHandlers) ScrapeCompany(w http.ResponseWriter, r *http.Request, id
 				Detail: "This company has no website on file. Add a URL to read from.",
 			})
 		default:
-			httperr.Write(w, r, err)
+			modelfailure.Write(w, r, err)
 		}
 		return
 	}

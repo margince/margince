@@ -254,7 +254,7 @@ func parseVTT(content string) []speakerTurn {
 		case isCueIdentifier(trimmed):
 			continue
 		}
-		speaker, text := splitSpeakerLine(trimmed)
+		speaker, text := SplitSpeakerLine(trimmed)
 		if speaker != "" {
 			current = speaker
 		}
@@ -298,7 +298,7 @@ func parseSRT(content string) []speakerTurn {
 			current = speaker
 			continue
 		}
-		speaker, text := splitSpeakerLine(trimmed)
+		speaker, text := SplitSpeakerLine(trimmed)
 		if speaker != "" {
 			current = speaker
 		}
@@ -309,12 +309,13 @@ func parseSRT(content string) []speakerTurn {
 	return turns
 }
 
-// splitSpeakerLine extracts attribution from one cue line: a WebVTT
+// SplitSpeakerLine extracts attribution from one cue line: a WebVTT
 // `<v Name>text</v>` voice tag, or the `Name: text` convention. A name is
 // letters-first with at most a short trailing number — that admits the
 // "Speaker 1" / "Sprecher 2" labels diarizers emit while a URL or clock
-// time is still never a speaker.
-func splitSpeakerLine(line string) (speaker, text string) {
+// time is still never a speaker. The stage-evidence quote check reads a
+// transcript's turns through it too, so both agree on what a label is.
+func SplitSpeakerLine(line string) (speaker, text string) {
 	if strings.HasPrefix(line, "<v ") {
 		if end := strings.Index(line, ">"); end > 3 {
 			speaker = strings.TrimSpace(line[3:end])
@@ -339,10 +340,10 @@ func timestampSpeakerLine(line string) (speaker string, ok bool) {
 		return "", false
 	}
 	rest = strings.TrimSpace(rest)
-	// A header carries ONLY a name after the clock: short, few words. A
-	// dialogue line that happens to open with a time ("00:12 Great point
-	// everyone, let's continue") stays dialogue.
-	if len(rest) > 40 || len(strings.Fields(rest)) > 4 {
+	// A header carries ONLY a name after the clock, so a dialogue line opening
+	// with a time ("00:12 Great point everyone…") stays dialogue. The word half
+	// belongs to speakerCandidate, which asks it of every lane.
+	if len(rest) > 40 {
 		return "", false
 	}
 	name := speakerCandidate(rest)
@@ -351,6 +352,13 @@ func timestampSpeakerLine(line string) (speaker string, ok bool) {
 	}
 	return name, true
 }
+
+// speakerNameWords is the most words a speaker LABEL carries — a diarizer's
+// one or two tokens, or a name written out in full with a title. Wide on
+// purpose:
+// refusing a real speaker line is the worse error, because the text then reads
+// as one voice and somebody else's words enter the corpus as the reader's own.
+const speakerNameWords = 4
 
 // clockTime matches mm:ss or hh:mm:ss with 1-2 digit groups.
 func clockTime(s string) bool {
@@ -372,11 +380,21 @@ func clockTime(s string) bool {
 }
 
 // speakerCandidate accepts a name-shaped prefix: it must start with a
-// letter, carry digits only as one trailing run of at most three (the
-// diarizer convention), and contain no markup or path characters.
+// letter, be a NAME's worth of words, carry digits only as one trailing run of
+// at most three (the diarizer convention), and contain no markup or path
+// characters.
+//
+// Only the word bound separates a label from a SENTENCE. Every other rule here
+// reads shape, and an ordinary clause has the shape of a name; the caller's
+// 40-character cap does not separate them either, since "On the integration
+// question you raised:" fits inside it. A clause admitted as a speaker takes
+// the whole paste with it — only that speaker's turns reach the corpus.
 func speakerCandidate(prefix string) string {
 	candidate := strings.TrimSpace(prefix)
 	if candidate == "" || strings.ContainsAny(candidate, "/<>") {
+		return ""
+	}
+	if len(strings.Fields(candidate)) > speakerNameWords {
 		return ""
 	}
 	stem := strings.TrimSpace(strings.TrimRight(candidate, "0123456789"))

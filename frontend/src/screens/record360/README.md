@@ -27,14 +27,15 @@ its source off a bare timeline page for the records that have no composite
 read. A record page hands in its own answers — which standing, which rows —
 and owes the reader the same shape as the record beside it.
 
-`moment.tsx` is THE MOMENT: the server picks one from a fixed ladder, and this
-holds everything a page needs to render it — the word for the rule
-(`MOMENT_RULE_LABEL`), the colour it carries (`standingTone`), whether it
-belongs in the day's work at all (`momentIsARow`) and the row the account
-brief draws it as (`MomentRow`), which draws what it rests on with
-`momentevidence.tsx`'s `MomentEvidence`. It was on the contact page, with the
-account brief importing the vocabulary across, which is the shape this kit
-exists to end, and the tell was that `StandingTone` was already the kit's own.
+`moment.ts` is THE MOMENT as a page READS it: the server picks one from a
+fixed ladder, and this holds the judgements every page owes the same answer to
+— the word for the rule (`MOMENT_RULE_LABEL`), whether it belongs in the day's
+work at all (`momentIsARow`) and whether what it rests on says anything its
+headline has not (`basisAddsARecord`). The moment is DRAWN by `FoundMove`
+above, on the contact page and in the account brief alike, and the chips under
+it by `momentevidence.tsx`'s `MomentEvidence`. The vocabulary was on the
+contact page with the account brief importing it across, which is the shape
+this kit exists to end.
 
 ## What belongs here
 

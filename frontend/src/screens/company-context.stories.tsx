@@ -143,7 +143,7 @@ export const ManualSetupSaveFailed: Story = {
     const canvas = within(canvasElement);
     await userEvent.type(canvas.getByLabelText("Company name"), "Havbris AS");
     await userEvent.type(
-      canvas.getByLabelText("What do you sell?"),
+      canvas.getByLabelText("Products and services"),
       "Coastal ferry maintenance contracts.",
     );
     await userEvent.type(

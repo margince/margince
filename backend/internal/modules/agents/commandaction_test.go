@@ -31,8 +31,8 @@ func TestCustomFieldCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.T) {
 		name string
 		call GovernedCall
 	}{
-		{"retire", NewRetireCustomFieldCall(unreadableProvider{}, RetireCustomFieldCommand{ID: id})},
-		{"update_options", NewUpdateCustomFieldOptionsCall(unreadableProvider{}, UpdateCustomFieldOptionsCommand{ID: id})},
+		{"retire", NewRetireCustomFieldCall(unreadableProvider{}, nil, RetireCustomFieldCommand{ID: id})},
+		{"update_options", NewUpdateCustomFieldOptionsCall(unreadableProvider{}, nil, UpdateCustomFieldOptionsCommand{ID: id})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -62,7 +62,7 @@ func TestStakeholderCommandsStageTheProject(t *testing.T) {
 	// provider — an unreadable one would fail at Guards before Subject ever ran.
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityProject, projectID, true)}
 
-	setInfo, err := StageSubject(context.Background(), NewSetStakeholderCall(provider, SetStakeholderCommand{ID: projectID}))
+	setInfo, err := StageSubject(context.Background(), NewSetStakeholderCall(provider, nil, SetStakeholderCommand{ID: projectID}))
 	if err != nil {
 		t.Fatalf("staging a set-stakeholder answered %v, want it staged", err)
 	}
@@ -71,7 +71,7 @@ func TestStakeholderCommandsStageTheProject(t *testing.T) {
 	}
 
 	removeInfo, err := StageSubject(context.Background(),
-		NewRemoveStakeholderCall(provider, RemoveStakeholderCommand{ID: projectID, ContactID: contactID}))
+		NewRemoveStakeholderCall(provider, nil, RemoveStakeholderCommand{ID: projectID, ContactID: contactID}))
 	if err != nil {
 		t.Fatalf("staging a remove-stakeholder answered %v, want it staged", err)
 	}
@@ -92,8 +92,8 @@ func TestStakeholderCommandsRefuseAnUnreadableProject(t *testing.T) {
 		name string
 		call GovernedCall
 	}{
-		{"set", NewSetStakeholderCall(unreadableProvider{}, SetStakeholderCommand{ID: id})},
-		{"remove", NewRemoveStakeholderCall(unreadableProvider{}, RemoveStakeholderCommand{ID: id, ContactID: contactID})},
+		{"set", NewSetStakeholderCall(unreadableProvider{}, nil, SetStakeholderCommand{ID: id})},
+		{"remove", NewRemoveStakeholderCall(unreadableProvider{}, nil, RemoveStakeholderCommand{ID: id, ContactID: contactID})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -111,8 +111,8 @@ func TestStakeholderCommandsRefuseAProjectHeldElsewhere(t *testing.T) {
 		name string
 		call GovernedCall
 	}{
-		{"set", NewSetStakeholderCall(elsewhereProvider{}, SetStakeholderCommand{ID: id})},
-		{"remove", NewRemoveStakeholderCall(elsewhereProvider{}, RemoveStakeholderCommand{ID: id, ContactID: contactID})},
+		{"set", NewSetStakeholderCall(elsewhereProvider{}, nil, SetStakeholderCommand{ID: id})},
+		{"remove", NewRemoveStakeholderCall(elsewhereProvider{}, nil, RemoveStakeholderCommand{ID: id, ContactID: contactID})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -127,10 +127,10 @@ func TestStakeholderCommandsRefuseAProjectHeldElsewhere(t *testing.T) {
 func TestStakeholderCommandsAdmitAReadableProject(t *testing.T) {
 	id, contactID := ids.NewV7(), ids.NewV7()
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityProject, id, true)}
-	if err := NewSetStakeholderCall(provider, SetStakeholderCommand{ID: id}).Guards(context.Background()); err != nil {
+	if err := NewSetStakeholderCall(provider, nil, SetStakeholderCommand{ID: id}).Guards(context.Background()); err != nil {
 		t.Fatalf("guarding a readable, authoritative project (set) answered %v, want it admitted", err)
 	}
-	if err := NewRemoveStakeholderCall(provider, RemoveStakeholderCommand{ID: id, ContactID: contactID}).Guards(context.Background()); err != nil {
+	if err := NewRemoveStakeholderCall(provider, nil, RemoveStakeholderCommand{ID: id, ContactID: contactID}).Guards(context.Background()); err != nil {
 		t.Fatalf("guarding a readable, authoritative project (remove) answered %v, want it admitted", err)
 	}
 }

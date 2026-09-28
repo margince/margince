@@ -61,7 +61,10 @@ func leadLastActivitySQL() string {
 
 var leadColumns = `id, full_name, email, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
-	promoted_contact_id, promoted_at, merged_into_id, source, captured_by, version, created_at, updated_at, archived_at,
+	promoted_contact_id, promoted_at, merged_into_id, source, captured_by,
+	source_author_id, source_author_name,
+	` + sourceAuthorSeatNameSQL("lead") + `,
+	version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
 	` + leadSourceLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
@@ -74,7 +77,8 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	  WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	    AND ((a.kind = 'email' AND a.direction = 'inbound')
-	         OR (a.kind = 'meeting' AND a.meeting_status IN ('booked','held')))
+	         OR (a.kind = 'meeting'
+	             AND (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))))
 	  ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0
 	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
 	` + leadLastActivitySQL() + `,
@@ -110,7 +114,8 @@ var leadColumns = `id, full_name, email, title, company_name, candidate_company_
 	  ORDER BY abs(CASE WHEN jsonb_typeof(factor.value->'points') = 'number'
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
-	  LIMIT 1)`
+	  LIMIT 1),
+	legal_hold`
 
 // readLead resolves one lead row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads whose
@@ -150,15 +155,19 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var status string
 	var version int64
 	var openTasks int
+	var authorName, authorSeatName *string
+	var authorID *ids.UUID
 
 	dests := []any{
 		&id, &l.FullName, &email, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
 		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &l.SourceSystem, &l.SourceId,
-		&promotedContact, &l.PromotedAt, &mergedInto, &l.Source, &l.CapturedBy, &version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
+		&promotedContact, &l.PromotedAt, &mergedInto, &l.Source, &l.CapturedBy,
+		&authorID, &authorName, &authorSeatName,
+		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
 		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &openTasks,
-		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason,
+		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -198,5 +207,6 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.Version = &version
 	l.OpenTaskCount = &openTasks
 	l.SlaDeadlineAt, l.SlaState = leadSLAFields(policy, l.RoutedAt, l.CreatedAt, l.FirstResponseAt, l.ArchivedAt)
+	l.Author = sourceAuthorOf(authorID, authorSeatName, authorName, l.SourceSystem)
 	return l, nil
 }

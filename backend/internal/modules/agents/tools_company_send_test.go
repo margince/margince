@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -95,7 +96,7 @@ func TestTheAccountStartedSendStagesACreate(t *testing.T) {
 // The inbox row is the whole of what a human reads before releasing a send, so
 // an addressee missing from it is a recipient nobody agreed to.
 func TestTheAccountStartedSendSummaryNamesEveryArgumentItReleases(t *testing.T) {
-	got := describeAccountSend(SendCompanyEmailCommand{
+	got := describeAccountSend(summaryByLang[textlang.English], SendCompanyEmailCommand{
 		To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 	}, []RecordLink{{EntityType: "company", EntityID: ids.NewV7()}})
 

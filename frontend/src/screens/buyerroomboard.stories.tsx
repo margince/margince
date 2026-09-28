@@ -106,10 +106,14 @@ function Board({
   );
 }
 
+const WRITING_SEAT: { mayWrite: boolean; refusalKey?: MessageKey } = {
+  mayWrite: true,
+};
+
 function board(
   documents: readonly BuyerRoomDocument[],
   threads: readonly DealRoomThread[],
-  seat: { mayWrite: boolean; refusalKey?: MessageKey } = { mayWrite: true },
+  seat: { mayWrite: boolean; refusalKey?: MessageKey } = WRITING_SEAT,
 ) {
   return () => {
     installFetchStub(routes(documents, threads));

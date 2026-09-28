@@ -28,7 +28,7 @@ import (
 // same row for its label and would refuse this too, so a whole-seam assertion
 // passes whether or not the guard is there at all.
 func TestArchiveGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
-	call := NewArchiveCall(unreadableProvider{}, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
+	call := NewArchiveCall(unreadableProvider{}, nil, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("guarding an unreadable contact answered %v, want the row-scope miss — a staged approval "+
@@ -40,7 +40,7 @@ func TestArchiveGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
 // reason refuseStagingElsewhere states: the decidability probe and the version
 // pin both read OUR tables, so the approval could never be released.
 func TestArchiveGuardsRefuseATargetHeldElsewhere(t *testing.T) {
-	call := NewArchiveCall(elsewhereProvider{}, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
+	call := NewArchiveCall(elsewhereProvider{}, nil, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("guarding a mirrored contact answered %v, want the unsupported-by-SoR refusal", err)
@@ -53,7 +53,7 @@ func TestArchiveGuardsRefuseATargetHeldElsewhere(t *testing.T) {
 func TestArchiveSubjectNamesTheRecordAndSuppliesNoPin(t *testing.T) {
 	id := ids.NewV7()
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityContact, id, true)}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: id})
+	call := NewArchiveCall(provider, nil, ArchiveCommand{RecordType: "contact", ID: id})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
@@ -84,7 +84,7 @@ func TestArchiveStagesATypeTheRecordSeamDoesNotServe(t *testing.T) {
 	id := ids.NewV7()
 	// A provider that fails every read, so a resolver that consulted the seam
 	// for a tag would be caught here rather than passing on a lenient stub.
-	call := NewArchiveCall(unreadableProvider{}, ArchiveCommand{RecordType: "tag", ID: id})
+	call := NewArchiveCall(unreadableProvider{}, nil, ArchiveCommand{RecordType: "tag", ID: id})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
@@ -146,7 +146,7 @@ func (c *countingProvider) Read(_ context.Context, ref datasource.EntityRef) (da
 // with the authority that admitted it.
 func TestBothGovernanceQuestionsAreAnsweredFromOneRead(t *testing.T) {
 	provider := &countingProvider{}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
+	call := NewArchiveCall(provider, nil, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if _, err := StageSubject(context.Background(), call); err != nil {
 		t.Fatalf("staging a readable contact answered %v, want it staged", err)

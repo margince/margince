@@ -72,7 +72,7 @@ func TestManagementSeesEveryRowAndAdministersNothing(t *testing.T) {
 			return err
 		}()},
 		{"list every role", func() error {
-			_, err := e.svc.ListRoles(mctx, mgmt)
+			_, err := e.svc.ListRoles(mctx, mgmt, false)
 			return err
 		}()},
 	}

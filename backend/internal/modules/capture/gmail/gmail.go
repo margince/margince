@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -188,10 +189,16 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		// overwriting the watermark (which would drop everything in between).
 		return nil, err
 	}
-	ids, nextHistory, err := c.selectMessages(ctx, access, start)
+	ids, deleted, nextHistory, err := c.selectMessages(ctx, access, start)
 	if err != nil {
 		return nil, err
 	}
+	// The owner's own deletions, reported before this round's new mail lands.
+	// Order matters only in the degenerate case — a message deleted and
+	// re-delivered within one history span — and reporting first is the safe
+	// half: the re-delivery re-captures it, where the other order would destroy
+	// the copy that had just arrived.
+	reportRemovals(ctx, sink, deleted)
 
 	for _, id := range ids {
 		msg, err := c.api.GetRaw(ctx, access, id)
@@ -217,21 +224,27 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	return marshalCursor(nextHistory, owner), nil
 }
 
-// selectMessages resolves which message ids to pull and the historyId to
-// advance to, choosing the initial-backfill or the incremental path and
-// folding the stale-cursor fallback into one place.
-func (c *Connector) selectMessages(ctx context.Context, access, start string) ([]string, string, error) {
+// selectMessages resolves which message ids to pull, which the owner deleted,
+// and the historyId to advance to — choosing the initial-backfill or the
+// incremental path and folding the stale-cursor fallback into one place.
+//
+// A BACKFILL reports no deletions, and that is right rather than a gap: it
+// anchors a cursor from the mailbox's current state, so it has no prior state
+// to say anything was removed from.
+func (c *Connector) selectMessages(ctx context.Context, access, start string) (ids, deleted []string, next string, err error) {
 	if start == "" {
-		return c.backfill(ctx, access)
+		anchored, historyID, backfillErr := c.backfill(ctx, access)
+		return anchored, nil, historyID, backfillErr
 	}
-	added, next, err := c.api.History(ctx, access, start)
+	added, removed, next, err := c.api.History(ctx, access, start)
 	if errors.Is(err, ErrHistoryGone) {
-		return c.backfill(ctx, access)
+		anchored, historyID, backfillErr := c.backfill(ctx, access)
+		return anchored, nil, historyID, backfillErr
 	}
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	return added, next, nil
+	return added, removed, next, nil
 }
 
 // backfill anchors the cursor at the mailbox's current historyId and returns
@@ -276,6 +289,15 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	//
 	// Before the parse: a draft needs no reading to be refused.
 	if hasDraftLabel(fetched.Labels) {
+		return false, nil
+	}
+	// Spam and trash for the same reason and in the same place. Both
+	// enumerations already ask Gmail to leave them out — messages.list carries
+	// includeSpamTrash=false — but neither ask is a guarantee about the message
+	// that finally arrives: ids are listed in one call and read in another, and
+	// a message can be moved between them. The listing narrows what is offered;
+	// this refuses what turns up anyway.
+	if hasRejectedLabel(fetched.Labels) {
 		return false, nil
 	}
 	msg, err := mailmap.Parse(fetched.RFC822, owner)
@@ -416,4 +438,56 @@ func labelContainers(labels []string) []string {
 		out = append(out, connector.Container(connectorName, label))
 	}
 	return out
+}
+
+// reportRemovals tells the sink which messages the owner deleted at Gmail.
+//
+// A Sink that cannot take removals is not a fault: connector.MessageRemover is
+// optional by design, so a fixture implementing only Upsert behaves exactly as
+// this connector did before — the deletions are dropped. Silently, because
+// there is nothing for an operator to fix.
+//
+// Graph has the same eight lines (graph.go), deliberately not shared: a
+// connector package owns its whole conversation with one provider and imports
+// no sibling, which leaves the connector port to host a shared helper — the
+// seam every provider implements, not a place for one caller's loop. Growing
+// it for them would be the larger coupling, so the duty is asserted on both
+// sides instead.
+//
+// A failure on one removal does not stop the pull. Losing a round of new mail
+// over a message that is already gone from the mailbox trades a real capture
+// for a cleanup the next history span reports again anyway.
+func reportRemovals(ctx context.Context, sink connector.Sink, deleted []string) {
+	if len(deleted) == 0 {
+		return
+	}
+	remover, ok := sink.(connector.MessageRemover)
+	if !ok {
+		return
+	}
+	for _, id := range deleted {
+		key := connector.NaturalKey{SourceSystem: connectorName, SourceID: id}
+		if err := remover.RemoveMessage(ctx, key); err != nil {
+			slog.WarnContext(ctx, "gmail: a mailbox-side deletion was not acted on", "error", err)
+		}
+	}
+}
+
+// ListContainers returns the mailbox's labels, satisfying
+// connector.ContainerLister.
+//
+// The auth state is unmarshalled here rather than taken apart by the caller for
+// the reason Sync does it: the refresh token is this connector's to hold, and a
+// registry that opened the blob to mint a token would be a second place that
+// knows what shape it has.
+func (c *Connector) ListContainers(ctx context.Context, auth connector.Auth) ([]connector.NamedContainer, error) {
+	var st authState
+	if err := json.Unmarshal(auth, &st); err != nil {
+		return nil, fmt.Errorf("gmail: malformed auth state: %w", err)
+	}
+	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	if err != nil {
+		return nil, err
+	}
+	return c.api.ListLabels(ctx, access)
 }

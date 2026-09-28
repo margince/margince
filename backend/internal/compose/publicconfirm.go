@@ -41,8 +41,8 @@ type publicConfirmLimiters struct {
 
 func newPublicConfirmLimiters() publicConfirmLimiters {
 	return publicConfirmLimiters{
-		perIP:    ratelimit.New(60, time.Minute),
-		perToken: ratelimit.New(20, time.Minute),
+		perIP:    ratelimit.New("public-confirm/per-ip", ratelimit.FailClosed, 60, time.Minute),
+		perToken: ratelimit.New("public-confirm/per-token", ratelimit.FailClosed, 20, time.Minute),
 	}
 }
 

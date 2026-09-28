@@ -59,7 +59,8 @@ function said(line: SpokenLine): string {
  * missing from the catalog with every case here still green — the link would
  * simply stop being a link.
  */
-const t = (key: MessageKey) => translate("en", key);
+const t = (key: MessageKey, params?: Record<string, string>) =>
+  translate("en", key, params);
 
 afterEach(() => {
   cleanup();
@@ -132,13 +133,13 @@ describe("restingReadings", () => {
   // ABSENT, never a zero standing in for an all-clear.
   it("says nothing needs you when every read came back with nothing", () => {
     expect(restingReadings(QUIET, WORDS).map(said)).toEqual([
-      "Nothing needs you",
+      "Nothing needs attention",
     ]);
   });
 
   it("does not count an unanswered approvals read as a clean queue", () => {
     const answered = restingReadings({ ...QUIET, waiting: 0 }, WORDS);
-    expect(answered.map(said)).toEqual(["Nothing needs you"]);
+    expect(answered.map(said)).toEqual(["Nothing needs attention"]);
   });
 
   // The fix for the pinned line: a day that settled three runs says three
@@ -153,7 +154,7 @@ describe("restingReadings", () => {
       WORDS,
     );
     expect(lines.map(said)).toEqual([
-      "2 decisions waiting",
+      en["agent.line.waiting_other"].replace("{count}", "2"),
       "brief ready",
       "summary ready",
       "offline model",
@@ -163,15 +164,27 @@ describe("restingReadings", () => {
 
 describe("restingTips", () => {
   it("offers every tip in the catalog on a screen none of them names", () => {
-    expect(restingTips("deals", t)).toHaveLength(TIPS.length);
+    expect(restingTips("deals", t, "Win32")).toHaveLength(TIPS.length);
   });
 
   // A rail telling somebody on Home to go to Home is the one line that would
   // cost it the other three.
   it("drops the tip that names the screen the reader is standing on", () => {
-    const here = restingTips("home", t).map((line) => line.subject?.route);
+    const here = restingTips("home", t, "Win32").map(
+      (line) => line.subject?.route,
+    );
     expect(here).not.toContainEqual({ screen: "home" });
     expect(here).toHaveLength(TIPS.length - 1);
+  });
+
+  // The palette's shortcut is named in the keys the reader's keyboard has: a
+  // Windows reader told to press ⌘ is told to press a key that is not there.
+  it("names the palette's shortcut the way this keyboard spells it", () => {
+    const lines = restingTips("deals", t, "Win32").map(said);
+    expect(lines).toContain("Ask the agent with Ctrl K.");
+    expect(lines.join(" ")).not.toContain("⌘");
+    const mac = restingTips("deals", t, "MacIntel").map(said);
+    expect(mac).toContain("Ask the agent with ⌘ K.");
   });
 
   /**
@@ -192,7 +205,11 @@ describe("restingTips", () => {
   it.each(LOCALES)(
     "keeps every tip inside the rail's two lines in %s",
     (locale) => {
-      const tips = restingTips("deals", (key) => translate(locale, key));
+      const tips = restingTips(
+        "deals",
+        (key, params) => translate(locale, key, params),
+        "Win32",
+      );
       expect(tips.map(said).filter((line) => line.length > CEILING)).toEqual(
         [],
       );
@@ -246,9 +263,9 @@ describe("useRestingLine", () => {
   it("still moves when there is only one reading to report", () => {
     vi.useFakeTimers();
     const { result } = renderHook(() =>
-      useRestingLine([plain("Nothing needs you")], TIP_LINES),
+      useRestingLine([plain("Nothing needs attention")], TIP_LINES),
     );
-    expect(said(result.current)).toBe("Nothing needs you");
+    expect(said(result.current)).toBe("Nothing needs attention");
     advance(10_000);
     expect(said(result.current)).toBe("tip A");
   });
@@ -316,8 +333,11 @@ function settledRun(
 }
 
 /** The sentence from the screenshot this change was opened against. */
-const SUMMARY_LINE = "My summary of Sabine Mayer is ready.";
-const BRIEF_LINE = "Your morning brief is ready.";
+const SUMMARY_LINE = en["agent.activity.summarizeNamed.done"].replace(
+  "{name}",
+  "Sabine Mayer",
+);
+const BRIEF_LINE = "Morning brief ready";
 
 const summary = (agoMs: number) =>
   settledRun("summarize", agoMs, { subject_label: "Sabine Mayer" });
@@ -411,9 +431,7 @@ describe("the rail's resting line", () => {
     await waitFor(() =>
       expect(shown(container)).toBe(en["agent.line.allClear"]),
     );
-    const tips = restingTips("companies", (key) => translate("en", key)).map(
-      said,
-    );
+    const tips = restingTips("companies", t, navigator.platform).map(said);
     await act(async () => {
       vi.advanceTimersByTime(7_000);
     });

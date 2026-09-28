@@ -3,16 +3,16 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useCan } from "../../app/capability";
 import type { MarginceCoreState } from "../../design-system/margince-core";
 import { AiRuntimeChip } from "../../design-system/margince-workbench";
 import {
   OnboardingStage,
   type StageProgress,
 } from "../../design-system/onboarding-stage";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import { throwProblem } from "../common";
 import { loadWizardState } from "../onboarding";
-import { configuredModelLabel } from "../onboarding-read";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 
@@ -32,14 +32,42 @@ type AiRunSummary = components["schemas"]["AiRunSummary"];
 type AiProfile = components["schemas"]["AiProfile"];
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 
+const tierKeys = {
+  local_small: "ob.ai.tier.localSmall",
+  cheap_cloud: "ob.ai.tier.cheapCloud",
+  premium: "ob.ai.tier.premium",
+  frontier: "ob.ai.tier.frontier",
+  local_large: "ob.ai.tier.localLarge",
+} as const;
+
+export function configuredModelLabel(
+  profile: AiProfile | undefined,
+  unavailable: string,
+  t: Translator,
+) {
+  const configured = profile?.configured_models
+    ?.map(
+      (binding) =>
+        `${binding.provider}/${binding.model} · ${t(tierKeys[binding.tier])}`,
+    )
+    .filter((binding, index, all) => binding && all.indexOf(binding) === index);
+  if (configured?.length) return configured.join(" + ");
+  if (profile?.providers?.length) return profile.providers.join(" + ");
+  return unavailable;
+}
+
 // The detailed AI profile, and the label every onboarding surface names the
 // configured model with. One hook so the gate, the read theatre and the
 // workbench cannot disagree about what is answering — and one ["ai-profile"]
 // cache entry, so naming it in three places still costs one request.
 export function useConfiguredModel(): string {
   const t = useT();
+  // GET /ai/profile is gated on automation:update server-side, so a rep's
+  // journey skips the read and names no model rather than drawing a 403.
+  const canReadProfile = useCan("automation", "update");
   const profile = useQuery({
     queryKey: ["ai-profile"],
+    enabled: canReadProfile,
     queryFn: async (): Promise<AiProfile> => {
       const { data, error } = await api.GET("/ai/profile");
       if (error) {

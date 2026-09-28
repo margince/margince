@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
@@ -133,8 +134,8 @@ func TestSyncInitialBackfillAnchorsCursorAndCaptures(t *testing.T) {
 	if sink.recs[0].Source != "gcal:evt-1" || sink.recs[0].CapturedBy != "connector:gcal" {
 		t.Errorf("provenance = (%q,%q), want (gcal:evt-1, connector:gcal)", sink.recs[0].Source, sink.recs[0].CapturedBy)
 	}
-	if tok, _ := parseCursor(cur); tok != "sync-abc" {
-		t.Errorf("cursor syncToken = %q, want sync-abc (anchored on initial)", tok)
+	if cs, _ := parseCursor(cur); cs.SyncToken != "sync-abc" {
+		t.Errorf("cursor syncToken = %q, want sync-abc (anchored on initial)", cs.SyncToken)
 	}
 	if api.incrementalCalls != 0 {
 		t.Errorf("initial backfill must not call incremental, got %d", api.incrementalCalls)
@@ -150,7 +151,7 @@ func TestSyncIncrementalUsesSyncTokenAndAdvancesCursor(t *testing.T) {
 	c := New(fakeOAuth{access: "access-1"}, api)
 	sink := &recordingSink{}
 
-	prior, _ := json.Marshal(cursorState{SyncToken: "sync-abc"})
+	prior, _ := json.Marshal(cursorState{SyncToken: "sync-abc", ListedAt: time.Now()})
 	cur, err := c.Sync(context.Background(), authBytes(t), prior, sink)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
@@ -161,8 +162,8 @@ func TestSyncIncrementalUsesSyncTokenAndAdvancesCursor(t *testing.T) {
 	if api.incrementalCalls != 1 || api.initialCalls != 0 {
 		t.Errorf("incremental path should call incremental once, initial never; got incremental=%d initial=%d", api.incrementalCalls, api.initialCalls)
 	}
-	if tok, _ := parseCursor(cur); tok != "sync-next" {
-		t.Errorf("cursor = %q, want advanced to sync-next", tok)
+	if cs, _ := parseCursor(cur); cs.SyncToken != "sync-next" {
+		t.Errorf("cursor = %q, want advanced to sync-next", cs.SyncToken)
 	}
 }
 
@@ -176,7 +177,7 @@ func TestSyncTokenGoneFallsBackToInitial(t *testing.T) {
 	c := New(fakeOAuth{access: "access-1"}, api)
 	sink := &recordingSink{}
 
-	prior, _ := json.Marshal(cursorState{SyncToken: "stale"})
+	prior, _ := json.Marshal(cursorState{SyncToken: "stale", ListedAt: time.Now()})
 	cur, err := c.Sync(context.Background(), authBytes(t), prior, sink)
 	if err != nil {
 		t.Fatalf("a too-old syncToken must not fail Sync: %v", err)
@@ -187,8 +188,8 @@ func TestSyncTokenGoneFallsBackToInitial(t *testing.T) {
 	if api.initialCalls != 1 {
 		t.Errorf("fallback should call ListInitial once, got %d", api.initialCalls)
 	}
-	if tok, _ := parseCursor(cur); tok != "sync-fresh" {
-		t.Errorf("cursor should re-anchor at the fresh token, got %q", tok)
+	if cs, _ := parseCursor(cur); cs.SyncToken != "sync-fresh" {
+		t.Errorf("cursor should re-anchor at the fresh token, got %q", cs.SyncToken)
 	}
 }
 
@@ -294,15 +295,16 @@ func TestHealthCheckVerifiesTokenAndCalendar(t *testing.T) {
 }
 
 func TestCursorRoundTrip(t *testing.T) {
-	cur := marshalCursor("sync-xyz")
-	tok, err := parseCursor(cur)
+	listed := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	cur := marshalCursor("sync-xyz", listed)
+	cs, err := parseCursor(cur)
 	if err != nil {
 		t.Fatalf("parseCursor: %v", err)
 	}
-	if tok != "sync-xyz" {
-		t.Errorf("round-trip token = %q, want sync-xyz", tok)
+	if cs.SyncToken != "sync-xyz" || !cs.ListedAt.Equal(listed) {
+		t.Errorf("round-trip = %+v, want sync-xyz listed %s", cs, listed)
 	}
-	if empty, err := parseCursor(nil); err != nil || empty != "" {
+	if empty, err := parseCursor(nil); err != nil || empty.SyncToken != "" {
 		t.Errorf("empty cursor = (%q,%v), want (\"\", nil)", empty, err)
 	}
 	// A stored-but-tokenless cursor is corruption, not a fresh calendar: it must

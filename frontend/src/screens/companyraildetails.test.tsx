@@ -57,7 +57,7 @@ const PART_LABELS = [
   "Address line 2",
   "Postal code",
   "City",
-  "State / region",
+  "State or region",
   "Country",
 ];
 

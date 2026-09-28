@@ -120,7 +120,9 @@ bootstrap_admin:
 #
 # seeds:
 #   ai_routing:
-#     profile: eu_hosted          # eu_hosted | sovereign | cloud_frontier
+#     # cloud_frontier, not eu_hosted: the Gemini Developer API states no EU
+#     # processing region, so nothing here keeps text in the EU.
+#     profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
 #     tiers:
 #       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
 #       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
@@ -163,6 +165,28 @@ bootstrap_admin:
 # (ai_call_payload) — OFF by default because it stores special-category-adjacent
 # content that then ages under the retention engine and the Art. 17 erasure
 # cascade. Honored by both the api and worker roles (both take --config).
+#
+# IF YOU TURN THIS ON, SET THE WINDOW DELIBERATELY. The `ai_call_payload` /
+# `content` retention policy is an admin-editable row, seeded at bootstrap at
+# 365 days, and it is the whole of the bound on this exposure. Three things
+# decide what the number should be:
+#
+#   WHAT IT BOUNDS. How long a captured transcript, contract or draft — the
+#   model's whole request — stays on disk after the work is done. For a reading
+#   of a meeting transcript, that request IS the transcript: the largest copy of
+#   somebody's words this product holds.
+#
+#   WHAT IT IS FOR. Debugging a call and auditing what was sent are
+#   days-to-weeks questions. A year of them is a year of somebody's words kept
+#   for a lane nobody is reading.
+#
+#   WHAT IT DOES NOT BOUND. An Art. 17 erasure reaches these payloads two ways:
+#   by the record a call cited, and by matching the subject's addresses in the
+#   text. A call that names no record and whose text spells no address is
+#   reached by neither, and for those this window is the guaranteed end — which
+#   is exactly the case a shorter one is for.
+#   docs/explanation/privacy-and-consent.md, "What an erasure reaches in the AI
+#   telemetry, and what it does not".
 # ai:
 #   capture_payloads: true
 
@@ -214,8 +238,21 @@ bootstrap_admin:
 #
 # The hourly sweep deletes payloads with the rows that carry them, and an
 # erasure request reaches them inside the window.
+# max_backfill_months caps how far back a mailbox import may reach, for the whole
+# installation. Absent means no cap, which is the shipped behaviour: whoever
+# connects a mailbox picks from 3 months to 10 years, and picks again next time.
+#
+# Set one when the answer should be the installation's rather than each
+# colleague's. A ten-year import is not a bigger version of a one-year import —
+# it predates every notice, policy and exclusion rule you have handed out, and it
+# is the input to the raw_capture growth your retention rule then ages back out.
+#
+# The number is matched against the offered windows (3, 6, 12, 24, 36, 60, 84,
+# 120), so the connect dialog offers only what it admits and a start above it is
+# refused at the door as well as at the preview.
 # capture:
 #   trace_payloads: false
+#   max_backfill_months: 24
 
 # Rates & costs "Refresh from sources" (worker role): an admin triggers an async
 # refresh that stages confirm-first proposals into the approvals inbox; a human

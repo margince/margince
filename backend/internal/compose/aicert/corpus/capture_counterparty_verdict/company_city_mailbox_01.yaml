@@ -33,9 +33,9 @@ expect:
     anywhere — the signature is an office, and "Sir or Madam" says the writer
     does not know who they are writing to either.
     "company_sender" scores highest: the company is writing as itself.
-    "role_mailbox" is a near miss and scores nearly as high — the effect is the
-    same, real correspondence with no contact invented, and whether a city
-    office is a function or the company speaking is a thin line.
+    "role_mailbox" is wrong but withholds a contact and scores in the middle:
+    the tiebreak between the two reads the address's local part, and a city
+    name is not a function like support@ or info@.
     "contact" is the failure this exists to catch and scores zero above the
     floor: it files a contact called "Singapore AC", which is what a founder
     actually found in his CRM. "spam" scores zero — hiding a counterparty's

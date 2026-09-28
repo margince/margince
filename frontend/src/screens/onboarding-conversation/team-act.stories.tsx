@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { SEEDED_ASSIGNABLE_ROLES } from "../roles.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -26,6 +27,8 @@ function act(locale?: "de") {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /teams": () => jsonResponse({ data: [], next_cursor: null }),
+      "GET /users/assignable-roles": () =>
+        jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
       "POST /users/access-preview": () =>
         jsonResponse({ role: "rep", row_scope: "own", objects: {} }),
     });

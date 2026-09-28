@@ -453,6 +453,113 @@ describe("NotificationBell", () => {
     expect(await screen.findByText(/Nothing has come in/i)).not.toBeNull();
   });
 
+  // A PANEL IS CHROME OVER THE PAGE IT OPENS. The popover deliberately ignores
+  // clicks inside itself (app/popover.ts), so a destination that should also
+  // close has to say so — otherwise the centre stands over the record it just
+  // sent the reader to.
+  it("leaves when a notice sends the reader to its record", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          target: { type: "lead", id: "11111111-1111-4111-8111-111111111111" },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+    await user.click(
+      await screen.findByRole("link", { name: "A lead is past its deadline" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("link", { name: /past its deadline/i }),
+      ).toBeNull(),
+    );
+  });
+
+  // The panel is drawn at the body, so Tab reaches it by nothing but the rule
+  // in design-system/portalfocus.ts: a keyboard reader who presses the bell
+  // lands inside, and stepping back off the first stop returns to the bell.
+  it("takes a keyboard reader into the panel and back to the bell", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline"),
+        notice("n2", "An automation could not run", {
+          created_at: "2026-09-14T09:00:00Z",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    const bell = await screen.findByRole("button", { name: /waiting/i });
+    await user.click(bell);
+
+    const settleAll = await screen.findByRole("button", {
+      name: /mark all read/i,
+    });
+    await waitFor(() => expect(document.activeElement).toBe(settleAll));
+
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(bell);
+  });
+
+  // A REFUSAL OUTLIVES THE PANEL IT WAS RAISED IN. The centre is unmounted by
+  // the dismissal, so a settle whose failure lived there would be gone by the
+  // time the reader came back to a count that had not moved.
+  it("still says why after the reader closes the centre and returns", async () => {
+    vi.stubGlobal("fetch", refusingBackend("read-all").fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    const bell = await screen.findByRole("button", { name: /waiting/i });
+    await user.click(bell);
+    await user.click(
+      await screen.findByRole("button", { name: /mark all read/i }),
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "the notice store is unavailable",
+    );
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    await user.click(bell);
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "the notice store is unavailable",
+    );
+  });
+
+  // The bulk verb is an offer to settle something, so it is absent when there
+  // is nothing: an enabled button whose whole effect is a write over an empty
+  // set tells a reader there is work here that they cannot see.
+  it("offers no bulk settle when nothing is waiting", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "An automation could not run", {
+          read_at: "2026-09-15T09:30:00Z",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
+
+    expect(
+      await screen.findByText("An automation could not run"),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /mark all read/i })).toBeNull();
+  });
+
   // TWO notices, not one. German agrees a verb with its count, so a bell name
   // built on "wartet" reads correctly at one and wrongly at every other number
   // — and a single-notice fixture is exactly the one case that cannot see it.

@@ -431,6 +431,18 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 		rows, err := tx.Query(ctx, `
 			SELECT c.id FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
+			-- The SECOND lock on a departed seat, deliberately here as well as
+			-- in the cascade that disconnects on deactivation. That cascade is
+			-- what ENDS the connection, and this does not replace it: a row it
+			-- missed is still holding a live provider credential either way.
+			-- But the cost of the join is one predicate and the cost of
+			-- missing a row is that a former colleague's mail keeps arriving,
+			-- so the poll asks the question too. Same condition
+			-- seatLoginAddressTx reads one file over, and spelled here for
+			-- the same reason it is spelled there: capture cannot import
+			-- identity (ADR-0054 §3).
+			JOIN app_user u ON u.id = c.user_id
+			 AND u.status = 'active' AND u.archived_at IS NULL
 			WHERE c.provider = $1 AND c.status IN ('connected','error') AND c.archived_at IS NULL
 			  AND COALESCE(s.next_sync_at, now()) <= now()`, name)
 		if err != nil {

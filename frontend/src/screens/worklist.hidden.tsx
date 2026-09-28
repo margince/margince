@@ -16,12 +16,21 @@
 // On a healthy installation the whole panel is one sentence saying nothing is
 // held back, which is a cheap thing to draw and the only thing worth reading.
 
+import { useState } from "react";
+import { Disclosure } from "../design-system/atoms";
+import { EmailEntry } from "../design-system/emailentry";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatNumber } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import {
+  type HiddenBacklog,
+  type HiddenRule,
+  useHiddenBacklog,
+  useHiddenBacklogRows,
+} from "./worklist.hidden.queries";
 import { AFTER_THE_DAY } from "./worklist.layout";
-import { type HiddenBacklog, useHiddenBacklog } from "./worklist.queries";
 import "./worklist.css";
 
 /**
@@ -38,7 +47,12 @@ import "./worklist.css";
  */
 export function HiddenBacklogPanel({
   enabled,
-}: Readonly<{ enabled: boolean }>) {
+  onOpenEmail,
+}: Readonly<{
+  enabled: boolean;
+  /** Opens a held-back message in the page's own email drawer. */
+  onOpenEmail: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const hidden = useHiddenBacklog(enabled);
@@ -91,7 +105,7 @@ export function HiddenBacklogPanel({
           emptyLabel={t("worklist.hidden.clear")}
         >
           {hidden.data && !hidden.data.clear && (
-            <HiddenFigures backlog={hidden.data} />
+            <HiddenFigures backlog={hidden.data} onOpenEmail={onOpenEmail} />
           )}
         </SurfaceState>
       </PanelBody>
@@ -99,7 +113,7 @@ export function HiddenBacklogPanel({
   );
 }
 
-// The four figures.
+// One figure per hiding rule.
 //
 // Exported for its story: the panel above fetches, so a story that mounted it
 // would draw a loading skeleton and never the readings it exists to show.
@@ -109,7 +123,11 @@ export function HiddenBacklogPanel({
 // place a reader learns to look for a section's total.
 export function HiddenFigures({
   backlog,
-}: Readonly<{ backlog: HiddenBacklog }>) {
+  onOpenEmail,
+}: Readonly<{
+  backlog: HiddenBacklog;
+  onOpenEmail: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -129,6 +147,8 @@ export function HiddenFigures({
             by count would bury it under an ordinary week of snoozes. */}
         <Reading
           count={backlog.past_horizon}
+          rule="past_horizon"
+          onOpenEmail={onOpenEmail}
           label={t("worklist.hidden.pastHorizon")}
           detail={t("worklist.hidden.pastHorizon.detail")}
           locale={locale}
@@ -136,6 +156,8 @@ export function HiddenFigures({
         />
         <Reading
           count={backlog.unlinked}
+          rule="unlinked"
+          onOpenEmail={onOpenEmail}
           label={t("worklist.hidden.unlinked")}
           detail={t("worklist.hidden.unlinked.detail")}
           locale={locale}
@@ -143,13 +165,28 @@ export function HiddenFigures({
         />
         <Reading
           count={backlog.colleagues}
+          rule="colleagues"
+          onOpenEmail={onOpenEmail}
           label={t("worklist.hidden.colleagues")}
           detail={t("worklist.hidden.colleagues.detail")}
           locale={locale}
           t={t}
         />
+        {/* A model's judgement sits between the two: nobody chose it, and
+            it can still be wrong about a customer. */}
+        <Reading
+          count={backlog.informs_us}
+          rule="informs_us"
+          onOpenEmail={onOpenEmail}
+          label={t("worklist.hidden.informsUs")}
+          detail={t("worklist.hidden.informsUs.detail")}
+          locale={locale}
+          t={t}
+        />
         <Reading
           count={backlog.not_sales}
+          rule="not_sales"
+          onOpenEmail={onOpenEmail}
           label={t("worklist.hidden.notSales")}
           detail={t("worklist.hidden.notSales.detail")}
           locale={locale}
@@ -157,6 +194,8 @@ export function HiddenFigures({
         />
         <Reading
           count={backlog.set_aside}
+          rule="set_aside"
+          onOpenEmail={onOpenEmail}
           label={t("worklist.hidden.setAside")}
           detail={t("worklist.hidden.setAside.detail")}
           locale={locale}
@@ -169,29 +208,99 @@ export function HiddenFigures({
 
 // One figure. Drawn only when it found something: a list of zeros says nothing
 // a reader can act on, and the clear case above already covers "all of them".
+//
+// A figure opens onto the messages behind it. They are read only once it is
+// opened, so a lead who never asks costs nothing.
 function Reading({
+  rule,
   count,
   label,
   detail,
   locale,
+  onOpenEmail,
   t,
 }: Readonly<{
+  rule: HiddenRule;
   count: number;
   label: string;
   detail: string;
   locale: Locale;
+  onOpenEmail: (activityId: string) => void;
   t: Translator;
 }>) {
+  const [open, setOpen] = useState(false);
   if (count === 0) {
     return null;
   }
   return (
-    <li className="worklist-hidden-row">
-      <span className="worklist-hidden-count">
-        {t("worklist.hidden.count", { count: formatNumber(count, locale) })}
-      </span>
-      <span>{label}</span>
-      <span className="t-caption worklist-hidden-detail">{detail}</span>
+    <li>
+      <Disclosure
+        open={open}
+        onToggle={setOpen}
+        summary={
+          <span className="worklist-hidden-row">
+            <span className="worklist-hidden-count">
+              {t("worklist.hidden.count", {
+                count: formatNumber(count, locale),
+              })}
+            </span>
+            <span>{label}</span>
+            <span className="t-caption worklist-hidden-detail">{detail}</span>
+          </span>
+        }
+      >
+        <HiddenRows rule={rule} open={open} onOpenEmail={onOpenEmail} />
+      </Disclosure>
     </li>
+  );
+}
+
+// The messages one rule holds back. An email is the canonical email row and
+// opens in the page's drawer; a channel message has no email shape and is
+// named by its subject.
+function HiddenRows({
+  rule,
+  open,
+  onOpenEmail,
+}: Readonly<{
+  rule: HiddenRule;
+  open: boolean;
+  onOpenEmail: (activityId: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const rows = useHiddenBacklogRows(rule, open);
+  const state = rows.isPending
+    ? "loading"
+    : rows.isError
+      ? "unavailable"
+      : rows.data.rows.length === 0
+        ? "empty"
+        : "ready";
+  return (
+    <SurfaceState
+      state={state}
+      loadingLabel={t("worklist.hidden.rows.loading")}
+      emptyLabel={t("worklist.hidden.rows.empty")}
+    >
+      <ul className="worklist-hidden-rows">
+        {rows.data?.rows.map((row) => (
+          <li key={row.activity_id}>
+            {row.email_summary ? (
+              <EmailEntry
+                summary={row.email_summary}
+                timestamp={formatDateTime(row.since, locale, viewerZone())}
+                onOpen={() => onOpenEmail(row.activity_id)}
+              />
+            ) : (
+              <span className="t-body">
+                {row.subject} ·{" "}
+                {formatDateTime(row.since, locale, viewerZone())}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </SurfaceState>
   );
 }

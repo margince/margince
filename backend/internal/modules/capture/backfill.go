@@ -106,8 +106,9 @@ type BackfillPreview struct {
 // ADR-0020). Pricing the projected spend is the estimator's job now (ADR-0068),
 // so this returns the raw message count only.
 func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (BackfillPreview, error) {
-	if !backfillWindows[windowMonths] {
-		return BackfillPreview{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
+	if !r.admitsWindow(windowMonths) {
+		return BackfillPreview{}, fmt.Errorf("%w: %d months (this installation offers %v)",
+			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
 	}
 	var connID ids.UUID
 	var name string
@@ -165,8 +166,12 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // keeps the queued row forever, nothing pages it, and every later start for that
 // connection answers 409 backfill_running.
 func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	if !backfillWindows[windowMonths] {
-		return BackfillRun{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
+	// Checked HERE as well as at the estimate, and not only there: the estimate
+	// is a preview a client may skip, and a start that trusted it would take
+	// the whole window from anyone who called this door directly.
+	if !r.admitsWindow(windowMonths) {
+		return BackfillRun{}, fmt.Errorf("%w: %d months (this installation offers %v)",
+			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
 	}
 	if enqueue == nil {
 		return BackfillRun{}, errors.New("capture: starting a backfill needs a scheduler — an unpaged run blocks its connection permanently")
@@ -219,6 +224,27 @@ func (r *Registry) StartBackfill(ctx context.Context, provider string, userID id
 		}
 		if err := enqueue(ctx, tx, run.ID); err != nil {
 			return fmt.Errorf("capture: scheduling the backfill: %w", err)
+		}
+		// How far back this import reaches, on the CONNECTION's own trail.
+		//
+		// capture_backfill holds the number, but a run is retained on its own
+		// terms and the question outlives it: "how much history did this
+		// mailbox bring in" is asked long afterwards, by somebody reading the
+		// connection rather than hunting its runs. The connection's audit
+		// image carries provider, status and account label and would answer
+		// everything about the grant except its reach.
+		//
+		// After the enqueue, so a schedule that failed records no import that
+		// never started.
+		// The before-image is the connection's PREVIOUS reach, which the
+		// widen-only check above has already read: a trail saying only how far
+		// this run goes cannot show that a mailbox's history was extended, and
+		// extending it is the act somebody asks about later. Null where no run
+		// has ever imported this account.
+		if err := auditLifecycle(ctx, tx, "update", captureConnectionObject, connID,
+			map[string]any{"backfill_window_months": widest},
+			map[string]any{"backfill_window_months": windowMonths}); err != nil {
+			return err
 		}
 		run.ConnectionID = connID
 		run.WindowMonths = windowMonths

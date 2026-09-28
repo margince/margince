@@ -23,9 +23,6 @@
 .company-context-count {
   margin-right: auto;
 }
-.company-context-count strong {
-  color: var(--accentText);
-}
 
 /* One proposed change, as a full-bleed row of the review panel: its name and
  * classification on one line, the old → new diff under them. The left rail is

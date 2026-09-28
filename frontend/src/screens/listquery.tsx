@@ -12,7 +12,12 @@ import {
 import { FIRST_PAGE } from "../api/client";
 import { navigate, type Route, routeHash, useHash } from "../app/router";
 import { useScrollMemory } from "../app/scrollmemory";
-import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
+import {
+  currentParams,
+  GLOBAL_DIALS,
+  type UrlParams,
+  useUrlParams,
+} from "../app/urlstate";
 import { Button } from "../design-system/atoms";
 import {
   type ListChip,
@@ -28,6 +33,7 @@ import { problemMessageOf, useMe } from "./common";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
 import { withoutStrandedTagMode } from "./tagfilter";
 import { useTagVocabulary } from "./tags.queries";
+import "./listquery.css";
 
 // The shared list foundation (P-14): every list screen sends the rich
 // q/sort/cursor/include_archived/filter vocabulary instead of a flat
@@ -99,8 +105,17 @@ function scoped(scope: string | undefined, name: string): string {
   return scope ? `${scope}.${name}` : name;
 }
 
-/** Is `key` a dial of the list at `scope`, rather than another list's? */
+/**
+ * Is `key` a dial of the list at `scope`, rather than another list's?
+ *
+ * A GLOBAL dial is nobody's: it belongs to something standing over the page —
+ * see `GLOBAL_DIALS` — so it is neither read as this list's filter nor
+ * overwritten when this list rewrites its own dials.
+ */
 function ownedBy(key: string, scope: string | undefined): boolean {
+  if (GLOBAL_DIALS.has(key)) {
+    return false;
+  }
   return scope ? key.startsWith(`${scope}.`) : !key.includes(".");
 }
 
@@ -708,6 +723,7 @@ export function ListTable<Row>({
   searchable = true,
   showArchivedToggle = true,
   tools,
+  saveView,
   emptyNote,
   scopeKey,
   body,
@@ -765,10 +781,14 @@ export function ListTable<Row>({
   /** False for a list whose GET has no `q` param, e.g. /partners. */
   searchable?: boolean;
   showArchivedToggle?: boolean;
-  /** Passed straight through to the surface's own tools slot, alongside the
-   * Columns and Compact buttons — for the one screen (deals) whose board and
-   * table views share a pipeline picker that lives beside them. */
+  /** Passed straight through to the surface's own tools slot, after the
+   * Display menu — for a screen whose board and table views share a dial that
+   * lives beside them, e.g. deals' pipeline picker. */
   tools?: ReactNode;
+  /** The screen's Save view, in the surface's own last slot; see
+   * `ListSurface`. A slot rather than the tail of `tools`, so the row's order
+   * is the surface's to keep and not each screen's to remember. */
+  saveView?: ReactNode;
   /**
    * What the empty table says under its generic line when THIS screen knows
    * why it is empty — a "Mine" view for a reader who owns nothing, with the
@@ -878,11 +898,6 @@ export function ListTable<Row>({
   // trigger — so a fresh object here costs nothing.
   const chosen = chosenFor(allChips, query.filters);
 
-  // A functional updater reads the query at commit time, not at the time the
-  // timer was scheduled: a concurrent sort/filter/includeArchived change
-  // (which sets query immediately, before this timer fires) is preserved
-  // instead of being reverted by a stale closure over `query`. Skipped when
-  // the screen isn't searchable — there is no debounce to race in that case.
   // The address moves without this screen unmounting — Back, Forward, a link to
   // the same list narrowed differently — and the box has to follow it or it
   // shows words the rows are not answering. Pressing Back out of a search left
@@ -930,6 +945,8 @@ export function ListTable<Row>({
     }
     const timer = setTimeout(() => {
       committed.current = localSearch;
+      // Functional, so a sort, filter or archive toggle set while the timer
+      // waited survives instead of being reverted by a stale `query`.
       setQuery((prev) =>
         prev.q === localSearch ? prev : { ...prev, q: localSearch },
       );
@@ -943,10 +960,9 @@ export function ListTable<Row>({
   const problem = isError ? (
     <>
       <p>{t("common.error")}</p>
-      <p style={{ marginTop: "var(--space-1)" }}>
-        {problemMessageOf(error, t)}
-      </p>
-      <Button onClick={() => refetch()} style={{ marginTop: "var(--space-2)" }}>
+      {/* ds:ignore the cause under a headline with its own Retry, a composite */}
+      <p className="listquery-cause">{problemMessageOf(error, t)}</p>
+      <Button className="listquery-retry" onClick={() => refetch()}>
         {t("common.retry")}
       </Button>
     </>
@@ -1030,6 +1046,7 @@ export function ListTable<Row>({
       caption={caption ? t(caption) : undefined}
       footer={footer}
       tools={tools}
+      saveView={saveView}
       search={
         searchable
           ? { value: localSearch, onChange: setLocalSearch }

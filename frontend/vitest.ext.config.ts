@@ -1,5 +1,20 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import base from "./vite.config.ts";
+
+// An ABSOLUTE glob for the coverage include below. The provider resolves a
+// relative pattern against the project root, which is frontend/, and this lane
+// deliberately reaches out of it — a `../extensions/**` pattern matched nothing
+// and the report came back empty, which the path gate caught.
+const unitScreens = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "extensions",
+  "*",
+  "frontend",
+  "**",
+);
 
 // The unit-screen test lane: vitest over extensions/*/frontend/**/*.test.tsx.
 //
@@ -57,6 +72,32 @@ export default defineConfig({
     // lane's job. A glob rather than a list, so a unit joins this gate by
     // existing — the same presence-is-enablement every other layer has.
     include: ["../extensions/*/frontend/**/*.test.{ts,tsx}"],
+    // ITS OWN REPORT DIRECTORY, and that is the whole of what this lane needed
+    // to be measured. Everything else about coverage is the base's and stays
+    // the base's — the v8 provider, the exclusions, and the lcov reporter's
+    // `projectRoot` pointing at the repository root, which is what makes a
+    // record name a path the SonarCloud scanner can open.
+    //
+    // Without a directory of its own it writes frontend/coverage/lcov.info,
+    // which is the CORE lane's report: whichever ran last would be the whole
+    // measurement, and the other tier would read as untested. Naming a second
+    // path is what lets both be handed to the scanner, which takes a list.
+    coverage: {
+      ...base.test?.coverage,
+      reportsDirectory: "coverage-ext",
+      // INCLUDE, and this is the line that makes the report measure this tier
+      // rather than the last one. The v8 provider reports what the run loaded
+      // and then filters by the project root, which is frontend/ — so a unit's
+      // screens, which live at ../extensions/, were dropped and the report came
+      // out describing 61 files of core src/ that the core lane already
+      // measures. That is a report which passes every check and measures the
+      // wrong tier, which is worse than none.
+      include: [unitScreens],
+      // The screens live OUTSIDE the project root, which the provider filters
+      // by. Without this the report comes back empty however the include is
+      // spelled — the root filter runs first.
+      allowExternal: true,
+    },
     exclude: [
       ...(base.test?.exclude ?? []),
       // The base's `**/node_modules/**` does NOT cover these paths, and the

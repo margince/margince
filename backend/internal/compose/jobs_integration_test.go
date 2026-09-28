@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"slices"
@@ -164,13 +165,21 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	if err := runner.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() {
+	// Idempotent, so the deferred call is a safety net for the paths that
+	// return before the explicit stop below rather than a second shutdown.
+	stopped := false
+	stopRunner := func() {
+		if stopped {
+			return
+		}
+		stopped = true
 		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if err := runner.Stop(stopCtx); err != nil {
 			t.Errorf("Stop: %v", err)
 		}
-	}()
+	}
+	defer stopRunner()
 
 	// RunOnStart enqueues both periodic dispatchers at boot; wait for the
 	// close-date pass to complete, then assert the same outcome the direct
@@ -181,6 +190,13 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	// the same one.
 	awaitKindCompleted(t, sub, CloseDateSweepArgs{}.Kind())
 
+	// Stopped BEFORE the row is read, not at the end of the test. The wait
+	// above returns on a completion event, and the runner goes on dispatching
+	// after it — so a second pass landing between the event and the read would
+	// be asserted against without anything saying one had run. Stopping first
+	// makes the four assertions below describe one settled row.
+	stopRunner()
+
 	swept := e.readSwept(t, id)
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) {
 		t.Fatalf("provisional date = %v — INV-CLOSE-PAST must hold immediately", swept.expectedClose)
@@ -189,10 +205,24 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
 	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
-		t.Errorf("forecast_category = %v, want the untouched commit override", swept.forecastCat)
+		t.Errorf("forecast_category = %s, want the untouched commit override", shownString(swept.forecastCat))
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the job-driven pass raised %d cards, want none — it must do exactly "+
 			"what the direct sweep does, which is apply and report", got)
 	}
+}
+
+// shownString renders a nullable column for a failure message.
+//
+// `%v` on a *string prints the ADDRESS, and this bug is the reason that
+// matters: "forecast_category = 0x6e8b29e0dc40" says the column was non-nil
+// and not what was wanted, which is a different defect from the column being
+// absent — and the message could not tell the two apart, so the one failure
+// anybody had caught reported a number nobody can act on.
+func shownString(value *string) string {
+	if value == nil {
+		return "NULL"
+	}
+	return fmt.Sprintf("%q", *value)
 }

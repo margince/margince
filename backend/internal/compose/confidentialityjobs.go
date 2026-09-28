@@ -13,10 +13,12 @@ package compose
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,8 +38,9 @@ func (ConfidentialityVerdictArgs) FleetWide() {}
 //
 // One worker where there were two (ADR-0103).
 type confidentialityVerdictWorker struct {
-	pool   *pgxpool.Pool
-	engine *ConfidentialityVerdictEngine
+	pool     *pgxpool.Pool
+	engine   *ConfidentialityVerdictEngine
+	receipts sweepRecorder
 }
 
 func (w *confidentialityVerdictWorker) Work(ctx context.Context, _ *river.Job[ConfidentialityVerdictArgs]) error {
@@ -51,20 +54,20 @@ func (w *confidentialityVerdictWorker) judgeWorkspace(ctx context.Context, works
 	// instead would fill the log with an alarm about a configuration somebody
 	// chose.
 	if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {
-		return err
+		return errors.Join(err, w.receipts.skipped(wsCtx, capture.SweepSettledThreadVerdicts))
 	}
 	// Threads that spent every attempt without an answer end at `unsure`, which
 	// HOLDS. Retiring runs after judging so a thread that exhausted its last
 	// attempt this tick is retired in the same pass rather than sitting
 	// claimable-but-never-claimed until the next one.
 	if _, err := w.engine.RetireExhausted(wsCtx); err != nil {
-		return err
+		return errors.Join(err, w.receipts.skipped(wsCtx, capture.SweepSettledThreadVerdicts))
 	}
 	// And the answers that never reached their messages. After retiring, so a
 	// thread that just became `unsure` has its messages settled in the same
 	// tick rather than waiting for the next one.
-	if _, err := w.engine.FinishSettledThreads(wsCtx); err != nil {
-		return err
-	}
-	return nil
+	_, err := w.receipts.run(wsCtx, capture.SweepSettledThreadVerdicts, func(tally *sweepTally) error {
+		return w.engine.finishSettledThreadsInto(wsCtx, tally)
+	})
+	return err
 }

@@ -148,3 +148,57 @@ func TestCapacityCountsAMeetingHostedByTheRepWhoeverFiledIt(t *testing.T) {
 		t.Errorf("counted %d meetings for the rep who hosts one of the two, want 1", got.Meetings)
 	}
 }
+
+// A meeting with NO recorded status counts, because a calendar connector writes
+// none and every other surface reads that as one nothing has said is off.
+//
+// The strict form dropped exactly the rep whose week syncs automatically, and
+// the direction is the one that hurts: the emptier the line looks, the more
+// they commit to. The first fixture for this line hand-wrote 'booked' and so
+// never touched the path an imported meeting takes.
+func TestCapacityCountsAMeetingNobodyRecordedAStatusFor(t *testing.T) {
+	e := integration.Setup(t)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+
+	// "" leaves meeting_status NULL, which is what the capture sink writes.
+	bookMeeting(t, e, "Synced from the rep's calendar",
+		time.Date(2026, 6, 16, 10, 0, 0, 0, time.UTC), "")
+	// And one the strict form already counted, so a seam that dropped BOTH
+	// would fail here rather than passing with a plausible zero.
+	bookMeeting(t, e, "Booked by hand",
+		time.Date(2026, 6, 17, 10, 0, 0, 0, time.UTC), "booked")
+
+	seam := weeklyPlanCapacity{pool: e.Pool}
+	got, err := seam.ForWeek(rep, e.AdminUser, time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("reading the named week's capacity: %v", err)
+	}
+	if got.Meetings != 2 {
+		t.Fatalf("the week holds a synced meeting and a hand-booked one, and capacity says "+
+			"%d — a meeting the connector imported carries no status, and dropping it "+
+			"prices a week that looks freer than the rep's actually is", got.Meetings)
+	}
+}
+
+// And the premise the case above rests on: the capture sink really does write
+// no status, so this is the shape an imported meeting arrives in rather than a
+// fixture convenience.
+func TestACapturedMeetingArrivesWithNoStatus(t *testing.T) {
+	e := integration.Setup(t)
+	seedCalendarConnection(t, e)
+
+	id := seedCapturedMeeting(t, e, "evt-status", time.Now().Add(48*time.Hour),
+		attendee{email: backfillOwner, response: "accepted", self: true},
+		attendee{email: "buyer@acme.test", response: "accepted"})
+
+	var status *string
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT meeting_status FROM activity WHERE id = $1`, id).Scan(&status); err != nil {
+		t.Fatalf("reading the captured meeting's status: %v", err)
+	}
+	if status != nil {
+		t.Errorf("the sink wrote meeting_status %q — if it records one now, the readers that "+
+			"admit NULL are carrying a case that no longer arises and should be re-read",
+			*status)
+	}
+}

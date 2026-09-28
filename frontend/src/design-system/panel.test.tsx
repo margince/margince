@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { PANEL_TONES, Panel, PanelBody, PanelRow } from "./panel";
+import { PANEL_TONES, Panel, PanelBody, PanelIntro, PanelRow } from "./panel";
 
 afterEach(cleanup);
 
@@ -186,6 +186,61 @@ describe("panel.css keeps the row's hover on the interactive variant", () => {
     expect(foot).toMatch(/border-top:\s*1px solid var\(--borderSubtle\)/);
     expect(css).not.toMatch(/\.panel-head::after/);
     expect(css).not.toMatch(/\.panel-foot::before/);
+  });
+});
+
+// The panel's descriptive line owns ONE thing, the interval under it, and that
+// is what these read. Spelled in a screen sheet it was corrected in three more,
+// so the same sentence stood at three distances from the rows it described.
+describe("PanelIntro is the line, and panel.css is its interval", () => {
+  it("draws a paragraph and takes the caller's class beside its own", () => {
+    render(
+      <Panel title="Lead vocabulary">
+        <PanelBody>
+          <PanelIntro className="listsection-intro">The stages.</PanelIntro>
+        </PanelBody>
+      </Panel>,
+    );
+    const line = screen.getByText("The stages.");
+    expect(line.tagName).toBe("P");
+    expect([...line.classList]).toEqual(["panel-intro", "listsection-intro"]);
+  });
+
+  it("spaces the line, drops that space last, and pays a stack the difference", () => {
+    const css = panelCss();
+    const ruleFor = (selector: string) =>
+      cssRules(css).find((candidate) => candidate.selector === selector);
+    const rule = (selector: string) => ruleFor(selector)?.block;
+
+    expect(declaredValue(rule(".panel-intro") ?? "", "margin")).toBe(
+      "0 0 var(--space-4)",
+    );
+    // Nothing else: the line reads at the body's type and in the body's ink,
+    // and a sheet that gave it either would be a second author for prose the
+    // document already decides.
+    expect(ruleFor(".panel-intro")?.properties).toEqual(["margin"]);
+
+    // Last in its body the line owes nothing — what follows brings its own top
+    // padding, and a trailing margin paid that gap twice.
+    expect(
+      declaredValue(rule(".panel-intro:last-child") ?? "", "margin-bottom"),
+    ).toBe("0");
+
+    // A margin inside a gapped stack ADDS to the gap rather than collapsing
+    // into it, so the stack pays the difference and lands on the same interval.
+    // Both tokens are read off the stack's own rule rather than named here: a
+    // retuned `.form-stack` gap that left this arithmetic behind would put the
+    // two spellings back on two rhythms and still pass a literal expectation.
+    const gap = declaredValue(
+      cssRules(readFileSync(join(here, "atoms.css"), "utf8")).find(
+        (candidate) => candidate.selector === ".form-stack",
+      )?.block ?? "",
+      "gap",
+    );
+    expect(gap).toBeDefined();
+    expect(
+      declaredValue(rule(".form-stack > .panel-intro") ?? "", "margin-bottom"),
+    ).toBe(`calc(var(--space-4) - ${gap})`);
   });
 });
 

@@ -56,7 +56,7 @@ describe("the units offered on a settings page", () => {
     // announced as "Open" tells a screen-reader user nothing about which unit
     // each one leads to.
     const link = screen.getByRole("link", {
-      name: "Open the dispact-connector page",
+      name: "Open dispact-connector page",
     });
     expect(link.getAttribute("href")).toBe("#/ext/dispact-connector");
     // The name is the row's, so it is on the page as text a reader can see
@@ -88,7 +88,7 @@ describe("the units offered on a settings page", () => {
     expect(screen.getAllByRole("link")).toHaveLength(2);
     expect(
       screen
-        .getByRole("link", { name: "Open the notes page" })
+        .getByRole("link", { name: "Open notes page" })
         .getAttribute("href"),
     ).toBe("#/ext/notes");
   });

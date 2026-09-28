@@ -67,7 +67,7 @@ describe("useAgentTicker", () => {
   it("names a list read in the reader's own words, not the cache key's", async () => {
     render(harness(<Ticker />));
     await read(["deals"], { data: [] });
-    expect(line()).toBe("Reading the pipeline");
+    expect(line()).toBe("Loading pipeline");
   });
 
   it("says nothing for a read that is plumbing rather than work", async () => {
@@ -86,11 +86,11 @@ describe("useAgentTicker", () => {
       data: [{ id: "o-1", name: "zenloop" }],
     });
     await read(["company360", "o-1"], { id: "o-1", name: "zenloop" });
-    expect(line()).toBe("Reading everything about zenloop");
+    expect(line()).toBe("Loading overview of zenloop");
   });
 
   it("says nothing for a record it cannot name yet, rather than naming its kind", async () => {
-    // "Reading a company" tells a reader nothing they cannot see from the page
+    // "Loading company" tells a reader nothing they cannot see from the page
     // they are standing on, and printing it while the name is one moment away is
     // worse than waiting that moment.
     render(harness(<Ticker />));
@@ -109,7 +109,7 @@ describe("useAgentTicker", () => {
   it("drops a line once its moment has passed", async () => {
     render(harness(<Ticker />));
     await read(["deals"], { data: [] });
-    expect(line()).toBe("Reading the pipeline");
+    expect(line()).toBe("Loading pipeline");
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
@@ -120,6 +120,6 @@ describe("useAgentTicker", () => {
     render(harness(<Ticker />));
     await read(["deals"], { data: [] });
     await read(["tasks"], { data: [] });
-    expect(line()).toBe("Reading your tasks");
+    expect(line()).toBe("Loading tasks");
   });
 });

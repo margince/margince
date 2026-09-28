@@ -39,6 +39,8 @@ describe("settingsSearch", () => {
   // password types "account".
   it.each([
     ["password", "account"],
+    ["calendar", "meetings"],
+    ["working hours", "meetings"],
     ["gdpr", "privacy"],
     ["webhook", "integrations"],
     ["csv", "import"],

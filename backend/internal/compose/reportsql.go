@@ -85,21 +85,30 @@ func readReportFrame(ctx context.Context, tx pgx.Tx) (reportFrame, error) {
 	return frame, nil
 }
 
-func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) ([]map[string]any, *int, reportFrame, error) {
-	var rows []map[string]any
-	var excluded *int
-	var frame reportFrame
+// fetchedRows is what one report statement answered, and what was done to its
+// population on the way.
+type fetchedRows struct {
+	rows     []map[string]any
+	excluded *int
+	frame    reportFrame
+	// narrowed is reportOutcome.PopulationNarrowed.
+	narrowed string
+}
+
+func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) (fetchedRows, error) {
+	var out fetchedRows
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
-		if frame, err = readReportFrame(ctx, tx); err != nil {
+		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
 		}
-		if err := requireFilterScopes(ctx, tx, spec, req.Filters); err != nil {
+		if err := requireNamedRecords(ctx, tx, spec, req.Filters); err != nil {
 			return err
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		where, err := buildReportWhere(ctx, tx, spec, req, callersOwnPopulation(), arg)
+		var where []string
+		where, out.narrowed, err = buildReportWhere(ctx, tx, spec, req, callersOwnPopulation(), arg)
 		if err != nil {
 			return err
 		}
@@ -112,14 +121,14 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			return err
 		}
 		if masked {
-			n, err := countMaskExcluded(ctx, tx, frame, spec, where, maskClauses, args)
+			n, err := countMaskExcluded(ctx, tx, out.frame, spec, where, maskClauses, args)
 			if err != nil {
 				return err
 			}
-			excluded = &n
+			out.excluded = &n
 			where = append(where, maskClauses...)
 		}
-		sql, args, err := bindReportTokens(ctx, frame, reportSQL(spec, selects, where, groupBy), args)
+		sql, args, err := bindReportTokens(ctx, out.frame, reportSQL(spec, selects, where, groupBy), args)
 		if err != nil {
 			return err
 		}
@@ -128,13 +137,13 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			return fmt.Errorf("report %s: %w", report, err)
 		}
 		defer pgRows.Close()
-		rows, err = scanReportRows(pgRows, columns)
+		out.rows, err = scanReportRows(pgRows, columns)
 		return err
 	})
 	if err != nil {
-		return nil, nil, reportFrame{}, err
+		return fetchedRows{}, err
 	}
-	return rows, excluded, frame, nil
+	return out, nil
 }
 
 // reportSQL renders the aggregate query: the validated SELECT list over the

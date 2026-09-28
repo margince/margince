@@ -53,19 +53,31 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 }
 
 func contactCreateInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
+	return contactCreateInputAdmitting(req, false)
+}
+
+// contactCreateInputFromImporter is contactCreateInput for a declared importer
+// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
+// namespace. provider.go keeps the closed door.
+func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
+	return contactCreateInputAdmitting(req, true)
+}
+
+func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer bool) (CreateContactInput, error) {
 	if req.FullName == "" {
 		return CreateContactInput{}, &RequiredFieldError{Field: "full_name"}
 	}
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateContactInput{}, err
 	}
 	in := CreateContactInput{
-		FullName:  req.FullName,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Title:     req.Title,
-		Source:    req.Source,
-		OwnerID:   idArg[ids.UserKind](req.OwnerId),
+		FullName:     req.FullName,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Title:        req.Title,
+		Source:       req.Source,
+		SourceSystem: req.SourceSystem,
+		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		// The body's extra top-level keys (custom-field values); the
 		// store decides which land (active catalog columns only).
 		CustomFields: req.AdditionalProperties,
@@ -193,10 +205,19 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 }
 
 func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
+	return companyCreateInputAdmitting(req, false)
+}
+
+// companyCreateInputFromImporter: see contactCreateInputFromImporter.
+func companyCreateInputFromImporter(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
+	return companyCreateInputAdmitting(req, true)
+}
+
+func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer bool) (CreateCompanyInput, error) {
 	if req.DisplayName == "" {
 		return CreateCompanyInput{}, &RequiredFieldError{Field: "display_name"}
 	}
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateCompanyInput{}, err
 	}
 	in := CreateCompanyInput{
@@ -205,6 +226,7 @@ func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInp
 		Description:     req.Description,
 		Industry:        req.Industry,
 		Source:          req.Source,
+		SourceSystem:    req.SourceSystem,
 		OwnerID:         idArg[ids.UserKind](req.OwnerId),
 		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
 		CustomFields:    req.AdditionalProperties,
@@ -275,11 +297,39 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 // already existing — suppressing the real record. The importer writes
 // that namespace from inside the process, never through this mapper.
 func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
+	return leadCreateInputAdmitting(req, false)
+}
+
+// leadCreateInputFromImporter is leadCreateInput for a declared importer — a
+// HUMAN holding import_run:create, decided by auth.DeclaredImporter at the
+// handler and nowhere else.
+//
+// The lead store keys its idempotent replay on (source_system, source_id), so
+// an import that could not spell its own namespace would have no replay key of
+// its own and would re-create every lead a crashed run had already landed.
+//
+// provider.go keeps the client door: an agent carrying its human's grants must
+// not reach this one.
+func leadCreateInputFromImporter(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
+	return leadCreateInputAdmitting(req, true)
+}
+
+// One body behind both doors, because the admission is the only difference: a
+// second mapping beside this one would be a second set of rules about the
+// reserved namespace, and the two would drift.
+func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool) (CreateLeadInput, error) {
 	if req.SourceSystem != nil {
-		if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
-			return CreateLeadInput{}, err
+		// The importer's namespace ALONE. The three exact internal identities
+		// stay refused for it too — they are the automation engine's, and a
+		// lead planted under a reminder's replay key makes the scan read it
+		// back as already asked.
+		if !importer || !provenance.ImporterNamespace(*req.SourceSystem) {
+			if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
+				return CreateLeadInput{}, err
+			}
 		}
 	}
+	// `source` is nobody's to forge, the importer included.
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return CreateLeadInput{}, err
 	}

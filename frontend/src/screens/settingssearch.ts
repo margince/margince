@@ -48,22 +48,21 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "theme",
     "appearance",
   ],
+  meetings: [
+    "calendar",
+    "availability",
+    "working hours",
+    "timezone",
+    "booking",
+    "buffer",
+    "notice",
+  ],
   voice: ["writing", "tone", "style", "drafts"],
   agents: ["passport", "token", "api", "mcp", "credentials", "automation"],
   notifications: ["notifications", "alerts", "digest", "email"],
   connections: ["mailbox", "imap", "gmail", "outlook", "email", "linkedin"],
   "capture-activity": ["mail", "email", "held", "judgement", "why"],
-  company: [
-    "general",
-    "installation",
-    "currency",
-    "logo",
-    "vat",
-    "address",
-    "timezone",
-    "fiscal year",
-    "context",
-  ],
+  company: ["general", "installation", "currency", "timezone", "fiscal year"],
   authentication: [
     "sign in",
     "login",
@@ -96,6 +95,15 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   extensions: ["unit", "plugin", "module", "extension"],
   reset: ["empty", "wipe", "delete everything", "danger"],
 };
+
+// The company-context card's own words. That card draws for an admin alone
+// (company-context.tsx), so another reader would land on a page without them.
+const PROFILE_ALIASES: readonly string[] = [
+  "logo",
+  "vat",
+  "address",
+  "context",
+];
 
 /**
  * A form of the text that matches the way contacts actually type.
@@ -133,6 +141,7 @@ export function settingsSearch(
   query: string,
   pages: readonly SettingsPage[],
   t: (key: MessageKey) => string,
+  reader: { readonly holdsAdminRole: boolean } = { holdsAdminRole: false },
 ): readonly SettingsHit[] {
   // Split on whitespace, and every word must land somewhere. A reader types
   // "email signature" as one thought, but the two words live in different
@@ -156,6 +165,9 @@ export function settingsSearch(
       fold(label),
       fold(group),
       ...(ALIASES[page.id] ?? []).map(fold),
+      ...(page.id === "company" && reader.holdsAdminRole
+        ? PROFILE_ALIASES.map(fold)
+        : []),
       fold(sub),
     ];
     // Every word, or the page does not answer. Ranked by the BEST field any

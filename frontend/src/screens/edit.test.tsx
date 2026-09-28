@@ -144,6 +144,23 @@ describe("edit record flow", () => {
     expect(firstFrame).toEqual(["Alice"]);
   });
 
+  it("says it is saving while an edit is in flight, not creating", () => {
+    render(
+      <EditRecordModal
+        open
+        onClose={vi.fn()}
+        title="Edit"
+        fields={twoFields}
+        record={twoFieldRecord}
+        pending
+        error={null}
+        onSubmit={vi.fn()}
+      />,
+    );
+    const save = screen.getByRole("button", { name: en["record.save"] });
+    expect(save).toHaveAccessibleDescription(en["common.saving"]);
+  });
+
   it("renders the server's own detail for a rejected update", async () => {
     const update = vi.fn(async () => {
       throwProblem({ status: 422, detail: "name too long" });

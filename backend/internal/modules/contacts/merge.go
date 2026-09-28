@@ -173,6 +173,16 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 		commsauthz.ContactStopSubject(targetID)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's stops: %w", err)
 	}
+	// And the links, bases and asks other modules keep about them — see
+	// satellitecarry.go.
+	if err := s.carryConsentSatellitesTx(ctx, tx,
+		commsauthz.ContactStopSubject(sourceID),
+		commsauthz.ContactStopSubject(targetID)); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's consent links: %w", err)
+	}
+	if err := s.carryIntrosTx(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's introduction asks: %w", err)
+	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {

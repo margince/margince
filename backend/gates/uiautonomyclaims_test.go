@@ -148,7 +148,13 @@ func shippedLocales(t *testing.T, dir string) []string {
 	// "two characters" silently drops pt-BR and zh-Hans: a whole language read
 	// by nothing, while the gate reports PASS. That is the same
 	// under-recognition this file exists to refuse, one level up.
-	machinery := map[string]bool{"index.ts": true, "publiclocale.ts": true}
+	machinery := map[string]bool{
+		"index.ts": true, "publiclocale.ts": true,
+		// A register of catalogue KEYS, not a catalogue: it ships no copy a
+		// user reads, and asking it for a phrasing of "nothing sends without
+		// your approval" would be asking a list of identifiers to speak.
+		"plural-debt.ts": true,
+	}
 
 	var locales []string
 	for _, e := range entries {

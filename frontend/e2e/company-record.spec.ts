@@ -166,12 +166,14 @@ test.describe("company record — the glance's page shape", () => {
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const call = page.getByRole("heading", { name: "Kontobriefing" });
+    const call = page.getByRole("heading", { name: "Unternehmensbericht" });
     await expect(call).toHaveCount(1);
-    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
+    const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
     await expect(needs).toHaveCount(1);
-    const money = page.getByRole("heading", { name: "Kommerziell" });
-    const ask = page.getByRole("heading", { name: "Diesen Account befragen" });
+    const money = page.getByRole("heading", { name: "Geschäftliches" });
+    const ask = page.getByRole("heading", {
+      name: "Fragen zu diesem Unternehmen",
+    });
     await expect(ask).toHaveCount(1);
     // Next steps is gone from this page — its open tasks are the needs list
     // and the Tasks tab now.
@@ -198,7 +200,7 @@ test.describe("company record — the glance's page shape", () => {
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
+    const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
     await expect(needs).toBeVisible();
 
     await page.getByRole("button", { name: "Kontakte" }).click();
@@ -267,7 +269,7 @@ test.describe("company record — the glance's page shape", () => {
     // the sparse account quietly dropping part of the page again.
     await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
     await expect(
-      page.getByRole("heading", { name: "Kontobriefing" }),
+      page.getByRole("heading", { name: "Unternehmensbericht" }),
     ).toHaveCount(1);
   });
 
@@ -327,12 +329,21 @@ test.describe("company record — the mockup's visual weight", () => {
   test("the lifecycle control is a control, not a tag", async ({ page }) => {
     // A filled button of ~190x48 in State A, sitting beside the name. The
     // 75x22 pale chip reads as metadata a reader cannot act on.
+    // By the test id the header hands its InlineChoice, for the reason the
+    // readings row above is: `.co-standing` was this page's own class and the
+    // page stopped drawing it, so the walk found nothing and threw naming a
+    // CONTROL — which sends a reader looking for a missing control rather than
+    // a missing selector. The primitive's own class would match every other
+    // screen's inline choice, and the copy inside it is German chrome this
+    // suite deliberately does not pin.
     const box = await page
-      .locator(".co-standing .badge, .co-standing button")
+      .locator('[data-testid="company-lifecycle"]')
       .first()
       .boundingBox();
     if (!box) {
-      throw new Error("the lifecycle control has no box");
+      throw new Error(
+        "no [data-testid='company-lifecycle'] on the company header — the id moved, or the control did",
+      );
     }
     expect(box.height).toBeGreaterThanOrEqual(32);
   });

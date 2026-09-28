@@ -278,7 +278,7 @@ describe("FieldHistoryTimeline", () => {
     await waitFor(() =>
       expect(screen.getByText("Globex Renewal (updated)")).toBeTruthy(),
     );
-    expect(screen.getByText("— created —")).toBeTruthy(); // empty-origin diff
+    expect(screen.getByText("(created)")).toBeTruthy(); // empty-origin diff
     expect(screen.getByText(/psp_7Q3fa91/)).toBeTruthy(); // PassportChip
   });
 

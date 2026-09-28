@@ -174,9 +174,16 @@ session or a token that has since rotated.
   reasoning that one outliving every copy of the message it rode on protects
   nobody: there is no longer a link for a subject to press, only a working
   credential for whoever finds one. Leads get one too, which is what gives a lead-only recipient an
-  opt-out. It works for the broad all-marketing scope; a lead pressing a
-  NAMED-PURPOSE credential records no stop at all, because the purpose-scoped
-  writer resolves contacts and a lead is not one.
+  opt-out. A lead pressing the broad all-marketing scope records an objection to
+  every marketing message; a lead pressing a NAMED-PURPOSE credential records a
+  stop narrowed to that one purpose, on `communication_suppression.purpose_id`,
+  and the engine binds it only to a marketing send that resolves to the same
+  purpose. It leaves the subject's OTHER marketing purposes running, which is
+  what "unsubscribe from this list" means, and it leaves the other categories
+  alone exactly as a broad objection does — an objection of either width says
+  nothing about an invoice. There is no unscoped marketing send for a narrow
+  stop to miss: a marketing message is only ever allowed once it has resolved
+  through a purpose, so the comparison always has both sides.
 - **A stop says who said it and how far it reaches.** An Art. 21 objection to
   direct marketing and a request to stop contact entirely are different legal
   acts with different reach, and the objection binds marketing alone while the

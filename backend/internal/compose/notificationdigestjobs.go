@@ -295,11 +295,16 @@ func (w *notificationDigestWorker) deliver(
 	// THE RECIPIENT'S OWN AUTHORITY, bound before a single word of content is
 	// read. Everything below this line runs as the colleague the message is
 	// addressed to.
-	seatCtx, err := seatContext(sysCtx, w.users, wsID, seat.UUID)
+	seatCtx, live, err := seatContext(sysCtx, w.users, wsID, seat.UUID)
 	if err != nil {
 		w.log.WarnContext(sysCtx, "the morning digest was not sent: the recipient's authority did not resolve",
 			"user", seat, "cause", err)
 		w.recordFailure(sysCtx, seat, window.Day, err.Error())
+		return
+	}
+	if !live {
+		// The seat was archived after the sweep listed it. A SKIP and not a
+		// failure: the claim is spent, and there is nobody left to tell.
 		return
 	}
 	lines, err := w.readDigestLines(seatCtx, seat, window)

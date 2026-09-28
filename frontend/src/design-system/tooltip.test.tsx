@@ -4,13 +4,16 @@
 
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitForElementToBeRemoved,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { useTruncationTooltip } from "./tooltip";
 
 // The specs for the tip that reveals a string its row could not fit. The
@@ -22,6 +25,7 @@ import { useTruncationTooltip } from "./tooltip";
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 const LONG = "In contact, but one contact carries the whole account.";
@@ -46,6 +50,7 @@ function Row({ text }: Readonly<{ text: string }>) {
 
 describe("a string too long for its row", () => {
   it("reveals the whole of it once the pointer has settled", async () => {
+    armHoverIntent();
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
     expect(screen.queryByRole("tooltip")).toBeNull();
@@ -58,6 +63,7 @@ describe("a string too long for its row", () => {
   });
 
   it("takes the tip away again when the pointer leaves", async () => {
+    armHoverIntent();
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
     const row = screen.getByText(LONG);
@@ -72,6 +78,7 @@ describe("a string too long for its row", () => {
   });
 
   it("describes the row it belongs to, so a screen reader reads the two as one", async () => {
+    armHoverIntent();
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
     const row = screen.getByText(LONG);
@@ -110,11 +117,18 @@ describe("a string too long for its row", () => {
 });
 
 describe("a string its row can already show in full", () => {
-  it("gets no tip on hover, having nothing left to reveal", async () => {
+  it("gets no tip on hover, having nothing left to reveal", () => {
+    // An absence, so asked past the hook's ceiling on a clock this case owns:
+    // on the real clock it would hold before the tip could have opened at all.
+    takeHoverClock();
+    armHoverIntent();
     stubWidths({ scroll: 220, client: 220 });
     render(<Row text="Sontana" />);
 
-    await userEvent.hover(screen.getByText("Sontana"));
+    fireEvent.pointerEnter(screen.getByText("Sontana"));
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
 
     expect(screen.queryByRole("tooltip")).toBeNull();
   });

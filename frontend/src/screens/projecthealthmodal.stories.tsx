@@ -30,7 +30,7 @@ const meta: Meta<typeof ProjectHealthModal> = {
   component: ProjectHealthModal,
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByText("What is happening");
+    await dialog.findByText("Note");
   },
 };
 export default meta;
@@ -89,7 +89,7 @@ export const OffTrackWithNoNoteYet: Story = {
       await dialog.findByRole("button", { name: "Off track" }),
     );
     await dialog.findByText(
-      "Say what is wrong, so whoever looks next does not have to guess.",
+      "Describe the problem so the next reader has the context.",
     );
   },
 };

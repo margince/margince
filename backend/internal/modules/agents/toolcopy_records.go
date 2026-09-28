@@ -22,7 +22,7 @@ var searchRecordsCopy = toolCopy{
 
 var listRecordsCopy = toolCopy{
 	Purpose: "Enumerate the contacts, companies, deals, leads or projects that meet exact " +
-		"conditions — every deal in one pipeline, the leads one contact owns, the projects still " +
+		"conditions — every deal in one pipeline, the leads one rep owns, the projects still " +
 		"being delivered.",
 	Limits: "It narrows only by the filters this workspace publishes for that record_type, which " +
 		"the schema lists per type, and it answers ONE page: the set continues past it.",
@@ -128,6 +128,16 @@ var relinkActivitiesCopy = toolCopy{
 	Limits:  "Each id must be visible and writable to you. A project destination needs a human.",
 	Instead: "relink_thread moves one conversation.",
 	Retain:  "The answer lists the ids moved.",
+}
+
+var bulkUpdateRecordsCopy = toolCopy{
+	Purpose: "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change.",
+	Limits: "Call mode preview first and show the user what it says: how many records change, " +
+		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
+		"record is changed only if it still has the version you sent and you may change it.",
+	Instead: "update_record and archive_record change one record.",
+	Retain: "Above 10 records, execute needs the confirm_token preview answered, for exactly the " +
+		"same selection; it is good once. Keep batch_id from the answer.",
 }
 
 var archiveRecordCopy = toolCopy{

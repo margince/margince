@@ -4,10 +4,8 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { translate, translatePlural } from "../i18n";
-import {
-  configuredModelLabel,
-  configuredModelSummary,
-} from "./onboarding-read";
+import { configuredModelLabel } from "./onboarding-conversation/workbench";
+import { configuredModelSummary } from "./onboarding-read";
 
 // The rail footer's plain-language line replaced a raw, truncated
 // "provider/model · tier + provider/model · tier" string. These cases prove

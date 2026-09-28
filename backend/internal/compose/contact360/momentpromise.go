@@ -74,9 +74,10 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 	// The fingerprint carries WHOSE promise this is, not only which task it
 	// is. A dismissal is keyed on the fingerprint so that the moment comes
 	// back when its evidence moves; handing a colleague's task to the reader
-	// changes the card from "owed to them" to "you owe them", and without the
-	// holder in the fingerprint an old dismissal would keep suppressing it —
-	// hiding the promise at the moment it became theirs to deliver.
+	// changes the card from "your team owes them" to "you owe them", and
+	// without the holder in the fingerprint an old dismissal would keep
+	// suppressing it — hiding the promise at the moment it became theirs to
+	// deliver.
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:open_promise",
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
@@ -93,7 +94,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 		// button does rather than presuming the promise is a thing to send.
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Write to them about it",
+			Label: "Write to them",
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
@@ -107,14 +108,14 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 //
 // The comparison is against the reader rather than against nil: the activity
 // writer assigns every human-written task to its author, so "has an assignee"
-// is true of almost every task and would say "owed to them" about the
+// is true of almost every task and would say "your team owes them" about the
 // reader's own work. A task held by a colleague still belongs on this card —
 // the record owes it either way — but it is not the reader's to deliver, and
 // a card that says otherwise sends them to do somebody else's job. Unassigned
 // work is the workspace's, and the reader is the workspace.
 func openPromiseHeadline(ctx context.Context, task crmcontracts.Activity, subject string) string {
 	if heldByAnother(ctx, task) {
-		return fmt.Sprintf("Owed to them: %s", subject)
+		return fmt.Sprintf("Your team owes them: %s", subject)
 	}
 	return fmt.Sprintf("You owe them: %s", subject)
 }
@@ -146,7 +147,7 @@ func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 // terms: a deadline still ahead, one already behind, or none at all.
 func openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
 	if task.DueAt == nil {
-		return fmt.Sprintf("Task recorded on %s with no date set. It stays open until you do it or close it.", task.OccurredAt.Format("2 Jan"))
+		return fmt.Sprintf("Task from %s with no due date. Stays open until you do it or close it.", task.OccurredAt.Format("2 Jan"))
 	}
 	if words, late := owedwork.LateWords(task.DueAt, now); late {
 		return words
@@ -260,9 +261,9 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 	// Deliberately not owedwork.LateWords: a claim names the date the
 	// SPEAKER promised, so its sentence keeps that framing, and its count is
 	// elapsed calendar days rather than whole days behind.
-	whyNow := "Promised for a date that passed less than a day ago."
+	whyNow := "Promised for a date earlier today."
 	if overdue := elapsed.Days(*claim.DueAt, now); overdue > 0 {
-		whyNow = fmt.Sprintf("Promised for a date that passed %d days ago.", overdue)
+		whyNow = fmt.Sprintf("Promised for a date %d days ago.", overdue)
 	}
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
@@ -283,7 +284,7 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 		FreshnessAt:         claim.DueAt,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Send it now",
+			Label: "Send it",
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
@@ -338,7 +339,7 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 		FreshnessAt:         claim.OccurredAt,
 		RecommendedAction: crmcontracts.ContactMomentAction{
 			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: "Write to them about it",
+			Label: "Write to them",
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
@@ -353,7 +354,7 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 // or none at all.
 func openClaimWhyNow(now time.Time, claim crmcontracts.ConversationClaim) string {
 	if claim.DueAt == nil {
-		return "Promised in a conversation with no date set. It stays open until you do it or close it."
+		return "Promised in a conversation, no due date. Stays open until you do it or close it."
 	}
 	if days := elapsed.FullDaysUntil(now, *claim.DueAt); days > 0 {
 		return fmt.Sprintf("Due in %d days.", days)

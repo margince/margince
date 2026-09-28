@@ -167,9 +167,9 @@ func TestWithNoModelLaneTheFloorWrites(t *testing.T) {
 	if draft.GeneratedBy == crmcontracts.WrittenByModel {
 		t.Error("a draft with no lane claims a model wrote it")
 	}
-	// The Art. 50 disclosure rides only a model-written draft. A deterministic
-	// one carries none, because there is nothing to disclose.
+	// The AI provenance notice rides only a model-written draft. A deterministic
+	// one carries none, because no model wrote it.
 	if draft.AiDisclosure != nil {
-		t.Errorf("a deterministic draft carried the AI disclosure %q", *draft.AiDisclosure)
+		t.Errorf("a deterministic draft carried the provenance notice %q", *draft.AiDisclosure)
 	}
 }

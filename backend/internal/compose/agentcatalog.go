@@ -25,22 +25,20 @@ import (
 // declaration and ai cannot read the catalog. Compose is where the edge is
 // injected, which is what compose is for.
 
-// scheduledAgents is the catalog every production path reads: each runner
-// AgentSpec with its declared allowlist attached.
+// scheduledAgents is the scheduled catalog: each runner AgentSpec with its
+// declared allowlist attached.
 //
-// It is the ONLY assembly of the two halves — RunnerService takes its default
-// specByName from here and Tick seeds from here — because the alternative is
-// the failure this whole change exists to remove. Job.Tools empty is read as
-// NO narrowing (runner/job.go), so one production path left reading the bare
-// runner.Catalog() would hand its agent every verb its passport admits, and
-// nothing would look wrong: the run would work, the diff would look complete,
-// and the boundary would be off.
+// RunnerService takes its default specByName from here and Tick seeds from
+// here, because the alternative is a path that skipped the join. The runner
+// refuses a Job with empty Tools (runner/job.go), so a production path left
+// reading the bare runner.Catalog() would build jobs the runner degrades before
+// their first model call, and that agent would never run.
 //
 // TestTheScheduledCatalogIsTotalAgainstTheContract holds both halves total
-// against each other. It does NOT hold that this is the only assembly of them —
-// no test does, so this comment does not claim it. What is gated is narrower
+// against each other. No test holds that this is the only assembly of them, so
+// this comment does not claim it. What is gated is narrower
 // and is the part that matters: TestOnlySanctionedFilesBuildARunnerJob names
-// the only two files that may construct a Job at all, so a second assembly
+// the only three files that may construct a Job at all, so a second assembly
 // would have nowhere to deliver its result.
 func scheduledAgents() ([]runner.AgentSpec, error) {
 	return joinScheduledAgents(runner.Catalog(), ai.AgentsFor(ai.TaskAgentLoop))
@@ -61,8 +59,8 @@ func joinScheduledAgents(specs []runner.AgentSpec, declared []ai.Agent) ([]runne
 		tools, ok := unclaimed[spec.Name]
 		if !ok {
 			return nil, fmt.Errorf(
-				"agent %q is scheduled but the contract declares no tools for it — add it under "+
-					"agent_loop's agents{} in api/ai-tasks.yaml, or the run is narrowed by its passport alone",
+				"agent %q is scheduled but the contract declares no tools for it — declare it as an "+
+					"agent_loop site with its tools in api/ai-tasks.yaml, or the runner refuses its every job",
 				spec.Name)
 		}
 		spec.Tools = slices.Clone(tools)

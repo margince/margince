@@ -178,24 +178,36 @@ that asked nothing would be a change nobody requested.
 
 ### `agent_loop` — a cumulative, tool-fed window
 
-There is no single buildable request, and forcing one would make the case lie
-about what it exercises. Instead `Run` drives the **real loop** with a recording
-brain, and `Evaluate` replays the reply through the same loop to see which step
-it took:
+`agent_loop` is an engine; each of its sites is one scheduled agent, and each
+site gets its own case (`agentLoopCases{agent: name}`, registered per site from
+`ai.AgentsFor`). There is no single buildable request, and forcing one would make
+the case lie about what it exercises. Instead `Run` drives the **real loop** with
+a recording brain, and `Evaluate` replays the reply through the same loop to see
+which step it took.
 
-```go
-recorder := &agentLoopRecorder{completer: completer}
-job := c.job
-job.Budget = agentLoopTurnBudget()          // one turn, so the run stays measurable
-_, err := runner.New(agentLoopToolSurface{specs: c.specs}, recorder).Run(ctx, job)
-trace := aitasks.Trace{Requests: recorder.requests}
-// … recorder.failed (the call never completed) and err (the run never reached a
-// reply) are distinct failures and reported separately …
-trace.Output = recorder.reply
+The window is the agent's own. `Prepare` resolves the agent through
+`ScheduledAgentSpecByName` — the resolver the runner service uses — so the goal,
+the tool allowlist and the language rule are production's, and the runner narrows
+the registry to the allowlist itself. A fixture carries only what varies between
+runs of one agent:
+
+```yaml
+fixture:
+  trigger_ref: morning_brief:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202  # as the scheduler mints it
+  grounding:                         # what retrieval seeded; every seed enters at T2
+    - source_id: deal:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07
+      content: Heat recovery — renewal due Friday.
 ```
 
-The expectation is the step the turn should take, and `Prepare` refuses one no
-tool in the fixture's surface could produce. Reference: `certcase_agentloop.go`.
+A `goal`, a `tools` surface or a per-seed `trust_tier` is refused by name: each
+would certify a window no run is handed. The expectation is the step the turn
+should take, and `Prepare` refuses one naming a tool this agent is not offered.
+Reference: `certcase_agentloop.go`.
+
+Every shipped `agent_loop` case is judge-less: its check reads the one step
+whole. A case that does carry a rubric must say it grades the turn's
+`FIRST step only` — the phrase `corpusagentloop_test.go` requires — or the judge
+marks a right first call down for the steps it never saw.
 
 ## The scenario file
 
@@ -216,7 +228,7 @@ expect:
   answer: [meeting]                # in the SITE's vocabulary — read its Prepare
   rubric: >
     What the grader is told to score, and why it matters to the product.
-  bands: {certified_min: 70, degraded_min: 50, floor: 40}   # required
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}   # required unless judge: none
   caps: {max_tokens: 400, p95_latency_ms: 6000}             # optional ceilings
 ```
 
@@ -240,6 +252,13 @@ The rules that decide whether a scenario is worth having:
 - **`expect.outcome` need not be `accepted`.** A run passes when the site's
   validator reports the outcome the scenario named — which is what lets a
   scenario whose right answer is *silence* exist at all.
+- **`judge: none` is for a check that sees everything a judge would.** Such a
+  case carries no `rubric` and no `bands`, and says in `judge_none_reason` why
+  the check alone is enough. `corpusjudgeless_test.go` requires a proof for it:
+  the answer it calls correct must reach its outcome, and the wrong answer its
+  rubric caught must reach a planted failure — the named trap, not a malformed
+  reply. Anything the reader is shown that the check never reads, such as a
+  free-text summary, keeps the judge.
 - **A rubric may only ask for what the site's reply envelope can carry.** A
   rubric scoring a field the schema does not declare measures nothing: the model
   cannot produce it however well it answers, so the clause can only mark a
@@ -250,7 +269,7 @@ The rules that decide whether a scenario is worth having:
 Aim a scenario at one thing that can go wrong. The scenarios that have earned
 their place are the ones with an adversarial edge — an injected instruction
 inside evidence, a page that grounds nothing, two sources that disagree on a
-price, a tight token cap — because a fixture the model handles trivially reports
+price, a cap production enforces and the prompt states — because a fixture the model handles trivially reports
 a band nobody learns from.
 
 ## Scope: what a run may claim

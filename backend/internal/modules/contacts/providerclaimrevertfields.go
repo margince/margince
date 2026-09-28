@@ -20,6 +20,35 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// The revert per target table, keyed by the ledger row and built on that
+// table's boughtPredicates entry. Only the employment adds a deletability
+// condition: an edge another provider's purchase also supports stays, although
+// it still counts as bought.
+const (
+	revertTitleSQL = `UPDATE contact t SET title = NULL
+		  FROM provider_applied_field f WHERE f.id = $1 AND ` + boughtTitleSQL
+	revertSocialSQL = `DELETE FROM contact_social t
+		 USING provider_applied_field f WHERE f.id = $1 AND ` + boughtSocialSQL
+	revertEmailSQL = `UPDATE contact_email t SET archived_at = now()
+		  FROM provider_applied_field f WHERE f.id = $1 AND ` + boughtChildRowSQL
+	revertPhoneSQL = `UPDATE contact_phone t SET archived_at = now()
+		  FROM provider_applied_field f WHERE f.id = $1 AND ` + boughtChildRowSQL
+	revertEmploymentSQL = `UPDATE relationship t SET archived_at = now(), is_current_primary = false
+		  FROM provider_applied_field f WHERE f.id = $1 AND ` + boughtEmploymentSQL + `
+		   AND NOT EXISTS (SELECT 1 FROM provider_employment_resolution e
+		         JOIN contact_provider_claim c ON c.id = e.claim_id
+		        WHERE e.relationship_id = t.id AND e.state = 'linked' AND c.provider <> f.provider)`
+)
+
+// revertStatements is the statement per target table, as the tests walk it.
+var revertStatements = map[string]string{
+	entityContact:      revertTitleSQL,
+	tableContactSocial: revertSocialSQL,
+	tableContactEmail:  revertEmailSQL,
+	tableContactPhone:  revertPhoneSQL,
+	tableRelationship:  revertEmploymentSQL,
+}
+
 // revertOne clears one filled field if it is still the provider's, and reports
 // whether it went.
 func revertOne(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) {
@@ -58,8 +87,7 @@ func revertColumn(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) 
 		// either — one unrevertible row would brick a privacy control.
 		return false, nil
 	}
-	tag, err := tx.Exec(ctx,
-		`UPDATE contact SET title = NULL WHERE id = $1 AND title = $2`, f.subject, *f.value)
+	tag, err := tx.Exec(ctx, revertTitleSQL, f.ledgerID)
 	if err != nil {
 		return false, fmt.Errorf("contacts: clearing a bought job title: %w", err)
 	}
@@ -84,8 +112,7 @@ func revertSocialHandle(ctx context.Context, tx pgx.Tx, f appliedField) (bool, e
 		// is what this function exists not to do, so it stays and says so.
 		return false, nil
 	}
-	tag, err := tx.Exec(ctx,
-		`DELETE FROM contact_social WHERE id = $1 AND contact_id = $2`, *f.rowID, f.subject)
+	tag, err := tx.Exec(ctx, revertSocialSQL, f.ledgerID)
 	if err != nil {
 		return false, fmt.Errorf("contacts: removing a bought profile link: %w", err)
 	}
@@ -111,13 +138,11 @@ func archiveChildRow(ctx context.Context, tx pgx.Tx, f appliedField) (bool, erro
 	if f.rowID == nil {
 		return false, fmt.Errorf("contacts: a bought %s was recorded without its row", f.field)
 	}
-	statement := `UPDATE contact_email SET archived_at = now()
-		 WHERE id = $1 AND contact_id = $2 AND source = $3 AND archived_at IS NULL`
+	statement := revertEmailSQL
 	if f.table == tableContactPhone {
-		statement = `UPDATE contact_phone SET archived_at = now()
-		 WHERE id = $1 AND contact_id = $2 AND source = $3 AND archived_at IS NULL`
+		statement = revertPhoneSQL
 	}
-	tag, err := tx.Exec(ctx, statement, *f.rowID, f.subject, f.provider)
+	tag, err := tx.Exec(ctx, statement, f.ledgerID)
 	if err != nil {
 		return false, fmt.Errorf("contacts: archiving a bought %s: %w", f.field, err)
 	}
@@ -138,15 +163,7 @@ func archiveEmploymentEdge(ctx context.Context, tx pgx.Tx, f appliedField) (bool
 	if f.rowID == nil {
 		return false, fmt.Errorf("contacts: a bought employment was recorded without its row")
 	}
-	tag, err := tx.Exec(ctx, `
-		UPDATE relationship
-		   SET archived_at = now(), is_current_primary = false
-		 WHERE id = $1 AND contact_id = $2 AND archived_at IS NULL
-       AND captured_by = 'connector:' || source
-       AND NOT EXISTS (SELECT 1 FROM provider_employment_resolution e
-         JOIN contact_provider_claim c ON c.id=e.claim_id
-         WHERE e.relationship_id=relationship.id AND e.state='linked' AND c.provider <> $3)`,
-		*f.rowID, f.subject, f.provider)
+	tag, err := tx.Exec(ctx, revertEmploymentSQL, f.ledgerID)
 	if err != nil {
 		return false, fmt.Errorf("contacts: retiring a bought employment: %w", err)
 	}

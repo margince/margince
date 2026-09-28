@@ -64,6 +64,30 @@ func TestClassForRefusesAKindNothingRaises(t *testing.T) {
 	}
 }
 
+// The enumeration that picks the morning's seats runs before any of them is
+// claimed, so a kind it cannot place must cost that one line and not the
+// installation's whole morning — a notice written under a kind since retired
+// from the contract is a row nobody can edit.
+//
+// NO DATABASE, and that is the assertion: the refusal has to precede the
+// preference query, so the nil transaction is what proves it rather than a
+// shortcut. An edit that looked the class up first would panic here.
+func TestARetiredKindIsNotBatchedRatherThanFatal(t *testing.T) {
+	t.Parallel()
+	if _, err := ClassFor("gossip"); err == nil {
+		t.Fatal("\"gossip\" is placeable now, so this case no longer stands for a kind the product cannot place")
+	}
+
+	batched := newBatchedClasses(ids.New[ids.UserKind]())
+	wanted, err := batched.wants(context.Background(), nil, "gossip")
+	if err != nil {
+		t.Fatalf("asking whether a retired kind batches: %v — one such row would cost every seat its digest", err)
+	}
+	if wanted {
+		t.Fatal("a kind with no class batched — it would reach a reader under a setting nobody chose")
+	}
+}
+
 // A coach kind the contract admits and this package does not place would reach
 // a reader under whatever the fallback happened to be. The kinds are read off
 // the generated enum rather than typed out, so a fifth one arrives in this test

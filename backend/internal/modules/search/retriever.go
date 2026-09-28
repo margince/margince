@@ -36,7 +36,7 @@ func (r *Retriever) Search(ctx context.Context, q retrieval.Query) (retrieval.Re
 	for _, t := range q.EntityTypes {
 		types = append(types, string(t))
 	}
-	hits, semantic, err := r.store.HybridSearch(ctx, q.Text, r.embedder, clampLimit(q.Limit), types...)
+	hits, semantic, err := r.store.hybridSearchWithin(ctx, q.Text, r.embedder, clampLimit(q.Limit), q.Within, types...)
 	if err != nil {
 		return retrieval.Result{}, err
 	}

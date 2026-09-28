@@ -40,3 +40,19 @@ func MarkWithheldFromWorkspaceTx(ctx context.Context, tx pgx.Tx, id ids.UUID) er
 	}
 	return nil
 }
+
+// ClearWithheldFromWorkspaceTx records that a withheld sender's contact has
+// been published after all, in the transaction that published it.
+//
+// The flag and the contact's visibility are one decision read from two places.
+// Left standing, it keeps this sender's mail held after the contact itself went
+// to the workspace, which is the record visible and its history not.
+func ClearWithheldFromWorkspaceTx(ctx context.Context, tx pgx.Tx, email string) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE capture_pending_counterparty
+		   SET withheld_from_workspace = false, updated_at = now()
+		 WHERE email = $1 AND withheld_from_workspace`, normalizeEmail(email)); err != nil {
+		return fmt.Errorf("capture: recording that a withheld contact was published: %w", err)
+	}
+	return nil
+}

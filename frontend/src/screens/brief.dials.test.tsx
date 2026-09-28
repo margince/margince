@@ -29,7 +29,10 @@ beforeEach(() => {
 // day so the whole answer stays in one spelling: the strip, the sentence and Do
 // next are all drawn from it, and a hand-built copy here would drift from theirs
 // one edited field at a time.
-function worklist(scopeOptions: Worklist["scope_options"]) {
+function worklist(
+  scopeOptions: Worklist["scope_options"],
+  teamWeek: Worklist["team_week"],
+) {
   // The row is marked CHANGED and a source is marked UNAVAILABLE, so all three
   // morning elements above the work column actually draw. The default fixture
   // leaves both empty, and both of those elements return null on an empty one —
@@ -47,16 +50,26 @@ function worklist(scopeOptions: Worklist["scope_options"]) {
   return {
     ...day,
     scope_options: scopeOptions,
+    team_week: teamWeek,
     sources_unavailable: [
       { source: "meeting", reason: "failed", category: "meetings" },
     ],
   };
 }
 
-/** Stub every read the Brief fans out to, for a reader with the given scopes. */
-function stubBrief(scopeOptions: Worklist["scope_options"]) {
+/**
+ * Stub every read the Brief fans out to, for a reader with the given scopes.
+ * `teamWeek` defaults to a lead's answer whenever the scopes reach a team, so a
+ * case about a read-only seat names its `none` outright.
+ */
+function stubBrief(
+  scopeOptions: Worklist["scope_options"],
+  teamWeek: Worklist["team_week"] = scopeOptions.includes("team")
+    ? "teams_led"
+    : "none",
+) {
   return stubApi({
-    "GET /worklist": () => jsonResponse(worklist(scopeOptions)),
+    "GET /worklist": () => jsonResponse(worklist(scopeOptions, teamWeek)),
     "GET /worklist/team": () =>
       jsonResponse({
         as_of: "2026-06-10T06:00:00Z",
@@ -100,6 +113,25 @@ describe("the Brief's dials", () => {
     expect(
       await screen.findByRole("group", { name: en["brief.scope.label"] }),
     ).toBeTruthy();
+  });
+
+  // A read-only seat reaches the team's live work and is refused the team's
+  // week, so it gets the scope dial on Morning and none on Weekly.
+  it("offers a read-only seat the team's work and not the team's week", async () => {
+    stubBrief(["mine", "unassigned", "team", "all"], "none");
+    render(<BriefScreen />);
+    expect(
+      await screen.findByRole("group", { name: en["brief.scope.label"] }),
+    ).toBeTruthy();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: en["brief.view.weekly"] }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("group", { name: en["brief.scope.label"] }),
+      ).toBeNull(),
+    );
   });
 
   // The dial writes the address, so a reader can send what they are looking at.

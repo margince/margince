@@ -499,7 +499,7 @@ describe("the conversational voice act", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe(
-      "I cannot read photo.png. I take .txt, .md, .pdf, .docx, .vtt, .srt, or .json.",
+      "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
     );
     expect(requestsTo(calls, "/sources/preview", "POST").length).toBe(0);
     expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
@@ -535,7 +535,7 @@ describe("the conversational voice act", () => {
 
     expect(
       await screen.findByText(
-        /I cannot tell which words are yours, so I counted none/,
+        /I cannot tell which words are yours, so none were counted/,
       ),
     ).toBeTruthy();
     expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
@@ -562,14 +562,12 @@ describe("the conversational voice act", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /Build my voice profile/ }),
     );
-    expect(document.querySelector(".ob-stage-note")?.textContent).toContain(
-      "800",
-    );
+    expect((await screen.findByRole("alert")).textContent).toContain("800");
 
     await uploadFile("two.md", "Second document.");
     // At the floor the reason is gone with the block it named.
     await waitFor(() => {
-      expect(document.querySelector(".ob-stage-note")).toBeNull();
+      expect(screen.queryByRole("alert")).toBeNull();
     });
     expect(screen.queryByText("500 of 800 words")).toBeNull();
   });
@@ -595,18 +593,14 @@ describe("the conversational voice act", () => {
       );
 
       expect(
-        await screen.findByText(/Finding your signature moves/, undefined, {
+        await screen.findByText(/Extracting your writing patterns/, undefined, {
           timeout: 4000,
         }),
       ).toBeTruthy();
       expect(
-        await screen.findByText(
-          /Here is your voice, in your own words\./,
-          undefined,
-          {
-            timeout: 4000,
-          },
-        ),
+        await screen.findByText(/This is your voice profile\./, undefined, {
+          timeout: 4000,
+        }),
       ).toBeTruthy();
       expect(
         await screen.findByText(/needs your review before it goes live/),
@@ -659,17 +653,13 @@ describe("the conversational voice act", () => {
       expect(await screen.findByText(UNCONFIGURED_DETAIL)).toBeTruthy();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /Try the build again/ }),
+        screen.getByRole("button", { name: /Retry build/ }),
       );
 
       expect(
-        await screen.findByText(
-          /Here is your voice, in your own words\./,
-          undefined,
-          {
-            timeout: 4000,
-          },
-        ),
+        await screen.findByText(/This is your voice profile\./, undefined, {
+          timeout: 4000,
+        }),
       ).toBeTruthy();
       expect(requestsTo(calls, "/builds", "POST").length).toBe(2);
     },
@@ -706,7 +696,7 @@ describe("the conversational voice act", () => {
     // own class rather than by text (which would now match both).
     await waitFor(() => {
       expect(document.querySelector(".ob-voice-meter-line")?.textContent).toBe(
-        "820 words — enough to build. More still sharpens it.",
+        "820 words: enough to build. More words improve it.",
       );
     });
     expect(
@@ -735,9 +725,7 @@ describe("the conversational voice act", () => {
     expect(
       await screen.findByText(en["ob.conv.voice.continueFailedStatus"]),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: /Try the build again/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Retry build/ })).toBeTruthy();
   });
 
   // What a refused build start may say on the collect scene. The two halves

@@ -70,6 +70,20 @@ func (s *IdempotencyRetentionSweeper) SweepWorkspace(ctx context.Context) error 
 		s.log.InfoContext(wsCtx, "idempotency retention: expired claims purged",
 			"rows", purged, "window", replayWindow.String())
 	}
+	// The bulk-change confirmation is the same kind of state — a transport
+	// promise with a short life that names who made it — so the same pass
+	// ends it rather than a second job ageing a second table.
+	var lapsed int64
+	if err := database.WithWorkspaceTx(wsCtx, s.pool, func(tx pgx.Tx) error {
+		var err error
+		lapsed, err = purgeLapsedBulkConfirmations(wsCtx, tx)
+		return err
+	}); err != nil {
+		return err
+	}
+	if lapsed > 0 {
+		s.log.InfoContext(wsCtx, "idempotency retention: lapsed bulk confirmations purged", "rows", lapsed)
+	}
 	return nil
 }
 

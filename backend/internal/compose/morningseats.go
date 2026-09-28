@@ -20,11 +20,13 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -84,12 +86,20 @@ func seatsWithAMorning(ctx context.Context, tx pgx.Tx) (map[ids.UUID]string, err
 // A fresh correlation id per seat, so one morning's work for one colleague is
 // one recoverable trace in the audit spine rather than a fleet pass nobody can
 // take apart.
+//
+// live is false for a seat that stopped being one between the roster read and
+// this resolve. That is a race rather than a fault: a colleague who has left has
+// no morning to be served, and calling it a failure charges a departure to the
+// pass — and, for the digest, to the column an operator reads for relay causes.
 func seatContext(
 	ctx context.Context, users *identity.Service, wsID, userID ids.UUID,
-) (context.Context, error) {
+) (context.Context, bool, error) {
 	rbac, seat, err := users.EffectiveAuthority(ctx, wsID, userID)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil, false, nil
+	}
 	if err != nil {
-		return nil, fmt.Errorf("resolving the colleague's authority: %w", err)
+		return nil, false, fmt.Errorf("resolving the colleague's authority: %w", err)
 	}
 	bound := principal.WithActor(ctx, principal.Principal{
 		Type:        principal.PrincipalHuman,
@@ -99,5 +109,5 @@ func seatContext(
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
 	})
-	return principal.WithCorrelationID(bound, ids.NewV7()), nil
+	return principal.WithCorrelationID(bound, ids.NewV7()), true, nil
 }

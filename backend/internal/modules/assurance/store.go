@@ -84,7 +84,12 @@ type SourceCoverage struct {
 // The worker NEVER refuses to start. Refusing would produce no run at all in
 // exactly the case this pass exists to report — a broken connector — and the
 // API would have nothing to show while the brief waited on it.
-func (s *Store) StartRun(ctx context.Context, tx pgx.Tx, asOf time.Time) (ids.UUID, error) {
+// requestedBy is the seat that asked for this pass, and nil is the nightly
+// cadence, which nobody asked for. It is NOT captured_by: that stays the system
+// principal on every run, because the pass reads the whole pipeline as the
+// system and a run captured_by a manager would attribute to them every
+// exception it raises.
+func (s *Store) StartRun(ctx context.Context, tx pgx.Tx, asOf time.Time, requestedBy *string) (ids.UUID, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return ids.Nil, err
 	}
@@ -98,10 +103,10 @@ func (s *Store) StartRun(ctx context.Context, tx pgx.Tx, asOf time.Time) (ids.UU
 	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO assurance_run (as_of, rule_versions, status, captured_by)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO assurance_run (as_of, rule_versions, status, captured_by, requested_by)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id`,
-		asOf, versions, StatusRunning, capturedBy).Scan(&id); err != nil {
+		asOf, versions, StatusRunning, capturedBy, requestedBy).Scan(&id); err != nil {
 		return ids.Nil, fmt.Errorf("assurance: opening the run: %w", err)
 	}
 	return id, nil

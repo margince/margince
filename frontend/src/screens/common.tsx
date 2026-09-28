@@ -246,14 +246,9 @@ export function QueryStates({
             button is something to reach, not something to hear. */}
         <div role="alert">
           <p>{t("common.error")}</p>
-          <p style={{ marginTop: "var(--space-2)" }}>
-            {problemMessageOf(query.error, t)}
-          </p>
+          <p className="querygate-cause">{problemMessageOf(query.error, t)}</p>
         </div>
-        <Button
-          onClick={() => query.refetch()}
-          style={{ marginTop: "var(--space-3)" }}
-        >
+        <Button onClick={() => query.refetch()} className="querygate-retry">
           {t("common.retry")}
         </Button>
       </EmptyState>
@@ -300,34 +295,6 @@ export function WriteRefused({
     <Callout kind="outcome" tone="danger" title={t(titleKey)} actions={actions}>
       {cause}
     </Callout>
-  );
-}
-
-/**
- * The same refusal WITHOUT a heading, on the one line a form has room for.
- *
- * `WriteRefused` above is the shape for a refusal that needs a claim of its own
- * — a card, a whole screen. Inside a modal's field stack the claim is already
- * the dialog's title, and a bordered notice between the last field and the
- * Save row reads as a second surface stacked on the form. So this is the
- * sentence and nothing else, in the danger ink, announced the moment it
- * arrives.
- *
- * ONE spelling, for the reason the component above it is one: nineteen screens
- * had grown the same `<p role="alert">` around the same call, and half of them
- * had grown it without the ink, so a refusal and a caption read the same.
- * Nothing is drawn when there is nothing to report, which is what lets a caller
- * hand it a query's `error` straight.
- */
-export function RefusalLine({ error }: Readonly<{ error: unknown }>) {
-  const t = useT();
-  if (error === null || error === undefined) {
-    return null;
-  }
-  return (
-    <p role="alert" className="t-danger">
-      {problemMessageOf(error, t)}
-    </p>
   );
 }
 

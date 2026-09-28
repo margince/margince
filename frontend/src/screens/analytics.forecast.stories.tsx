@@ -25,12 +25,19 @@ import {
 // which is the one notice this section draws and the only thing between the
 // answer and the tiles.
 //
+// Each of the three readings says what it RESTS ON under its figure — when the
+// call was made and how far it sits over the evidence, what the evidence is,
+// what "already won" counts — because a figure with nothing under it is a
+// number a reader has to trust. The money is compact: a slot is about a hundred
+// points wide and a full amount clips there, while the sentence above keeps the
+// amount as it was authored.
+//
 // Read both frames in BOTH themes with the toolbar's Theme control.
 
 type Readings = components["schemas"]["ForecastReadings"];
 
 const SELECTION: AnalyticsSelection = {
-  scope: { kind: "workspace", label: "Whole workspace" },
+  scope: { kind: "workspace", label: "Whole company" },
 };
 
 function readings(over: Partial<Readings> = {}): Readings {
@@ -75,6 +82,14 @@ function routes(data: Readings): RouteMap {
     "GET /me": meRoute({}),
     "GET /forecast": () => jsonResponse(data),
     "GET /forecast/assurance": () => jsonResponse({}, 404),
+    "GET /forecast/assurance/preview": () =>
+      jsonResponse({
+        started: false,
+        eligible_deals: data.eligible_count,
+        findings: [],
+        readiness: "ready",
+        sources: [],
+      }),
   };
 }
 
@@ -98,8 +113,8 @@ export const EveryDealPriced: Story = {
   },
 };
 
-// Eleven of the fifty-two carry no amount. The caveat is the frame's point: it
-// is real pipeline contributing zero money to every figure below it, said
+// Eleven of the fifty-two carry no amount. The caveat is the frame's point:
+// they are real deals contributing zero money to every figure below them, said
 // beside the total rather than left in the receipt for somebody to find.
 export const SomeDealsUnpriced: Story = {
   render: () => {
@@ -129,8 +144,34 @@ export const RecordingACall: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Update the current call",
+        name: "Update call",
       }),
     );
   },
+};
+
+// Nobody has called the period. The call slot answers in WORDS rather than with
+// a glyph — a slot in a row compared across must not answer with a dash — and
+// carries no detail, because there is no call to say anything about.
+export const NobodyHasCalled: Story = {
+  render: () => {
+    installFetchStub(routes(readings({ current_call: undefined })));
+    return (
+      <StoryProviders>
+        <ForecastView selection={SELECTION} canSubmit={false} />
+      </StoryProviders>
+    );
+  },
+};
+
+// At 390px. The strip folds to full-width ROWS — every slot declares
+// `narrow="row"` — because two slots abreast on a phone clip the label AND
+// ellipsize the figure, and a clipped number is a different number. The
+// hairline between rows is the plate's; the tiles lose their boxes.
+// Five slots — the three readings plus the landing pair — so this is the widest
+// strip in the set and the one the fold matters most for.
+export const EveryDealPricedPhone: Story = {
+  ...EveryDealPriced,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

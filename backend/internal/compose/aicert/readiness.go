@@ -109,8 +109,8 @@ type Standing struct {
 }
 
 // StampParts says which of a scenario stamp's three digests moved. A stamp is
-// the scenario digested WHOLE, then the request its site builds, then the
-// grader's request — three fixed-width hex digests concatenated
+// the scenario digested WHOLE, then the request its site builds, then how a run
+// is graded — three fixed-width hex digests concatenated
 // (ScenarioStamps), so which one differs is readable rather than inferred.
 type StampParts struct {
 	// Case is true when the test itself changed: its fixture, its expected
@@ -120,9 +120,9 @@ type StampParts struct {
 	// stayed put. The band that follows describes the NEW prompt, and a drop is
 	// a consequence of a product change rather than of the model.
 	Prompt bool
-	// Grader is true when the judge's request changed. A band can move with
-	// neither the test nor the product touched, which reads as a model
-	// regression and is not one.
+	// Grader is true when how a run is graded changed: the judge's request or
+	// the scoring rule. A band can move with neither the test nor the product
+	// touched, which reads as a model regression and is not one.
 	Grader bool
 }
 
@@ -136,7 +136,7 @@ func (p StampParts) Describe() string {
 		moved = append(moved, "the prompt this build sends")
 	}
 	if p.Grader {
-		moved = append(moved, "the grader")
+		moved = append(moved, "how a run is graded")
 	}
 	if len(moved) == 0 {
 		// A stamp this build cannot split — one written before the three-part
@@ -287,14 +287,24 @@ func (r ReadinessRow) ClaimedScope() string {
 	return r.Record.CertifiedScope
 }
 
-// Binding names the (provider, model, env) this row was measured on — the whole
-// of what a band green-lights. Empty for an absent row, which was measured on
-// nothing.
+// Binding names the (provider, model, env) this row was measured on, plus the
+// thinking level where the run set one — the whole of what a band green-lights.
+// Empty for an absent row, which was measured on nothing.
 func (r ReadinessRow) Binding() string {
 	if !r.Certified {
 		return ""
 	}
-	return r.Record.Provider + " · " + r.Record.ServedModel + " · " + r.Record.EnvClass
+	return BindingLabel(r.Record.Provider, r.Record.ServedModel, r.Record.EnvClass, r.Record.ThinkingLevelAt(r.Site.Variant))
+}
+
+// BindingLabel is a binding as every surface spells it — the report, the
+// certification page and a preset's rung — so a row and its record match by it.
+func BindingLabel(provider, model, env, thinking string) string {
+	label := provider + " · " + model + " · " + env
+	if thinking != "" {
+		label += " · thinking " + thinking
+	}
+	return label
 }
 
 // SiteKey is the site's name as every tree here spells it.
@@ -315,6 +325,11 @@ func (r ReadinessRow) SiteKey() string { return string(r.Site.Task) + "/" + r.Si
 func Readiness(census Census, taskStamps map[string]string, perScenario map[string]map[string]string, records []Record) (rows []ReadinessRow, unclaimed []Record) {
 	byTask := map[string][]Record{}
 	for _, rec := range records {
+		// A decision record measured the decision lane, never the site's LLM
+		// prompt: DecisionReadiness judges it, and it is nobody's unclaimed row.
+		if rec.Kind == KindDecision {
+			continue
+		}
 		byTask[rec.Task] = append(byTask[rec.Task], rec)
 	}
 
@@ -345,7 +360,7 @@ func Readiness(census Census, taskStamps map[string]string, perScenario map[stri
 	}
 
 	for _, rec := range records {
-		if !claimed[RecordKey(rec)] {
+		if rec.Kind != KindDecision && !claimed[RecordKey(rec)] {
 			unclaimed = append(unclaimed, rec)
 		}
 	}
@@ -446,7 +461,12 @@ func CurrentStamps(ctx context.Context, corpus []Scenario, census *aitasks.Regis
 }
 
 // RecordKey identifies one record the way its own file path does — the four
-// fields that make it a distinct measurement.
+// fields that make it a distinct measurement, and for a decision record its
+// site and configured model, so it never collides with the completion record
+// of the same binding.
 func RecordKey(rec Record) string {
+	if rec.Kind != "" {
+		return rec.Task + "/" + rec.Kind + ":" + rec.Site + "/" + rec.Provider + "/" + rec.Model + "/" + rec.EnvClass
+	}
 	return rec.Task + "/" + rec.Provider + "/" + rec.ServedModel + "/" + rec.EnvClass
 }

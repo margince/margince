@@ -157,6 +157,23 @@ export const NothingEverRaised: Story = {
   play: openIt,
 };
 
+// A centre with a history and nothing waiting. No bulk verb: there is nothing
+// left for it to settle, and an enabled one would promise work the reader
+// cannot find.
+export const NothingLeftToSettle: Story = {
+  render: story([
+    notice("n1", "A lead is past its deadline", {
+      read_at: "2026-09-15T10:00:00Z",
+      target: { type: "lead", id: "11111111-1111-4111-8111-111111111111" },
+    }),
+    notice("n2", "An automation could not run", {
+      created_at: "2026-09-14T09:00:00Z",
+      read_at: "2026-09-14T10:00:00Z",
+    }),
+  ]),
+  play: openIt,
+};
+
 // The same panel in dark. The settled rows' ink and the indigo mark are both
 // derived tones, so this is where a wrong one shows.
 export const CentreOpenDark: Story = {

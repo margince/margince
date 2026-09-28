@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, type ReactNode, useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { identifierNumber } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
@@ -315,4 +316,16 @@ function ProposalDemo() {
 
 export const Proposals: Story = {
   render: () => <ProposalDemo />,
+};
+
+// What a proposal SETTLES into. Accepted through the gate rather than set as a
+// prop, because the settled card is the machine's own next state and a story
+// that reached past it would document a shape the product does not have.
+export const Resolved: Story = {
+  render: () => <ProposalDemo />,
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement);
+    const [accept] = await page.findAllByRole("button", { name: "Accept" });
+    await userEvent.click(accept);
+  },
 };

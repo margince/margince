@@ -411,13 +411,7 @@ function LeadsWorkbench({
             header: t("lead.status"),
             sort: "status",
             cell: (lead: Lead) => (
-              <span
-                style={{
-                  display: "inline-flex",
-                  gap: "var(--space-1)",
-                  alignItems: "center",
-                }}
-              >
+              <span className="lead-status-cell">
                 <StatusBadge status={lead.status} />
                 <SlaBadge state={lead.sla_state} />
               </span>
@@ -612,22 +606,20 @@ function LeadsWorkbench({
         // carried `leads` in the saved-view vocabulary all along.
         dataViews={savedViews}
         tools={
-          <>
-            {/* Board or table is how the SAME rows are drawn, so it belongs
-                with the drawing dials rather than above the surface — the
-                slot the deals screen's pipeline picker already uses. */}
-            <SegmentedControl
-              options={["table", "board"] as const}
-              value={view}
-              onChange={setView}
-              labels={{
-                table: t("deals.viewTable"),
-                board: t("deals.viewBoard"),
-              }}
-            />
-            <SaveViewAction resource="leads" query={state.query} />
-          </>
+          // Board or table is how the SAME rows are drawn, so it belongs with
+          // the drawing dials rather than above the surface — the slot the
+          // deals screen's pipeline picker already uses.
+          <SegmentedControl
+            options={["table", "board"] as const}
+            value={view}
+            onChange={setView}
+            labels={{
+              table: t("deals.viewTable"),
+              board: t("deals.viewBoard"),
+            }}
+          />
         }
+        saveView={<SaveViewAction resource="leads" query={state.query} />}
       />
     </>
   );

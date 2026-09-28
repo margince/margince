@@ -59,6 +59,7 @@ type Server struct {
 	commissionsHandlers
 	activitiesHandlers
 	approvalsHandlers
+	bulkHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers
@@ -129,6 +130,7 @@ type Server struct {
 	exportBundleHandlers
 	companyRollupHandlers
 	strengthHandlers
+	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
 	outcomeReviewHandlers
@@ -188,6 +190,10 @@ type Server struct {
 	analyticsQueryHandlers
 	analyticsContextHandlers
 	assuranceHandlers
+	// The check a human starts: the preview of a first pass, and the pass
+	// itself. In compose because a pass is assembled from the deals and
+	// coverage seams, which assurance owns nothing of.
+	assuranceRunHandlers
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers

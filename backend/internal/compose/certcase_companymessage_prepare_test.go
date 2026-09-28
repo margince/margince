@@ -123,6 +123,17 @@ func TestCompanyMessageCaseRefusesAFixtureProductionCouldNotProduce(t *testing.T
 			},
 			wantMsg: "no value",
 		},
+		{
+			// A standing offer is what a bare yes may accept, and only the server's
+			// slot supplies one: a fixture stating it would certify a grant the
+			// product never recorded.
+			name: "a standing offer the fixture states itself",
+			mutate: func(f *onboardingCompanyMessageFixture) {
+				offer := legalNameOffer()
+				f.Conversation.PreviousOffer = &offer
+			},
+			wantMsg: "only the server's own offer slot",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

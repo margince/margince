@@ -90,7 +90,7 @@ describe("CompanyScreen — a live record that is not the viewer's to change", (
       expect(control.hasAttribute("disabled")).toBe(true);
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "You cannot change this company. Ask its owner to share it with you, or your administrator for the right to edit it.",
+        "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
       );
     }
   });

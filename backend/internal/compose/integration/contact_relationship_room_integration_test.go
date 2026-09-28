@@ -805,16 +805,18 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 		VALUES ($1, '`+duplicate.String()+`', 'title', 'Head of Procurement',
 		        'Anna Weber — Head of Procurement', 'site_read:https://example.test/team',
 		        'site_read', 'agent:enrich')`)
-	// And one they BOTH carry, with different values.
+	// One single-answer field they BOTH carry, with different values, and one
+	// phone number each: a phone is a list, keyed per number.
 	for _, p := range []struct {
-		id    ids.UUID
-		value string
+		id              ids.UUID
+		website, number string
 	}{
-		{survivor, "+49 111"}, {duplicate, "+49 222"},
+		{survivor, "https://survivor.test", "+4930111111"}, {duplicate, "https://duplicate.test", "+4930222222"},
 	} {
 		SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
-			VALUES ($1, '`+p.id.String()+`', 'phone', '`+p.value+`', 'sig',
-			        'activity:x', 'capture_enrich', 'agent:enrich')`)
+			VALUES ($1, '`+p.id.String()+`', 'website', '`+p.website+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
+		SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value_key, value, evidence_snippet, source_ref, source, captured_by)
+			VALUES ($1, '`+p.id.String()+`', 'phone', '`+p.number+`', '`+p.number+`', 'sig', 'activity:x', 'capture_enrich', 'agent:enrich')`)
 	}
 
 	if _, err := e.Contacts.MergeContact(e.Admin(),
@@ -824,7 +826,7 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 
 	rows := map[string]string{}
 	got, err := OwnerConn(t).Query(context.Background(),
-		`SELECT field, value FROM contact_profile_field WHERE contact_id = $1`, survivor)
+		`SELECT field || value_key, value FROM contact_profile_field WHERE contact_id = $1`, survivor)
 	if err != nil {
 		t.Fatalf("reading the survivor's fields: %v", err)
 	}
@@ -847,8 +849,15 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 	}
 	// Where the survivor already held the field, THEIRS is the one a human has
 	// been reading. The merged-away copy is dropped, never allowed to overwrite.
-	if rows["phone"] != "+49 111" {
-		t.Errorf("phone = %q, want the survivor's own value", rows["phone"])
+	if rows["website"] != "https://survivor.test" {
+		t.Errorf("website = %q, want the survivor's own value", rows["website"])
+	}
+	// Two numbers are two answers, so the merged-away number's evidence joins
+	// the survivor's, as its contact_phone row does.
+	for _, number := range []string{"+4930111111", "+4930222222"} {
+		if rows["phone"+number] != number {
+			t.Errorf("phone evidence %s missing after the merge; survivor holds %v", number, rows)
+		}
 	}
 
 	var left int

@@ -94,7 +94,7 @@ func TestGeminiCompleteMapsNativeWireAndUsage(t *testing.T) {
 	}
 }
 
-func TestGeminiStructuredOutputUsesResponseJSONSchema(t *testing.T) {
+func TestGeminiStructuredOutputRidesResponseFormat(t *testing.T) {
 	schema := json.RawMessage(`{"type":"object","properties":{"ok":{"type":"boolean"}}}`)
 	var body []byte
 	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
@@ -108,19 +108,71 @@ func TestGeminiStructuredOutputUsesResponseJSONSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	var wire struct {
-		GenerationConfig struct {
-			ResponseMimeType   string          `json:"responseMimeType"`   //nolint:tagliatelle // Google's wire format (camelCase)
-			ResponseJSONSchema json.RawMessage `json:"responseJsonSchema"` //nolint:tagliatelle // Google's wire format (camelCase)
-		} `json:"generationConfig"` //nolint:tagliatelle // Google's wire format (camelCase)
+		GenerationConfig map[string]json.RawMessage `json:"generationConfig"` //nolint:tagliatelle // Google's wire format (camelCase)
 	}
 	if err := json.Unmarshal(body, &wire); err != nil {
 		t.Fatal(err)
 	}
-	if wire.GenerationConfig.ResponseMimeType != "application/json" {
-		t.Fatalf("responseMimeType not set: %s", body)
+	// Both older spellings are deprecated in v1beta; sending either beside
+	// responseFormat would be two schemas on one request.
+	for _, deprecated := range []string{"responseMimeType", "responseJsonSchema", "responseSchema"} {
+		if _, sent := wire.GenerationConfig[deprecated]; sent {
+			t.Errorf("deprecated %s sent: %s", deprecated, body)
+		}
 	}
-	if !bytes.Equal(bytes.TrimSpace(wire.GenerationConfig.ResponseJSONSchema), bytes.TrimSpace(schema)) {
-		t.Fatalf("responseJsonSchema not verbatim: %s", wire.GenerationConfig.ResponseJSONSchema)
+	var format struct {
+		Text struct {
+			MimeType string          `json:"mimeType"` //nolint:tagliatelle // Google's wire format (camelCase)
+			Schema   json.RawMessage `json:"schema"`
+		} `json:"text"`
+	}
+	if err := json.Unmarshal(wire.GenerationConfig["responseFormat"], &format); err != nil {
+		t.Fatalf("responseFormat absent or malformed: %v: %s", err, body)
+	}
+	if format.Text.MimeType != "APPLICATION_JSON" {
+		t.Fatalf("responseFormat.text.mimeType = %q, want APPLICATION_JSON", format.Text.MimeType)
+	}
+	if !bytes.Equal(bytes.TrimSpace(format.Text.Schema), bytes.TrimSpace(schema)) {
+		t.Fatalf("responseFormat.text.schema not verbatim: %s", format.Text.Schema)
+	}
+}
+
+// A structured request thinks at low unless its caller chose a level, because
+// Gemini's thinking is charged to the same maxOutputTokens the answer needs; a
+// free-text request keeps the model's own default. So does a Flash-Lite, whose
+// default is already shallower than low: naming low would make it think more.
+func TestGeminiThinkingDefaultsLowOnlyForAStructuredRequest(t *testing.T) {
+	schema := json.RawMessage(`{"type":"object"}`)
+	cases := []struct {
+		name   string
+		model  string
+		schema json.RawMessage
+		chosen string
+		want   string
+	}{
+		{"structured, no level chosen", "gemini-3.5-flash", schema, "", geminiStructuredThinkingLevel},
+		{"structured on pro, no level chosen", "gemini-3.1-pro-preview", schema, "", geminiStructuredThinkingLevel},
+		{"structured, caller chose high", "gemini-3.5-flash", schema, "high", "high"},
+		{"free text, no level chosen", "gemini-3.5-flash", nil, "", ""},
+		{"free text, caller chose medium", "gemini-3.5-flash", nil, "medium", "medium"},
+		{"structured on flash-lite, no level chosen", "gemini-3.1-flash-lite", schema, "", ""},
+		{"structured on 2.5 flash-lite, no level chosen", "gemini-2.5-flash-lite", schema, "", ""},
+		{"structured on 2.5 flash, no level chosen", "gemini-2.5-flash", schema, "", ""},
+		{"structured on 2.5 pro, no level chosen", "models/gemini-2.5-pro", schema, "", ""},
+		{"structured on an alias, no level chosen", "gemini-flash-latest", schema, "", geminiStructuredThinkingLevel},
+		{"structured on flash-lite, caller chose medium", "gemini-3.1-flash-lite", schema, "medium", "medium"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := geminiGenerationConfig(model.Request{ResponseSchema: tc.schema}, tc.model, geminiOptions{ThinkingLevel: tc.chosen})
+			got := ""
+			if cfg.ThinkingConfig != nil {
+				got = cfg.ThinkingConfig.ThinkingLevel
+			}
+			if got != tc.want {
+				t.Fatalf("thinking level = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 
@@ -138,6 +190,31 @@ func TestGeminiThinkingLevelFromProviderOptions(t *testing.T) {
 	}
 	if !bytes.Contains(body, []byte(`"thinkingLevel":"low"`)) {
 		t.Fatalf("thinkingLevel not on wire: %s", body)
+	}
+}
+
+// The thinking default follows the model the request names, the "models/"
+// prefix included, not the binding's default model.
+func TestGeminiStructuredThinkingFollowsTheRequestedModel(t *testing.T) {
+	for _, tc := range []struct {
+		model string
+		sent  bool
+	}{{"models/gemini-3.1-flash-lite", false}, {"gemini-3.5-flash", true}, {"gemini-2.5-flash", false}, {"models/gemini-2.5-flash", false}} {
+		var body []byte
+		client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
+			body = readBody(t, r.Body)
+			_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"{}"}]},"finishReason":"STOP"}]}`))
+		})
+		if _, err := client.Complete(context.Background(), model.Request{
+			Model:          tc.model,
+			Messages:       []model.Message{{Role: "user", Content: "hi"}},
+			ResponseSchema: json.RawMessage(`{"type":"object"}`),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if sent := bytes.Contains(body, []byte(`"thinkingConfig"`)); sent != tc.sent {
+			t.Errorf("%s: thinkingConfig sent = %v, want %v: %s", tc.model, sent, tc.sent, body)
+		}
 	}
 }
 
@@ -314,26 +391,25 @@ func TestGeminiThoughtSignatureRoundTrips(t *testing.T) {
 	}
 }
 
-// SAFETY / MAX_TOKENS / RECITATION arrive inside a 200 body — an abnormal
-// finishReason must surface as an error, never as a clean (truncated) answer.
+// SAFETY / RECITATION arrive inside a 200 body — a withholding finishReason
+// must surface as an error, never as a clean answer. MAX_TOKENS is not one:
+// finishreasonparity_test.go holds it to a truncated Response.
 func TestGeminiAbnormalFinishReasonIsAnError(t *testing.T) {
 	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"trunc"}]},"finishReason":"MAX_TOKENS"}]}`))
+		_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"withheld"}]},"finishReason":"SAFETY"}]}`))
 	})
 	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
-	if err == nil || !strings.Contains(err.Error(), "MAX_TOKENS") {
-		t.Fatalf("want error naming MAX_TOKENS, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "SAFETY") {
+		t.Fatalf("want error naming SAFETY, got %v", err)
 	}
 }
 
 // The terminal has to survive as DATA, not only inside the message: every
-// abnormal finishReason classifies to the one `provider_error` sentinel, so
-// without an accessor the stored row cannot separate a truncated answer
-// (MAX_TOKENS — retry smaller) from a refused one (SAFETY — retrying is
-// pointless). The message is asserted byte-for-byte because callers and the
-// test above match on its text, so carrying the reason must not reword it.
+// withholding finishReason classifies to the one `output_withheld` sentinel, so
+// without an accessor the stored row cannot separate a refused answer (SAFETY —
+// retrying is pointless) from a recited one (RECITATION — change the prompt).
 func TestGeminiAbnormalFinishReasonCarriesTheTerminalAsData(t *testing.T) {
-	for _, reason := range []string{"MAX_TOKENS", "SAFETY", "RECITATION"} {
+	for _, reason := range []string{"SAFETY", "RECITATION", "PROHIBITED_CONTENT"} {
 		t.Run(reason, func(t *testing.T) {
 			client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
 				_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"x"}]},"finishReason":"` + reason + `"}]}`))
@@ -342,8 +418,8 @@ func TestGeminiAbnormalFinishReasonCarriesTheTerminalAsData(t *testing.T) {
 			if err == nil {
 				t.Fatal("want an error for an abnormal finishReason")
 			}
-			if want := "ai: gemini: generation stopped: " + reason; err.Error() != want {
-				t.Fatalf("message changed:\n got %q\nwant %q", err.Error(), want)
+			if !errors.Is(err, model.ErrOutputWithheld) || !strings.Contains(err.Error(), reason) {
+				t.Fatalf("want a withheld answer naming %s, got %v", reason, err)
 			}
 			var stopped interface{ FinishReason() string }
 			if !errors.As(err, &stopped) {
@@ -389,6 +465,42 @@ func TestGeminiStreamSurfacesErrorChunkAndAbnormalFinish(t *testing.T) {
 				t.Fatalf("want error naming %q, got %v", tc.want, err)
 			}
 		})
+	}
+}
+
+// A stream cut off at MAX_TOKENS delivers the text it generated, then ends on
+// model.ErrOutputTruncated: a clean end would pass the half-written answer off
+// as a complete one.
+func TestGeminiStreamCutOffDeliversItsTextThenSaysSo(t *testing.T) {
+	client := newGeminiForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"he"}]}}]}`+"\n\n")
+		_, _ = io.WriteString(w, `data: {"candidates":[{"content":{"parts":[{"text":"llo"}]},"finishReason":"MAX_TOKENS"}]}`+"\n\n")
+	})
+	stream, err := client.Stream(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := stream.Close(); err != nil {
+			t.Errorf("closing stream: %v", err)
+		}
+	}()
+	for _, want := range []string{"he", "llo"} {
+		if chunk, ok, err := stream.Next(context.Background()); err != nil || !ok || chunk != want {
+			t.Fatalf("chunk %q: got %q %v %v — the cut-off chunk's own text was generated and billed", want, chunk, ok, err)
+		}
+	}
+	_, ok, err := stream.Next(context.Background())
+	if ok || err == nil {
+		t.Fatalf("a cut-off stream ended as %v %v, want an error saying it was cut off", ok, err)
+	}
+	// Stored as Complete stores the same truncation, so one terminal is one
+	// value in the trace whichever path served it.
+	if got := finishReasonFor("", err); got != model.FinishReasonLength {
+		t.Errorf("finish reason = %q, want %q", got, model.FinishReasonLength)
+	}
+	if errors.Is(err, model.ErrOutputWithheld) || errors.Is(err, model.ErrRequestRejected) {
+		t.Errorf("a truncation was classified as an outcome: %v", err)
 	}
 }
 
@@ -477,7 +589,22 @@ func TestGeminiStreamEOFWithoutStopIsAnError(t *testing.T) {
 	if chunk, ok, err := stream.Next(context.Background()); err != nil || !ok || chunk != "partial" {
 		t.Fatalf("first chunk: %q %v %v", chunk, ok, err)
 	}
-	if _, _, err := stream.Next(context.Background()); err == nil || !strings.Contains(err.Error(), "STOP") {
-		t.Fatalf("EOF without STOP must be an error, got %v", err)
+	if _, _, err := stream.Next(context.Background()); err == nil || errors.Is(err, model.ErrOutputTruncated) {
+		t.Fatalf("EOF without STOP must be an error, and not a truncation, got %v", err)
+	}
+}
+
+// A prompt Gemini refused to read comes back with no candidates at all and the
+// reason under promptFeedback; the trace has to name that reason, or a blocked
+// prompt is indistinguishable from a body cut short in transit.
+func TestGeminiNamesTheReasonAPromptWasBlocked(t *testing.T) {
+	wire := finishWires(t)["gemini"]
+	client, _ := wire.client(t, `{"promptFeedback":{"blockReason":"PROHIBITED_CONTENT"}}`)
+	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "q"}}})
+	if !errors.Is(err, model.ErrOutputWithheld) {
+		t.Fatalf("err = %v, want model.ErrOutputWithheld", err)
+	}
+	if got := finishReasonFor("", err); !strings.Contains(got, "PROHIBITED_CONTENT") {
+		t.Errorf("finish reason = %q, want it to name PROHIBITED_CONTENT", got)
 	}
 }

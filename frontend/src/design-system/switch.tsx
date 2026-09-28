@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { BusyMark } from "./atoms";
+import { useSinglePress } from "./presslatch";
 import "./switch.css";
 
 // Switch: a setting that takes effect when you flip it.
@@ -136,6 +137,7 @@ export function Switch({
   // them their write is going through and that they were never allowed to make
   // it, in the same row.
   const busy = pending === true && disabled !== true && !refused;
+  const singlePress = useSinglePress();
 
   return (
     <div className="switchrow">
@@ -164,9 +166,9 @@ export function Switch({
         onClick={
           busy
             ? (event) => event.stopPropagation()
-            : () => {
+            : singlePress(() => {
                 onChange(!on);
-              }
+              })
         }
       >
         {/* The track's knob. Decorative: the state is already on aria-checked,
@@ -183,8 +185,15 @@ export function Switch({
           {hint}
         </p>
       )}
+      {/* A refusal is the supporting line under a control, and `Button` prints
+          its own `reason` at exactly this role. The two components state the
+          same contract in each other's docs, so they say it in the same type:
+          a sentence set a rung louder on one of them reads as a different kind
+          of claim about the same kind of denial. `switchreason` stays beside it
+          for the margin a `<p>` still owes (switch.css) and for the one screen
+          that hides this sentence while keeping it announced. */}
       {reason !== undefined && (
-        <p className="switchreason" id={reasonId}>
+        <p className="switchreason t-caption" id={reasonId}>
           {reason}
         </p>
       )}

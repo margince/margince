@@ -144,8 +144,8 @@ func TestACreateTaskArgumentIsAReadyTaskBody(t *testing.T) {
 	if args["subject"] == "" || args["subject"] == nil {
 		t.Fatalf("the task carries no subject: %v", args)
 	}
-	if args["source"] != "ui" {
-		t.Fatalf("source = %v, want ui", args["source"])
+	if args["source"] != "manual" {
+		t.Fatalf("source = %v, want manual", args["source"])
 	}
 	links, ok := args["links"].([]map[string]any)
 	if !ok || len(links) != 1 {

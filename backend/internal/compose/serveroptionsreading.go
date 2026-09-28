@@ -26,6 +26,7 @@ func WithColdStart(fetch PageFetcher, brain completer) Option {
 		s.coldstartHandlers = coldstartHandlers{engine: &coldStartEngine{
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
 			approvals: approvals.NewService(InstallationDB(pool)),
+			pool:      pool,
 		}}
 	}
 }
@@ -40,6 +41,7 @@ func WithScrape(fetch PageFetcher, brain completer) Option {
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
 			contacts:  contacts.NewStore(InstallationDB(pool)),
 			approvals: approvals.NewService(InstallationDB(pool)),
+			pool:      pool,
 		}}
 	}
 }

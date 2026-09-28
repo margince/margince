@@ -10,9 +10,3 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
-
-/* A refresh that failed says so where the button is. Tinting is not the signal
- * — the words are. */
-.rates-error {
-  color: var(--dangerText);
-}

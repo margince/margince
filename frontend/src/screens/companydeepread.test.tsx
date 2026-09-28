@@ -217,7 +217,7 @@ describe("company-360 deep read", () => {
       expect(screen.getByText("Read up to the page limit")).toBeTruthy(),
     );
     expect(screen.queryByText(/Stopped early/)).toBeNull();
-    expect(screen.getByText("6 evidenced facts staged")).toBeTruthy();
+    expect(screen.getByText("6 facts with evidence staged")).toBeTruthy();
     // The crawl's own URL lists are debug output, not something a contact
     // reading a company record has any use for.
     expect(screen.queryByText("Pages skipped")).toBeNull();
@@ -273,7 +273,7 @@ describe("company-360 deep read", () => {
     await waitFor(() =>
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
-    expect(screen.queryByText("Margince can fill this in")).toBeNull();
+    expect(screen.queryByText("Research this company")).toBeNull();
     await userEvent.click(
       await screen.findByRole("button", { name: "Profile" }),
     );
@@ -282,13 +282,13 @@ describe("company-360 deep read", () => {
     // the panel's own title and would be there for a read still loading, so
     // waiting on it alone could pass without the report ever arriving.
     await waitFor(() =>
-      expect(screen.getByText("9 evidenced facts staged")).toBeTruthy(),
+      expect(screen.getByText("9 facts with evidence staged")).toBeTruthy(),
     );
     expect(screen.getByText("Website research")).toBeTruthy();
-    expect(screen.queryByText("Margince can fill this in")).toBeNull();
+    expect(screen.queryByText("Research this company")).toBeNull();
     expect(screen.queryByText(/It reads the company's website/)).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Read the website again" }),
+      screen.getByRole("button", { name: "Read website again" }),
     ).toBeTruthy();
   });
 
@@ -314,7 +314,7 @@ describe("company-360 deep read", () => {
     render(<CompanyScreen id="o-1" />);
 
     await waitFor(() =>
-      expect(screen.getByText("Margince can fill this in")).toBeTruthy(),
+      expect(screen.getByText("Research this company")).toBeTruthy(),
     );
     expect(
       screen.getByRole("button", { name: "Start company research" }),
@@ -324,7 +324,7 @@ describe("company-360 deep read", () => {
     // Released so the test leaves no request hanging behind it.
     answerLatest?.();
     await waitFor(() =>
-      expect(screen.getByText("Margince can fill this in")).toBeTruthy(),
+      expect(screen.getByText("Research this company")).toBeTruthy(),
     );
   });
 
@@ -367,9 +367,7 @@ describe("company-360 deep read", () => {
     await startDeepRead(calls);
 
     await waitFor(() =>
-      expect(
-        screen.getByText("2 proposals waiting for your review"),
-      ).toBeTruthy(),
+      expect(screen.getByText("2 proposals awaiting review")).toBeTruthy(),
     );
     // A complete crawl carries no stopped-early banner.
     expect(screen.queryByText(/Stopped early:/)).toBeNull();
@@ -377,7 +375,7 @@ describe("company-360 deep read", () => {
     expect(screen.queryByText("brandt.example/team")).toBeNull();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Open the Worklist" }),
+      screen.getByRole("button", { name: "Open Worklist" }),
     );
     expect(window.location.hash).toBe("#/worklist");
   });
@@ -457,13 +455,13 @@ describe("company-360 deep read", () => {
     try {
       render(<CompanyScreen id="o-1" />);
       await flushUntil(() =>
-        screen.queryByRole("button", { name: "Read the website again" }),
+        screen.queryByRole("button", { name: "Read website again" }),
       );
       const beforeSecondRead = factsCallCount();
       expect(beforeSecondRead).toBeGreaterThan(0);
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Read the website again" }),
+        screen.getByRole("button", { name: "Read website again" }),
       );
       await flushUntil(() => secondReadPollCount > 0);
       // rd-2 is still running: nothing has finished, so nothing should have
@@ -517,7 +515,7 @@ describe("company-360 deep read", () => {
     );
     await waitFor(() =>
       expect(
-        screen.getByText("Site reading is not configured on this server."),
+        screen.getByText("Website research is not configured on this server."),
       ).toBeTruthy(),
     );
   });

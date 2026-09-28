@@ -179,6 +179,7 @@ export function DealStatusCardPanel({
       <TodayPanel
         state={status.isPending ? "loading" : "failed"}
         onOpenTasks={() => navigate({ screen: "worklist" })}
+        tasksLabel={t("today.workQueue")}
       />
     </>
   );
@@ -254,7 +255,10 @@ function Briefing({
           card on an absence. The pending and failed states keep their panel,
           because a read still running has not established a quiet day. */}
       {card.next ? (
-        <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
+        <TodayPanel
+          onOpenTasks={() => navigate({ screen: "worklist" })}
+          tasksLabel={t("today.workQueue")}
+        >
           <Move
             key="next"
             dealId={dealId}

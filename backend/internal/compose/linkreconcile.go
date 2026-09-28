@@ -65,18 +65,20 @@ func (LinkReconcileArgs) Kind() string { return "link_reconcile" }
 func (LinkReconcileArgs) FleetWide() {}
 
 type linkReconcileWorker struct {
-	pool    *pgxpool.Pool
-	store   *contacts.Store
-	pending *capture.PendingStore
-	log     *slog.Logger
+	pool     *pgxpool.Pool
+	store    *contacts.Store
+	pending  *capture.PendingStore
+	receipts sweepRecorder
+	log      *slog.Logger
 }
 
 func newLinkReconcileWorker(pool *pgxpool.Pool, store *contacts.Store, log *slog.Logger) *linkReconcileWorker {
 	return &linkReconcileWorker{
-		pool:    pool,
-		store:   store,
-		pending: capture.NewPendingStore(InstallationDB(pool)),
-		log:     log,
+		pool:     pool,
+		store:    store,
+		pending:  capture.NewPendingStore(InstallationDB(pool)),
+		receipts: newSweepRecorder(pool),
+		log:      log,
 	}
 }
 
@@ -96,7 +98,9 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 	sweepCtx := w.systemContext(ctx, workspace)
 	owed, err := w.store.ContactsOwedACohortRepair(sweepCtx, linkReconcileContactsPerTick)
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return jobs.FaultContext(ctx, errors.Join(err,
+			w.receipts.skipped(sweepCtx, capture.SweepFiledMeetingHolds),
+			w.receipts.skipped(sweepCtx, capture.SweepStrandedContacts)))
 	}
 	var linked, promoted int64
 	var failed error
@@ -123,21 +127,25 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 			"workspace", workspace.String(),
 			"contacts", len(owed), "linked", linked, "promoted", promoted)
 	}
-	lifted, err := w.liftFiledMeetingHolds(sweepCtx)
+	lifted, err := w.receipts.run(sweepCtx, capture.SweepFiledMeetingHolds, func(tally *sweepTally) error {
+		return w.liftFiledMeetingHolds(sweepCtx, tally)
+	})
 	if err != nil {
 		failed = errors.Join(failed, err)
 	}
-	if lifted > 0 {
+	if lifted.processed > 0 {
 		w.log.InfoContext(ctx, "link reconcile: filed meetings are no longer held to their attendees",
-			"workspace", workspace.String(), "meetings", lifted)
+			"workspace", workspace.String(), "meetings", lifted.processed)
 	}
-	asked, err := w.askAboutStrandedContacts(sweepCtx)
+	asked, err := w.receipts.run(sweepCtx, capture.SweepStrandedContacts, func(tally *sweepTally) error {
+		return w.askAboutStrandedContacts(sweepCtx, tally)
+	})
 	if err != nil {
 		failed = errors.Join(failed, err)
 	}
-	if asked > 0 {
+	if asked.processed > 0 {
 		w.log.InfoContext(ctx, "link reconcile: captured contacts nobody had been asked about are queued",
-			"workspace", workspace.String(), "contacts", asked)
+			"workspace", workspace.String(), "contacts", asked.processed)
 	}
 	retracted, err := w.retractNoiseJudgedContacts(sweepCtx)
 	if err != nil {
@@ -188,12 +196,12 @@ const askAboutStrandedContactsPerTick = 200
 // A contact whose question the ceiling refuses again is simply offered again
 // next tick. That is the bound doing its job rather than a failure: the queue
 // drains, and the room appears.
-func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context) (int, error) {
+func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context, asked *sweepTally) error {
 	stranded, err := w.pending.StrandedContacts(ctx, askAboutStrandedContactsPerTick)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	asked := 0
+	asked.capHit = len(stranded) >= askAboutStrandedContactsPerTick
 	var failed error
 	for _, c := range stranded {
 		opened, err := w.pending.AskWhoseRecord(ctx, c)
@@ -204,10 +212,10 @@ func (w *linkReconcileWorker) askAboutStrandedContacts(ctx context.Context) (int
 			continue
 		}
 		if opened {
-			asked++
+			asked.processed++
 		}
 	}
-	return asked, failed
+	return failed
 }
 
 // liftFiledMeetingHoldsPerTick bounds the drain. The population is finite and
@@ -231,24 +239,18 @@ const liftFiledMeetingHoldsPerTick = 200
 // It drains permanently: the recompute rewrites the reason on every row it
 // selects, so a row worked once cannot match again, and afterwards the same
 // predicate guards the invariant for the price of one probe.
-func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context) (int, error) {
+func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted *sweepTally) error {
 	var held []ids.ActivityID
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		where := filedMeetingHeldClause("a", arg)
 		rows, err := tx.Query(ctx, `
 			SELECT a.id
 			  FROM activity a
-			 WHERE a.audience = 'participants'
-			   AND a.audience_reason = $1
-			   AND a.restricted_at IS NULL
-			   AND a.archived_at IS NULL
-			   AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
-			   -- A row with no import rows is not a captured row, and the
-			   -- recompute leaves it alone. Selecting one would return it every
-			   -- tick, and a full page of them would starve the rows this can
-			   -- actually repair.
-			   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id)
+			 WHERE `+where+`
 			 ORDER BY a.occurred_at DESC, a.id
-			 LIMIT $2`, activities.ReasonNoCounterparty, liftFiledMeetingHoldsPerTick)
+			 LIMIT `+fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick)), args...)
 		if err != nil {
 			return fmt.Errorf("selecting the filed meetings still held: %w", err)
 		}
@@ -262,20 +264,35 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context) (int, e
 		}
 		return rows.Err()
 	}); err != nil {
-		return 0, err
+		return err
 	}
-	lifted := 0
+	lifted.capHit = len(held) >= liftFiledMeetingHoldsPerTick
 	for _, id := range held {
 		// One transaction per meeting, like the repair above: a row another
 		// writer holds a lock on costs that row and not the whole drain.
 		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 			return activities.RecomputeAudienceTx(ctx, tx, id)
 		}); err != nil {
-			return lifted, fmt.Errorf("re-deriving the audience of %s: %w", id, err)
+			return fmt.Errorf("re-deriving the audience of %s: %w", id, err)
 		}
-		lifted++
+		lifted.processed++
 	}
-	return lifted, nil
+	return nil
+}
+
+// filedMeetingHeldClause selects the filed records still carrying the "named
+// nobody" hold. The pass drains by it and the capture-health page counts by
+// it, so what the page reports as held is exactly what the pass will lift.
+func filedMeetingHeldClause(alias string, arg func(any) int) string {
+	return alias + `.audience = 'participants'
+	   AND ` + alias + `.audience_reason = ` + fmt.Sprintf("$%d", arg(activities.ReasonNoCounterparty)) + `
+	   AND ` + alias + `.restricted_at IS NULL
+	   AND ` + alias + `.archived_at IS NULL
+	   AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = ` + alias + `.id)
+	   -- A row with no import rows is not a captured row, and the recompute
+	   -- leaves it alone. Selecting one would return it every tick, and a full
+	   -- page of them would starve the rows this can actually repair.
+	   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = ` + alias + `.id)`
 }
 
 // attachDomainBacklogs gives the contacts on a company's domain their employer.

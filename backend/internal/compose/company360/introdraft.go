@@ -247,7 +247,7 @@ func wireIntroRequest(
 		AiGenerated: &aiWritten,
 		Reasoning:   introReasons(facts),
 	}
-	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, facts.lang)
+	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, facts.lang)
 	return out
 }
 

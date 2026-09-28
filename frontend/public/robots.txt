@@ -1,0 +1,9 @@
+# Margince is a private CRM served only to authenticated users; nothing here is
+# meant for a search index. This file tells a COMPLIANT crawler not to fetch the
+# pages; the X-Robots-Tag: noindex header in nginx.conf is what de-indexes a
+# crawler that fetches anyway (and covers non-HTML). The two do not fully layer:
+# a crawler that obeys this file never reads the noindex, so a bare URL-only
+# listing from an external link stays possible — acceptable here, since the only
+# fetchable page is a login screen with no snippet.
+User-agent: *
+Disallow: /

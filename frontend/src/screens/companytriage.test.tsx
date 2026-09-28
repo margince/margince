@@ -77,7 +77,7 @@ it("says no domain was checked in rather than showing an empty list", async () =
   // — and a blank body would leave a reader unable to tell that from a read
   // that failed.
   expect(
-    await screen.findByText(/recorded by hand or brought in from elsewhere/),
+    await screen.findByText(/created manually or imported/),
   ).toBeInTheDocument();
 });
 
@@ -90,11 +90,11 @@ it("reports a failed read as unavailable rather than as nothing checked", async 
   // Waited for and asserted POSITIVELY. An absence assertion alone passes
   // before the request settles and passes over a section that rendered nothing
   // at all, which is the same vacuous green either way.
-  expect(await screen.findByText(/Could not be loaded/)).toBeInTheDocument();
+  expect(await screen.findByText(/Some data did not load/)).toBeInTheDocument();
   // And the distinction the whole section turns on: "no domain was checked" is
   // a claim about how this record came to exist, and a request that did not
   // answer cannot support it.
   expect(
-    screen.queryByText(/recorded by hand or brought in from elsewhere/),
+    screen.queryByText(/created manually or imported/),
   ).not.toBeInTheDocument();
 });

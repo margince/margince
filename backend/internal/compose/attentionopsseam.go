@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -78,6 +79,14 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, sco
 		})
 	}
 	return out, nil
+}
+
+// captureHealthRegistry composes the registry a health lane reads through:
+// bare, with no sink, authority or vault, because
+// Registry.HealthConcerns stays within what Connections itself reads and
+// anything deeper would be a nil dereference on a request path.
+func captureHealthRegistry(db *database.DB) *capture.Registry {
+	return capture.NewRegistry(db, nil, nil, nil)
 }
 
 // attentionCaptureHealth binds the capture-health lane to the capture

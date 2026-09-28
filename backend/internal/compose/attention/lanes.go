@@ -11,33 +11,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// What each lane READS, and the shape it reads it into.
+// What each lane READS, and the shape it reads it into. Every one is an
+// interface a compose seam binds to the owning module, which is what lets this
+// package assemble a day without importing one. Apart from the assembly in
+// feed.go because this is the surface another package implements.
 //
-// Every one is an interface a compose seam binds to the owning module, which is
-// what lets this package assemble a day without importing a single module. They
-// sit apart from the assembly in feed.go because they are the surface another
-// package implements: a reader adding a lane needs this file and not the rest.
-//
-// The optional lanes are nil when the installation binds no reader for them,
-// and a nil lane is ABSENT from the feed rather than empty — "this feed does
-// not do commitments" is a different fact from "you owe nobody anything".
+// A nil lane is ABSENT from the feed rather than empty: "this feed does not do
+// commitments" is a different fact from "you owe nobody anything".
 
 // Approvals is the staged-proposal queue, read through its owning service.
-//
-// CountPending is separate from the page because the lane is bounded and the
-// count is not: a reader with forty decisions must be told forty, then shown
-// the nine worth one sitting.
+// CountPending is separate because the lane is bounded and the count is not: a
+// reader with forty decisions is told forty, then shown the nine worth a sitting.
 type Approvals interface {
 	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
 	CountPending(ctx context.Context) (int, error)
 }
 
 // MachineSender answers whether an address belongs to a sending system rather
-// than a contact.
-//
-// Injected rather than imported: this package reaches no module, and the rule
-// belongs to capture, which owns what a machine sender IS. A feed given none
-// treats every address as a contact's, which under-groups rather than hiding
+// than a contact. Injected rather than imported, because the rule belongs to
+// capture. A feed given none treats every address as a contact's, which
+// under-groups rather than hiding
 // anything.
 type MachineSender func(address string) bool
 

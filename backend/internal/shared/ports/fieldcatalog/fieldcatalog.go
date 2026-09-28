@@ -1,21 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package fieldcatalog is the cross-module seam a record store rides to
-// consume custom-field columns without importing modules/customfields
-// directly (ADR-0054 §3: "a module NEVER imports a sibling"). The
-// catalog engine (modules/customfields) owns the custom_field table and
-// implements Reader; compose injects the concrete Reader into
-// contact/company/deal store constructors — a nil Reader is the
-// zero-cost pass-through a store falls back to when the seam is unwired
-// (tests, or a deployment that never mounted the module).
+// Package fieldcatalog is the cross-module seam a record store rides to consume
+// custom-field columns without importing modules/customfields. That module owns
+// the custom_field table and implements Reader; compose injects it, and a nil
+// Reader is the zero-cost pass-through for an unwired seam.
 //
-// Column is deliberately thin: just enough for a record store's SQL
-// mechanics (platform/database/storekit's customcolumns.go helpers) to
-// build a SELECT/INSERT/UPDATE fragment and convert a wire value to and
-// from its bind shape. Admin-facing catalog metadata (slug, label,
-// lifecycle status, picklist options, …) stays inside modules/customfields
-// — a record store has no business with it.
+// Column is deliberately thin: enough for a store's SQL mechanics to build a
+// fragment and convert a wire value to its bind shape. Admin-facing catalog
+// metadata stays inside modules/customfields.
 package fieldcatalog
 
 import "context"
@@ -37,44 +30,33 @@ const (
 	TypeBoolean     = "boolean"
 )
 
-// Types answers the closed set above, so a consumer that has to handle EVERY
-// field type derives that obligation instead of restating it. A gate written
-// over a hand-copied list of the six passes unchanged the day a seventh is
-// added here, which is the one moment it exists to fail.
+// Types answers the closed set above, so a consumer handling EVERY field type
+// derives that obligation instead of restating it: a gate over a hand-copied
+// list passes unchanged the day a seventh type lands, which is the one moment it
+// exists to fail. Missing the segment vocabulary costs a column its filter;
+// missing storekit's conversion matrix costs the VALUE on both write and read.
 //
-// What such a gate protects is not uniform. Missing the segment or search
-// vocabulary costs a column its filter; missing storekit's conversion matrix
-// costs the VALUE — SQLValue and extractValue drop an unrecognised type on
-// both the write and the read.
-//
-// A fresh slice per call: the alternative is an exported package-level slice,
-// which any consumer can reorder or overwrite for every other consumer.
+// A fresh slice per call, so no consumer can reorder it for every other.
 func Types() []string {
 	return []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean}
 }
 
-// Column is one custom-field column for a (workspace, object) pair,
-// identified by its physical column name and its closed field type (one
-// of the Type* constants above). Whether a given Column is active,
-// retired, or both is a question of which method returned it — Reader
-// and FilterableReader below — not of the type itself.
+// Column is one custom-field column for a (workspace, object) pair. Whether it
+// is active, retired or both is a question of which method returned it, not of
+// the type.
 //
 // The fields carry DIFFERENT disclosure rules, and this is the one place that
-// says so, because three surfaces read them and each was choosing for itself:
+// says so, because three surfaces read them:
 //
-//   - Name and Type are SCHEMA. Ambient to any caller who may read records of
-//     that object, because a consumer that had to hide them would describe a
-//     narrower product than the engine implements — a field nothing may name is
-//     a field a filter cannot use. Note what this does NOT rest on: a record
-//     payload omits a NULL, so a column with no value on any record is not
-//     already visible there. Ambient is a decision, not an observation.
-//   - Options is catalogue CONTENT, authored by an admin. A consumer passing it
-//     to a caller needs `custom_field:read`, the grant that governs the
-//     catalogue surface these values otherwise come from.
+//   - Name and Type are SCHEMA, ambient to any caller who may read records of
+//     that object: a field nothing may name is a field a filter cannot use.
+//     Ambient is a decision, not an observation — a record payload omits a NULL,
+//     so an unused column is not already visible there.
+//   - Options is catalogue CONTENT, authored by an admin, and passing it on
+//     needs `custom_field:read`.
 //
-// Neither of those is a Column's own business to enforce — it holds no context —
-// so the obligation lands on the consumer, which is why it is written where every
-// consumer reads rather than in each of them.
+// A Column holds no context and cannot enforce either, so the obligation lands
+// on the consumer — written here rather than in each of them.
 type Column struct {
 	Name string
 	Type string
@@ -112,19 +94,15 @@ type FilterableReader interface {
 
 // Target is what a custom field may be ATTACHED to.
 //
-// Deliberately its own vocabulary rather than datasource.EntityType, which it
-// otherwise resembles. EntityType is what a record PROVIDER can be asked
-// about: declaring a member there obliges native provider routing, agent
-// record-shape generation and the embedding/provenance consumers that
-// enumerate it, and TestTheRecordProviderServesExactlyTheSeamVocabulary fails
-// the moment a member answers UnsupportedEntityError. A contract can carry a
-// typed extra field without any of that being true of it, and widening
-// EntityType to say so would promise five capabilities to buy one.
+// Its own vocabulary rather than datasource.EntityType, which it resembles.
+// Declaring a member there obliges native provider routing, agent record-shape
+// generation and every enumerating consumer — held by
+// TestTheRecordProviderServesExactlyTheSeamVocabulary — and a contract can carry
+// a typed extra field without any of that being true.
 //
-// Every value the custom_field.object CHECK already admits is here, including
-// the ones no active target list offers: a catalog row written under an older
-// vocabulary must stay readable, or the fields an installation already
-// configured stop rendering.
+// Every value the custom_field.object CHECK admits is here, including ones no
+// active target list offers: a row written under an older vocabulary must stay
+// readable, or fields an installation already configured stop rendering.
 type Target string
 
 // The targets themselves. Every value the custom_field.object CHECK admits,

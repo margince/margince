@@ -40,7 +40,13 @@ type UnlabeledEmail struct {
 // least of all when the pending question may resolve to `noise` and hide it. It
 // re-enters the backlog by itself once the verdict lands, because this is a
 // query over live state rather than a queue anything has to remember to refill.
-func (s *Store) UnlabeledCaptureEmails(ctx context.Context, limit, bodyLimit int) ([]UnlabeledEmail, error) {
+//
+// ruleset is the digest of the classify prompt the caller will ask: a message
+// every rung declined under another prompt is offered to this one.
+func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limit, bodyLimit int) ([]UnlabeledEmail, error) {
+	if ruleset == "" {
+		return nil, fmt.Errorf("activities: reading the classify backlog: %w", errRulesetUnnamed)
+	}
 	var out []UnlabeledEmail
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
@@ -55,9 +61,9 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, limit, bodyLimit int
 			       -- direction guessed.
 			       coalesce(direction = 'inbound', false)
 			FROM activity
-			WHERE `+ClassifyBacklogPredicate+`
+			WHERE `+ClassifyBacklogPredicate("$3")+`
 			ORDER BY occurred_at
-			LIMIT $2`, bodyLimit, limit)
+			LIMIT $2`, bodyLimit, limit, ruleset)
 		if err != nil {
 			return err
 		}

@@ -273,7 +273,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// reply captured before its sender was a contact names nobody the
 		// activity arm can act on.
 		"cg:intro-advance":    {"gw:events:crm:activity", "gw:events:crm:contact"},
-		"cg:notice-case-open": {"gw:events:crm:contact"},
+		"cg:notice-case-open": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// What happened in a Deal Room, written onto the deal's timeline. Its
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
@@ -303,7 +303,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the events.md §4.3 groups, the E10 outbound-webhook fan-out, the ADR-0078 consumers (graph-edge projection, LinkedIn matcher), the ADR-0101 provider-enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, and the approval-pending fan-out", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, and the approval-pending fan-out", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

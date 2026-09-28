@@ -81,11 +81,24 @@ func TestOnlyAnEmailCarriesTheHeadersOfOne(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			req := emailRequest()
-			req.Kind = crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote
-			tc.apply(&req)
-			if got := faultFieldOf(t, mustRefuse(t, req)); got != tc.field {
-				t.Fatalf("refused %q, want the field the caller sent: %q", got, tc.field)
+			// Every non-email kind, not just `note`. The identity table keys on
+			// (identity_kind, identity_key) and the mail kind is ONE namespace
+			// across every activity kind, so a task or a meeting permitted to
+			// state a Message-ID could take the identity of a real message just
+			// as a note could. A guard that covered one kind would be a guard
+			// with three ways round it.
+			for _, kind := range []crmcontracts.CreateActivityRequestKind{
+				crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
+				crmcontracts.CreateActivityRequestKindCreateActivityRequestKindCall,
+				crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask,
+				crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
+			} {
+				req := emailRequest()
+				req.Kind = kind
+				tc.apply(&req)
+				if got := faultFieldOf(t, mustRefuse(t, req)); got != tc.field {
+					t.Fatalf("[%s] refused %q, want the field the caller sent: %q", kind, got, tc.field)
+				}
 			}
 		})
 	}

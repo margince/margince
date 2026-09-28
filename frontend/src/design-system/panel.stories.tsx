@@ -2,16 +2,25 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Badge, Button, Disclosure, EmptyState } from "./atoms";
+import {
+  Badge,
+  Button,
+  Disclosure,
+  EmptyState,
+  Field,
+  TextInput,
+} from "./atoms";
 import {
   Panel,
   PanelBody,
   PanelGroupHead,
+  PanelIntro,
   PanelPlate,
   PanelRow,
   RailPanel,
   type RailPanelState,
 } from "./panel";
+import { SettingList, SettingRow } from "./settingrow";
 import type { SectionDetail } from "./surfacestate";
 
 // The titled-card shape: a fixed-height header, an optional footer band, and
@@ -42,6 +51,77 @@ export const WithBody: Story = {
       </PanelBody>
     ),
   },
+};
+
+// The intro line in the four places it lands, drawn together because what this
+// component owns is an INTERVAL and an interval is only judged against another
+// one. Left to a screen sheet the same sentence stood at three distances from
+// what it described. Reading down: --space-4 to the rows; nothing at all when
+// the line IS the body, because whatever follows the body brings its own top
+// padding; the same --space-4 between two stacked lines, and again under the
+// pair; and the same --space-4 to a field, paid as the difference over the
+// `.form-stack` gap that already separates the fields.
+export const WithIntro: StoryObj = {
+  decorators: [
+    (Story) => (
+      <div style={{ display: "grid", gap: "var(--space-4)" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => (
+    <>
+      <Panel title="Lead vocabulary">
+        <PanelBody>
+          <PanelIntro>
+            The stages a lead moves through before it becomes a deal.
+          </PanelIntro>
+        </PanelBody>
+        <PanelRow>Enquiry</PanelRow>
+        <PanelRow>Qualified</PanelRow>
+      </Panel>
+
+      <Panel title="Data residency">
+        <PanelBody>
+          <PanelIntro>
+            Records for this workspace are stored in the Frankfurt region.
+          </PanelIntro>
+        </PanelBody>
+      </Panel>
+
+      <Panel title="Offer templates">
+        <PanelBody>
+          <PanelIntro>
+            The wording an offer is built from, and the currency it is priced
+            in.
+          </PanelIntro>
+          <PanelIntro>
+            You may read these templates. Editing them is an administrator's.
+          </PanelIntro>
+          <SettingList>
+            <SettingRow
+              label="Default template"
+              value="Retrofit — standard"
+              control={<Button>Change</Button>}
+            />
+          </SettingList>
+        </PanelBody>
+      </Panel>
+
+      <Panel title="Sender address">
+        <PanelBody className="form-stack">
+          <PanelIntro>
+            Replies to mail this workspace sends arrive at this address.
+          </PanelIntro>
+          <Field label="Reply-to">
+            {(control) => (
+              <TextInput {...control} defaultValue="hello@brandt.example" />
+            )}
+          </Field>
+        </PanelBody>
+      </Panel>
+    </>
+  ),
 };
 
 export const WithTitleAction: Story = {

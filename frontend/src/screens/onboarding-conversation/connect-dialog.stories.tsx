@@ -132,7 +132,7 @@ export const MailboxAskGerman: Story = {
       locale="de"
       providerMarkKey="graph"
       headline="Microsoft-Postfach verbinden"
-      intro="Margince liest Ihre gesendeten und empfangenen Nachrichten, um sie dem richtigen Konto zuzuordnen. Ohne Ihren Klick auf Senden wird nichts verschickt."
+      intro="Margince liest deine gesendeten und empfangenen Nachrichten, um sie dem richtigen Konto zuzuordnen. Ohne deinen Klick auf Senden wird nichts verschickt."
     >
       <div className="ob-connect-dialog-actions">
         <Button variant="primary">Weiter zu Microsoft</Button>

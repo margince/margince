@@ -62,6 +62,7 @@ var narrowingClauses = map[string]string{
 	"Actor":      "a.actor_id = $",
 	"EntityType": "a.entity_type = $",
 	"EntityID":   "a.entity_id = $",
+	"BatchID":    "a.batch_id = $",
 	"Action":     "a.action = $",
 	// The window bounds are the pair a census cannot tell apart on its own:
 	// swapped, they narrow as much and bind as many arguments, and answer
@@ -264,15 +265,15 @@ func TestTheCursorIsTheOneFilterThatCanBeRefused(t *testing.T) {
 // been told it works.
 //
 // Compared by NAME, because the two structs are written by different authors:
-// one is generated from the contract and one is this module's own. The single
-// spelling difference is the generator's (EntityId for EntityID), and it is
-// declared rather than normalized away, so a second divergence has to be
-// looked at instead of absorbed.
+// one is generated from the contract and one is this module's own. The
+// spelling differences are the generator's (EntityId for EntityID, BatchId for
+// BatchID), and they are declared rather than normalized away, so another
+// divergence has to be looked at instead of absorbed.
 func TestEveryPublishedAuditFilterReachesTheStore(t *testing.T) {
 	t.Parallel()
 	// generatorSpellings maps a contract parameter onto the store field that
 	// takes it where the two are not spelled identically.
-	generatorSpellings := map[string]string{"EntityId": "EntityID"}
+	generatorSpellings := map[string]string{"EntityId": "EntityID", "BatchId": "BatchID"}
 
 	published := reflect.TypeOf(crmcontracts.ListAuditLogParams{})
 	stored := reflect.TypeOf(AuditFilter{})
@@ -362,9 +363,9 @@ func TestTheHandlerCarriesEveryPublishedFilterIntoTheStore(t *testing.T) {
 
 // storeFieldSpellings maps a store field onto the contract parameter it takes,
 // where the generator spells the two differently. Declared rather than
-// normalized away, so a SECOND divergence has to be looked at.
+// normalized away, so another divergence has to be looked at.
 // gatekit:fixture the generator's own spelling of one audit-log parameter
-var storeFieldSpellings = map[string]string{"EntityID": "EntityId"}
+var storeFieldSpellings = map[string]string{"EntityID": "EntityId", "BatchID": "BatchId"}
 
 // boundFilterFields answers, for each AuditFilter field the handler sets, WHICH
 // parameter it took the value from — in either shape the handler uses.

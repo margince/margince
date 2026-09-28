@@ -183,17 +183,23 @@ const RENDER_TEST_MS = SETTLE_MS + SLOWEST_MEASURED_TEST_MS;
 // so raising either moves this with it.
 const WRITE_TEST_MS = SETTLE_MS + RENDER_TEST_MS;
 
+// A case that holds the refetch open waits a THIRD time — the render, the
+// write, and the release — so it carries three waiters' budgets. Derived from
+// the same constants for the reason the two above are: raising the settle
+// moves all three together rather than leaving one behind.
+const HELD_REFETCH_TEST_MS = SETTLE_MS + WRITE_TEST_MS;
+
 // The card sits on the Settings → Integrations entry, whose predicate opens for
 // all five roles, and the reads behind it are granted to all five. The writes
 // are not: connecting spends money and destroying the data is irreversible, and
 // the server admits neither for a manager, a rep or a read_only seat.
 describe("ProviderCard write posture", () => {
   const READ_ONLY =
-    "Read-only view — connecting a provider spends money, so it is an admin or ops action.";
-  const CONNECT = "Replace the key";
+    "Read-only: connecting a provider costs money, so only an administrator or operations user can do it.";
+  const CONNECT = "Replace API key";
   const DISCONNECT = "Disconnect";
-  const DELETE_DATA = "Delete bought data";
-  const KEY_FIELD = "Replace the API key";
+  const DELETE_DATA = "Delete purchased data";
+  const KEY_FIELD = "Replace API key";
   const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
   // Disconnect and delete-data live behind the overflow, because neither is the
   // same weight as Connect: one is recoverable and the other irreversibly
@@ -376,9 +382,9 @@ describe("ProviderCard write posture", () => {
       // row's description printed it twice on the card and read it twice to a
       // screen reader, and a `getAllByText(...).length > 0` assertion passed
       // over exactly that.
-      expect(screen.getAllByText(/only alongside the work email/)).toHaveLength(
-        1,
-      );
+      expect(
+        screen.getAllByText(/only together with the work email/),
+      ).toHaveLength(1);
 
       // The row it depends on is unaffected — the dependency runs one way.
       expect(
@@ -515,6 +521,85 @@ describe("ProviderCard write posture", () => {
     WRITE_TEST_MS,
   );
 
+  // A switch that went idle before its refetch landed let the next press send
+  // the OLD map under the OLD version, and the server refused it with a
+  // conflict the admin had no way to account for. The press has to stay busy
+  // until the card holds what the write produced.
+  it(
+    "holds the priced switch busy until the connections refetch lands",
+    async () => {
+      const user = userEvent.setup();
+      // The refetch is held open, which is the window this is about: the PATCH
+      // has answered and the card has not yet been told what it now holds.
+      let releaseRefetch = () => {};
+      const held = new Promise<void>((resolve) => {
+        releaseRefetch = resolve;
+      });
+      let patched = false;
+      const fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : undefined;
+        const path = new URL(String(request ? request.url : input)).pathname;
+        if (request?.method === "PATCH") {
+          patched = true;
+          return new Response(JSON.stringify(CONNECTION), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (patched && path === "/v1/provider-connections") {
+          await held;
+        }
+        return new Response(
+          JSON.stringify(routeBody(path, ME_OPERATOR, CONNECTION)),
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      });
+      vi.stubGlobal("fetch", fetch);
+      render(
+        <Providers>
+          <ProviderCard />
+        </Providers>,
+      );
+      await screen.findByRole(
+        "heading",
+        { name: CONNECTION.provider },
+        { timeout: SETTLE_MS },
+      );
+
+      const buyEmail = screen.getByRole("switch", {
+        name: "Allow buying work email",
+      });
+      await user.click(buyEmail);
+
+      // Still busy: the PATCH has answered and the card has not been told what
+      // it holds, so a second press here would write the stale map under the
+      // stale version. aria-busy rather than `disabled`, because the control
+      // stays focusable while it waits — it is working, not forbidden.
+      await waitFor(
+        () =>
+          expect(
+            screen
+              .getByRole("switch", { name: "Allow buying work email" })
+              .getAttribute("aria-busy"),
+          ).toBe("true"),
+        { timeout: SETTLE_MS },
+      );
+
+      releaseRefetch();
+      await waitFor(
+        () =>
+          expect(
+            screen
+              .getByRole("switch", { name: "Allow buying work email" })
+              .getAttribute("aria-busy"),
+          ).toBeNull(),
+        { timeout: SETTLE_MS },
+      );
+    },
+    HELD_REFETCH_TEST_MS,
+  );
+
   it(
     "keeps the destructive pair behind its own grant",
     async () => {
@@ -531,5 +616,116 @@ describe("ProviderCard write posture", () => {
       expect(screen.queryByText(READ_ONLY)).toBeNull();
     },
     RENDER_TEST_MS,
+  );
+});
+
+describe("ProviderCard across connections and deletions", () => {
+  const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
+
+  function mountWith(
+    fetch: ReturnType<typeof vi.fn>,
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  ) {
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ProviderCard />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    return client;
+  }
+
+  it(
+    "draws the installation's lookup switch once, however many providers are connected",
+    async () => {
+      const second = { ...CONNECTION, provider: "second_provider" };
+      mountWith(
+        vi.fn(async (input: RequestInfo | URL) => {
+          const request = input instanceof Request ? input : undefined;
+          const path = new URL(String(request ? request.url : input)).pathname;
+          const body =
+            path === "/v1/provider-connections"
+              ? { data: [CONNECTION, second] }
+              : routeBody(path, ME_OPERATOR, CONNECTION);
+          return new Response(JSON.stringify(body), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }),
+      );
+      await screen.findByRole(
+        "heading",
+        { name: "second_provider" },
+        { timeout: SETTLE_MS },
+      );
+      expect(
+        screen.getByRole("heading", { name: CONNECTION.provider }),
+      ).toBeTruthy();
+      expect(
+        await screen.findAllByRole("switch", { name: AUTOMATIC_LOOKUP }),
+      ).toHaveLength(1);
+    },
+    RENDER_TEST_MS,
+  );
+
+  it(
+    "makes every cached contact read stale once the bought data is deleted",
+    async () => {
+      const user = userEvent.setup();
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      // A contact page already open in this session, with its bought marks.
+      const cached = [
+        ["contact360", "p-1"],
+        ["contact", "p-1"],
+        ["contactEmployments", "p-1", "cursor"],
+      ];
+      for (const key of cached) {
+        client.setQueryData(key, { bought_fields: [{ target: "title" }] });
+      }
+      mountWith(
+        vi.fn(async (input: RequestInfo | URL) => {
+          const request = input instanceof Request ? input : undefined;
+          if (request?.method === "DELETE") {
+            return new Response(null, { status: 204 });
+          }
+          const path = new URL(String(request ? request.url : input)).pathname;
+          return new Response(
+            JSON.stringify(routeBody(path, ME_OPERATOR, CONNECTION)),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }),
+        client,
+      );
+      await screen.findByRole(
+        "heading",
+        { name: CONNECTION.provider },
+        { timeout: SETTLE_MS },
+      );
+      await user.click(screen.getByRole("button", { name: "More actions" }));
+      await user.click(
+        screen.getByRole("button", { name: en["provider.deleteData"] }),
+      );
+      await user.type(
+        screen.getByLabelText(en["provider.deleteDataConfirm.typed"]),
+        CONNECTION.provider,
+      );
+      const confirms = screen.getAllByRole("button", {
+        name: en["provider.deleteData"],
+      });
+      await user.click(confirms[confirms.length - 1]);
+
+      await waitFor(
+        () => {
+          for (const key of cached) {
+            expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+          }
+        },
+        { timeout: SETTLE_MS },
+      );
+    },
+    WRITE_TEST_MS,
   );
 });

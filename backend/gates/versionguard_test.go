@@ -37,7 +37,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -112,7 +111,7 @@ func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
 	}
 	versioned := versionedTables(t) // reused from updateguard_test.go
 
-	for _, table := range sortedNames(pinned) {
+	for _, table := range sortedKeys(pinned) {
 		if bumped[table] {
 			continue
 		}
@@ -313,14 +312,4 @@ func packageVarCompositeLit(t *testing.T, files []*ast.File, name string) *ast.C
 	}
 	t.Fatalf("var %s not found in the parsed package: the derivation lost its subject list", name)
 	return nil
-}
-
-// sortedNames gives a set's members a stable report order.
-func sortedNames(set map[string]bool) []string {
-	names := make([]string, 0, len(set))
-	for name := range set {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
 }

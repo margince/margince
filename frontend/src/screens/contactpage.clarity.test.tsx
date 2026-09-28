@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { UnsavedGuard } from "../app/unsaved";
+import { en } from "../i18n/en";
 import { mount, view } from "./contactpage.testkit";
 import { jsonResponse } from "./story-utils";
 
@@ -47,20 +48,27 @@ describe("a contact with little context", () => {
     expect(
       await screen.findByRole("heading", { name: "About this contact" }),
     ).toBeTruthy();
+    // The day's work is answered where the question is asked. On a thin
+    // relationship the answer is what the server found and how far the
+    // reading reached — never "nothing needs you", which is a claim about a
+    // record nobody has written anything about, and never a move read out of
+    // records that are not there.
+    expect(
+      await screen.findByRole("heading", { name: en["today.title"] }),
+    ).toBeTruthy();
     expect(screen.getByText("No interactions recorded")).toBeTruthy();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
+    expect(screen.getByText(en["contact.overview.coverage"])).toBeTruthy();
     for (const label of [
-      "Margince suggests",
+      en["co.suggest.byline"],
+      en["co.suggest.basedOn"],
       "One thread only",
-      "What this rests on",
       "Nothing captured, nobody connected",
       "One-sided",
     ]) {
       expect(screen.queryByText(label)).toBeNull();
     }
     expect(screen.queryByRole("heading", { name: "Consent" })).toBeNull();
-    expect(
-      screen.queryByRole("heading", { name: "What needs you" }),
-    ).toBeNull();
     const sourceFact = screen.getByText("Source").closest(".record-fact");
     if (!(sourceFact instanceof HTMLElement)) {
       throw new Error("the Source fact is not on the page");
@@ -152,14 +160,14 @@ describe("a contact with little context", () => {
       },
     });
     const manage = await screen.findByRole("button", {
-      name: "Manage consent & proof history",
+      name: "Manage consent and proof history",
     });
     expect(ledgerReads).toBe(0);
     expect(screen.getAllByTestId("confirm-details-ask")).toHaveLength(1);
     expect(screen.getByText("Send to dana@brandt.example")).toBeTruthy();
     await user.click(manage);
     const dialog = await screen.findByRole("dialog", {
-      name: "Manage consent & proof history",
+      name: "Manage consent and proof history",
     });
     await user.click(
       await within(dialog).findByRole("button", { name: "Record consent" }),
@@ -177,7 +185,7 @@ describe("a contact with little context", () => {
       contact: { ...sparse.contact, writable: false },
     });
     await screen.findByRole("button", {
-      name: "Manage consent & proof history",
+      name: "Manage consent and proof history",
     });
     expect(screen.queryByTestId("confirm-details-ask")).toBeNull();
   });
@@ -202,14 +210,14 @@ it("opens details and permissions in a narrow-screen drawer and restores focus",
   }));
   mount("overview", sparse);
   const toggle = await screen.findByRole("button", {
-    name: "Show details & permissions",
+    name: "Show details and permissions",
   });
   expect(
     screen.queryByRole("heading", { name: "Communication permissions" }),
   ).toBeNull();
   await user.click(toggle);
   const dialog = await screen.findByRole("dialog", {
-    name: "Details & permissions",
+    name: "Details and permissions",
   });
   expect(
     within(dialog).getByRole("heading", { name: "Communication permissions" }),
@@ -250,7 +258,7 @@ it("names restricted overview sections even when an open commitment leads", asyn
   ).toBeTruthy();
   expect(
     screen.getByText(
-      /Not shown: Activity, Where this contact stands, what Margince found, open tasks/,
+      /Not shown: Activity, Contact status, Margince findings, open tasks/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText("No interactions recorded")).toBeNull();
@@ -310,11 +318,11 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
   ));
   await user.click(
     await screen.findByRole("button", {
-      name: "Show details & permissions",
+      name: "Show details and permissions",
     }),
   );
   const dialog = await screen.findByRole("dialog", {
-    name: "Details & permissions",
+    name: "Details and permissions",
   });
   await user.click(
     await within(dialog).findByRole("button", { name: "Change Title" }),
@@ -334,7 +342,7 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
   expect(within(dialog).getByDisplayValue("Director")).toBeTruthy();
   await user.keyboard("{Escape}");
   expect(
-    screen.getByRole("dialog", { name: "Details & permissions" }),
+    screen.getByRole("dialog", { name: "Details and permissions" }),
   ).toBeTruthy();
   await user.click(within(dialog).getByRole("button", { name: "Close" }));
   expect(screen.queryByRole("dialog")).toBeNull();

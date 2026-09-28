@@ -8,6 +8,7 @@ import { IconAction } from "./iconaction";
 // and an edited one becomes human-typed — so the names are imported here as
 // well as re-exported below: a re-export binds nothing in this file's scope.
 import { type Provenance, ProvenanceTag } from "./provenance";
+import { Row } from "./stack";
 import "./panel.css"; // StagingCard's box is drawn by the panel-ai family.
 import "./trust.css";
 
@@ -384,7 +385,7 @@ export function StagedProposal({
     return (
       <section className="real-card" aria-label={t("trust.resolvedValue")}>
         <ProvenanceTag provenance={provenance} />
-        <p style={{ marginTop: "var(--space-2)" }}>
+        <p className="proposal-value">
           {proposal.description}: <strong>{resolution.value}</strong>
         </p>
         {proposal.evidence && <EvidenceChip evidence={proposal.evidence} />}
@@ -394,13 +395,13 @@ export function StagedProposal({
 
   return (
     <StagingCard>
-      <div
-        style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
-      >
+      {/* Who proposed it and how sure it is are one claim, so they stay on one
+          line however narrow the card gets. */}
+      <Row gap="2" wrap={false}>
         <ProvenanceTag provenance={{ kind: "agent", agent: proposal.agent }} />
         <ConfidenceMeter level={proposal.confidence} />
-      </div>
-      <p style={{ marginTop: "var(--space-2)" }}>
+      </Row>
+      <p className="proposal-value">
         {proposal.description}:{" "}
         <span className="staged-value">{proposal.value}</span>
       </p>

@@ -188,9 +188,9 @@ var pinnedWording = map[string]string{
 	"record_confirmation@2@en":    "ae6261f551d0f39945b720db03b9ef2f51a36516b88eeff0b1afae80808e0c28",
 	"record_confirmation@2@de":    "3ba76e0c75f2dd619ad4666d3452607b87a638ea1183e3188ace7bd7d4ac6b06",
 	"record_confirmation@2@vi":    "28894b02130d640779a9fd4550a2f987a4925c04aaf2749679d44708eae9d2a7",
-	"consent_confirmation@2@en":   "05485c736c4971864938a0a4100a69b0533b7f9792e1d75820299461c043233e",
-	"consent_confirmation@2@de":   "78ed420da7fa53e0cbfc5f02996520e27f8ba0fbb84b1c435b52abbe0da30054",
-	"consent_confirmation@2@vi":   "e224aa3f581bf8b2fccb3468364abe52f0f6467e3dd045c9e2b056a96fd4b7b3",
+	"consent_confirmation@3@en":   "05485c736c4971864938a0a4100a69b0533b7f9792e1d75820299461c043233e",
+	"consent_confirmation@3@de":   "bc4ce2c04ab10176e5bb49362554a42411b97ac1c9629f6c6eb921de527fa59a",
+	"consent_confirmation@3@vi":   "e224aa3f581bf8b2fccb3468364abe52f0f6467e3dd045c9e2b056a96fd4b7b3",
 }
 
 // TestEveryControllerTemplateIsPinnedToItsWording fails when a registered

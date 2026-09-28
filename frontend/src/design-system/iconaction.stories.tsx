@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   CalendarDays,
+  Info,
   Mail,
   MoreHorizontal,
   PenLine,
@@ -94,4 +95,22 @@ export const Held: Story = {
     icon: <Phone size={15} aria-hidden="true" />,
     disabled: true,
   },
+};
+
+// Inside a line of text, beside the words it explains: the square keeps its
+// whole target and takes one line box, so the line is as tall as its neighbour.
+export const Inline: Story = {
+  render: () => (
+    <div>
+      <p>
+        Qualify{" "}
+        <IconAction
+          inline
+          label="Explain Qualify"
+          icon={<Info aria-hidden="true" />}
+        />
+      </p>
+      <p>Proposal</p>
+    </div>
+  ),
 };

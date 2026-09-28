@@ -32,6 +32,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -148,7 +150,7 @@ func draftFollowUpReply(
 // version pin waiver in approvals covers exactly that: the target is context
 // here, and the anchor's liveness is the send path's own check.
 func stageFollowUpDraft(
-	ctx context.Context, svc *approvals.Service, summary string,
+	ctx context.Context, tx pgx.Tx, svc *approvals.Service, summary string,
 	dealID ids.UUID, evidence ids.UUID, draft automation.HeldDraftProposal,
 ) error {
 	raw, err := json.Marshal(draft)
@@ -168,7 +170,7 @@ func stageFollowUpDraft(
 	if err != nil {
 		return fmt.Errorf("compose: marshal the drafted follow-up identity: %w", err)
 	}
-	_, _, err = svc.StageUnlessDeclined(ctx, approvals.StageInput{
+	_, _, err = svc.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
 		Kind:           automation.HeldDraftKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,

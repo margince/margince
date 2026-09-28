@@ -60,6 +60,20 @@ var provenanceStamps = map[string]map[string]bool{
 	"company": {"name_source": true, "source": true},
 }
 
+// followsAnotherField are columns the update path derives from a field the
+// restore does send, so replaying the derived one would state it twice.
+//
+// A contact's narrowing_reason follows its visibility: the patch that writes
+// `owner` records human_decided, the one that writes `workspace` clears it.
+// Putting visibility back therefore puts the reason in the state a human's own
+// edit would leave, and a restore that refused over the reason would make every
+// visibility change un-undoable.
+//
+//nolint:goconst // as namedByTheShapeButNotWrittenByThePatch below: the rows are wire names read as data
+var followsAnotherField = map[string]map[string]bool{
+	"contact": {"narrowing_reason": true},
+}
+
 // addressColumns maps the address_* columns an audit image carries onto the
 // keys of the structured `address` object the update shapes declare. The image
 // is per COLUMN, because that is what the record holds; the request is one
@@ -198,7 +212,7 @@ const (
 // spell decides how one image key reaches the update path, so filterImage reads
 // as the assembly it is rather than as the decision and the assembly at once.
 func spell(entityType, key string, value json.RawMessage, allowed map[string]bool) spelling {
-	if derivedColumns[key] || provenanceStamps[entityType][key] ||
+	if derivedColumns[key] || provenanceStamps[entityType][key] || followsAnotherField[entityType][key] ||
 		namedByTheShapeButNotWrittenByThePatch[entityType][key] {
 		return spelledDropped
 	}

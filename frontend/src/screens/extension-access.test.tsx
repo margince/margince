@@ -269,7 +269,7 @@ const render = (ui: ReactNode) =>
 // delete" with no subject, and this lookup would stop finding it.
 function matrixFor(object: string): HTMLElement {
   return screen.getByRole("table", {
-    name: `Who may do what with ${object}`,
+    name: `Permissions for ${object}`,
   });
 }
 
@@ -337,7 +337,7 @@ describe("ExtensionAccessCard", () => {
     // The page's own heading stays on the lead card, which carries the seat and
     // inventory states and never a unit's grants.
     expect(
-      screen.getByRole("heading", { name: /Extensions & access/i }),
+      screen.getByRole("heading", { name: /Extensions and access/i }),
     ).toBeTruthy();
 
     const unit = screen
@@ -349,25 +349,25 @@ describe("ExtensionAccessCard", () => {
     // Version and page link ride the card's heading row rather than its body.
     expect(within(unit).getByText("Version 0.3.1")).toBeTruthy();
     expect(
-      within(unit).getByRole("link", { name: "Open the notes page" }),
+      within(unit).getByRole("link", { name: "Open notes page" }),
     ).toBeTruthy();
     // The grants are the card's rows; the inventory of what the unit brought is
     // its reference half, behind a disclosure that reads last and closed. So
     // the two are still told apart — by a row label and a summary rather than
     // by two section headings.
-    expect(within(unit).getByText("What this unit brings")).toBeTruthy();
+    expect(within(unit).getByText("What this unit adds")).toBeTruthy();
     // … and each registered object keeps a matrix of its own within the card,
     // NAMED by the row that holds it: the object is what a reader landing on a
     // tick in the middle of one has to be able to trace back to.
     expect(within(unit).getAllByRole("table").length).toBe(2);
     expect(
       within(unit).getByRole("table", {
-        name: "Who may do what with ext_notes_note",
+        name: "Permissions for ext_notes_note",
       }),
     ).toBeTruthy();
     expect(
       within(unit).getByRole("table", {
-        name: "Who may do what with ext_notes_signing_key",
+        name: "Permissions for ext_notes_signing_key",
       }),
     ).toBeTruthy();
   });
@@ -380,7 +380,7 @@ describe("ExtensionAccessCard", () => {
     // The accessible name carries the unit, not a bare "Open": several unit
     // blocks sit on this one page, so a link found by name alone has to be
     // unambiguous.
-    const link = screen.getByRole("link", { name: "Open the notes page" });
+    const link = screen.getByRole("link", { name: "Open notes page" });
     expect(link.getAttribute("href")).toBe("#/ext/notes");
   });
 
@@ -402,11 +402,13 @@ describe("ExtensionAccessCard", () => {
       throw new Error("no unit block rendered for stale");
     }
     expect(
-      within(unit).getByText(/stale is composed into the API, but this build/),
+      within(unit).getByText(
+        /stale is installed on the API, but this app build/,
+      ),
     ).toBeTruthy();
-    expect(screen.queryByText(/quiet is composed into the API/)).toBeNull();
+    expect(screen.queryByText(/quiet is installed on the API/)).toBeNull();
     // And the resolvable unit says nothing of the kind.
-    expect(screen.queryByText(/notes is composed into the API/)).toBeNull();
+    expect(screen.queryByText(/notes is installed on the API/)).toBeNull();
   });
 
   it("shows every route operation with its method, so a DELETE cannot hide behind a GET on the same path", async () => {
@@ -545,9 +547,9 @@ describe("ExtensionAccessCard", () => {
     // The message names the concurrent change rather than reading as a generic
     // save failure — the point is that the operator's change did not happen.
     await waitFor(() =>
-      expect(screen.getByText(/Someone else changed this role/)).toBeTruthy(),
+      expect(screen.getByText(/Another user changed this role/)).toBeTruthy(),
     );
-    expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
+    expect(screen.queryByText(/Could not load this view/)).toBeNull();
 
     // The matrix was re-read, so it now shows the OTHER admin's grant …
     await waitFor(() =>
@@ -569,18 +571,18 @@ describe("ExtensionAccessCard", () => {
     // The signing key: granted to nobody, which is exactly the state that
     // renders the extension's own screens empty.
     expect(
-      screen.getByText(/No role holds read on ext_notes_signing_key/),
+      screen.getByText(/No role has read access to ext_notes_signing_key/),
     ).toBeTruthy();
     // The note object has a reader, so it carries no such warning.
     expect(
-      screen.queryByText(/No role holds read on ext_notes_note/),
+      screen.queryByText(/No role has read access to ext_notes_note/),
     ).toBeNull();
 
     // Granting read to a role clears the warning for that object.
     await userEvent.click(cell("ext_notes_signing_key", "Rep", "Read").control);
     await waitFor(() =>
       expect(
-        screen.queryByText(/No role holds read on ext_notes_signing_key/),
+        screen.queryByText(/No role has read access to ext_notes_signing_key/),
       ).toBeNull(),
     );
   });
@@ -604,7 +606,7 @@ describe("ExtensionAccessCard", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          /needs permission to read the installation's extensions/i,
+          /requires permission to read installation extensions/i,
         ),
       ).toBeTruthy(),
     );
@@ -638,7 +640,7 @@ describe("ExtensionAccessCard", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          /needs permission to read the installation's extensions/i,
+          /requires permission to read installation extensions/i,
         ),
       ).toBeTruthy(),
     );
@@ -692,7 +694,7 @@ describe("ExtensionAccessCard", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          /needs permission to read the installation's extensions/i,
+          /requires permission to read installation extensions/i,
         ),
       ).toBeTruthy(),
     );
@@ -715,7 +717,7 @@ describe("ExtensionAccessCard", () => {
     // to find out why.
     expect(
       screen.getAllByText(
-        "Your seat reads this page. Changing a grant needs a full seat.",
+        "Your role can read this page. Changing a grant requires a full seat.",
       )[0],
     ).toBeTruthy();
     const denied = cell("ext_notes_note", "Admin", "Read");
@@ -728,7 +730,7 @@ describe("ExtensionAccessCard", () => {
     const reasonId = denied.describedBy;
     expect(reasonId).toBeTruthy();
     expect(document.getElementById(reasonId ?? "")?.textContent).toMatch(
-      /needs a full seat/i,
+      /requires a full seat/i,
     );
   });
 
@@ -789,7 +791,9 @@ describe("ExtensionAccessCard", () => {
     render(<ExtensionAccessCard />);
 
     await waitFor(() =>
-      expect(screen.getByText(/No extension units are composed/i)).toBeTruthy(),
+      expect(
+        screen.getByText(/No extension units are installed/i),
+      ).toBeTruthy(),
     );
   });
 

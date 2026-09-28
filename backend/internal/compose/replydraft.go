@@ -198,12 +198,12 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	// The draft's OWN language, from the envelope the drafter already resolved:
 	// a German reply used to carry an English legal line, which is the half of
 	// the drift a reader meets rather than a maintainer.
-	disclosure := draftfloor.AIDisclosure(textlang.Lang(envelope.Language))
+	disclosure := draftfloor.AIProvenanceNotice(textlang.Lang(envelope.Language))
 	return activities.DraftResult{
 		Subject:             activities.ReplySubject(activity.Kind, topic, draft.Subject),
 		Body:                draft.Body,
 		AIGenerated:         true,
-		AIDisclosure:        &disclosure,
+		AIProvenanceNotice:  &disclosure,
 		VoiceProfileVersion: voiceVersion,
 		DraftRef:            draftRef,
 		VoiceDegraded:       voice.Degraded,

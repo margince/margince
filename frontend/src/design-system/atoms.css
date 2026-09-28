@@ -1,4 +1,6 @@
-/* Atom styles — the Margince-owned vocabulary (foundation v0 mirror).
+/* Atom styles — the Margince-owned control vocabulary. A COMPONENT sheet, which
+ * atoms.tsx imports as every <name>.tsx imports its own <name>.css; the document
+ * layer beneath it, loaded once by app.css, is base.css.
  * Colours read tokens only; the conformance gate enforces it. */
 
 .badge {
@@ -207,9 +209,6 @@
 }
 .table tbody tr:hover td {
   background: var(--bgHover);
-}
-.table tbody tr.rowlink {
-  cursor: pointer;
 }
 
 /* A cell with two facts that belong on two lines — a call's timestamp over the
@@ -884,8 +883,11 @@
   }
 }
 
+/* The row wraps rather than running off a narrow dialog, and only between the
+   lead verbs and the pair: Cancel and the confirm never part. */
 .modal .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--gapActions);
@@ -895,7 +897,17 @@
 /* A verb that is neither the confirm nor the cancel goes to the far end of the
    row, so the two controls that close the dialog stay a pair. */
 .modal .actions > .actions-lead {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
   margin-inline-end: auto;
+}
+
+.modal .actions > .actions-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gapActions);
 }
 
 /* One control in two halves: the confirm, and the caret that opens the other
@@ -923,7 +935,8 @@
    items' first line puts the two buttons back on one line and lets the
    sentence hang below the one it belongs to, capped so a long reason wraps
    inside the dialog instead of setting its width. */
-.modal .actions:has(.btn-with-reason) {
+.modal .actions:has(.btn-with-reason),
+.modal .actions:has(.btn-with-reason) > .actions-pair {
   align-items: flex-start;
 }
 .modal .actions .btn-with-reason {
@@ -953,6 +966,15 @@
 }
 .entity-link:hover {
   text-decoration: underline;
+}
+
+/* A keyboard reader gets no ring from the bare-link rule in base.css, which
+   scopes itself to `a:not([class])` — so the one anchor the product uses most
+   has to draw its own. */
+.entity-link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
 }
 
 /* THE COUNT BESIDE AN OPTION, and it is one chip wherever it is drawn: a tab
@@ -1276,8 +1298,16 @@
   gap: var(--gapActions);
 }
 
-.form-error {
-  color: var(--dangerText);
+/* An ErrorLine that carries a verb: the sentence and its button on one line,
+ * wrapping under a narrow column rather than overflowing it. */
+.error-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+span.error-line {
+  display: inline-flex;
 }
 
 /* A CARD'S TRAILING ACTION ROW: the verbs under a card's body, with the air
@@ -2191,8 +2221,11 @@
      the smallest text on the card and the only thing on it to press, so weight
      is what carries it rather than size: semibold, because --fw-bold is
      reserved for the word that must outrank a heading, and a door does not.
-     24px tall, which is the AA target floor (WCAG 2.5.8, and axe runs it in the
-     wcag22aa sweep) — the same rung the worklist's rank button takes. The words
+     24px tall under a pointer that can be AIMED, which is the AA target floor
+     for one (WCAG 2.5.8, and axe runs it in the wcag22aa sweep). A finger aims
+     at nothing, so the coarse-pointer block below raises this same control to
+     the 44px floor every touch target in the product stands at: the compact
+     foot is what a mouse gets, and it was never a floor for a thumb. The words
      box to 15px at this size, and axe measures the BUTTON's own rectangle: the
      overlay that stretches the door over the tile is a pseudo-element, which
      never enters it. Centred in an inline-flex rather than padded, so the words
@@ -2205,6 +2238,21 @@
      as a space in the markup: this is a flex line, and a whitespace-only text
      node between two items is not a flex item — the space simply vanished. */
   gap: var(--space-1);
+}
+/* The same door under a thumb. 44px is the floor every touch target in this
+   product stands at (`.btn-federated` in base.css, the list row in
+   listtable.css), and a reading's door is the one thing on the tile to press —
+   a target a finger misses on a card it covers is a reading a reader cannot
+   open at all.
+   Raised HERE rather than on the rule above, because the foot is read as well
+   as pressed: a mouse already lands on 24px, and lifting every reading's foot
+   to 44 would set the height of a strip of cards from a control that did not
+   need it. `max()` for the reason `.btn-federated` gives — a later rise in the
+   shared control height must not be capped by this floor. */
+@media (pointer: coarse) {
+  .stat-card-open {
+    min-height: max(var(--controlHeight), 44px);
+  }
 }
 /* The arrow LEANS toward the door on the way in: the one movement on the tile,
    3px, at the state duration — a card that answers the pointer reads as one a
@@ -2426,4 +2474,16 @@
   transition:
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
+}
+
+/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
+   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
+   shared control height must not be capped by this floor. Declared under
+   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
+   still a mouse — the floor is about what a thumb can hit, not about how much
+   room there is. */
+@media (pointer: coarse) {
+  .segmented button {
+    min-height: max(var(--controlHeight), 44px);
+  }
 }

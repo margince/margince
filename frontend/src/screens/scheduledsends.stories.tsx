@@ -117,7 +117,7 @@ export const MovingAMessage: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Change moment",
+        name: "Reschedule",
       }),
     );
   },

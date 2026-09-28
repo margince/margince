@@ -97,7 +97,7 @@ export const ANoticeToSettle: Story = {
   },
 };
 
-// Pending: "Got it" is clicked and the read call never resolves.
+// Pending: "Acknowledge" is clicked and the read call never resolves.
 export const ANoticeSettling: Story = {
   args: { ...baseArgs, item: noticeItem() },
   render: (args) => {
@@ -107,14 +107,14 @@ export const ANoticeSettling: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Got it" }),
+      await canvas.findByRole("button", { name: "Acknowledge" }),
     );
   },
 };
 
 // A meeting, drawn with the clock a rep is racing.
 //
-// The state this row could not reach before: it said "starting shortly" whether
+// The state this row could not reach before: it said "starting soon" whether
 // the meeting began in four minutes or in fifty, so the one row that has to be
 // opened BEFORE a wall-clock time was the row that would not say the time.
 //
@@ -196,7 +196,7 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
 
 // A task nobody has taken, with the date it is due and how it is put down.
 //
-// Three states the row gained at once: the due moment drawn, "nobody owns it"
+// Three states the row gained at once: the due moment drawn, "no owner"
 // said out loud, and the spans behind the snooze's caret — opened here, because
 // a popover closed is a story that shows nothing about what it holds.
 export const ATaskNobodyOwnsBeingPutDown: Story = {
@@ -222,7 +222,7 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "For how long" }),
+      await canvas.findByRole("button", { name: "Snooze duration" }),
     );
   },
 };
@@ -287,7 +287,7 @@ export const AWaitingBuyerWithEveryVerb: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "For how long" }),
+      await canvas.findByRole("button", { name: "Snooze duration" }),
     );
   },
 };

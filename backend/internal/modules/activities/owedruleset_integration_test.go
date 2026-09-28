@@ -228,3 +228,38 @@ func containsCandidate(rows []OwedCandidate, id ids.UUID) bool {
 	}
 	return false
 }
+
+// A judged row the models declined to RE-judge keeps its verdict against the
+// prompt they declined, and is offered again once the prompt moves.
+func TestARestaleDeclineStandsOnlyForThePromptThatWasDeclined(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	activity := e.waitingFrom(t, "Judged, then declined", "buyer@customer.test", e.buyer(t))
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, dbNow(t, e)); err != nil {
+		t.Fatal(err)
+	}
+	offered := func(ruleset string) bool {
+		t.Helper()
+		rows, _, err := store.OwedRestale(asClassifier(e), ruleset, 100, 400, 400)
+		if err != nil {
+			t.Fatalf("reading the re-judge backlog under %s: %v", ruleset, err)
+		}
+		return containsCandidate(rows, activity)
+	}
+
+	if recorded, err := store.MarkOwedVerdictDeclined(asClassifier(e), activity, rulesetOld); err != nil || !recorded {
+		t.Fatalf("recording the decline under the old prompt: recorded=%v err=%v", recorded, err)
+	}
+	if !offered(rulesetNew) {
+		t.Error("a verdict whose re-judge was declined under the old prompt is not offered to the new one")
+	}
+	if recorded, err := store.MarkOwedVerdictDeclined(asClassifier(e), activity, rulesetNew); err != nil || !recorded {
+		t.Fatalf("recording the decline under the new prompt: recorded=%v err=%v", recorded, err)
+	}
+	if offered(rulesetNew) {
+		t.Error("a re-judge the new prompt was refused is offered again, so the sweep re-sends it every tick")
+	}
+	if verdict, ruleset := verdictAndRuleset(t, e, activity); verdict != OwedVerdictInformsUs || ruleset != rulesetOld {
+		t.Errorf("the declined re-judge moved the verdict to %q under %q; the old verdict stands", verdict, ruleset)
+	}
+}

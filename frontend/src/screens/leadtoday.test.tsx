@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
+import { en } from "../i18n/en";
 import { leadTodoRows } from "./leadtoday";
 import { TodayPanel } from "./record360";
 
@@ -43,7 +44,7 @@ function Rows({
   const t = useT();
   const { locale } = useLocale();
   return (
-    <TodayPanel onOpenTasks={onOpenTasks}>
+    <TodayPanel onOpenTasks={onOpenTasks} tasksLabel={t("today.workQueue")}>
       {leadTodoRows(
         lead,
         t,
@@ -123,7 +124,7 @@ describe("what needs a contact on a lead, and the verb that resolves it", () => 
     expect(onReply).not.toHaveBeenCalled();
   });
 
-  it("the Next task row's Open tasks verb opens the same queue the panel head does", async () => {
+  it("the Next task row's verb opens the same queue the panel head does", async () => {
     const onOpenTasks = vi.fn();
     show({
       lead: {
@@ -133,13 +134,19 @@ describe("what needs a contact on a lead, and the verb that resolves it", () => 
       },
       onOpenTasks,
     });
-    fireEvent.click(await screen.findByRole("button", { name: "Open tasks" }));
-    fireEvent.click(screen.getByRole("button", { name: "View tasks" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: en["lead.today.openTasks"] }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: en["today.workQueue"] }),
+    );
     expect(onOpenTasks).toHaveBeenCalledTimes(2);
   });
 
   it("says nothing is next once no open task is linked", () => {
     show({ lead: { ...BASE, first_response_at: "2026-06-02T08:00:00Z" } });
-    expect(screen.queryByRole("button", { name: "Open tasks" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["lead.today.openTasks"] }),
+    ).toBeNull();
   });
 });

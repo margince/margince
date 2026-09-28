@@ -78,9 +78,15 @@ describe("the chip fill's call sites", () => {
     // And not through a shared name: `.t-caption` renders inside the relay chip
     // and inside half the screens, so a reader that chained containment over
     // class names would put every caption inside every chip.
+    const colleagueProof = (element: Set<string>) =>
+      element.has("pe-colleague-proof");
+    expect(
+      [...inside.values()].some((below) => below.some(colleagueProof)),
+      "the contact screens render .pe-colleague-proof t-caption inside a host; the reader did not see it",
+    ).toBe(true);
     const belowRelay = inside.get("pn-relay-owner") ?? [];
     expect(
-      belowRelay.some((element) => element.has("compose-need")),
+      belowRelay.some(colleagueProof),
       "containment chained across components, which makes the scan report rules against chips they never land on",
     ).toBe(false);
   });

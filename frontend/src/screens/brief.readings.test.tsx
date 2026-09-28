@@ -22,6 +22,7 @@ import {
 } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
+import type { Worklist } from "./worklist.queries";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's
 // own strip does not: the row is FIVE slots on every morning, quiet or busy, so
@@ -755,6 +756,79 @@ describe("risk scope and reading actions", () => {
     );
     expect(window.location.hash).toContain("filter=deals_at_risk");
   });
+});
+
+// "Not counted" says a number is missing. It does not say the calendar never
+// answered while the lead lane did — and a reader who meets the same four words
+// under four different failures learns nothing from any of them.
+describe("a slot with no figure names its own source", () => {
+  function unreadable(
+    unavailable: Worklist["sources_unavailable"],
+    ...args: Parameters<typeof readingsDay>
+  ) {
+    const day = readingsDay(...args);
+    day.sources_unavailable = unavailable;
+    drawDay(day);
+  }
+
+  it("says which source went missing under each of the four slots", () => {
+    unreadable(
+      [
+        { source: "meeting", reason: "failed", category: "meetings" },
+        { source: "lead_response", reason: "failed", category: "leads" },
+        { source: "decision", reason: "failed", category: "decisions" },
+      ],
+      { prospecting: 2, review: 0 },
+      [],
+      [],
+      { urgent: 0 },
+    );
+
+    // Four figures that could not be counted, and four different reasons.
+    expect(strippedFigures()).toContain(en["brief.readings.unavailable"]);
+    expect(
+      screen.getByText(en["brief.readings.unavailable.urgent"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(en["brief.readings.unavailable.meetings"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(en["brief.readings.unavailable.leads"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(en["brief.readings.unavailable.decisions"]),
+    ).toBeTruthy();
+  });
+
+  // The basis line answers "what was this figure taken over". With no figure
+  // there was nothing to take it over, so the slot must stop saying it.
+  it("drops the basis line from the slot that has no figure", () => {
+    unreadable(
+      [{ source: "lead_response", reason: "failed", category: "leads" }],
+      { prospecting: 2 },
+      [],
+      [],
+      { urgent: 4 },
+    );
+
+    expect(leadsCard().textContent).toContain(
+      en["brief.readings.unavailable.leads"],
+    );
+    expect(screen.queryByText(en["brief.readings.leadsBasis"])).toBeNull();
+    // One failed source does not silence the rest of the plate: the slots that
+    // DID answer keep their own basis.
+    expect(screen.getByText(en["brief.readings.urgentBasis"])).toBeTruthy();
+  });
+});
+
+// NOTHING FLAGGED is not NOTHING PRICED. A day that flagged no deal has none to
+// price; a day that flagged some and priced none has money nobody can size.
+it("says no deal was flagged rather than restating the basis", () => {
+  draw({ revenue_at_risk_minor: null, revenue_currency: "EUR" });
+
+  expect(screen.getByText(en["brief.readings.noDealWork"])).toBeTruthy();
+  expect(screen.getByText(en["brief.readings.noDealWorkWhy"])).toBeTruthy();
+  expect(screen.queryByText(en["brief.readings.riskBasis"])).toBeNull();
 });
 
 it("marks known deal value and urgent work as incomplete when a source fails", () => {

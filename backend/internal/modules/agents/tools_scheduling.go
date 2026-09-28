@@ -10,15 +10,17 @@ package agents
 // channel verbs address a contact and send them words.
 //
 // check_availability is 🟢 (it proposes slots and commits nothing);
-// book_meeting is 🟡 — it writes a meeting and implies an invitation.
+// book_meeting records a meeting; invite_meeting explicitly delivers an invitation.
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -31,13 +33,14 @@ func (t checkAvailability) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "check_availability", Title: "Check calendar availability", Version: toolVersionV1,
 		Description:   checkAvailabilityCopy.render(),
+		Instead:       checkAvailabilityCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getAvailability",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"host_user_id":{"type":"string","format":"uuid","description":"Defaults to the acting principal's user"},
 			"from":{"type":"string","format":"date-time"` + timestampNote + `},
 			"to":{"type":"string","format":"date-time"` + timestampNote + `},
-			"duration_minutes":{"type":"integer","minimum":15,"maximum":480}},
+			"duration_minutes":{"type":"integer","minimum":15,"maximum":480},"reliable":{"type":"boolean","default":false,"description":"Require live calendar occupancy and booking policy; fails if unavailable"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[AvailabilityResult](),
 	}
@@ -49,12 +52,23 @@ func (t checkAvailability) Handle(ctx context.Context, in json.RawMessage) (json
 		From            time.Time `json:"from"`
 		To              time.Time `json:"to"`
 		DurationMinutes int       `json:"duration_minutes"`
+		Reliable        bool      `json:"reliable"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
 	noteDerivedContent(ctx)
-	free, err := t.comms.Availability(ctx, args.HostUserID, args.From, args.To, args.DurationMinutes)
+	var free AvailabilityResult
+	var err error
+	if args.Reliable {
+		scheduling, ok := t.comms.(ReliableScheduling)
+		if !ok {
+			return nil, fmt.Errorf("calendar-backed availability is unavailable")
+		}
+		free, err = scheduling.ReliableAvailability(ctx, args.HostUserID, args.From, args.To, args.DurationMinutes)
+	} else {
+		free, err = t.comms.Availability(ctx, args.HostUserID, args.From, args.To, args.DurationMinutes)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -119,20 +133,22 @@ const noCalendarConnectedMessage = "No calendar is connected for this host, so t
 	"user told you about is missing from their calendar. Say the calendar is not connected rather than " +
 	"reporting the day as clear."
 
-// --- book_meeting (🟡: commits a slot + implies an invite) ---
+// --- book_meeting: record-only booking ---
 
 // bookMeetingTool carries a record reader for its staging, like the two send
 // verbs — but it reads the records the booking will ATTACH to rather than one
 // anchor, because a booking has none.
 type bookMeetingTool struct {
-	comms Comms
-	p     datasource.SystemOfRecordProvider
+	comms    Comms
+	p        datasource.SystemOfRecordProvider
+	language baselanguage.Resolver
 }
 
 func (t bookMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "book_meeting", Title: "Book a meeting", Version: toolVersionV1,
 		Description:   bookMeetingCopy.render(),
+		Instead:       bookMeetingCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
 		OpenAPIOp: "bookMeeting",
 		// `links` is REQUIRED by crm.yaml's bookMeeting body and was advertised
@@ -169,7 +185,7 @@ func (t bookMeetingTool) StageInfo(ctx context.Context, in json.RawMessage) (Sta
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewBookMeetingCall(t.p, BookMeetingCommand(args)))
+	return StageSubject(ctx, NewBookMeetingCall(t.p, t.language, BookMeetingCommand(args)))
 }
 
 func (t bookMeetingTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -213,4 +229,9 @@ func (t bookMeetingTool) Handle(ctx context.Context, in json.RawMessage) (json.R
 		noteEvidence(ctx, datasource.EntityType(link.EntityType), link.EntityID)
 	}
 	return t.comms.BookMeeting(ctx, args)
+}
+
+// ReliableScheduling distinguishes live calendar occupancy from CRM-only availability.
+type ReliableScheduling interface {
+	ReliableAvailability(context.Context, *ids.UUID, time.Time, time.Time, int) (AvailabilityResult, error)
 }

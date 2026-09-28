@@ -62,7 +62,7 @@ async function openTheModelQuestion(page: Page): Promise<void> {
   // an installation that has bound no model is asked for one before it is
   // asked for a website, because a read it cannot perform is a question it
   // should not put.
-  await expect(page.getByText("Hier kann noch nichts denken")).toBeVisible();
+  await expect(page.getByText("Kein Modell verbunden")).toBeVisible();
 }
 
 for (const [where, viewport] of Object.entries({

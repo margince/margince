@@ -104,7 +104,13 @@ func (s *Service) IssuePasswordLink(ctx context.Context, actor Identity, userID 
 		// account-takeover credential, so a delegated holder must not reach an
 		// admin's account, and a role assignment changing between the check and
 		// the write must not decide the answer against a state that has passed.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID); err != nil {
+		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachTakeover); err != nil {
+			return err
+		}
+		if err := refuseWhileHoldingArchivedRole(ctx, tx, userID); err != nil {
 			return err
 		}
 		superseded, err := supersedeSetPasswordTokens(ctx, tx, userID)

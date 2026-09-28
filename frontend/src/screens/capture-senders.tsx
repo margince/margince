@@ -2,15 +2,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
+import { EntityRef } from "./entityref";
 
 // What the classifier decided about each sender this mailbox brought in, and
 // the seat's own answer where they gave one.
@@ -25,6 +33,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // itself private.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];
+type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
 
 // The classifier's vocabulary, in the reader's words. A kind absent from the
 // map is one the server learned to say and this screen has not — it falls back
@@ -51,6 +60,25 @@ function useSenders() {
     queryKey: ["capture-senders"],
     queryFn: async () => {
       const { data, error, response } = await api.GET("/capture/senders");
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+}
+
+// The contacts this seat's mail created that stay visible to them alone until
+// a sender decision is reached — the set the admin capture-health card counts
+// for this mailbox. Its own read: a contact whose address never reached the
+// senders list above is waiting too, and that list cannot show it.
+function useAwaitingDecision() {
+  return useQuery({
+    queryKey: ["capture-contacts-awaiting-decision"],
+    queryFn: async () => {
+      const { data, error, response } = await api.GET(
+        "/capture/contacts-awaiting-decision",
+      );
       if (error || !response.ok) {
         throwProblem(error);
       }
@@ -120,7 +148,7 @@ export function CaptureSendersCard() {
   return (
     <Panel title={t("senders.title")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("senders.sub")}</p>
+        <PanelIntro>{t("senders.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("senders.title")}>
           {(list) =>
             list.data.length === 0 ? (
@@ -198,11 +226,7 @@ export function CaptureSendersCard() {
                     },
                   ]}
                 />
-                {setDecision.isError && (
-                  <p className="settings-panel-sub" role="alert">
-                    {problemMessageOf(setDecision.error, t)}
-                  </p>
-                )}
+                <ErrorLine error={setDecision.error} />
               </>
             )
           }
@@ -226,7 +250,61 @@ export function CaptureSendersCard() {
           {t("senders.keepOutBody")}
         </ConfirmModal>
       </PanelBody>
+      <AwaitingDecision />
     </Panel>
+  );
+}
+
+// Drawn only when something waits, or when the read failed: an empty group
+// under the senders list would be a second empty state saying what the first
+// already said, and one flashed while loading would say it and take it back.
+function AwaitingDecision() {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const query = useAwaitingDecision();
+  if (query.isPending || (query.isSuccess && query.data.data.length === 0)) {
+    return null;
+  }
+  return (
+    <>
+      <PanelGroupHead title={t("senders.waiting.title")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("senders.waiting.sub")}</PanelIntro>
+        <QueryGate query={query} pendingLabel={t("senders.waiting.title")}>
+          {(list) => (
+            <DataTable<AwaitingContact>
+              label={t("senders.waiting.title")}
+              rows={list.data}
+              rowKey={(row) => row.contact_id}
+              columns={[
+                {
+                  key: "contact",
+                  header: t("senders.waiting.colContact"),
+                  render: (row) => (
+                    <EntityRef
+                      kind="contact"
+                      id={row.contact_id}
+                      name={row.display_name ?? row.emails[0] ?? null}
+                    />
+                  ),
+                },
+                {
+                  key: "addresses",
+                  header: t("senders.waiting.colAddresses"),
+                  render: (row) => row.emails.join(", "),
+                },
+                {
+                  key: "since",
+                  header: t("senders.waiting.colSince"),
+                  render: (row) => formatDate(row.captured_at, locale, zone),
+                },
+              ]}
+            />
+          )}
+        </QueryGate>
+      </PanelBody>
+    </>
   );
 }
 

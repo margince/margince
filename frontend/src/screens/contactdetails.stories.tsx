@@ -55,3 +55,77 @@ export const ReadOnly: Story = {
     },
   },
 };
+
+// A contact a purchase filled: the title, profile link, one address and one
+// number carry the "bought" mark beside them, the typed address does not, and
+// the location and departments the provider sold stand in their own row.
+const boughtFixture: components["schemas"]["Contact"] = {
+  ...fixture,
+  title: "Head of Revenue",
+  social: { linkedin: "https://www.linkedin.com/in/dana" },
+  emails: [
+    {
+      id: "e-bought",
+      email: "dana@bought.example",
+      email_type: "work",
+      is_primary: true,
+      position: 0,
+      source: "surfe",
+      captured_by: "connector:surfe",
+    },
+    {
+      id: "e-typed",
+      email: "dana@typed.example",
+      email_type: "personal",
+      is_primary: false,
+      position: 1,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
+  bought_fields: [
+    { target: "title", provider: "surfe", applied_at: "2026-06-02T12:00:00Z" },
+    {
+      target: "linkedin",
+      provider: "surfe",
+      applied_at: "2026-06-02T12:00:00Z",
+    },
+    {
+      target: "email:e-bought",
+      provider: "surfe",
+      applied_at: "2026-06-02T12:00:00Z",
+    },
+  ],
+};
+const boughtProfiles: components["schemas"]["ContactProviderProfile"][] = [
+  {
+    provider: "surfe",
+    state: "completed",
+    categories_not_requested: [],
+    emails: [],
+    mobile_phones: [],
+    job_history: [],
+    departments: ["Sales"],
+    seniorities: [],
+    location: "Munich, Germany",
+    attributes: [
+      {
+        kind: "location",
+        value: "Munich, Germany",
+        retrieved_at: "2026-06-02T12:00:00Z",
+      },
+      {
+        kind: "department",
+        value: "Sales",
+        retrieved_at: "2026-03-02T12:00:00Z",
+      },
+    ],
+  },
+];
+export const BoughtValues: Story = {
+  args: { contact: boughtFixture, profiles: boughtProfiles },
+};
+export const BoughtValuesDark: Story = {
+  args: { contact: boughtFixture, profiles: boughtProfiles },
+  globals: { theme: "dark" },
+};

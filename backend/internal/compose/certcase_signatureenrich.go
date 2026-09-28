@@ -81,9 +81,9 @@ func (signatureEnrichCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 		return nil, errors.New(
 			"enrich/signature: the fixture's mail leaves no signature block, and the pass calls no model without one")
 	}
-	var want map[string]string
-	if err := json.Unmarshal(expected, &want); err != nil {
-		return nil, fmt.Errorf("enrich/signature: the expected answer is not a field to value map: %w", err)
+	want, err := signatureExpectation(expected)
+	if err != nil {
+		return nil, err
 	}
 	if len(want) == 0 {
 		return nil, errors.New("enrich/signature: the scenario expects no field, so no reply could disagree with it")
@@ -105,6 +105,33 @@ func (signatureEnrichCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	}, nil
 }
 
+// signatureExpectation reads the expected answer as field to values: a bare
+// string for a single-answer field, a list for a field the signature may state
+// several times — the phone numbers.
+func signatureExpectation(expected json.RawMessage) (map[string][]string, error) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(expected, &raw); err != nil {
+		return nil, fmt.Errorf("enrich/signature: the expected answer is not a field to value map: %w", err)
+	}
+	want := make(map[string][]string, len(raw))
+	for _, name := range slices.Sorted(maps.Keys(raw)) {
+		var one string
+		if err := json.Unmarshal(raw[name], &one); err == nil {
+			want[name] = []string{one}
+			continue
+		}
+		var several []string
+		if err := json.Unmarshal(raw[name], &several); err != nil {
+			return nil, fmt.Errorf("enrich/signature: the expected %q is neither a value nor a list of values: %w", name, err)
+		}
+		if !signatureRepeatedFields[name] {
+			return nil, fmt.Errorf("enrich/signature: the scenario expects a list for %q, which the gate keeps once", name)
+		}
+		want[name] = several
+	}
+	return want, nil
+}
+
 // refuseUnenrichableExpectation names an expectation the pass can never satisfy:
 // a field outside the §2.9 vocabulary is one no model was told exists and the
 // gate drops as unknown on every reply, and an empty value is dropped as empty on
@@ -112,13 +139,13 @@ func (signatureEnrichCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 // corpus. Naming it here costs a parse; finding it later costs a paid run.
 //
 // Sorted so a fixture with two offences names the same one every time.
-func refuseUnenrichableExpectation(want map[string]string) error {
+func refuseUnenrichableExpectation(want map[string][]string) error {
 	for _, name := range slices.Sorted(maps.Keys(want)) {
-		switch {
-		case !enrichFieldNames[name]:
+		if !enrichFieldNames[name] {
 			return fmt.Errorf(
 				"enrich/signature: the scenario expects %q, which this prompt never offers the model", name)
-		case strings.TrimSpace(want[name]) == "":
+		}
+		if len(want[name]) == 0 || slices.ContainsFunc(want[name], func(v string) bool { return strings.TrimSpace(v) == "" }) {
 			return fmt.Errorf(
 				"enrich/signature: the scenario expects an empty value for %q, which the gate drops", name)
 		}
@@ -126,12 +153,37 @@ func refuseUnenrichableExpectation(want map[string]string) error {
 	return nil
 }
 
+// signatureDisagreements is expectationDisagreements over a signature's
+// answer, where phone is a list: every expected number must survive, and a
+// number the scenario did not name is a richer read rather than a wrong one.
+func signatureDisagreements(expected, proposed map[string][]string) []string {
+	var out []string
+	for _, name := range slices.Sorted(maps.Keys(expected)) {
+		if !signatureRepeatedFields[name] {
+			got := map[string]string{}
+			if values := proposed[name]; len(values) > 0 {
+				got[name] = values[0]
+			}
+			out = append(out, expectationDisagreements(map[string]string{name: expected[name][0]}, got)...)
+			continue
+		}
+		for _, want := range expected[name] {
+			if !slices.ContainsFunc(proposed[name], func(v string) bool {
+				return normalizeEvidence(v) == normalizeEvidence(want)
+			}) {
+				out = append(out, fmt.Sprintf("no surviving %s %q, which the scenario expects", name, want))
+			}
+		}
+	}
+	return out
+}
+
 // signatureEnrichCase is one candidate ready to be read, closed over the derived
 // window, the minted activity id, and the fields the scenario expects.
 type signatureEnrichCase struct {
 	cand     contacts.SignatureCandidate
 	lines    string
-	expected map[string]string
+	expected map[string][]string
 }
 
 // Run issues the one request this site sends. It sends it bare: production wraps
@@ -177,7 +229,7 @@ func (c *signatureEnrichCase) Run(ctx context.Context, completer aitasks.Complet
 // because its digits and separators survive the normalization.
 func (c *signatureEnrichCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	gated, dropped := gateEvidence(trace.Output, c.lines, "activity:"+c.cand.ActivityID.String(),
-		func(name string) bool { return enrichFieldNames[name] })
+		func(name string) bool { return enrichFieldNames[name] }, signatureRepeatedFields)
 	// Every refusal reaches the Detail whatever the result: a reply that grounded
 	// the expected field while fabricating evidence for three others is not the
 	// clean run it would otherwise look like.
@@ -185,16 +237,16 @@ func (c *signatureEnrichCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if len(gated) == 0 && len(dropped) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
 	}
-	proposed := make(map[string]string, len(gated))
+	proposed := make(map[string][]string, len(gated))
 	for _, f := range gated {
 		if float64(f.Confidence) < enrichConfidenceFloor {
 			detail = append(detail, fmt.Sprintf("%s is hedged at %.2f, below the %.2f the pass applies at",
 				f.Field, f.Confidence, enrichConfidenceFloor))
 			continue
 		}
-		proposed[f.Field] = f.Value
+		proposed[f.Field] = append(proposed[f.Field], f.Value)
 	}
-	disagreements := expectationDisagreements(c.expected, proposed)
+	disagreements := signatureDisagreements(c.expected, proposed)
 	if len(gated) == 0 {
 		// A scenario that DID expect a field still reads its own disagreements
 		// here: the reply is an abstention either way, and what it declined to

@@ -59,7 +59,7 @@ func TestRelationshipLifecycle(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
-		"role": "cto", "is_current_primary": true, "source": "ui",
+		"role": "cto", "is_current_primary": true, "source": "manual",
 	}, nil, &first); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
 	}
@@ -73,7 +73,7 @@ func TestRelationshipLifecycle(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": company2.ID,
-		"is_current_primary": true, "source": "ui",
+		"is_current_primary": true, "source": "manual",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("second employment → %d", status)
 	}
@@ -115,14 +115,14 @@ func TestRelationshipLifecycle(t *testing.T) {
 
 	// A malformed endpoint shape is a 422, not a DB error.
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "contact_id": e.contactID, "source": "ui",
+		"kind": "employment", "contact_id": e.contactID, "source": "manual",
 	}, nil, nil); status != 422 {
 		t.Fatalf("shape-violating edge → %d, want 422", status)
 	}
 	// An invisible endpoint reads as absent (H1).
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": "00000000-0000-7000-8000-00000000dead",
-		"company_id": e.companyID, "source": "ui",
+		"company_id": e.companyID, "source": "manual",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("invisible endpoint → %d, want 404", status)
 	}
@@ -149,7 +149,7 @@ func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
-		"role": "cto", "source": "ui",
+		"role": "cto", "source": "manual",
 	}, nil, &edge); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
 	}
@@ -208,7 +208,7 @@ func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
-		"role": "cto", "source": "ui",
+		"role": "cto", "source": "manual",
 	}, nil, &edge); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
 	}
@@ -294,7 +294,7 @@ func TestAnApprovedEdgeArchiveRefusesAfterTheEdgeMoves(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
-		"role": "cto", "source": "ui",
+		"role": "cto", "source": "manual",
 	}, nil, &edge); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
 	}

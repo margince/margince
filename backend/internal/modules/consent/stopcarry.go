@@ -26,6 +26,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -55,39 +56,22 @@ func (s *Store) LockStopsTx(ctx context.Context, tx pgx.Tx, subjects ...commsaut
 
 // CarryStopsTx implements contacts.StopCarrier.
 //
-// IDEMPOTENT ON KIND. A survivor who already holds a live stop of the same
-// kind keeps their own — theirs is at least as recent and may carry a
-// different authority, and two live rows of one kind would mean the second
-// lift silently re-enables mail the first was still refusing.
+// IDEMPOTENT ON (KIND, PURPOSE_ID), not kind alone. A survivor who already
+// holds a live stop of the same kind AND the same purpose (both narrowed to
+// one subscription, or both broad) keeps their own — theirs is at least as
+// recent and may carry a different authority, and two live rows of one
+// (kind, purpose_id) would mean the second lift silently re-enables mail the
+// first was still refusing. A narrow stop and a broad stop of one kind are
+// two different refusals, not a duplicate of each other, so both travel.
 //
 // THE AUTHORITY TRAVELS. A subject-level objection stays subject-level on the
 // survivor, so no seat can lift what the subject asked for merely by merging
 // the record first. Carrying it as the merging rep's own level would be a
 // laundering path: merge, then lift.
 func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
-	// GATED HERE TOO, not merely at the merge that calls it.
-	//
-	// This is exported and takes a transaction it does not own, so anything
-	// holding a consent store can call it directly — and its effect is to write
-	// a suppression onto a subject the caller names.
-	//
-	// THE GATE ADMITS ANY OF THE THREE GRANTS ITS THREE CALLERS RUN UNDER,
-	// rather than naming one and refusing the others. The three doors are:
-	//
-	//   MergeContact   contact:update
-	//   MergeLeads    lead:update
-	//   PromoteLead   lead:update + contact:create, and NEVER contact:update
-	//
-	// so a rule of "update on whichever subject survives" refused promotion
-	// outright — a rep entitled to turn a lead into a contact does not thereby
-	// hold the right to edit contacts, and the promotion rolled back on a
-	// permission the caller was never required to have.
-	//
-	// The point of this gate is to keep a caller who holds NO contacts grant at
-	// all from writing suppressions through a seam meant for merges. It is not
-	// to re-decide the merge's own entitlement, which each door already checked
-	// before opening its transaction.
-	if err := admitAMergingCaller(ctx); err != nil {
+	// GATED HERE TOO, not merely at the merge that calls it: this is exported
+	// and writes a suppression onto a subject the caller names. See admitACarry.
+	if err := admitACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -104,17 +88,30 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		return err
 	}
 
-	// DISTINCT ON collapses several live source rows of one kind to the
-	// strongest, because a subquery in an INSERT ... SELECT does NOT see the
-	// rows that statement is inserting — Postgres evaluates it against the
-	// statement's snapshot. Without this, a subject holding two live
+	// DISTINCT ON collapses several live source rows of one (kind, purpose_id)
+	// to the strongest, because a subquery in an INSERT ... SELECT does NOT
+	// see the rows that statement is inserting — Postgres evaluates it against
+	// the statement's snapshot. Without this, a subject holding two live
 	// subject_requests carried two copies onto the survivor.
 	//
-	// The NOT EXISTS compares AUTHORITY, not merely kind. A survivor holding a
-	// weaker row of the same kind must not block a stronger one: a legacy
-	// user-level subject_request would otherwise keep a subject-level objection
-	// out, and an admin could then lift the weaker row — the laundering path
-	// carrying the authority was meant to close.
+	// KEYED ON PURPOSE TOO, not kind alone. purpose_id narrows a stop to one
+	// subscription; NULL means all marketing. A subject can hold a narrow
+	// objection to one newsletter AND a broad one covering everything else —
+	// two different refusals of the same kind — and collapsing on kind alone
+	// kept only whichever the ORDER BY put first, dropping the other onto the
+	// floor. That is the same lost-stop defect this file exists to close, one
+	// column narrower: the survivor kept receiving the one list its
+	// predecessor asked to leave.
+	//
+	// The NOT EXISTS compares AUTHORITY, not merely kind and purpose. A
+	// survivor holding a weaker row of the same (kind, purpose_id) must not
+	// block a stronger one: a legacy user-level subject_request would
+	// otherwise keep a subject-level objection out, and an admin could then
+	// lift the weaker row — the laundering path carrying the authority was
+	// meant to close. IS NOT DISTINCT FROM, so two NULL purposes compare
+	// equal — the idiom the writer dedup in withdrawalpress.go and the replay
+	// check in publicstop.go already use — rather than two broad stops
+	// comparing as different rows because SQL NULL is never equal to NULL.
 	// RETURNING, so each carried stop can ship its own event. A consumer that
 	// learned about the original suppression must learn that it now also
 	// applies to the survivor, or it keeps mailing the record the merge just
@@ -122,10 +119,10 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
 		  (contact_id, lead_id, address, kind, source, decided_by_level,
-		   captured_by, carried_from)
-		SELECT DISTINCT ON (live.kind)
+		   captured_by, carried_from, purpose_id)
+		SELECT DISTINCT ON (live.kind, live.purpose_id)
 		       $3, $4, live.address, live.kind, live.source, live.decided_by_level,
-		       $5, live.id
+		       $5, live.id, live.purpose_id
 		  FROM communication_suppression live
 		 WHERE (($1::uuid IS NOT NULL AND live.contact_id = $1)
 		     OR ($2::uuid IS NOT NULL AND live.lead_id = $2))
@@ -135,10 +132,11 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		          WHERE (($3::uuid IS NOT NULL AND held.contact_id = $3)
 		              OR ($4::uuid IS NOT NULL AND held.lead_id = $4))
 		            AND held.kind = live.kind
+		            AND held.purpose_id IS NOT DISTINCT FROM live.purpose_id
 		            AND held.revoked_at IS NULL
 		            AND coalesce(array_position($6::text[], held.decided_by_level), array_length($6::text[], 1) + 1)
 		                >= coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1))
-		 ORDER BY live.kind, coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC, live.recorded_at DESC
+		 ORDER BY live.kind, live.purpose_id, coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC, live.recorded_at DESC
 		RETURNING kind, decided_by_level`,
 		zeroAsNull(from.ContactID.UUID), zeroAsNull(from.LeadID.UUID),
 		zeroAsNull(to.ContactID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())
@@ -216,27 +214,49 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	return nil
 }
 
-// admitAMergingCaller refuses a principal holding none of the three grants the
-// three merge doors run under. auth.RequireAny takes one object and several
-// actions, and this rule spans two objects, so it is spelled out here rather
-// than by widening the platform primitive for a single call site.
+// admitACarry asks, at the seam, for the authority the merge door that owns
+// this shape of carry already asked for: the grant that door runs under, and
+// write authority over both records it names. An exported carry that asked
+// less would let an in-process caller move one subject's links and stops onto
+// another it may not change.
 //
-// A refusal names contact.update, because that is the grant an ordinary contact
-// merge is missing and the one an operator will go and grant.
-func admitAMergingCaller(ctx context.Context) error {
-	for _, g := range []struct {
-		object string
-		action principal.Action
-	}{
-		{entityContact, principal.ActionUpdate},
-		{entityLead, principal.ActionUpdate},
-		{entityContact, principal.ActionCreate},
-	} {
-		if err := auth.Require(ctx, g.object, g.action); err == nil {
-			return nil
+// THE GRANT FOLLOWS THE DOOR, not the survivor:
+//
+//	contact → contact   MergeContact   contact:update
+//	lead → lead         MergeLead      lead:update
+//	lead → contact      PromoteLead    lead:update + contact:create, never contact:update
+//
+// Promotion never requires contact:update.
+func admitACarry(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
+	switch {
+	case !from.ContactID.IsZero() && !to.ContactID.IsZero():
+		if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
+			return err
+		}
+	case !from.LeadID.IsZero() && !to.LeadID.IsZero():
+		if err := auth.Require(ctx, entityLead, principal.ActionUpdate); err != nil {
+			return err
+		}
+	case !from.LeadID.IsZero() && !to.ContactID.IsZero():
+		if err := auth.Require(ctx, entityLead, principal.ActionUpdate); err != nil {
+			return err
+		}
+		if err := auth.Require(ctx, entityContact, principal.ActionCreate); err != nil {
+			return err
+		}
+	default:
+		return errors.New("consent: a carry runs contact to contact, lead to lead, or lead to contact")
+	}
+	for _, subject := range []commsauthz.StopSubject{from, to} {
+		table, id := entityContact, subject.ContactID.UUID
+		if id.IsZero() {
+			table, id = entityLead, subject.LeadID.UUID
+		}
+		if err := auth.EnsureWritable(ctx, tx, table, id); err != nil {
+			return err
 		}
 	}
-	return auth.Require(ctx, entityContact, principal.ActionUpdate)
+	return nil
 }
 
 // authorityLadder renders commsauthz's own rank order for SQL, weakest first,

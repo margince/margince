@@ -13,9 +13,9 @@
   align-items: center;
 }
 
-/* The count, pinned to the glyph's corner the way the rail pins its own. It
-   only PLACES the badge; the badge draws itself. `pointer-events: none` so the
-   figure is part of the target rather than a second one inside it. */
+/* The count, pinned to the glyph's corner. It only PLACES the badge; the badge
+   draws itself. `pointer-events: none` so the figure is part of the target
+   rather than a second one inside it. */
 .notifbell-count {
   position: absolute;
   top: -2px;
@@ -56,6 +56,10 @@
   gap: var(--space-1);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
+  /* A subject is a sentence the server wrote and may carry an unbroken token —
+     a message id, a URL. The panel's measure is fixed, so a row without this
+     reaches past it and the whole panel scrolls sideways. */
+  overflow-wrap: anywhere;
 }
 .notifrow:last-child {
   padding-bottom: 0;
@@ -77,7 +81,11 @@
   flex-wrap: wrap;
 }
 
-.notifrow-subject {
+/* A subject the product has no page for is prose and reads as prose. The
+   linked one wears `.entity-link` beside this and is drawn as the door it is —
+   accent ink, an underline under the pointer, a ring under the keyboard —
+   which is the only thing telling a reader which notices open something. */
+span.notifrow-subject {
   color: var(--textPrimary);
 }
 

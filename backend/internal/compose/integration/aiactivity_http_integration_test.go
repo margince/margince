@@ -35,9 +35,10 @@ func TestMyAiActivityServesTheRealHandlerToAHuman(t *testing.T) {
 	// Decoding into slices also fails the call outright if either field
 	// arrives as anything but a JSON array.
 	var body struct {
-		AsOf    *string            `json:"as_of"`
-		Running *[]json.RawMessage `json:"running"`
-		Recent  *[]json.RawMessage `json:"recent"`
+		AsOf      *string            `json:"as_of"`
+		Running   *[]json.RawMessage `json:"running"`
+		Recent    *[]json.RawMessage `json:"recent"`
+		LiveTotal *int               `json:"live_total"`
 	}
 	status := e.Call(t, "GET", "/v1/me/ai-activity", nil, nil, &body)
 	if status != http.StatusOK {
@@ -52,6 +53,9 @@ func TestMyAiActivityServesTheRealHandlerToAHuman(t *testing.T) {
 	}
 	if body.Recent == nil {
 		t.Errorf("recent is absent: the contract requires it even on a day with no settled occurrence")
+	}
+	if body.LiveTotal == nil || *body.LiveTotal != 0 {
+		t.Errorf("live_total = %v, want a present 0: an absent total is unknown, not an AI at rest", body.LiveTotal)
 	}
 }
 

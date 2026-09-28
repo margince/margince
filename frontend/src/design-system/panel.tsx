@@ -223,6 +223,27 @@ export function PanelBody({
   );
 }
 
+// PanelIntro is the one descriptive line a panel may carry: the sentence that
+// says what the zone is, standing first in a `PanelBody`, above the form or the
+// rows it describes. A BODY child and never a prop, because the head is a title
+// and the verbs that act on it — a description up there is a head at two
+// heights, and `panelhead.test.tsx` holds that. Two may stack, a reading and
+// the posture a reader holds over it, and the second is still one of these.
+//
+// The interval below it belongs to this component rather than to the screen
+// writing the line: seventy-odd of these were spaced from one screen sheet, and
+// three screens had each spelled a correction to that margin of their own.
+export function PanelIntro({
+  children,
+  className,
+}: Readonly<{ children: ReactNode; className?: string }>) {
+  return (
+    <p className={["panel-intro", className ?? ""].filter(Boolean).join(" ")}>
+      {children}
+    </p>
+  );
+}
+
 // PanelRow is the hairline row every list inside a panel wants: content that
 // runs edge to edge rather than sitting in the body's padding, with a rule
 // against the row above it (none on the first). The rule itself is inset to the

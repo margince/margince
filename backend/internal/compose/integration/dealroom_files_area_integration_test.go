@@ -103,7 +103,7 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 	}
 	var doc AnyMap
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
-		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
+		"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
 	}, nil, &doc); status != http.StatusCreated {
 		t.Fatalf("add emailed file to the room = %d %v", status, doc)
 	}
@@ -166,7 +166,7 @@ func TestARepCannotShareATeammatesLimitedAudienceMailAttachment(t *testing.T) {
 		t.Fatalf("take the rep off the mail: %v", err)
 	}
 	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
-		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
+		"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("sharing a teammate's limited-audience attachment = %d, want 404", status)
 	}

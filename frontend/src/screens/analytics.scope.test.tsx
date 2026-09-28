@@ -9,7 +9,7 @@ afterEach(() => {
   cleanup();
 });
 
-const WORKSPACE = { kind: "workspace" as const, label: "Whole workspace" };
+const WORKSPACE = { kind: "workspace" as const, label: "Whole company" };
 const NORTH = { kind: "team" as const, id: "t-north", label: "North" };
 const SOUTH = { kind: "team" as const, id: "t-south", label: "South" };
 const MINE = { kind: "owner" as const, id: "u-me", label: "Lena Fischer" };

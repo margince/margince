@@ -104,8 +104,7 @@ func (s *Store) applySiteContactFieldsTx(ctx context.Context, tx pgx.Tx, company
 	// The contact is resolved from the company's employment edges, so the
 	// probe above says nothing about it: the company gate is a gate on a DIFFERENT
 	// table. Probe the record this function is about to write, the way every
-	// sibling fill does (ApplyDiscoveredFields, SaveResearchClaims,
-	// ApplyEnrichment, ApplyDeepReadTx).
+	// sibling fill does (SaveResearchClaims, ApplyEnrichment, ApplyDeepReadTx).
 	//
 	// Live, not the plain spelling: EnsureWritable returns nil the moment the
 	// rendered scope clause is empty, which is exactly what today's two callers

@@ -99,6 +99,11 @@ type EnsureCounterpartyInput struct {
 	// behaviour that existed before this field. The wrong direction to fail in
 	// is silently narrowing a record somebody expected to see.
 	OwnerScoped bool
+	// NarrowedBecause is why an owner-scoped ensure keeps the record the
+	// owner's: awaiting_verdict from the sink, a decision from the verdict path.
+	// Ignored unless OwnerScoped. The sink's value lands only on a row it
+	// creates, never over an incumbent's reason.
+	NarrowedBecause NarrowingReason
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -112,6 +117,13 @@ type EnsureCounterpartyResult struct {
 	// TriagePending instead.
 	CompanyID      *ids.CompanyID
 	DedupeRecorded bool
+	// DomainSplit is non-nil when the two domains this ensure asked about — the
+	// sender's own, and its base — are registered to two different companies.
+	// The contact was attached to the lower id, which is the answer this path
+	// has always given; the report is what says the choice was between two.
+	// Raising it is the caller's job, for the same reason the contact
+	// conflict's is: a failure to raise must never cost the message.
+	DomainSplit *DomainSplit
 	// NameFilled reports that this ensure completed an incumbent's split name
 	// that was previously unknown — the fill-only-if-empty path, never an
 	// overwrite. Counting it separately keeps "created a contact" honest.
@@ -232,6 +244,13 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		if err := promoteIfWorkspaceScoped(ctx, tx, match.ContactID, in.OwnerScoped); err != nil {
 			return err
 		}
+		if in.OwnerScoped && in.NarrowedBecause != "" && in.NarrowedBecause != NarrowedAwaitingVerdict {
+			// The sink usually minted this row before the decision arrived, so
+			// the decision's reason lands on the incumbent here.
+			if err := recordNarrowingTx(ctx, tx, match.ContactID, in.NarrowedBecause); err != nil {
+				return err
+			}
+		}
 		if quarantineSuspect(in.DisplayName, in.Domain) {
 			// The header carries an impersonation tell. A new record would be
 			// created quarantined for review; an EXISTING one has no such
@@ -242,27 +261,31 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		return fillMissingContactName(ctx, tx, match.ContactID, parsed, res)
 	}
 
+	acquired, acqErr := acquiredFromCaptureTx(ctx, tx, in.Replied, in.Email)
+	if acqErr != nil {
+		return acqErr
+	}
 	id, err := createContact(ctx, tx, match, ContactSpec{
 		FullName:    name,
 		FirstName:   nameColumn(parsed.First),
 		LastName:    nameColumn(parsed.Last),
 		OwnerID:     ownerFromUUID(&in.OwnerID),
 		Visibility:  visibilityFor(in.OwnerScoped),
+		Narrowing:   narrowingFor(in.OwnerScoped, in.NarrowedBecause),
 		Quarantined: quarantineSuspect(in.DisplayName, in.Domain),
 		Emails:      []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
-		// Only a REPLY is the contact initiating contact. Capture also mints a
-		// record for somebody we wrote to twice who never answered, and
-		// recording that as subject_initiated would put the vocabulary's
-		// strongest claim on a cold prospect's file — the exact confusion this
-		// table exists to prevent, manufactured by the table itself.
+		// Only a message FROM them is the contact initiating contact: a reply,
+		// or any captured mail they sent us (acquiredFromCaptureTx). Capture
+		// also mints a record for somebody we wrote to twice who never
+		// answered, and recording that as subject_initiated would put the
+		// vocabulary's strongest claim on a cold prospect's file.
 		//
 		// The TIME comes from the earliest message this counterparty is a party
 		// to, not from this write: the sink runs after the capture commits and
 		// the verdict path can run days later. See acquiredwhen.go.
-		Acquisition: acquisitionFromCapture(ctx, tx,
-			acquiredFromCapture(in.Replied), in.Email, in.ActivityID),
+		Acquisition: acquisitionFromCapture(ctx, tx, acquired, in.Email, in.ActivityID),
 	})
 	if err != nil {
 		return err
@@ -328,6 +351,7 @@ func (s *Store) ensureCompanyAndEmployment(ctx context.Context, tx pgx.Tx, in En
 	if err != nil {
 		return err
 	}
+	res.DomainSplit = match.DomainSplit
 	if match.Decision != DecisionExactCollision {
 		// No company yet. Whether one may be created is not this path's
 		// call any more.

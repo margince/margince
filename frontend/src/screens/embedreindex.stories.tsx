@@ -66,7 +66,7 @@ const renderNeedsReindex = () => {
 };
 
 // The ops banner's companion card: reindex_needed is true, an admin sees the
-// "Review & reindex" trigger alongside the always-available "Rebuild index".
+// "Review and reindex" trigger alongside the always-available "Rebuild index".
 //
 // Three rows of the settings row language, which is what to look at here: the
 // status reads as an ANSWER beside its naming, and the two verbs sit at the same
@@ -84,7 +84,7 @@ export const NeedsReindexDark: Story = {
 };
 
 // The v6 B2 rebuild affordance stays available even when nothing is pending —
-// only "Rebuild index" renders, never "Review & reindex".
+// only "Rebuild index" renders, never "Review and reindex".
 export const UpToDateRebuildAvailable: Story = {
   render: () => {
     installFetchStub({
@@ -139,7 +139,7 @@ export const PreviewDialogWithEstimate: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const reviewButton = await canvas.findByRole("button", {
-      name: "Review & reindex",
+      name: "Review and reindex",
     });
     await userEvent.click(reviewButton);
     // `screen`, not the canvas: ConfirmModal portals to document.body, so a
@@ -185,7 +185,7 @@ export const PreviewDialogEstimateUnavailable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Review & reindex" }),
+      await canvas.findByRole("button", { name: "Review and reindex" }),
     );
     // `screen`, not the canvas: ConfirmModal portals to document.body.
     await screen.findByText("the estimator could not be reached");
@@ -206,6 +206,29 @@ export const WithheldForNonOpsRole: Story = {
           ...meFixture({ roles: ["rep"] }),
         }),
       "GET /embeddings/reindex/status": () => jsonResponse(STATUS_NEEDED),
+    });
+    return (
+      <StoryProviders>
+        <EmbedReindexCard />
+      </StoryProviders>
+    );
+  },
+};
+
+// The grant is held but no embeddings model is bound (every `--ai-fake`
+// stack), so there is no index to report on. The card keeps its place and
+// names the fix, one sentence and its link in the card body, and the status
+// read that could only answer 501 is never issued.
+export const Unbound: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            allow: { embedding_reindex: ["read", "update"] },
+            settingsAvailability: { embedding_reindex: false },
+          }),
+        ),
     });
     return (
       <StoryProviders>

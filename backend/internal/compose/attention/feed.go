@@ -128,6 +128,10 @@ type Service struct {
 	// walks is OPTIONAL like pins above it: nil means this feed freezes no
 	// walk, and every page is an offset into a freshly ranked day.
 	walks Walks
+	// snapshots composes this feed's ~40 lane reads into ONE transaction, and
+	// is OPTIONAL for the reason snapshot.go's inSnapshot gives: unbound is
+	// what this feed did before, which is what a unit test wants.
+	snapshots Snapshots
 	// walk is the frozen walk THIS request resumes, resolved before the day is
 	// read and carried on a per-request copy. Nil on a first page.
 	walk *worklistsnap.Snapshot
@@ -197,13 +201,12 @@ type Service struct {
 	// queue reports as an absent source rather than as an empty one.
 	leads LeadResponses
 	// overdueLoad is the team board's COUNTING reader for tasks, beside the
-	// bounded listing reader the ranked queue uses. Optional, and its absence
-	// draws no column rather than a column of zeros.
+	// bounded listing reader the ranked queue uses. Required BY THE BOARD —
+	// teamLoad refuses without it — and read by nothing else, so a feed
+	// assembled for the ranked queue alone leaves it nil.
 	overdueLoad OverdueLoad
-	// promiseLoad is the board's counting reader for commitments due, optional
-	// on the same terms: absent draws no column, because a column of zeros
-	// reads as a team owing nothing rather than as a question this installation
-	// cannot answer.
+	// promiseLoad is the board's counting reader for commitments due, required
+	// on the same terms.
 	promiseLoad PromiseLoad
 	// decisionDepth is how many staged decisions a read takes. The lane feed's
 	// page is a prefetch for a surface that answers one at a time; the ranked

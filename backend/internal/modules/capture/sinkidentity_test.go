@@ -63,6 +63,20 @@ func TestAMeetingRecordIsIdentifiedByItsSeriesAndOccurrence(t *testing.T) {
 	}
 }
 
+// An all-day occurrence is keyed by its DATE, not by the noon it is stored at.
+// An importer states the same meeting as the date's midnight; keyed as instants
+// the two never met, and every all-day event HubSpot logged landed twice.
+func TestAnAllDayMeetingIsIdentifiedByItsDate(t *testing.T) {
+	noon := time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)
+	_, key := identitySink().identityOfRecord(connector.NormalizedRecord{
+		NaturalKey:        connector.NaturalKey{SourceSystem: "gcal", SourceID: "goog-evt-1"},
+		CrossDoorIdentity: connector.CrossDoorIdentity{Series: "series-42@google.com", Occurrence: noon, AllDay: true},
+	})
+	if key != "series-42@google.com/2026-07-19" {
+		t.Fatalf("an all-day meeting keyed as %q, want the series and the date", key)
+	}
+}
+
 // A series with no occurrence identifies NOTHING.
 //
 // A recurring event shares one UID across every meeting in it, so a key on the

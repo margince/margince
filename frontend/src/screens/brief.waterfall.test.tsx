@@ -59,12 +59,29 @@ describe("the frozen outlook", () => {
     expect(screen.queryByText(en["brief.weekly.outlook.landing"])).toBeNull();
   });
 
-  it("labels best case as inclusive of commit", () => {
+  // The figure includes commit, so a reader adding the two would double-count
+  // the overlap. The basis line is what stops that, and it sits under the
+  // reading rather than inside its name: the label names what is measured.
+  it("says under best case that the figure already contains commit", () => {
     show([horizon()]);
 
-    // The figure includes commit, so a reader adding the two would double-count
-    // the overlap. The label is what stops that.
-    expect(screen.getByText(/best case \(incl\. commit\)/i)).toBeTruthy();
+    expect(screen.getByText(en["brief.weekly.outlook.bestCase"])).toBeTruthy();
+    expect(
+      screen.getByText(en["brief.weekly.outlook.bestCaseDetail"]),
+    ).toBeTruthy();
+  });
+
+  // A STAT CARD NEVER SHOWS A BARE EM DASH. A horizon frozen with no base
+  // currency cannot be said as money at all, and the slot says which absence
+  // that is rather than drawing a dash the reader has to interpret.
+  it("names an unforecast period in words rather than an em dash", () => {
+    show([horizon({ base_currency: "" })]);
+
+    const figures = [...document.querySelectorAll(".stat-card-value")].map(
+      (value) => value.textContent,
+    );
+    expect(figures).toHaveLength(5);
+    expect(new Set(figures)).toEqual(new Set([en["format.notForecast"]]));
   });
 
   it("says which forward measure the landing was read under", () => {

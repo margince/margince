@@ -8,7 +8,7 @@ import type { components } from "../api/schema";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -252,7 +252,7 @@ export function LinkedInImportCard() {
             happens to it — was a wall of prose before the card's first row, and
             both halves of it belong to the import row rather than to the card:
             they say what that one setting does. */}
-        <p className="settings-panel-sub">{t("linkedinImport.sub")}</p>
+        <PanelIntro>{t("linkedinImport.sub")}</PanelIntro>
         <SettingList>
           <LinkedInProfileRow />
           {/* The file is NAMED on the left, which is the row language doing the

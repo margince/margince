@@ -41,18 +41,27 @@ const VIEW_PARAM = "view";
 const SCOPE_PARAM = "scope";
 
 /**
+ * Which views have a team surface for this reader, each on its own server rule.
+ *
+ * Morning's team board is the team's live work, offered where the worklist's
+ * `scope_options` carries `team`. Weekly's frozen team week is a lead's verdict
+ * on named colleagues, offered where the worklist's `team_week` is not `none`.
+ * A read-only seat has the first and not the second.
+ */
+export type TeamOffers = Readonly<Record<BriefView, boolean>>;
+
+/**
  * Which scopes this view can actually answer.
  *
- * BOTH views have a team surface today — the team board on Morning, the frozen
- * team week on Weekly — but only for a reader whose row scope reaches a team,
- * which is `offered`. A rep gets one scope and therefore no dial at all: a
- * control with one option asks a reader to confirm what they cannot change.
+ * A reader with no team surface on a view gets one scope there and therefore no
+ * dial at all: a control with one option asks a reader to confirm what they
+ * cannot change.
  */
 export function scopesFor(
-  _view: BriefView,
-  offered: boolean,
+  view: BriefView,
+  offered: TeamOffers,
 ): readonly BriefScope[] {
-  return offered ? SCOPES : ["mine"];
+  return offered[view] ? SCOPES : ["mine"];
 }
 
 /**
@@ -64,7 +73,10 @@ export function scopesFor(
  * those should produce a broken page — they should produce the nearest page
  * this reader is entitled to.
  */
-export function addressFrom(params: UrlParams, offered: boolean): BriefAddress {
+export function addressFrom(
+  params: UrlParams,
+  offered: TeamOffers,
+): BriefAddress {
   const view = asView(params.get(VIEW_PARAM));
   const asked = asScope(params.get(SCOPE_PARAM));
   // NARROWED BY WHAT THIS READER MAY SEE, not only by the vocabulary. A link to

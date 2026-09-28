@@ -106,7 +106,7 @@ func SetupSearch(t *testing.T) *SearchEnv {
 	}
 	// Registered here, before the test adds any cleanup of its own, so it runs
 	// last and sees a package that has genuinely stopped.
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
 	e.Store = search.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS)))
 	return e

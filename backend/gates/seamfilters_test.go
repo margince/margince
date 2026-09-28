@@ -74,7 +74,10 @@ var filterSetModules = []string{
 // whose answer would be a disclosure an agent should not be handed by
 // enumeration. The escape exists so that case can be stated rather than left as
 // a silence indistinguishable from the gap this gate closes.
-var unofferedSeamFilters = gatekit.Waive(map[string]string{})
+var unofferedSeamFilters = gatekit.Waive(map[string]string{
+	"company.id": "a screen's batch read of companies it already holds ids for; an agent reads a " +
+		"company by id through read_record, and a second route to the same answer is prompt text for nothing",
+})
 
 // deferredSeamFilters are the gaps this gate found on the day it landed: a
 // filter both halves carry that the seam does not name, and that SHOULD be

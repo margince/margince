@@ -71,7 +71,7 @@ func TestListMembersEvaluatesADynamicSegmentOnTheCallersOnlyConnection(t *testin
 	lists := collections.NewStore(harnessDB(pool, e.WS)).WithFieldCatalog(svc)
 
 	field, err := svc.Create(ctx, customfields.FieldSpec{
-		Object: "contact", Label: "Segment Budget", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "Segment Budget", Type: customfields.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the field: %v", err)
@@ -81,7 +81,7 @@ func TestListMembersEvaluatesADynamicSegmentOnTheCallersOnlyConnection(t *testin
 	}
 	column := *field.ColumnName
 
-	created, err := contactsStore.CreateContact(ctx, contacts.CreateContactInput{FullName: "Match", Source: "ui"})
+	created, err := contactsStore.CreateContact(ctx, contacts.CreateContactInput{FullName: "Match", Source: "manual"})
 	if err != nil {
 		t.Fatalf("creating the contact: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestSavedViewValidatesItsFilterOnTheCallersOnlyConnection(t *testing.T) {
 	// at all: a core-field filter resolves from the static vocabulary, the
 	// second acquisition never occurs, and the case would pass proving nothing.
 	field, err := svc.Create(ctx, customfields.FieldSpec{
-		Object: "contact", Label: "View Budget", Type: customfields.TypeText, Source: "ui",
+		Object: "contact", Label: "View Budget", Type: customfields.TypeText, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("defining the field: %v", err)

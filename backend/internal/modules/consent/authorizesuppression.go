@@ -12,45 +12,102 @@ package consent
 
 import (
 	"slices"
+	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// applySuppression narrows a decision by a live suppression, against the
-// category the record actually resolved to.
+// applySuppression narrows a decision by the live suppressions on a
+// recipient, against the category the record actually resolved to and the
+// purpose (if any) the send itself resolved to.
 //
 // Called AFTER resolution, which is the whole point: liveSuppression can say a
-// row exists, but only the resolved category says whether it binds THIS
-// message.
-func applySuppression(d commsauthz.Decision, kinds []string) commsauthz.Decision {
-	if len(kinds) == 0 {
+// row exists, but only the resolved category — and, for a narrow row, the
+// resolved purpose — says whether it binds THIS message.
+func applySuppression(d commsauthz.Decision, stops []liveStop, sendPurpose *ids.UUID) commsauthz.Decision {
+	if len(stops) == 0 {
 		return d
 	}
-	// EVERY kind is asked, and the first that binds refuses. A contact may
-	// carry several at once, and since this change they no longer agree: an
-	// objection binds only marketing while a hard bounce binds everything, so
-	// picking one and asking it alone lets the others through.
+	// EVERY stop is asked, and the first that binds refuses. A contact may
+	// carry several at once, and since reach became category- and
+	// purpose-dependent they no longer agree: an objection binds only
+	// marketing while a hard bounce binds everything, so picking one and
+	// asking it alone lets the others through.
 	//
 	// The row records the binding kind when one binds, and otherwise the first
 	// that stood — a message that went out while a suppression stood is exactly
 	// what a later reader needs to see, with the verdict beside it saying the
 	// engine knew and let it through.
-	for _, kind := range kinds {
-		if suppressionBinds(kind, d.Resolved) {
+	for _, s := range stops {
+		if suppressionBinds(s.Kind, d.Resolved, s.PurposeID, sendPurpose) {
 			d.Verdict = commsauthz.VerdictDeny
-			d.ReasonCode = kind
-			d.Suppression = kind
+			d.ReasonCode = s.Kind
+			d.Suppression = s.Kind
 			return d
 		}
 	}
-	// None of them binds this category, so the send stands and the row records
-	// that one stood anyway. Sorted for the record's sake only: an unordered
-	// read would make this field depend on the planner, and the same message
-	// would describe itself differently on two runs.
-	sorted := slices.Clone(kinds)
-	slices.Sort(sorted)
-	d.Suppression = sorted[0]
+	// None of them binds this send, so it stands and the row records that a
+	// stop stood anyway — but only a BROAD one, because only a broad one's
+	// non-binding is explicable from what the row stores.
+	//
+	// communication_decision keeps kind and resolved_category and NO purpose.
+	// A broad objection recorded beside an allowed invoice explains itself:
+	// the two columns say marketing was refused and this was not marketing.
+	// A NARROW objection recorded beside an allowed marketing send does not —
+	// the columns read "we knew they objected to marketing and sent marketing
+	// anyway", and the purpose that makes it correct is nowhere in the row.
+	// That combination was impossible before purpose_id existed, because an
+	// objection always bound a marketing send; it became the ordinary outcome
+	// the moment a stop could name one list. privacy/sarcommunication.go hands
+	// these columns to the subject in their Art. 15 export, so the unexplained
+	// row is not an internal curiosity — it is a self-contradiction shown to
+	// the subject it is about.
+	//
+	// So a narrow row is left off this field rather than misdescribed. It is
+	// not lost: the suppression table still holds it, and a review opened from
+	// this decision reads it through Decision.PurposeID.
+	//
+	// Sorted for the record's sake only: an unordered read would make this
+	// field depend on the planner, and the same message would describe itself
+	// differently on two runs.
+	broad := make([]liveStop, 0, len(stops))
+	for _, s := range stops {
+		if s.PurposeID == nil {
+			broad = append(broad, s)
+		}
+	}
+	if len(broad) == 0 {
+		return d
+	}
+	slices.SortFunc(broad, func(a, b liveStop) int {
+		return strings.Compare(a.Kind, b.Kind)
+	})
+	d.Suppression = broad[0].Kind
 	return d
+}
+
+// suppressionBindsAny reports whether ANY live stop binds this category and
+// this send's purpose.
+//
+// The same question applySuppression asks, asked earlier: the basis writers run
+// before the decision is assembled, and what they need to know is not whether
+// the subject carries a stop but whether one reaches THIS message. A contact
+// who objected to marketing and is being sent an invoice carries a live stop
+// that binds nothing here, and the send is lawful — so the ground it relied on
+// belongs on the record like any other.
+//
+// Built from suppressionBinds rather than repeating its cases, so the write and
+// the refusal cannot come to disagree about what a stop covers — including
+// about the send's purpose, which a narrow row is compared against here exactly
+// as applySuppression compares it later.
+func suppressionBindsAny(stops []liveStop, category commsauthz.Category, sendPurpose *ids.UUID) bool {
+	for _, s := range stops {
+		if suppressionBinds(s.Kind, category, s.PurposeID, sendPurpose) {
+			return true
+		}
+	}
+	return false
 }
 
 // suppressionBinds reports whether one kind of suppression stops one category.
@@ -91,30 +148,23 @@ func applySuppression(d commsauthz.Decision, kinds []string) commsauthz.Decision
 //     rather than pick a narrower rule — the direction liveSuppression,
 //     blockedReasonCode and the validators all already fail in.
 //
-// suppressionBindsAny reports whether ANY live stop binds this category.
-//
-// The same question applySuppression asks, asked earlier: the basis writers run
-// before the decision is assembled, and what they need to know is not whether
-// the subject carries a stop but whether one reaches THIS message. A contact
-// who objected to marketing and is being sent an invoice carries a live stop
-// that binds nothing here, and the send is lawful — so the ground it relied on
-// belongs on the record like any other.
-//
-// Built from suppressionBinds rather than repeating its cases, so the write and
-// the refusal cannot come to disagree about what a stop covers.
-func suppressionBindsAny(kinds []string, category commsauthz.Category) bool {
-	for _, kind := range kinds {
-		if suppressionBinds(kind, category) {
-			return true
-		}
-	}
-	return false
-}
-
-func suppressionBinds(kind string, category commsauthz.Category) bool {
+// THE PURPOSE BOUNDARY, added for communication_suppression.purpose_id: a
+// broad row (rowPurpose nil) binds every marketing send exactly as before that
+// column existed. A NARROW row binds ONLY a send whose own resolved purpose
+// (sendPurpose) equals it — two marketing purposes are two different pieces of
+// direct marketing, and an objection to one says nothing about the other. A
+// send with NO resolved purpose (sendPurpose nil — the evidence arms, which
+// never consult a purpose key at all) is deliberately NOT bound by a narrow
+// row: nothing established that this particular message belongs to the
+// purpose the row names, and guessing that it does would refuse mail on a
+// coincidence rather than a match. Only ReasonObjection ever carries a
+// non-nil rowPurpose today; every other kind's row is always broad, so the
+// comparison never narrows them.
+func suppressionBinds(kind string, category commsauthz.Category, rowPurpose, sendPurpose *ids.UUID) bool {
 	switch kind {
 	case commsauthz.ReasonObjection:
-		return category == commsauthz.CategoryMarketing
+		return category == commsauthz.CategoryMarketing &&
+			(rowPurpose == nil || (sendPurpose != nil && *rowPurpose == *sendPurpose))
 	case commsauthz.ReasonRestricted, commsauthz.ReasonSubjectRequest:
 		return !survivesARestriction(category)
 	default:

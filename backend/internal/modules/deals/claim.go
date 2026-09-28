@@ -46,6 +46,9 @@ func (s *Store) ClaimDeal(ctx context.Context, id ids.DealID, ifVersion *int64) 
 		if !claim.Changed {
 			return nil
 		}
+		if err := s.followOwner(ctx, tx, id.UUID, claim.Before, &actor.UserID); err != nil {
+			return err
+		}
 		return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealUpdated{
 			ChangedFields: map[string]any{"owner_id": actor.UserID},
 		})

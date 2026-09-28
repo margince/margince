@@ -52,11 +52,15 @@ type grantRequirement struct {
 }
 
 // kindLinkedInMatch is the staged kind for "this imported connection is this
-// contact". This module makes three separate statements about it — the grants
-// deciding it needs, that only the member it was staged for may decide it, and
-// that it declines the version pin — and a typo across them would leave the
-// kind half-governed with nothing saying so. Compose owns the registration
-// spelling; the compose-side waiver fitness tests bind the two together.
+// contact". This module makes two separate statements about it — the grants
+// deciding it needs, and that it declines the version pin — and a typo across
+// them would leave the kind half-governed with nothing saying so. Compose owns
+// the registration spelling; the compose-side waiver fitness tests bind the two
+// together.
+//
+// It is NOT narrowed to one seat. The proposal's subject is a contact the
+// decider can already read, so who may decide it is the inbox's ordinary rule:
+// the grant below, and visibility of that contact.
 const kindLinkedInMatch = "linkedin_match"
 
 // kindHeldDraft is an automation-composed reply held for the rep it was written
@@ -182,8 +186,9 @@ var decisionGrants = map[string][]grantRequirement{
 	"send_company_email": {{objectActivity, principal.ActionCreate}},
 	// send_message is the same effect on a messaging channel: an activity
 	// write, with the consent gate running in the handler whoever approved it.
-	"send_message": {{objectActivity, principal.ActionCreate}},
-	"book_meeting": {{objectActivity, principal.ActionCreate}},
+	"send_message":   {{objectActivity, principal.ActionCreate}},
+	"book_meeting":   {{objectActivity, principal.ActionCreate}},
+	"invite_meeting": {{objectActivity, principal.ActionCreate}},
 	// A relink moves an activity onto another record, which the store gates on
 	// activity.UPDATE — an association change, not a re-capture. It reaches a
 	// human at all only for one destination: filing under a PROJECT classifies
@@ -209,20 +214,16 @@ var decisionGrants = map[string][]grantRequirement{
 	// A rate refresh proposes an effective-dated row on a workspace-shared price
 	// sheet, and deciding it requires BOTH write verbs on that sheet.
 	//
-	// The release is an upsert: it inserts a new (currency, day) or replaces an
-	// existing rate, and which one it will be is not knowable when the decision
-	// is made — the sheet can change between the decision and the apply. The
-	// apply also runs as the system principal, so the store's in-transaction
-	// check on the specific verb never fires here; this is the only grant
-	// standing between an approver and the row the release replaces.
+	// The release is an upsert and which half it will be is not knowable when the
+	// decision is made. The apply runs as the system principal, so the store's
+	// in-transaction check never fires here; this is the only grant standing
+	// between an approver and the row the release replaces.
 	//
-	// Either verb alone would authorize the operation it does not name: a
-	// create-only approver could release an overwrite, precisely the
-	// substitution the store's second check exists to refuse. Requiring both is
-	// the conservative reading — approve an upsert only if you could have
-	// performed either half yourself. Every seeded role holding one holds the
-	// other (writeNoDelete for admin and ops, the zero grant for everyone
-	// else), so this constrains edited roles only, and constrains them right.
+	// Either verb alone would authorize the operation it does not name — a
+	// create-only approver releasing an overwrite. Requiring both is the
+	// conservative reading: approve an upsert only if you could have performed
+	// either half. Every seeded role holding one holds the other, so this
+	// constrains edited roles only.
 	"fx_rate_proposal": {
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},

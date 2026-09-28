@@ -16,12 +16,13 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { ErrorLine } from "../design-system/errorline";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
 import { StageCreate, StageRow, str } from "./settings.stages";
@@ -112,15 +113,9 @@ function PipelineRetirement({
         >
           {t("pipeline.restore")}
         </Button>
-        {restore.isError && (
-          // role="alert" so a refused restore is announced, the same treatment
-          // ArchiveAction gives a refused retire. Without it the button simply
-          // comes back and the admin cannot tell a failure from a success —
-          // and the row they are looking at still says Retired either way.
-          <span role="alert" style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(restore.error, t)}
-          </span>
-        )}
+        {/* Announced as ArchiveAction announces a refused retire: the row
+            still says Retired, so silence reads exactly like success. */}
+        <ErrorLine inline error={restore.error} />
       </>
     );
   }
@@ -346,14 +341,12 @@ export function PipelinesCard() {
       }
     >
       <PanelBody>
-        <p className="settings-panel-sub">{t("settings.pipelinesSub")}</p>
+        <PanelIntro>{t("settings.pipelinesSub")}</PanelIntro>
         {/* Said once, at the top, rather than annotating each absent control —
             the rule in design-system/README.md. A reader holding one of the two
             verbs can see for themselves which controls they got. */}
         {!canCreate && !canEdit && (
-          <p className="settings-panel-sub">
-            {t("settings.pipelinesReadOnly")}
-          </p>
+          <PanelIntro>{t("settings.pipelinesReadOnly")}</PanelIntro>
         )}
         <SettingList>
           <QueryGate

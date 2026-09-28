@@ -80,7 +80,7 @@ func signalSummaryCopyFor(lang textlang.Lang) signalSummaryCopy {
 func baseLanguageForSummary(ctx context.Context, tx pgx.Tx) textlang.Lang {
 	lang, err := identity.BaseLanguageOf(ctx, tx)
 	if err != nil {
-		slog.WarnContext(ctx, "the installation's base language could not be read; this signal summary is English",
+		slog.WarnContext(ctx, "the installation's base language could not be read; this summary is English",
 			"reason", err)
 		return textlang.English
 	}

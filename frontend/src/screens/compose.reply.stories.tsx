@@ -200,7 +200,7 @@ export const PreparedReply: Story = {
             entityType="deal"
             entityId="d-1"
             prepared={{
-              label: "Draft the reply",
+              label: "Draft reply",
               intent: "reply to their last message: waiting 13 days",
             }}
           />

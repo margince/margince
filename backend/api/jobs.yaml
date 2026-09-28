@@ -556,10 +556,27 @@ kinds:
       Daily, because the check is what the Forecast tab's readiness verdict,
       coverage line and findings are all read from, and a check that never runs
       leaves every one of them with nothing to say. Run at boot like the other
-      passes here, and for a sharper reason than most: until the first run
-      exists the read answers 404, which the tab renders as a failed panel — so
-      the gap between an install starting and its first check is time a contact
-      spends looking at what reads like a broken page.
+      passes here — but a workspace nobody has STARTED is skipped, however often
+      this fires: the first pass over a backlog raises every exception at once,
+      and that queue is the feature's first impression. Until somebody starts it
+      the read answers 404, which the tab renders as the preview and the start
+      button rather than as a failed panel.
+
+  assurance_run:
+    role: worker
+    go_type: AssuranceRunArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    args:
+      Workspace: id
+      RequestedBy: id
+    reason: >-
+      The same pass assurance_sweep runs, on one workspace, because a human
+      asked: either to start the cycle or to confirm a record they have just
+      fixed before a call. Same five minutes for the same work — one walk of the
+      eligible deals and one bundling pass. Uniqueness on the workspace makes a
+      second press while one is in flight a refusal rather than a second walk.
 
 
   close_date_sweep:
@@ -608,6 +625,13 @@ kinds:
       fixed months ago. Cheap: one grouped read over an index on decided_at,
       and on an installation whose authorities agree it finds nothing and says
       so once.
+    fault:
+      nil_after_logging: >-
+        the warn line is this pass's FINDING, not a failure: it is the mail
+        enforcing the engine would have stopped, logged at warn because that
+        is what an operator weighs before enforcing. A pass that read the
+        disagreement has succeeded whatever it found; a pass that could not
+        read it returns that through jobs.Fault.
 
   comms_scheduled_send_recovery:
     role: worker
@@ -813,6 +837,24 @@ kinds:
       so an installation has a first snapshot the day it starts rather than the
       day after — with nothing to difference, movement is empty either way, and
       the sooner the first one exists the sooner the second is worth taking.
+
+
+  risk_verdict_sweep:
+    role: worker
+    fleet: true
+    go_type: RiskVerdictSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      The first successful pass after local midnight records the set of
+      deals the day starts with, and every later pass that day finds the day
+      taken and writes nothing — the figure's denominator is that morning
+      set, not a sample. Hourly only so a pass missed early in the day is
+      taken by the next one rather than tomorrow's. Five minutes for the
+      forecast snapshot's reason: two bounded deal reads and one pricing pass
+      per workspace.
 
 
   follow_up_reconcile:
@@ -1145,6 +1187,22 @@ kinds:
       without a second migration; a narrower one would have to be widened by
       changing history nobody kept.
 
+  mail_draft_retention:
+    role: worker
+    go_type: MailDraftRetentionArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because each pass is capped (mailDraftRetentionBatch) and the
+      cadence is what drains a backlog deeper than one batch — the shape
+      stored_object_reap takes. It is the only way out for a draft whose
+      anchor was deleted or fell out of its author's scope — reading one
+      answers not found, so nobody can find it to discard it — and a draft
+      holds a subject's address and the words written to them.
+
   idempotency_retention:
     role: worker
     fleet: true
@@ -1156,7 +1214,9 @@ kinds:
     reason: >-
       Hourly rather than daily: the rows hold verbatim record snapshots and the
       replay window they serve is only 24h, so a daily pass would leave a day of
-      expired personal data sitting past its purpose.
+      expired personal data sitting past its purpose. The same pass deletes
+      lapsed bulk-change confirmations, which name who previewed and live 15
+      minutes.
 
 
   stored_object_reap:
@@ -1257,7 +1317,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 6h11m40s
+      value: 6h45m0s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
@@ -1720,3 +1780,16 @@ kinds:
     opts_owner: args
     cadence: {operator: WebhookRetry.Interval, schedule_when_positive: WebhookRetry.Interval}
     registration: {when: [WebhookRetry.Deliverer], absent: registers_nothing}
+
+  meeting_delivery:
+    role: worker
+    registration: {when: [GmailRegistry], absent: registers_nothing}
+    go_type: MeetingDeliveryArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 15s
+    reason: >-
+      Calendar commands survive request disconnects and worker restarts. A bounded
+      pass retries stable provider identities while reservations remain held.

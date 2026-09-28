@@ -9,6 +9,7 @@ import {
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
 import { BusyMark, Textarea, TextInput } from "./atoms";
+import { ErrorLine } from "./errorline";
 import "./inlinechoice.css";
 
 // Free-text editing follows the same save/refusal contract as choices.
@@ -290,9 +291,9 @@ export function InlineText({
       />
       {saving && <BusyMark />}
       {failure && (
-        <span id={errorId} role="alert" className="form-error">
+        <ErrorLine inline id={errorId}>
           {failure}
-        </span>
+        </ErrorLine>
       )}
     </span>
   );

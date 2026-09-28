@@ -21,6 +21,7 @@ import type { ReactNode } from "react";
 import { useId } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
+import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { useTooltip } from "../design-system/tooltip";
@@ -28,6 +29,7 @@ import { VisibilityLine } from "../design-system/visibility";
 import { useT } from "../i18n";
 import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import "./recordaccess.css";
+import { ErrorLine } from "../design-system/errorline";
 
 // The shape both records share, which is all this component reads. Spelled
 // structurally rather than as `Contact | Company`: the two differ in every
@@ -176,15 +178,24 @@ export function RecordAccess({
           />
         )}
       </AccessTip>
+      {/* The full answer (every colleague, and why) lives on the share
+          screen; the header keeps only the mark and its toggle. */}
+      <Button
+        variant="link"
+        className="record-access-action"
+        onClick={() => navigate({ screen: "share", id: kind, id2: id })}
+      >
+        {t("recordAccess.whoHasAccess")}
+      </Button>
       <span id={descriptionId} className="sr-only">
         {description}
       </span>
       {setVisibility.isError && (
-        <span role="alert" className="form-error">
+        <ErrorLine inline>
           {isVersionSkewOf(setVisibility.error)
             ? t("edit.versionSkew")
             : problemMessageOf(setVisibility.error, t)}
-        </span>
+        </ErrorLine>
       )}
     </section>
   );

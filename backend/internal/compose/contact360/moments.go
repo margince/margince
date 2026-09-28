@@ -266,7 +266,7 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("Prepare for %s", label),
-		WhyNow:              "Preparation is worth something before the meeting and nothing after it.",
+		WhyNow:              "Prepare before the meeting, not after.",
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		FreshnessAt:         &meeting.StartsAt,
@@ -332,9 +332,9 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 		//
 		// The interval itself is real; only its owner was wrong. It is the age
 		// of OUR last message, which is the fact this rung fires on anyway.
-		Headline: fmt.Sprintf("They wrote — we last wrote %d days before", sinceWeWrote),
-		WhyNow: "They are waiting on us, and our last message to them is older than the re-engagement " +
-			"rule allows. The window where a reply is expected is now.",
+		Headline: fmt.Sprintf("They wrote back; your last message was %d days earlier", sinceWeWrote),
+		WhyNow: "They're waiting on a reply, and your last message to them is older than the " +
+			"re-engagement rule allows.",
 		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:    evidence,
 		FreshnessAt: &inbound,
@@ -379,8 +379,8 @@ func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("No reply for %d days", quietFor),
-		WhyNow: fmt.Sprintf("Rule: outbound with no reply after %d days. Your follow-up was sent %d days ago.",
-			goneQuietAfterDays, waiting),
+		WhyNow: fmt.Sprintf("Your last message went out %d days ago. The rule flags no reply after %d days.",
+			waiting, goneQuietAfterDays),
 		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:    evidence,
 		FreshnessAt: &outbound,
@@ -413,7 +413,7 @@ func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 // that — a screen for asking one of them — so the reason says that, and not
 // that Margince cannot tell who they are. It sits beside a card listing them.
 func askColleague() crmcontracts.ContactMomentAction {
-	reason := "Sending a colleague a request for context is not available yet"
+	reason := "Asking a colleague for context isn't available yet"
 	return crmcontracts.ContactMomentAction{
 		Kind:          crmcontracts.ContactMomentActionKindAskColleague,
 		Label:         "Ask for context",
@@ -444,7 +444,7 @@ func logInteraction() crmcontracts.ContactMomentAction {
 // be told what to do, and "nothing" is a legitimate answer that an empty card
 // fails to give.
 func nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
-	why := "No meeting is close, nothing is owed, and nobody is waiting on a reply."
+	why := "No meeting coming up, nothing owed, nobody waiting on a reply."
 	// Every rung above this one either fired or found nothing, and "found
 	// nothing" includes "was not allowed to look". Saying nobody is waiting on
 	// a reply when the timeline was withheld states a fact about data this
@@ -455,7 +455,7 @@ func nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Co
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNextSteps,
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedClaims,
 		crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedCommercial) {
-		why = "Nothing needs you in what this record shows you. Parts of it are not yours to see, so this is not the whole picture."
+		why = "Nothing needs you in what you can see. Parts of this record are hidden from you."
 	}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:nothing_needed",

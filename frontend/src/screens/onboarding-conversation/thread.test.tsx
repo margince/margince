@@ -99,7 +99,9 @@ describe("word-by-word reveal", () => {
     // The animated copy is presentation only; the coherent sentence is the
     // visually hidden source next to it.
     expect(reveal?.getAttribute("aria-hidden")).toBe("true");
-    expect(screen.getByText(/Reading gradion\.com now/)).toBeTruthy();
+    expect(
+      screen.getByText(/Reading gradion\.com\. I will report/),
+    ).toBeTruthy();
     // The restored entry stays plain.
     const bubbles = container.querySelectorAll(".ob-conv-narration");
     expect(bubbles[0]?.querySelector(".ob-conv-reveal")).toBeNull();
@@ -181,7 +183,7 @@ describe("question card interactivity", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
-        name: "Skip this - I will set it myself",
+        name: "Skip. I will set it myself.",
       }),
     ).not.toBeInTheDocument();
     expect(onAnswer).not.toHaveBeenCalled();
@@ -249,14 +251,12 @@ describe("question card interactivity", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "Skip this - I will set it myself",
+        name: "Skip. I will set it myself.",
       }),
     ).not.toBeInTheDocument();
     // The dismissal is still an honest record: it says what happened, as
     // the ordinary user turn it always was.
-    expect(
-      screen.getByText("Skip this - I will set it myself"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Skip. I will set it myself.")).toBeInTheDocument();
   });
 });
 

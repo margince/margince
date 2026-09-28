@@ -56,17 +56,17 @@ C3="$(commit HEAD)"
 
 # 1. The first publish, with no tag on the remote at all.
 bash "$MOVE" "$TAG" "$C1" origin >/dev/null
-[ "$(tagged)" = "$C1" ] || fail "the first publish did not record its revision"
+[[ "$(tagged)" = "$C1" ]] || fail "the first publish did not record its revision"
 printf 'ok    the first publish records its revision against no tag\n'
 
 # 2. A later publish moves it forward.
 bash "$MOVE" "$TAG" "$C3" origin >/dev/null
-[ "$(tagged)" = "$C3" ] || fail "a descendant did not move the tag forward"
+[[ "$(tagged)" = "$C3" ]] || fail "a descendant did not move the tag forward"
 printf 'ok    a descendant moves it forward\n'
 
 # 3. THE DEFECT: an older release recording itself after a newer one already did.
 bash "$MOVE" "$TAG" "$C2" origin >/dev/null
-if [ "$(tagged)" != "$C3" ]; then
+if [[ "$(tagged)" != "$C3" ]]; then
 	fail "an ancestor moved the tag BACKWARD — every later patch is then cut from a base ahead of what consumers have"
 else
 	printf 'ok    an ancestor leaves the newer revision alone\n'
@@ -75,7 +75,7 @@ fi
 # 4. Re-recording the revision already there is a no-op and not a failure: a
 #    re-run of a succeeded job must not fail the lane.
 bash "$MOVE" "$TAG" "$C3" origin >/dev/null
-[ "$(tagged)" = "$C3" ] || fail "re-recording the same revision disturbed the tag"
+[[ "$(tagged)" = "$C3" ]] || fail "re-recording the same revision disturbed the tag"
 printf 'ok    re-recording the same revision changes nothing\n'
 
 # 5. A revision this checkout does not have is refused rather than guessed at.
@@ -97,7 +97,7 @@ else
 	printf 'ok    a tag this checkout cannot order against is refused\n'
 fi
 
-if [ "$FAILURES" -ne 0 ]; then
+if [[ "$FAILURES" -ne 0 ]]; then
 	printf 'publish-released-tag: %d case(s) failed\n' "$FAILURES" >&2
 	exit 1
 fi

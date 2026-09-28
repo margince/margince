@@ -176,47 +176,66 @@ func (s *Store) BundleException(ctx context.Context, in BundleInput) (applied bo
 		return false, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// THE SUBJECT IS READ OFF THE EXCEPTION, never taken from the caller.
-		//
-		// It is what the exclusion constraint compares, so a caller-supplied
-		// subject would let two findings about ONE deal arrive under two
-		// spellings and take two tasks — the exact duplication this table
-		// exists to prevent, passing every constraint on the way in.
-		//
-		// The cycle is locked FOR SHARE in the same statement. Reading
-		// `closed_at IS NULL` in the snapshot only proves the cycle was open
-		// when this transaction started: CloseCycle could commit in between and
-		// the insert would still land, filing a finding under a pass that had
-		// ended. The share lock makes CloseCycle's UPDATE wait for this
-		// transaction, so the predicate that admitted the row is still true
-		// when it commits.
-		tag, err := tx.Exec(ctx, `
-			WITH open_cycle AS (
-			    SELECT c.id FROM assurance_cycle c
-			     WHERE c.id = $1 AND c.closed_at IS NULL
-			     FOR SHARE
-			)
-			INSERT INTO assurance_task_item
-			    (cycle_id, exception_id, task_activity_id, subject_kind, subject_id)
-			SELECT open_cycle.id, e.id, $3, e.subject_kind, e.subject_id
-			  FROM open_cycle, assurance_exception e
-			 WHERE e.id = $2
-			ON CONFLICT (exception_id, cycle_id) DO NOTHING`,
-			in.CycleID, in.ExceptionID, in.TaskActivityID)
-		if err != nil {
-			return fmt.Errorf("assurance: bundling the exception: %w", err)
-		}
-		applied = tag.RowsAffected() > 0
-		if !applied {
-			return nil
-		}
-		if _, err := storekit.AuditEvent(ctx, tx, "create", "assurance_task_item", in.ExceptionID,
-			map[string]any{"cycle_id": in.CycleID, "task_activity_id": in.TaskActivityID}); err != nil {
-			return err
-		}
-		return nil
+		applied, err = s.BundleExceptionTx(ctx, tx, in)
+		return err
 	})
 	return applied, err
+}
+
+// BundleExceptionTx is BundleException on the CALLER's transaction, for a caller
+// that has already taken something it needs held across the write.
+//
+// compose does: whether the task is still open is a fact about the `activity`
+// row, which this module owns none of and reads none of (see TaskIDsForSubject),
+// so the caller locks it and files the finding inside the same transaction. The
+// cycle's own share lock below is the same shape applied to the row this module
+// DOES own.
+func (s *Store) BundleExceptionTx(
+	ctx context.Context, tx pgx.Tx, in BundleInput,
+) (applied bool, err error) {
+	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
+		return false, err
+	}
+
+	// THE SUBJECT IS READ OFF THE EXCEPTION, never taken from the caller.
+	//
+	// It is what the exclusion constraint compares, so a caller-supplied
+	// subject would let two findings about ONE deal arrive under two
+	// spellings and take two tasks — the exact duplication this table
+	// exists to prevent, passing every constraint on the way in.
+	//
+	// The cycle is locked FOR SHARE in the same statement. Reading
+	// `closed_at IS NULL` in the snapshot only proves the cycle was open
+	// when this transaction started: CloseCycle could commit in between and
+	// the insert would still land, filing a finding under a pass that had
+	// ended. The share lock makes CloseCycle's UPDATE wait for this
+	// transaction, so the predicate that admitted the row is still true
+	// when it commits.
+	tag, err := tx.Exec(ctx, `
+		WITH open_cycle AS (
+		    SELECT c.id FROM assurance_cycle c
+		     WHERE c.id = $1 AND c.closed_at IS NULL
+		     FOR SHARE
+		)
+		INSERT INTO assurance_task_item
+		    (cycle_id, exception_id, task_activity_id, subject_kind, subject_id)
+		SELECT open_cycle.id, e.id, $3, e.subject_kind, e.subject_id
+		  FROM open_cycle, assurance_exception e
+		 WHERE e.id = $2
+		ON CONFLICT (exception_id, cycle_id) DO NOTHING`,
+		in.CycleID, in.ExceptionID, in.TaskActivityID)
+	if err != nil {
+		return false, fmt.Errorf("assurance: bundling the exception: %w", err)
+	}
+	applied = tag.RowsAffected() > 0
+	if !applied {
+		return false, nil
+	}
+	if _, err := storekit.AuditEvent(ctx, tx, "create", "assurance_task_item", in.ExceptionID,
+		map[string]any{"cycle_id": in.CycleID, "task_activity_id": in.TaskActivityID}); err != nil {
+		return false, err
+	}
+	return applied, nil
 }
 
 // TaskIDsForSubject reads the tasks this module's cycles have raised for one

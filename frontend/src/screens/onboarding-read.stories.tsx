@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { configuredAiProfile } from "./onboarding.stories.fixtures";
 import { ConversationEntries, ReadCompanyStep } from "./onboarding-read";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 import "./onboarding.css";
 // `.staging-card` is the panel-ai family's staged member and lives in the
 // design system's own sheet; nothing in this surface's import graph pulls it,
@@ -160,16 +165,30 @@ const deferred = {
   next_attempt_at: "2026-08-01T00:00:00Z",
 };
 
+// One finding, so the finished heading reads in the singular.
+const readyOne = {
+  ...reading,
+  status: "ready" as const,
+  phase: null,
+  profile_fields: reading.profile_fields.slice(0, 1),
+};
+
 function ReadStory({
   mode = "website",
   read = null,
   error = null,
 }: Readonly<{
   mode?: "website" | "manual" | null;
-  read?: typeof reading | typeof partial | typeof deferred | null;
+  read?:
+    | typeof reading
+    | typeof partial
+    | typeof deferred
+    | typeof readyOne
+    | null;
   error?: string | null;
 }>) {
   installFetchStub({
+    "GET /me": meRoute({ automation: ["update"] }),
     "GET /ai/profile": () => jsonResponse(configuredAiProfile),
   });
   return (
@@ -214,6 +233,10 @@ export const WaitingForBudget: Story = {
 
 export const PartialCoverage: Story = {
   render: () => <ReadStory read={partial} />,
+};
+
+export const ReadyWithOneDetail: Story = {
+  render: () => <ReadStory read={readyOne} />,
 };
 
 export const RobotsBlocked: Story = {

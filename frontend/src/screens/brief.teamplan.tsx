@@ -5,13 +5,13 @@ import { useId, useState } from "react";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { middayInstant } from "../format/calendarday";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { RefusalLine } from "./common";
 import { EntityRef } from "./entityref";
 import {
   useAnswerCommitment,
@@ -174,7 +174,7 @@ function TeamCommitment({
             ) : (
               <p>{commitment.manager_response}</p>
             )}
-            {answer.isError && <RefusalLine error={answer.error} />}
+            <ErrorLine error={answer.error} />
           </>
         )}
       </div>

@@ -123,6 +123,9 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/erasure_leadtwins.go",
 	"internal/modules/privacy/erasure_payloads.go",
 	"internal/modules/privacy/erasure_channels.go",
+	// The drafts a rep started to the subject and never sent. Same Art. 17
+	// transaction; its own file because the table is not the eraser's own.
+	"internal/modules/privacy/maildrafts.go",
 	// The live capabilities over the subject's consent record — the
 	// preference-center token and the double-opt-in token. Split out of
 	// erasure.go for the same size reason as the timeline, and named here for
@@ -146,6 +149,12 @@ var erasureCascadeFiles = []string{
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",
+	// What was read out of the subject's conversations as promised, asked or
+	// decided, each row carrying the sentence it was read from. Same Art. 17
+	// transaction, its own file for the same both-engines reason — and named
+	// here so conversation_claim cannot look uncovered the moment its purge
+	// moves file.
+	"internal/modules/privacy/erasure_claims.go",
 	"internal/modules/privacy/deliveries.go",
 	// The subject's RESTRICTION record and the deal-room seats their address
 	// holds. Both are executed by EraseContact's own transaction and both write
@@ -225,6 +234,12 @@ var retentionSweepFiles = []string{
 	// two through one registry reports the lift as a violation of a rule it was
 	// never under.
 	"internal/modules/privacy/activitycontenterasure.go",
+	// The live capabilities over an anonymized subject's consent record — the
+	// two grant tokens, the confirm-details link and what came back through it.
+	// They left retentionactions.go when it crossed the length cap, and this
+	// list is what would otherwise have reported the sweep as having stopped
+	// deleting them.
+	"internal/modules/privacy/retentionconsent.go",
 }
 
 // sqlStatements splits one Go string literal into the statements it holds. A

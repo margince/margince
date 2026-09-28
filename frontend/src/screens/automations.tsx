@@ -11,7 +11,8 @@ import {
   OverflowMenu,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
+import { ErrorLine } from "../design-system/errorline";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { AutonomyDot } from "../design-system/trust";
@@ -279,11 +280,7 @@ function AutomationEditor({
         onSubmit={onSubmit}
         onCancel={onClose}
       />
-      {refusal !== null && (
-        <p className="auto-error" role="alert">
-          {refusal}
-        </p>
-      )}
+      {refusal !== null && <ErrorLine>{refusal}</ErrorLine>}
     </Modal>
   );
 }
@@ -443,11 +440,7 @@ export function AutomationRow({
       {/* A refused flip moves nothing on screen — so this line is the only
           report that it did not land, and it has to be spoken. The edit
           dialog's own refusal stays inside it, and so does the delete's. */}
-      {refused === "status" && (
-        <p className="auto-error" role="alert">
-          {refusal}
-        </p>
-      )}
+      {refused === "status" && <ErrorLine>{refusal}</ErrorLine>}
     </li>
   );
 }
@@ -553,7 +546,7 @@ export function AutomationsAdmin() {
     // rather than "the whole settings page".
     <Panel title={t("nav.automations")}>
       <PanelBody>
-        <p className="settings-panel-sub">{t("auto.sub")}</p>
+        <PanelIntro>{t("auto.sub")}</PanelIntro>
         {/* Bound to the grant the CONTROL asks for. It read "no create AND no
             edit AND no delete" while the row swaps its Switch for a Badge on
             `update` alone — so a seat holding create but not update lost the
@@ -612,11 +605,7 @@ export function AutomationsAdmin() {
           {/* The refusal stays where the reader is: the dialog is still open
               over the card, so a line underneath it would report the failure
               behind the thing covering it. */}
-          {create.isError && (
-            <p className="auto-error" role="alert">
-              {problemMessageOf(create.error, t)}
-            </p>
-          )}
+          <ErrorLine error={create.error} />
         </Modal>
       </PanelBody>
     </Panel>

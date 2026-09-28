@@ -72,7 +72,7 @@ describe("where a cited value came from", () => {
     expect(
       await screen.findByText(/What they offer: Load-shifting software/),
     ).toBeTruthy();
-    expect(screen.getByText("Read from their website")).toBeTruthy();
+    expect(screen.getByText("Read from company website")).toBeTruthy();
     expect(
       screen.getByText(/We build load-shifting software for industry/),
     ).toBeTruthy();
@@ -149,9 +149,7 @@ describe("where a cited value came from", () => {
   it("reports a receipt it cannot read as exactly that", async () => {
     show({ entity_type: "profile_field", entity_id: "p-1" });
 
-    expect(
-      await screen.findByText(/This receipt could not be read/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Source could not be loaded/)).toBeTruthy();
   });
 });
 
@@ -190,7 +188,7 @@ describe("the receipt is a drawer beside the claim, not a box over it", () => {
   it("marks a machine-written claim nobody has confirmed", async () => {
     show(SITE_READ);
     expect(
-      await screen.findByText("AI extracted · not yet confirmed"),
+      await screen.findByText("Extracted by AI · not confirmed"),
     ).toBeTruthy();
   });
 

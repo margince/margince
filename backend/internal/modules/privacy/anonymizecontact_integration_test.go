@@ -103,7 +103,7 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		 VALUES ('contact', 'private_note', 'Private note', 'text', 'cf_private_note', $1)`, user)
 	mustExec(ctx, t, tx, `UPDATE contact SET cf_private_note = 'lives on Hauptstrasse' WHERE id = $1`, contact)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, nil); err != nil {
 		t.Fatalf("anonymizing: %v", err)
 	}
 

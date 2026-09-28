@@ -223,7 +223,7 @@ func (s *Service) queue(ctx context.Context, userID ids.UserID, companyID ids.Co
 		if s.enqueue == nil {
 			return settle(ctx, tx, queued.ID, nil, outcome{
 				Status: StatusDegraded, GeneratedBy: crmcontracts.WrittenByDeterministic,
-				DegradeReason: "No worker runs account scans in this deployment, so the rules' own advice stands alone.",
+				DegradeReason: "No worker runs account scans here, so only the rule-based advice is shown.",
 			})
 		}
 		return s.enqueue(ctx, tx, Queued{ScanID: queued.ID, CompanyID: companyID, ViewerID: userID})
@@ -288,14 +288,14 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, companyID ids.Compan
 		// The reader sees the floor and why; the cause is for whoever runs
 		// the lane, and the log is where they look.
 		s.log.Warn("account scan: the lane did not answer usably", "scan_id", claimed.ID, "err", lane.Cause)
-		out.Status, out.DegradeReason = StatusDegraded, "The model did not answer in a form the records support, so the rules' own advice stands alone."
+		out.Status, out.DegradeReason = StatusDegraded, "The model's answer didn't match the records, so only the rule-based advice is shown."
 	case err != nil:
 		// The row is claimed: left running it would be served as a read in
 		// flight for as long as it sat there. It closes with the reason the
 		// reader can act on, and the cause goes back to the carrier.
 		return errors.Join(err, s.fail(ctx, h, "The account could not be read. Try again later."))
 	case s.lane == nil:
-		out.Status, out.DegradeReason = StatusDegraded, "No model lane is configured, so the rules' own advice stands alone."
+		out.Status, out.DegradeReason = StatusDegraded, "No model is configured here, so only the rule-based advice is shown."
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return settle(ctx, tx, h.ID, &h.ClaimedAt, out)

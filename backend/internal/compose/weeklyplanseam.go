@@ -98,7 +98,12 @@ func (c weeklyPlanCapacity) ForWeek(
 			SELECT
 			  (SELECT count(*) FROM activity m
 			    WHERE m.kind = 'meeting' AND m.archived_at IS NULL
-			      AND m.meeting_status = 'booked'
+			      -- NULL is a meeting nothing has said is off, which every
+			      -- other surface counts. A calendar connector writes no
+			      -- status at all, so the strict form left exactly the rep
+			      -- whose week syncs automatically planning against a week
+			      -- that looked freer than it was.
+			      AND (m.meeting_status IS NULL OR m.meeting_status = 'booked')
 			      -- By HOST, falling back to the capturer only where no host is
 			      -- recorded. A meeting a colleague booked or a calendar
 			      -- connector imported is still this rep's time, and reading

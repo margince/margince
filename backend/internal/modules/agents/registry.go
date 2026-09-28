@@ -16,8 +16,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -78,6 +80,9 @@ type Registry struct {
 	// replayReader re-reads the records a recorded result rests on, so a replay
 	// is gated as the read it is.
 	replayReader ReplayReader
+	// language writes every staged summary in the installation's base
+	// language (summarycopy.go). Nil writes English.
+	language baselanguage.Resolver
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -174,7 +179,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 	ctx = admitted
-	if stepUp := releasableVolumeRefusal(err); stepUp != nil {
+	if stepUp := releasableVolumeRefusal(err); stepUp != nil && !spec.ConfirmsInConversation {
 		return nil, 0, r.stageStepUp(ctx, stepUp)
 	}
 	// The call ceiling is charged where the call is known to RUN, and only
@@ -284,6 +289,7 @@ func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, re
 func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, args json.RawMessage) (json.RawMessage, int, error) {
 	ctx, trace := withTrace(ctx)
 	ctx, facts := withEnvelopeFacts(ctx)
+	ctx = agentvolume.WithEffectTally(ctx)
 	noteRowScope(ctx)
 	out, err := t.Handle(ctx, args)
 	if err != nil {

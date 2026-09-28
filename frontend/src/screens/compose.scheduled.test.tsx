@@ -24,7 +24,7 @@ import { allowedPreview, isPreviewDoor } from "./sendpermission.testkit";
 // by role alone: the To, Cc and Bcc lines are comboboxes of their own now
 // (they offer the record's contacts), so a bare role query matches four
 // controls and the readiness signal every suite waits on has to say which.
-const WHY_ASK = "Why are you writing?";
+const WHY_ASK = "Reason for contact";
 // The door out of a scheduled send.
 //
 // The composer already computed whether it had scheduled — 201 waits, 202 has
@@ -40,7 +40,7 @@ type Activity = components["schemas"]["Activity"];
 
 // A reason that carries no unsubscribe surface, so the form is sendable with
 // nothing else filled in.
-const WHY_LABEL = "About a deal we are working on";
+const WHY_LABEL = "Active deal";
 
 const ACTIVITY: Activity = {
   id: "act-1",
@@ -143,7 +143,7 @@ describe("a scheduled send is reachable again", () => {
     // on: a confirmation reading "sent" beside a door to withdraw it would
     // contradict itself.
     expect(
-      await screen.findByText("Scheduled. It has not gone out yet."),
+      await screen.findByText("Email scheduled. It has not been sent yet."),
     ).toBeTruthy();
 
     const door = screen.getByRole("button", { name: "Scheduled messages" });
@@ -166,7 +166,7 @@ describe("a scheduled send is reachable again", () => {
       screen.queryByRole("button", { name: "Scheduled messages" }),
     ).toBeNull();
     expect(
-      screen.queryByText("Scheduled. It has not gone out yet."),
+      screen.queryByText("Email scheduled. It has not been sent yet."),
     ).toBeNull();
   });
 });

@@ -77,7 +77,7 @@ func setupConfigEnv(t *testing.T) *configEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
+	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{})
 	return e

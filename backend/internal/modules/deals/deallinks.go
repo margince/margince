@@ -44,7 +44,7 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 		if err := auth.EnsureAssignee(ctx, tx, in.OwnerID.UUID); err != nil {
 			return err
 		}
-		p.Set("owner_id", current.OwnerId, *in.OwnerID)
+		p.Set(ownerColumn, current.OwnerId, *in.OwnerID)
 	}
 	if in.ProjectID != nil {
 		if err := ensureProjectAttachable(ctx, tx, in.ProjectID.UUID); err != nil {

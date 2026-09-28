@@ -5,20 +5,38 @@ rules that bound it — the two tiers, what waits for a human, passports and
 allowances — are on
 [Agents, passports and what they may do](agents-and-passports.md).
 
+## Questions about the AI
+
+### What does the AI do in Margince?
+The AI in Margince drafts emails, reads deal documents for deal fields, enriches company records from the web, answers questions from a document set you filed, and ranks your Morning brief overnight. Everything it proposes carries its evidence, and changes to your records either wait as an approval or appear as an automatic change you can switch off in **Settings → Agents**.
+Also called: AI features, assistant, copilot, what can Margince AI do.
+
+### Can the AI send email on my behalf?
+Inside the app, no: **Draft with AI** in the email composer writes a draft, and only you press **Send**. An outside agent you connected can send as you, immediately, if you gave it the **Send messages** permission; the consent screen says it "sends messages as you, without asking first", unless your installation set a [send floor](agents-and-passports.md#your-installation-can-be-stricter) that stages every agent send as an approval. Every send still needs recorded consent for its purpose. The overnight Morning brief agent can never send.
+Also called: auto-send, send without asking, AI emails customers.
+
+### How do I draft an email with AI?
+To have Margince draft an email, open the composer from a contact's page (**Email**, or **Write** where several channels exist) and choose **Draft with AI**. The composer is the confirmation: it says "Review and edit the draft. Sending cannot be undone." Review and edit the draft, fill **Reason for contact** when it is asked, then choose **Send**; nothing asks again. The AI never adds a sign-off; your signature is set in **Settings → Account**.
+Also called: AI writer, write a reply, compose with AI.
+
+### How do I get the AI to read a document for deal fields?
+To fill deal fields from a file, open the company's **Documents** tab, file the document on a deal with **Add document** (choose **A deal**, not **This company**), then choose **Show extracted fields** on that document and **Read this file**. Margince shows each field it found with the passage it read it from; choose **Accept {count} fields** to save them, or **Dismiss**. Nothing is written to the deal until you accept. A document filed against the company offers no reading.
+Also called: extract from contract, read a PDF, parse an offer.
+
 ## What the AI actually does for you
 
-**Drafting.** It writes email drafts. It does not send them. Your email
-signature is yours: the app notes that "the AI never writes a sign-off — this
-is the one that goes out."
+**Drafting.** The AI writes email drafts (**Draft with AI**). It does not send
+them. Your email signature is yours: the app notes "AI drafts never add a
+sign-off."
 
-**Reading documents for deal fields.** You can ask it to read a file attached
-to a deal. It comes back with the fields it can ground in that file — deal
+**Reading documents for deal fields.** You can ask the AI to read a file
+attached to a deal. It comes back with the fields it can ground in that file — deal
 name, amount, currency, expected close date — each shown with the passage it
 read them from, and staged for you to accept. Nothing is written to the deal
 until you press accept. If the file states none of those fields, it says so
-rather than inventing them: "AI read this file and it states none of the deal
-fields." A field it is unsure of is left out and marked "omitted (this file
-says something, but not clearly enough to accept)".
+rather than inventing them: "AI read this file and found none of the deal
+fields." A field it is unsure of is left out and marked "omitted (stated, but
+not clearly enough to accept)".
 
 Note that a document filed against **a deal** can be read for deal fields; one
 filed against **the company** cannot.
@@ -27,7 +45,9 @@ filed against **the company** cannot.
 LinkedIn connection, filling in a new account. Every one of these stages a card
 rather than writing straight to the record.
 
-**Answering questions about your documents.** See
+**Answering questions about your documents.** Choose **Ask your documents** in
+the command palette (⌘K or Ctrl+K), pick a **Document set** and type **Your
+question**. See
 [Documents and files](documents-and-files.md). The important property is that
 it answers only from the set of documents you filed, and a question that set
 does not cover is refused rather than guessed at.
@@ -40,10 +60,11 @@ place: a reader of a grounded answer can see which passage each sentence
 rests on and go and check it, and an agent acting on that answer unattended
 cannot.
 
-**The overnight brief.** The product looks at your accounts overnight and
-ranks what deserves your first hour. If it found nothing, it says so plainly:
-"The overnight brief found nothing worth your first hour. That is the answer,
-not an omission."
+**The overnight brief.** The Morning brief looks at your accounts overnight and
+ranks what deserves your first hour. If it found nothing, it says so plainly
+rather than inventing work. It runs only if you turned on **Let Margince prepare
+the Morning brief overnight** in **Settings → Connections**, and it can read and
+write but never send.
 
 Where the overnight pass has something to say about a ranked deal, it writes it
 onto the item itself, beside the rank — so the reason is in the same place as
@@ -61,7 +82,7 @@ the rule that put it back, stated: no activity, no return.
 
 ## Every derived claim carries its evidence
 
-Nothing the AI writes on screen is presented as a bare fact. A generated value
+Nothing the AI in Margince writes on screen is presented as a bare fact. A generated value
 carries the records it was written from, and you can open them. An enriched
 field on a contact carries the verbatim snippet it was read from. A number in a
 report carries the rows it reconciles to.
@@ -72,22 +93,25 @@ dismissal that gets overwritten next time.
 
 ## Who did what: the trust marks
 
-Everywhere a value can be attributed, the app says who put it there. The
-labels are:
+Everywhere a value can be attributed, Margince says who put it there. The trust
+marks are:
 
-- "Typed by a person", "Typed by {name}", "typed by you", "typed by a buyer"
-- "Automated by {agent}" — or "Automated by an agent" when the credential
+- "Typed by a person", "Typed by you", "Typed by a buyer", or the colleague's
+  name
+- "Automated by {agent}", or "Automated by an agent" when the credential
   carries no readable name, because printing an opaque id at you would not help
 - "System task {job}", or plain "System task" where the job has no readable
-  name — the installation's own housekeeping: a scheduled sweep, a backfill. Deliberately named apart from an agent, because "a model decided
+  name: the installation's own housekeeping, such as a scheduled sweep or a
+  backfill. Deliberately named apart from an agent, because "a model decided
   this" and "the system did its housekeeping" are different answers to the
   question "who do I ask about this?"
-- "via {connector}" — it arrived from a connected mailbox
-- "source not recorded" — when honestly nothing is known
+- "Via {connector}": it arrived from a connected mailbox
+- "Source not recorded": when honestly nothing is known
 
 ## Watching work in progress
 
-While the AI is working for you, you can see it. Twelve kinds of work are
+While the AI in Margince is working for you, you can see it in the agent panel
+(**Open agent panel**, under **Running now**). Twelve kinds of work are
 narrated: your morning brief, the overnight risk sweep, reading a document,
 reading a company's site, summarising, scanning an account, drafting a reply,
 drafting an offer, your weekly review, the learnings behind it, proposing next
@@ -102,13 +126,13 @@ limits, and a sweep picks it up when the allowance is raised or the month rolls.
 See [Settings](settings.md).
 
 "Stalled" means the work has been running unusually long and may have stopped.
-The app says exactly that: "Reading your document has taken unusually long. It
-may have stopped."
+The app says exactly that: "Reading is taking unusually long and may have
+stopped."
 
 Where there is a way out, the same line says it. An account whose read stalled
 is read again when you open it again: the open starts a fresh attempt, and the
-stalled one gives way to it. A document whose read stalled offers "Try reading
-it again" where it showed "Reading this file…", and pressing it does the same.
+stalled one gives way to it. A document whose read stalled offers **Read again**
+where it showed "Reading this file…", and pressing it does the same.
 A read still inside its time is joined rather than restarted, so opening a page
 twice, or pressing twice, never reads anything twice.
 
@@ -126,14 +150,15 @@ nothing for forty seconds, and then find it already done.
 
 ## Where to see what the AI is doing
 
-The **Worklist** is the day's shape: what needs a decision, today's meetings,
+The **Worklist** on **Home** is the day's shape: what needs a decision, today's meetings,
 deals going quiet, promises you made, what ran on its own overnight.
 
 The **Home** brief ranks accounts and shows the factors behind each ranking —
 winnability, revenue, timing, momentum, warmth — with the evidence rows behind
 them.
 
-The **AI** group in Settings holds four pages — Models & routing, Automations,
-AI usage and Model calls — and **Settings → Agents** is where you mint your own
-passports. **Settings → Audit log** holds the full audit trail: every action,
+The **AI** group in Settings holds four pages: **Models and routing**,
+**Automations**, **AI usage** and **Model calls**. **Settings → Agents** is where
+you mint your own passports, connect MCP clients and switch **Automatic
+changes** on or off. **Settings → Audit log** holds the full audit trail: every action,
 attributed to a human, an agent or a connector.

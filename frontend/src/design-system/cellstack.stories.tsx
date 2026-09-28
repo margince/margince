@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DataTable } from "./atoms";
 import { CellStack } from "./cellstack";
+import { DataTable } from "./datatable";
 
 const meta: Meta<typeof CellStack> = {
   title: "Design System/Cell stack",

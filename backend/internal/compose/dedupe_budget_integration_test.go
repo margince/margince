@@ -30,8 +30,14 @@ func connectorCtx(e *integration.Env) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:test",
+		// A connector carries the GRANTING HUMAN's live permissions, never a
+		// narrower set of its own — registry.connectorContext builds the
+		// principal from rbac.Permissions, and every seeded role has read on
+		// lead as its floor. Create alone is narrower than any real sync, and a
+		// fixture that stopped there would refuse the collision path here for a
+		// reason that cannot occur in production.
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"lead": {Create: true}},
+			Objects:  map[string]principal.ObjectGrant{"lead": {Create: true, Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})

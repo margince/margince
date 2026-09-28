@@ -69,7 +69,7 @@ type Story = StoryObj<typeof Shell>;
 // rail's foot names the contact and keys their chip's tint on their address —
 // the stable identity, so a later rename does not move them to a new colour.
 export const SignedIn: Story = {
-  render: () => <Shell session={meRoute({})} />,
+  render: () => <Shell session={meRoute({ automation: ["update"] })} />,
 };
 
 // A seat that never set a display name. The name falls back to the address,
@@ -78,7 +78,7 @@ export const SignedIn: Story = {
 // every colleague whose address starts the same way.
 export const NameFromAddress: Story = {
   render: () => {
-    const me = meFixture({});
+    const me = meFixture({ allow: { automation: ["update"] } });
     return (
       <Shell
         session={() =>

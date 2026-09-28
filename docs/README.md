@@ -1,11 +1,11 @@
 # Margince documentation
 
-**Using the product rather than changing it?** The end-to-end walkthroughs for a
-rep or a delivery lead live in [`user-guide/`](../user-guide/README.md). This tree
-is mostly for the contact changing the code — with one deliberate exception:
-`how-to/` carries product how-tos (working your pipeline, setting up projects,
-partner programs) beside the engineering ones, because a how-to is a thing you
-return to for one answer whichever audience you are in.
+**Using the product rather than changing it?** The [handbook](handbook/README.md)
+is the one answer to "how do I…" in the app — it is also the corpus behind the
+in-app ask — and the end-to-end walkthroughs for a rep or a delivery lead live in
+[`user-guide/`](../user-guide/README.md). The rest of this tree is for the
+contact changing or operating the code, so a product task belongs in the
+handbook, not in `how-to/`.
 
 Documentation for building and operating **Margince** — a governed, single-tenant CRM (a Go `/v1` API
 backend; the Vite/React web UI ships separately). One installation serves one company, and boot
@@ -39,9 +39,12 @@ maps the codebase and links everything below.
 The only tree here written for the contact using Margince rather than building it:
 no code, no API, just the app.
 
-- [handbook/README.md](handbook/README.md) — eleven pages covering records, the
-  pipeline, capture, what the AI does and does not do, approvals, documents,
-  retention, seats and settings.
+- [handbook/README.md](handbook/README.md) — twenty-five pages covering records,
+  the pipeline, partners, capture, mail, what the AI does and does not do, approvals,
+  offers, documents, retention, seats and settings. It is also the default
+  document set behind **Ask your documents** on a new installation, so
+  [how-to/update-the-handbook.md](how-to/update-the-handbook.md) says how to
+  write a page that can answer a question, and how to measure it.
 
 ### Compliance — the German pack a customer signs
 
@@ -78,7 +81,6 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
-- [write-an-email.md](how-to/write-an-email.md) — start a contextual email, select an exact reply target, and read the conversation while writing.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.
 - [add-a-job.md](how-to/add-a-job.md) — declare a background job kind in the job contract, then write and register its worker.
@@ -86,6 +88,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [create-a-workflow.md](how-to/create-a-workflow.md) — scaffold and wire a new automation starter workflow into the closed catalog.
 - [apply-migrations.md](how-to/apply-migrations.md) — write and apply a database migration.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md) — say you are fixing a red `main` before you start, so parallel sessions do not all diagnose it.
+- [work-on-an-issue.md](how-to/work-on-an-issue.md) — check whether an issue is already somebody's before you start it, claim the one you take, hand it back when you stop, and re-derive its ruling from the code before you build any of it.
 - [mint-a-passport.md](how-to/mint-a-passport.md) — issue an agent passport token.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md) — connect a client to the governed MCP tool surface.
 - [run-the-frontend.md](how-to/run-the-frontend.md) — run the SPA in dev.
@@ -98,17 +101,15 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md) — bind the AI lanes to a BYOK cloud key (Anthropic / OpenAI / Gemini / any OpenAI-compatible vendor).
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md) — certify a model against a task's fixture corpus and benchmark a candidate swap (`make e2e-ai`).
+- [certify-a-decision-site.md](how-to/certify-a-decision-site.md) — certify a decision model for a site, so the `decisions:` lane may answer it, and re-certify or drop it when the site changes.
 - [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md) — the sweep loop after a tree-wide change stales every record: run both preset bindings, tell a moved question from a model regression before calling anything a drop, fix or flag, re-run one task, regenerate both generated pages.
 - [add-an-ai-task.md](how-to/add-an-ai-task.md) — add a new AI task or invocation site: declare it in the contract, wire the lane, register the site, certify it.
 - [write-a-certification-case.md](how-to/write-a-certification-case.md) — bind a site to the production request builder and validator that certify it: the test-first loop, the case interface, the three site kinds, scenario and rubric authoring, scope.
 - [register-a-webhook.md](how-to/register-a-webhook.md) — register an HTTPS endpoint for Standard-Webhooks-signed, retried outbound delivery of contract-generated event payloads (curl or Settings → Integrations), and verify/inspect/replay a delivery.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
-- [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the pipeline numbers; no code.
-- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the pipeline.
-- [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
-- [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
+- [update-the-handbook.md](how-to/update-the-handbook.md) — change the operator handbook so the in-app ask can answer from it: how a page is cut and read, the task-section rules, the probe (`scripts/handbook-ask/probe.sh`) to run before and after, and the checklist.
 - [cut-a-release.md](how-to/cut-a-release.md) — push a `v*` tag and get a GitHub release with both desktop bundles attached: what the tag's shelf decides, what a failed or re-run lane leaves behind, and why this is not the constellation dist release.
 
 ### Reference — look it up
@@ -119,7 +120,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
 - [ai-prompts.md](reference/ai-prompts.md) — **generated**: every instruction this build sends a model, read off real requests, with how many untrusted spans each call carried.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.
-- [ai-certification.md](reference/ai-certification.md) — what the AI certification lane covers: every shipped invocation site, the scenarios it is scored against with a link to each case, an index naming the best model still measured for each site, and a table per (provider, model, env) binding, with `ai-certification.json` beside it carrying the same numbers for a reader who wants to analyse them. Generated from the corpus, the records and the invocation-site census, never hand-edited; a stale record says which scenario moved under it.
+- [ai-certification.md](reference/ai-certification.md) — which AI features you can rely on under each preset, in plain words first (can I use it?), then, folded for engineers, what the AI certification lane covers: every shipped invocation site, the scenarios it is scored against with a link to each case, an index naming the best model still measured for each site, and a table per (provider, model, env) binding, with `ai-certification.json` beside it carrying the same numbers for a reader who wants to analyse them. Generated from the corpus, the records and the invocation-site census, never hand-edited; a stale record says which scenario moved under it.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md) — which served MCP tools the USE-CASE lane actually drives: per tool, the cases that require it, what those cases scored and on which model, the scheduled agents that attach it, and what it costs. With `mcp-tool-coverage.json` beside it. Generated from the served surface, `e2e/llm/scenarios` and the verdicts that lane commits, never hand-edited. It reads that lane ALONE — single steps are `ai-certification.md`’s question — and it answers what neither page does: a tool can be paid for on every step of every run and be required by no case at all.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
 - [ci-workflows.md](reference/ci-workflows.md) — the nine workflows that run beside the merge gate rather than inside it: what each triggers on, what it does and does not gate, and what a red one means.
@@ -138,11 +139,16 @@ budget rather than keeping its own list of which pages are generated.
 - [gate-patterns.md](reference/gate-patterns.md) — the eight shapes a fitness gate comes in, how strong each can be, and how each one silently passes. Read it before writing a gate: [principles/derive-the-obligation.md](principles/derive-the-obligation.md) is the method, this is the menu.
 - [gate-inventory.md](reference/gate-inventory.md) — every gate in `backend/`, grouped by shape, with what it holds. Generated from the `//gate:kind` line each gate declares in its own file, never hand-edited.
 - [configuration.md](reference/configuration.md) — every binary flag and environment variable.
+- [ollama-self-hosting.md](reference/ollama-self-hosting.md) — what we measured running Gemma 4, gpt-oss, Qwen3 and others on a 24GB Mac mini M4 through Ollama: the machine, each model's speed and fit, a pass rate and latency for every task, and the traps (default thinking, `think:false` on gpt-oss, long-id copying). Read it before re-testing a local model.
+- [vllm-self-hosting.md](reference/vllm-self-hosting.md) — the same 24GB Mac mini M4 serving Qwen3, gpt-oss, Gemma 3 and two Mistral models through vLLM (vllm-metal): the server flags that change answers (thinking, window, sampling, the JSON whitespace loop), what did not start or answered gibberish, and a pass rate and latency per model on seven tasks.
+- [ai-thinking.md](reference/ai-thinking.md) — how much a model thinks before it answers: the level vocabulary, where a site's floor and a binding's own level are set, their precedence, and the exact wire field each provider and model is sent.
 - [openrouter.md](reference/openrouter.md) — the broker's upstream selection: why a model id served by 21 hosts makes latency and answer quality a per-request lottery, the `routing:` default this product ships against that (reliability over price, the inverse of the broker's own), which preferences are hard filters and which only reorder, and the 2026-09-02 measurements behind each choice — including the one that was 17× faster and would have cost a fifth of the certification score.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
 - [system-requirements.md](reference/system-requirements.md) — what an installation needs, for both deployment shapes: one node, or the api / worker / web / database on separate nodes.
 - [ai-egress.md](reference/ai-egress.md) — every declared AI task, and whether the text it reads can leave the installation. Generated from `backend/api/ai-tasks.yaml`, never hand-edited.
 - [record-vocabulary.md](reference/record-vocabulary.md) — the rule both record nouns hold: the reader and the program say the same word, and the schema follows. Why it is this way round, the words that merely spell those letters and stay, and the four gates that keep a second spelling out.
+- [ui-copy-style.md](reference/ui-copy-style.md) — the standard the English UI catalog is held to: voice, address, grammar and mechanics, length ceilings, vocabulary and message shapes, with which rules `frontend/src/i18n/copy-style.test.ts` holds and which are the author's judgement.
+- [ui-copy-style-de.md](reference/ui-copy-style-de.md) — what German copy adds to that standard: du address and the four families that keep Sie, grammar by slot, German mechanics, inclusive language and one German word per concept, with what `copy-style-de.test.ts` and `address-register.test.ts` hold.
 - [issue-labels.md](reference/issue-labels.md) — the full issue-label taxonomy. The binding short form is in `AGENTS.md`.
 - [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
 - [sonarcloud-deviations.md](reference/sonarcloud-deviations.md) — the SonarCloud findings that stay open on purpose, one entry each saying what would break if somebody applied the rule. Everything not listed there is a finding to fix.
@@ -163,6 +169,8 @@ budget rather than keeping its own list of which pages are generated.
 - [composition-layer.md](explanation/composition-layer.md) — how `internal/compose/` boots and where every cross-module edge is wired.
 - [job-fleet.md](explanation/job-fleet.md) — the job contract: declaration before code, dispatchers vs workspace workers, why args name rows, and the failure vocabulary.
 - [prompt-shape.md](explanation/prompt-shape.md) — how a prompt is built: the per-call data fence, why prompt caching cannot help us, what the repeated instructions cost, and the test for whether a task asks about one item per call or several.
+- [ai-certification.md](explanation/ai-certification.md) — how an AI feature earns its grade, drawn step by step: one try (the product's own prompt, the mechanical check, the judge asked three times), extra tries for close cases, what every scenario must clear, how the pooled grade is reached, and the order to fix a failing feature in.
+- [prompt-principles.md](explanation/prompt-principles.md) — the rules a production prompt keeps: what we optimise and in which order (the `gemini_cloud` baseline first, then OpenRouter, then local hosting), fourteen principles each with the check that holds it, the fix order for a failing certification case, what is worth cutting for context, and the pre-merge checklist.
 - [raw-capture-part-slimming.md](explanation/raw-capture-part-slimming.md) — why the stored original keeps its attachments by reference: proof before removal, why the strip is by byte offset rather than by parsing, and the guarantee it narrows.
 - [custom-fields.md](explanation/custom-fields.md) — the one runtime `ALTER TABLE` chokepoint: the closed type/object sets, the privilege boundary, and the `fieldcatalog` seam.
 
@@ -181,6 +189,7 @@ budget rather than keeping its own list of which pages are generated.
 
 - [ai-runtime.md](explanation/ai-runtime.md) — the AI task contract, tiers/ladders, the routing config, the one Router gate, honest tracing, and certification.
 - [agent-surface.md](explanation/agent-surface.md) — the Surface-B reasoning loop and the model runtime.
+- [ai-provenance-notice.md](explanation/ai-provenance-notice.md) — the sentence a model-written draft carries: what it is for, why it discharges no EU AI Act Art. 50 disclosure duty, which surface shows it to the rep only and which renders it into the outgoing body, and the send-without-review path that would make the analysis stop holding.
 - [ai-activity-rail.md](explanation/ai-activity-rail.md) — what the AI is doing for you while it does it: the one `ai_task_run` projection, who reports into it (router vs. carrier vs. step), how an occurrence is attributed to a contact, the read's one-statement/two-arm shape and its derived `stalled`, and the separate question of which of the 23 kinds a reader is actually shown — with the written reason for each of the 17 that are not.
 - [search-and-retrieval.md](explanation/search-and-retrieval.md) — the lexical and hybrid lanes, row scope inside the query, embedding identity, and the two kinds of staleness with their two different answers.
 - [relationship-graph.md](explanation/relationship-graph.md) — who on our team knows this contact: participants, the interaction projection, warmth, deal coverage and its risk rules.

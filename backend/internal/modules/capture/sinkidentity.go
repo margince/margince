@@ -94,13 +94,23 @@ func (s *Sink) identityOfRecord(rec connector.NormalizedRecord) (kind, key strin
 	}
 	if s.meetingIdentityKind != "" && s.meetingIdentityKey != nil && rec.CrossDoorIdentity.Stated() {
 		return s.meetingIdentityKind, s.meetingIdentityKey(
-			rec.CrossDoorIdentity.Series,
-			// The occurrence as an instant, handed to the keyer as the text the
-			// import door states, so both doors reach one spelling through one
-			// function.
-			rec.CrossDoorIdentity.Occurrence.UTC().Format(time.RFC3339))
+			rec.CrossDoorIdentity.Series, occurrenceText(rec.CrossDoorIdentity))
 	}
 	return "", ""
+}
+
+// occurrenceText is the occurrence handed to the keyer as the text the import
+// door states, so both doors reach one spelling through one function.
+//
+// An all-day occurrence goes over as its DATE. Its instant is the noon anchor
+// this system stores all-day events at, while an import states the same
+// meeting as the date's midnight; keyed as instants the two never meet, and a
+// HubSpot import plus the connected calendar hold every all-day event twice.
+func occurrenceText(id connector.CrossDoorIdentity) string {
+	if id.AllDay {
+		return id.Occurrence.UTC().Format(time.DateOnly)
+	}
+	return id.Occurrence.UTC().Format(time.RFC3339)
 }
 
 // activityHoldingIdentity answers the activity another door already filed this
@@ -140,4 +150,23 @@ func (s *Sink) claimRecordIdentity(
 	// held the message, not asserted by a caller who typed its header.
 	_, err := s.claimIdentity(ctx, tx, id, kind, key, capturedByFor(ctx, rec))
 	return err
+}
+
+// reclaimMeetingIdentity files a REPLAYED meeting under its identity again,
+// once the replay is proven to be this seat's own row.
+//
+// A meeting's key can change under a row that already exists: an all-day
+// occurrence was keyed by its noon anchor before it was keyed by its date. The
+// claim runs only when a row is born, so without this the row would keep the
+// old key forever, and an import stating the date would land a second copy.
+// Re-claiming a key the row already holds is a no-op, and losing it to another
+// row is not an error (claimRecordIdentity). Mail is left alone: its identity
+// is its Message-ID, which never changes.
+func (s *Sink) reclaimMeetingIdentity(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord,
+) error {
+	if !rec.CrossDoorIdentity.Stated() {
+		return nil
+	}
+	return s.claimRecordIdentity(ctx, tx, id, rec)
 }

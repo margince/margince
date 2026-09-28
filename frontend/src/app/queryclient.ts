@@ -195,6 +195,15 @@ function refreshRecordHistory(client: QueryClient): void {
   });
 }
 
+// Who can see a record changes with a share, a visibility or owner change, or
+// a role or team edit, and each of those is a different write. Invalidated for
+// every successful mutation for the reason the two above are.
+function refreshRecordAccess(client: QueryClient): void {
+  client.invalidateQueries({
+    predicate: (query) => query.queryKey[0] === "record-access",
+  });
+}
+
 // Built per call rather than exported as a module singleton so the policy can
 // be exercised without importing main.tsx, which mounts the application into
 // the document as a side effect of being imported.
@@ -234,6 +243,7 @@ export function createQueryClient(): QueryClient {
       onSuccess: () => {
         refreshNamedReferences(client);
         refreshRecordHistory(client);
+        refreshRecordAccess(client);
       },
     }),
   });

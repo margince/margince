@@ -48,7 +48,7 @@ function roomDocument(over: Partial<DealRoomDocument>): DealRoomDocument {
     position: 1,
     filename: "commercial-terms-v4.pdf",
     byte_size: 412_000,
-    source: "ui",
+    source: "manual",
     version: 1,
     created_at: "2026-05-04T09:00:00Z",
     updated_at: "2026-05-04T09:00:00Z",

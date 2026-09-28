@@ -102,8 +102,13 @@ func RetractDerivedForActivityTx(
 	// the backlog before the narrowing committed, and without the lock its
 	// write can land after this clear, leaving the narrowed message labelled
 	// from text nobody may read.
+	//
+	// The stamp goes with it, by the same reasoning: a timestamp recording when
+	// a label that no longer exists was applied is residue of the same kind.
+	// activity_capture_label_stamped is what holds the two together.
 	if _, err := tx.Exec(ctx, `
-		UPDATE activity SET capture_label = NULL WHERE id = $1 AND capture_label IS NOT NULL`, activityID); err != nil {
+		UPDATE activity SET capture_label = NULL, capture_labeled_at = NULL
+		 WHERE id = $1 AND capture_label IS NOT NULL`, activityID); err != nil {
 		return fmt.Errorf("activities: clearing the narrowed activity's attention label: %w", err)
 	}
 	// The profile fields this message's signature wrote, last and inside the

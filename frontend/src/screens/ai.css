@@ -1,0 +1,11 @@
+/* The two autonomy tiers, one line each. */
+.askai-tiers {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.askai-hint {
+  margin-top: var(--space-2);
+}

@@ -7,10 +7,10 @@ import { project360 } from "./projects.fixtures";
 import { StoryProviders } from "./story-utils";
 
 // The band under a project's header: what its deals are worth, what is still
-// owed, and when anything last happened. A STRIP rather than five cards,
-// because the five are read across as one comparison — which is also why the
-// server withholds the whole plate rather than half of it, and why the states
-// below are states of the PLATE.
+// owed, and how much has been filed. A STRIP rather than four cards, because
+// the four are read across as one comparison — which is also why the server
+// withholds the whole plate rather than half of it, and why the states below
+// are states of the PLATE.
 //
 // The fixture is `projects.fixtures.ts`, the one the project-page tests build
 // from. A story that hand-rolled a second 360 would be a second answer to what
@@ -77,8 +77,8 @@ export const LargeFiguresGerman: Story = {
 /**
  * A project nothing has been filed under yet. Zero is a READING here, not an
  * absence — "no work has landed on this project" is a true thing to report —
- * so the plate keeps its place and `last_activity_at` says never rather than
- * the slot going blank.
+ * so the plate keeps its place and the activity slot says "None" rather than
+ * standing a bare zero there.
  */
 export const NothingFiledYet: Story = {
   render: strip(
@@ -114,9 +114,58 @@ export const Unavailable: Story = {
   render: strip(project360({ rollups: undefined })),
 };
 
-/** At 390px the plate folds: the last slot takes the rest of its row, so a
- *  count that does not divide the columns leaves no orphan beside empty cells. */
+/** At 390px the plate folds to one full-width ROW per reading — label leading,
+ *  figure on the trailing edge, a hairline between and no boxes. Two-up, the
+ *  German "Gewonnene Deals" clipped its label and "143.600 €" its figure. */
 export const Phone: Story = {
   tags: ["uat-phone"],
+  render: strip(project360()),
+};
+
+/** The German plate at 390px, where the fold was found: two-up, "Gewonnene
+ *  Deals" clipped its label and the figure beside it ellipsized. Folded, the
+ *  label runs complete and the figure sits on the trailing edge. */
+export const PhoneGerman: Story = {
+  tags: ["uat-phone"],
+  render: () => (
+    <StoryProviders locale="de">
+      <RollupsStrip
+        view={project360({
+          rollups: {
+            open_deal_value: { amount_minor: 14_360_000, currency: "EUR" },
+            won_deal_value: { amount_minor: 9_140_000, currency: "EUR" },
+            open_commitments: 12,
+            last_activity_at: "2026-07-01T09:00:00Z",
+            activity_count: 482,
+          },
+        })}
+      />
+    </StoryProviders>
+  ),
+};
+
+/**
+ * A count with no date behind it. The two move on different rules, so this is
+ * a shape the payload really takes — the count still stands as the reading and
+ * the qualifier simply has nothing to add, rather than the slot inventing a
+ * date or going blank.
+ */
+export const FiledWithNoDate: Story = {
+  render: strip(
+    project360({
+      rollups: {
+        open_deal_value: { amount_minor: 1_200_000, currency: "EUR" },
+        won_deal_value: { amount_minor: 450_000, currency: "EUR" },
+        open_commitments: 4,
+        last_activity_at: null,
+        activity_count: 7,
+      },
+    }),
+  ),
+};
+
+/** The plate in the dark theme: four slots, one of them carrying a detail. */
+export const DeliveringDark: Story = {
+  globals: { theme: "dark" },
   render: strip(project360()),
 };

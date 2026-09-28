@@ -194,7 +194,7 @@ describe("the facts a contact can state and take away", () => {
     await user.click(await screen.findByRole("button", { name: "Add fact" }));
     await user.click(screen.getByRole("combobox"));
     await user.click(await screen.findByRole("option", { name: "Customer" }));
-    await user.type(screen.getByLabelText("What it says"), "Kaufhaus Norde");
+    await user.type(screen.getByLabelText("Value"), "Kaufhaus Norde");
     await user.click(screen.getByRole("button", { name: "Save fact" }));
 
     await waitFor(() =>
@@ -229,7 +229,7 @@ describe("the facts a contact can state and take away", () => {
     const add = screen.getByRole("button", { name: "Add fact" });
     expect(add.getAttribute("aria-describedby")).toBe("why");
     await user.click(add);
-    expect(screen.queryByLabelText("What it says")).toBeNull();
+    expect(screen.queryByLabelText("Value")).toBeNull();
     expect(calls.every((one) => one.method === "GET")).toBe(true);
   });
 });

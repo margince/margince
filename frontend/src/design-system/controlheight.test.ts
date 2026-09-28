@@ -102,8 +102,8 @@ const THE_HEIGHT = "var(--controlHeight)";
  *
  * This is the reading that covers what the markup cannot say. A class assembled
  * from a template — `.btn-${variant}` — or joined in a helper is invisible to
- * an AST walk of the markup, and three of the controls below (`.railmore`,
- * `.calendar-day`, `.probe-button`) arrive only this way.
+ * an AST walk of the markup, and two of the controls below (`.railmore`,
+ * `.calendar-day`) arrive only this way.
  */
 function pressableClasses(): Set<string> {
   const out = new Set<string>();
@@ -229,6 +229,35 @@ const ACCEPTED = new Map<string, string>([
       "under the .iconbtn floor it is drawn beside",
   ],
   ["stat-card-open", "the card's own 'open' link, not a control on it"],
+  // Touch FLOORS, not second heights. Each of these stands at --controlHeight
+  // for a mouse and is lifted only under `@media (pointer: coarse)`, where WCAG
+  // 2.2 AA asks 44px of a thumb. `max()` is what keeps them a floor: a later
+  // rise in the shared height passes straight through.
+  [
+    "user",
+    "the account chip takes the coarse-pointer 44px floor; at a fine pointer it " +
+      "is --controlHeight like every other control",
+  ],
+  [
+    ".segmented button",
+    "a segment takes the coarse-pointer 44px floor; the strip is --controlHeight " +
+      "for a mouse, which is what makes it read as one control",
+  ],
+  [
+    "rail-count-go",
+    "a digest chip takes the coarse-pointer 44px floor; it is a line of text for " +
+      "a mouse and a target for a thumb",
+  ],
+  [
+    "record-details-toggle",
+    "the queue drawer's handle takes the coarse-pointer 44px floor, for the " +
+      "reason the chips beside it do",
+  ],
+  [
+    ".worklist-more .btn",
+    "the worklist's one load-more verb takes the coarse-pointer 44px floor " +
+      "the row verbs beside it get",
+  ],
   [
     "worklist-rank-select",
     "the rank NUMBER made pressable, held at the column's floor so a row " +
@@ -259,7 +288,6 @@ const ACCEPTED = new Map<string, string>([
       ".btn-federated beside it carries one",
   ],
   ["ob-gate-submit", "the onboarding gate's door, the same floor"],
-  ["probe-button", "the standalone MCP view's one action, sized for a thumb"],
   [
     "commstatus",
     "a 44px finger target around a mark that stays 18px, so the mark keeps " +
@@ -270,6 +298,13 @@ const ACCEPTED = new Map<string, string>([
     ".worklist-row button:not(.worklist-rank-select), .worklist-row a.btn, .worklist-row .link-button",
     "the queue's touch floor at phone width, deliberately every pressable " +
       "thing in a row rather than a list of today's verb groups",
+  ],
+  [
+    ".co-lead .today-verb .btn, .co-lead .co-todo .btn, .co-lead .panel-head .btn",
+    "the 44px target floor a coarse pointer owes an aimed-at control " +
+      "(WCAG 2.5.8), scoped to the needs-you panel's verbs and its head link — " +
+      "named one by one rather than as the pane, so the sources under a move's " +
+      "reason stay an inline citation run at their own height",
   ],
   [
     "worklist-row-why",

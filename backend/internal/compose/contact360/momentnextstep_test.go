@@ -57,12 +57,12 @@ func TestTheNextStepRungNamesTheRecordedSeat(t *testing.T) {
 		role *string
 		want string
 	}{
-		{"an influencer", ptr("influencer"), "The deal is live and nothing is scheduled with them. They are the recorded influencer on it."},
-		{"an economic buyer", ptr("economic_buyer"), "The deal is live and nothing is scheduled with them. They are the recorded economic buyer on it."},
+		{"an influencer", ptr("influencer"), "The deal is open and nothing is scheduled with them. They're the recorded influencer on it."},
+		{"an economic buyer", ptr("economic_buyer"), "The deal is open and nothing is scheduled with them. They're the recorded economic buyer on it."},
 		// A stakeholder edge may carry no role at all, and a sentence naming
 		// one anyway would invent the fact the rung exists to report.
-		{"a seat with no role recorded", nil, "The deal is live and nothing is scheduled with them. They are a stakeholder on it."},
-		{"a seat whose role is blank", ptr("  "), "The deal is live and nothing is scheduled with them. They are a stakeholder on it."},
+		{"a seat with no role recorded", nil, "The deal is open and nothing is scheduled with them. They're a stakeholder on it."},
+		{"a seat whose role is blank", ptr("  "), "The deal is open and nothing is scheduled with them. They're a stakeholder on it."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			page := &crmcontracts.Contact360{

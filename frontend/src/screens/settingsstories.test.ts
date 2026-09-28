@@ -78,6 +78,11 @@ const ACROSS_PAGE_STORIES = new Set([
   "Settings/Across pages/Rates and model costs",
   "Settings/Across pages/AI readings",
   "Settings/Across pages/Refresh from sources",
+  // The units an installation composed: the manifest's declared secret scope
+  // decides whether a unit is offered on a member's own Connections page or
+  // under Integrations, so the card is one subject that both pages mount and
+  // filing it under either would say the other page does not offer it.
+  "Settings/Across pages/Units offered in settings",
 ]);
 
 const settingsStories = storyFilesUnder(SCREENS)
@@ -111,10 +116,15 @@ describe("the settings stories are filed where the product files them", () => {
   // `Governance/Privacy & retention/Notice duties`; 88 → 89 for
   // `Governance/Privacy & retention/Linked case notice`; 89 → 90 for
   // `AI/Automations/Date field picker`; 90 → 91 for `Governance/System
-  // health/Connector records refused`. 91 → 92 for
-  // `You/Notifications/How each kind reaches you`.
+  // health/Connector records refused`; 91 → 93 for `Across pages/Units offered
+  // in settings` and `Governance/System health/Health card shell`; 93 → 94 for
+  // `Sales/Pipelines/Retired pipeline`; 94 → 95 for `Governance/System
+  // health/Dead work`; 95 → 96 for `Governance/System health/Mail capture
+  // checks`; 97 → 98 for `Data/Integrations/Automatic lookup`; 98 → 99 for
+  // the member roster's role picker; 99 → 100 for `You/Notifications/How each
+  // kind reaches you`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(92);
+    expect(settingsStories.length).toBe(100);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

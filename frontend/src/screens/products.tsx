@@ -4,7 +4,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Badge } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatMoney } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { useLocale, useT } from "../i18n";
@@ -287,7 +287,7 @@ export function ProductsAdmin() {
   return (
     <Panel className="listsection" title={t("product.title")}>
       <PanelBody className="listsection-intro">
-        <p className="settings-panel-sub">{t("product.settingsSub")}</p>
+        <PanelIntro>{t("product.settingsSub")}</PanelIntro>
         {/* A reader who holds no write verb here sees a list with no editor, and
             silence about why is a claim that the list has none. The posture is
             stated ONCE for the whole section (design-system README, "Absent,
@@ -299,7 +299,7 @@ export function ProductsAdmin() {
             read-only notice at the admin who holds all three. Gate on the
             probe, not on its absence. */}
         {me.isSuccess && !canCreate && !canUpdate && !canArchive && (
-          <p className="settings-panel-sub">{t("product.readOnly")}</p>
+          <PanelIntro>{t("product.readOnly")}</PanelIntro>
         )}
       </PanelBody>
       <ListTable

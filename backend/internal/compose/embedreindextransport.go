@@ -443,5 +443,8 @@ func WithEmbedReindex(router *ai.Router, inserter *jobs.Runner) Option {
 			enqueue:   inserter,
 			clock:     systemClock{},
 		}}
+		// Set beside the engine, past the same two gates, so /me's answer and the
+		// routes' 501 are one predicate rather than two that could drift.
+		s.authHandlers = s.WithEmbedReindexAvailable(true)
 	}
 }

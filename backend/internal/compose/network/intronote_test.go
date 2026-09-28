@@ -205,13 +205,13 @@ func TestAReplyThatNamesNobodyIsRefused(t *testing.T) {
 	}
 }
 
-// A model-written note carries the Art. 50 disclosure; a template-written one
+// A model-written note carries the AI provenance notice; a template-written one
 // does not, because no model wrote it.
 //
 // The contract's rule is that ai_disclosure is non-null exactly when
-// ai_generated is true, and this note is read by a customer — so the pair is
-// not decoration.
-func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
+// ai_generated is true, and this note goes out under the sender's own name — so
+// the pair is not decoration.
+func TestOnlyAModelWrittenNoteCarriesTheProvenanceNotice(t *testing.T) {
 	t.Parallel()
 	note := introNote{subject: "s", body: "b"}
 
@@ -220,7 +220,7 @@ func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
 		t.Error("a model-written note does not say so")
 	}
 	if written.AiDisclosure == nil || *written.AiDisclosure == "" {
-		t.Error("a model-written note carries no Art. 50 disclosure")
+		t.Error("a model-written note carries no provenance notice")
 	}
 
 	floor := wireIntroNote(note, crmcontracts.WrittenByDeterministic, warmNote())
@@ -267,6 +267,24 @@ func TestReasoningIsAlwaysAnArrayOnTheWire(t *testing.T) {
 		if strings.Contains(string(raw), `"reasoning":null`) {
 			t.Errorf("%s: reasoning serializes as null rather than an array:\n%s", name, raw)
 		}
+	}
+}
+
+// On a route through an intermediary the band and date describe the sender's
+// edge to that intermediary, so the note claims no history with the recipient.
+func TestAnIndirectRouteClaimsNoHistoryWithTheRecipient(t *testing.T) {
+	t.Parallel()
+	facts := warmNote()
+	facts.through = "Marek Janetzke"
+
+	body := noteFloor(facts).body
+	for _, absent := range []string{"developing", "2026-08-20", "We have been"} {
+		if strings.Contains(body, absent) {
+			t.Errorf("the note hands the intermediary's edge (%q) to the recipient:\n%s", absent, body)
+		}
+	}
+	if label := noteReasons(facts)[0].Label; label != "Sofia Meier → Marek Janetzke (developing)" {
+		t.Errorf("the relationship reason is %q; want the edge the band was scored on", label)
 	}
 }
 
@@ -322,7 +340,7 @@ func TestANoteObeyingThePromptIsAccepted(t *testing.T) {
 func TestTheNotePromptAsksForWhatTheParseRequires(t *testing.T) {
 	t.Parallel()
 	for _, required := range []string{
-		"address them by name: open with their first name",
+		"open with a greeting line naming them by first name",
 		"naming them in full",
 		`Write a short subject line in the "subject" field`,
 	} {

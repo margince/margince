@@ -12,6 +12,7 @@ import {
   Field,
   Textarea,
 } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -174,7 +175,7 @@ function ThreadRow({
           </div>
         </div>
       ) : null}
-      {error ? <p className="t-danger">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
     </div>
   );
 }
@@ -218,9 +219,9 @@ export function ThreadComposer({
     return (
       <>
         {collapsible ? null : (
-          <p className="t-danger" id={REFUSAL_ID}>
+          <ErrorLine standing id={REFUSAL_ID}>
             {verbs.refusal}
-          </p>
+          </ErrorLine>
         )}
         <div className="card-actions">
           {/* `reasonId`, not `reason`: every control on the board is refused
@@ -300,7 +301,7 @@ export function ThreadComposer({
           </Button>
         ) : null}
       </div>
-      {error ? <p className="t-danger">{error}</p> : null}
+      {error ? <ErrorLine>{error}</ErrorLine> : null}
     </div>
   );
 }

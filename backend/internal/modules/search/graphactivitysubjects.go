@@ -46,23 +46,39 @@ type activityLinkArm struct {
 	column string
 }
 
-// title is the expression that renders this record type for a human, read off
-// the module's one entity table rather than restated here — so a record named
-// in a prep reads exactly as it reads in a search result and on an anchor
-// profile. An entity with no branch has no title, which is a broken read the
-// arm gate (TestEverySubjectLinkArmIsRanked) refuses before it can ship.
-func (a activityLinkArm) title() string {
+// branch is the search branch that owns this record type: where its table and
+// its display expression are declared. Everything about how a record reads is
+// held there once, so a record named in a prep reads exactly as it reads in a
+// search result and on an anchor profile. An entity with no branch is a broken
+// read the arm gate (TestEverySubjectLinkArmIsRanked) refuses before it ships.
+func (a activityLinkArm) branch() (searchBranch, bool) {
 	for _, branch := range searchBranches {
 		if branch.entity == a.entity {
-			return branch.title
+			return branch, true
 		}
 	}
-	return ""
+	return searchBranch{}, false
+}
+
+// title is the EXPRESSION that renders this record type for a human, not
+// necessarily a column: a lead reads as `coalesce(full_name, company_name,
+// email)`, because a lead is often a name, sometimes only an employer and
+// occasionally nothing but an address. Its columns are unqualified and resolve
+// against the entity table wherever a statement aliases that table — so a
+// caller composes it as a select expression and never as `alias.<title>`,
+// which is what asking Postgres to find a schema called `t` looks like.
+func (a activityLinkArm) title() string {
+	branch, ok := a.branch()
+	if !ok {
+		return ""
+	}
+	return branch.title
 }
 
 // activityLinkArms is EVERY arm of activity_link, in no particular order —
 // subjectTier decides the dereference precedence and relatedSectionOrder
-// decides which of them the hop-2 walk reports.
+// decides the order the hop-2 walk emits them in. All three cover the same
+// set, each for its own reason, and a gate holds each against the DDL.
 //
 // All five are here, and the completeness is load-bearing: the first draft of
 // the dereference borrowed the hop-2 walk's shorter list and so dropped the

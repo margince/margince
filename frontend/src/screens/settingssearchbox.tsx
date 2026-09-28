@@ -3,6 +3,7 @@
 
 import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { useHoldsAdminRole } from "../app/capability";
 import { navigate } from "../app/router";
 import { useT } from "../i18n";
 import type { SettingsPage } from "./settingscatalog";
@@ -72,7 +73,8 @@ export function SettingsSearchBox({
     activeRef.current?.scrollIntoView?.({ block: "nearest" });
   }, [active]);
 
-  const hits = settingsSearch(typed, pages, t);
+  const holdsAdminRole = useHoldsAdminRole();
+  const hits = settingsSearch(typed, pages, t, { holdsAdminRole });
   // Whether the popup is ON SCREEN, which is what `aria-expanded` must report.
   // It was `hits.length > 0`, so a query matching nothing rendered a visible
   // popup while the combobox told assistive technology it was collapsed.

@@ -10,7 +10,7 @@ import { StoryProviders } from "./story-utils";
 // is, and — expanded — the same TimelineRow the chronicle renders. Two facts
 // the screenshots below carry that a single glance would miss: a thread that
 // ended on their word reads "Your move", never the reverse, and a group cut
-// by the page's edge says so with the "may continue earlier" caption rather
+// by the page's edge says so with the "Earlier messages may exist" caption rather
 // than looking finished.
 
 function entry(

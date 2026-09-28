@@ -81,7 +81,7 @@ it("explains pooled tokens, UTC reset and unchanged model selection", async () =
     await screen.findByText(/22,453,486 of 24,000,000 tokens/),
   ).toBeTruthy();
   expect(
-    screen.getByText(/not an individual quota or a dollar spending cap/),
+    screen.getByText(/Not an individual quota or a dollar spending cap/),
   ).toBeTruthy();
   expect(await screen.findByText("Same model selection")).toBeTruthy();
   expect(screen.getByText(/UTC/)).toBeTruthy();
@@ -126,9 +126,7 @@ it("keeps a rejected draft visible after a concurrent edit", async () => {
     ).not.toBeDisabled(),
   );
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
-  expect(
-    await screen.findByText("The change could not be applied"),
-  ).toBeTruthy();
+  expect(await screen.findByText("Change not applied")).toBeTruthy();
   expect(screen.getByLabelText("Tokens per full user per month")).toHaveValue(
     "12000000",
   );
@@ -151,7 +149,7 @@ it.each([
   expect(await screen.findByText("AI by activity")).toBeTruthy();
   expect(
     screen.getByText(
-      "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+      "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
     ),
   ).toBeTruthy();
   expect(screen.queryByRole("table")).toBeNull();
@@ -188,6 +186,12 @@ it("explains each routing impact in operational language", () => {
           },
           {
             ...feature,
+            task: "decision",
+            display_name: "Decision activity",
+            impact: "decision_changed",
+          },
+          {
+            ...feature,
             task: "fallback",
             display_name: "Fallback activity",
             impact: "fallback_changed",
@@ -205,6 +209,7 @@ it("explains each routing impact in operational language", () => {
 
   expect(screen.getByText("Waiting on allowance")).toBeTruthy();
   expect(screen.getByText("Different model selected")).toBeTruthy();
+  expect(screen.getByText("Decision model changed")).toBeTruthy();
   expect(screen.getByText("Fallback chain changed")).toBeTruthy();
   expect(screen.getByText("No model configured")).toBeTruthy();
 });
@@ -219,7 +224,7 @@ it("reports a failed carrier reading as unavailable", async () => {
   await user.click(
     await screen.findByText("Recorded work waiting on the allowance"),
   );
-  expect(screen.getByText(/Account scans: Unavailable/)).toBeTruthy();
+  expect(screen.getByText(/Company scans: Unavailable/)).toBeTruthy();
 });
 it("explains the one-user floor when there are no eligible full users", async () => {
   mount(undefined, false, {
@@ -228,7 +233,7 @@ it("explains the one-user floor when there are no eligible full users", async ()
   });
   expect(
     await screen.findByText(
-      /With no eligible users, the allowance counts one user/,
+      /With no eligible users, the allowance counts 1 user/,
     ),
   ).toBeTruthy();
 });
@@ -259,4 +264,43 @@ it("saves a fixed company override without discarding the per-user value", async
       expected_revision: "budget-v1",
     },
   ]);
+});
+it("features card says decision model first, and why another feature skips it", async () => {
+  mount(undefined, false, {
+    ...status,
+    features: [
+      {
+        ...feature,
+        task: "capture_classify",
+        display_name: "Classify correspondence",
+        decision_first: true,
+        decision_candidate: {
+          tier: "decide",
+          provider: "jev_compatible",
+          model: "jev-classify",
+          processing: "cloud_provider",
+        },
+      },
+      {
+        ...feature,
+        task: "deep_read_triage",
+        display_name: "Triage a site",
+        decision_skip_reason: "local_only",
+      },
+    ],
+  });
+
+  // The lane leads, where it processes, and the ladder that answers after it.
+  expect(
+    await screen.findByText(
+      "Decision model first (jev_compatible · jev-classify · Cloud provider) → then gemini · example-model",
+    ),
+  ).toBeInTheDocument();
+  // A feature the lane does not serve keeps its ladder, with the reason beside it.
+  expect(screen.getByText("gemini · example-model")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "Decision model not used: this activity takes only a local decision provider.",
+    ),
+  ).toBeInTheDocument();
 });

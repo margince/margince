@@ -94,13 +94,15 @@ describe("the scope preview", () => {
       screen.getByRole("combobox", { name: "Import window" }),
       "10 years",
     );
-    await screen.findByText(/Import emails since/);
+    await screen.findByText(/Imports email since/);
     expect(screen.getByText(/At least 20,000 messages/)).toBeInTheDocument();
     expect(
       screen.getByText(/full import can contain more messages and cost more/),
     ).toBeInTheDocument();
     expect(starts).toEqual([]);
-    await user.click(screen.getByRole("button", { name: "Connect and read" }));
+    await user.click(
+      screen.getByRole("button", { name: "Connect and import" }),
+    );
     await waitFor(() => expect(starts).toEqual([{ window: "120m" }]));
   });
 
@@ -116,7 +118,7 @@ describe("the scope preview", () => {
 
     await waitFor(() => expect(windows).toEqual([{ window: "6m" }]));
     expect(
-      await screen.findByText("About 1,234 messages in that window."),
+      await screen.findByText("About 1,234 messages in this period."),
     ).toBeInTheDocument();
 
     await pickOption(
@@ -150,7 +152,7 @@ describe("the scope preview", () => {
     });
     render({ state: "none" });
 
-    await screen.findByText("About 100 messages in that window.");
+    await screen.findByText("About 100 messages in this period.");
 
     await pickOption(
       user,
@@ -162,15 +164,15 @@ describe("the scope preview", () => {
     // window is on screen — not the old one, and not a "new" one, since none
     // has arrived yet — while the request for it is still in flight.
     expect(
-      screen.queryByText(/messages in that window\./),
+      screen.queryByText(/messages in this period\./),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText("Counting the messages in that window…"),
+      screen.getByText("Counting messages in this period…"),
     ).toBeInTheDocument();
 
     deferred.resolve?.(previewOf({ estimated_messages: 900 }));
     expect(
-      await screen.findByText("About 900 messages in that window."),
+      await screen.findByText("About 900 messages in this period."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Counting the messages/)).not.toBeInTheDocument();
   });
@@ -192,7 +194,7 @@ describe("the scope preview", () => {
     render({ state: "none" });
 
     expect(
-      await screen.findByText("Counting the messages in that window…"),
+      await screen.findByText("Counting messages in this period…"),
     ).toBeInTheDocument();
 
     await pickOption(
@@ -200,7 +202,7 @@ describe("the scope preview", () => {
       screen.getByRole("combobox", { name: "Import window" }),
       "3 months",
     );
-    const start = screen.getByRole("button", { name: "Connect and read" });
+    const start = screen.getByRole("button", { name: "Connect and import" });
     expect(start).toBeEnabled();
     await user.click(start);
 
@@ -214,7 +216,7 @@ describe("the scope preview", () => {
     render({ state: "none" });
 
     expect(
-      await screen.findByText("Estimated from the mailbox, not counted yet."),
+      await screen.findByText("Estimated from the mailbox, not counted."),
     ).toBeInTheDocument();
   });
 
@@ -224,7 +226,7 @@ describe("the scope preview", () => {
     });
     render({ state: "none" });
 
-    await screen.findByText("About 1,234 messages in that window.");
+    await screen.findByText("About 1,234 messages in this period.");
     expect(screen.queryByText(/not counted yet/)).not.toBeInTheDocument();
   });
 
@@ -238,7 +240,7 @@ describe("the scope preview", () => {
     // 250 minor units is 2.50 of the major unit; the symbol is the locale's
     // business, so only the amount is pinned here.
     expect(
-      await screen.findByText(/Roughly\s+\S*2\.50 in model calls\./),
+      await screen.findByText(/About\s+\S*2\.50 in model calls\./),
     ).toBeInTheDocument();
     expect(screen.queryByText(/EUR|€/)).not.toBeInTheDocument();
   });
@@ -247,7 +249,7 @@ describe("the scope preview", () => {
     installFetchStub({ [PREVIEW_ROUTE]: () => previewOf({}) });
     render({ state: "none" });
 
-    await screen.findByText("About 1,234 messages in that window.");
+    await screen.findByText("About 1,234 messages in this period.");
     expect(screen.queryByText(/in model calls/)).not.toBeInTheDocument();
   });
 
@@ -268,11 +270,11 @@ describe("the scope preview", () => {
     render({ state: "none" });
 
     expect(
-      await screen.findByText(/I could not estimate that window/),
+      await screen.findByText(/The period could not be estimated/),
     ).toBeInTheDocument();
     expect(screen.getByText(/The mailbox went quiet\./)).toBeInTheDocument();
 
-    const start = screen.getByRole("button", { name: "Connect and read" });
+    const start = screen.getByRole("button", { name: "Connect and import" });
     expect(start).toBeEnabled();
     await user.click(start);
     await waitFor(() => expect(starts).toEqual([{ window: "6m" }]));
@@ -291,7 +293,7 @@ describe("the scope preview", () => {
 
     expect(
       await screen.findByText(
-        "I could not estimate that window: Something unexpected went wrong. You can still start, or pick another.",
+        "The period could not be estimated: An unexpected error occurred. Start anyway, or select another period.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/ECONNRESET/)).not.toBeInTheDocument();
@@ -312,17 +314,19 @@ describe("starting the read", () => {
     });
     render({ state: "none" });
 
-    await screen.findByText("About 1,234 messages in that window.");
+    await screen.findByText("About 1,234 messages in this period.");
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Import window" }),
       "3 months",
     );
-    await user.click(screen.getByRole("button", { name: "Connect and read" }));
+    await user.click(
+      screen.getByRole("button", { name: "Connect and import" }),
+    );
 
     await waitFor(() => expect(starts).toEqual([{ window: "3m" }]));
     expect(
-      await screen.findByRole("heading", { name: "Reading your mailbox" }),
+      await screen.findByRole("heading", { name: "Importing mailbox history" }),
     ).toBeInTheDocument();
   });
 
@@ -348,8 +352,10 @@ describe("starting the read", () => {
       screen.getByRole("combobox", { name: "Import window" }).textContent,
     ).toContain("1 year");
 
-    await screen.findByText("About 90 messages in that window.");
-    await user.click(screen.getByRole("button", { name: "Connect and read" }));
+    await screen.findByText("About 90 messages in this period.");
+    await user.click(
+      screen.getByRole("button", { name: "Connect and import" }),
+    );
     await waitFor(() => expect(starts).toEqual([{ window: "12m" }]));
   });
 
@@ -364,14 +370,16 @@ describe("starting the read", () => {
     });
     render({ state: "none" });
 
-    await screen.findByText("About 1,234 messages in that window.");
-    await user.click(screen.getByRole("button", { name: "Connect and read" }));
+    await screen.findByText("About 1,234 messages in this period.");
+    await user.click(
+      screen.getByRole("button", { name: "Connect and import" }),
+    );
 
     expect(
-      await screen.findByText(/I could not start the backread/),
+      await screen.findByText(/The mailbox history import did not start/),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Reading your mailbox" }),
+      screen.queryByRole("heading", { name: "Importing mailbox history" }),
     ).not.toBeInTheDocument();
     // Still the setup view: the window pick is where the user was left.
     expect(
@@ -396,11 +404,11 @@ describe("starting the read", () => {
     });
 
     expect(
-      await screen.findByRole("heading", { name: "Reading your mailbox" }),
+      await screen.findByRole("heading", { name: "Importing mailbox history" }),
     ).toBeInTheDocument();
     expect(starts).toEqual([]);
     expect(
-      screen.queryByRole("button", { name: "Connect and read" }),
+      screen.queryByRole("button", { name: "Connect and import" }),
     ).not.toBeInTheDocument();
   });
 });
@@ -464,7 +472,7 @@ describe("the tallies", () => {
       },
     });
 
-    await screen.findByRole("heading", { name: "Here is what is in there." });
+    await screen.findByRole("heading", { name: "Import results" });
     expect(screen.queryByText(/deal/i)).not.toBeInTheDocument();
   });
 });
@@ -507,7 +515,7 @@ describe("outcomes", () => {
 
     expect(
       await screen.findByText(
-        /The backread stopped: The provider rejected our credentials\./,
+        /The mailbox history import stopped: The provider rejected the stored credentials\./,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/\bauth\b/)).not.toBeInTheDocument();
@@ -517,9 +525,7 @@ describe("outcomes", () => {
     installFetchStub({});
     render({ state: "error" });
 
-    expect(
-      await screen.findByText(/we can't classify yet/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/unclassified reason/)).toBeInTheDocument();
   });
 
   it("states that a cancelled read wrote nothing", async () => {
@@ -527,7 +533,7 @@ describe("outcomes", () => {
     render({ state: "cancelled", counts: { messages_scanned: 40 } });
 
     expect(
-      await screen.findByText("I stopped reading. Nothing was written."),
+      await screen.findByText("Import stopped. Nothing was written."),
     ).toBeInTheDocument();
   });
 
@@ -543,10 +549,10 @@ describe("outcomes", () => {
     });
     render({ state: "running", counts: { messages_scanned: 1 } });
 
-    await user.click(screen.getByRole("button", { name: "Stop reading" }));
+    await user.click(screen.getByRole("button", { name: "Stop import" }));
     expect(
       await screen.findByText(
-        "I could not stop the read: There is no read to stop. Try again — it keeps running meanwhile.",
+        "The import could not be stopped: There is no read to stop. It keeps running meanwhile. Retry.",
       ),
     ).toBeInTheDocument();
   });
@@ -560,11 +566,11 @@ describe("outcomes", () => {
 
     expect(
       await screen.findByText(
-        "I stopped reading. What was already captured stays — it is waiting for you in the inbox.",
+        "Import stopped. Records already captured stay and wait for review in the Worklist.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("I stopped reading. Nothing was written."),
+      screen.queryByText("Import stopped. Nothing was written."),
     ).not.toBeInTheDocument();
   });
 
@@ -586,7 +592,7 @@ describe("outcomes", () => {
     );
 
     expect(
-      await screen.findByText(/import status can't be read right now/),
+      await screen.findByText(/Import status is unavailable/),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^done$/i }));
     expect(onDone).toHaveBeenCalledTimes(1);
@@ -610,7 +616,7 @@ describe("leaving", () => {
     });
 
     await user.click(
-      screen.getByRole("button", { name: "Continue while it reads" }),
+      screen.getByRole("button", { name: "Continue during import" }),
     );
     // Leaving the backread is not leaving the step: the read keeps running
     // and nothing is cancelled.
@@ -639,7 +645,7 @@ describe("leaving", () => {
     // The posture write needs this surface mounted to show a refusal; an
     // exit that pressed mid-write would leave it nowhere to land.
     const exit = await screen.findByRole("button", {
-      name: "Continue while it reads",
+      name: "Continue during import",
     });
     expect(exit).toBeDisabled();
     await user.click(exit);
@@ -657,9 +663,9 @@ describe("leaving", () => {
     });
     const { onDone } = render({ state: "none" });
 
-    await screen.findByText("About 1,234 messages in that window.");
+    await screen.findByText("About 1,234 messages in this period.");
     await user.click(
-      screen.getByRole("button", { name: "Do not read history now" }),
+      screen.getByRole("button", { name: "Skip history import" }),
     );
 
     expect(onDone).toHaveBeenCalledTimes(1);
@@ -670,9 +676,9 @@ describe("leaving", () => {
     installFetchStub({ [PREVIEW_ROUTE]: () => previewOf({}) });
     const { container } = render({ state: "none" });
 
-    await screen.findByText("About 1,234 messages in that window.");
+    await screen.findByText("About 1,234 messages in this period.");
     const note = screen.getByText(en["ob.backread.note"]);
-    const start = screen.getByRole("button", { name: "Connect and read" });
+    const start = screen.getByRole("button", { name: "Connect and import" });
     expect(
       note.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

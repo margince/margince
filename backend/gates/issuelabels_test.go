@@ -91,9 +91,10 @@ var labelSections = []struct {
 }
 
 // labelSpan matches a label name as the page writes one: a fenced span holding
-// only the name, so `gh issue list --label "area: <x>"` — which has spaces — is
-// prose about a label rather than a listing of one.
-var labelSpan = regexp.MustCompile("`((?:priority: |area: |status: |claim: )?[a-z][a-z-]*)`")
+// only the name. A space is allowed only behind an axis prefix, which is what
+// separates the two-word `status: in progress` from `gh issue create` and from
+// the `gh issue list --label "area: <x>"` this page teaches the flag with.
+var labelSpan = regexp.MustCompile("`((?:priority: |area: |status: |claim: )[a-z][a-z-]*(?: [a-z][a-z-]*)*|[a-z][a-z-]*)`")
 
 func TestEachSectionOfTheReferencePageListsExactlyItsLabels(t *testing.T) {
 	t.Parallel()
