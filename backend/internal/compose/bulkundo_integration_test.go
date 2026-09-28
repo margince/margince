@@ -44,7 +44,7 @@ func seedSurroundedContacts(t *testing.T, e *integration.Env, n int) []surrounde
 	t.Helper()
 	ctx := e.Admin()
 	lists := collections.NewStore(e.DB())
-	tag, err := lists.CreateTag(ctx, "undo-"+ids.NewV7().String()[:8], nil, nil)
+	tag, err := lists.CreateTag(ctx, "undo-"+ids.NewV7().String(), nil, nil)
 	if err != nil {
 		t.Fatalf("seeding a tag: %v", err)
 	}
