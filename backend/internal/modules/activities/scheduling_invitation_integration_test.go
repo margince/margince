@@ -12,7 +12,9 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -121,6 +123,59 @@ func TestInvitationDeliveryKeepsOneActivityAndOneProviderIdentity(t *testing.T) 
 	}
 	if count != 3 {
 		t.Fatalf("delivery retry duplicated the CRM meeting: %d", count)
+	}
+}
+
+func TestAnInvitationOutsideTheCallersAudienceReadsAsNotFound(t *testing.T) {
+	e := setupSend(t)
+	host := e.as(principal.RowScopeAll)
+	clock := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
+	store := e.store(nil).WithClock(func() time.Time { return clock }).WithWorkingHours(func(context.Context, ids.UserID) (WorkingHours, error) { return fallbackWorkingHours(), nil }).WithSchedulingCalendar(&invitationCalendar{}).WithMeetingVault(keyvault.NewMemory()).WithPublicBaseURL("https://crm.example.com")
+	profile := defaultSchedulingProfile()
+	profile.Provider = "gcal"
+	profile.Enabled = true
+	name := "Test Host"
+	profile.HostName = &name
+	if _, err := store.SaveSchedulingProfile(host, profile); err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.NewV7()
+	args := schedulingArgs{}
+	if _, err := e.owner.Exec(host, `INSERT INTO contact(id,full_name,source,captured_by)VALUES(`+args.add(contact)+`,'Guest','manual','human:test')`, args...); err != nil {
+		t.Fatal(err)
+	}
+	invited, err := store.CreateInvitation(host, crmcontracts.MeetingInvitationRequest{ContactId: crmcontracts.Id(contact), AttendeeEmail: "guest@example.test", Subject: "Acquisition talks", Start: clock.Add(3 * time.Hour), End: clock.Add(3*time.Hour + 30*time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.UUID(invited.Id)
+	colleague := principal.WithActor(host, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.other.String(), UserID: e.other,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}, "contact": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if seen, err := store.Invitation(colleague, id); err != nil || seen.Subject != "Acquisition talks" {
+		t.Fatalf("a workspace-audience meeting must stay readable to a colleague: %+v %v", seen, err)
+	}
+
+	if _, err := store.SetAudience(host, ids.From[ids.ActivityKind](id), SetAudienceInput{Audience: "selected", Members: []AudienceMember{{SubjectType: "user", SubjectID: e.rep}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Invitation(colleague, id); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a colleague outside the audience read the meeting: err = %v, want ErrNotFound", err)
+	}
+	if _, err := store.GetActivity(colleague, ids.From[ids.ActivityKind](id), storekit.LiveOnly); err != nil {
+		t.Fatalf("the colleague must still discover the withheld meeting on the timeline: %v", err)
+	}
+	if kept, err := store.Invitation(host, id); err != nil || kept.Subject != "Acquisition talks" {
+		t.Fatalf("the host lost their own meeting: %+v %v", kept, err)
+	}
+	guest := principal.WithActor(host, principal.Principal{Type: principal.PrincipalSystem, ID: "system:public_booking"})
+	if viaToken, err := store.Invitation(guest, id); err != nil || viaToken.Subject != "Acquisition talks" {
+		t.Fatalf("the guest's management link lost the meeting: %+v %v", viaToken, err)
 	}
 }
 
