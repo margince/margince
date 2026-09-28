@@ -10,6 +10,7 @@ package integration
 // handed to an invited member.
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"testing"
@@ -30,10 +31,24 @@ type roleDirectoryWire struct {
 	Roles []roleWire `json:"roles"`
 }
 
+// dropFieldSalesMasksAfter removes the masks a copied "Field sales" role took
+// from rep: field_mask has no workspace column, so a mask left behind reaches
+// the next test's copy of the same key and refuses its insert.
+func dropFieldSalesMasksAfter(t *testing.T) {
+	t.Helper()
+	owner := OwnerConn(t)
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `DELETE FROM field_mask WHERE role_key = 'custom_field_sales'`); err != nil {
+			t.Errorf("removing custom_field_sales's masks: %v", err)
+		}
+	})
+}
+
 func TestTheRoleLifecycleOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
+	dropFieldSalesMasksAfter(t)
 
 	var created roleWire
 	if status := e.Call(t, "POST", "/v1/roles", map[string]any{"copy_from": "rep", "name": "Field sales"}, nil, &created); status != http.StatusCreated {
@@ -118,6 +133,7 @@ func TestTheRoleEditorsRefusalsOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
+	dropFieldSalesMasksAfter(t)
 
 	var created roleWire
 	if status := e.Call(t, "POST", "/v1/roles", map[string]any{"copy_from": "rep", "name": "Field sales"}, nil, &created); status != http.StatusCreated {
@@ -172,6 +188,7 @@ func TestTheAssignableRolesOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
+	dropFieldSalesMasksAfter(t)
 	if status := e.Call(t, "POST", "/v1/roles", map[string]any{"copy_from": "rep", "name": "Field sales"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create -> %d, want 201", status)
 	}
