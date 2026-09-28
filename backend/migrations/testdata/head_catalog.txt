@@ -4274,6 +4274,7 @@ public.idx_rel_works_with_contact CREATE INDEX idx_rel_works_with_contact ON pub
 public.idx_rel_works_with_counterparty CREATE INDEX idx_rel_works_with_counterparty ON public.relationship USING btree (counterparty_contact_id) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))
 public.idx_relationship_counterparty_contact CREATE INDEX idx_relationship_counterparty_contact ON public.relationship USING btree (counterparty_contact_id)
 public.idx_report_run_asker CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC)
+public.idx_restore_drill_recent CREATE INDEX idx_restore_drill_recent ON public.restore_drill USING btree (started_at DESC)
 public.idx_role_assignment_team CREATE INDEX idx_role_assignment_team ON public.role_assignment USING btree (team_id)
 public.idx_role_assignment_user CREATE INDEX idx_role_assignment_user ON public.role_assignment USING btree (user_id)
 public.idx_runner_job_due CREATE INDEX idx_runner_job_due ON public.runner_job USING btree (status, due_at)
@@ -5634,6 +5635,21 @@ public.report_run.schema_version text NOT NULL gen=- def=-
 public.report_run.total_safe boolean NOT NULL gen=- def=-
 public.report_run.withheld boolean NOT NULL gen=- def=-
 public.report_run_pkey CREATE UNIQUE INDEX report_run_pkey ON public.report_run USING btree (id)
+public.restore_drill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.restore_drill.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.restore_drill.finished_at timestamp with time zone gen=- def=-
+public.restore_drill.id uuid NOT NULL gen=- def=uuidv7()
+public.restore_drill.notes text gen=- def=-
+public.restore_drill.operator text NOT NULL gen=- def=-
+public.restore_drill.outcome text NOT NULL gen=- def='running'::text
+public.restore_drill.restore_drill_finishes_after_it_starts CHECK (((finished_at IS NULL) OR (finished_at >= started_at)))
+public.restore_drill.restore_drill_outcome_check CHECK ((outcome = ANY (ARRAY['running'::text, 'passed'::text, 'failed'::text])))
+public.restore_drill.restore_drill_outcome_follows_completion CHECK (((finished_at IS NULL) = (outcome = 'running'::text)))
+public.restore_drill.restore_drill_pkey PRIMARY KEY (id)
+public.restore_drill.restore_drill_restores_to_the_past CHECK ((restored_to <= started_at))
+public.restore_drill.restored_to timestamp with time zone NOT NULL gen=- def=-
+public.restore_drill.started_at timestamp with time zone NOT NULL gen=- def=now()
+public.restore_drill_pkey CREATE UNIQUE INDEX restore_drill_pkey ON public.restore_drill USING btree (id)
 public.retention_policy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.retention_policy.action text NOT NULL gen=- def=-
 public.retention_policy.category text gen=- def=-

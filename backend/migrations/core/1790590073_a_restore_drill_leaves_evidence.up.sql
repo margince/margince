@@ -55,3 +55,7 @@ CREATE TABLE restore_drill (
 
 -- The one question the operator surface asks: what is the most recent drill?
 CREATE INDEX idx_restore_drill_recent ON restore_drill (started_at DESC);
+
+-- The app role writes and reads it; without this the ledger is owner-only and
+-- every drill recorded through the running server fails on permission.
+GRANT SELECT, INSERT, UPDATE ON restore_drill TO margince_app;
