@@ -120,7 +120,9 @@ export function BindingEditor({
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
       <Heading size="large" id={headingId} className="t-h2 dialog-heading">
-        {t("aiRouting.editTitle", { lane: label })}
+        {draft.kind === "decisions" && base.binding === undefined
+          ? t("aiRouting.decisions.add")
+          : t("aiRouting.editTitle", { lane: label })}
       </Heading>
       {binding && (
         <div className="form-stack">

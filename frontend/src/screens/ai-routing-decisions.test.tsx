@@ -35,8 +35,11 @@ describe("the decision model lane", () => {
     await user.click(
       within(absent).getByRole("button", { name: "Add decision model" }),
     );
-    // Adding opens the lane's editor, with nothing yet to remove.
-    const lane = await screen.findByRole("dialog");
+    // Adding opens the lane's editor, named for the add, with nothing yet to
+    // remove.
+    const lane = await screen.findByRole("dialog", {
+      name: "Add decision model",
+    });
     expect(
       within(lane).queryByRole("button", { name: "Remove decision model" }),
     ).toBeNull();
