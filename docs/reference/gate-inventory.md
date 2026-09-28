@@ -454,6 +454,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `technicaldomain_test.go` | H2 | The technical lookup reads the domain the RECORD holds, and nothing else. |
 | `trackedbinaries_test.go` | H2 | A compiled binary is never tracked. |
 | `transactionopeners_test.go` | H2 | One function in the database package turns a pool into a transaction, and every seam the package publishes routes through it. |
+| `triggertargetcolumns_test.go` | H2 | A touch trigger may only sit on a table that has every column it writes. |
 | `triggerwrittencolumns_test.go` | H2 | A statement may not write a column its table's trigger already writes. |
 | `txseamacquire_test.go` | H2 | Code that runs on a caller's `pgx.Tx` acquires no connection of its own. |
 | `undoabledatecolumns_test.go` | H2 | A `date` column's audit image is written in Postgres's own spelling of a date. |

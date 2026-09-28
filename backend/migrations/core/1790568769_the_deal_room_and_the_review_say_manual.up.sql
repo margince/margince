@@ -32,7 +32,12 @@
 SET LOCAL lock_timeout = '3s';
 
 UPDATE activity                 SET source = 'manual' WHERE source IN ('mcp', 'ui');
+
+-- The review's touch trigger writes a version column the table does not have,
+-- so it is held off for this sweep; 1790587992 points it at set_updated_at.
+ALTER TABLE activity_review_response DISABLE TRIGGER trg_activity_review_response_updated;
 UPDATE activity_review_response SET source = 'manual' WHERE source IN ('mcp', 'ui');
+ALTER TABLE activity_review_response ENABLE TRIGGER trg_activity_review_response_updated;
 
 -- The Deal Room's five written tables. The invitation and session rows carry the
 -- server's own 'system' and are deliberately absent.

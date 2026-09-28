@@ -548,7 +548,7 @@ public.activity_review_response.source text NOT NULL gen=- def=-
 public.activity_review_response.submission_id uuid NOT NULL gen=- def=-
 public.activity_review_response.template_key text NOT NULL gen=- def=-
 public.activity_review_response.template_version integer NOT NULL gen=- def=-
-public.activity_review_response.trg_activity_review_response_updated CREATE TRIGGER trg_activity_review_response_updated BEFORE UPDATE ON public.activity_review_response FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.activity_review_response.trg_activity_review_response_updated CREATE TRIGGER trg_activity_review_response_updated BEFORE UPDATE ON public.activity_review_response FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.activity_review_response.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_response_activity_id_key CREATE UNIQUE INDEX activity_review_response_activity_id_key ON public.activity_review_response USING btree (activity_id)
 public.activity_review_response_by_occurrence CREATE INDEX activity_review_response_by_occurrence ON public.activity_review_response USING btree (deal_id, closing_occurrence_id)
