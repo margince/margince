@@ -7,8 +7,9 @@ import type { components } from "../api/schema";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import { DraftOffer } from "./composedraftcontext";
 import { StoryProviders } from "./story-utils";
-// The drawer's own sheet: `.compose-band` and `.compose-rewrite` are reached BY
-// CLASS, and a story's module graph stops short of compose.tsx, which loads it.
+// The drawer's own sheet: `.compose-band-body` and `.compose-rewrite` are
+// reached BY CLASS, and a story's module graph stops short of compose.tsx,
+// which loads it.
 import "./compose.css";
 
 // The card that says a MACHINE wrote the words below, and the rewrites offered

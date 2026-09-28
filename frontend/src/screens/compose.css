@@ -10,12 +10,9 @@
 
 /* The card that says a machine wrote what is below it. The indigo edge, the
    indigo head band and its ink are `Panel tone="ai"` — the one spelling of
-   machine authorship in the product — so all that is left here is how the card
-   sits in the drawer's own column and how its block stacks inside it. */
-.compose-band {
-  margin-block: var(--space-3);
-}
-
+   machine authorship in the product — so all that is left here is how its block
+   stacks inside it. The space around it is the column's own gap: a margin on
+   top of that doubled it and pushed the fields under the card further down. */
 .compose-band-body {
   display: flex;
   flex-direction: column;
