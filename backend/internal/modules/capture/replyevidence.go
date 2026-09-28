@@ -41,7 +41,7 @@ func ownerAnswered() string {
 		            AND ours.kind = reply.kind
 		            AND ours.counterparty_outbound_attested
 		            AND ` + auth.ActivityAvailableClause("ours") + `)
-		   AND NOT ` + counterpartyHeldOn("reply") + `)`
+		   AND NOT ` + CounterpartyHeldOn("reply") + `)`
 }
 
 // OwnerWasAnsweredTx reports whether the address has answered this owner in a

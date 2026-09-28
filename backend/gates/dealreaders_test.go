@@ -107,6 +107,11 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.
+	"internal/modules/deals/suggestion.go:SuggestionFloorExpr":         "the instant a company's suggestion evidence must be newer than, read from the latest close of a deal on it. Composed only into the system-only suggestion writer and the scout's system-principal evidence read; it selects a timestamp that decides which evidence counts, never a deal",
+	"internal/modules/deals/suggestion.go:SuggestableCompanyClause":    "asks whether a company has an open deal, to refuse a suggestion about it. Composed only into the system-only suggestion writer and the scout's system-principal read; no deal column leaves it",
+	"internal/modules/deals/suggestion.go:SupersedeStaleSuggestionsTx": "the system-only sweep (auth.RequireSystem) that retires a suggestion once its company has an open deal. It reads whether one exists and writes suggestion state; no deal column leaves it",
+
 	"internal/compose/assuranceseam.go":                                        "the assurance scan's subject statement, selecting a deal's owner, amount and currency so a finding can be raised against it. assurancebundle.go records that the pass runs as PrincipalSystem over the whole installation; what a human later reads is AssuranceExceptions, which asks both halves",
 	"internal/compose/captureofflinedemo.go:fillParties":                       "the offline capture demo's fixture parties, read to seed a mailbox that has something to capture against. Demo seeding rather than a product read path, where the demo binds its own principal",
 	"internal/modules/activities/retentionstamp.go:StampCorrespondenceForDeal": "the retention stamp freezes the deal's NAME into the evidence at the moment the correspondence qualifies, because a rename or a delete must not take the proof with it. It runs inside the qualifying write and the name goes onto the evidence row, never to a caller",

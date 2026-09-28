@@ -109,6 +109,12 @@ const (
 	// which, so the probe reads it back (bulkwithhold.go).
 	probeBulkBatch = "bulk_batch"
 
+	// probeDealSuggestion keys the deals-owned suggestion probe. A suggestion
+	// has no owner column: it is visible only to a reader who may see its
+	// company and every piece of its evidence, a rule only the deals store
+	// evaluates.
+	probeDealSuggestion = "deal_suggestion"
+
 	// The fields a body names another record by, spelled where the table that
 	// uses them is.
 	offerDealField        = "deal_id"
@@ -198,6 +204,14 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/deals":              {object: tableDeal, table: tableDeal, idPath: "id"},
 	"PATCH /v1/deals/{id}":        {object: tableDeal, table: tableDeal, idPath: "id"},
 	"POST /v1/deals/{id}/advance": {object: tableDeal, table: tableDeal, idPath: "id"},
+	// A suggestion's decision answers the suggestion, evidence titles and all,
+	// so a replay clears the suggestion's own visibility rule again; the deal
+	// an acceptance opened rides beside it as a companion.
+	"POST /v1/deal-suggestions/{id}/accept": {
+		object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "suggestion.id",
+		companions: []companionRef{{table: tableDeal, idPath: offerDealField}},
+	},
+	"POST /v1/deal-suggestions/{id}/dismiss": {object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "id"},
 	// Taking back an automatic stage move answers the deal, and the deal's
 	// grant governs it — the progression ledger carries no authority of its
 	// own. A retried undo must replay rather than re-execute: the second run

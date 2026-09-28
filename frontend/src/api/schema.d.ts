@@ -3030,6 +3030,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deal-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open Deal Scout suggestions the caller may see, newest first.
+         * @description A suggestion proposes opening a deal for a company that has no open deal,
+         *     from evidence the scout found: a held meeting with somebody at the company,
+         *     the pair of `new_opportunity` and `commitment_made` signals within thirty
+         *     days, or a proposal or contract sent to it as a document. A suggestion is
+         *     listed only to a reader who may read the company and EVERY piece of its
+         *     evidence. Suggestions are never deals: no deal list, board total, forecast
+         *     or report counts them.
+         */
+        get: operations["listDealSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open the suggested deal, with the caller's corrections.
+         * @description Creates the deal on the company, files the evidence messages under it and
+         *     acknowledges the signals that raised it, in one transaction. A message the
+         *     caller may not move stays where it is and is listed in
+         *     `unlinked_activity_ids`. Every field of the body is optional; an omitted
+         *     one keeps the suggestion's value, and `amount_minor` and `currency` travel
+         *     together. `409 suggestion_decided` when the suggestion was already
+         *     accepted, dismissed or superseded; a replay under the same
+         *     Idempotency-Key answers the first result.
+         */
+        post: operations["acceptDealSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-suggestions/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the suggestion is not a deal, for the whole workspace.
+         * @description Audited. Nobody is offered this evidence again, and the company is
+         *     suggested again only on evidence newer than the dismissal. `409
+         *     suggestion_decided` when the suggestion was already decided.
+         */
+        post: operations["dismissDealSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals": {
         parameters: {
             query?: never;
@@ -19080,6 +19161,95 @@ export interface components {
                     owner_id?: string | null;
                 }[];
             };
+        };
+        /** @description One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal. */
+        DealSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Only open_deal is suggested today.
+             * @enum {string}
+             */
+            kind: "open_deal" | "advance_stage" | "revive";
+            /** @enum {string} */
+            state: "open" | "accepted" | "dismissed" | "superseded";
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            /** Format: uuid */
+            pipeline_id: string;
+            /**
+             * Format: uuid
+             * @description The stage the deal would open in: the default pipeline's first open stage.
+             */
+            stage_id: string;
+            /** @description The proposed deal name. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Proposed only when a finished reading of a cited document stated both an amount and a currency.
+             */
+            amount_minor?: number | null;
+            /** @description Present exactly when amount_minor is. */
+            currency?: string | null;
+            /** Format: date */
+            close_date?: string | null;
+            confidence: number;
+            /** Format: date-time */
+            created_at: string;
+            evidence: components["schemas"]["DealSuggestionEvidence"][];
+        };
+        /** @description One cited piece of evidence. Exactly one of the three ids is present, and it matches kind. */
+        DealSuggestionEvidence: {
+            /** @enum {string} */
+            kind: "meeting" | "signal" | "attachment";
+            /**
+             * Format: uuid
+             * @description The held meeting.
+             */
+            activity_id?: string | null;
+            /** Format: uuid */
+            signal_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The document sent to the company.
+             */
+            attachment_id?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
+            /** @description The meeting's subject, the signal's summary or the document's file name. */
+            title: string;
+        };
+        DealSuggestionListResponse: {
+            data: components["schemas"]["DealSuggestion"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        /** @description The caller's corrections. An omitted field keeps the suggestion's value. */
+        AcceptDealSuggestionRequest: {
+            name?: string;
+            /** Format: int64 */
+            amount_minor?: number;
+            currency?: string;
+            /**
+             * Format: uuid
+             * @description Any open stage; the deal opens in that stage's pipeline.
+             */
+            stage_id?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /**
+             * Format: date
+             * @description A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
+             */
+            close_date?: string;
+        };
+        DealSuggestionAcceptance: {
+            suggestion: components["schemas"]["DealSuggestion"];
+            /** Format: uuid */
+            deal_id: string;
+            /** @description Evidence messages the caller may not move, left where they were. */
+            unlinked_activity_ids: string[];
+            acknowledged_signals: number;
         };
         /** @description One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8). */
         DedupeCandidate: {
@@ -43151,6 +43321,131 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listDealSuggestions: {
+        parameters: {
+            query?: {
+                company_id?: string;
+                pipeline_id?: string;
+                stage_id?: string;
+                /** @description Opaque keyset cursor. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of open suggestions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    acceptDealSuggestion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AcceptDealSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal that was opened. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestionAcceptance"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    dismissDealSuggestion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dismissed suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDeals: {

@@ -176,7 +176,7 @@ func TestAReplayedUndoIsRefusedOnceItNamesARecordOutOfSight(t *testing.T) {
 	}
 	handlers := bulkHandlers{engine: engine}
 	r := chi.NewRouter()
-	r.With(idempotency(e.Pool, replayProbes(nil, nil, nil, e.DB()), nil)).Post("/v1/bulk/{id}/undo",
+	r.With(idempotency(e.Pool, replayProbes(nil, nil, nil, nil, e.DB()), nil)).Post("/v1/bulk/{id}/undo",
 		func(w http.ResponseWriter, req *http.Request) {
 			id := ids.MustParse(chi.URLParam(req, "id"))
 			handlers.UndoBulkChange(w, req, openapi_types.UUID(id), crmcontracts.UndoBulkChangeParams{})

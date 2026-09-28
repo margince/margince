@@ -23,7 +23,9 @@
 // vocabulary's record provenance), deal_risk_day and deal_risk_verdict
 // (each day's first risk pass and the deals it judged material and at risk,
 // written by compose's hourly pass because the judgement cannot be recomputed
-// afterwards).
+// afterwards), deal_suggestion and deal_suggestion_evidence (Deal Scout's
+// proposals to open a deal and the evidence each cites, written by compose's
+// hourly pass through RecordSuggestionTx and decided by a rep here).
 //
 // The project moved OUT of this module into modules/projects, superseding
 // ADR-0073 — see that package's doc.go for the reasoning and for the two
