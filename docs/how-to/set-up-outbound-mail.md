@@ -6,14 +6,14 @@ how to configure the second way (the SMTP relay), and what breaks without it.
 
 ## Which mail goes out which way
 
-**Mail a person writes goes out through that person's connected mailbox.** The
+**Mail a user writes goes out through that user's connected mailbox.** The
 composer, replies, scheduled sends and sequences all send as the rep, through
 the Gmail, Microsoft 365 or IMAP connection they made under Settings →
 Integrations. [connect-a-mailbox.md](connect-a-mailbox.md) sets that up.
 
 **Mail the installation writes by itself goes out through the SMTP relay** in
 the deployment file's `email:` block. It never uses anybody's connected mailbox,
-even when the person who pressed the button has one. This covers:
+even when the user who pressed the button has one. This covers:
 
 | Mail | Started by |
 |---|---|
