@@ -5411,16 +5411,16 @@ export const de = {
   "stage.closingNote":
     "Jeder Deal endet in einer davon, deshalb bleiben sie nach den offenen Phasen.",
   "stage.closingMissing":
-    "Noch keine Phase für gewonnen oder verloren. Lege eine als neue Phase dieses Typs an.",
+    "Noch keine Phase für gewonnene oder verlorene Deals. Lege eine neue Phase dieses Typs an.",
   "stage.orderHint":
     "Ziehe eine Phase am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
-  "stage.handle": "{name} verschieben, Schritt {position} von {total}",
-  "stage.moved": "{name} ist jetzt Schritt {position} von {total}",
+  "stage.handle": "{name} verschieben, Phase {position} von {total}",
+  "stage.moved": "{name} ist jetzt Phase {position} von {total}",
   "stage.lowerThanAbove": "Niedriger als {name} ({reading}) darüber",
   "stage.oddsOf": "Gewinnwahrscheinlichkeit von {name}",
   "stage.noneOpen": "Noch keine offenen Phasen",
   "stage.noneOpenNote":
-    "Lege den ersten Schritt eines Deals an. Er steht vor den Abschlussphasen.",
+    "Lege die erste Phase eines Deals an, vor den Abschlussphasen.",
   "stage.added": "Phase hinzugefügt",
   "stage.criteria.title": "Austrittskriterien",
   "stage.criteria.sub":

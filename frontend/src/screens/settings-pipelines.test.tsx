@@ -124,7 +124,7 @@ function server(opts: {
     if (url.endsWith("/pipelines/order")) {
       return jsonResponse({ data: catalog(), page: { has_more: false } });
     }
-    if (url.endsWith("/restore")) {
+    if (url.endsWith("/pipelines/pl-old/restore") && method === "POST") {
       return jsonResponse({ ...catalog()[0], archived_at: null });
     }
     if (url.includes("/pipelines/") && method === "DELETE") {

@@ -110,9 +110,9 @@ export function SortableList<T extends SortableEntry>({
   const rows = useRef(new Map<string, HTMLLIElement>());
   // The gesture outlives the render it started in, so what it commits to is
   // read from here rather than from that render's closure.
-  const latest = useRef({ items, onReorder, labels });
+  const latest = useRef({ items, onReorder, labels, busy });
   useEffect(() => {
-    latest.current = { items, onReorder, labels };
+    latest.current = { items, onReorder, labels, busy };
   });
   // The gesture listens on the window, not on the handle: reordering can move
   // the carried row's own element, and a moved element loses pointer capture
@@ -163,8 +163,16 @@ export function SortableList<T extends SortableEntry>({
     stopListening.current?.();
     stopListening.current = null;
     setDraft(null);
-    const moved = latest.current.items.find((each) => each.key === carried.key);
-    if (landed && moved && !sameOrder(carried.order, carried.start)) {
+    // A write that started mid-carry makes the carried order one drawn from a
+    // list the server has not answered yet, so it lands nowhere.
+    const current = latest.current;
+    const moved = current.items.find((each) => each.key === carried.key);
+    if (
+      landed &&
+      !current.busy &&
+      moved &&
+      !sameOrder(carried.order, carried.start)
+    ) {
       commit([...carried.order], moved);
     }
   };

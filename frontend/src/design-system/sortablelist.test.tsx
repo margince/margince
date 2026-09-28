@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -114,6 +114,31 @@ describe("SortableList", () => {
     await user.keyboard("{ArrowDown}");
     expect(onReorder).not.toHaveBeenCalled();
     expect(document.activeElement).toBe(grip);
+  });
+
+  // happy-dom lays every row out at zero height, so a pointer at 100 is below
+  // them all and carries the row to the end.
+  const dragBravoToTheEnd = () => {
+    const grip = screen.getByRole("button", { name: "Move Bravo, 2 of 3" });
+    fireEvent.pointerDown(grip, { pointerId: 1, button: 0 });
+    fireEvent.pointerMove(globalThis.window, { pointerId: 1, clientY: 100 });
+  };
+
+  it("commits a pointer drag when it lands", () => {
+    const onReorder = vi.fn();
+    render(<Harness onReorder={onReorder} />);
+    dragBravoToTheEnd();
+    fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+    expect(onReorder).toHaveBeenCalledWith(["a", "c", "b"]);
+  });
+
+  it("drops a drag that lands after a write has started", () => {
+    const onReorder = vi.fn();
+    const { rerender } = render(<Harness onReorder={onReorder} />);
+    dragBravoToTheEnd();
+    rerender(<Harness onReorder={onReorder} busy />);
+    fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+    expect(onReorder).not.toHaveBeenCalled();
   });
 
   it("draws no grip for a reader who may not reorder", () => {
