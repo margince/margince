@@ -8,7 +8,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
-import { BindingEditor } from "./ai-binding-editor";
+import { BindingEditor, reachableProviders } from "./ai-binding-editor";
 import { TierFacts, UntrackedFacts, useLaneFactsSource } from "./ai-lane-facts";
 import {
   type ModelCatalogue,
@@ -25,7 +25,7 @@ import { RefreshFromSources } from "./rate-refresh";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
-// Which provider and model each tier uses (ai-operational-spec §1.4).
+// Which provider and model each tier uses.
 //
 // Read by admin/ops only: `ai_routing` is narrow on both verbs because this is
 // the editable document, and it decides where an installation's correspondence
@@ -202,7 +202,7 @@ function ModelTiers({
             {
               kind: "decisions",
               binding: routing.decisions ?? {
-                provider: DECISION_PROVIDERS[0],
+                provider: firstDecisionProvider(keys.data?.providers),
                 model: "",
               },
             },
@@ -271,10 +271,11 @@ function FirstBinding({
   const bind = useMutation({
     mutationFn: async (vars: {
       id: keyof typeof SETUP_PROVIDERS;
+      stored: string;
       version: string;
     }) => {
       const { data, error, response } = await api.PUT("/ai/routing", {
-        body: firstBinding(vars.id),
+        body: firstBinding(vars.id, vars.stored),
         headers: { "If-Match": vars.version },
       });
       if (error) {
@@ -308,7 +309,13 @@ function FirstBinding({
             pending={bind.isPending && bind.variables?.id === id}
             disabled={!canManage || bind.isPending}
             reason={canManage ? undefined : t("aiRouting.adminOnly")}
-            onClick={() => bind.mutate({ id, version: read.version })}
+            onClick={() =>
+              bind.mutate({
+                id,
+                stored: read.routing.profile,
+                version: read.version,
+              })
+            }
           >
             {t("aiRouting.unboundStart", { provider: label })}
           </Button>
@@ -348,10 +355,14 @@ function startableProviders(
 // A complete, valid document on one provider's presets: every tier the contract
 // declares, plus the embeddings binding without which the document is refused.
 //
-// `cloud_frontier` because a fresh installation stores an empty profile, which
-// is no member of the enum, and nothing on this card edits it: both presets are
-// cloud vendors, which is exactly what that profile admits.
-export function firstBinding(id: keyof typeof SETUP_PROVIDERS): Routing {
+// The stored profile is kept when it is one: an operator who declared eu_hosted
+// before binding anything must not be moved off it by a first click. A fresh
+// installation stores an empty profile, which is no member of the enum, and
+// then `cloud_frontier` — what both cloud presets need — is written instead.
+export function firstBinding(
+  id: keyof typeof SETUP_PROVIDERS,
+  stored: string,
+): Routing {
   const p = SETUP_PROVIDERS[id];
   const lane = {
     provider: p.provider,
@@ -359,7 +370,7 @@ export function firstBinding(id: keyof typeof SETUP_PROVIDERS): Routing {
     ...(p.baseUrl ? { base_url: p.baseUrl } : {}),
   };
   return {
-    profile: "cloud_frontier",
+    profile: isProfile(stored) ? stored : "cloud_frontier",
     tiers: Object.fromEntries(TIER_ORDER.map((t) => [t, { ...lane }])),
     embeddings: {
       provider: p.provider,
@@ -380,5 +391,26 @@ function sheetAsOf(catalogue: ModelCatalogue): string | null {
         ? rate.effective_date
         : latest,
     null,
+  );
+}
+
+const PROFILES: readonly Routing["profile"][] = [
+  "eu_hosted",
+  "sovereign",
+  "cloud_frontier",
+];
+
+function isProfile(value: string): value is Routing["profile"] {
+  return PROFILES.some((p) => p === value);
+}
+
+// Where a new decision binding starts: the first decision adapter this
+// installation can reach, so the editor does not open on one it would refuse.
+function firstDecisionProvider(
+  keys: Parameters<typeof reachableProviders>[1],
+): string {
+  return (
+    reachableProviders(DECISION_PROVIDERS, keys, undefined)[0] ??
+    DECISION_PROVIDERS[0]
   );
 }

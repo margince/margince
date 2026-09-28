@@ -135,10 +135,17 @@ func keyTestRefusal(state ModelAvailability) KeyTestReason {
 // keyTestFailure reads a vendor's refusal. Only the status is trusted: 401 and
 // 403 are the credential, 429 is the vendor's throttle, and everything else —
 // a timeout, a 5xx, a 404 from a host that is not the vendor — is unreachable.
+//
+// Gemini is the exception: it answers an invalid key with 400 API_KEY_INVALID.
+// Its list request carries nothing a caller chose, so a 400 there can only be
+// the key.
 func keyTestFailure(err error) KeyTestReason {
 	var refused *listStatusError
 	if !errors.As(err, &refused) {
 		return KeyTestUnreachable
+	}
+	if refused.vendor == geminiListVendor && refused.status == http.StatusBadRequest {
+		return KeyTestAuthFailed
 	}
 	switch refused.status {
 	case http.StatusUnauthorized, http.StatusForbidden:

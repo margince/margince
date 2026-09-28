@@ -72,6 +72,24 @@ describe("AiRoutingCard", () => {
     expect(await screen.findByTestId("ai-routing-tier-premium")).toBeTruthy();
   });
 
+  // An operator who declared a profile before binding anything keeps it: a
+  // first click must not move the installation's residency policy.
+  it("keeps a stored profile on the first binding", async () => {
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...UNBOUND,
+      profile: "eu_hosted",
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /start from google gemini/i }),
+    );
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(backend.getCapturedPut()?.profile).toBe("eu_hosted");
+  });
+
   // Nothing to bind TO. The seed sentence is still right for a deployment, and
   // the half a reader of THIS screen can act on is "add a key first" — so the
   // callout says that and offers no button that could only fail.

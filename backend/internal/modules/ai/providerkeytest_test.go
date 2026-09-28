@@ -91,14 +91,30 @@ func TestAKeyThatCannotBeTestedSaysWhy(t *testing.T) {
 		want     KeyTestReason
 	}{
 		{"no key held", boundAt(providerOpenAI, ""), providerOpenAI, noCloudKeys(), KeyTestNoKey},
-		{"broker with no host", RoutingConfig{Profile: ProfileCloudFrontier}, providerOpenAICompatible,
-			cloudKeyFor(providerOpenAICompatible, "k"), KeyTestNoEndpoint},
-		{"sovereign forbids a cloud vendor", RoutingConfig{Profile: ProfileSovereign}, providerAnthropic,
-			cloudKeyFor(providerAnthropic, "k"), KeyTestProfileForbids},
-		{"a decision server publishes no list", RoutingConfig{Profile: ProfileCloudFrontier}, providerJev,
-			cloudKeyFor(providerJev, "k"), KeyTestNotPublished},
-		{"an adapter this build does not carry", RoutingConfig{Profile: ProfileCloudFrontier}, "not-a-vendor",
-			noCloudKeys(), KeyTestNotPublished},
+		{
+			"broker with no host",
+			RoutingConfig{Profile: ProfileCloudFrontier},
+			providerOpenAICompatible,
+			cloudKeyFor(providerOpenAICompatible, "k"), KeyTestNoEndpoint,
+		},
+		{
+			"sovereign forbids a cloud vendor",
+			RoutingConfig{Profile: ProfileSovereign},
+			providerAnthropic,
+			cloudKeyFor(providerAnthropic, "k"), KeyTestProfileForbids,
+		},
+		{
+			"a decision server publishes no list",
+			RoutingConfig{Profile: ProfileCloudFrontier},
+			providerJev,
+			cloudKeyFor(providerJev, "k"), KeyTestNotPublished,
+		},
+		{
+			"an adapter this build does not carry",
+			RoutingConfig{Profile: ProfileCloudFrontier},
+			"not-a-vendor",
+			noCloudKeys(), KeyTestNotPublished,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -135,5 +151,26 @@ func TestEveryPickerStateHasAKeyTestReading(t *testing.T) {
 		if got := keyTestRefusal(state); got != want {
 			t.Errorf("%q reads as %q, want %q", state, got, want)
 		}
+	}
+}
+
+// Gemini refuses a bad key with 400 API_KEY_INVALID where other vendors say
+// 401. Read as unreachable, the button would send a reader after the network
+// for a key that is simply wrong.
+func TestGeminiReadsA400AsARefusedKeyAndNobodyElseDoes(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	t.Cleanup(srv.Close)
+
+	gemini := probeProviderKey(context.Background(), boundAt(providerGemini, srv.URL), providerGemini,
+		cloudKeyFor(providerGemini, "k"), stubBuilder)
+	if gemini.Reason != KeyTestAuthFailed {
+		t.Fatalf("gemini 400: got %+v, want auth_failed", gemini)
+	}
+	openai := probeProviderKey(context.Background(), boundAt(providerOpenAI, srv.URL), providerOpenAI,
+		cloudKeyFor(providerOpenAI, "k"), stubBuilder)
+	if openai.Reason != KeyTestUnreachable {
+		t.Fatalf("openai 400: got %+v, want unreachable", openai)
 	}
 }

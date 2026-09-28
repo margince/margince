@@ -73,6 +73,37 @@ describe("the decision model lane", () => {
     expect(sent?.embeddings.model).toBe("gemini-embedding-001");
   });
 
+  // An installation that reaches decisions only through OpenRouter holds no
+  // TypeSafe key, so adding opens on the adapter it CAN use rather than on a
+  // refused one.
+  it("adds a decision model on a provider this installation can reach", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, BOUND, {
+      providerKeys: [
+        { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
+        { provider: "jev", configured: false, env_var: "TYPESAFE_API_KEY" },
+        {
+          provider: "jev_compatible",
+          configured: false,
+          env_var: "JEV_COMPATIBLE_API_KEY",
+          optional: true,
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const dialog = await openEditor(
+      user,
+      "ai-routing-decisions",
+      /add decision model/i,
+    );
+    expect(
+      within(dialog).getByRole("combobox", { name: "Provider" }),
+    ).toHaveTextContent("jev_compatible");
+    expect(within(dialog).queryByText("Provider key missing")).toBeNull();
+  });
+
   // OpenRouter's endpoint is a URL nobody remembers, so jev_compatible offers
   // it in one press — the endpoint and the model certified there — and names
   // the key it needs, which the preset cannot fill.
@@ -284,6 +315,27 @@ describe("saving one binding", () => {
     expect(within(dialog).queryByText(/routing not saved/i)).toBeNull();
     const sent = await saveEditor(user, backend);
     expect(sent?.tiers.premium.model).toBe("my-draft-model");
+  });
+
+  // A race on ANOTHER lane is no conflict: the 409 is retried once, and the
+  // re-read shows this lane untouched, so the edit lands with theirs.
+  it("retries a server conflict that came from another lane", async () => {
+    const user = userEvent.setup({ delay: null });
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+    const dialog = await openEditor(user, "ai-routing-tier-cheap_cloud");
+    const model = within(dialog).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-3.5-flash");
+
+    backend.raceNextPut();
+    const sent = await saveEditor(user, backend);
+
+    expect(sent?.tiers.cheap_cloud.model).toBe("gemini-3.5-flash");
+    expect(sent?.tiers.premium.model).toBe("gemini-3.1-pro-preview");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   // The vendor's list is a hint, not a permitted set: an id it does not name

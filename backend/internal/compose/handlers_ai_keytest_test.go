@@ -71,3 +71,16 @@ func TestAKeyTestCarriesOnlyTheFieldsOfItsOutcome(t *testing.T) {
 		t.Fatalf("a failure carries its reason and no count: %+v", failed)
 	}
 }
+
+// The wire enum is a declared mirror of the store's reasons: a reason the
+// contract does not list would reach the screen as a word it has no copy for.
+func TestEveryKeyTestReasonIsOnTheWire(t *testing.T) {
+	for _, reason := range []ai.KeyTestReason{
+		ai.KeyTestNoKey, ai.KeyTestProfileForbids, ai.KeyTestNotPublished, ai.KeyTestNoEndpoint,
+		ai.KeyTestAuthFailed, ai.KeyTestRateLimited, ai.KeyTestUnreachable,
+	} {
+		if !crmcontracts.AiProviderKeyTestResultReason(reason).Valid() {
+			t.Errorf("reason %q is not in the contract's enum", reason)
+		}
+	}
+}

@@ -166,9 +166,9 @@ export function backendFor(
 ) {
   let stored = routing;
   let revision = 1;
-  // Set by `raceNextPut`: the next write loses a race that happens after the
-  // editor's own re-read, so the server's If-Match check is what catches it.
-  let loseNextPut = false;
+  // Set by `raceNextPut`: a colleague's write that lands after the editor's
+  // own re-read and just before its PUT, so the server's If-Match catches it.
+  let racing: unknown;
   // Typed as the document this endpoint takes, so an assertion can read a field
   // off it without an unchecked cast at every call site. The stub still stores
   // whatever arrives — the type is a claim about the ENDPOINT, not a check on
@@ -208,8 +208,12 @@ export function backendFor(
         if (req.method === "PUT") {
           // The real server's rule: a stale If-Match is a 409, and the stub
           // holds it so the editor's conflict path is exercised end to end.
-          if (loseNextPut || req.headers.get("If-Match") !== etag()) {
-            loseNextPut = false;
+          if (racing !== undefined) {
+            stored = racing;
+            racing = undefined;
+            revision++;
+          }
+          if (req.headers.get("If-Match") !== etag()) {
             return jsonResponse(
               { title: "Conflict", status: 409, code: "version_skew" },
               409,
@@ -234,9 +238,9 @@ export function backendFor(
       stored = next;
       revision++;
     },
-    /** The next PUT loses to a write that lands after the editor re-read. */
-    raceNextPut: () => {
-      loseNextPut = true;
+    /** A colleague saves `next` between the editor's re-read and its PUT. */
+    raceNextPut: (next: unknown = CHANGED_ELSEWHERE) => {
+      racing = next;
     },
     getCapturedPut: (): CapturedRouting | null => capturedPut,
     getPutCount: () => putCount,

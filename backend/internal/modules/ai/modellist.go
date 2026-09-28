@@ -232,6 +232,10 @@ func openAIWireModels(
 
 // ---- gemini ----
 
+// geminiListVendor names Gemini on its list errors, which the key test reads:
+// Gemini refuses a bad key with 400 where every other vendor says 401.
+const geminiListVendor = "gemini"
+
 // ListModels reports GET /v1beta/models, the one vendor list that says what
 // each model is FOR: `supportedGenerationMethods` names `embedContent` for an
 // embedder and `generateContent` for a chat model, so the embeddings lane can
@@ -256,7 +260,7 @@ func (c *geminiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 		if pageToken != "" {
 			endpoint += "&pageToken=" + url.QueryEscape(pageToken)
 		}
-		raw, err := getListBody(ctx, c.http, "gemini", endpoint, func(r *http.Request) {
+		raw, err := getListBody(ctx, c.http, geminiListVendor, endpoint, func(r *http.Request) {
 			r.Header.Set("x-goog-api-key", c.apiKey)
 		})
 		if err != nil {

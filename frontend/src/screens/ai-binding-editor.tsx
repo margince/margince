@@ -30,7 +30,12 @@ import {
   sliceOf,
   withSlice,
 } from "./ai-routing-slice";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import {
+  problemCode,
+  problemCodeOf,
+  problemMessageOf,
+  throwProblem,
+} from "./common";
 
 // One binding's editor: provider, model, and whatever else only that lane has.
 //
@@ -75,26 +80,8 @@ export function BindingEditor({
   // A move away mid-edit asks first, as the page's other editors do.
   useUnsavedGuard(!sameSlice(draft, initial));
   const save = useMutation({
-    mutationFn: async (vars: { base: SliceValue; edit: SliceValue }) => {
-      const latest = await queryClient.fetchQuery({
-        queryKey: ROUTING_KEY,
-        queryFn: fetchRouting,
-        staleTime: 0,
-      });
-      if (!sameSlice(sliceOf(latest.routing, vars.base), vars.base)) {
-        throw new SliceMoved();
-      }
-      const { data, error, response } = await api.PUT("/ai/routing", {
-        body: withSlice(latest.routing, vars.edit),
-        // Always sent: an absent If-Match is an unconditional overwrite.
-        headers: { "If-Match": latest.version },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      if (!data) throw new Error("AI routing unavailable");
-      return { routing: data, version: response.headers.get("ETag") ?? "" };
-    },
+    mutationFn: (vars: { base: SliceValue; edit: SliceValue }) =>
+      writeSlice(() => readLatest(queryClient), vars.base, vars.edit),
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
@@ -108,18 +95,20 @@ export function BindingEditor({
       {
         onSuccess: onClose,
         onError: async (error) => {
-          if (!(error instanceof SliceMoved) && !isVersionSkew(error)) return;
+          if (!isConflict(error)) return;
           // The reader's edit stays on screen; what moves is the base, so the
           // next Save is judged against the binding they have now been shown
           // was changed.
-          const fresh = await queryClient.fetchQuery({
-            queryKey: ROUTING_KEY,
-            queryFn: fetchRouting,
-            staleTime: 0,
-          });
-          setBase(sliceOf(fresh.routing, edit));
           setConflict(true);
           save.reset();
+          // A failed re-read leaves the old base, so the next Save is caught
+          // again rather than writing over a change nobody has seen.
+          try {
+            const fresh = await readLatest(queryClient);
+            setBase(sliceOf(fresh.routing, edit));
+          } catch {
+            return;
+          }
         },
       },
     );
@@ -168,7 +157,7 @@ export function BindingEditor({
           {t("aiRouting.conflictHelp")}
         </Callout>
       )}
-      {save.isError && (
+      {save.isError && !isConflict(save.error) && (
         <Callout tone="danger" kind="outcome" title={t("aiRouting.saveFailed")}>
           {problemMessageOf(save.error, t)}
         </Callout>
@@ -400,6 +389,44 @@ function laneName(value: SliceValue): string {
   return value.kind === "tier" ? value.tier : value.kind;
 }
 
-function isVersionSkew(error: unknown): boolean {
-  return problemCodeOf(error) === "version_skew";
+function isConflict(error: unknown): boolean {
+  return error instanceof SliceMoved || problemCodeOf(error) === "version_skew";
+}
+
+function readLatest(
+  queryClient: ReturnType<typeof useQueryClient>,
+): Promise<RoutingRead> {
+  return queryClient.fetchQuery({
+    queryKey: ROUTING_KEY,
+    queryFn: fetchRouting,
+    staleTime: 0,
+  });
+}
+
+// Puts one slice onto the latest document. A 409 means some write landed
+// between the re-read and the PUT; it is retried once, because the re-read
+// then tells a colleague's edit to ANOTHER lane — which is no conflict — from
+// one to this lane, which throws SliceMoved as it would have at first.
+export async function writeSlice(
+  latestRead: () => Promise<RoutingRead>,
+  base: SliceValue,
+  edit: SliceValue,
+): Promise<RoutingRead> {
+  for (let attempt = 0; ; attempt++) {
+    const latest = await latestRead();
+    if (!sameSlice(sliceOf(latest.routing, base), base)) {
+      throw new SliceMoved();
+    }
+    const { data, error, response } = await api.PUT("/ai/routing", {
+      body: withSlice(latest.routing, edit),
+      // Always sent: an absent If-Match is an unconditional overwrite.
+      headers: { "If-Match": latest.version },
+    });
+    if (error) {
+      if (attempt === 0 && problemCode(error) === "version_skew") continue;
+      throwProblem(error);
+    }
+    if (!data) throw new Error("AI routing unavailable");
+    return { routing: data, version: response.headers.get("ETag") ?? "" };
+  }
 }
