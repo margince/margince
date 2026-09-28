@@ -31,9 +31,9 @@ func WithCompanyContextRollout(rollout string) Option {
 // that ordering is the whole point. The endpoints do not depend on the option
 // running — an unset rollout means every stage is on, which
 // companyContextReadEnabled says and GetCompanyContextCapabilities re-derives —
-// while the injected boolean would be the zero value, false. So setting it
-// inside the option made the two agree only for a server that HAD the option,
-// and a server without one reported the surface absent while serving it.
+// while the injected boolean would be the zero value, false. Set inside the
+// option, the two would agree only for a server that has the option; one
+// without it would report the surface absent while serving it.
 //
 // Reading s.companyContextRollout here instead means both sides resolve the same
 // field through the same predicate, whatever ran. The agreement is then a
