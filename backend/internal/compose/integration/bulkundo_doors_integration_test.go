@@ -37,14 +37,22 @@ func undoDoors(e *apptest.AppEnv, doors []bulkDoor, client *apptest.MCPClient) [
 	httpDoor := undoDoor{
 		bulkDoor: doors[0],
 		preview: func(t *testing.T, batchID string) (out bulkPreviewDTO, refusal string) {
-			return out, httpCall(t, e, "/v1/bulk/"+batchID+"/undo/preview", nil, &out)
+			raw, refusal := httpPost(t, e, "/v1/bulk/"+batchID+"/undo/preview", nil)
+			if refusal == "" && json.Unmarshal(raw, &out) != nil {
+				t.Fatalf("the undo preview answered a body that does not decode: %s", raw)
+			}
+			return out, refusal
 		},
 		undo: func(t *testing.T, batchID, token string) (out bulkUndoResultDTO, refusal string) {
 			body := AnyMap{}
 			if token != "" {
 				body["confirm_token"] = token
 			}
-			return out, httpCall(t, e, "/v1/bulk/"+batchID+"/undo", body, &out)
+			raw, refusal := httpPost(t, e, "/v1/bulk/"+batchID+"/undo", body)
+			if refusal == "" && json.Unmarshal(raw, &out) != nil {
+				t.Fatalf("the undo answered a body that does not decode: %s", raw)
+			}
+			return out, refusal
 		},
 	}
 	mcpCall := func(t *testing.T, args AnyMap, out any) string {
@@ -72,16 +80,14 @@ func undoDoors(e *apptest.AppEnv, doors []bulkDoor, client *apptest.MCPClient) [
 	return []undoDoor{httpDoor, mcpDoor}
 }
 
-func httpCall(t *testing.T, e *apptest.AppEnv, path string, body AnyMap, out any) string {
+// httpPost answers the body of a 200, or the refusal the caller is shown.
+func httpPost(t *testing.T, e *apptest.AppEnv, path string, body AnyMap) (json.RawMessage, string) {
 	t.Helper()
 	var raw json.RawMessage
 	if status := e.Call(t, "POST", path, body, nil, &raw); status != http.StatusOK {
-		return string(raw)
+		return nil, string(raw)
 	}
-	if err := json.Unmarshal(raw, out); err != nil {
-		t.Fatalf("%s answered a body that does not decode: %v", path, err)
-	}
-	return ""
+	return raw, ""
 }
 
 func bulkUndoApp(t *testing.T, slug string) (*apptest.AppEnv, []undoDoor) {
