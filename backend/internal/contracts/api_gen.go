@@ -23028,10 +23028,11 @@ type CaptureHeldMeetings struct {
 	OldestAgeSeconds *int `json:"oldest_age_seconds,omitempty"`
 }
 
-// CaptureKeptBreakdown Why the skipped messages were skipped. The three counts are disjoint and sum to `skipped`.
+// CaptureKeptBreakdown Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
 // Reported because the count alone tells an owner that something survived their deletion and
 // not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
-// window expires on a date, an open request closes when it is finished.
+// window expires on a date, an open request closes when it is finished, and an undetermined
+// floor lifts when the installation can say what the law requires.
 type CaptureKeptBreakdown struct {
 	// Held Messages an erasure or a controller pinned by hand.
 	Held int `json:"held"`
@@ -23054,6 +23055,13 @@ type CaptureKeptBreakdown struct {
 
 	// UnderStatute Messages inside their commercial-retention window — correspondence the law still requires keeping.
 	UnderStatute int `json:"under_statute"`
+
+	// UnderUndeterminedFloor Messages kept because this installation could not determine what the law requires of
+	// them. Distinct from `under_statute`, which is a claim that a retention window applies:
+	// these were shielded because a purge that cannot ask what the law requires must not
+	// guess that the answer is "nothing", and reporting them as a statute would tell an owner
+	// their mail is commercial correspondence when nothing established that.
+	UnderUndeterminedFloor int `json:"under_undetermined_floor"`
 }
 
 // CaptureMailboxHealth defines model for CaptureMailboxHealth.
@@ -23161,10 +23169,11 @@ type CapturePurgeOutcome struct {
 	// Destroyed Messages gone entirely — text, original, attachments, vectors, delivery copies.
 	Destroyed int `json:"destroyed"`
 
-	// Kept Why the skipped messages were skipped. The three counts are disjoint and sum to `skipped`.
+	// Kept Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
 	// Reported because the count alone tells an owner that something survived their deletion and
 	// not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
-	// window expires on a date, an open request closes when it is finished.
+	// window expires on a date, an open request closes when it is finished, and an undetermined
+	// floor lifts when the installation can say what the law requires.
 	Kept CaptureKeptBreakdown `json:"kept"`
 
 	// Preview True when nothing was actually done.

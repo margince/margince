@@ -26,7 +26,7 @@ import (
 )
 
 // KeptBreakdown is the skipped count, by the reason each message survived.
-// The three are disjoint and sum to Skipped.
+// The four are disjoint and sum to Skipped.
 type KeptBreakdown struct {
 	// Held is how many an erasure or a controller pinned by hand.
 	Held int `json:"held"`
@@ -34,6 +34,12 @@ type KeptBreakdown struct {
 	UnderStatute int `json:"under_statute"`
 	// UnderRequest is how many a data-subject request is still about.
 	UnderRequest int `json:"under_request"`
+	// UnderUndeterminedFloor is how many were kept because this installation
+	// could not say what the law requires of them. Apart from UnderStatute
+	// because the shield is the same and the BASIS is not: reported together,
+	// the receipt tells an owner a retention window applies when none was
+	// measured.
+	UnderUndeterminedFloor int `json:"under_undetermined_floor"`
 	// StatutoryClass names the retention class that shielded them and for how
 	// long — empty when nothing was shielded by it, so a reader is never shown
 	// a rule that kept nothing.
@@ -58,9 +64,10 @@ type KeptBreakdown struct {
 // theirs was a Handelsbrief.
 func keptBreakdown(subject capture.PurgeSubject) KeptBreakdown {
 	kept := KeptBreakdown{
-		Held:         len(subject.Held),
-		UnderStatute: len(subject.UnderStatute),
-		UnderRequest: len(subject.UnderRequest),
+		Held:                   len(subject.Held),
+		UnderStatute:           len(subject.UnderStatute),
+		UnderRequest:           len(subject.UnderRequest),
+		UnderUndeterminedFloor: len(subject.UnderUndeterminedFloor),
 	}
 	if kept.UnderStatute > 0 {
 		name, keep, fromYearEnd := privacy.StatutoryFloorClass()
@@ -99,7 +106,8 @@ func (p *CapturePurger) auditPurgeReceipt(ctx context.Context, ruleID ids.UUID, 
 				"destroyed": outcome.Destroyed, "released": outcome.Released,
 				"skipped": outcome.Skipped, "anonymised": outcome.Anonymised,
 				"kept_held": outcome.Kept.Held, "kept_under_statute": outcome.Kept.UnderStatute,
-				"kept_under_request": outcome.Kept.UnderRequest,
+				"kept_under_request":            outcome.Kept.UnderRequest,
+				"kept_under_undetermined_floor": outcome.Kept.UnderUndeterminedFloor,
 			})
 		return err
 	})

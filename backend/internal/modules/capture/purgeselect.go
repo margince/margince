@@ -25,36 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// StatutoryFloor carries the shield every destructive activity path in this
-// installation applies, handed in by the compose seam.
-//
-// Capture cannot import privacy, and the predicate lives over there — a second
-// copy is how one destructive path quietly stops shielding what the others do.
-// So it travels: the seam reads it from privacy and passes it here.
-//
-// Held by: TestTheStatutoryFloorIsSpelledOnce (backend/gates/statutoryfloorsingle_test.go).
-type StatutoryFloor struct {
-	// Clause filters an activity aliased `a`, in the positive form: it is TRUE
-	// for a row the law still requires the installation to keep.
-	Clause func(intervalArg, anchorArg int) string
-	// Interval is the retention period, as a SQL interval literal; Anchor says
-	// whether the window runs from the end of the calendar year.
-	Interval string
-	Anchor   bool
-}
-
-// column renders the shield as a boolean expression and appends its two
-// arguments, returning where they landed.
-func (f StatutoryFloor) column(used int, args []any) (string, []any) {
-	if f.Clause == nil {
-		// No floor supplied. Shield EVERYTHING rather than nothing: a purge
-		// that cannot ask what the law requires must not guess that the answer
-		// is "nothing", because that guess destroys correspondence.
-		return "true", args
-	}
-	return f.Clause(used+1, used+2), append(args, f.Interval, f.Anchor)
-}
-
 // PurgeSubject is what a purge found: what it will destroy, and what it will
 // only release.
 type PurgeSubject struct {
@@ -82,6 +52,13 @@ type PurgeSubject struct {
 	UnderStatute []ids.UUID
 	// UnderRequest are the activities a data-subject request is still about.
 	UnderRequest []ids.UUID
+	// UnderUndeterminedFloor are the activities kept because the installation
+	// could not say what the law requires of them. Not a subset of
+	// UnderStatute and never merged into it: the shield is the same act, the
+	// BASIS is what differs, and telling an owner a retention window applies
+	// when none was measured is the receipt claiming something it never
+	// established.
+	UnderUndeterminedFloor []ids.UUID
 }
 
 // Total is how many messages the rule matched at all.
@@ -147,7 +124,7 @@ func SelectPurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, true)+` AS withheld,
+		       `+withheldReason(shielded, floor.shieldedAs(), true)+` AS withheld,
 		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
@@ -456,7 +433,7 @@ func SelectWorkspacePurgeSubjectTx(
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, false)+` AS withheld
+		       `+withheldReason(shielded, floor.shieldedAs(), false)+` AS withheld
 		  FROM activity a
 		 WHERE `+match+`
 		   AND EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = a.id)

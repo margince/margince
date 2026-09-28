@@ -8796,7 +8796,8 @@ export const de = {
   "capturePurge.preview": "Erst prüfen",
   "capturePurge.confirm": "Endgültig löschen",
   "capturePurge.done": "Schließen",
-  "capturePurge.failed": "Die Löschung lief nicht",
+  "capturePurge.failed":
+    "Die Löschung wurde nicht abgeschlossen. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
   "capturePurge.wouldDestroy_one": "{count} Nachricht würde vernichtet.",
   "capturePurge.wouldDestroy_other": "{count} Nachrichten würden vernichtet.",
   "capturePurge.destroyed_one": "{count} Nachricht vernichtet.",
@@ -8818,13 +8819,17 @@ export const de = {
   "capturePurge.keptStatute_other":
     "{count} Nachrichten bleiben als Handelsbriefe erhalten, die du nicht löschen darfst.",
   "capturePurge.keptFor_one":
-    "Das Gesetz verlangt, ihn {years} Jahr aufzubewahren.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahr aufzubewahren.",
   "capturePurge.keptFor_other":
-    "Das Gesetz verlangt, ihn {years} Jahre aufzubewahren.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahre aufzubewahren.",
   "capturePurge.keptForFromYearEnd_one":
-    "Das Gesetz verlangt, ihn {years} Jahr nach Ablauf des Kalenderjahres aufzubewahren, in dem er eingegangen ist.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahr nach Ablauf des Kalenderjahres aufzubewahren, in dem sie eingegangen sind.",
   "capturePurge.keptForFromYearEnd_other":
-    "Das Gesetz verlangt, ihn {years} Jahre nach Ablauf des Kalenderjahres aufzubewahren, in dem er eingegangen ist.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahre nach Ablauf des Kalenderjahres aufzubewahren, in dem sie eingegangen sind.",
+  "capturePurge.keptUndetermined_one":
+    "{count} Nachricht bleibt erhalten, weil diese Installation nicht feststellen konnte, was das Gesetz dafür verlangt. Nichts wurde aufgrund einer Regel vernichtet, die niemand lesen konnte.",
+  "capturePurge.keptUndetermined_other":
+    "{count} Nachrichten bleiben erhalten, weil diese Installation nicht feststellen konnte, was das Gesetz dafür verlangt. Nichts wurde aufgrund einer Regel vernichtet, die niemand lesen konnte.",
   "capturePurge.keptRequest_one":
     "{count} Nachricht bleibt erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
   "capturePurge.keptRequest_other":

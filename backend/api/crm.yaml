@@ -26753,11 +26753,12 @@ components:
     CaptureKeptBreakdown:
       type: object
       description: |
-        Why the skipped messages were skipped. The three counts are disjoint and sum to `skipped`.
+        Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
         Reported because the count alone tells an owner that something survived their deletion and
         not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
-        window expires on a date, an open request closes when it is finished.
-      required: [held, under_statute, under_request]
+        window expires on a date, an open request closes when it is finished, and an undetermined
+        floor lifts when the installation can say what the law requires.
+      required: [held, under_statute, under_request, under_undetermined_floor]
       properties:
         held:
           type: integer
@@ -26768,6 +26769,14 @@ components:
         under_request:
           type: integer
           description: Messages a data-subject request is still about, and which it needs in order to be answered.
+        under_undetermined_floor:
+          type: integer
+          description: |
+            Messages kept because this installation could not determine what the law requires of
+            them. Distinct from `under_statute`, which is a claim that a retention window applies:
+            these were shielded because a purge that cannot ask what the law requires must not
+            guess that the answer is "nothing", and reporting them as a statute would tell an owner
+            their mail is commercial correspondence when nothing established that.
         statutory_class:
           type: string
           description: |

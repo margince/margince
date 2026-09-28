@@ -8720,15 +8720,16 @@ export const vi = {
   "capturePurge.open": "Xóa thư đã thu thập từ {value}",
   "capturePurge.title": "Xóa thư đã thu thập từ {value}?",
   "capturePurge.intro":
-    "Thao tác này hủy các thư mà quy tắc này đã khớp: nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
+    "Thao tác này xóa vĩnh viễn các thư mà quy tắc này đã khớp: nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
   "capturePurge.preview": "Xem trước",
   "capturePurge.confirm": "Xóa vĩnh viễn",
   "capturePurge.done": "Đóng",
-  "capturePurge.failed": "Việc xóa không chạy",
-  "capturePurge.wouldDestroy_one": "{count} thư sẽ bị hủy.",
-  "capturePurge.wouldDestroy_other": "{count} thư sẽ bị hủy.",
-  "capturePurge.destroyed_one": "Đã hủy {count} thư.",
-  "capturePurge.destroyed_other": "Đã hủy {count} thư.",
+  "capturePurge.failed":
+    "Việc xóa chưa hoàn tất. Một số thư có thể đã bị xóa vĩnh viễn. Hãy kiểm tra lại xem còn lại những gì.",
+  "capturePurge.wouldDestroy_one": "{count} thư sẽ bị xóa vĩnh viễn.",
+  "capturePurge.wouldDestroy_other": "{count} thư sẽ bị xóa vĩnh viễn.",
+  "capturePurge.destroyed_one": "Đã xóa vĩnh viễn {count} thư.",
+  "capturePurge.destroyed_other": "Đã xóa vĩnh viễn {count} thư.",
   "capturePurge.released_one":
     "{count} thư cũng được đồng nghiệp thu thập. Quyền truy cập của bạn kết thúc; bản của họ vẫn còn.",
   "capturePurge.released_other":
@@ -8751,6 +8752,10 @@ export const vi = {
     "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
   "capturePurge.keptForFromYearEnd_other":
     "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
+  "capturePurge.keptUndetermined_one":
+    "{count} thư được giữ lại vì bản cài đặt này không xác định được luật yêu cầu gì đối với thư đó. Không có gì bị xóa dựa trên một quy tắc không ai đọc được.",
+  "capturePurge.keptUndetermined_other":
+    "{count} thư được giữ lại vì bản cài đặt này không xác định được luật yêu cầu gì đối với chúng. Không có gì bị xóa dựa trên một quy tắc không ai đọc được.",
   "capturePurge.keptRequest_one":
     "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần thư đó.",
   "capturePurge.keptRequest_other":

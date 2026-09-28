@@ -8943,7 +8943,8 @@ export const en = {
   "capturePurge.preview": "Check first",
   "capturePurge.confirm": "Delete permanently",
   "capturePurge.done": "Close",
-  "capturePurge.failed": "The deletion did not run",
+  "capturePurge.failed":
+    "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
   "capturePurge.wouldDestroy_one": "{count} message would be destroyed.",
   "capturePurge.wouldDestroy_other": "{count} messages would be destroyed.",
   "capturePurge.destroyed_one": "{count} message destroyed.",
@@ -8964,13 +8965,18 @@ export const en = {
     "{count} message was kept as commercial correspondence, which is not yours to delete.",
   "capturePurge.keptStatute_other":
     "{count} messages were kept as commercial correspondence, which is not yours to delete.",
-  "capturePurge.keptFor_one": "The law requires keeping it for {years} year.",
+  "capturePurge.keptFor_one":
+    "The law requires keeping such correspondence for {years} year.",
   "capturePurge.keptFor_other":
-    "The law requires keeping it for {years} years.",
+    "The law requires keeping such correspondence for {years} years.",
   "capturePurge.keptForFromYearEnd_one":
-    "The law requires keeping it for {years} year after the end of the calendar year it arrived in.",
+    "The law requires keeping such correspondence for {years} year after the end of the calendar year it arrived in.",
   "capturePurge.keptForFromYearEnd_other":
-    "The law requires keeping it for {years} years after the end of the calendar year it arrived in.",
+    "The law requires keeping such correspondence for {years} years after the end of the calendar year it arrived in.",
+  "capturePurge.keptUndetermined_one":
+    "{count} message was kept because this installation could not establish what the law requires of it. Nothing was destroyed on a rule nobody could read.",
+  "capturePurge.keptUndetermined_other":
+    "{count} messages were kept because this installation could not establish what the law requires of them. Nothing was destroyed on a rule nobody could read.",
   "capturePurge.keptRequest_one":
     "{count} message was kept: a data-protection request is still being answered and needs it.",
   "capturePurge.keptRequest_other":
