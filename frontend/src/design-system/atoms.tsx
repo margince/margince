@@ -462,10 +462,10 @@ export function Avatar({
 }: Readonly<{
   name: string;
   /**
-   * What the mesh is keyed on: the record's own id — a company's, a contact's,
-   * a seat's user id. Required, because two surfaces keying one record on
-   * different strings draw it in two colours; a site with no id at all passes
-   * the name and says why.
+   * The record's own id — a company's, a contact's, a seat's user id: two
+   * surfaces keying one record on different strings draw it in two colours. A
+   * site with no id passes the name and says why; an empty key (a payload
+   * missing its id) falls back to the name, not to one colour for all.
    */
   identity: string;
   // A resolved logo to render instead of the monogram. The monogram is the
@@ -509,7 +509,7 @@ export function Avatar({
   return (
     <span
       className={classes.join(" ")}
-      style={logo ? undefined : meshStyle(meshOf(identity))}
+      style={logo ? undefined : meshStyle(meshOf(identity || name))}
     >
       {logo ? (
         // The monogram stays underneath: it is what the chip shows until the

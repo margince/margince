@@ -48,11 +48,7 @@ export const Contact: Story = {
   ),
 };
 
-/**
- * A company, which the mark's shape says before the name is read. The two
- * shapes are the reason `kind` exists: on a page carrying both, the square is
- * what tells a reader which chips are companies before they read a word.
- */
+/** A company listed on a record: the same round mark, keyed on its id. */
 export const Company: Story = {
   render: () => (
     <RecordCard

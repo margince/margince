@@ -109,6 +109,19 @@ describe("Avatar", () => {
       expect(meshOf(after)).toBe(meshBefore);
     });
 
+    // A payload that lost its id must not hash every such chip to one colour.
+    it("keys on the name when the key arrives empty", () => {
+      const { container: keyed } = render(
+        <Avatar identity="Voltaq Systems" name="Voltaq Systems" />,
+      );
+      const byName = meshOf(keyed);
+      cleanup();
+      const { container: empty } = render(
+        <Avatar identity="" name="Voltaq Systems" />,
+      );
+      expect(meshOf(empty)).toBe(byName);
+    });
+
     // A logo's chip draws no mesh at any moment — the initials wait on a
     // neutral ground — and only a logo that fails falls back to the mesh.
     it("is never drawn under a logo, and returns when the logo fails", () => {

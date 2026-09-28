@@ -44,19 +44,23 @@ const noteEntry: TimelineEntry = {
 };
 const baseTimeline: TimelineEntry[] = [emailEntry, meetingEntry, noteEntry];
 
-const meta: Meta<typeof RecordView> = {
+// `satisfies` and `StoryObj<typeof meta>`, not `Meta<…>` and a bare StoryObj:
+// that pair makes every arg optional, which let stories render RecordView with
+// no `identity` although the prop is required.
+const meta = {
   title: "Design System/RecordView",
   component: RecordView,
-};
+} satisfies Meta<typeof RecordView>;
 export default meta;
 
-type Story = StoryObj<typeof RecordView>;
+type Story = StoryObj<typeof meta>;
 
 // The unchanged shape: no row carries an action, so every entry renders as it
 // did before the slot existed.
 export const Default: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: baseTimeline,
@@ -71,6 +75,7 @@ export const Default: Story = {
 export const MailWithSignatureAndQuote: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: [
@@ -107,6 +112,7 @@ export const MailWithSignatureAndQuote: Story = {
 export const NoteThatReadsLikeASignOff: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     zone: "Europe/Berlin",
     timeline: [
       {
@@ -127,6 +133,7 @@ export const NoteThatReadsLikeASignOff: Story = {
 export const WithRowActions: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: [

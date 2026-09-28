@@ -6,14 +6,15 @@ import { AvatarStack } from "./avatarstack";
 
 // A committee of contacts as overlapping monograms, folding into a "+N" once
 // the group runs past `max`.
-const meta: Meta<typeof AvatarStack> = {
+const meta = {
   title: "Design System/AvatarStack",
   component: AvatarStack,
   parameters: { layout: "padded" },
-};
+} satisfies Meta<typeof AvatarStack>;
 export default meta;
 
-type Story = StoryObj<typeof AvatarStack>;
+// Typed off `meta`, so every face must carry its required `identity`.
+type Story = StoryObj<typeof meta>;
 
 export const FewContacts: Story = {
   args: {
