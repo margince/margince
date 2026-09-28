@@ -71,12 +71,7 @@ export function DraftBand({
     return null;
   }
   return (
-    <Panel
-      tone="ai"
-      title={t("compose.aiDisclosureTitle")}
-      titleLevel={3}
-      className="compose-band"
-    >
+    <Panel tone="ai" title={t("compose.aiDisclosureTitle")} titleLevel={3}>
       <PanelBody className="compose-band-body">
         <p className="t-body">
           {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
