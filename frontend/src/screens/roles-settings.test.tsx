@@ -77,8 +77,11 @@ function backend(
     allow?: GrantSpec;
     roles?: string[];
     refuse?: { status: number; code: string };
+    // Every directory read after the first fails, as a flaky network would.
+    failRefetch?: boolean;
   } = {},
 ) {
+  let directoryReads = 0;
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
       input instanceof Request ? input : new Request(String(input), init);
@@ -92,6 +95,10 @@ function backend(
       );
     }
     if (url.pathname.endsWith("/v1/roles") && req.method === "GET") {
+      directoryReads += 1;
+      if (opts.failRefetch && directoryReads > 1) {
+        return json({ title: "Unavailable" }, 503);
+      }
       const withArchived = url.searchParams.get("include_archived") === "true";
       return json({
         roles: withArchived
@@ -202,6 +209,25 @@ describe("RolesSettings", () => {
         }),
       ),
     );
+  });
+
+  it("opens the new role even when the directory cannot be re-read", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend([], { failRefetch: true }));
+    render(<RolesSettings />);
+
+    await user.click(await screen.findByRole("button", { name: "New role" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await pickOption(
+      user,
+      dialog.getByRole("combobox", { name: /copy rights from/i }),
+      "Field sales",
+    );
+    await user.type(dialog.getByRole("textbox", { name: /name/i }), "Closers");
+    await user.click(dialog.getByRole("button", { name: "Create role" }));
+
+    const detail = await screen.findByRole("heading", { name: "Closers" });
+    expect(detail.textContent).toBe("Closers");
   });
 
   it("offers no new role to a reader who is not an admin", async () => {

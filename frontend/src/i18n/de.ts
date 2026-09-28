@@ -7447,7 +7447,7 @@ export const de = {
   "settings.page.teams.sub":
     "Teammitgliedschaft, die den teambezogenen Zugriff auf Datensätze bestimmt.",
   "settings.page.roles.sub":
-    "Was jede Rolle darf und wessen Datensätze sie erreicht.",
+    "Was jede Rolle darf und auf welche Datensätze sie zugreifen kann.",
   "settings.page.seats.sub":
     "Belegte Plätze im Verhältnis zum Lizenzumfang dieser Installation.",
   "settings.page.stageautomation.sub":
@@ -8104,7 +8104,7 @@ export const de = {
     "Kontakte, Unternehmen, Leads und Deals bleiben für jede Rolle lesbar, die sie lesen darf. Diese Einstellung legt fest, was Mitglieder ändern dürfen und welche Projekte sie sehen.",
   "roles.scope.own": "Eigene",
   "roles.scope.ownSub": "Datensätze, die dem Mitglied gehören.",
-  "roles.scope.team": "Die ihrer Teams",
+  "roles.scope.team": "Die der Teammitglieder",
   "roles.scope.teamSub":
     "Datensätze, die jemandem aus den Teams des Mitglieds gehören.",
   "roles.scope.all": "Alle",
@@ -8116,7 +8116,7 @@ export const de = {
     "Jeder Schalter speichert sofort. Nur ein Admin kann ein Recht einschalten; du kannst Rechte ausschalten.",
   "roles.turnOnAdminOnly": "Nur ein Admin kann ein Recht einschalten.",
   "roles.widenAdminOnly":
-    "Nur ein Admin kann erweitern, wessen Datensätze eine Rolle erreicht; du kannst es einschränken.",
+    "Nur ein Admin kann den Zugriff einer Rolle auf weitere Datensätze erweitern; du kannst ihn einschränken.",
   "roles.objectColumn": "Objekt",
   "roles.preview": "Vorschau, was diese Rolle sieht",
   "roles.archive": "Rolle archivieren",
@@ -8127,7 +8127,7 @@ export const de = {
   "roles.restoredToast": "{name} wiederhergestellt",
   "roles.notSaved": "Änderung nicht gespeichert",
   "roles.refusal.widening":
-    "Nur ein Admin kann eine Rolle anlegen oder wiederherstellen, ein Recht einschalten oder erweitern, wessen Datensätze sie erreicht. Du kannst eine Rolle umbenennen, einschränken oder archivieren.",
+    "Nur ein Admin kann eine Rolle anlegen oder wiederherstellen, ein Recht einschalten oder den Zugriff auf weitere Datensätze erweitern. Du kannst eine Rolle umbenennen, ihren Zugriff einschränken oder archivieren.",
   "roles.refusal.versionSkew":
     "Jemand anderes hat diese Rolle geändert, während sie geöffnet war. Die Rolle zeigt jetzt diese Änderung; nimm deine erneut vor, falls sie noch zutrifft.",
   "roles.refusal.inUse":

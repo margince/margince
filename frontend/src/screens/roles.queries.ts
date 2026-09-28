@@ -275,8 +275,25 @@ export function useCreateRole() {
       }
       return data;
     },
-    onSuccess: () => refreshAfterRoleEdit(client),
+    // The new role lands in the directory before the refetch, so the editor can
+    // open it even when that refetch fails and the old list is kept.
+    onSuccess: (role) => {
+      addRole(client, role);
+      return refreshAfterRoleEdit(client);
+    },
   });
+}
+
+// Puts a newly made role into every directory read, in the server's key order:
+// keys are ASCII and the server sorts them bytewise, not by any locale.
+function addRole(client: QueryClient, role: Role) {
+  client.setQueriesData<readonly Role[]>({ queryKey: ROLES_KEY }, (roles) =>
+    roles === undefined || roles.some((existing) => existing.key === role.key)
+      ? roles
+      : [...roles, role].sort((left, right) =>
+          left.key < right.key ? -1 : Number(left.key > right.key),
+        ),
+  );
 }
 
 /** Archives a custom role, or restores an archived one. */
