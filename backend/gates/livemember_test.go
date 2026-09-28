@@ -131,7 +131,7 @@ var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
 	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
 	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
 	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
-	"internal/modules/identity/users.go":         "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
+	"internal/modules/identity/userrole.go":      "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
 })
 
 // appUserAlias finds what app_user is called in a statement, so a sibling
