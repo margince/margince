@@ -1600,6 +1600,7 @@ span.error-line {
    is not pointing never receives. */
 .checkfield:has(input:disabled) {
   cursor: not-allowed;
+  color: var(--textSecondary);
 }
 /* The box is native, so it was taking the PLATFORM's focus ring — the one blue
    this product otherwise refuses (see the caret and accent-color declarations in

@@ -83,6 +83,10 @@ function stub(
     roster?: unknown;
     // The record's own read answers 404: the reader can no longer open it.
     gone?: boolean;
+    // The record's own read fails on the network rather than answering.
+    probeFails?: boolean;
+    // The write answers only once this settles.
+    hold?: Promise<void>;
   }> = {},
 ) {
   const { sent = [], writes = [], status = 200, seat = mayWrite } = options;
@@ -101,7 +105,10 @@ function stub(
       if (key === "GET /users") return json(options.roster ?? ROSTER);
       if (options.gone && method === "GET")
         return json({ status: 404, title: "Not found" }, 404);
+      if (options.probeFails && key === "GET /contacts/p-1")
+        throw new TypeError("Failed to fetch");
       if (method === "PATCH" && request) {
+        await options.hold;
         writes.push({
           body: await request.json(),
           version: request.headers.get("If-Match"),
@@ -120,10 +127,10 @@ function LiveRecordAccess() {
   ) : null;
 }
 
-function draw(node: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function draw(
+  node: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
@@ -134,13 +141,14 @@ function draw(node: ReactNode) {
   );
 }
 
-const drawContact = (contact?: Contact) =>
+const drawContact = (contact?: Contact, client?: QueryClient) =>
   draw(
     contact ? (
       <RecordAccess kind="contact" record={contact} />
     ) : (
       <LiveRecordAccess />
     ),
+    client,
   );
 
 // The chip is named by the question it answers; its visible word is the state.
@@ -376,8 +384,7 @@ describe("RecordAccess — the switch", () => {
       owner_id: "u1",
     });
     const panel = await open(user);
-    // A native radio group selects on every arrow key, so each step used to
-    // be a write that published or narrowed the record.
+    // A native radio group selects on every arrow key; only Save writes.
     radio(panel, "owner").focus();
     await user.keyboard("{ArrowDown}{ArrowUp}{ArrowDown}");
     expect(radio(panel, "workspace")).toHaveProperty("checked", true);
@@ -444,6 +451,61 @@ describe("RecordAccess — the switch", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("region")).toBeNull();
     expect(await screen.findByText("Conflict")).toBeTruthy();
+    // Reopened, the switch is back on the stored answer, so the refusal of a
+    // pick it no longer shows would describe nothing on screen.
+    const reopened = await open(user);
+    expect(radio(reopened, "owner")).toHaveProperty("checked", true);
+    expect(within(reopened).queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps focus on the saved answer once Save has nothing left to save", async () => {
+    const user = userEvent.setup();
+    let visibility: "owner" | "workspace" = "owner";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.endsWith("/me")) return me(mayWrite);
+        if (request.method === "PATCH") {
+          visibility = audienceOf(await request.json());
+          return json({});
+        }
+        return json({
+          contact: { ...base, visibility, writable: true, owner_id: "u1" },
+        });
+      }),
+    );
+    drawContact();
+    const panel = await open(user);
+    await choose(user, panel, "workspace");
+    await screen.findByText(en["recordAccess.contact.published"]);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(radio(panel, "workspace")),
+    );
+  });
+
+  it("holds the answers still while the write is out", async () => {
+    const user = userEvent.setup();
+    let release = () => {};
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const writes: { body: unknown; version: string | null }[] = [];
+    stub({ writes, hold });
+    drawContact({
+      ...base,
+      visibility: "owner",
+      writable: true,
+      owner_id: "u1",
+    });
+    const panel = await open(user);
+    await choose(user, panel, "workspace");
+    // A pick made now would be dropped when the write lands.
+    await waitFor(() =>
+      expect(radio(panel, "owner").hasAttribute("disabled")).toBe(true),
+    );
+    release();
+    await screen.findByText(en["recordAccess.contact.published"]);
+    expect(writes).toHaveLength(1);
   });
 
   it("refreshes a stale version, then shares and makes private again", async () => {
@@ -558,6 +620,34 @@ describe("RecordAccess — what the owner's answer costs", () => {
     // as not found; the page would otherwise fail on its own refetch.
     window.location.hash = "#/contacts/p-1";
     stub({ gone: true });
+    const client = new QueryClient();
+    client.setQueryData(["contact360", "p-1"], { contact: base });
+    const entries = history.length;
+    drawContact(
+      {
+        ...base,
+        visibility: "workspace",
+        writable: true,
+        owner_id: "u-owner",
+      },
+      client,
+    );
+    const panel = await open(user);
+    await choose(user, panel, "owner");
+    expect(
+      await screen.findByText(en["recordAccess.contact.leftYourAccess"]),
+    ).toBeTruthy();
+    // In place of the record rather than after it, and with its reads gone:
+    // Back must not return to a page drawn from what the server now refuses.
+    expect(window.location.hash).toBe("#/contacts");
+    expect(history.length).toBe(entries);
+    expect(client.getQueryData(["contact360", "p-1"])).toBeUndefined();
+  });
+
+  it("calls a write that landed a success when the check after it fails", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts/p-1";
+    stub({ probeFails: true });
     drawContact({
       ...base,
       visibility: "workspace",
@@ -567,9 +657,10 @@ describe("RecordAccess — what the owner's answer costs", () => {
     const panel = await open(user);
     await choose(user, panel, "owner");
     expect(
-      await screen.findByText(en["recordAccess.contact.leftYourAccess"]),
+      await screen.findByText(en["recordAccess.contact.madePrivate"]),
     ).toBeTruthy();
-    expect(window.location.hash).toBe("#/contacts");
+    expect(within(panel).queryByRole("alert")).toBeNull();
+    expect(window.location.hash).toBe("#/contacts/p-1");
   });
 
   it("stays on the record when a share still reaches the reader", async () => {
@@ -727,8 +818,8 @@ describe("RecordAccess — a company", () => {
   it("redraws the company page's own chip after a write, and writes again on the new version", async () => {
     const user = userEvent.setup();
     // The real page: its header reads the company from `["company", id]`, not
-    // from the 360, so a write that refreshed only the 360 left the chip on
-    // the old answer and the next write on a version the server had moved.
+    // from the 360, so the write refreshes every read of the record and the
+    // next write carries the version the server moved to.
     const session = meFixture({ allow: { company: ["read", "update"] } });
     let version = 1;
     let visibility: "owner" | "workspace" = "owner";

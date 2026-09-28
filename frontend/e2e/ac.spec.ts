@@ -3065,6 +3065,10 @@ test.describe("the contact's access panel, open", () => {
       await chip.click();
       const panel = page.getByRole("region", { name: title });
       await expect(panel).toBeVisible();
+      // A press carries focus into the panel, onto its first answer.
+      await expect(
+        panel.getByRole("radio", { name: de["recordAccess.option.owner"] }),
+      ).toBeFocused();
       await expect(
         panel.getByRole("radio", { name: de["recordAccess.option.workspace"] }),
       ).toBeChecked();

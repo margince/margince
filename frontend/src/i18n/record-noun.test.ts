@@ -227,6 +227,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
+    // The colleagues a record is shared with are users, not the contact record.
+    "recordAccess.contact.privateYours",
+    "recordAccess.contact.madePrivate",
+    "recordAccess.company.privateYours",
+    "recordAccess.option.ownerHint",
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
     "scheduling.windowLimits",

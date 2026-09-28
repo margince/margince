@@ -3885,7 +3885,7 @@ export const de = {
   "recordAccess.option.ownerHint":
     "Nutzende und Teams, mit denen geteilt wurde, behalten den Zugriff.",
   "recordAccess.option.ownerHintNotYours":
-    "Du verlierst den Zugriff, sofern nicht mit dir oder deinem Team geteilt wurde.",
+    "Du verlierst den Zugriff, es sei denn, der Datensatz ist mit dir oder deinem Team geteilt.",
   "recordAccess.option.ownerNeeded":
     "Lege zuerst ein zuständiges Teammitglied fest.",
   "recordAccess.option.workspace": "Alle Nutzenden im Unternehmen",
