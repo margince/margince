@@ -3855,7 +3855,7 @@ export const de = {
   "recordAccess.contact.shared":
     "Alle Nutzenden im Unternehmen können diesen Kontakt sehen.",
   "recordAccess.contact.privateYours":
-    "Nur du und die Nutzenden, mit denen er geteilt wurde, können diesen Kontakt sehen.",
+    "Nur du und die Nutzenden oder Teams, mit denen er geteilt wurde, können diesen Kontakt sehen.",
   "recordAccess.contact.privateOf":
     "Privat für {owner}. Du kannst diesen Kontakt sehen, weil er mit dir oder deinem Team geteilt wurde.",
   "recordAccess.contact.privateOfOwner":
@@ -3863,12 +3863,14 @@ export const de = {
   "recordAccess.contact.published":
     "Dieser Kontakt ist jetzt für alle Nutzenden sichtbar.",
   "recordAccess.contact.madePrivate":
-    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Nutzende, mit denen er direkt geteilt wurde, behalten den Zugriff.",
+    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Nutzende und Teams, mit denen er geteilt wurde, behalten den Zugriff.",
+  "recordAccess.contact.leftYourAccess":
+    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Du hast keinen Zugriff mehr darauf.",
   "recordAccess.company.title": "Wer dieses Unternehmen sehen kann",
   "recordAccess.company.shared":
     "Alle Nutzenden im Unternehmen können diesen Datensatz sehen.",
   "recordAccess.company.privateYours":
-    "Nur du und die Nutzenden, mit denen es geteilt wurde, können dieses Unternehmen sehen.",
+    "Nur du und die Nutzenden oder Teams, mit denen es geteilt wurde, können dieses Unternehmen sehen.",
   "recordAccess.company.privateOf":
     "Privat für {owner}. Du kannst dieses Unternehmen sehen, weil es mit dir oder deinem Team geteilt wurde.",
   "recordAccess.company.privateOfOwner":
@@ -3877,9 +3879,15 @@ export const de = {
     "Dieses Unternehmen ist jetzt für alle Nutzenden sichtbar.",
   "recordAccess.company.madePrivate":
     "Dieses Unternehmen ist jetzt privat für das zuständige Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
+  "recordAccess.company.leftYourAccess":
+    "Dieses Unternehmen ist jetzt privat für das zuständige Teammitglied. Du hast keinen Zugriff mehr darauf.",
   "recordAccess.option.owner": "Nur das zuständige Teammitglied",
   "recordAccess.option.ownerHint":
-    "Nutzende, mit denen direkt geteilt wurde, behalten den Zugriff.",
+    "Nutzende und Teams, mit denen geteilt wurde, behalten den Zugriff.",
+  "recordAccess.option.ownerHintNotYours":
+    "Du verlierst den Zugriff, sofern nicht mit dir oder deinem Team geteilt wurde.",
+  "recordAccess.option.ownerNeeded":
+    "Lege zuerst ein zuständiges Teammitglied fest.",
   "recordAccess.option.workspace": "Alle Nutzenden im Unternehmen",
   "recordAccess.manage": "Zugriff verwalten",
   "whoCanSee.title": "Wer diesen Datensatz sehen kann",

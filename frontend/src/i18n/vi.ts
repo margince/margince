@@ -3821,19 +3821,21 @@ export const vi = {
   "recordAccess.contact.shared":
     "Mọi người trong tổ chức đều xem được liên hệ này.",
   "recordAccess.contact.privateYours":
-    "Chỉ bạn và những ai được chia sẻ mới xem được liên hệ này.",
+    "Chỉ bạn và những ai hoặc nhóm được chia sẻ mới xem được liên hệ này.",
   "recordAccess.contact.privateOf":
     "Riêng của {owner}. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.contact.privateOfOwner":
     "Riêng của chủ sở hữu. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.contact.published": "Tổ chức đã xem được liên hệ này.",
   "recordAccess.contact.madePrivate":
-    "Liên hệ này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Những ai hoặc nhóm đã được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.contact.leftYourAccess":
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
   "recordAccess.company.title": "Ai xem được công ty này",
   "recordAccess.company.shared":
     "Mọi người trong tổ chức đều xem được công ty này.",
   "recordAccess.company.privateYours":
-    "Chỉ bạn và những ai được chia sẻ mới xem được công ty này.",
+    "Chỉ bạn và những ai hoặc nhóm được chia sẻ mới xem được công ty này.",
   "recordAccess.company.privateOf":
     "Riêng của {owner}. Bạn xem được công ty này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.company.privateOfOwner":
@@ -3841,9 +3843,14 @@ export const vi = {
   "recordAccess.company.published": "Tổ chức đã xem được công ty này.",
   "recordAccess.company.madePrivate":
     "Công ty này thuộc về chủ sở hữu trở lại. Các deal, liên hệ và email đã lưu vào công ty vẫn giữ phạm vi hiển thị riêng của chúng.",
+  "recordAccess.company.leftYourAccess":
+    "Công ty này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
   "recordAccess.option.owner": "Chỉ chủ sở hữu",
   "recordAccess.option.ownerHint":
-    "Những ai được chia sẻ trực tiếp vẫn giữ quyền truy cập.",
+    "Những ai hoặc nhóm được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.option.ownerHintNotYours":
+    "Bạn sẽ mất quyền truy cập, trừ khi nó được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.option.ownerNeeded": "Hãy chỉ định chủ sở hữu trước.",
   "recordAccess.option.workspace": "Cả tổ chức",
   "recordAccess.manage": "Quản lý quyền truy cập",
   "whoCanSee.title": "Ai xem được bản ghi này",

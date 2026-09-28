@@ -12,8 +12,18 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { CompanyScreen } from "./companies";
+import {
+  emptyPage,
+  jsonResponse,
+  company as pageCompany,
+  stubFetch,
+} from "./company.fixtures";
 import { useContact360 } from "./contact360";
 import { RecordAccess } from "./recordaccess";
 
@@ -71,6 +81,8 @@ function stub(
     status?: number;
     seat?: Seat;
     roster?: unknown;
+    // The record's own read answers 404: the reader can no longer open it.
+    gone?: boolean;
   }> = {},
 ) {
   const { sent = [], writes = [], status = 200, seat = mayWrite } = options;
@@ -87,6 +99,8 @@ function stub(
       sent.push(key);
       if (key === "GET /me") return me(seat);
       if (key === "GET /users") return json(options.roster ?? ROSTER);
+      if (options.gone && method === "GET")
+        return json({ status: 404, title: "Not found" }, 404);
       if (method === "PATCH" && request) {
         writes.push({
           body: await request.json(),
@@ -146,6 +160,19 @@ const radio = (panel: HTMLElement, key: "owner" | "workspace") =>
   within(panel).getByRole("radio", {
     name: new RegExp(`^${en[`recordAccess.option.${key}`]}`),
   });
+
+const saveButton = (panel: HTMLElement) =>
+  within(panel).getByRole("button", { name: en["record.save"] });
+
+// Picks an answer and commits it, the two steps a reader takes.
+async function choose(
+  user: ReturnType<typeof userEvent.setup>,
+  panel: HTMLElement,
+  key: "owner" | "workspace",
+) {
+  await user.click(radio(panel, key));
+  await user.click(saveButton(panel));
+}
 
 beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 afterEach(() => {
@@ -279,7 +306,7 @@ describe("RecordAccess — the switch", () => {
       owner_id: "u1",
     });
     const panel = await open(user);
-    await user.click(radio(panel, "workspace"));
+    await choose(user, panel, "workspace");
     expect(sent).toContain("PATCH /contacts/p-1");
     expect(writes).toEqual([
       { body: { visibility: "workspace" }, version: "7" },
@@ -300,7 +327,7 @@ describe("RecordAccess — the switch", () => {
       owner_id: "u1",
     });
     const panel = await open(user);
-    await user.click(radio(panel, "owner"));
+    await choose(user, panel, "owner");
     expect(writes).toEqual([{ body: { visibility: "owner" }, version: "7" }]);
   });
 
@@ -317,7 +344,7 @@ describe("RecordAccess — the switch", () => {
       owner_id: "u-owner",
     });
     const panel = await open(user);
-    await user.click(radio(panel, "workspace"));
+    await choose(user, panel, "workspace");
     expect(sent).toContain("PATCH /contacts/p-1");
   });
 
@@ -333,7 +360,34 @@ describe("RecordAccess — the switch", () => {
     });
     const panel = await open(user);
     await user.click(radio(panel, "workspace"));
+    // Save names a change, so it waits for one.
+    expect(saveButton(panel).hasAttribute("disabled")).toBe(true);
     expect(sent).not.toContain("PATCH /contacts/p-1");
+  });
+
+  it("writes nothing while a keyboard reader arrows through the answers", async () => {
+    const user = userEvent.setup();
+    const sent: string[] = [];
+    stub({ sent });
+    drawContact({
+      ...base,
+      visibility: "owner",
+      writable: true,
+      owner_id: "u1",
+    });
+    const panel = await open(user);
+    // A native radio group selects on every arrow key, so each step used to
+    // be a write that published or narrowed the record.
+    radio(panel, "owner").focus();
+    await user.keyboard("{ArrowDown}{ArrowUp}{ArrowDown}");
+    expect(radio(panel, "workspace")).toHaveProperty("checked", true);
+    expect(sent).not.toContain("PATCH /contacts/p-1");
+    await user.click(saveButton(panel));
+    await waitFor(() =>
+      expect(sent.filter((key) => key === "PATCH /contacts/p-1")).toHaveLength(
+        1,
+      ),
+    );
   });
 
   it("refuses to write a row it read back without a version", async () => {
@@ -351,7 +405,7 @@ describe("RecordAccess — the switch", () => {
       owner_id: "u1",
     });
     const panel = await open(user);
-    await user.click(radio(panel, "owner"));
+    await choose(user, panel, "owner");
     expect(await within(panel).findByRole("alert")).toBeTruthy();
     expect(sent).not.toContain("PATCH /contacts/p-1");
   });
@@ -366,12 +420,30 @@ describe("RecordAccess — the switch", () => {
       owner_id: "u1",
     });
     const panel = await open(user);
-    await user.click(radio(panel, "workspace"));
+    await choose(user, panel, "workspace");
     expect(await within(panel).findByRole("alert")).toBeTruthy();
     expect((await chip()).textContent).toContain(en["visibility.private"]);
-    // The switch falls back to the stored answer once the write is refused.
-    expect(radio(panel, "owner")).toHaveProperty("checked", true);
+    // The unsaved answer stays, so Save can try it again.
+    expect(radio(panel, "workspace")).toHaveProperty("checked", true);
+    expect(saveButton(panel).hasAttribute("disabled")).toBe(false);
     expect(screen.queryByText(en["recordAccess.contact.published"])).toBeNull();
+  });
+
+  it("reports a refused write in a toast, which a closed panel still shows", async () => {
+    const user = userEvent.setup();
+    stub({ status: 500 });
+    drawContact({
+      ...base,
+      visibility: "owner",
+      writable: true,
+      owner_id: "u1",
+    });
+    const panel = await open(user);
+    await choose(user, panel, "workspace");
+    await within(panel).findByRole("alert");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("region")).toBeNull();
+    expect(await screen.findByText("Conflict")).toBeTruthy();
   });
 
   it("refreshes a stale version, then shares and makes private again", async () => {
@@ -391,14 +463,7 @@ describe("RecordAccess — the switch", () => {
           version++;
           if (writes.length === 1)
             return json({ status: 409, code: "version_skew" }, 409);
-          if (
-            typeof body === "object" &&
-            body !== null &&
-            "visibility" in body &&
-            (body.visibility === "owner" || body.visibility === "workspace")
-          ) {
-            visibility = body.visibility;
-          }
+          visibility = audienceOf(body);
           return json({});
         }
         return json({
@@ -414,19 +479,115 @@ describe("RecordAccess — the switch", () => {
     );
     drawContact();
     const panel = await open(user);
-    await user.click(radio(panel, "workspace"));
+    await choose(user, panel, "workspace");
     expect((await within(panel).findByRole("alert")).textContent).toBe(
       en["edit.versionSkew"],
     );
-    await user.click(radio(panel, "workspace"));
+    await user.click(saveButton(panel));
     await within(panel).findByText(en["recordAccess.contact.shared"]);
-    await user.click(radio(panel, "owner"));
+    await choose(user, panel, "owner");
     await within(panel).findByText(en["recordAccess.contact.privateYours"]);
     expect(writes).toEqual([
       { version: "7", body: { visibility: "workspace" } },
       { version: "8", body: { visibility: "workspace" } },
       { version: "9", body: { visibility: "owner" } },
     ]);
+  });
+});
+
+describe("RecordAccess — what the owner's answer costs", () => {
+  it("refuses the owner's answer on a record nobody owns, and says why", async () => {
+    const user = userEvent.setup();
+    // Channel and capture mint rows with no owner and workspace visibility;
+    // the server refuses owner-only there, since no seat could read it.
+    const sent: string[] = [];
+    stub({ sent });
+    drawContact({
+      ...base,
+      visibility: "workspace",
+      writable: true,
+      owner_id: null,
+    });
+    const panel = await open(user);
+    const owner = within(panel).getByRole("radio", {
+      name: new RegExp(en["recordAccess.option.ownerNeeded"]),
+    });
+    expect(owner.hasAttribute("disabled")).toBe(true);
+    await user.click(owner);
+    expect(saveButton(panel).hasAttribute("disabled")).toBe(true);
+    expect(sent).not.toContain("PATCH /contacts/p-1");
+  });
+
+  it("warns a reader who is not the owner that they lose the record", async () => {
+    const user = userEvent.setup();
+    stub();
+    drawContact({
+      ...base,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u-owner",
+    });
+    const panel = await open(user);
+    expect(
+      within(panel).getByRole("radio", {
+        name: new RegExp(en["recordAccess.option.ownerHintNotYours"]),
+      }),
+    ).toBeTruthy();
+  });
+
+  it("tells the owner who keeps access, teams included", async () => {
+    const user = userEvent.setup();
+    stub();
+    drawContact({
+      ...base,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u1",
+    });
+    const panel = await open(user);
+    expect(
+      within(panel).getByRole("radio", {
+        name: new RegExp(en["recordAccess.option.ownerHint"]),
+      }),
+    ).toBeTruthy();
+  });
+
+  it("takes a reader who made it private out of reach to the list", async () => {
+    const user = userEvent.setup();
+    // No share reaches this reader, so the record they just closed now reads
+    // as not found; the page would otherwise fail on its own refetch.
+    window.location.hash = "#/contacts/p-1";
+    stub({ gone: true });
+    drawContact({
+      ...base,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u-owner",
+    });
+    const panel = await open(user);
+    await choose(user, panel, "owner");
+    expect(
+      await screen.findByText(en["recordAccess.contact.leftYourAccess"]),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe("#/contacts");
+  });
+
+  it("stays on the record when a share still reaches the reader", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts/p-1";
+    stub();
+    drawContact({
+      ...base,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u-owner",
+    });
+    const panel = await open(user);
+    await choose(user, panel, "owner");
+    expect(
+      await screen.findByText(en["recordAccess.contact.madePrivate"]),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe("#/contacts/p-1");
   });
 });
 
@@ -514,7 +675,7 @@ describe("RecordAccess — a company", () => {
     expect(
       await within(panel).findByText(en["recordAccess.company.privateYours"]),
     ).toBeTruthy();
-    await user.click(radio(panel, "workspace"));
+    await choose(user, panel, "workspace");
     // The COMPANY endpoint: a component that wrote /contacts/c-1 would pass
     // every other assertion in this block.
     expect(sent).toContain("PATCH /companies/c-1");
@@ -562,4 +723,68 @@ describe("RecordAccess — a company", () => {
     drawCompany({ ...company, writable: true });
     expect(screen.queryByRole("button")).toBeNull();
   });
+
+  it("redraws the company page's own chip after a write, and writes again on the new version", async () => {
+    const user = userEvent.setup();
+    // The real page: its header reads the company from `["company", id]`, not
+    // from the 360, so a write that refreshed only the 360 left the chip on
+    // the old answer and the next write on a version the server had moved.
+    const session = meFixture({ allow: { company: ["read", "update"] } });
+    let version = 1;
+    let visibility: "owner" | "workspace" = "owner";
+    const writes: { version: string | null; body: unknown }[] = [];
+    stubFetch(async (url, method, request) => {
+      const path = new URL(url).pathname;
+      if (path.endsWith("/me")) return jsonResponse(session);
+      if (!path.endsWith("/companies/o-1")) return emptyPage();
+      if (method === "PATCH") {
+        const pinned = request.headers.get("If-Match");
+        const body: unknown = await request.json();
+        writes.push({ version: pinned, body });
+        if (pinned !== String(version))
+          return jsonResponse({ status: 409, code: "version_skew" }, 409);
+        visibility = audienceOf(body);
+        version++;
+      }
+      return jsonResponse({
+        ...pageCompany,
+        owner_id: session.user.id,
+        visibility,
+        version,
+      });
+    });
+    draw(
+      <LocaleProvider initial="en">
+        <RecordShell>
+          <CompanyScreen id="o-1" />
+        </RecordShell>
+      </LocaleProvider>,
+    );
+    const panel = await open(user, "company");
+    await choose(user, panel, "workspace");
+    await waitFor(async () =>
+      expect((await chip("company")).textContent).toContain("Shared"),
+    );
+    await choose(user, panel, "owner");
+    await waitFor(async () =>
+      expect((await chip("company")).textContent).toContain(
+        en["visibility.private"],
+      ),
+    );
+    expect(writes).toEqual([
+      { version: "1", body: { visibility: "workspace" } },
+      { version: "2", body: { visibility: "owner" } },
+    ]);
+  });
 });
+
+function audienceOf(body: unknown): "owner" | "workspace" {
+  const visibility =
+    typeof body === "object" && body !== null && "visibility" in body
+      ? body.visibility
+      : undefined;
+  if (visibility !== "owner" && visibility !== "workspace") {
+    throw new Error(`Expected a visibility write, got ${JSON.stringify(body)}`);
+  }
+  return visibility;
+}

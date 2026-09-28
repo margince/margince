@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent } from "storybook/test";
 
 import { Badge, Button } from "./atoms";
 import { Popover } from "./popover";
@@ -51,10 +52,23 @@ export const ItOpens: Story = {
         All users in the company can see this contact.
       </Popover>
       <Popover label={<VisibilityBadge state="private" opens />}>
-        Only you and the users it was shared with can see this contact.
+        Only you and the users or teams it was shared with can see this contact.
       </Popover>
     </div>
   ),
+};
+
+/** The chip reached by Tab: the ring is drawn round the pill itself, at the
+ * pill's radius, and not round the button's box it sits in. */
+export const ItOpensFocused: Story = {
+  render: () => (
+    <Popover label={<VisibilityBadge state="private" opens />}>
+      Only you and the users or teams it was shared with can see this contact.
+    </Popover>
+  ),
+  play: async () => {
+    await userEvent.tab();
+  },
 };
 
 /** The mark beside the verb that changes it, as the mail drawer draws it for

@@ -3,23 +3,19 @@
 
 // WHO CAN SEE THIS RECORD, said in the header and changed there.
 //
-// One component for both records, because they are one question. The contact
-// header carried this and the company header carried nothing — so the same
-// fact lived in two places on one product: a contact said who could read it
-// beside its name, and a capture-private company said nothing at all while its
-// sidebar showed a "Private correspondence" section that is a DIFFERENT
-// setting (a capture hold on a mail domain, counterparty-hold.tsx). A reader
-// who learned the contact page then read the company page was told the account
-// was shared, by omission, when it was not.
+// One component for both records, because they are one question, and both
+// headers answer it in the same place. It is a different setting from the
+// company sidebar's "Private correspondence", which is a capture hold on a mail
+// domain (counterparty-hold.tsx).
 //
 // The mark sits on the identity line rather than in the details rail: who may
 // read a record is true of the RECORD, not of whichever tab is open, and the
 // rail folds away. It is one chip among the record's other marks, with the
-// answer, the switch and the way to the full list behind it: verbs revealed on
-// hover beside the mark moved the header under the pointer and held empty
-// space for every other reader.
+// answer, the switch and the way to the full list behind it, so nothing on the
+// header moves or holds space for a reader who never asks.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordWriteRefusal } from "../app/capability";
@@ -38,6 +34,7 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
+import { invalidateRecord } from "./recordwritekeys";
 import { memberName, useRosterNames } from "./roster";
 import "./recordaccess.css";
 
@@ -73,6 +70,7 @@ const COPY = {
     privateOfOwner: "recordAccess.contact.privateOfOwner",
     published: "recordAccess.contact.published",
     madePrivate: "recordAccess.contact.madePrivate",
+    leftYourAccess: "recordAccess.contact.leftYourAccess",
     archived: "contact.rail.archivedReadOnly",
     notYours: "contact.notYoursToChange",
   },
@@ -84,14 +82,15 @@ const COPY = {
     privateOfOwner: "recordAccess.company.privateOfOwner",
     published: "recordAccess.company.published",
     madePrivate: "recordAccess.company.madePrivate",
+    leftYourAccess: "recordAccess.company.leftYourAccess",
     archived: "record.archivedReadOnly",
     notYours: "record.notYoursToChange",
   },
 } as const satisfies Record<RecordKind, Record<string, MessageKey>>;
 
-// The 360 query each record page holds, so the write invalidates the read the
-// header is drawn from rather than a list the page is not showing.
-const QUERY_KEY = { contact: "contact360", company: "company360" } as const;
+// The list a reader lands on once a write has taken the record out of their
+// reach, which is where archiving one already takes them.
+const LIST = { contact: "contacts", company: "companies" } as const;
 
 /**
  * Who may read the record, as a chip that opens the answer and the switch.
@@ -117,6 +116,9 @@ export function RecordAccess({
     notYours: t(copy.notYours),
   });
   const sentence = useAudienceSentence(kind, record);
+  const viewerId = useViewerId();
+  const failure = (error: unknown) =>
+    isVersionSkewOf(error) ? t("edit.versionSkew") : problemMessageOf(error, t);
   const setVisibility = useMutation({
     // Every value the write needs is a VARIABLE, never a closure over the
     // render that drew the control: a click landing between the commit and the
@@ -130,6 +132,7 @@ export function RecordAccess({
       id: string;
       version: AccessibleRecord["version"];
       visibility: Audience;
+      mayLoseAccess: boolean;
     }) => {
       const path = kind === "contact" ? "/contacts/{id}" : "/companies/{id}";
       const { error } = await api.PATCH(path, {
@@ -139,20 +142,24 @@ export function RecordAccess({
       if (error) {
         throwProblem(error);
       }
-      return { id, visibility };
     },
+    // The toast as well as the line in the panel, because the panel may be
+    // closed by the time the refusal arrives.
     onError: async (error, { id }) => {
-      if (isVersionSkewOf(error)) {
-        await queryClient.invalidateQueries({
-          queryKey: [QUERY_KEY[kind], id],
-        });
-      }
+      toast.show(failure(error), { tone: "danger" });
+      await invalidateRecord(queryClient, kind, id);
     },
-    onSuccess: async ({ id, visibility }) => {
+    onSuccess: async (_, { id, visibility, mayLoseAccess }) => {
+      if (mayLoseAccess && (await gone(kind, id))) {
+        toast.show(t(copy.leftYourAccess));
+        navigate({ screen: LIST[kind] });
+        await queryClient.invalidateQueries({ queryKey: [LIST[kind]] });
+        return;
+      }
       toast.show(
         t(visibility === "workspace" ? copy.published : copy.madePrivate),
       );
-      await queryClient.invalidateQueries({ queryKey: [QUERY_KEY[kind], id] });
+      await invalidateRecord(queryClient, kind, id);
     },
   });
 
@@ -164,10 +171,7 @@ export function RecordAccess({
   }
   const id = record.id;
   const current = record.visibility;
-  // The answer just given, until the refetch confirms it: a radio that stays
-  // on the old answer for a round trip reads as a press that missed.
-  const chosen =
-    (setVisibility.isPending && setVisibility.variables?.visibility) || current;
+  const ownerId = record.owner_id ?? undefined;
   return (
     <Popover
       label={
@@ -185,35 +189,26 @@ export function RecordAccess({
         {refusal ? (
           <p className="t-caption">{refusal}</p>
         ) : (
-          <ChoiceList<Audience>
+          <AudienceSwitch
             legend={t(copy.title)}
-            hideLegend
-            value={chosen}
-            choices={[
-              {
-                value: "owner",
-                label: t("recordAccess.option.owner"),
-                description: t("recordAccess.option.ownerHint"),
-              },
-              {
-                value: "workspace",
-                label: t("recordAccess.option.workspace"),
-              },
-            ]}
-            onChange={(visibility) => {
-              if (setVisibility.isPending || visibility === current) {
-                return;
-              }
-              setVisibility.mutate({ id, version: record.version, visibility });
-            }}
+            current={current}
+            owner={ownerStanding(ownerId, viewerId)}
+            pending={setVisibility.isPending}
+            onSave={(visibility, saved) =>
+              setVisibility.mutate(
+                {
+                  id,
+                  version: record.version,
+                  visibility,
+                  mayLoseAccess: visibility === "owner" && ownerId !== viewerId,
+                },
+                { onSuccess: saved },
+              )
+            }
           />
         )}
         {setVisibility.isError && (
-          <ErrorLine inline>
-            {isVersionSkewOf(setVisibility.error)
-              ? t("edit.versionSkew")
-              : problemMessageOf(setVisibility.error, t)}
-          </ErrorLine>
+          <ErrorLine inline>{failure(setVisibility.error)}</ErrorLine>
         )}
         {/* The full answer (every colleague, and why) is the share screen's;
             this panel names the audience and switches it. */}
@@ -228,9 +223,93 @@ export function RecordAccess({
   );
 }
 
+// The switch holds its answer until Save: a radio group selects on every
+// arrow key, so a keyboard reader moving through the answers would otherwise
+// publish or narrow the record at each step. It lives inside the panel, so a
+// closed panel drops an answer nobody saved.
+function AudienceSwitch({
+  legend,
+  current,
+  owner,
+  pending,
+  onSave,
+}: Readonly<{
+  legend: string;
+  current: Audience;
+  owner: OwnerStanding;
+  pending: boolean;
+  onSave: (visibility: Audience, saved: () => void) => void;
+}>) {
+  const t = useT();
+  const [picked, setPicked] = useState<Audience>();
+  const answer = picked ?? current;
+  return (
+    <>
+      <ChoiceList<Audience>
+        legend={legend}
+        hideLegend
+        value={answer}
+        choices={[
+          {
+            value: "owner",
+            label: t("recordAccess.option.owner"),
+            description: t(OWNER_HINT[owner]),
+            // The server refuses owner-only on a record nobody owns: no seat
+            // could read it.
+            disabled: owner === "none" && current !== "owner",
+          },
+          {
+            value: "workspace",
+            label: t("recordAccess.option.workspace"),
+          },
+        ]}
+        onChange={setPicked}
+      />
+      <Button
+        variant="primary"
+        disabled={answer === current && !pending}
+        pending={pending}
+        onClick={() => onSave(answer, () => setPicked(undefined))}
+      >
+        {t("record.save")}
+      </Button>
+    </>
+  );
+}
+
+type OwnerStanding = "reader" | "other" | "none";
+
+function ownerStanding(
+  ownerId: string | undefined,
+  viewerId: string | undefined,
+): OwnerStanding {
+  if (ownerId === undefined) {
+    return "none";
+  }
+  return ownerId === viewerId ? "reader" : "other";
+}
+
+// What the owner's answer costs, said to the reader it costs: a colleague
+// who is not the owner stops reading a private row unless a share reaches them.
+const OWNER_HINT = {
+  reader: "recordAccess.option.ownerHint",
+  other: "recordAccess.option.ownerHintNotYours",
+  none: "recordAccess.option.ownerNeeded",
+} as const satisfies Record<OwnerStanding, MessageKey>;
+
+// Whether the reader can still open the record: a private row answers to its
+// owner and its shares alone, and whether a share reaches this reader is the
+// server's to say.
+async function gone(kind: RecordKind, id: string): Promise<boolean> {
+  const path = kind === "contact" ? "/contacts/{id}" : "/companies/{id}";
+  const { response } = await api.GET(path, { params: { path: { id } } });
+  return response.status === 404;
+}
+
 // Who may read the record, true for THIS reader. A private record open in
-// front of anyone but its owner is open because it was shared with them — an
-// administrator's role does not lift owner-privacy — so "Only you" is false.
+// front of anyone but its owner is open because it was shared with them or
+// their team (an administrator's role does not lift owner-privacy), so the
+// sentence names the owner and the share.
 function useAudienceSentence(
   kind: RecordKind,
   record: AccessibleRecord,

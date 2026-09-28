@@ -228,8 +228,8 @@ To take back a share in Margince, open the record, choose **Share**, find the co
 Also called: unshare, remove access.
 
 ### How do I make a contact or company visible to everyone?
-To make a private contact or company visible to the whole company, open it, press the access chip under its name (it reads **Private**) and choose **All users in the company**. To hide it again, press the chip (it now reads **Shared**) and choose **Only the owner**; users it was shared with directly keep access. **Manage access** in the same panel opens the full list of who can open the record and why. The choice is offered only to someone who may change the record; anyone else, and anyone on an archived record, sees the reason instead.
-A record set to owner-only with **no owner** is refused, because no seat could then read it.
+To make a private contact or company visible to the whole company, open it, press the access chip under its name (it reads **Private**), choose **All users in the company** and press **Save**. Nothing changes until you press **Save**, so moving through the answers with the arrow keys is safe. To hide it again, press the chip (it now reads **Shared**), choose **Only the owner** and press **Save**; users and teams it was shared with keep access. **Manage access** in the same panel opens the full list of who can open the record and why. The choice is offered only to someone who may change the record; anyone else, and anyone on an archived record, sees the reason instead.
+A record with **no owner** cannot be made owner-only, because no seat could then read it: **Only the owner** is greyed out with "Assign an owner first." If you are not the owner, **Only the owner** warns "You lose access unless it is shared with you or your team." and, if no share reaches you, Margince takes you back to the list.
 Also called: publish a contact, make public, make private.
 
 ## Who can see this record
@@ -238,7 +238,7 @@ A contact and a company each carry the answer under their own name, as one
 chip that reads **Shared** or **Private**. Pressing it opens one sentence saying
 who can see the record, the choice that changes it, and **Manage access**:
 
-- **Private**, read by its owner: "Only you and the users it was shared with can see this contact."
+- **Private**, read by its owner: "Only you and the users or teams it was shared with can see this contact."
 - **Private**, read by anyone else who can open it, naming the owner: "Private to Mira Voss. You can see this contact because it was shared with you or your team." A private record reaches nobody else, an administrator included; a share is the only way in.
 - **Shared**: "All users in the company can see this contact."
 
@@ -249,8 +249,8 @@ waiting for a machine to decide.
 
 Making a company private again does not re-hide what is filed against it: "This
 company is now private to its owner. Deals, contacts and mail filed against it
-keep their own visibility." Making a contact private keeps access for users it
-was shared with directly.
+keep their own visibility." Making a contact private keeps access for users and
+teams it was shared with.
 
 The write is also refused if your permission to make it lapsed while you were
 deciding, rather than landing on an answer you no longer hold.

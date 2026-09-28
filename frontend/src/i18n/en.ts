@@ -3967,19 +3967,21 @@ export const en = {
   "recordAccess.contact.shared":
     "All users in the company can see this contact.",
   "recordAccess.contact.privateYours":
-    "Only you and the users it was shared with can see this contact.",
+    "Only you and the users or teams it was shared with can see this contact.",
   "recordAccess.contact.privateOf":
     "Private to {owner}. You can see this contact because it was shared with you or your team.",
   "recordAccess.contact.privateOfOwner":
     "Private to its owner. You can see this contact because it was shared with you or your team.",
   "recordAccess.contact.published": "This contact is now visible to all users.",
   "recordAccess.contact.madePrivate":
-    "This contact is now private to its owner. Users it was shared with directly keep access.",
+    "This contact is now private to its owner. Users and teams it was shared with keep access.",
+  "recordAccess.contact.leftYourAccess":
+    "This contact is now private to its owner. You no longer have access to it.",
   "recordAccess.company.title": "Who can see this company",
   "recordAccess.company.shared":
     "All users in the company can see this record.",
   "recordAccess.company.privateYours":
-    "Only you and the users it was shared with can see this company.",
+    "Only you and the users or teams it was shared with can see this company.",
   "recordAccess.company.privateOf":
     "Private to {owner}. You can see this company because it was shared with you or your team.",
   "recordAccess.company.privateOfOwner":
@@ -3987,11 +3989,17 @@ export const en = {
   "recordAccess.company.published": "This company is now visible to all users.",
   "recordAccess.company.madePrivate":
     "This company is now private to its owner. Deals, contacts and mail filed against it keep their own visibility.",
+  "recordAccess.company.leftYourAccess":
+    "This company is now private to its owner. You no longer have access to it.",
   // The switch behind the header's access chip. The owner's answer carries
-  // what it does not take away, because a direct share outlives it.
+  // what it does not take away, because a share outlives it; to anyone but the
+  // owner it says what it takes from them, and without an owner it is refused.
   "recordAccess.option.owner": "Only the owner",
   "recordAccess.option.ownerHint":
-    "Users it is shared with directly keep access.",
+    "Users and teams it is shared with keep access.",
+  "recordAccess.option.ownerHintNotYours":
+    "You lose access unless it is shared with you or your team.",
+  "recordAccess.option.ownerNeeded": "Assign an owner first.",
   "recordAccess.option.workspace": "All users in the company",
   "recordAccess.manage": "Manage access",
   // The full answer on the share screen: every colleague who can open the

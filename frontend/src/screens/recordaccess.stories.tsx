@@ -97,7 +97,8 @@ export const Shared: Story = {
 };
 
 /** Open on a shared contact the reader may change: the sentence, the switch
- *  on its current answer, and the way to the full list. */
+ *  on its current answer, Save waiting for a different one, and the way to the
+ *  full list. */
 export const SharedOpen: Story = {
   render: () => <Access contact={{ ...base, visibility: "workspace" }} />,
   play: openChip,
@@ -153,7 +154,8 @@ export const Archived: Story = {
 };
 
 /** A refused write: the error stays inside the panel, beside the switch it
- *  answers, and the switch returns to the stored answer. */
+ *  answers, and a toast says it too, for a reader who closed the panel. The
+ *  unsaved answer stays chosen so Save can try again. */
 export const WriteRefused: Story = {
   render: () => (
     <Access contact={{ ...base, visibility: "workspace" }} patchStatus={500} />
@@ -163,8 +165,29 @@ export const WriteRefused: Story = {
     await userEvent.click(
       await screen.findByRole("radio", { name: /^Only the owner/ }),
     );
+    await userEvent.click(await screen.findByRole("button", { name: "Save" }));
     await screen.findByRole("alert");
   },
+};
+
+/** A colleague holding a write grant on somebody else's contact: the owner's
+ *  answer says it would take the contact out of their own reach. */
+export const NotTheOwner: Story = {
+  render: () => (
+    <Access
+      contact={{ ...base, visibility: "workspace", owner_id: COLLEAGUE }}
+    />
+  ),
+  play: openChip,
+};
+
+/** A contact capture minted with no owner: the owner's answer is refused, and
+ *  its help line says what comes first. */
+export const NoOwner: Story = {
+  render: () => (
+    <Access contact={{ ...base, visibility: "workspace", owner_id: null }} />
+  ),
+  play: openChip,
 };
 
 /** Under a thumb: the chip keeps its pill and grows its target to the touch
