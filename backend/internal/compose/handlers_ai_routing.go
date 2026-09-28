@@ -358,6 +358,8 @@ func toContractKeyTest(t ai.KeyTest) crmcontracts.AiProviderKeyTestResult {
 			count := t.ModelCount
 			out.ModelCount = &count
 		}
+		confirmed := !t.Unconfirmed
+		out.KeyConfirmed = &confirmed
 		return out
 	}
 	reason := crmcontracts.AiProviderKeyTestResultReason(t.Reason)

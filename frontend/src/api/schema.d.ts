@@ -10180,10 +10180,11 @@ export interface paths {
          *     - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
          *     - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
          *       public, so listing it would pass any key. It passes with no `model_count`.
-         *     - Any other decision endpoint is sent the decision request with an empty body. A 400 or
-         *       422 is a pass (the server let the caller in, then refused the body); 401 or 403 is a
-         *       refused key; a 200 is not a pass, since no decision server answers an empty request.
-         *       It passes with no `model_count`.
+         *     - Any other decision endpoint is sent the decision request with an empty body. 401 or
+         *       403 is a refused key. A 400 or 422 is a pass with `key_confirmed: false`: the server
+         *       answered and did not refuse the key, but may have refused the body before reading it.
+         *       A 200 is not a pass, since no decision server answers an empty request. It passes with
+         *       no `model_count`.
          *     - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
          *       on OpenRouter) answers `profile_forbids` without being dialled.
          *
@@ -17686,6 +17687,8 @@ export interface components {
             provider: string;
             /** @description Whether the vendor answered its model list with this credential. */
             ok: boolean;
+            /** @description Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server. */
+            key_confirmed?: boolean;
             /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
             model_count?: number;
             /**

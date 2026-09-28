@@ -65,9 +65,12 @@ func TestAKeyTestCarriesOnlyTheFieldsOfItsOutcome(t *testing.T) {
 	if !passed.Ok || passed.ModelCount == nil || *passed.ModelCount != 0 || passed.Reason != nil {
 		t.Fatalf("a pass carries its count, zero included, and no reason: %+v", passed)
 	}
-	uncounted := toContractKeyTest(ai.KeyTest{Provider: "jev_compatible", OK: true})
-	if !uncounted.Ok || uncounted.ModelCount != nil {
-		t.Fatalf("a pass that listed nothing carries no count: %+v", uncounted)
+	uncounted := toContractKeyTest(ai.KeyTest{Provider: "jev_compatible", OK: true, Unconfirmed: true})
+	if !uncounted.Ok || uncounted.ModelCount != nil || uncounted.KeyConfirmed == nil || *uncounted.KeyConfirmed {
+		t.Fatalf("an unconfirmed pass that listed nothing carries no count and key_confirmed false: %+v", uncounted)
+	}
+	if passed.KeyConfirmed == nil || !*passed.KeyConfirmed {
+		t.Fatalf("a listing pass confirms the key: %+v", passed)
 	}
 	failed := toContractKeyTest(ai.KeyTest{Provider: "openai", Reason: ai.KeyTestAuthFailed})
 	want := crmcontracts.AiProviderKeyTestResultReasonAuthFailed

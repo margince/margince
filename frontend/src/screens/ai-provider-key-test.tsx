@@ -86,7 +86,7 @@ export function KeyTestOutcome({
         <>
           <Badge tone="success">{t("aiProviderKeys.connected")}</Badge>{" "}
           {result.model_count === undefined
-            ? t(keyHeld ? "aiProviderKeys.accepted" : "aiProviderKeys.answered")
+            ? t(passLine(keyHeld, result.key_confirmed !== false))
             : plural("aiProviderKeys.modelCount", result.model_count, {
                 count: formatNumber(result.model_count, locale),
               })}
@@ -99,6 +99,20 @@ export function KeyTestOutcome({
       )}
     </p>
   );
+}
+
+// What a pass without a count proves. A keyless server accepted no key; a
+// server that answered the empty decision request without refusing it may
+// not have read the key at all.
+function passLine(
+  keyHeld: boolean,
+  confirmed: boolean,
+):
+  | "aiProviderKeys.accepted"
+  | "aiProviderKeys.answered"
+  | "aiProviderKeys.unconfirmed" {
+  if (!keyHeld) return "aiProviderKeys.answered";
+  return confirmed ? "aiProviderKeys.accepted" : "aiProviderKeys.unconfirmed";
 }
 
 function keyTestReason(

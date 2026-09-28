@@ -89,8 +89,8 @@ func TestAnOpenRouterDecisionKeyIsTestedAtItsKeyEndpoint(t *testing.T) {
 			decisionBound(providerJevCompatible, "https://openrouter.ai/api/alpha/decisions"),
 			providerJevCompatible, cloudKeyFor(providerJevCompatible, "or"), host.probes())
 
-		if got.Reason != want || got.OK != (want == "") || got.Counted {
-			t.Errorf("http %d: got %+v, want reason %q and no count", status, got, want)
+		if got.Reason != want || got.OK != (want == "") || got.Counted || got.Unconfirmed {
+			t.Errorf("http %d: got %+v, want reason %q, no count, and a confirmed key", status, got, want)
 		}
 		if host.asked[0] != "GET https://openrouter.ai/api/v1/key auth=Bearer or" {
 			t.Errorf("http %d: asked %v", status, host.asked)
@@ -122,8 +122,8 @@ func TestAnyOtherDecisionServerIsProbedWithAnEmptyDecision(t *testing.T) {
 			decisionBound(providerJevCompatible, "http://decider.internal:8767/v1/systemone"),
 			providerJevCompatible, noCloudKeys(), host.probes())
 
-		if got.Reason != want || got.OK != (want == "") || got.Counted {
-			t.Errorf("http %d: got %+v, want reason %q", status, got, want)
+		if got.Reason != want || got.OK != (want == "") || got.Counted || got.OK != got.Unconfirmed {
+			t.Errorf("http %d: got %+v, want reason %q, and a pass marked unconfirmed", status, got, want)
 		}
 		if host.asked[0] != "POST http://decider.internal:8767/v1/systemone auth=" {
 			t.Errorf("http %d: asked %v — a keyless server is sent no header", status, host.asked)

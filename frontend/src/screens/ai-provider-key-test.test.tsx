@@ -221,6 +221,26 @@ describe("testing a provider key", () => {
     expect(within(row).queryByText(/accepted the key/)).toBeNull();
   });
 
+  // The empty decision request proves the server answered, not that it read
+  // the key, so a held key is not called accepted on that evidence.
+  it("says an unconfirmed pass could not confirm the key", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(READER, () =>
+        jsonResponse({ provider: "jev", ok: true, key_confirmed: false }),
+      ).fetchMock,
+    );
+    render();
+
+    const row = await testRow(user, "jev");
+
+    expect(
+      await within(row).findByText(/cannot confirm the key is valid/),
+    ).toBeTruthy();
+    expect(within(row).queryByText(/accepted the key/)).toBeNull();
+  });
+
   // A result describes the key that was held when it ran; once that key is
   // replaced it says nothing about the one now stored.
   it("clears the result when the key is replaced", async () => {

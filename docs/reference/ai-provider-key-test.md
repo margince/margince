@@ -19,7 +19,7 @@ reaches the answer.
 | `ollama` | `GET {base}/api/tags`, no auth | 200, with the count of pulled models |
 | `jev` | `GET /v1/models` beside its endpoint (TypeSafe's model list), `Authorization: Bearer` — on whatever host the endpoint names, OpenRouter included | 200, with the model count |
 | `jev_compatible` on `openrouter.ai` | `GET https://openrouter.ai/api/v1/key`, `Authorization: Bearer` | 200, no count |
-| `jev_compatible` elsewhere | `POST {endpoint}` with body `{}`, `Authorization: Bearer` when a key is held | 400 or 422 (reached, key let through, empty request refused), no count. A 200 is **not** a pass: no Jev server answers an empty request, so it is something else at that address |
+| `jev_compatible` elsewhere | `POST {endpoint}` with body `{}`, `Authorization: Bearer` when a key is held | 400 or 422, no count, reported as **unconfirmed** (`key_confirmed: false`): the server answered and did not refuse the key, but may have refused the empty body before reading the key. A 200 is **not** a pass: no Jev server answers an empty request, so it is something else at that address |
 
 Why the two `jev_compatible` rows differ: "compatible" promises only the Jev
 decision route. OpenRouter's model catalogue is public — it answers 200 to any
@@ -27,7 +27,8 @@ key, so listing it proves nothing — which is why its key endpoint is asked
 instead. A self-hosted server publishes nothing but the decision route, and a
 request naming no model is refused before anything is decided. A keyless
 pass — a self-hosted server with no key stored — reads "The server answered":
-no key was sent, so none was accepted.
+no key was sent, so none was accepted. With a key held, the screen says the
+server did not refuse it and that a wrong key would show at the first decision.
 
 A failure answers `ok: false` with one `reason`:
 

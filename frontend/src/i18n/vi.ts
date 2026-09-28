@@ -8640,6 +8640,8 @@ export const vi = {
   "aiProviderKeys.connected": "Đã kết nối",
   "aiProviderKeys.accepted": "Nhà cung cấp đã chấp nhận khóa.",
   "aiProviderKeys.answered": "Máy chủ đã phản hồi.",
+  "aiProviderKeys.unconfirmed":
+    "Máy chủ đã phản hồi và không từ chối khóa. Máy chủ không thể xác nhận khóa hợp lệ; khóa sai sẽ lộ ra ở quyết định đầu tiên.",
   "aiProviderKeys.testFailed": "Kiểm tra thất bại",
   "aiProviderKeys.modelCount_one": "Có {count} mô hình",
   "aiProviderKeys.modelCount_other": "Có {count} mô hình",

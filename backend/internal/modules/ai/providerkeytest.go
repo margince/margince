@@ -50,13 +50,16 @@ const (
 // KeyTest is one vendor's answer to the stored credential. Reason is empty
 // exactly when OK is true. Counted says ModelCount is a real list's length: a
 // vendor tested without listing (a broker's key endpoint, the decision wire)
-// passes with no count rather than with a zero.
+// passes with no count rather than with a zero. Unconfirmed marks a pass that
+// proves the server answered but not that it checked the key: the decision
+// wire's empty request, which a server may refuse before it reads the key.
 type KeyTest struct {
-	Provider   string
-	OK         bool
-	ModelCount int
-	Counted    bool
-	Reason     KeyTestReason
+	Provider    string
+	OK          bool
+	ModelCount  int
+	Counted     bool
+	Unconfirmed bool
+	Reason      KeyTestReason
 }
 
 // clientBuilder turns a binding into a client; SelectBrain in production, and
@@ -157,6 +160,7 @@ func probeDecisionKey(
 		return out
 	}
 	out.OK, out.ModelCount, out.Counted = true, count, counted
+	out.Unconfirmed = decisionHostFor(provider, client.url) == decisionHostWire
 	return out
 }
 

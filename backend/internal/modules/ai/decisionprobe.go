@@ -27,9 +27,9 @@ import (
 //   - OpenRouter's catalogue is public, so listing proves nothing about a key;
 //     GET /api/v1/key is its authenticated no-cost read, and its catalogue —
 //     asked for every output modality, or Jev is left out — is the list.
-//   - Any other server is asked the decision POST with an empty body: a 400
-//     means the server was reached and let the key past to validation, a
-//     401/403 that it refused the key. No model is named, so nothing is billed.
+//   - Any other server is asked the decision POST with an empty body: a 401/403
+//     is a refused key, and a 400 says only that it answered without refusing —
+//     an unconfirmed pass. No model is named, so nothing is billed.
 //
 // A lane the profile would refuse to bind is not dialled either: testing a key
 // for a decision endpoint eu_hosted forbids answers profile_forbids, the same
@@ -167,9 +167,10 @@ func (c *decisionClient) openRouterDecisionModels(ctx context.Context) ([]model.
 	return models, nil
 }
 
-// wireProbe sends the decision POST an empty body. The server validates the
-// body only after it has accepted the caller, so a 400 or 422 is a key it let
-// through; nothing was asked, so nothing is billed.
+// wireProbe sends the decision POST an empty body. A 401/403 is a refused key;
+// a 400 or 422 means the server answered and did not refuse it — which is all
+// the wire can prove, since a server may validate the body before the key, and
+// the pass is reported as unconfirmed. Nothing was asked, so nothing is billed.
 func (c *decisionClient) wireProbe(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, bytes.NewReader([]byte("{}")))
 	if err != nil {
