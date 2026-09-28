@@ -26,8 +26,12 @@ export type NameOf = (
   entityId: string,
 ) => string | undefined;
 
-/** A contact on an exchange: the record it is, and what it is called. */
-export type ContactOn = Readonly<{ id: string; name: string }>;
+/**
+ * A party on an exchange: what it is called, and the key its face is drawn
+ * on — a contact's record id, or the name itself where no record stands
+ * behind it.
+ */
+export type ContactOn = Readonly<{ key: string; name: string }>;
 
 /**
  * The contacts an activity is filed against, named and in link order.
@@ -48,29 +52,42 @@ export function contactsOn(
       continue;
     }
     const name = nameOf?.("contact", link.entity_id);
-    if (name && !contacts.some((seen) => seen.id === link.entity_id)) {
-      contacts.push({ id: link.entity_id, name });
+    if (name && !contacts.some((seen) => seen.key === link.entity_id)) {
+      contacts.push({ key: link.entity_id, name });
     }
   }
   return contacts;
 }
 
 /**
- * The one contact an activity is filed against, or nothing when it is filed
- * against none or several. The server's own phrase for a message names a
- * participant it resolved to a contact, so on an exchange filed against one
- * contact the phrase is that contact and a face drawn from it keys on the
- * record; filed against several, the phrase cannot say which.
+ * Their names, each once. Two records can carry one name, and a line that
+ * printed it twice would read as a slip rather than as two people; a face
+ * keeps the two apart by key.
  */
-export function soleContactOn(
+export function namesOf(contacts: readonly ContactOn[]): string[] {
+  return [...new Set(contacts.map((contact) => contact.name))];
+}
+
+/** A contact record as a page holds it: enough to know it by name. */
+export type RecordContact = Readonly<{ id: string; full_name: string }>;
+
+/**
+ * The contact's id when the server's phrase for a message names it and the
+ * message is filed against it. The phrase names whoever came first on the far
+ * side, a colleague or a bare address as readily as a contact, so the record
+ * is claimed only when its name is the phrase's lead (before the " +N" count
+ * of the rest), never merely because it is the one link.
+ */
+export function contactNamedBy(
+  phrase: string,
   links: readonly ActivityLinkRef[] | undefined,
+  contact: RecordContact | undefined,
 ): string | undefined {
-  const ids = new Set(
-    (links ?? [])
-      .filter((link) => link.entity_type === "contact")
-      .map((link) => link.entity_id),
+  const filed = links?.some(
+    (link) => link.entity_type === "contact" && link.entity_id === contact?.id,
   );
-  return ids.size === 1 ? [...ids][0] : undefined;
+  const lead = phrase.replace(/ \+\d+$/, "").trim();
+  return filed && contact?.full_name === lead ? contact.id : undefined;
 }
 
 /**

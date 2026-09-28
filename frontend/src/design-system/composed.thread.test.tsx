@@ -131,8 +131,8 @@ describe("a thread's card", () => {
               direction: "inbound",
               counterparts: "Ida Keller, Marc Dubois",
               counterpartContacts: [
-                { id: "p-ida", name: "Ida Keller" },
-                { id: "p-marc", name: "Marc Dubois" },
+                { key: "p-ida", name: "Ida Keller" },
+                { key: "p-marc", name: "Marc Dubois" },
               ],
             }),
             entry({
@@ -140,7 +140,7 @@ describe("a thread's card", () => {
               atIso: "2026-07-01T10:00:00Z",
               direction: "inbound",
               counterparts: "Ida Keller",
-              counterpartContacts: [{ id: "p-ida", name: "Ida Keller" }],
+              counterpartContacts: [{ key: "p-ida", name: "Ida Keller" }],
             }),
           ]),
         ]}

@@ -522,11 +522,11 @@ export type TimelineEntry = {
    */
   counterparts?: string;
   /**
-   * The same contacts, id and name each, before they were joined into the
+   * The same contacts, key and name each, before they were joined into the
    * phrase above. A thread lists everyone it was with and draws each sender's
    * face, and both need a contact: a set of phrases counts "Ida Keller" and
    * "Ida Keller, Marc Dubois" as two, and a monogram of a phrase is nobody's.
-   * With no name resolved, the server's phrase for the one filed contact.
+   * With no name resolved, the server's phrase on the record it names.
    */
   counterpartContacts?: readonly ContactOn[];
   /**
@@ -976,7 +976,7 @@ function otherSide(entry: TimelineEntry): readonly ContactOn[] {
     return entry.counterpartContacts;
   }
   const who = otherSideOf(entry);
-  return who ? [{ id: who, name: who }] : [];
+  return who ? [{ key: who, name: who }] : [];
 }
 
 // Who a thread was with, as one phrase: the other side's names, each once,
@@ -1080,11 +1080,11 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
       </span>
     );
   }
-  // The face is ONE contact's, the first on the other side, keyed on its id so
-  // it is that contact's colour everywhere — never the lead line's phrase.
+  // The face is ONE contact's, the first on the other side, keyed on its record
+  // so it is that contact's colour everywhere — never the lead line's phrase.
   const [face] = otherSide(entry);
   if (entry.direction === "inbound" && face) {
-    return <Avatar name={face.name} identity={face.id} />;
+    return <Avatar name={face.name} identity={face.key} />;
   }
   const Icon =
     entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];

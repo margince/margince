@@ -8,7 +8,10 @@ import { Avatar, Badge, Button } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { soleContactOn } from "../design-system/participants";
+import {
+  contactNamedBy,
+  type RecordContact,
+} from "../design-system/participants";
 import {
   formatDayMonth,
   formatNumber,
@@ -233,7 +236,7 @@ type Row = {
   // Who the row is drawn beside: the other party on a retained email, and the
   // contact themself on every other kind, since a note or a call has no
   // second name of its own to show. `key` is a contact's id, or the
-  // counterparty's name when no single filed contact stands behind it.
+  // counterparty's name when it names no contact this card knows.
   who: Readonly<{ name: string; key: string }>;
   date: string;
   time: string;
@@ -304,19 +307,17 @@ function channelKeyOf(
 // hook, so the zone is read once in ContactMemory and passed down.
 type InteractionLabel = ReturnType<typeof useInteractionLabel>;
 
-// The row's counterparty, or the contact when the message names none of its
-// own: every other kind, and an email the server resolved no name for, is a
-// conversation with this card's record. A mail's face keys on the one contact
-// it is filed against, as a thread's does, so one contact is one colour here.
+// The row's counterparty, or this card's contact when the message names none.
+// A mail naming this contact keys on its record, as a thread's face does; any
+// other name, a colleague's or a stranger's, keys on itself.
 function whoFor(
   activity: Pick<Activity, "email_summary" | "links"> | null,
-  contact: Readonly<{ id: string; full_name: string }>,
+  contact: RecordContact,
 ): Row["who"] {
   const counterparty = activity?.email_summary?.counterparty;
-  const filed = soleContactOn(activity?.links);
-  return counterparty
-    ? { name: counterparty, key: filed ?? counterparty }
-    : { name: contact.full_name, key: contact.id };
+  if (!counterparty) return { name: contact.full_name, key: contact.id };
+  const named = contactNamedBy(counterparty, activity?.links, contact);
+  return { name: counterparty, key: named ?? counterparty };
 }
 
 function fromEntry(
@@ -325,7 +326,7 @@ function fromEntry(
   interactionLabel: InteractionLabel,
   locale: Locale,
   recordZone: string,
-  contact: Readonly<{ id: string; full_name: string }>,
+  contact: RecordContact,
 ): Row {
   const status = entry.status ?? null;
   return {

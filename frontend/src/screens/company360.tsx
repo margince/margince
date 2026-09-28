@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -693,12 +694,12 @@ export function AskSection({
       </p>
       {ask.isPending && <Skeleton width="100%" height={40} />}
       {ask.isError && (
-        <p className="surfacestate-withheld">
+        <ErrorLine>
           {t("co.ask.failed")}
           {/* The server's own detail says WHICH failure — budget exhausted reads
               differently from a malformed request, and a rep can act on one. */}
           {` ${problemMessageOf(ask.error, t)}`}
-        </p>
+        </ErrorLine>
       )}
       {/* The previous answer is hidden while the next question is in flight.
           Leaving it under the spinner puts a finished answer next to a loading
@@ -1870,18 +1871,16 @@ export function useSuggestionsBody({
         {/* The row staying put with no word reads as a click that missed,
             and the rep clicks again. */}
         {dismiss.isError && (
-          <p className="surfacestate-withheld">
-            {t("co.suggest.dismissFailed")}
-            {` ${problemMessageOf(dismiss.error, t)}`}
-          </p>
+          <ErrorLine>
+            {`${t("co.suggest.dismissFailed")} ${problemMessageOf(dismiss.error, t)}`}
+          </ErrorLine>
         )}
         {/* Same rule for the write, and it matters more: a rep who thinks the
             step was written stops looking for it. */}
         {write.isError && (
-          <p className="surfacestate-withheld">
-            {t("co.suggest.addTaskFailed")}
-            {` ${problemMessageOf(write.error, t)}`}
-          </p>
+          <ErrorLine>
+            {`${t("co.suggest.addTaskFailed")} ${problemMessageOf(write.error, t)}`}
+          </ErrorLine>
         )}
       </>
     ) : undefined;

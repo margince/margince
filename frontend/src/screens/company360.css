@@ -537,6 +537,9 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin: 8px 0 0;
+  /* The step to whatever answers the press: the wait, the failure, the reply
+     (whose own top margin collapses into this one). */
+  margin-bottom: var(--space-3);
 }
 /* The reply itself: a white plate on the panel's indigo ground, so the answer
    reads as the thing that came back rather than as more of the panel. */

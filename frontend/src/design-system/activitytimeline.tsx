@@ -13,9 +13,11 @@ import {
 import type { TimelineEntry } from "./composed";
 import {
   type ContactOn,
+  contactNamedBy,
   contactsOn,
   type NameOf,
-  soleContactOn,
+  namesOf,
+  type RecordContact,
   withWhom,
 } from "./participants";
 
@@ -87,12 +89,16 @@ function dealChip(activity: Activity, nameOf: NameOf): ReactNode {
   return name ? <span className="tl-about">{name}</span> : undefined;
 }
 
-// With no name resolved, the server's phrase stands for the one contact the
-// message is filed against, so a face drawn from it keys on that record.
-function phraseContact(activity: Activity): ContactOn[] | undefined {
-  const id = soleContactOn(activity.links);
+// With no name resolved, the server's phrase, keyed on the record it names
+// when that is the contact the list is about; left absent otherwise, and the
+// row keys the phrase on itself.
+function phraseContact(
+  activity: Activity,
+  about: RecordContact | undefined,
+): ContactOn[] | undefined {
   const name = activity.email_summary?.counterparty?.trim();
-  return id && name ? [{ id, name }] : undefined;
+  const key = name && contactNamedBy(name, activity.links, about);
+  return name && key ? [{ key, name }] : undefined;
 }
 
 export function activityTimeline(
@@ -114,6 +120,8 @@ export function activityTimeline(
     t: ReturnType<typeof useT>;
     locale: Locale;
   }>,
+  // The contact whose page this is, which a message's phrase may name.
+  about?: RecordContact,
 ): TimelineEntry[] {
   return (activities ?? []).map((activity) => {
     // Resolved once: the phrase the row shows and the names a thread counts
@@ -134,15 +142,11 @@ export function activityTimeline(
       direction: activity.direction,
       counterparts:
         contacts && who
-          ? withWhom(
-              contacts.map((contact) => contact.name),
-              who.t,
-              who.locale,
-            )
+          ? withWhom(namesOf(contacts), who.t, who.locale)
           : undefined,
       counterpartContacts: contacts?.length
         ? contacts
-        : phraseContact(activity),
+        : phraseContact(activity, about),
       // What this exchange was ABOUT, when it is filed against a deal. A
       // chronology of an account runs several deals through one list, and the
       // row that does not say which one is a row a reader has to open to place.

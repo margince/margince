@@ -136,17 +136,22 @@ describe("a record's mark", () => {
   });
 
   it("is the same on a contact's page and on the message that contact sent", async () => {
-    mount("timeline", { ...view, activities: { data: thread, page: noMore } });
-    await screen.findByRole("heading", {
-      level: 1,
-      name: view.contact.full_name,
-    });
-    const faces = await waitForFaces();
-    expect(faces).toHaveLength(thread.length);
-    for (const face of faces) {
-      expect(face).toBe(meshKeyedOn(view.contact.id));
-    }
+    const faces = await facesOnThread(view.contact.full_name);
+    expect(faces).toEqual([
+      meshKeyedOn(view.contact.id),
+      meshKeyedOn(view.contact.id),
+    ]);
     expect(headMesh()).toBe(meshKeyedOn(view.contact.id));
+  });
+
+  // Filed against this contact, sent by somebody else: the phrase names the
+  // sender, so the face is theirs and never drawn in this contact's colour.
+  it("is the sender's own on a message filed here that somebody else sent", async () => {
+    const faces = await facesOnThread("Bob Stranger");
+    expect(faces).toEqual([
+      meshKeyedOn("Bob Stranger"),
+      meshKeyedOn("Bob Stranger"),
+    ]);
   });
 });
 
@@ -155,36 +160,46 @@ const danaCarded = { ...dana, full_name: "Dana Buyer-Lang" };
 
 type Activity = components["schemas"]["Activity"];
 
-// Two messages from the page's contact, one conversation: the thread card
-// draws each sender's face from the server's phrase for who wrote it.
-const thread: Activity[] = ["m-2", "m-1"].map((id, at) => ({
-  id,
-  kind: "email",
-  subject: "Fleet renewal",
-  occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
-  direction: "inbound",
-  thread_key: "t-fleet",
-  is_done: false,
-  source: "manual",
-  captured_by: "human:u-1",
-  created_at: "2026-08-10T12:00:00Z",
-  updated_at: "2026-08-10T12:00:00Z",
-  links: [{ entity_type: "contact", entity_id: view.contact.id }],
-  email_summary: {
-    activity_id: id,
-    occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
-    version: 1,
+// Two inbound messages filed against the page's contact, one conversation,
+// each naming its sender with the server's phrase: the thread card draws each
+// sender's face from it.
+const thread = (sender: string): Activity[] =>
+  ["m-2", "m-1"].map((id, at) => ({
+    id,
+    kind: "email",
     subject: "Fleet renewal",
-    preview: "Can you hold the price?",
-    counterparty: view.contact.full_name,
+    occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
     direction: "inbound",
-    display_status: "team",
-    move: "needs_reply",
-    attachment_count: 0,
-  },
-}));
+    thread_key: "t-fleet",
+    is_done: false,
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: "2026-08-10T12:00:00Z",
+    updated_at: "2026-08-10T12:00:00Z",
+    links: [{ entity_type: "contact", entity_id: view.contact.id }],
+    email_summary: {
+      activity_id: id,
+      occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
+      version: 1,
+      subject: "Fleet renewal",
+      preview: "Can you hold the price?",
+      counterparty: sender,
+      direction: "inbound",
+      display_status: "team",
+      move: "needs_reply",
+      attachment_count: 0,
+    },
+  }));
 
-async function waitForFaces(): Promise<string[]> {
+async function facesOnThread(sender: string): Promise<string[]> {
+  mount("timeline", {
+    ...view,
+    activities: { data: thread(sender), page: noMore },
+  });
+  await screen.findByRole("heading", {
+    level: 1,
+    name: view.contact.full_name,
+  });
   await screen.findAllByText("Can you hold the price?");
   return [...document.querySelectorAll(".tl-msg .avatar-mesh")].map(
     (face) => face.getAttribute("style") ?? "",
