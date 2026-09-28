@@ -326,6 +326,42 @@ func availableModelLane(lane string) *crmcontracts.AvailableModelLane {
 	return &out
 }
 
+// TestAiProviderKey asks one vendor whether the stored credential works.
+//
+// Human-only, like every other route that reaches this installation's
+// credentials. A vendor that refused or could not be asked is a 200 carrying
+// the reason: the test ran and that is its result.
+func (h aiRoutingHandlers) TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
+	if h.store == nil {
+		httperr.NotImplemented(w, r, "TestAiProviderKey")
+		return
+	}
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	tested, err := h.store.TestProviderKey(r.Context(), provider)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractKeyTest(tested))
+}
+
+// toContractKeyTest maps a key test onto the wire, where `model_count` and
+// `reason` are each present only on the side of `ok` they describe.
+func toContractKeyTest(t ai.KeyTest) crmcontracts.AiProviderKeyTestResult {
+	out := crmcontracts.AiProviderKeyTestResult{Provider: t.Provider, Ok: t.OK}
+	if t.OK {
+		count := t.ModelCount
+		out.ModelCount = &count
+		return out
+	}
+	reason := crmcontracts.AiProviderKeyTestResultReason(t.Reason)
+	out.Reason = &reason
+	return out
+}
+
 // The routing resource always exists, including its unconfigured default.
 // Absence and * permit replacement; an explicitly empty tag must not unpin it.
 func routingPrecondition(header http.Header) (string, error) {

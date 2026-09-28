@@ -10,7 +10,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { tierLabel } from "./ai-decision-labels";
-import { useRouting } from "./ai-routing";
+import { useRouting } from "./ai-routing-query";
 import { DecisionSummaryRow } from "./aiusage-decisions";
 import { QueryGate, throwProblem, useMe } from "./common";
 import "./aiusage.css";

@@ -78,7 +78,7 @@ func getListBody(
 		// The status and nothing else. A vendor's error body on this endpoint is
 		// frequently HTML from a proxy, and echoing it into a log is how a
 		// request — or a key in a redirected URL — ends up in one.
-		return nil, fmt.Errorf("ai: %s: listing models: http %d", vendor, resp.StatusCode)
+		return nil, &listStatusError{vendor: vendor, status: resp.StatusCode}
 	}
 	// Bounded, so a vendor cannot stream an unbounded body into memory on a read
 	// nobody is metering, and refused past the bound rather than cut: a cut list
@@ -91,6 +91,19 @@ func getListBody(
 		return nil, fmt.Errorf("ai: %s: the model list is larger than %d MiB and was not read", vendor, listBodyLimit>>20)
 	}
 	return raw, nil
+}
+
+// listStatusError is a vendor that answered its list endpoint with something
+// other than 200. Typed so a caller can tell a refused credential from a
+// throttled one; the status is all it carries, for the reason getListBody
+// drops the body.
+type listStatusError struct {
+	vendor string
+	status int
+}
+
+func (e *listStatusError) Error() string {
+	return fmt.Sprintf("ai: %s: listing models: http %d", e.vendor, e.status)
 }
 
 // listBodyLimit bounds one vendor's list response. OpenRouter's full catalog

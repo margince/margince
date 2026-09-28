@@ -17,6 +17,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -338,7 +339,6 @@ export function AiFeaturesCard() {
   return (
     <Panel title={t("aiAdmin.features")}>
       <PanelBody>
-        <p>{t("aiAdmin.prospective")}</p>
         <QueryGate query={query} pendingLabel={t("aiAdmin.features")}>
           {(status) => (
             <>
@@ -382,10 +382,9 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
   );
 }
 
-export function AiFeatureTable({
-  rows,
-  onEdit,
-}: Readonly<{ rows: Feature[]; onEdit?: (tier: string) => void }>) {
+// Read-only by design: a task's tier is fixed by the task contract, and the
+// binding a tier names is edited on the Model tiers card.
+export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
   const t = useT();
   const impact = (row: Feature) => {
     switch (row.impact) {
@@ -435,11 +434,6 @@ export function AiFeatureTable({
             </li>
           ))}
         </ol>
-        {onEdit && (
-          <Button onClick={() => onEdit(row.leading_tier)}>
-            {t("aiAdmin.editBinding")}
-          </Button>
-        )}
       </Disclosure>
     ) : (
       "—"
@@ -454,7 +448,12 @@ export function AiFeatureTable({
           key: "activity",
           header: t("aiAdmin.activity"),
           render: (row: Feature) => (
-            <span title={row.task}>{row.display_name}</span>
+            <CellStack>
+              <span>{row.display_name}</span>
+              <span className="t-caption">
+                {row.task} · {row.execution_mode}
+              </span>
+            </CellStack>
           ),
         },
         {

@@ -10156,6 +10156,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-keys/{provider}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask one vendor whether the stored credential works (admin/ops).
+         * @description Calls the vendor's own model-list endpoint with the credential this installation holds,
+         *     and says whether it answered. The answer to "is this key any good" is the vendor's, and
+         *     asking before a tier is bound to it is cheaper than finding out at the first call.
+         *
+         *     No request body. The key is the STORED one, never a candidate sent here: a credential
+         *     that travels only to be tested is still a credential in a request log. The host is the
+         *     adapter's default, or for `openai_compatible` the one a stored binding names — never a
+         *     request parameter, for the reason `/ai/available-models/{provider}` gives.
+         *
+         *     A vendor that could not be asked, or asked and refused, is NOT an error — the response is
+         *     200 with `ok: false` and `reason` naming which. `reason` is a closed vocabulary rather
+         *     than the vendor's own words: those are as often a proxy's HTML as they are a sentence,
+         *     and sometimes carry the very credential being tested.
+         *
+         *     Writes nothing. Governed by `ai_routing` read, the grant `/ai/available-models` already
+         *     makes the same vendor call under.
+         */
+        post: operations["testAiProviderKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/calls": {
         parameters: {
             query?: never;
@@ -17628,6 +17666,20 @@ export interface components {
             env_var: string;
             /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
             optional: boolean;
+        };
+        /** @description One vendor's answer to the stored credential. `ok` with `model_count` when it answered; otherwise `reason` names why, and never the vendor's own words. */
+        AiProviderKeyTestResult: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            /** @description Whether the vendor answered its model list with this credential. */
+            ok: boolean;
+            /** @description How many models the vendor reported, present only when `ok`. */
+            model_count?: number;
+            /**
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — the vendor has no list endpoint to test against (a decision server). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @enum {string}
+             */
+            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
         };
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -54241,6 +54293,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    testAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the vendor accepted the stored credential, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderKeyTestResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     listAiCalls: {

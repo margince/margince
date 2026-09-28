@@ -107,12 +107,6 @@ function story(
         return response;
       },
       "GET /ai/status": () => jsonResponse(aiStatus),
-      "POST /ai/routing/preview": () =>
-        jsonResponse({
-          current_version: "routing-v1",
-          features: status.features,
-          unused_tiers: ["frontier"],
-        }),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-keys": () =>
         jsonResponse({
@@ -141,7 +135,7 @@ function story(
 }
 
 const meta: Meta<typeof AiRoutingCard> = {
-  title: "Settings/AI/Models and routing/Model routing",
+  title: "Settings/AI/Models and routing/Model tiers",
   component: AiRoutingCard,
   subcomponents: { AdapterFields, EmbeddingWidthField },
 };
@@ -208,22 +202,21 @@ export const BoundDark: Story = {
   render: story(BOUND),
 };
 
-export const AdvancedBindings: Story = {
+// One lane's editor, open: provider, model and the vendor's own list. It owns
+// that one binding and saves it alone.
+export const EditingATier: Story = {
   render: story(BOUND),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByText(/advanced.*shared.*bindings/i),
-    );
-    await userEvent.click(
-      canvas.getAllByRole("button", { name: /change/i })[0],
+      (await canvas.findAllByRole("button", { name: /^edit$/i }))[0],
     );
   },
 };
 
 // A decision model bound in front of the ladder. The row offers only the
 // adapters that answer a decision, and says where the bound one processes text
-// from the server's own reading, which the features above repeat per activity.
+// from the server's own reading.
 const DECISION = {
   provider: "jev_compatible",
   model: "typesafe/jev-1.13",
@@ -243,10 +236,4 @@ export const DecisionModel: Story = {
       },
     })),
   }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByText(/advanced.*shared.*bindings/i),
-    );
-  },
 };

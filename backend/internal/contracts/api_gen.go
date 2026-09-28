@@ -934,6 +934,39 @@ func (e AiProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AiProviderKeyTestResultReason.
+const (
+	AiProviderKeyTestResultReasonAuthFailed     AiProviderKeyTestResultReason = "auth_failed"
+	AiProviderKeyTestResultReasonNoEndpoint     AiProviderKeyTestResultReason = "no_endpoint"
+	AiProviderKeyTestResultReasonNoKey          AiProviderKeyTestResultReason = "no_key"
+	AiProviderKeyTestResultReasonNotPublished   AiProviderKeyTestResultReason = "not_published"
+	AiProviderKeyTestResultReasonProfileForbids AiProviderKeyTestResultReason = "profile_forbids"
+	AiProviderKeyTestResultReasonRateLimited    AiProviderKeyTestResultReason = "rate_limited"
+	AiProviderKeyTestResultReasonUnreachable    AiProviderKeyTestResultReason = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderKeyTestResultReason enum.
+func (e AiProviderKeyTestResultReason) Valid() bool {
+	switch e {
+	case AiProviderKeyTestResultReasonAuthFailed:
+		return true
+	case AiProviderKeyTestResultReasonNoEndpoint:
+		return true
+	case AiProviderKeyTestResultReasonNoKey:
+		return true
+	case AiProviderKeyTestResultReasonNotPublished:
+		return true
+	case AiProviderKeyTestResultReasonProfileForbids:
+		return true
+	case AiProviderKeyTestResultReasonRateLimited:
+		return true
+	case AiProviderKeyTestResultReasonUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiRoutingProfile.
 const (
 	AiRoutingProfileCloudFrontier AiRoutingProfile = "cloud_frontier"
@@ -20137,6 +20170,24 @@ type AiProviderKeyStatus struct {
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
 }
+
+// AiProviderKeyTestResult One vendor's answer to the stored credential. `ok` with `model_count` when it answered; otherwise `reason` names why, and never the vendor's own words.
+type AiProviderKeyTestResult struct {
+	// ModelCount How many models the vendor reported, present only when `ok`.
+	ModelCount *int `json:"model_count,omitempty"`
+
+	// Ok Whether the vendor answered its model list with this credential.
+	Ok bool `json:"ok"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — the vendor has no list endpoint to test against (a decision server). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+	Reason *AiProviderKeyTestResultReason `json:"reason,omitempty"`
+}
+
+// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — the vendor has no list endpoint to test against (a decision server). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+type AiProviderKeyTestResultReason string
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
@@ -59373,6 +59424,9 @@ type ServerInterface interface {
 	// Store or rotate one vendor's BYOK key (admin/ops).
 	// (PUT /ai/provider-keys/{provider})
 	SetAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
+	// Ask one vendor whether the stored credential works (admin/ops).
+	// (POST /ai/provider-keys/{provider}/test)
+	TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -61611,6 +61665,12 @@ func (_ Unimplemented) DeleteAiProviderKey(w http.ResponseWriter, r *http.Reques
 // Store or rotate one vendor's BYOK key (admin/ops).
 // (PUT /ai/provider-keys/{provider})
 func (_ Unimplemented) SetAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask one vendor whether the stored credential works (admin/ops).
+// (POST /ai/provider-keys/{provider}/test)
+func (_ Unimplemented) TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67520,6 +67580,38 @@ func (siw *ServerInterfaceWrapper) SetAiProviderKey(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetAiProviderKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TestAiProviderKey operation middleware
+func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestAiProviderKey(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -95195,6 +95287,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/ai/provider-keys/{provider}", wrapper.SetAiProviderKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/provider-keys/{provider}/test", wrapper.TestAiProviderKey)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)
