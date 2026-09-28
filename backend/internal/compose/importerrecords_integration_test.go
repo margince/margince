@@ -99,7 +99,7 @@ func recordWires(t *testing.T, e *integration.Env) []recordWire {
 			Name: "Imported Deal", PipelineId: pipeline.Id, StageId: (*pipeline.Stages)[0].Id, SourceSystem: &system,
 		})), func(w http.ResponseWriter, r *http.Request) { d.CreateDeal(w, r, crmcontracts.CreateDealParams{}) }},
 		{"project", "/v1/projects", encode(json.Marshal(crmcontracts.CreateProjectRequest{
-			Name: "Imported Project", CompanyId: company, Source: "ui", SourceSystem: &system,
+			Name: "Imported Project", CompanyId: company, Source: "manual", SourceSystem: &system,
 		})), func(w http.ResponseWriter, r *http.Request) {
 			p.CreateProject(w, r, crmcontracts.CreateProjectParams{})
 		}},
