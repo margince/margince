@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { DataTable } from "../design-system/datatable";
@@ -61,11 +62,6 @@ export function ModelPriceDialog({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const sheet = useAiModelCatalogue();
-  const available = useAvailableModels(
-    fixedProvider ?? "",
-    "",
-    fixedProvider !== undefined,
-  );
 
   const save = useMutation({
     mutationFn: async () => {
@@ -211,50 +207,24 @@ export function ModelPriceDialog({
             inputMode: "text",
           })
         ) : (
-          <Field label={t("settings.rates.colModel")}>
-            {(control) => (
-              <ComboBox
-                {...control}
-                value={modelId}
-                suggestions={offeredModels(
-                  available.data,
-                  sheet.data,
-                  fixedProvider,
-                  lane,
-                  locale,
-                )}
-                onChange={(next) => {
-                  setSaved(null);
-                  setModelId(next);
-                }}
-              />
-            )}
-          </Field>
+          <VendorModelField
+            provider={fixedProvider}
+            lane={lane}
+            value={modelId}
+            onChange={(next) => {
+              setSaved(null);
+              setModelId(next);
+            }}
+          />
         )}
         <div className="form-row">
-          <Field label={t("aiRates.manual.lane")}>
-            {(control) => (
-              <Select
-                {...control}
-                value={lane}
-                options={[
-                  { value: "chat", label: t("aiRates.manual.laneChat") },
-                  {
-                    value: "embeddings",
-                    label: t("aiRates.manual.laneEmbeddings"),
-                  },
-                  {
-                    value: "decisions",
-                    label: t("aiRates.manual.laneDecisions"),
-                  },
-                ]}
-                onChange={(next) => {
-                  setSaved(null);
-                  setLane(next as ModelLane);
-                }}
-              />
-            )}
-          </Field>
+          <LaneField
+            lane={lane}
+            onChange={(next) => {
+              setSaved(null);
+              setLane(next);
+            }}
+          />
           <Field label={t("settings.rates.colEffective")}>
             {(control) => (
               <TextInput
@@ -289,78 +259,171 @@ export function ModelPriceDialog({
         ) : null}
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         {pricedModels ? (
-          <>
-            <Heading size="small" className="t-h3">
-              {t("aiRates.manual.priced")}
-            </Heading>
-            <div className="rates-manual-table">
-              <DataTable
-                label={t("aiRates.manual.priced")}
-                rows={existing}
-                rowKey={(row) => row.model_id}
-                rowClassName={(row) =>
-                  row.model_id === modelId.trim() ? "row-current" : undefined
-                }
-                columns={[
-                  {
-                    key: "model",
-                    header: t("settings.rates.colModel"),
-                    grow: true,
-                    render: (row) => (
-                      <span className="rates-manual-model">
-                        {row.model_id}
-                        {row.effective_date > today() ? (
-                          <Badge>
-                            {t("aiRates.manual.from", {
-                              date: row.effective_date,
-                            })}
-                          </Badge>
-                        ) : null}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: "in",
-                    header: t("settings.rates.colInput"),
-                    align: "end",
-                    render: (row) => row.input_per_mtok,
-                  },
-                  {
-                    key: "out",
-                    header: t("settings.rates.colOutput"),
-                    align: "end",
-                    render: (row) => row.output_per_mtok,
-                  },
-                  {
-                    key: "cr",
-                    header: t("settings.rates.colCacheRead"),
-                    align: "end",
-                    render: (row) => row.cache_read_per_mtok,
-                  },
-                  {
-                    key: "cw",
-                    header: t("settings.rates.colCacheWrite"),
-                    align: "end",
-                    render: (row) => row.cache_write_per_mtok,
-                  },
-                  {
-                    key: "edit",
-                    header: t("aiRates.manual.edit"),
-                    align: "end",
-                    render: (row) => (
-                      <Button variant="ghost" onClick={() => edit(row)}>
-                        {t("aiRates.manual.edit")}
-                        <span className="sr-only"> {row.model_id}</span>
-                      </Button>
-                    ),
-                  },
-                ]}
-              />
-            </div>
-          </>
+          <PricedModels
+            rows={existing}
+            current={modelId.trim()}
+            onEdit={edit}
+          />
         ) : null}
         {submit}
       </div>
     </Modal>
+  );
+}
+
+type SheetRow = components["schemas"]["AiModelRate"];
+
+// The provider's priced models as a table, the row a form is editing marked.
+function PricedModels({
+  rows,
+  current,
+  onEdit,
+}: Readonly<{
+  rows: readonly SheetRow[];
+  current: string;
+  onEdit: (row: SheetRow) => void;
+}>) {
+  const t = useT();
+  const existing = [...rows];
+  const modelId = current;
+  const edit = onEdit;
+  return (
+    <>
+      <Heading size="small" className="t-h3">
+        {t("aiRates.manual.priced")}
+      </Heading>
+      <div className="rates-manual-table">
+        <DataTable
+          label={t("aiRates.manual.priced")}
+          rows={existing}
+          rowKey={(row) => row.model_id}
+          rowClassName={(row) =>
+            row.model_id === modelId.trim() ? "row-current" : undefined
+          }
+          columns={[
+            {
+              key: "model",
+              header: t("settings.rates.colModel"),
+              grow: true,
+              render: (row) => (
+                <span className="rates-manual-model">
+                  {row.model_id}
+                  {row.effective_date > today() ? (
+                    <Badge>
+                      {t("aiRates.manual.from", {
+                        date: row.effective_date,
+                      })}
+                    </Badge>
+                  ) : null}
+                </span>
+              ),
+            },
+            {
+              key: "in",
+              header: t("settings.rates.colInput"),
+              align: "end",
+              render: (row) => row.input_per_mtok,
+            },
+            {
+              key: "out",
+              header: t("settings.rates.colOutput"),
+              align: "end",
+              render: (row) => row.output_per_mtok,
+            },
+            {
+              key: "cr",
+              header: t("settings.rates.colCacheRead"),
+              align: "end",
+              render: (row) => row.cache_read_per_mtok,
+            },
+            {
+              key: "cw",
+              header: t("settings.rates.colCacheWrite"),
+              align: "end",
+              render: (row) => row.cache_write_per_mtok,
+            },
+            {
+              key: "edit",
+              header: t("aiRates.manual.edit"),
+              align: "end",
+              render: (row) => (
+                <Button variant="ghost" onClick={() => edit(row)}>
+                  {t("aiRates.manual.edit")}
+                  <span className="sr-only"> {row.model_id}</span>
+                </Button>
+              ),
+            },
+          ]}
+        />
+      </div>
+    </>
+  );
+}
+
+const LANES: readonly ModelLane[] = ["chat", "embeddings", "decisions"];
+
+// What the model is FOR. A closed choice: the list is the contract's own, so a
+// pick is looked up in it rather than trusted as a string.
+function LaneField({
+  lane,
+  onChange,
+}: Readonly<{ lane: ModelLane; onChange: (next: ModelLane) => void }>) {
+  const t = useT();
+  const labels: Readonly<Record<ModelLane, string>> = {
+    chat: t("aiRates.manual.laneChat"),
+    embeddings: t("aiRates.manual.laneEmbeddings"),
+    decisions: t("aiRates.manual.laneDecisions"),
+  };
+  return (
+    <Field label={t("aiRates.manual.lane")}>
+      {(control) => (
+        <Select
+          {...control}
+          value={lane}
+          options={LANES.map((value) => ({ value, label: labels[value] }))}
+          onChange={(next) => {
+            const picked = LANES.find((candidate) => candidate === next);
+            if (picked) onChange(picked);
+          }}
+        />
+      )}
+    </Field>
+  );
+}
+
+// The model box for one vendor: what it serves, and what the sheet prices
+// already, offered as suggestions to a box that still takes any id typed.
+function VendorModelField({
+  provider,
+  lane,
+  value,
+  onChange,
+}: Readonly<{
+  provider: string;
+  lane: ModelLane;
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const sheet = useAiModelCatalogue();
+  const available = useAvailableModels(provider, "", true);
+  return (
+    <Field label={t("settings.rates.colModel")}>
+      {(control) => (
+        <ComboBox
+          {...control}
+          value={value}
+          suggestions={offeredModels(
+            available.data,
+            sheet.data,
+            provider,
+            lane,
+            locale,
+          )}
+          onChange={onChange}
+        />
+      )}
+    </Field>
   );
 }

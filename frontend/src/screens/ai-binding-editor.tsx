@@ -307,21 +307,19 @@ function DecisionFields({
 }>) {
   const t = useT();
   return (
-    <>
-      <AdapterFields
-        label={t("aiRouting.provider.label")}
-        lane="decisions"
-        laneName="decisions"
-        binding={binding}
-        catalogue={catalogue}
-        disabled={disabled}
-        providers={reachableProviders(DECISION_PROVIDERS, keys, current)}
-        onChange={(next) => onChange(reboundDecision(binding, next))}
-        // The endpoint is a full URL nobody remembers, and OpenRouter's is the
-        // one most installations want; the key is the one thing it cannot fill.
-        providerAside={openRouterPreset(binding, disabled, onChange, t)}
-      />
-    </>
+    <AdapterFields
+      label={t("aiRouting.provider.label")}
+      lane="decisions"
+      laneName="decisions"
+      binding={binding}
+      catalogue={catalogue}
+      disabled={disabled}
+      providers={reachableProviders(DECISION_PROVIDERS, keys, current)}
+      onChange={(next) => onChange(reboundDecision(binding, next))}
+      // The endpoint is a full URL nobody remembers, and OpenRouter's is the
+      // one most installations want; the key is the one thing it cannot fill.
+      providerAside={openRouterPreset(binding, disabled, onChange, t)}
+    />
   );
 }
 
