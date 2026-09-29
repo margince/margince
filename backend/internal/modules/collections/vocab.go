@@ -371,6 +371,7 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 	for name, field := range core.Fields {
 		merged.Fields[name] = field
 	}
+	s.bindDealAmount(resource, merged.Fields)
 	if s.catalog == nil {
 		withholdFromCaller(ctx, resource, merged.Fields)
 		return merged, true, nil

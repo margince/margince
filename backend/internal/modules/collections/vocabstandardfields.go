@@ -84,14 +84,15 @@ var companyStandardFields = map[string]storekit.Field{
 	lastActivityField: dayOf("last_activity_at"),
 }
 
-// dealStandardFields carries the amount in the installation's base currency,
-// in its minor units: a deal's own amount_minor is in the deal's currency, and
-// comparing it against one number would rank a yen deal beside a euro one. A
-// deal the rate service has not converted has no base amount and matches only
-// `exists: false`.
+// unpricedDealAmount stands for the deal amount until SegmentEngine binds the
+// expression compose injects (WithDealAmount): converting money reads the rate
+// sheet, which this module does not own, so an unwired store offers the field
+// and compiles it to FALSE.
+var unpricedDealAmount = storekit.Field{Expr: "NULL::bigint", Type: storekit.FieldCurrency, Withheld: true}
+
 var dealStandardFields = map[string]storekit.Field{
 	nameFilterField:       textOf("name"),
-	amountField:           {Expr: "t.amount_minor_base", Type: storekit.FieldCurrency},
+	amountField:           unpricedDealAmount,
 	"expected_close_date": {Expr: "t.expected_close_date", Type: storekit.FieldDate},
 	createdAtField:        dayOf("created_at"),
 	lastActivityField:     dayOf("last_activity_at"),
@@ -121,6 +122,23 @@ func withFields(parts ...map[string]storekit.Field) map[string]storekit.Field {
 		}
 	}
 	return out
+}
+
+// WithDealAmount injects a deal's worth in the installation's base currency,
+// over the deal aliased t, for the filter builder's amount leaf. An open deal
+// the rate sheet cannot price has no worth and matches only `exists: false`, so
+// the leaf never compares two currencies.
+func (s *Store) WithDealAmount(expr string) *Store {
+	s.dealAmount = expr
+	return s
+}
+
+// bindDealAmount prices the amount leaf with the injected expression.
+func (s *Store) bindDealAmount(resource string, fields map[string]storekit.Field) {
+	if resource != typeDeal || s.dealAmount == "" {
+		return
+	}
+	fields[amountField] = storekit.Field{Expr: s.dealAmount, Type: storekit.FieldCurrency}
 }
 
 // maskedAs names the mask a filter field answers to where the two names

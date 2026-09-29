@@ -36,6 +36,9 @@ type Store struct {
 	// identity module owns that rule, so compose injects it. Without it no
 	// steward is judged gone, only a missing one.
 	liveSteward string
+	// dealAmount is a deal's worth in the base currency, as SQL over alias t.
+	// The rate sheet belongs to deals and the rule to compose, which injects it.
+	dealAmount string
 }
 
 // WithLiveSteward injects the identity module's rule for a seat that may act,
