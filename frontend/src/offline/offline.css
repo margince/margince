@@ -22,9 +22,11 @@ body {
 
 .offline {
   display: grid;
-  justify-items: start;
+  justify-items: center;
   gap: var(--space-4);
   max-inline-size: 28rem;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .offline[hidden] {
