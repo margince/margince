@@ -1,12 +1,35 @@
 {
+  "id": "/",
   "name": "Margince",
   "short_name": "Margince",
   "description": "The sovereign AI business platform for the Mittelstand.",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#FBFCFB",
+  "background_color": "#F1F5F2",
   "theme_color": "#0B7A53",
   "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "/icon.svg",
       "sizes": "any",
