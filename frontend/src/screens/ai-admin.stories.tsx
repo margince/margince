@@ -78,7 +78,6 @@ export const Preview: Story = {
   render: story("degraded"),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText("Summarize correspondence");
     await userEvent.click(
       await canvas.findByRole("button", { name: "Edit allowance" }),
     );

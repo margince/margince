@@ -129,9 +129,10 @@ export const MixedDark: Story = {
 export const Tested: Story = {
   render: story([gemini, anthropic]),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /^test$/i }),
+      await body.findByRole("button", { name: "Manage gemini" }),
     );
+    await userEvent.click(await body.findByRole("button", { name: /^test$/i }));
   },
 };
