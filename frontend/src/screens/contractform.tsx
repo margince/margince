@@ -236,7 +236,7 @@ export function ContractForm({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
       </Heading>
 

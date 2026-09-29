@@ -1242,7 +1242,7 @@ function PassportCard() {
         labelledBy={mintTitleId}
         placement="right"
       >
-        <Heading size="large" className="t-h2" id={mintTitleId}>
+        <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
         </Heading>
         {/* The token region is mounted for the whole life of the drawer rather

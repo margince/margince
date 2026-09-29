@@ -76,7 +76,7 @@ export function LineRecordsOpener({
         labelledBy={titleId}
         size="wide"
       >
-        <Heading size="medium" as="h2" id={titleId}>
+        <Heading size="medium" as="h2" id={titleId} className="modal-title">
           {t("magic.records.title")}
         </Heading>
         {open && <LineRecordsList line={line} since={since} />}

@@ -47,7 +47,7 @@ export function ExplainDrawer({
         labelledBy={`${titleId} ${figureId}`}
         placement="right"
       >
-        <Heading size="large" id={titleId}>
+        <Heading size="large" id={titleId} className="modal-title">
           {t("explain.title")}
         </Heading>
         <p className="t-label" id={figureId}>
