@@ -30,13 +30,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -76,8 +75,8 @@ func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 		}
 		// Parsed with mode 0 so build constraints are ignored: a file excluded
 		// on this platform still has to obey the rule.
-		fset := token.NewFileSet()
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		fset := gatekit.SourceFileSet()
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

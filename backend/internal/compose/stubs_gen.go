@@ -167,6 +167,10 @@ func (stubs) ProposeAiModelRateRefresh(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "ProposeAiModelRateRefresh")
 }
 
+func (stubs) RefreshAiModelRates(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RefreshAiModelRates")
+}
+
 func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, provider string, params crmcontracts.ListAvailableModelsParams) {
 	httperr.NotImplemented(w, r, "ListAvailableModels")
 }
@@ -213,6 +217,10 @@ func (stubs) DeleteAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, p
 
 func (stubs) SetAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
 	httperr.NotImplemented(w, r, "SetAiProviderKey")
+}
+
+func (stubs) TestAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "TestAiProviderKey")
 }
 
 func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1773,6 +1781,50 @@ func (stubs) ReopenLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 
 func (stubs) ExplainLeadScore(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ExplainLeadScoreParams) {
 	httperr.NotImplemented(w, r, "ExplainLeadScore")
+}
+
+func (stubs) ListLists(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListListsParams) {
+	httperr.NotImplemented(w, r, "ListLists")
+}
+
+func (stubs) CreateList(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateList")
+}
+
+func (stubs) ArchiveList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveList")
+}
+
+func (stubs) GetList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetList")
+}
+
+func (stubs) UpdateList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateList")
+}
+
+func (stubs) ListListHistory(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListListHistoryParams) {
+	httperr.NotImplemented(w, r, "ListListHistory")
+}
+
+func (stubs) ListListMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListListMembersParams) {
+	httperr.NotImplemented(w, r, "ListListMembers")
+}
+
+func (stubs) AddListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AddListMember")
+}
+
+func (stubs) RemoveListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RemoveListMember")
+}
+
+func (stubs) ExplainListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, recordId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ExplainListMember")
+}
+
+func (stubs) RestoreList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreList")
 }
 
 func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {

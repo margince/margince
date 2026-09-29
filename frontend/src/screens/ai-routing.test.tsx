@@ -5,15 +5,17 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
+import { reachableProviders } from "./ai-binding-editor";
 import { AiRoutingCard } from "./ai-routing";
 import {
   BOUND,
   backendFor,
   type CapturedRouting,
-  openLane,
+  openEditor,
   ROUTING_EDITOR,
   ROUTING_READER,
   render,
+  saveEditor,
   UNBOUND,
 } from "./ai-routing.testkit";
 import { rebind } from "./ai-routing-fields";
@@ -50,20 +52,9 @@ describe("AiRoutingCard", () => {
 
     await userEvent.click(start);
 
-    // The form arrives complete: every tier the contract declares plus the
-    // embeddings binding, because a document missing either is refused and the
-    // reader would be exactly where they started.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /preview effects/i }),
-    );
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /save routing/i }),
-    );
+    // The whole document in one write: every tier the contract declares plus
+    // the embeddings binding, because a document missing either is refused
+    // and the reader would be exactly where they started.
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     const sent = backend.getCapturedPut() as CapturedRouting;
     expect(Object.keys(sent.tiers).sort()).toEqual([
@@ -75,6 +66,29 @@ describe("AiRoutingCard", () => {
     ]);
     expect(sent.embeddings.model).toBe("gemini-embedding-001");
     expect(sent.tiers.premium.provider).toBe("gemini");
+    // A fresh installation stores an empty profile, which the server refuses;
+    // nothing on this card edits it, so the first write names a real one.
+    expect(sent.profile).toBe("cloud_frontier");
+    // And the rows replace the offer, each now editable on its own.
+    expect(await screen.findByTestId("ai-routing-tier-premium")).toBeTruthy();
+  });
+
+  // An operator who declared a profile before binding anything keeps it: a
+  // first click must not move the installation's residency policy.
+  it("keeps a stored profile on the first binding", async () => {
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...UNBOUND,
+      profile: "eu_hosted",
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /start from google gemini/i }),
+    );
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(backend.getCapturedPut()?.profile).toBe("eu_hosted");
   });
 
   // Nothing to bind TO. The seed sentence is still right for a deployment, and
@@ -124,25 +138,19 @@ describe("AiRoutingCard", () => {
     expect(screen.getByText("gemini-3.1-flash-lite")).toBeTruthy();
   });
 
-  // A routing-read-only role sees "AI by activity" stand as a section with a
-  // sentence naming the two grants it lacks; the live feature table never
-  // renders for it, because the server refuses that data to this grant
-  // combination regardless of how the component is shaped. The bindings
-  // this grant DOES allow — the lane rows below it — still render, so this
-  // is one section's refusal, not a whole-page one.
-  it("explains the withheld AI-activity section to a routing-read-only role", async () => {
-    vi.stubGlobal("fetch", backendFor(ROUTING_READER).fetchMock);
+  // The profile decides which vendors a lane may name, and a Save it refuses
+  // says so — the line tells the reader which profile did the refusing. It is
+  // a reading only: nothing on this card changes it.
+  it("shows the installation profile as a line, never as a control", async () => {
+    vi.stubGlobal("fetch", backendFor(ROUTING_EDITOR).fetchMock);
     render(<AiRoutingCard />);
 
-    expect(await screen.findByText("gemini-3.5-flash")).toBeTruthy();
-
-    expect(screen.getByText("AI by activity")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByRole("table")).toBeNull();
+    const line = await screen.findByTestId("ai-routing-profile");
+    expect(line.textContent).toContain("eu_hosted");
+    expect(within(line).queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("combobox", { name: /profile/i })).toBeNull();
+    // And no Preview step stands between an edit and its save.
+    expect(screen.queryByRole("button", { name: /preview/i })).toBeNull();
   });
 
   it("sends the WHOLE binding, so an untouched tier is not dropped", async () => {
@@ -152,19 +160,11 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     const model = within(tier).getByRole("combobox", { name: "Model" });
     await user.clear(model);
     await user.type(model, "gemini-3.1-pro-preview");
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     // PUT replaces the whole document, so the tier nobody touched has to travel
     // with the one that changed — sending only the edit would unbind the rest.
     expect(backend.getCapturedPut()).toEqual({
@@ -186,24 +186,15 @@ describe("AiRoutingCard", () => {
       vi.stubGlobal("fetch", backendFor(grants).fetchMock);
       render(<AiRoutingCard />);
 
-      // Disabled, never hidden: somebody who cannot change the binding still
-      // needs to see which vendor their installation's text goes to.
+      // Open, never hidden: somebody who cannot change the binding still
+      // needs to see which vendor their installation's text goes to. Save
+      // carries the refusal, as `disabled` with its reason beside it.
       expect(await screen.findByText("gemini-3.5-flash")).toBeTruthy();
+      const user = userEvent.setup();
+      const dialog = await openEditor(user, "ai-routing-tier-premium");
       expect(
-        screen.getByRole("button", { name: "Preview effects" }),
+        within(dialog).getByRole("button", { name: /save binding/i }),
       ).toBeDisabled();
-      // `disabled`, not `aria-disabled`: the design system reserves the second
-      // for a write in flight, so a reader keeps focus on the control they just
-      // pressed. A refusal is the first, and the reason travels with it.
-      await waitFor(() =>
-        expect(
-          (
-            screen.getByRole("button", {
-              name: /save routing/i,
-            }) as HTMLButtonElement
-          ).disabled,
-        ).toBe(true),
-      );
     },
   );
 
@@ -219,7 +210,7 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
 
     expect(await screen.findByText(/no models bound/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /save routing/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^edit$/i })).toBeNull();
   });
 
   // Cheapest first, most capable last — the ladder, not the alphabet.
@@ -264,19 +255,11 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-embedding-001");
 
-    const lane = await openLane(user, "ai-routing-embeddings");
+    const lane = await openEditor(user, "ai-routing-embeddings");
     const model = within(lane).getByRole("combobox", { name: "Model" });
     await user.clear(model);
     await user.type(model, "gemini-embedding-002");
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     expect(backend.getCapturedPut()?.embeddings.model).toBe(
       "gemini-embedding-002",
     );
@@ -298,7 +281,7 @@ describe("AiRoutingCard", () => {
     // A native vendor addresses its own API, so no host is asked for.
     expect(screen.queryByLabelText("Host")).toBeNull();
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     // Named, because the row now holds two comboboxes: the adapter, and the
     // model picker that offers what this installation can price.
     await pickOption(
@@ -308,15 +291,7 @@ describe("AiRoutingCard", () => {
     );
     const host = await within(tier).findByLabelText("Host");
     await user.type(host, "https://openrouter.ai/api");
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     const sent = backend.getCapturedPut();
     expect(sent?.tiers.premium.provider).toBe("openai_compatible");
     expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
@@ -342,21 +317,13 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("openai/gpt-oss-120b");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     await pickOption(
       user,
       within(tier).getByRole("combobox", { name: "Provider" }),
       "gemini",
     );
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.tiers.premium;
     expect(sent?.provider).toBe("gemini");
     expect(sent).not.toHaveProperty("routing");
@@ -371,7 +338,7 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-embedding-001");
 
-    const lane = await openLane(user, "ai-routing-embeddings");
+    const lane = await openEditor(user, "ai-routing-embeddings");
     await pickOption(
       user,
       within(lane).getByRole("combobox", { name: "Provider" }),
@@ -382,15 +349,7 @@ describe("AiRoutingCard", () => {
       "https://openrouter.ai/api",
     );
     await user.type(within(lane).getByLabelText("Vector width"), "1536");
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.embeddings;
     expect(sent?.provider).toBe("openai_compatible");
     expect(sent?.base_url).toBe("https://openrouter.ai/api");
@@ -407,19 +366,11 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-embedding-001");
 
-    const lane = await openLane(user, "ai-routing-embeddings");
+    const lane = await openEditor(user, "ai-routing-embeddings");
     const width = within(lane).getByLabelText("Vector width");
     await user.type(width, "768");
     await user.clear(width);
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.embeddings;
     expect(sent?.dimensions).toBeUndefined();
     expect(JSON.stringify(sent)).not.toContain("dimensions");
@@ -435,7 +386,7 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     await user.click(within(tier).getByRole("combobox", { name: "Model" }));
     // The row says both: which model, and what it costs per million tokens in
     // → out, which is what a reader is choosing between.
@@ -464,21 +415,13 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     await pickSuggestion(
       user,
       within(tier).getByRole("combobox", { name: "Model" }),
       /^gemini-3\.1-pro-preview/,
     );
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     expect(backend.getCapturedPut()?.tiers.premium.model).toBe(
       "gemini-3.1-pro-preview",
     );
@@ -493,7 +436,7 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     await user.click(within(tier).getByRole("combobox", { name: "Model" }));
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
@@ -510,36 +453,118 @@ describe("AiRoutingCard", () => {
     expect(offered.join(" ")).not.toContain("gemini-embedding-001");
   });
 
-  // A vendor that cannot be asked degrades to the sheet and says which state it
-  // is in, rather than emptying the field or failing the form.
-  it("falls back to the sheet, and says why, when the vendor holds no key", async () => {
+  // The editor offers the vendors this installation can reach — plus the one
+  // the lane names now, even when that one has lost its key: dropping it would
+  // erase the lane's own binding from its own editor.
+  it("offers only reachable providers, keeping the one the lane names", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal("fetch", backendFor(ROUTING_EDITOR).fetchMock);
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        premium: { provider: "anthropic", model: "claude-opus-4-8" },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
     render(<AiRoutingCard />);
-    await screen.findByText("gemini-3.5-flash");
+    await screen.findByText("claude-opus-4-8");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
-    await pickOption(
-      user,
-      within(tier).getByRole("combobox", { name: "Provider" }),
-      "anthropic",
-    );
-    expect(
-      await within(tier).findByText(/this provider has no key/i),
-    ).toBeTruthy();
-    // And the sheet's own anthropic row is still offered, so the field is not
-    // left empty by a vendor it could not reach. The box is cleared first: it
-    // still holds the previous vendor's model, and the list filters on what is
-    // typed.
-    const model = within(tier).getByRole("combobox", { name: "Model" });
-    await user.clear(model);
-    await user.click(model);
+    const tier = await openEditor(user, "ai-routing-tier-cheap_cloud");
+    await user.click(within(tier).getByRole("combobox", { name: "Provider" }));
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+    // Keyed or keyless, never a vendor whose key is missing.
+    expect(offered).toContain("gemini");
+    expect(offered).toContain("ollama");
+    expect(offered).toContain("openai_compatible");
+    expect(offered).not.toContain("anthropic");
+    expect(offered).not.toContain("openai");
+    // Keyless adapters are offered on the probe's word: ollama answered, vllm
+    // did not, and nothing binds fake.
+    expect(offered).not.toContain("vllm");
+    expect(offered).not.toContain("fake");
+    await user.keyboard("{Escape}");
+    await user.click(within(tier).getByRole("button", { name: /cancel/i }));
+
+    const bound = await openEditor(user, "ai-routing-tier-premium");
+    await user.click(within(bound).getByRole("combobox", { name: "Provider" }));
     expect(
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
-        .map((o) => o.textContent)
-        .join(" "),
-    ).toContain("claude-opus-4-8");
+        .map((o) => o.textContent),
+    ).toContain("anthropic");
+  });
+
+  it("offers fake only where a lane is already bound to it, and keeps a lane's own unreachable adapter", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        premium: { provider: "fake", model: "fake-chat" },
+        local_small: { provider: "vllm", model: "some-model" },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("fake-chat");
+
+    // Nothing asks a keyless adapter whether it is up until an editor opens.
+    const probed = () =>
+      backend.fetchMock.mock.calls.filter(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/ai/available-models/ollama",
+        ),
+      ).length;
+    const before = probed();
+
+    const tier = await openEditor(user, "ai-routing-tier-cheap_cloud");
+    await waitFor(() => expect(probed()).toBeGreaterThan(before));
+    await user.click(within(tier).getByRole("combobox", { name: "Provider" }));
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+    expect(offered).toContain("fake");
+    expect(offered).toContain("ollama");
+    expect(offered).not.toContain("vllm");
+    await user.keyboard("{Escape}");
+    await user.click(within(tier).getByRole("button", { name: /cancel/i }));
+
+    const own = await openEditor(user, "ai-routing-tier-local_small");
+    await user.click(within(own).getByRole("combobox", { name: "Provider" }));
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toContain("vllm");
+  });
+
+  // A lane on a vendor with no key cannot be saved there: it would fail closed
+  // at the first call. The editor says which key is missing, and the model
+  // list falls back to the sheet and says why.
+  it("refuses to save onto a provider whose key is missing, and says so", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        premium: { provider: "anthropic", model: "claude-opus-4-8" },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("claude-opus-4-8");
+
+    const dialog = await openEditor(user, "ai-routing-tier-premium");
+    expect(within(dialog).getByText("Provider key missing")).toBeTruthy();
+    expect(
+      await within(dialog).findByText(/this provider has no key/i),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: /save binding/i }),
+    ).toBeDisabled();
+    expect(backend.getPutCount()).toBe(0);
   });
 
   // The half that keeps this from being a Select: the sheet is a starting
@@ -552,19 +577,11 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     const model = within(tier).getByRole("combobox", { name: "Model" });
     await user.clear(model);
     await user.type(model, "gemini-4-experimental-0731");
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     expect(backend.getCapturedPut()?.tiers.premium.model).toBe(
       "gemini-4-experimental-0731",
     );
@@ -584,7 +601,7 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
     await screen.findByText("gemini-3.5-flash");
 
-    const tier = await openLane(user, "ai-routing-tier-premium");
+    const tier = await openEditor(user, "ai-routing-tier-premium");
     const model = within(tier).getByRole("combobox", { name: "Model" });
     await user.clear(model);
     await user.click(model);
@@ -597,15 +614,7 @@ describe("AiRoutingCard", () => {
     ).toEqual(["gemini-4.0-flash", "gemini-3.5-flash"]);
 
     await user.type(model, "gemini-3.1-pro-preview");
-    await user.click(screen.getByRole("button", { name: /preview effects/i }));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /save routing/i }),
-      ).not.toBeDisabled(),
-    );
-    await user.click(screen.getByRole("button", { name: /save routing/i }));
-
-    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    await saveEditor(user, backend);
     expect(backend.getCapturedPut()?.tiers.premium.model).toBe(
       "gemini-3.1-pro-preview",
     );
@@ -664,5 +673,79 @@ describe("rebind", () => {
       base_url: "https://openrouter.ai/api",
     });
     expect(next.routing).toEqual({ sort: "throughput" });
+  });
+});
+
+describe("reachableProviders", () => {
+  const keys = [
+    { provider: "gemini", configured: true, env_var: "G", optional: false },
+    { provider: "openai", configured: false, env_var: "O", optional: false },
+    {
+      provider: "jev_compatible",
+      configured: false,
+      env_var: "J",
+      optional: true,
+    },
+  ];
+  const all = ["gemini", "openai", "jev_compatible", "ollama", "vllm", "fake"];
+  const up = { provider: "ollama", models: [] };
+  const down = {
+    provider: "vllm",
+    models: [],
+    unavailable: "unreachable" as const,
+  };
+  const routing = (provider: string) => ({
+    profile: "eu_hosted" as const,
+    tiers: { premium: { provider, model: "m" } },
+    embeddings: { provider: "gemini", model: "e", dimensions: 8 },
+  });
+
+  it.each([
+    {
+      rule: "a keyed vendor needs a sealed key or an optional one",
+      probes: new Map(),
+      routed: "gemini",
+      current: undefined,
+      expected: ["gemini", "jev_compatible"],
+    },
+    {
+      rule: "a keyless adapter needs a probe that answered without unavailable",
+      probes: new Map([
+        ["ollama", up],
+        ["vllm", down],
+      ]),
+      routed: "gemini",
+      current: undefined,
+      expected: ["gemini", "jev_compatible", "ollama"],
+    },
+    {
+      rule: "fake shows once the routing document binds it",
+      probes: new Map(),
+      routed: "fake",
+      current: undefined,
+      expected: ["gemini", "jev_compatible", "fake"],
+    },
+    {
+      rule: "a probe still loading hides its adapter",
+      probes: new Map([["ollama", undefined]]),
+      routed: "gemini",
+      current: undefined,
+      expected: ["gemini", "jev_compatible"],
+    },
+    {
+      rule: "the lane's own provider is always kept",
+      probes: new Map([["vllm", down]]),
+      routed: "gemini",
+      current: "openai",
+      expected: ["gemini", "openai", "jev_compatible"],
+    },
+  ])("$rule", ({ probes, routed, current, expected }) => {
+    expect(
+      reachableProviders(all, keys, current, probes, routing(routed)),
+    ).toEqual(expected);
+  });
+
+  it("hides nothing while the key list has not arrived", () => {
+    expect(reachableProviders(all, undefined, undefined)).toEqual(all);
   });
 });

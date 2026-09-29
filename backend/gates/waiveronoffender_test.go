@@ -24,7 +24,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -62,11 +61,11 @@ func TestEveryWaiverIsAskedAboutAnOffenderNotACandidate(t *testing.T) {
 	t.Parallel()
 	defer prefilterAdmitted.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	guards := 0
 	var findings []string
 	for _, path := range waiverCensusFiles(t) {
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

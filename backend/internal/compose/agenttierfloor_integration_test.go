@@ -154,7 +154,7 @@ func composedRegistry(e *integration.Env) *agents.Registry {
 	// embedder, a transcript enqueue, an imports reader, a meeting-brief reader
 	// and a logger. What it exercises is the tier floor.
 	return registryWithGate(e.DB(), auth.NewGate(adminSeat{}), nil,
-		SendPath{}, companyEnricher{}, nil, nil, nil, nil, nil)
+		SendPath{}, companyEnricher{}, nil, nil, nil, nil, nil, false)
 }
 
 // composedRegistryFlooring is that same composition with ONE pair floored to

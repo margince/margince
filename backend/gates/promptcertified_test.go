@@ -66,6 +66,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // funcKey names one function by the directory it lives in and its own name.
@@ -184,7 +186,6 @@ func walkPromptTree(t *testing.T, root string) promptGraph {
 		promptArg: map[funcKey]int{},
 		forwards:  map[funcKey]map[funcKey]map[int]bool{},
 	}
-	fset := token.NewFileSet()
 	type parsed struct {
 		file *ast.File
 		dir  string
@@ -198,7 +199,7 @@ func walkPromptTree(t *testing.T, root string) promptGraph {
 		if d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, p, nil, 0)
+		file, parseErr := gatekit.ParseFile(p, 0)
 		if parseErr != nil {
 			return parseErr
 		}
@@ -662,7 +663,7 @@ func TestTheCensusCannotBeFooled(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			file, err := parser.ParseFile(token.NewFileSet(), "p.go", tc.src, 0)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "p.go", tc.src, 0)
 			if err != nil {
 				t.Fatalf("parsing the case source: %v", err)
 			}
@@ -685,7 +686,7 @@ func run() { helper := thing{}; helper.Build() }
 type thing struct{}
 func (thing) Build() {}
 func Build() {}`
-	file, err := parser.ParseFile(token.NewFileSet(), "p.go", src, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "p.go", src, 0)
 	if err != nil {
 		t.Fatalf("parsing: %v", err)
 	}
@@ -705,7 +706,7 @@ func TestAPromptInACertificationFileIsNotItsOwnCertification(t *testing.T) {
 	src := `package p
 import "x/shared/ports/model"
 func selfCertifying() model.Request { return model.Request{System: "s"} }`
-	file, err := parser.ParseFile(token.NewFileSet(), "certcase_p.go", src, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "certcase_p.go", src, 0)
 	if err != nil {
 		t.Fatalf("parsing: %v", err)
 	}
@@ -859,7 +860,7 @@ func choice(instructions string) decision.Question { return decision.Question{Ty
 func certified() decision.Request { return decision.Request{Questions: map[string]decision.Question{"kind": choice("certified")}} }
 func rogue() decision.Request { return decision.Request{Questions: map[string]decision.Question{"kind": choice("rogue")}} }`
 	g := graphOf(t, src, "p.go", "p", false)
-	certCase, err := parser.ParseFile(token.NewFileSet(), "certcase_p.go", `package p
+	certCase, err := parser.ParseFile(gatekit.SourceFileSet(), "certcase_p.go", `package p
 import "x/shared/ports/decision"
 type someCase struct{}
 func (someCase) DecisionRequest() decision.Request { return certified() }`, 0)

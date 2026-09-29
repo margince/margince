@@ -22,8 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // contractReasonEnum reads the enum crm.yaml publishes on Undoability.reason.
@@ -227,14 +226,13 @@ func theEvaluatorsSources(t *testing.T) []*ast.File {
 	if err != nil {
 		t.Fatalf("read the evaluator's package: %v", err)
 	}
-	fset := token.NewFileSet()
 	var files []*ast.File
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(dir, name), 0)
 		if err != nil {
 			t.Fatalf("parse %s: %v", name, err)
 		}

@@ -3250,8 +3250,9 @@ export interface paths {
         /**
          * Say what one change over a selection of records would do, without doing it.
          * @description The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
-         *     each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`) or
-         *     `archive`. The answer says which records the change would alter (`affected`), which it
+         *     each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`),
+         *     `archive`, or `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`, while lists
+         *     are switched on). The answer says which records the change would alter (`affected`), which it
          *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
          *
          *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -6697,6 +6698,181 @@ export interface paths {
         patch: operations["updateRelationship"];
         trace?: never;
     };
+    "/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find the lists this caller may see, by name.
+         * @description A list is found by its sharing: every seat finds a workspace list, the members of its team
+         *     (or of its owner's teams) find a team list, and only its owner and steward find a private
+         *     one. `visible_count` is how many members THIS caller may see, never the list's whole size.
+         */
+        get: operations["listLists"];
+        put?: never;
+        /**
+         * Make a Live List (a saved filter) or a Shortlist (chosen records).
+         * @description A Live List stores the filter tree it was previewed with, validated against the record
+         *     type's filter vocabulary; a Shortlist stores none. Sharing defaults to `team` and the
+         *     steward to the caller.
+         */
+        post: operations["createList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read one list, with the count of its members this caller may see. */
+        get: operations["getList"];
+        put?: never;
+        post?: never;
+        /** Archive a list. Its members and history stay, read-only. */
+        delete: operations["archiveList"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a list's name, purpose, filter, sharing, team or steward.
+         * @description Needs list authority: the list's steward, or a seat with the list update grant that reads
+         *     every row. `version` must be the one the caller read; a list changed since answers `409`.
+         *     An archived list is read-only (`409`). Every change is recorded as a revision.
+         */
+        patch: operations["updateList"];
+        trace?: never;
+    };
+    "/lists/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bring an archived list back. */
+        post: operations["restoreList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Page through the members of a list this caller may see.
+         * @description A Shortlist's chosen members, with who added each, when and why; or a Live List's filter
+         *     evaluated now, completely, in pages. Both are row-scoped: a member record this caller
+         *     cannot see is absent, and nothing says it was there. For member rows with their record's
+         *     own columns, read the record list (`listContacts`, `listCompanies`, `listDeals`,
+         *     `listLeads`) with `list_id`.
+         */
+        get: operations["listListMembers"];
+        put?: never;
+        /** Add one record to a Shortlist, with an optional note on why. */
+        post: operations["addListMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/members/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take one record off a Shortlist, with an optional note on why. */
+        post: operations["removeListMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/members/{recordId}/why": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Say why a record is, or is not, on a list.
+         * @description For a Live List: every clause of the filter with its verdict for this record and the
+         *     record's current value, evaluated by the same SQL that decides membership. A value this
+         *     caller may not read (a masked field, a fact on a linked record) is `hidden`. For a
+         *     Shortlist: who added the record, when, and the note they left. A record this caller cannot
+         *     see answers `404`, whether or not it is a member.
+         */
+        get: operations["explainListMember"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read what changed on a list, newest first.
+         * @description Every change of the list's definition, and every Shortlist membership change of a record
+         *     this caller can see now. A change about a record they cannot see is absent.
+         */
+        get: operations["listListHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/filters/vocabulary": {
         parameters: {
             query?: never;
@@ -6824,7 +7000,8 @@ export interface paths {
          * @description First-class filtered export (features/10 §3): emits exactly the rows that match the active
          *     filter AND that the caller may see (row-scoped through the same one filter engine that drives
          *     lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
-         *     with a `filter` (the canonical §13.5 predicate) or a `view_id`. Bulk record read
+         *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or the `list_id` of a Live List
+         *     (while lists are switched on; the export is then listed on the list as a use). Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
          */
@@ -10331,6 +10508,58 @@ export interface paths {
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
         delete: operations["deleteAiProviderKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-keys/{provider}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask one vendor whether the stored credential works (admin/ops).
+         * @description Asks the vendor, with the credential this installation holds, the cheapest authenticated
+         *     question it answers, and says whether it answered. The answer to "is this key any good"
+         *     is the vendor's, and asking before a lane is bound to it is cheaper than finding out at
+         *     the first call. No call is billed:
+         *
+         *     - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
+         *       model list, and `model_count` is its length.
+         *     - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+         *     - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
+         *       public, so listing it would pass any key. It passes with no `model_count`.
+         *     - Any other decision endpoint is sent the decision request with an empty body. 401 or
+         *       403 is a refused key. A 400 or 422 is a pass with `key_confirmed: false`: the server
+         *       answered and did not refuse the key, but may have refused the body before reading it.
+         *       A 200 is not a pass, since no decision server answers an empty request. It passes with
+         *       no `model_count`.
+         *     - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
+         *       on OpenRouter) answers `profile_forbids` without being dialled.
+         *
+         *     No request body. The key is the STORED one, never a candidate sent here: a credential
+         *     that travels only to be tested is still a credential in a request log. The host is the
+         *     adapter's default, or for `openai_compatible` the one a stored binding names — never a
+         *     request parameter, for the reason `/ai/available-models/{provider}` gives.
+         *
+         *     A vendor that could not be asked, or asked and refused, is NOT an error — the response is
+         *     200 with `ok: false` and `reason` naming which. `reason` is a closed vocabulary rather
+         *     than the vendor's own words: those are as often a proxy's HTML as they are a sentence,
+         *     and sometimes carry the very credential being tested.
+         *
+         *     Writes nothing. Governed by `ai_routing` read, the grant `/ai/available-models` already
+         *     makes the same vendor call under.
+         */
+        post: operations["testAiProviderKey"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -16809,6 +17038,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai-model-rates/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-price the models this installation calls from the providers' own catalogues.
+         * @description Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
+         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and
+         *     each `openai_compatible` model already on the sheet that the list still names. A model
+         *     whose price already matches is left alone and leaves no audit row; a future-dated manual
+         *     price is not touched. Runs inline and answers with what happened per provider. A provider
+         *     that publishes no price list reports `not_available`: its prices are set by hand.
+         *     Human session only (x-agent-access: human-only).
+         */
+        post: operations["refreshAiModelRates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai-model-rates/propose-refresh": {
         parameters: {
             query?: never;
@@ -16819,11 +17074,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Enqueue an async model-cost refresh (stages 🟡 proposals).
-         * @description Admin/ops-only. Enqueues a background job that crawls the configured provider
-         *     pricing pages, AI-extracts per-model prices (evidence-gated), and stages a
-         *     confirm-first proposal per changed model into the approvals inbox. Returns
-         *     immediately. Human session only (x-agent-access: human-only).
+         * Retired. Answers 501; use POST /ai-model-rates/refresh.
+         * @deprecated
+         * @description Retired: model prices are no longer extracted from provider pricing pages and staged
+         *     for approval. This operation always answers 501 and is kept for one release so a
+         *     client built against it fails loudly instead of on a missing route. Use
+         *     `POST /ai-model-rates/refresh`. Human session only (x-agent-access: human-only).
          */
         post: operations["proposeAiModelRateRefresh"];
         delete?: never;
@@ -17182,6 +17438,28 @@ export interface components {
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
+        };
+        /** @description The outcome of a catalogue refresh, one entry per provider this build knows. */
+        AiModelRateRefreshReport: {
+            providers: components["schemas"]["AiModelRateProviderRefresh"][];
+        };
+        AiModelRateProviderRefresh: {
+            /** @description The provider as the routing document spells it. */
+            provider: string;
+            /**
+             * @description `updated` wrote at least one price; `unchanged` found every priced model already
+             *     current; `not_available` means the provider (or the catalogue, for these models)
+             *     publishes no price to read; `unreachable` means the catalogue could not be read;
+             *     `not_bound` means nothing this provider serves is bound or on the sheet.
+             * @enum {string}
+             */
+            outcome: "updated" | "unchanged" | "not_available" | "unreachable" | "not_bound";
+            /** @description Prices written today. */
+            updated: number;
+            /** @description Models already at the catalogue price. */
+            unchanged: number;
+            /** @description Model ids written this run. */
+            models: string[];
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -17872,7 +18150,7 @@ export interface components {
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -17911,6 +18189,22 @@ export interface components {
             env_var: string;
             /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
             optional: boolean;
+        };
+        /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
+        AiProviderKeyTestResult: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            /** @description Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential. */
+            ok: boolean;
+            /** @description Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server. */
+            key_confirmed?: boolean;
+            /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
+            model_count?: number;
+            /**
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @enum {string}
+             */
+            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
         };
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -22561,7 +22855,7 @@ export interface components {
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts")[];
+            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts")[];
             contacts?: {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
@@ -22578,6 +22872,8 @@ export interface components {
             strength?: components["schemas"]["CompanyStrength"];
             activities?: components["schemas"]["ActivityListResponse"];
             tags?: components["schemas"]["Tag"][];
+            /** @description The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on. */
+            list_memberships?: components["schemas"]["List"][];
             pending_approvals?: {
                 data: components["schemas"]["Approval"][];
                 page: components["schemas"]["PageInfo"];
@@ -25155,6 +25451,12 @@ export interface components {
          *     quarter, and the deal amount that can be corrected after the close, would
          *     otherwise make the same entry answer a different question each time it is read.
          *     Carries no owner — visibility is inherited from the deal.
+         *
+         *     An entry carries no `masked_fields`, because no column of one can be withheld on
+         *     its own: the rate IS the partner's margin tier and the amount over the basis is
+         *     that rate again. A role whose field mask withholds `partner.margin_tier` therefore
+         *     reads no entry at all — the list omits it, the single read answers 404, and the
+         *     summary leaves it out of the totals.
          */
         CommissionEntry: {
             /** Format: uuid */
@@ -25833,10 +26135,12 @@ export interface components {
         BulkRecordType: "contact" | "company" | "deal";
         /**
          * @description What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-         *     `archive` retires it exactly as the single-record archive does.
+         *     `archive` retires it exactly as the single-record archive does. `add_to_list` and
+         *     `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+         *     `addListMember` and `removeListMember` do, and change nothing on the record itself.
          * @enum {string}
          */
-        BulkVerb: "reassign_owner" | "archive";
+        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list";
         /** @description One selected record and the version the caller was shown. */
         BulkItem: {
             /** Format: uuid */
@@ -25853,9 +26157,16 @@ export interface components {
             items: components["schemas"]["BulkItem"][];
             /**
              * Format: uuid
-             * @description The new owner. Required for `reassign_owner` and refused for `archive`.
+             * @description The new owner. Required for `reassign_owner` and refused for every other verb.
              */
             owner_id?: string;
+            /**
+             * Format: uuid
+             * @description The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+             */
+            list_id?: string;
+            /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
+            note?: string;
         };
         BulkChangeExecuteRequest: {
             record_type: components["schemas"]["BulkRecordType"];
@@ -25863,16 +26174,24 @@ export interface components {
             items: components["schemas"]["BulkItem"][];
             /**
              * Format: uuid
-             * @description The new owner. Required for `reassign_owner` and refused for `archive`.
+             * @description The new owner. Required for `reassign_owner` and refused for every other verb.
              */
             owner_id?: string;
+            /**
+             * Format: uuid
+             * @description The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+             */
+            list_id?: string;
+            /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
+            note?: string;
             /** @description The token a preview of exactly this selection returned. Required above 10 records. */
             confirm_token?: string;
         };
         /**
          * @description Why a record is left alone. `not_found`: the caller cannot see it, or it is already
          *     archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-         *     its version moved since the caller read it. `no_change`: it already has this owner.
+         *     its version moved since the caller read it. `no_change`: it already has this owner, or is
+         *     already on (or already off) the Shortlist.
          *     `anchor_company`: it is the installation's own company, which is never archived.
          *     `not_previewed`: the preview whose token this execution presents did not list it.
          *     `refused`: a single-record rule refuses it; `code` says which.
@@ -25900,11 +26219,13 @@ export interface components {
             /** @description The refusal in English, for a code the client does not know. */
             message?: string;
         };
-        /** @description The two facts a bulk change can move on a record. */
+        /** @description The facts a bulk change can move on a record. */
         BulkRecordState: {
             /** Format: uuid */
             owner_id: string | null;
             archived: boolean;
+            /** @description For a list verb, whether the record is on the Shortlist. */
+            listed?: boolean;
         };
         /** @description One record the change would alter, as it is and as it would be. */
         BulkSampleRow: {
@@ -25983,6 +26304,11 @@ export interface components {
              * @description The new owner a reassignment named.
              */
             owner_id?: string;
+            /**
+             * Format: uuid
+             * @description The Shortlist a list verb named.
+             */
+            list_id?: string;
             /** @description The number of records changed. */
             changed: number;
             skipped: components["schemas"]["BulkSkip"][];
@@ -29347,11 +29673,13 @@ export interface components {
                 contact_ids: string[];
             };
         };
-        /** @description A static membership set or a dynamic segment. Mirrors the `list` table. */
+        /** @description A Live List (list_type dynamic: its members are its filter's current result) or a Shortlist (static: members chosen by hand). Mirrors the `list` table. */
         List: {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @description What the list is for, in the words of its steward. */
+            purpose?: string | null;
             /** @enum {string} */
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /**
@@ -29359,20 +29687,56 @@ export interface components {
              * @enum {string}
              */
             list_type: "static" | "dynamic";
-            /** @description Dynamic — validated query plan; static — null. */
+            /** @description A Live List's filter tree; null for a Shortlist. */
             definition?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * @description Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
+             * @enum {string}
+             */
+            sharing: "private" | "team" | "workspace";
             /** Format: uuid */
             owner_id?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The team a team list is shared with; null shares it with the teams of its owner.
+             */
             team_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Who looks after the list and may change it.
+             */
+            steward_id?: string | null;
+            steward_name?: string | null;
+            /** Format: int64 */
+            version: number;
+            /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size. */
+            visible_count?: number | null;
+            /**
+             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+             * @enum {string}
+             */
+            health: "ok" | "ownerless" | "invalid";
+            /** @description Whether this caller holds list authority over the list. */
+            can_edit: boolean;
+            /** @description What uses this list. Exports are listed as usage and block nothing. */
+            dependencies?: components["schemas"]["ListDependency"][];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        ListDependency: {
+            /** @enum {string} */
+            kind: "export";
+            /** Format: date-time */
+            occurred_at: string;
+            actor?: string | null;
+            /** @description Whether it refuses a breaking change or archive of the list. */
+            blocking: boolean;
         };
         ListMember: {
             /** Format: uuid */
@@ -29383,9 +29747,132 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+            /** @description The principal that added a Shortlist member; `dynamic` for a Live List member. */
             added_by?: string;
             /** Format: date-time */
             created_at?: string;
+            note?: string | null;
+        };
+        CreateListRequest: {
+            name: string;
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            /**
+             * @default static
+             * @enum {string}
+             */
+            list_type: "static" | "dynamic";
+            definition?: {
+                [key: string]: unknown;
+            } | null;
+            purpose?: string | null;
+            /**
+             * @default team
+             * @enum {string}
+             */
+            sharing: "private" | "team" | "workspace";
+            /** Format: uuid */
+            team_id?: string | null;
+            /** Format: uuid */
+            steward_id?: string | null;
+        };
+        UpdateListRequest: {
+            /**
+             * Format: int64
+             * @description The version the caller read.
+             */
+            version: number;
+            name?: string;
+            /** @description Null removes the purpose. */
+            purpose?: string | null;
+            /** @description A Live List's new filter tree. */
+            definition?: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            sharing?: "private" | "team" | "workspace";
+            /**
+             * Format: uuid
+             * @description Null shares a team list with the teams of its owner.
+             */
+            team_id?: string | null;
+            /** Format: uuid */
+            steward_id?: string;
+        };
+        ListMemberChangeRequest: {
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            /** Format: uuid */
+            entity_id: string;
+            /** @description Why, in the words of whoever made the change. */
+            note?: string | null;
+        };
+        ListListResponse: {
+            data: components["schemas"]["List"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        ListMemberListResponse: {
+            data: components["schemas"]["ListMember"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        /** @description One node of a Live List's filter judged for one record: a group (`join`, `children`) or a clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the filter treats as not selected. */
+        ListClauseVerdict: {
+            /** @enum {string} */
+            join?: "and" | "or";
+            children?: components["schemas"]["ListClauseVerdict"][];
+            field?: string;
+            op?: string;
+            /** @description The clause's value as the filter states it. */
+            operand?: unknown;
+            result: boolean | null;
+            /** @description The record's current value of the field, as text. */
+            value?: string | null;
+            /** @description The value is not shown to this caller. */
+            hidden?: boolean;
+        };
+        ListMemberExplanation: {
+            /** Format: uuid */
+            list_id: string;
+            /** Format: uuid */
+            entity_id: string;
+            /** @enum {string} */
+            list_type: "static" | "dynamic";
+            member: boolean;
+            /** @description For a Live List, whether the record is live and eligible at all, before any clause. */
+            eligible?: boolean;
+            clauses?: components["schemas"]["ListClauseVerdict"];
+            added_by?: string | null;
+            added_by_name?: string | null;
+            /** Format: date-time */
+            added_at?: string | null;
+            note?: string | null;
+        };
+        ListHistoryEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "member_added" | "member_removed" | "revised";
+            /** Format: date-time */
+            occurred_at: string;
+            actor: string;
+            actor_name?: string | null;
+            entity_type?: string | null;
+            /** Format: uuid */
+            entity_id?: string | null;
+            /** @enum {string|null} */
+            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | null;
+            note?: string | null;
+            /** Format: int64 */
+            version?: number | null;
+            name?: string | null;
+            definition?: {
+                [key: string]: unknown;
+            } | null;
+            sharing?: string | null;
+        };
+        ListHistoryResponse: {
+            data: components["schemas"]["ListHistoryEntry"][];
+            page: components["schemas"]["PageInfo"];
         };
         /** @description A candidate filter to evaluate without saving it. */
         FilterPreviewRequest: {
@@ -29743,10 +30230,10 @@ export interface components {
             data: components["schemas"]["SavedView"][];
             page: components["schemas"]["PageInfo"];
         };
-        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine. */
+        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List whose filter is exported). The slice is always row-scoped to the caller through the one filter engine. */
         FilteredExportRequest: {
             /**
-             * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
+             * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
              * @enum {string}
              */
             object?: "contact" | "company" | "deal" | "lead" | "project";
@@ -29756,9 +30243,14 @@ export interface components {
             };
             /**
              * Format: uuid
-             * @description Export the filter state of one of the caller's saved views. Mutually exclusive with object.
+             * @description Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
              */
             view_id?: string;
+            /**
+             * Format: uuid
+             * @description Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
+             */
+            list_id?: string;
             /** @enum {string} */
             format: "csv" | "json";
         };
@@ -30917,6 +31409,8 @@ export interface components {
         SettingsAvailability: {
             /** @description True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it. */
             company_context: boolean;
+            /** @description True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
+            lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */
             embedding_reindex: boolean;
         };
@@ -33178,6 +33672,8 @@ export interface components {
              * @description The company this partner record extends (PK = FK).
              */
             company_id: string;
+            /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
+            readonly masked_fields?: string[];
             /**
              * @description Functional role (ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}
@@ -39282,6 +39778,14 @@ export interface components {
          *     `422 code: sort_field_not_allowed`.
          */
         Sort: string;
+        /**
+         * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+         *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+         *     in the record list's own columns. The list must be one the caller may find and of this
+         *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+         *     the caller's row scope still applies to every row.
+         */
+        ListMembershipFilter: string;
         /** @description Include soft-deleted (archived) rows. Default false. */
         IncludeArchived: boolean;
         /**
@@ -40064,6 +40568,14 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -41620,6 +42132,14 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -43694,6 +44214,14 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -49030,6 +49558,14 @@ export interface operations {
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
                 /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
+                /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -50583,6 +51119,345 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLists: {
+        parameters: {
+            query?: {
+                entity_type?: "contact" | "company" | "deal" | "lead" | "project";
+                list_type?: "static" | "dynamic";
+                /** @description Matches the name or purpose, case-insensitively. */
+                q?: string;
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lists, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateListRequest"];
+            };
+        };
+        responses: {
+            /** @description Created list. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    archiveList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateListRequest"];
+            };
+        };
+        responses: {
+            /** @description The changed list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listListMembers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMemberListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    addListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListMemberChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Added member. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMember"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListMemberChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The explanation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMemberExplanation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listListHistory: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListHistoryResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -55032,6 +55907,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    testAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the vendor accepted the stored credential, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderKeyTestResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     listAiCalls: {
@@ -64268,6 +65168,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    refreshAiModelRates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the refresh did, one entry per provider this build knows. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelRateRefreshReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     proposeAiModelRateRefresh: {
         parameters: {
             query?: never;
@@ -64277,7 +65199,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Refresh enqueued. */
+            /** @description Never returned; declared so the response contract stays additive. */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -64288,6 +65210,13 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            /** @description Retired; use POST /ai-model-rates/refresh. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     updateCompanyProfileField: {

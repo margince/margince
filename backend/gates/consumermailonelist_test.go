@@ -36,7 +36,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -303,7 +302,7 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 // composite literal in one source file naming two or more DISTINCT providers.
 func consumerMailListsInSource(t *testing.T, name, code string) []string {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	file, err := parser.ParseFile(fset, name, code, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", name, err)

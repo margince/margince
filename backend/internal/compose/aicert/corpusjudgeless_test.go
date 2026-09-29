@@ -276,17 +276,6 @@ func fxPairs(pairs ...[4]string) func([]string) string {
 	return literal(mustJSON(map[string]any{"pairs": out}))
 }
 
-func pricedModels(rows ...[6]string) func([]string) string {
-	out := make([]map[string]string, len(rows))
-	for i, r := range rows {
-		out[i] = map[string]string{
-			"provider": "Aurora AI", "model_id": r[0], "input_per_mtok": r[1], "output_per_mtok": r[2],
-			"cache_read_per_mtok": r[3], "cache_write_per_mtok": r[4], "evidence": r[5], "confidence": "0.9",
-		}
-	}
-	return literal(mustJSON(map[string]any{"models": out}))
-}
-
 func signatureFields(phone, phoneSnippet string) func([]string) string {
 	fields := []map[string]any{
 		{"field": "title", "value": "Head of Quality Assurance", "evidence_snippet": "Head of Quality Assurance", "confidence": 0.9},
@@ -325,18 +314,6 @@ func extractionProofs() map[string]judgelessProof {
 		"fx_rates_json_api_grounded": {
 			correct:   fxPairs([4]string{"EUR", "USD", "1.08", "s0"}, [4]string{"EUR", "GBP", "0.86", "s0"}),
 			wrong:     fxPairs([4]string{"EUR", "USD", "1.08", "s0"}, [4]string{"GBP", "EUR", "0.86", "s0"}),
-			wantWrong: aitasks.OutcomeWrongAnswer,
-		},
-		// A caching price for the model whose page says it has none, and a model
-		// the page never names priced off a line it does print.
-		"pricing_table_two_models_grounded": {
-			correct: pricedModels([6]string{"aurora-large", "5", "25", "0.5", "6.25", "s0"},
-				[6]string{"aurora-mini", "0.25", "1.5", "0", "0", "s1"}),
-			wrong: pricedModels([6]string{"aurora-large", "5", "25", "0.5", "6.25", "s0"},
-				[6]string{"aurora-mini", "0.25", "1.5", "0.5", "6.25", "s1"}),
-			alsoWrong: []func([]string) string{pricedModels([6]string{"aurora-large", "5", "25", "0.5", "6.25", "s0"},
-				[6]string{"aurora-mini", "0.25", "1.5", "0", "0", "s1"},
-				[6]string{"aurora-ultra", "5", "25", "0.5", "6.25", "s0"})},
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		// The defect this scenario exists for: one number of four, and four

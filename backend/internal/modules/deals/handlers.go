@@ -29,6 +29,8 @@ import (
 
 type Handlers struct {
 	store *Store
+	// listMembers resolves the deal list's list_id; nil while lists are off.
+	listMembers storekit.ListMemberFilterResolver
 	// blob backs the renderOffer endpoint's PDF write; nil means this
 	// role answers RenderOffer 501 (WithBlobstore opts a role in). Unlike
 	// activities' attachment store, the blob write lives here in

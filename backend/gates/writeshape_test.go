@@ -18,7 +18,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -153,9 +152,6 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/modules/collections:CreateSavedView":           "saved views are per-user view state, not record facts — events.md §5.3c ratifies this config family as audit-only and defines no saved_view.* type",
 	"internal/modules/collections:UpdateSavedView":           "saved views are per-user view state, not record facts — events.md §5.3c ratifies this config family as audit-only and defines no saved_view.* type",
 	"internal/modules/collections:ArchiveSavedView":          "saved views are per-user view state, not record facts — events.md §5.3c ratifies this config family as audit-only and defines no saved_view.* type",
-	"internal/modules/collections:CreateList":                "lists are ratified audit-only in V1 — events.md \u00a75.3c defines no list.* types and none is added",
-	"internal/modules/collections:ArchiveList":               "lists are ratified audit-only in V1 — events.md \u00a75.3c defines no list.* types and none is added",
-	"internal/modules/collections:AddMember":                 "lists are ratified audit-only in V1 — events.md \u00a75.3c defines no list.* types and none is added",
 	"internal/modules/collections:CreateTag":                 "tags are ratified audit-only in V1 — events.md \u00a75.3c defines no tag.* types and none is added",
 	"internal/modules/collections:ArchiveTag":                "tags are ratified audit-only in V1 — events.md \u00a75.3c defines no tag.* types and none is added",
 	"internal/modules/collections:UpdateTag":                 "a tag is workspace vocabulary, not a record fact: the closed event catalog carries no tag.* type and none is added here, because a subscriber acts on the RECORD a tag was applied to and that write emits its own event. The audit row answers who changed the word, which is the question a vocabulary dispute asks",
@@ -296,7 +292,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 	t.Parallel()
 	defer auditOnlyWrites.AssertAllMatched(t)
 	emissionPathsByDir := map[string]map[string]bool{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, root := range []string{"internal/modules", "internal/compose", settingsStoreDir} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
@@ -304,7 +300,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}
@@ -374,7 +370,7 @@ func emissionBearingFunctions(fset *token.FileSet, dir string) (map[string]bool,
 		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return nil, err
 		}

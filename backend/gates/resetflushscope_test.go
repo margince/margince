@@ -28,10 +28,10 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -43,8 +43,7 @@ const (
 
 func TestOnlyTheGatedResetFlushClearsTheAuthLockouts(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, resetFlushFile, nil, 0)
+	file, err := gatekit.ParseFile(resetFlushFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", resetFlushFile, err)
 	}

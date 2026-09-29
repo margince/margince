@@ -163,7 +163,8 @@ func (o ownDomainReader) ReaderAddresses(
 // wiring gate on this one constructor covers every caller, rather than
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
-	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
+	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
+		WithLiveSteward(identity.LiveMemberSQL("u"))
 }
 
 // newCollectionsHandlers builds the lists/tags/saved-views transport over
@@ -248,10 +249,12 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	// WithCatalogue wires the public OpenRouter model read unconditionally: it
 	// needs no tenant credential, so there is no "no provider connected"
 	// configuration to honor here.
-	s.aiRoutingHandlers = aiRoutingHandlers{
-		store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).
-			WithCatalogue(ai.NewModelCatalogue(systemClock{})),
-	}
+	catalogue := ai.NewModelCatalogue(systemClock{})
+	routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(catalogue)
+	s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
+	// The price refresh reads the same bindings and the same broker list, so
+	// its 15-minute cache is the picker's too.
+	s.voiceHandlers = s.WithCatalogueRefresh(routing, catalogue)
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):

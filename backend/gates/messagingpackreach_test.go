@@ -28,6 +28,8 @@ import (
 	"go/ast"
 	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -44,7 +46,7 @@ const (
 func TestEveryDeclaredMessagingRuleSetIsRegistered(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	body := functionBodyIn(t, fset, applyFile, applyFunc)
 
 	loops := messagingApplyLoops(body)

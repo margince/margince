@@ -13,7 +13,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -30,10 +29,8 @@ import (
 // at staging time — a cross-midnight approval must not miss the past-date
 // guard), so the payload carries no date.
 const (
-	fxRateProposalKind      = "fx_rate_proposal"
-	aiModelRateProposalKind = "ai_model_rate_proposal"
-	fxRateTargetType        = "fx_rate"
-	aiModelRateTargetType   = "ai_model_rate"
+	fxRateProposalKind = "fx_rate_proposal"
+	fxRateTargetType   = "fx_rate"
 )
 
 type fxRateProposal struct {
@@ -44,26 +41,6 @@ type fxRateProposal struct {
 	// re-reads and refuses on mismatch (ErrVersionSkew) so an old proposal can
 	// never overwrite a newer manual or approved rate.
 	ExpectedPriorRate string `json:"expected_prior_rate,omitempty"`
-}
-
-// aiModelRatePrior carries the four per-MTok USD buckets in force (as of the
-// staging day) a model-price diff was computed against; the apply effect
-// re-reads and must match. Absent = the model was unpriced when diffed.
-type aiModelRatePrior struct {
-	InputUsd      string `json:"input_per_mtok"`
-	OutputUsd     string `json:"output_per_mtok"`
-	CacheReadUsd  string `json:"cache_read_per_mtok"`
-	CacheWriteUsd string `json:"cache_write_per_mtok"`
-}
-
-type aiModelRateProposal struct {
-	Provider      string            `json:"provider"`
-	ModelID       string            `json:"model_id"`
-	InputUsd      string            `json:"input_per_mtok"`
-	OutputUsd     string            `json:"output_per_mtok"`
-	CacheReadUsd  string            `json:"cache_read_per_mtok"`
-	CacheWriteUsd string            `json:"cache_write_per_mtok"`
-	ExpectedPrior *aiModelRatePrior `json:"expected_prior,omitempty"`
 }
 
 // sameRate reports numeric equality of two decimal strings — numeric(20,10)
@@ -180,73 +157,4 @@ func fxPriorMatches(p fxRateProposal, prior string, found bool) error {
 		return fmt.Errorf("the %s rate changed since the proposal was diffed (now %s) — re-run the refresh: %w",
 			p.FromCurrency, prior, apperrors.ErrVersionSkew)
 	}
-}
-
-func aiModelRateAcceptEffect(svc *approvals.Service, rates *ai.RateStore) approvals.ApprovedEffect {
-	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		var p aiModelRateProposal
-		if err := json.Unmarshal(proposedChange, &p); err != nil {
-			return fmt.Errorf("compose: ai model rate proposal payload: %w", err)
-		}
-		execCtx, err := rateRefreshActor(ctx)
-		if err != nil {
-			return err
-		}
-		// Single-transaction redeem-and-apply (see fxRateAcceptEffect): a
-		// failed write keeps the approval redeemable. The write is pinned to
-		// the day the precondition read sampled (asOf below), so a cross-
-		// midnight apply fails the past-date guard rather than overwriting the
-		// new day's scheduled row.
-		return svc.RedeemAndApply(ctx, approvalID, aiModelRateProposalKind, diffHash, func(tx pgx.Tx) error {
-			// Same precondition as the fx effect: the price in force must still
-			// be the one the diff was computed against, or applying restores a
-			// stale value — refuse and roll back, keep the decision on record.
-			// Lock + same-day pinning as the fx effect (see fxRateAcceptEffect).
-			cur, asOf, err := rates.EffectiveModelRateInTx(execCtx, tx, p.Provider, p.ModelID)
-			if err != nil {
-				return err
-			}
-			if err := modelPriorMatches(p, cur); err != nil {
-				return err
-			}
-			_, err = rates.SetModelRateInTx(execCtx, tx, ai.SetModelRateInput{
-				Provider: p.Provider, ModelID: p.ModelID,
-				InputUsd: p.InputUsd, OutputUsd: p.OutputUsd,
-				CacheReadUsd: p.CacheReadUsd, CacheWriteUsd: p.CacheWriteUsd,
-				EffectiveDate: asOf,
-			})
-			return err
-		})
-	}
-}
-
-// modelPriorMatches enforces the proposal's precondition against the price in
-// force now, comparing in µUSD (the sheet's storage unit) so wire-scale
-// differences cannot false-skew. A nil ExpectedPrior asserts "unpriced" —
-// also how a payload staged before the precondition existed reads, so such a
-// proposal fails closed onto a re-diff once the model is priced.
-func modelPriorMatches(p aiModelRateProposal, cur *ai.ModelRate) error {
-	moved := fmt.Errorf("the %s/%s price changed since the proposal was diffed — re-run the refresh: %w",
-		p.Provider, p.ModelID, apperrors.ErrVersionSkew)
-	if p.ExpectedPrior == nil {
-		if cur != nil {
-			return moved
-		}
-		return nil
-	}
-	if cur == nil {
-		return moved
-	}
-	in, e1 := ai.UsdPerMTokToMicroUSD("input_per_mtok", p.ExpectedPrior.InputUsd)
-	out, e2 := ai.UsdPerMTokToMicroUSD("output_per_mtok", p.ExpectedPrior.OutputUsd)
-	cr, e3 := ai.UsdPerMTokToMicroUSD("cache_read_per_mtok", p.ExpectedPrior.CacheReadUsd)
-	cw, e4 := ai.UsdPerMTokToMicroUSD("cache_write_per_mtok", p.ExpectedPrior.CacheWriteUsd)
-	if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
-		return moved // an unparseable expected prior can never match — fail closed onto a re-diff
-	}
-	if in != cur.InputPerMTokMicroUSD || out != cur.OutputPerMTokMicroUSD ||
-		cr != cur.CacheReadPerMTokMicroUSD || cw != cur.CacheWritePerMTokMicroUSD {
-		return moved
-	}
-	return nil
 }

@@ -23,7 +23,6 @@ import (
 	"context"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"maps"
 	"path/filepath"
 	"regexp"
@@ -212,7 +211,7 @@ func nativeMoneyMeasures(t *testing.T) []string {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, parser.SkipObjectResolution)
+		file, err := gatekit.ParseFile(source, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", source, err)
 		}

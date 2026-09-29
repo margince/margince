@@ -101,7 +101,7 @@ for which actions wait by default.
 - LinkedIn match · Add a next step from a transcript
 
 **Housekeeping**
-- Refresh exchange rates · Refresh model prices · Record an automation step
+- Refresh exchange rates · Record an automation step
 - Let an agent continue
 
 ## Automatic changes: what answers itself

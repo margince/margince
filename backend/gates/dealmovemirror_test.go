@@ -31,11 +31,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // dealMoveOpenSemantic is the value both sides must call "open". It is written
@@ -96,7 +97,7 @@ func TestTheDealMoveTierRuleReadsTheSameOnBothSides(t *testing.T) {
 // not a case to skip.
 func functionNamed(t *testing.T, tree, relPath, name string) *ast.FuncDecl {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), tree+"/"+relPath, nil, 0)
+	file, err := gatekit.ParseFile(tree+"/"+relPath, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", relPath, err)
 	}
@@ -203,7 +204,7 @@ func render(expr ast.Expr) string {
 //     source text, so trimming answers a value the compiler never sees.
 func constValueIn(t *testing.T, tree, relPath, name string) string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), tree+"/"+relPath, nil, 0)
+	file, err := gatekit.ParseFile(tree+"/"+relPath, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", relPath, err)
 	}

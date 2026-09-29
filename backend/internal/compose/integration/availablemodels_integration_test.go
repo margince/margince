@@ -162,3 +162,28 @@ embeddings: {provider: fake, model: fake-embed, dimensions: 8}
 	}
 	return cfg
 }
+
+// A key test reads the stored document to find the host and the profile, and
+// the offline fake answers it with no vendor and no network.
+func TestAKeyTestAsksTheStoredBinding(t *testing.T) {
+	e := SetupSearch(t)
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {
+		t.Fatalf("storing the sovereign binding: %v", err)
+	}
+
+	local, err := store.TestProviderKey(e.adminRoutingCtx(), "fake")
+	if err != nil {
+		t.Fatalf("testing a local vendor: %v", err)
+	}
+	if !local.OK || local.ModelCount == 0 {
+		t.Fatalf("the fake should pass the test: %+v", local)
+	}
+	cloud, err := store.TestProviderKey(e.adminRoutingCtx(), "anthropic")
+	if err != nil {
+		t.Fatalf("a refused vendor is a result, not an error: %v", err)
+	}
+	if cloud.OK || cloud.Reason != ai.KeyTestProfileForbids {
+		t.Fatalf("sovereign must forbid testing a cloud key: %+v", cloud)
+	}
+}

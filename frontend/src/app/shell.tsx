@@ -627,7 +627,7 @@ function SectionSwitcher({
       <Modal open={open} onClose={close} labelledBy={titleId}>
         {/* Named by the SECTION: the list is everything Settings holds, and the
             entry the reader came from is marked inside it. */}
-        <Heading size="large" id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {t(section.titleKey)}
         </Heading>
         {/* Above the rows, exactly where the rail puts it. Without this the

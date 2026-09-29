@@ -32,7 +32,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"sort"
@@ -230,13 +229,12 @@ func functionDeclarations(files []gatekit.ParsedFile) map[string]*ast.FuncDecl {
 func composeFilesFor(t *testing.T) []gatekit.ParsedFile {
 	t.Helper()
 	root := filepath.Join(repoRoot, "backend", "internal", "compose")
-	fset := token.NewFileSet()
 	var parsed []gatekit.ParsedFile
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, parseErr := gatekit.ParseFile(path, parser.ParseComments)
 		if parseErr != nil {
 			return parseErr
 		}

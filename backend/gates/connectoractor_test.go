@@ -28,7 +28,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -139,7 +138,7 @@ func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]s
 			strings.HasSuffix(name, "_test.go") || isIntegrationTagged(path) {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

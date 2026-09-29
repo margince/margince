@@ -77,7 +77,7 @@ export function EmploymentEdit({
   const valid = validDateEntry(start) && validDateEntry(end);
   return (
     <Modal open={open} onClose={onClose} labelledBy={id}>
-      <Heading size="large" id={id} className="t-h2 dialog-heading">
+      <Heading size="large" id={id} className="t-h2 modal-title">
         {t("employment.edit")}
       </Heading>
       <div className="form-stack">

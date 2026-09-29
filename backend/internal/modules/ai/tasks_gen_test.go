@@ -26,8 +26,8 @@ func TestGeneratedDeclarationAccessors(t *testing.T) {
 	}
 
 	rate := SitesFor(TaskRateExtract)
-	if len(rate) != 2 || rate[0].Name != "pricing" || rate[1].Name != "fx" {
-		t.Fatalf("SitesFor(rate_extract) = %+v, want pricing then fx", rate)
+	if len(rate) != 1 || rate[0].Name != "fx" {
+		t.Fatalf("SitesFor(rate_extract) = %+v, want the fx site alone", rate)
 	}
 	if rate[0].Kind != SiteKindOneShot {
 		t.Errorf("a bare site got kind %q, want %q", rate[0].Kind, SiteKindOneShot)

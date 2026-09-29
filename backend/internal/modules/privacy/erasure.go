@@ -364,6 +364,10 @@ func anonymizeSubjectRows(
 	if err != nil {
 		return nil, err
 	}
+	// The Shortlists they and those leads were chosen for, with the notes.
+	if err := deleteSubjectListMemberships(ctx, tx, contactID, wiped); err != nil {
+		return nil, err
+	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {
 		return nil, err
 	}

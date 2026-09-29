@@ -5,7 +5,6 @@ package collections
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -13,15 +12,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type memberRow struct {
-	// ID is the list_member row id for a static member, but the record's
-	// own id for a computed segment member (which owns no member row) — an
+	// ID is the list_member row id for a Shortlist member, but the record's
+	// own id for a Live List member (which owns no member row) — an
 	// overloaded identifier with no single entity kind, so it stays untyped.
 	ID     ids.UUID
 	ListID ids.ListID
@@ -31,44 +28,40 @@ type memberRow struct {
 	EntityID   ids.UUID
 	AddedBy    string
 	CreatedAt  time.Time
+	Note       *string
 }
 
-func (s *Store) ListMembers(ctx context.Context, listID ids.ListID, limit int, cursor string) ([]memberRow, storekit.Page, error) {
-	if err := auth.Require(ctx, "list", principal.ActionRead); err != nil {
-		return nil, storekit.Page{}, err
+// pageSize reads a limit of 0 as none named: the web routes and the agent tool
+// both send 0 when their caller names no limit, which asks for the default page.
+func pageSize(limit int) int {
+	if limit == 0 {
+		return storekit.ClampLimit(nil)
 	}
-	// The caller's page size reaches a make() capacity below, so it is
-	// bounded by the contract's CAP-PAGE ceiling here rather than trusted:
-	// the router binds this parameter without range validation, and the
-	// matched set is capped at PredicateRowLimit regardless, so a larger
-	// request could only ever buy an allocation nobody fills.
-	limit = storekit.ClampLimit(&limit)
-	// GetList is the module's one gated read of a list row — it takes the
-	// same auth.Require and ensureListVisible this endpoint owes, and maps a
-	// missing row to ErrNotFound so an unknown id answers 404 rather than
-	// falling through as an unclassified driver error. Its transaction has
-	// closed by the time it returns, which is what lets the dynamic branch
-	// resolve its vocabulary without one already open (see evaluateSegment).
+	return storekit.ClampLimit(&limit)
+}
+
+// ListMembers reads one page of a list's members that this caller may see.
+// Sharing a list never widens record visibility: a Shortlist member is shown
+// only when its record passes the reader's row scope, and a Live List is the
+// filter evaluated inside that scope, so two readers may see different pages
+// of one list.
+func (s *Store) ListMembers(ctx context.Context, listID ids.ListID, limit int, cursor string) ([]memberRow, storekit.Page, error) {
+	limit = pageSize(limit)
+	// GetList commits before the dynamic branch resolves its vocabulary, which
+	// opens a connection of its own (see evaluateSegment).
 	list, err := s.GetList(ctx, listID)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	// A dynamic segment has no explicit members: its membership IS the
-	// live evaluation of its stored filter through the ONE engine. That
-	// evaluation composes the caller's row-scope clause itself
-	// (Query.SelectIDs), so a team-scoped caller's segment excludes the
-	// records they cannot see — the same visibility law the static path
-	// enforces with its per-member probe.
 	if list.ListType == listTypeDynamic {
-		return s.evaluateSegment(ctx, listID, list.EntityType, list.Definition, limit, cursor)
+		return s.evaluateSegment(ctx, list, limit, cursor)
+	}
+	if err := auth.Require(ctx, list.EntityType, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
 	}
 	var out []memberRow
 	var page storekit.Page
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Re-probed inside the transaction that discloses the rows, so the
-		// gate and the disclosure read the same list. Only the dynamic path
-		// needs its gate to commit early, and paying that cost here would
-		// widen this one for nothing.
 		if err := ensureListVisible(ctx, tx, listID); err != nil {
 			return err
 		}
@@ -79,28 +72,40 @@ func (s *Store) ListMembers(ctx context.Context, listID ids.ListID, limit int, c
 	return out, page, err
 }
 
-// listStaticMembers reads the explicit members of a static list. A list
-// holds one entity_type (AddMember enforces it); every member is a row of
-// that table. The parent-list gate does not cover the members: without a
-// per-member row-scope filter a shared list would leak the existence of
-// records outside the caller's scope. So each member is disclosed only if
-// its target passes that table's visibility predicate (unbounded actors
-// get no filter).
+// visibleMemberClause is the row-scope test a Shortlist member's record must
+// pass for this reader, over list_member aliased lm: live, and inside the
+// reader's scope for the list's record type.
+func visibleMemberClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
+	scope, err := recordScope(ctx, entityType, "e", arg)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = lm.entity_id AND e.archived_at IS NULL AND %s)",
+		pgx.Identifier{entityType}.Sanitize(), scope), nil
+}
+
+// recordScope is the reader's row scope over a record of table aliased alias,
+// TRUE for a reader who sees every row: the empty clause is how auth says so,
+// not a missing predicate to be defaulted open.
+func recordScope(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
+	scope, err := auth.ScopeClauseFor(ctx, table, alias, arg)
+	if err != nil || scope != "" {
+		return scope, err
+	}
+	return "TRUE", nil
+}
+
+// listStaticMembers reads the members of a Shortlist this reader may see,
+// keyset-paged over the member row id.
 func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, listID ids.ListID, listEntityType string, limit int, cursor string) ([]memberRow, storekit.Page, error) {
-	var out []memberRow
-	var page storekit.Page
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	sql := fmt.Sprintf(`SELECT lm.id, lm.list_id, lm.entity_type, lm.entity_id, lm.added_by, lm.created_at
-		FROM list_member lm WHERE lm.list_id = $%d`, arg(listID))
-	scope, err := auth.ScopeClauseFor(ctx, listEntityType, "e", arg)
+	visible, err := visibleMemberClause(ctx, listEntityType, arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if scope != "" {
-		sql += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM %s e WHERE e.id = lm.entity_id AND %s)",
-			listEntityType, scope)
-	}
+	sql := fmt.Sprintf(`SELECT lm.id, lm.list_id, lm.entity_type, lm.entity_id, lm.added_by, lm.created_at, lm.note
+		FROM list_member lm WHERE lm.list_id = $%d AND %s`, arg(listID), visible)
 	if cursor != "" {
 		after, err := ids.Parse(cursor)
 		if err != nil {
@@ -113,133 +118,100 @@ func (s *Store) listStaticMembers(ctx context.Context, tx pgx.Tx, listID ids.Lis
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	defer rows.Close()
-	for rows.Next() {
+	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (memberRow, error) {
 		var m memberRow
-		if err := rows.Scan(&m.ID, &m.ListID, &m.EntityType, &m.EntityID, &m.AddedBy, &m.CreatedAt); err != nil {
-			return nil, storekit.Page{}, err
-		}
-		out = append(out, m)
-	}
-	if err := rows.Err(); err != nil {
+		err := rowScanMember(row, &m)
+		return m, err
+	})
+	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if len(out) > limit {
 		out = out[:limit]
-		page = storekit.Page{HasMore: true, NextCursor: out[limit-1].ID.String()}
+		return out, storekit.Page{HasMore: true, NextCursor: out[limit-1].ID.String()}, nil
 	}
-	return out, page, nil
+	return out, storekit.Page{}, nil
 }
 
-func (s *Store) AddMember(ctx context.Context, listID ids.ListID, entityType string, entityID ids.UUID) (memberRow, error) {
-	// The contract declares entity_id required, which is a claim only a check
-	// makes true: an absent key decodes to the zero UUID with no error, reaches
-	// the link-target gate below, matches nothing, and answers not-found for a
-	// record the caller never named. The guard is at the STORE entry, not in the
-	// handler, because this is the door every transport comes through.
-	if err := httperr.RequireBodyID(entityIDField, entityID); err != nil {
-		return memberRow{}, err
+// CountMembers answers how many members of the list this reader may see:
+// never the list's whole size, which would tell them how many records they
+// cannot see.
+func (s *Store) CountMembers(ctx context.Context, listID ids.ListID) (int, error) {
+	list, err := s.GetList(ctx, listID)
+	if err != nil {
+		return 0, err
 	}
-	if err := auth.Require(ctx, "list", principal.ActionUpdate); err != nil {
-		return memberRow{}, err
+	if list.ListType == listTypeDynamic {
+		engine, pred, err := s.liveFilter(ctx, list)
+		if err != nil {
+			return 0, err
+		}
+		var n int
+		err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+			n, err = engine.CountMatching(ctx, tx, pred)
+			return err
+		})
+		return n, err
 	}
-	actor, _ := principal.Actor(ctx)
-	var out memberRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureListVisible(ctx, tx, listID); err != nil {
-			return err
-		}
-		var listEntityType, listType string
-		if err := tx.QueryRow(ctx, `SELECT entity_type, list_type FROM list WHERE id = $1`, listID).
-			Scan(&listEntityType, &listType); err != nil {
-			return err
-		}
-		if listType != listTypeStatic {
-			return &BadInputError{Field: "list", Reason: "a dynamic segment computes its members; only static lists take them"}
-		}
-		if entityType != listEntityType {
-			return &BadInputError{Field: entityTypeField, Reason: "must match the list's entity_type " + listEntityType}
-		}
-		// The member reference is a READ of a row-scoped record (H1) — unlike
-		// applyTagTx's EnsureWritableLive, because membership is not rendered
-		// as an attribute of the record itself: adding it to this caller's own
-		// list does not change what a colleague reading the record sees, the
-		// way a tag on it would. list.update plus this caller's own row scope
-		// on the LIST already governs who may curate it.
-		if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
-			return err
-		}
-		row := tx.QueryRow(ctx, `
-			INSERT INTO list_member (list_id, entity_type, entity_id, added_by)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
-			RETURNING id, list_id, entity_type, entity_id, added_by, created_at`,
-			listID, entityType, entityID, actor.ID)
-		err := rowScanMember(row, &out)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("already a member: %w", apperrors.ErrConflict)
-		}
+	if err := auth.Require(ctx, list.EntityType, principal.ActionRead); err != nil {
+		return 0, err
+	}
+	var n int
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		visible, err := visibleMemberClause(ctx, list.EntityType, arg)
 		if err != nil {
 			return err
 		}
-		_, err = storekit.AuditEvent(ctx, tx, "update", "list", listID.UUID, map[string]any{
-			"added": map[string]any{"entity_type": entityType, "entity_id": entityID},
-		})
-		return err
+		return tx.QueryRow(ctx, fmt.Sprintf(
+			"SELECT count(*) FROM list_member lm WHERE lm.list_id = $%d AND %s", arg(listID), visible),
+			args...).Scan(&n)
 	})
-	return out, err
+	return n, err
 }
 
 func rowScanMember(row pgx.Row, m *memberRow) error {
-	return row.Scan(&m.ID, &m.ListID, &m.EntityType, &m.EntityID, &m.AddedBy, &m.CreatedAt)
+	return row.Scan(&m.ID, &m.ListID, &m.EntityType, &m.EntityID, &m.AddedBy, &m.CreatedAt, &m.Note)
 }
 
-// dynamicAddedBy marks a computed segment member: it was never explicitly
+// dynamicAddedBy marks a computed Live List member: it was never explicitly
 // added, so its provenance is the filter itself, not a user.
 const dynamicAddedBy = "dynamic"
 
-// evaluateSegment runs a dynamic list's stored filter through the ONE
-// engine and returns the matching visible records as members. SelectIDs
-// composes the caller's row-scope clause, so the result is already
-// existence-hidden to the caller's scope; the ids come back id-ordered,
-// which the members endpoint paginates by keyset over the entity id (a
-// computed member carries no member-row id of its own, so the record's
-// own id IS its stable member identifier).
-//
-// The engine is resolved BEFORE the transaction below opens, never
-// inside it: SegmentEngine reaches the field catalog, which opens its own
-// transaction against this same store's pool, and a store-scoped
-// transaction already open cannot wait on a second connection from that
-// same pool without risking a deadlock under load.
-func (s *Store) evaluateSegment(ctx context.Context, listID ids.ListID, listEntityType string, definition map[string]any, limit int, cursor string) ([]memberRow, storekit.Page, error) {
-	engine, ok, err := s.SegmentEngine(ctx, listEntityType)
+// liveFilter resolves a Live List's engine and decoded filter. The engine is
+// resolved BEFORE any transaction opens: SegmentEngine reaches the field
+// catalog, which opens its own transaction on this store's pool, and one
+// already held cannot wait on a second connection from the same pool without
+// risking a deadlock under load.
+func (s *Store) liveFilter(ctx context.Context, list listRow) (storekit.Query, storekit.Predicate, error) {
+	engine, ok, err := s.SegmentEngine(ctx, list.EntityType)
 	if err != nil {
-		return nil, storekit.Page{}, err
+		return storekit.Query{}, storekit.Predicate{}, err
 	}
 	if !ok {
 		// A stored list.entity_type outside the segment set is a schema
 		// invariant break, not a client error — surface it, never guess.
-		return nil, storekit.Page{}, fmt.Errorf("no dynamic segment engine for entity_type %q", listEntityType)
+		return storekit.Query{}, storekit.Predicate{}, fmt.Errorf("no dynamic segment engine for entity_type %q", list.EntityType)
 	}
-	// A stored definition that no longer decodes is a schema invariant break in
-	// the same class as the missing engine above, not a client error: the tree
-	// was compiled before it was stored, and the reader of this list sent only
-	// its id. Surfaced as its own error rather than as a field fault, so nobody
-	// is told to fix a `definition` they never sent.
-	pred, err := predicateFromDefinition(definition)
+	// A stored definition that no longer decodes is an invariant break in the
+	// same class: the tree was compiled before it was stored, and this reader
+	// sent only the list's id.
+	pred, err := predicateFromDefinition(list.Definition)
 	if err != nil {
-		return nil, storekit.Page{}, fmt.Errorf("stored definition for list %s: %w", listID, err)
+		return storekit.Query{}, storekit.Predicate{}, fmt.Errorf("stored definition for list %s: %w", list.ID, err)
 	}
-	var matched []ids.UUID
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var selectErr error
-		matched, selectErr = engine.SelectIDs(ctx, tx, pred, storekit.PredicateRowLimit)
-		return selectErr
-	})
+	return engine, pred, nil
+}
+
+// evaluateSegment reads one page of a Live List: the stored filter evaluated
+// in SQL inside the caller's row scope, keyset-paged over the record id, so
+// every page of a set of any size is complete.
+func (s *Store) evaluateSegment(ctx context.Context, list listRow, limit int, cursor string) ([]memberRow, storekit.Page, error) {
+	engine, pred, err := s.liveFilter(ctx, list)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-
 	var after *ids.UUID
 	if cursor != "" {
 		parsed, err := ids.Parse(cursor)
@@ -248,24 +220,52 @@ func (s *Store) evaluateSegment(ctx context.Context, listID ids.ListID, listEnti
 		}
 		after = &parsed
 	}
-
-	out := make([]memberRow, 0, limit)
-	var page storekit.Page
+	var matched []ids.UUID
+	var more bool
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var selectErr error
+		matched, more, selectErr = engine.SelectPage(ctx, tx, pred, after, limit)
+		return selectErr
+	})
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	out := make([]memberRow, 0, len(matched))
 	for _, entityID := range matched {
-		if after != nil && entityID.String() <= after.String() {
-			continue
-		}
-		if len(out) == limit {
-			page = storekit.Page{HasMore: true, NextCursor: out[limit-1].EntityID.String()}
-			break
-		}
 		out = append(out, memberRow{
-			ID:         entityID,
-			ListID:     listID,
-			EntityType: listEntityType,
-			EntityID:   entityID,
-			AddedBy:    dynamicAddedBy,
+			ID: entityID, ListID: list.ID, EntityType: list.EntityType, EntityID: entityID, AddedBy: dynamicAddedBy,
 		})
 	}
-	return out, page, nil
+	if more {
+		return out, storekit.Page{HasMore: true, NextCursor: out[len(out)-1].EntityID.String()}, nil
+	}
+	return out, storekit.Page{}, nil
+}
+
+// MemberFilter resolves a list into the narrowing a record list read applies
+// for its list_id: a Shortlist's chosen members, or a Live List's filter. The
+// list must be one the caller may find (else ErrNotFound) and of the read's
+// record type. The narrowing carries no row scope; the read applies its own.
+func (s *Store) MemberFilter(ctx context.Context, listID ids.UUID, entityType string) (storekit.ListMemberFilter, error) {
+	list, err := s.GetList(ctx, ids.From[ids.ListKind](listID))
+	if err != nil {
+		return nil, err
+	}
+	if list.EntityType != entityType {
+		return nil, &BadInputError{Field: listIDField, Reason: "names a list of " + list.EntityType + ", not of " + entityType}
+	}
+	if list.ListType == listTypeDynamic {
+		engine, pred, err := s.liveFilter(ctx, list)
+		if err != nil {
+			return nil, err
+		}
+		return func(idColumn string, arg func(any) int) (string, error) {
+			return engine.MatchClause(pred, idColumn, arg)
+		}, nil
+	}
+	return func(idColumn string, arg func(any) int) (string, error) {
+		return fmt.Sprintf(`EXISTS (SELECT 1 FROM list_member lm
+			WHERE lm.list_id = $%d AND lm.entity_type = $%d AND lm.entity_id = %s)`,
+			arg(list.ID), arg(list.EntityType), idColumn), nil
+	}, nil
 }

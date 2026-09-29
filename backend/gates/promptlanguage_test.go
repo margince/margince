@@ -37,6 +37,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The heading a language rule opens with, read from the package that DEFINES
@@ -149,8 +150,8 @@ func everyModelRequest(t *testing.T) []requestSite {
 // requestSitesIn parses one file and reports every model.Request literal in it.
 func requestSitesIn(t *testing.T, path string) []requestSite {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	fset := gatekit.SourceFileSet()
+	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
@@ -415,8 +416,8 @@ func TestAModelRequestIsBuiltAsALiteral(t *testing.T) {
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return nil
 			}
-			fset := token.NewFileSet()
-			file, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			fset := gatekit.SourceFileSet()
+			file, parseErr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 			if parseErr != nil {
 				t.Fatalf("parsing %s: %v", path, parseErr)
 			}

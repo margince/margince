@@ -49,7 +49,7 @@ const passportOwner = "internal/modules/identity"
 // never one it built. identityFrom is the only way to obtain one honestly.
 func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	calls := 0
 	roots := []string{"internal", "cmd"}
 	for _, root := range roots {
@@ -58,7 +58,7 @@ func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
 				strings.HasSuffix(path, "_test.go") {
 				return err
 			}
-			parsed, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			parsed, parseErr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 			if parseErr != nil {
 				return parseErr
 			}
@@ -243,7 +243,7 @@ func splitTopLevel(s string) []string {
 // whole statements rather than lines.
 func sqlStringsIn(t *testing.T, path string, body []byte) []string {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), path, body, parser.SkipObjectResolution)
+	parsed, err := parser.ParseFile(gatekit.SourceFileSet(), path, body, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

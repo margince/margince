@@ -34,12 +34,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // testOnlySetterFloor guards against a vacuous pass. If the walk stops finding
@@ -54,14 +54,14 @@ const testOnlySetterFloor = 1
 func TestJobRunnerConfigIsNeverSetInProduction(t *testing.T) {
 	t.Parallel()
 	var offenders, permitted []string
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}
 		path = filepath.ToSlash(path)
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

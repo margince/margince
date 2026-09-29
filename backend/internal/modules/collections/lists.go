@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -31,6 +32,18 @@ type Store struct {
 	// nil is the port's pass-through, and a store without one filters on core
 	// fields alone.
 	catalog CatalogReader
+	// liveSteward is "this app_user may act" over app_user aliased u. The
+	// identity module owns that rule, so compose injects it. Without it no
+	// steward is judged gone, only a missing one.
+	liveSteward string
+}
+
+// WithLiveSteward injects the identity module's rule for a seat that may act,
+// rendered over app_user aliased u: it decides whether a list's steward is
+// still there.
+func (s *Store) WithLiveSteward(clause string) *Store {
+	s.liveSteward = clause
+	return s
 }
 
 // NewStore binds the store to the pool every read and write runs through.
@@ -100,6 +113,15 @@ const definitionField = "definition"
 // path, never prose.
 const entityIDField = "entity_id"
 
+// A list's own columns, as its reads, writes, patches and refusals spell them.
+const (
+	listIDField    = "list_id"
+	listTypeField  = "list_type"
+	purposeField   = "purpose"
+	teamIDField    = "team_id"
+	stewardIDField = "steward_id"
+)
+
 // memberEntityVocabulary renders the accepted set for the refusal message.
 // Derived from the same map the check uses, because a message that restates
 // the vocabulary drifts from it silently — the caller is then told a record
@@ -113,14 +135,36 @@ var memberEntityVocabulary = func() string {
 	return strings.Join(names, "|")
 }()
 
-const listColumns = `id, name, entity_type, list_type, definition, owner_id, team_id, created_at, updated_at, archived_at`
+// The three sharing settings a list may carry (list_sharing_check). Team is
+// the default: a list is made to be worked from together, and nobody should
+// have to find a setting to make it so.
+const (
+	sharingPrivate   = "private"
+	sharingTeam      = "team"
+	sharingWorkspace = "workspace"
+)
+
+// listObject is the list's RBAC object, audit entity type and table, and
+// sharingField the input and audit key of who may find it.
+const (
+	listObject   = "list"
+	sharingField = "sharing"
+)
+
+const listColumns = `l.id, l.name, l.entity_type, l.list_type, l.definition, l.owner_id, l.team_id,
+	l.purpose, l.steward_id, l.sharing, l.version, l.created_at, l.updated_at, l.archived_at,
+	(SELECT u.display_name FROM app_user u WHERE u.id = l.steward_id)`
+
+// selectList reads one list row by its id, bound through listByID.
+const selectList = "SELECT " + listColumns + " FROM list l WHERE l.id = @id"
+
+func listByID(id ids.ListID) pgx.StrictNamedArgs { return pgx.StrictNamedArgs{"id": id} }
 
 // catalogCap bounds the un-paginated catalog reads. Lists and tags are
 // workspace-curated vocabulary — tens of rows, not record data — which
-// is why the contract defines no cursor for them (the missing
-// pagination is filed as feedback). The cap keeps a runaway workspace
-// from turning the catalog read into an export; truncation is reported
-// through the page flag, never silently.
+// is why the contract defines no cursor for them. The cap keeps a runaway
+// workspace from turning the catalog read into an export; truncation is
+// reported through the page flag, never silently.
 const catalogCap = 1000
 
 type listRow struct {
@@ -131,35 +175,58 @@ type listRow struct {
 	Definition map[string]any
 	OwnerID    *ids.UserID
 	TeamID     *ids.TeamID
+	Purpose    *string
+	StewardID  *ids.UserID
+	Sharing    string
+	Version    int64
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	ArchivedAt *time.Time
+	// StewardName is the steward's display name.
+	StewardName *string
 }
 
 func scanList(r pgx.Row) (listRow, error) {
 	var l listRow
-	err := r.Scan(&l.ID, &l.Name, &l.EntityType, &l.ListType,
-		&l.Definition, &l.OwnerID, &l.TeamID, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt)
+	err := r.Scan(&l.ID, &l.Name, &l.EntityType, &l.ListType, &l.Definition, &l.OwnerID, &l.TeamID,
+		&l.Purpose, &l.StewardID, &l.Sharing, &l.Version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
+		&l.StewardName)
 	return l, err
 }
 
-func (s *Store) ListLists(ctx context.Context, entityType *string, archived storekit.ArchivedFilter) ([]listRow, bool, error) {
-	if err := auth.Require(ctx, "list", principal.ActionRead); err != nil {
+// ListFilter narrows the list library read.
+type ListFilter struct {
+	EntityType *string
+	ListType   *string
+	// Query matches name or purpose, case-insensitively.
+	Query    *string
+	Archived storekit.ArchivedFilter
+}
+
+// ListLists reads the lists this caller may find, by name.
+func (s *Store) ListLists(ctx context.Context, filter ListFilter) ([]listRow, bool, error) {
+	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
 		return nil, false, err
 	}
 	var out []listRow
-	truncated := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := []string{"true"}
-		if entityType != nil {
-			where = append(where, fmt.Sprintf("entity_type = $%d", arg(*entityType)))
+		if filter.EntityType != nil {
+			where = append(where, fmt.Sprintf("l.entity_type = $%d", arg(*filter.EntityType)))
 		}
-		if archived != storekit.IncludeArchived {
-			where = append(where, "archived_at IS NULL")
+		if filter.ListType != nil {
+			where = append(where, fmt.Sprintf("l.list_type = $%d", arg(*filter.ListType)))
 		}
-		scope, err := auth.ScopeClause(ctx, arg)
+		if filter.Query != nil && *filter.Query != "" {
+			pattern := arg("%" + storekit.EscapeLike(*filter.Query) + "%")
+			where = append(where, fmt.Sprintf("(l.name ILIKE $%[1]d OR l.purpose ILIKE $%[1]d)", pattern))
+		}
+		if filter.Archived != storekit.IncludeArchived {
+			where = append(where, "l.archived_at IS NULL")
+		}
+		scope, err := auth.ScopeClauseFor(ctx, listObject, "l", arg)
 		if err != nil {
 			return err
 		}
@@ -167,29 +234,21 @@ func (s *Store) ListLists(ctx context.Context, entityType *string, archived stor
 			where = append(where, scope)
 		}
 		rows, err := tx.Query(ctx,
-			"SELECT "+listColumns+" FROM list WHERE "+strings.Join(where, " AND ")+
-				fmt.Sprintf(" ORDER BY name LIMIT $%d", arg(catalogCap+1)), args...)
+			"SELECT "+listColumns+" FROM list l WHERE "+strings.Join(where, " AND ")+
+				fmt.Sprintf(" ORDER BY l.name, l.id LIMIT $%d", arg(catalogCap+1)), args...)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			l, err := scanList(rows)
-			if err != nil {
-				return err
-			}
-			out = append(out, l)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if len(out) > catalogCap {
-			out = out[:catalogCap]
-			truncated = true
-		}
-		return nil
+		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (listRow, error) { return scanList(row) })
+		return err
 	})
-	return out, truncated, err
+	if err != nil {
+		return nil, false, err
+	}
+	if len(out) > catalogCap {
+		return out[:catalogCap], true, nil
+	}
+	return out, false, nil
 }
 
 type CreateListInput struct {
@@ -199,94 +258,128 @@ type CreateListInput struct {
 	Definition map[string]any
 	OwnerID    *ids.UserID
 	TeamID     *ids.TeamID
+	Purpose    *string
+	// Sharing defaults to team; StewardID to the creator.
+	Sharing   string
+	StewardID *ids.UserID
 }
 
 func (s *Store) CreateList(ctx context.Context, in CreateListInput) (listRow, error) {
-	if err := auth.Require(ctx, "list", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, listObject, principal.ActionCreate); err != nil {
 		return listRow{}, err
 	}
+	if err := s.checkNewList(ctx, &in); err != nil {
+		return listRow{}, err
+	}
+	var out listRow
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var id ids.ListID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO list (name, entity_type, list_type, definition, owner_id, team_id, purpose, sharing, steward_id)
+			VALUES (@name, @entity_type, @list_type, @definition, @owner_id, @team_id, @purpose, @sharing, @steward_id)
+			RETURNING id`, pgx.StrictNamedArgs{
+			nameField: in.Name, entityTypeField: in.EntityType, listTypeField: in.ListType, definitionField: in.Definition,
+			ownerIDField: in.OwnerID, teamIDField: in.TeamID, purposeField: in.Purpose, sharingField: in.Sharing,
+			stewardIDField: in.StewardID,
+		}).Scan(&id); err != nil {
+			return err
+		}
+		var err error
+		if out, err = scanList(tx.QueryRow(ctx, selectList, listByID(id))); err != nil {
+			return err
+		}
+		if err := writeRevision(ctx, tx, out); err != nil {
+			return err
+		}
+		auditID, err := storekit.Audit(ctx, tx, "create", listObject, out.ID.UUID, nil, map[string]any{
+			nameField: out.Name, entityTypeField: out.EntityType, listTypeField: out.ListType, sharingField: out.Sharing,
+		})
+		if err != nil {
+			return err
+		}
+		return storekit.EmitEvent(ctx, tx, auditID, out.ID.UUID, crmcontracts.PublicEventListCreated{
+			RecordType: out.EntityType, ListType: out.ListType, Sharing: out.Sharing,
+		})
+	})
+	return out, err
+}
+
+// checkNewList fills a new list's defaults and refuses a list that could not
+// be evaluated or found: an unknown record type, a definition on a Shortlist
+// or none on a Live List, a filter the engine cannot compile, an unknown
+// sharing setting.
+func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
+	if strings.TrimSpace(in.Name) == "" {
+		return &BadInputError{Field: nameField, Reason: "a list needs a name"}
+	}
 	if !memberEntityTables[in.EntityType] {
-		return listRow{}, &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
+		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	if in.ListType == "" {
 		in.ListType = listTypeStatic
 	}
-	// A dynamic segment IS its definition; a static set must not carry
-	// one — the shape rules out a half-and-half list.
-	if in.ListType == listTypeDynamic && len(in.Definition) == 0 {
-		return listRow{}, &BadInputError{Field: definitionField, Reason: "a dynamic list needs a query definition"}
+	if in.Sharing == "" {
+		in.Sharing = sharingTeam
 	}
-	if in.ListType == listTypeStatic && len(in.Definition) > 0 {
-		return listRow{}, &BadInputError{Field: definitionField, Reason: "a static list carries no definition"}
+	if err := checkSharing(in.Sharing); err != nil {
+		return err
 	}
-	// A dynamic segment's definition is a stored filter the members
-	// endpoint later runs through the ONE engine. Validate it against the
-	// entity's closed vocabulary NOW so an unknown field or an over-deep
-	// tree is rejected at creation (422) rather than at read time — a
-	// list cannot store a filter it could never evaluate.
-	if in.ListType == listTypeDynamic {
-		if err := s.validateSegmentDefinition(ctx, in.EntityType, in.Definition); err != nil {
-			return listRow{}, err
+	if in.StewardID == nil {
+		in.StewardID = storekit.OwnerOrActor(ctx, nil)
+	}
+	if in.OwnerID == nil {
+		in.OwnerID = storekit.OwnerOrActor(ctx, nil)
+	}
+	switch in.ListType {
+	case listTypeDynamic:
+		if len(in.Definition) == 0 {
+			return &BadInputError{Field: definitionField, Reason: "a Live List needs a filter definition"}
 		}
+		return s.validateSegmentDefinition(ctx, in.EntityType, in.Definition)
+	case listTypeStatic:
+		if len(in.Definition) > 0 {
+			return &BadInputError{Field: definitionField, Reason: "a Shortlist carries no filter definition"}
+		}
+		return nil
+	default:
+		return &BadInputError{Field: listTypeField, Reason: "must be static|dynamic"}
+	}
+}
+
+func checkSharing(sharing string) error {
+	switch sharing {
+	case sharingPrivate, sharingTeam, sharingWorkspace:
+		return nil
+	default:
+		return &BadInputError{Field: sharingField, Reason: "must be private|team|workspace"}
+	}
+}
+
+// GetList reads one list the caller may find; one they may not answers
+// ErrNotFound, the same as one that does not exist.
+func (s *Store) GetList(ctx context.Context, id ids.ListID) (listRow, error) {
+	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
+		return listRow{}, err
 	}
 	var out listRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `
-			INSERT INTO list (name, entity_type, list_type, definition, owner_id, team_id)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			RETURNING `+listColumns,
-			in.Name, in.EntityType, in.ListType, in.Definition, in.OwnerID, in.TeamID)
 		var err error
-		if out, err = scanList(row); err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "create", "list", out.ID.UUID, nil, map[string]any{
-			"name": out.Name, "entity_type": out.EntityType, "list_type": out.ListType,
-		})
+		out, err = readVisibleList(ctx, tx, id)
 		return err
 	})
 	return out, err
 }
 
-func (s *Store) GetList(ctx context.Context, id ids.ListID) (listRow, error) {
-	if err := auth.Require(ctx, "list", principal.ActionRead); err != nil {
+// readVisibleList is the list read every entry point takes inside its own
+// transaction: the sharing probe, then the row.
+func readVisibleList(ctx context.Context, tx pgx.Tx, id ids.ListID) (listRow, error) {
+	if err := ensureListVisible(ctx, tx, id); err != nil {
 		return listRow{}, err
 	}
-	var out listRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureListVisible(ctx, tx, id); err != nil {
-			return err
-		}
-		var err error
-		out, err = scanList(tx.QueryRow(ctx, "SELECT "+listColumns+" FROM list WHERE id = $1", id))
-		return err
-	})
+	out, err := scanList(tx.QueryRow(ctx, selectList, listByID(id)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return listRow{}, apperrors.ErrNotFound
 	}
-	return out, err
-}
-
-func (s *Store) ArchiveList(ctx context.Context, id ids.ListID) (listRow, error) {
-	if err := auth.Require(ctx, "list", principal.ActionDelete); err != nil {
-		return listRow{}, err
-	}
-	var out listRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureListVisible(ctx, tx, id); err != nil {
-			return err
-		}
-		row := tx.QueryRow(ctx,
-			"UPDATE list SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+listColumns, id)
-		var err error
-		if out, err = scanList(row); errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound // already archived reads as absent
-		} else if err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", "list", id.UUID, nil, nil)
-		return err
-	})
 	return out, err
 }
 
@@ -346,10 +439,10 @@ func compileForValidation(engine storekit.Query, tree map[string]any, field stri
 	return err
 }
 
-// ensureListVisible is the list's own row-scope probe (owner_id scoped
-// like every other owner-carrying table; ownerless lists are shared).
+// ensureListVisible is the list's sharing probe: whether this caller may find
+// the list (platform/auth's list sharing predicate).
 func ensureListVisible(ctx context.Context, tx pgx.Tx, id ids.ListID) error {
-	return auth.EnsureVisible(ctx, tx, "list", id.UUID)
+	return auth.EnsureVisible(ctx, tx, listObject, id.UUID)
 }
 
 // BadInputError maps to a 422 at the transport.

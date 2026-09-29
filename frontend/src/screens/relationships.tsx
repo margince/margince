@@ -422,7 +422,7 @@ export function AddRelationshipAction({
         {t(copy.add)}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t(copy.add)}
         </Heading>
         <div className="form-stack">

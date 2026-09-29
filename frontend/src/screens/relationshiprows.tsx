@@ -328,7 +328,7 @@ export function RelationshipRows({
         }}
         labelledBy={headingId}
       >
-        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("rel.remove")}
         </Heading>
         <p className="relationshiprows-remove-lede">{t("rel.removeConfirm")}</p>

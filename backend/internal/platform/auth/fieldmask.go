@@ -13,6 +13,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,6 +21,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// CodeFieldMasked is the refusal code for a masked field named as a sort or
+// filter key. It lives here because the read paths that owe the refusal are
+// sibling modules that may not import one another, and a second spelling of the
+// code is a client that handles the refusal on one surface and not the next.
+const CodeFieldMasked = "field_masked"
 
 // MaskedFields answers the columns of one object the principal reads as
 // withheld on a row it may or may not change. An unbounded principal and the
@@ -31,6 +38,10 @@ import (
 // here is deciding what to null or leave out. Expanding at the one place they
 // all ask is what stopped four surfaces each answering a narrower question —
 // see the fieldmask package.
+//
+// A crossing is answered under the object ASKED FOR, not the one configured: a
+// partner's margin mask reaches the commission entry that republishes the tier,
+// and the commissions read asks about its own object.
 func MaskedFields(p principal.Principal, object string, writable bool) []string {
 	return fieldmask.Withheld(object, configuredMasks(p, object, writable))
 }
@@ -43,21 +54,29 @@ func configuredMasks(p principal.Principal, object string, writable bool) []stri
 	if Unbounded(p) {
 		return nil
 	}
+	// A condition lifts only where it can be ANSWERED. Write authority is a
+	// question about an owner and a grant, which a non-shareable object's rows
+	// do not carry, so a mask conditioned on it there names no row it could
+	// lift on and withholds whatever the caller passes. MaskExcludedClause
+	// resolves the same way: the wire rendering and the statement rendering of
+	// one mask that disagreed would ship the value the SQL withheld.
+	conditionLifts := writable && shareableObject(object)
 	var out []string
 	for _, m := range p.Permissions.FieldMasks {
-		if m.Object != object {
+		if m.Condition == principal.MaskOutsideWriteAuthority && conditionLifts {
 			continue
 		}
-		if m.Condition == principal.MaskOutsideWriteAuthority && writable {
-			continue
+		for _, field := range reachedFields(m, object) {
+			if !slices.Contains(out, field) {
+				out = append(out, field)
+			}
 		}
-		out = append(out, m.Field)
 	}
 	return out
 }
 
-// MasksAnyRowOf reports whether the principal carries a mask on the object at
-// all — the test a list applies before accepting a sort or filter over a
+// MasksAnyRowOf reports whether the principal carries a mask reaching the field
+// at all — the test a list applies before accepting a sort or filter over a
 // maskable column: ordering by a value the caller may not read on some rows
 // would disclose it through the order.
 func MasksAnyRowOf(ctx context.Context, object, field string) (bool, error) {
@@ -65,13 +84,10 @@ func MasksAnyRowOf(ctx context.Context, object, field string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if Unbounded(p) {
-		return false, nil
-	}
 	// Masked on ANY row means either condition applies somewhere, so the
-	// unconditioned set is the one to ask about: a mask that lifts where the
-	// caller may write still withholds everywhere they may not.
-	return fieldmask.Covers(object, configuredMasks(p, object, false), field), nil
+	// conditioned masks count too: one that lifts where the caller may write
+	// still withholds everywhere they may not.
+	return len(masksWithholding(p, object, field)) > 0, nil
 }
 
 // WritableSubset answers, in ONE statement, which of the given rows of a
@@ -149,7 +165,11 @@ func WritableSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.U
 // before.
 // It returns the subset it computed, so a caller that needs the same answer for
 // something else — the field masks conditioned on write authority are the case —
-// reads it rather than asking the database the same question twice.
+// reads it rather than asking the database the same question twice. The RETURN
+// is the authority answer and the FLAG is the edit affordance, and they differ
+// on an archived row: reading the return for an affordance offers an edit every
+// mutation refuses, reading the flag for a mask hides an owner's own figure the
+// moment they archive the record.
 func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	rows []T, id func(T) ids.UUID, set func(*T, bool),
 ) (map[ids.UUID]bool, error) {
@@ -164,17 +184,17 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	if err != nil {
 		return nil, err
 	}
-	// An ARCHIVED row is nobody's to change, whatever their authority over it.
-	// WritableSubset deliberately does not filter on archived_at — it answers
-	// the masks, which apply to a record a caller may still READ — but the
-	// mutations take the LIVE probe, so a flag that ignored the state would
-	// promise an edit every one of them refuses.
-	if err := excludeArchived(ctx, tx, table, writable); err != nil {
+	// An ARCHIVED row is nobody's to change, whatever their authority over it,
+	// so the flag says no. The answer this returns keeps it: a mask applies to
+	// a record the caller may still READ, and archiving is not a withdrawal of
+	// authority over the row.
+	archived, err := archivedAmong(ctx, tx, table, writable)
+	if err != nil {
 		return nil, err
 	}
 	for i := range rows {
-		may := writable[id(rows[i])]
-		set(&rows[i], may)
+		rowID := id(rows[i])
+		set(&rows[i], writable[rowID] && !archived[rowID])
 	}
 	return writable, nil
 }
@@ -265,7 +285,7 @@ func MaskedExpressionSQL(ctx context.Context, object, field, alias, expr string,
 // may READ one maskable column — the filter an AGGREGATE over that column
 // applies, so a sum never includes a value the row itself would withhold and
 // the drill-through that explains the sum shows exactly the rows inside it.
-// Returns ("", false) when no mask names the (object, field) pair for this
+// Returns ("", false) when no mask reaches the (object, field) pair for this
 // caller; "FALSE" when a mask withholds the column on every row. The alias
 // names the row like the caller's FROM clause does.
 func MaskExcludedClause(ctx context.Context, object, field, alias string, arg func(any) int) (string, bool, error) {
@@ -273,29 +293,13 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 	if err != nil {
 		return "", false, err
 	}
-	if Unbounded(p) {
-		return "", false, nil
-	}
 	clause, masked := "", false
-	for _, m := range p.Permissions.FieldMasks {
-		// A mask reaches this column when it WITHHOLDS it, not only when it
-		// names it: an aggregate over the amount is taken over figures the
-		// reader may not read if a mask on the ARR beside it is matched by
-		// spelling. MaskedColumnSQL and MaskedExpressionSQL read this too.
-		if m.Object != object || !fieldmask.Covers(object, []string{m.Field}, field) {
-			continue
-		}
+	// A mask reaches this column when it WITHHOLDS it, not only when it names
+	// it: an aggregate over the amount is taken over figures the reader may not
+	// read if a mask on the ARR beside it is matched by spelling.
+	for _, m := range masksWithholding(p, object, field) {
 		masked = true
-		if m.Condition != principal.MaskOutsideWriteAuthority {
-			// MaskAlways (and any future stricter condition this switch does
-			// not know) withholds the column on every row: fail closed.
-			return sqlNoRow, true, nil
-		}
-		// Write authority is the object's update verb AND the row arm — a
-		// caller whose role lost the verb owns no write authority anywhere,
-		// however many rows the row arm alone would name (the same pair
-		// WritableSubset asks).
-		if !p.Permissions.Allows(object, principal.ActionUpdate) {
+		if narrowsToNoRow(p, m, object) {
 			return sqlNoRow, true, nil
 		}
 		if clause == "" {
@@ -305,31 +309,91 @@ func MaskExcludedClause(ctx context.Context, object, field, alias string, arg fu
 	return clause, masked, nil
 }
 
-// excludeArchived clears the write flag on every row that is not live. ONE
-// statement for the page, like everything else on this path: it asks which of
-// the rows already marked writable are archived, and only those come back.
-func excludeArchived(ctx context.Context, tx pgx.Tx, table string, writable map[ids.UUID]bool) error {
-	live := make([]ids.UUID, 0, len(writable))
+// narrowsToNoRow reports whether this mask leaves the caller no row of the
+// object to aggregate, as against the rows they could write.
+//
+// Three ways in. MaskAlways — and any future stricter condition this does not
+// know — withholds the column on every row. Write authority is a question only
+// a shareable object's rows can answer, and a condition that cannot be answered
+// withholds rather than erroring the read, which is the direction that cannot
+// leak. And write authority is the object's update verb AND the row arm, so a
+// caller whose role lost the verb holds none anywhere, however many rows the
+// row arm alone would name.
+func narrowsToNoRow(p principal.Principal, m principal.FieldMask, object string) bool {
+	return m.Condition != principal.MaskOutsideWriteAuthority ||
+		!shareableObject(object) ||
+		!p.Permissions.Allows(object, principal.ActionUpdate)
+}
+
+// MaskExclusionClauses renders what an aggregate over the object must AND in to
+// leave out the rows whose columns this caller reads as withheld — every mask
+// REACHING the object, not only those configured on it, because a fact
+// republished on another record is disclosed by a total just as completely.
+//
+// At most one clause: the masks that reach one object narrow it the same two
+// ways, and the stricter of them decides. Nothing is bound until the answer is
+// known, so a caller's argument slice never carries a placeholder the rendered
+// statement does not name.
+func MaskExclusionClauses(ctx context.Context, object, alias string, arg func(any) int) ([]string, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if Unbounded(p) {
+		return nil, nil
+	}
+	reaching := false
+	for _, m := range p.Permissions.FieldMasks {
+		if !maskReaches(m, object) {
+			continue
+		}
+		if narrowsToNoRow(p, m, object) {
+			return []string{sqlNoRow}, nil
+		}
+		reaching = true
+	}
+	if !reaching {
+		return nil, nil
+	}
+	return []string{writeAuthorityPredicateAs(p, object, alias, arg)}, nil
+}
+
+// maskReaches reports whether the mask withholds any field of the object — its
+// own, or one its group names on another record.
+func maskReaches(m principal.FieldMask, object string) bool {
+	return len(reachedFields(m, object)) > 0
+}
+
+// archivedAmong answers which of the rows the caller holds authority over are
+// not live. ONE statement for the page, like everything else on this path, and
+// it reports rather than edits: the authority map its caller passes in is also
+// that caller's return value, and a helper that struck rows out of it would be
+// deciding the masks on its way past.
+func archivedAmong(ctx context.Context, tx pgx.Tx, table string,
+	writable map[ids.UUID]bool,
+) (map[ids.UUID]bool, error) {
+	authorized := make([]ids.UUID, 0, len(writable))
 	for id, may := range writable {
 		if may {
-			live = append(live, id)
+			authorized = append(authorized, id)
 		}
 	}
-	if len(live) == 0 {
-		return nil
+	archived := map[ids.UUID]bool{}
+	if len(authorized) == 0 {
+		return archived, nil
 	}
 	rows, err := tx.Query(ctx,
-		fmt.Sprintf(`SELECT id FROM %s WHERE id = ANY($1) AND archived_at IS NOT NULL`, table), live)
+		fmt.Sprintf(`SELECT id FROM %s WHERE id = ANY($1) AND archived_at IS NOT NULL`, table), authorized)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var id ids.UUID
 		if err := rows.Scan(&id); err != nil {
-			return err
+			return nil, err
 		}
-		writable[id] = false
+		archived[id] = true
 	}
-	return rows.Err()
+	return archived, rows.Err()
 }

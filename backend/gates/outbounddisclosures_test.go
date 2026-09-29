@@ -33,7 +33,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"testing"
 
@@ -103,7 +102,7 @@ func TestEveryOutboundIdentitySaysWhatItDiscloses(t *testing.T) {
 // cannot come to disagree about what it declares.
 func identityValues(t *testing.T) map[string]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), outboundIdentities, nil, 0)
+	file, err := gatekit.ParseFile(outboundIdentities, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", outboundIdentities, err)
 	}

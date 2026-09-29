@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // TestMain puts every gate back at the module root before any of them runs.
@@ -114,4 +115,23 @@ func trackedFiles(t *testing.T) []trackedFile {
 		files = append(files, trackedFile{path: path, symlink: strings.HasPrefix(meta, "120000")})
 	}
 	return files
+}
+
+// mayHoldFolded is the cheap question in front of a case-insensitive scan: it
+// is false only when text is ASCII and holds none of words in any case, so a
+// scan it skips could not have matched. Other text always goes to the scan,
+// because (?i) folds ſ to s and the Kelvin sign to k where ToLower does not.
+func mayHoldFolded(text string, words ...string) bool {
+	for i := 0; i < len(text); i++ {
+		if text[i] >= utf8.RuneSelf {
+			return true
+		}
+	}
+	folded := strings.ToLower(text)
+	for _, word := range words {
+		if strings.Contains(folded, word) {
+			return true
+		}
+	}
+	return false
 }

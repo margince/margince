@@ -468,9 +468,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     settings: (args) => (
       <SettingsScreen route={{ screen: "settings", ...args }} />
     ),
-    // The object rides the URL so a filter surface can be linked to; an
-    // unknown segment falls back to contacts inside the screen rather than
-    // rendering a page with no vocabulary to offer.
+    // The object or library section rides the URL, so each can be linked to.
     filters: ({ id }) => <FiltersScreen id={id} />,
     // No segments: the queue is one page, and a single scheduled message has
     // nothing to show that its row does not already carry.
@@ -491,6 +489,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
       <SearchScreen q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),
     tags: ({ id }) => <TagResultScreen tagID={id} />,
+    lists: ({ id }) => <FiltersScreen list={id ?? ""} />,
     share: ({ id, id2 }) => <ShareRoute id={id} id2={id2} />,
     onboarding: () => <OnboardingScreen />,
     client: () => <ClientSurfaceScreen />,

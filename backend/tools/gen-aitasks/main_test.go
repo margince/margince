@@ -158,9 +158,9 @@ func TestParseContractAcceptsTheShippedDeclaration(t *testing.T) {
 		t.Errorf("status = %q, want shipped", verdict.Status)
 	}
 
-	// A task is not one prompt: rate_extract has always had two.
-	if got := len(c.Tasks["rate_extract"].Sites); got != 2 {
-		t.Errorf("rate_extract declares %d sites, want 2 (pricing, fx)", got)
+	// A task is not one prompt: voice_build has always had several.
+	if got := len(c.Tasks["voice_build"].Sites); got != 4 {
+		t.Errorf("voice_build declares %d sites, want 4", got)
 	}
 	if got := len(c.Tasks["cold_start"].Sites); got != 4 {
 		t.Errorf("cold_start declares %d sites, want 4", got)

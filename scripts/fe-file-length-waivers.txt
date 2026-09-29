@@ -11,7 +11,7 @@
 # Format: <frozen-line-count> <path>
 979 frontend/src/screens/webhooks.tsx
 1003 frontend/src/app/shell.tsx
-1008 frontend/src/App.tsx
+1003 frontend/src/App.tsx
 1034 frontend/src/screens/automations.test.tsx
 1041 frontend/src/screens/installation-setup.tsx
 925 frontend/src/screens/auth.tsx
@@ -46,7 +46,7 @@
 1610 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
-1583 frontend/src/screens/leads.tsx
+1582 frontend/src/screens/leads.tsx
 2264 frontend/src/screens/company360.test.tsx
 2243 frontend/src/screens/companies.test.tsx
 2338 frontend/src/screens/companies.tsx
@@ -82,7 +82,7 @@
 630 frontend/src/screens/onboarding-connect-panels.tsx
 625 frontend/src/screens/retention.tsx
 626 frontend/src/screens/leads.list.tsx
-628 frontend/src/screens/partners.tsx
+617 frontend/src/screens/partners.tsx
 661 frontend/src/screens/record360/citations.tsx
 529 frontend/src/screens/contractform.tsx
 599 frontend/src/screens/users-admin.tsx
@@ -110,7 +110,6 @@
 793 frontend/src/screens/automations.tsx
 859 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
-712 frontend/src/screens/ai-routing.tsx
 855 frontend/src/screens/create.tsx
 815 frontend/src/design-system/decisioncard.tsx
 535 frontend/src/screens/companyheader.tsx

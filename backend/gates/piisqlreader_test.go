@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"regexp"
 	"strconv"
@@ -71,8 +70,7 @@ func withoutComments(literal string) string {
 // write-target and read-target scans run over these.
 func sqlLiterals(t *testing.T, path string) []string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
@@ -558,8 +556,7 @@ func unreadableWriteOn(statements []string, assembledFragment string) string {
 // node is the only place the fact that more follows is written down.
 func assembledSweepTargets(t *testing.T, path string) map[string]string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}

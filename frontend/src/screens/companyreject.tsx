@@ -130,7 +130,7 @@ export function CompanyRejectAction({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("company.reject")}
         </Heading>
         <p className="companyreject-confirm">

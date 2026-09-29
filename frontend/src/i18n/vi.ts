@@ -229,8 +229,6 @@ export const vi = {
     "Chỉ người có cả quyền đọc chẩn đoán AI và quyền đọc hạn mức AI mới xem được các tính năng đang hoạt động.",
   "aiAdmin.save": "Lưu hạn mức",
   "aiAdmin.cancel": "Hủy",
-  "aiAdmin.prospective":
-    "Mô hình được chính sách hiện tại chọn. Lời gọi thực tế có thể dùng dự phòng hoặc thất bại; đây không phải trạng thái nhà cung cấp hay bằng chứng mô hình đã được dùng.",
   "aiAdmin.calls": "Xem các lời gọi mô hình thực tế",
   "aiAdmin.website": "Đọc website",
   "aiAdmin.scans": "Quét tài khoản",
@@ -245,12 +243,10 @@ export const vi = {
   "aiAdmin.impact.fallback": "Chuỗi dự phòng đã đổi",
   "aiAdmin.impact.unconfigured": "Chưa cấu hình mô hình",
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
-  "aiAdmin.impact.same": "Giữ nguyên lựa chọn mô hình",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
   "aiAdmin.cloud": "Nhà cung cấp đám mây",
   "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
-  "aiAdmin.editBinding": "Sửa liên kết dùng chung",
   "aiAdmin.decisionFirst":
     "Mô hình quyết định trước ({provider} · {model} · {processing}) → sau đó {ladder}",
   "aiAdmin.decisionSkip.unbound":
@@ -259,9 +255,6 @@ export const vi = {
     "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
   "aiAdmin.decisionSkip.local_only":
     "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
-  "aiAdmin.effect": "Tác động",
-  "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
-  "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -1823,7 +1816,6 @@ export const vi = {
   "approval.kind.transcript_proposal":
     "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
-  "approval.kind.ai_model_rate_proposal": "Làm mới giá mô hình",
   "approval.kind.disqualify_lead": "Loại một khách hàng tiềm năng",
   "approval.kind.demote_lead": "Hoàn tác chuyển đổi lead",
   "approval.kind.advance_project_phase": "Chuyển dự án sang giai đoạn kế tiếp",
@@ -1873,10 +1865,6 @@ export const vi = {
   "approval.field.currency": "Tiền tệ",
   "approval.field.rate": "Tỷ giá mới",
   "approval.field.prior_rate": "Tỷ giá hiện tại",
-  "approval.field.provider": "Nhà cung cấp",
-  "approval.field.model": "Mô hình",
-  "approval.field.input_per_mtok": "Đầu vào, mỗi triệu token",
-  "approval.field.output_per_mtok": "Đầu ra, mỗi triệu token",
   "approval.field.tool": "Nó đang làm gì",
   "approval.field.observed": "Đã dùng",
   "approval.field.limit": "Giới hạn",
@@ -3064,6 +3052,15 @@ export const vi = {
   "bulk.refusal.required": "Liên hệ riêng tư phải có người phụ trách",
   "bulk.confirmReassign": "Đổi người phụ trách",
   "bulk.confirmArchive": "Lưu trữ {unit}",
+  "bulk.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
+  "bulk.titleAddToList":
+    "Th\u00eam {unit} \u0111\u00e3 ch\u1ecdn v\u00e0o {list}?",
+  "bulk.confirmAddToList": "Th\u00eam v\u00e0o danh s\u00e1ch",
+  "bulk.titleRemoveFromList":
+    "G\u1ee1 {unit} \u0111\u00e3 ch\u1ecdn kh\u1ecfi {list}?",
+  "bulk.confirmRemoveFromList": "G\u1ee1 kh\u1ecfi danh s\u00e1ch",
+  "bulk.stateListed": "C\u00f3 trong danh s\u00e1ch",
+  "bulk.stateNotListed": "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch",
   "bulk.doneContacts_one": "Đã thay đổi {count} liên hệ.",
   "bulk.doneContacts_other": "Đã thay đổi {count} liên hệ.",
   "bulk.doneCompanies_one": "Đã thay đổi {count} công ty.",
@@ -5936,7 +5933,7 @@ export const vi = {
   "overnightGrant.writeFailedTitle": "Thay đổi chưa được lưu",
   "overnightGrant.renewScope":
     "Margince nay làm được nhiều hơn so với khi bạn đồng ý. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
-  "aiHealth.title": "Các tầng mô hình",
+  "aiHealth.title": "Tình trạng gọi theo tầng",
   "aiHealth.sub":
     "Mỗi tầng mô hình có đang trả lời hay không. Một tầng đã ngừng và một tầng chỉ đang thận trọng trông giống hệt nhau ở mọi nơi khác — thư đã thu thập vẫn bị giữ lại trong cả hai trường hợp.",
   "aiHealth.noCalls": "không có mô hình nào được gọi trong {hours} giờ qua",
@@ -8730,16 +8727,10 @@ export const vi = {
     "Điền sẵn endpoint và mô hình của OpenRouter. JEV_COMPATIBLE_API_KEY nhận khóa OpenRouter của bạn.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
-  "aiRouting.lanes.title": "Các làn định tuyến",
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
-  "aiRouting.change": "Đổi",
-  "aiRouting.done": "Xong",
   "aiRouting.noKey": "Chưa có khoá",
-  "aiRouting.unpriced": "Chưa định giá",
-  "aiRouting.effect":
-    "Ràng buộc đã lưu sẽ đến mọi tiến trình trong vòng một phút, không cần khởi động lại.",
-  "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
+  "aiProviderKeys.title": "Nhà cung cấp",
   "aiProviderKeys.keyless": "Không cần khoá",
   "aiProviderKeys.field": "Khoá API",
   "aiProviderKeys.save": "Lưu khoá",
@@ -8765,7 +8756,7 @@ export const vi = {
   "aiProviderKeys.remove": "Xóa",
   "aiRouting.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy bản cài đặt này dùng những mô hình nào.",
-  "aiRouting.title": "Định tuyến mô hình",
+  "aiRouting.title": "Các tầng mô hình",
   "aiRouting.sheetAsOf":
     "Danh sách mô hình là bảng giá tính đến {date}. Mọi ID mới hơn mà nhà cung cấp của bạn phục vụ cũng dùng được — cứ gõ vào.",
   "aiRouting.sheetUnknown":
@@ -8774,15 +8765,8 @@ export const vi = {
   "aiRouting.unboundUnkeyed":
     "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy thêm khóa nhà cung cấp mô hình bên dưới, rồi ràng buộc các tầng tại đây. Bản triển khai cũng có thể khai báo ràng buộc đầu tiên tại seeds.ai_routing trong margince.yaml; mục này chỉ được đọc một lần khi tạo tổ chức.",
   "aiRouting.unboundKeyed":
-    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy bắt đầu với mặc định của nhà cung cấp đã có khóa, chỉnh sửa tùy ý rồi lưu.",
+    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy bắt đầu với mặc định của một nhà cung cấp; bạn có thể đổi từng tầng sau đó.",
   "aiRouting.unboundStart": "Bắt đầu với {provider}",
-  "aiRouting.profile.card": "Hồ sơ triển khai",
-  "aiRouting.profile.label": "Vị trí",
-  "aiRouting.profile.help":
-    "Nơi chạy suy luận. Sovereign nghĩa là không có dữ liệu ra ngoài: chỉ mô hình trên máy chủ của bạn, bị từ chối khi lưu chứ không phải ở lần gọi đầu tiên.",
-  "aiRouting.profile.eu_hosted": "Đặt tại EU",
-  "aiRouting.profile.sovereign": "Sovereign (không ra ngoài)",
-  "aiRouting.profile.cloud_frontier": "Cloud frontier (đám mây cao cấp)",
   "aiRouting.dimensions.label": "Độ rộng vector",
   "aiRouting.dimensions.help":
     "Để trống để dùng mặc định của nhà cung cấp. Giá trị ngoài khoảng 1 đến 2000 sẽ bị từ chối.",
@@ -8810,13 +8794,55 @@ export const vi = {
   "aiRouting.model.label": "Mô hình",
   "aiRouting.model.help":
     "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
-  "aiRouting.save": "Lưu định tuyến",
   "aiRouting.saving": "Đang lưu ràng buộc…",
-  "aiRouting.savedTitle": "Đã lưu định tuyến",
-  "aiRouting.saved": "Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.saveFailed": "Không thể lưu định tuyến",
   "aiRouting.adminOnly":
     "Đổi định tuyến mô hình cần quyền cập nhật định tuyến và đọc hạn mức.",
+  "aiProviderKeys.test": "Kiểm tra",
+  "aiProviderKeys.testing": "Đang kiểm tra khóa…",
+  "aiProviderKeys.connected": "Đã kết nối",
+  "aiProviderKeys.accepted": "Nhà cung cấp đã chấp nhận khóa.",
+  "aiProviderKeys.answered": "Máy chủ đã phản hồi.",
+  "aiProviderKeys.unconfirmed":
+    "Máy chủ đã phản hồi và không từ chối khóa. Máy chủ không thể xác nhận khóa hợp lệ; khóa sai sẽ lộ ra ở quyết định đầu tiên.",
+  "aiProviderKeys.testFailed": "Kiểm tra thất bại",
+  "aiProviderKeys.modelCount_one": "Có {count} mô hình",
+  "aiProviderKeys.modelCount_other": "Có {count} mô hình",
+  "aiProviderKeys.reason.authFailed":
+    "Nhà cung cấp từ chối khóa này. Hãy kiểm tra rồi thay khóa.",
+  "aiProviderKeys.reason.rateLimited":
+    "Nhà cung cấp đang giới hạn tốc độ với khóa này. Khóa có thể vẫn hợp lệ; hãy thử lại sau.",
+  "aiProviderKeys.reason.noKey": "Chưa lưu khóa nào cho nhà cung cấp này.",
+  "aiProviderKeys.reason.noEndpoint":
+    "Chưa có tầng nào dùng nhà cung cấp này nên không có máy chủ để kiểm tra. Hãy ràng buộc một tầng trước.",
+  "aiProviderKeys.reason.profileForbids":
+    "Hồ sơ triển khai này không cho phép truy cập nhà cung cấp này.",
+  "aiProviderKeys.reason.notPublished":
+    "Phiên bản này không thể kiểm tra nhà cung cấp này.",
+  "aiProviderKeys.reason.unreachable":
+    "Nhà cung cấp không phản hồi. Hãy kiểm tra máy chủ và mạng.",
+  "aiRouting.intro":
+    "Chọn nhà cung cấp và mô hình cho từng tầng, cho embeddings và, nếu muốn, cho mô hình quyết định. Ràng buộc đã lưu áp dụng cho mọi tiến trình trong vòng một phút, không cần khởi động lại.",
+  "aiRouting.profileLine":
+    "Hồ sơ triển khai: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một tầng được dùng và do bộ phận vận hành đặt.",
+  "aiRouting.edit": "Sửa",
+  "aiRouting.editTitle": "Sửa ràng buộc {lane}",
+  "aiRouting.saveBinding": "Lưu ràng buộc",
+  "aiRouting.keyMissing": "Thiếu khóa nhà cung cấp",
+  "aiRouting.keyMissingHelp":
+    "{provider} chưa có khóa. Hãy thêm khóa trong mục Nhà cung cấp trước khi ràng buộc mô hình.",
+  "aiRouting.conflictHelp":
+    "Trong lúc bạn sửa, một ràng buộc khác đã được lưu ở đây. Thay đổi của bạn vẫn còn trong biểu mẫu: lưu lại để thay thế, hoặc hủy để giữ bản đã lưu.",
+  "aiRouting.notListed":
+    "Không có trong danh sách mô hình công bố của {provider}. Bạn vẫn có thể lưu nếu nhà cung cấp phục vụ ID này.",
+  "aiRouting.median": "Trung vị {ms} ms",
+  "aiRouting.untracked": "Tình trạng gọi chỉ được theo dõi cho các tầng.",
+  "aiRouting.taskCount_one": "{count} tác vụ",
+  "aiRouting.taskCount_other": "{count} tác vụ",
+  "aiTasks.title": "Tác vụ AI",
+  "aiTasks.intro":
+    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",
+  "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
@@ -9837,6 +9863,157 @@ export const vi = {
   "filters.op.atLeast": "\u00edt nh\u1ea5t l\u00e0",
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
+  "filters.tab.leads": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
+  "filters.matchLeads_one": "{count} kh\u00e1ch ti\u1ec1m n\u0103ng kh\u1edbp",
+  "filters.matchLeads_other":
+    "{count} kh\u00e1ch ti\u1ec1m n\u0103ng kh\u1edbp",
+  "filters.date.on": "V\u00e0o m\u1ed9t ng\u00e0y",
+  "filters.date.daysAgo": "S\u1ed1 ng\u00e0y tr\u01b0\u1edbc",
+  "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
+  "filters.date.daysAgoCount":
+    "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
+  "filters.saveList": "L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
+  "filters.saveListTitle":
+    "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
+  "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
+  "lists.page": "Danh s\u00e1ch",
+  "lists.section.label": "Hi\u1ec3n th\u1ecb",
+  "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
+  "lists.section.lists": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.section.build": "T\u1ea1o b\u1ed9 l\u1ecdc",
+  "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.kind.shortlist": "Danh s\u00e1ch ch\u1ecdn",
+  "lists.type.contact": "Li\u00ean h\u1ec7",
+  "lists.type.company": "C\u00f4ng ty",
+  "lists.type.deal": "Giao d\u1ecbch",
+  "lists.type.lead": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
+  "lists.type.project": "D\u1ef1 \u00e1n",
+  "lists.sharing.private": "Ch\u1ec9 m\u00ecnh t\u00f4i",
+  "lists.sharing.team": "Nh\u00f3m c\u1ee7a t\u00f4i",
+  "lists.sharing.workspace": "To\u00e0n c\u00f4ng ty",
+  "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
+  "lists.sharingHint":
+    "Chia s\u1ebb danh s\u00e1ch kh\u00f4ng cho ai xem b\u1ea3n ghi m\u00e0 h\u1ecd v\u1ed1n kh\u00f4ng \u0111\u01b0\u1ee3c xem.",
+  "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
+  "lists.health.invalid":
+    "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.library.title": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.library.search": "T\u00ecm danh s\u00e1ch",
+  "lists.library.all": "T\u1ea5t c\u1ea3",
+  "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
+  "lists.library.empty":
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
+  "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
+  "lists.col.name": "T\u00ean",
+  "lists.col.kind": "Lo\u1ea1i",
+  "lists.col.recordType": "B\u1ea3n ghi",
+  "lists.col.count": "B\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c",
+  "lists.col.steward": "Ph\u1ee5 tr\u00e1ch",
+  "lists.col.sharing": "Chia s\u1ebb v\u1edbi",
+  "lists.noSteward": "Ch\u01b0a c\u00f3 ai",
+  "lists.newShortlist": "Danh s\u00e1ch ch\u1ecdn m\u1edbi",
+  "lists.newShortlistTitle": "T\u1ea1o danh s\u00e1ch ch\u1ecdn",
+  "lists.newShortlistOption":
+    "M\u1ed9t danh s\u00e1ch ch\u1ecdn m\u1edbi\u2026",
+  "lists.recordTypeLabel": "Lo\u1ea1i b\u1ea3n ghi",
+  "lists.name": "T\u00ean",
+  "lists.purpose": "D\u00f9ng \u0111\u1ec3 l\u00e0m g\u00ec",
+  "lists.create": "T\u1ea1o danh s\u00e1ch",
+  "lists.save": "L\u01b0u",
+  "lists.settings": "S\u1eeda danh s\u00e1ch",
+  "lists.settingsTitle": "S\u1eeda danh s\u00e1ch n\u00e0y",
+  "lists.archive": "L\u01b0u tr\u1eef danh s\u00e1ch",
+  "lists.restore": "Kh\u00f4i ph\u1ee5c",
+  "lists.unavailable":
+    "Danh s\u00e1ch ch\u01b0a \u0111\u01b0\u1ee3c b\u1eadt cho h\u1ec7 th\u1ed1ng n\u00e0y.",
+  "lists.gone":
+    "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
+  "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
+  "lists.head.facts":
+    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 chia s\u1ebb v\u1edbi {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
+  "lists.head.exported_one":
+    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.head.exported_other":
+    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.archived.title":
+    "Danh s\u00e1ch n\u00e0y \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
+  "lists.archived.body":
+    "Danh s\u00e1ch ch\u1ec9 \u0111\u1ecdc cho \u0111\u1ebfn khi \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c. Th\u00e0nh vi\u00ean v\u00e0 l\u1ecbch s\u1eed v\u1eabn \u0111\u01b0\u1ee3c gi\u1eef.",
+  "lists.invalid.title":
+    "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.invalid.body":
+    "M\u1ed9t tr\u01b0\u1eddng m\u00e0 b\u1ed9 l\u1ecdc d\u00f9ng \u0111\u00e3 thay \u0111\u1ed5i. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch c\u00f3 th\u1ec3 s\u1eeda b\u1ed9 l\u1ecdc trong tr\u00ecnh t\u1ea1o.",
+  "lists.ownerless.title":
+    "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
+  "lists.ownerless.body":
+    "Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch \u0111\u00e3 r\u1eddi \u0111i ho\u1eb7c ch\u01b0a t\u1eebng \u0111\u01b0\u1ee3c ch\u1ec9 \u0111\u1ecbnh. Ai c\u00f3 quy\u1ec1n s\u1eeda danh s\u00e1ch n\u00ean nh\u1eadn ph\u1ee5 tr\u00e1ch.",
+  "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
+  "lists.members.title": "Th\u00e0nh vi\u00ean",
+  "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
+  "lists.members.emptyLive":
+    "Kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o b\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c kh\u1edbp v\u1edbi b\u1ed9 l\u1ecdc c\u1ee7a danh s\u00e1ch.",
+  "lists.members.emptyShortlist":
+    "Ch\u01b0a ch\u1ecdn g\u00ec. Th\u00eam b\u1ea3n ghi t\u1eeb trang b\u1ea3n ghi ho\u1eb7c t\u1eeb m\u1ed9t l\u1ef1a ch\u1ecdn.",
+  "lists.members.projects":
+    "Danh s\u00e1ch d\u1ef1 \u00e1n hi\u1ec3n th\u1ecb th\u00e0nh vi\u00ean trong danh s\u00e1ch D\u1ef1 \u00e1n.",
+  "lists.members.whyColumn": "L\u00fd do",
+  "lists.members.why": "V\u00ec sao?",
+  "lists.members.more": "Xem th\u00eam",
+  "lists.history.title": "Nh\u1eefng thay \u0111\u1ed5i",
+  "lists.history.empty": "Ch\u01b0a c\u00f3 thay \u0111\u1ed5i n\u00e0o.",
+  "lists.history.loading": "\u0110ang t\u1ea3i l\u1ecbch s\u1eed",
+  "lists.history.when": "Khi n\u00e0o",
+  "lists.history.what": "N\u1ed9i dung",
+  "lists.history.who": "Ai",
+  "lists.history.added": "\u0110\u00e3 th\u00eam m\u1ed9t b\u1ea3n ghi",
+  "lists.history.removed": "\u0110\u00e3 g\u1ee1 m\u1ed9t b\u1ea3n ghi",
+  "lists.history.revised": "\u0110\u00e3 s\u1eeda danh s\u00e1ch",
+  "lists.history.reason.chosen": "th\u1ee7 c\u00f4ng",
+  "lists.history.reason.bulk":
+    "trong m\u1ed9t thay \u0111\u1ed5i h\u00e0ng lo\u1ea1t",
+  "lists.history.reason.archived":
+    "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
+  "lists.history.reason.restored":
+    "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c",
+  "lists.why.title": "V\u00ec sao {name}",
+  "lists.why.loading": "\u0110ang t\u00ecm l\u00fd do",
+  "lists.why.liveMember":
+    "C\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n \u0111ang ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
+  "lists.why.liveNotMember":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n kh\u00f4ng ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
+  "lists.why.notEligible":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch: b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef ho\u1eb7c kh\u00f4ng th\u1ec3 \u0111\u01b0a v\u00e0o danh s\u00e1ch.",
+  "lists.why.all": "T\u1ea5t c\u1ea3 c\u00e1c \u0111i\u1ec1u ki\u1ec7n",
+  "lists.why.any": "B\u1ea5t k\u1ef3 \u0111i\u1ec1u ki\u1ec7n n\u00e0o",
+  "lists.why.met": "Th\u1ecfa m\u00e3n",
+  "lists.why.unmet": "Kh\u00f4ng th\u1ecfa m\u00e3n",
+  "lists.why.unknown":
+    "Kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb \u0111\u1ec3 x\u00e9t",
+  "lists.why.value": "Hi\u1ec7n t\u1ea1i: {value}",
+  "lists.why.empty": "tr\u1ed1ng",
+  "lists.why.hidden": "Gi\u00e1 tr\u1ecb b\u1ecb \u1ea9n v\u1edbi b\u1ea1n",
+  "lists.why.daysAgo_one": "{count} ng\u00e0y tr\u01b0\u1edbc",
+  "lists.why.daysAgo_other": "{count} ng\u00e0y tr\u01b0\u1edbc",
+  "lists.why.chosen": "\u0110\u01b0\u1ee3c {who} ch\u1ecdn v\u00e0o {when}.",
+  "lists.why.someone": "ai \u0111\u00f3",
+  "lists.why.notChosen":
+    "B\u1ea3n ghi n\u00e0y kh\u00f4ng c\u00f3 trong danh s\u00e1ch ch\u1ecdn.",
+  "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
+  "lists.removeTitle":
+    "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
+  "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
+  "lists.noteHint":
+    "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
+  "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
+  "lists.onShortlists": "C\u00f3 trong danh s\u00e1ch ch\u1ecdn",
+  "lists.add": "Th\u00eam",
+  "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
+  "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
+  "lists.views.empty":
+    "Ch\u01b0a c\u00f3 b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u cho lo\u1ea1i b\u1ea3n ghi n\u00e0y.",
+  "lists.views.loading":
+    "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
+  "lists.history.someone": "Ai \u0111\u00f3",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",
@@ -9849,9 +10026,12 @@ export const vi = {
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
   "filters.dynamic":
     "\u0110\u1ed9ng \u2014 t\u00ednh l\u1ea1i sau m\u1ecdi s\u1ef1 ki\u1ec7n",
-  "filters.matchContacts": "{count} liên hệ khớp",
-  "filters.matchCompanies": "{count} c\u00f4ng ty kh\u1edbp",
-  "filters.matchDeals": "{count} deal kh\u1edbp",
+  "filters.matchContacts_one": "{count} li\u00ean h\u1ec7 kh\u1edbp",
+  "filters.matchContacts_other": "{count} li\u00ean h\u1ec7 kh\u1edbp",
+  "filters.matchCompanies_one": "{count} c\u00f4ng ty kh\u1edbp",
+  "filters.matchCompanies_other": "{count} c\u00f4ng ty kh\u1edbp",
+  "filters.matchDeals_one": "{count} deal kh\u1edbp",
+  "filters.matchDeals_other": "{count} deal kh\u1edbp",
   "filters.noFilterYet":
     "Th\u00eam \u0111i\u1ec1u ki\u1ec7n \u0111\u1ec3 xem k\u1ebft qu\u1ea3",
   "filters.countUnavailable":
@@ -10722,10 +10902,20 @@ export const vi = {
     "Thêm đơn giá ở Cài đặt → AI thì các lệnh gọi này sẽ bắt đầu báo chi phí.",
   "aiRates.priced": "Giá áp dụng từ {date}",
   "aiRates.proposed": "Giá của OpenRouter",
-  "aiRates.proposedDetail":
-    "Vừa đọc từ nhà cung cấp, không phải từ bảng giá của bạn. Khi bạn gán mô hình này, giá sẽ vào hộp phê duyệt để mức dùng và chi phí tính được sau khi bạn xác nhận.",
+  "aiRates.proposedDetail": "Giá của nhà cung cấp, chưa có trong bảng giá",
   "aiRates.proposedBasis":
-    "Khi gán, giá sẽ vào hộp phê duyệt; sau khi xác nhận, mức dùng và chi phí có thể tính theo giá đó.",
+    "Bấm Làm mới giá mô hình để ghi giá này vào bảng giá; sau đó mức dùng và chi phí sẽ tính theo giá đó.",
+  "aiRates.refresh.button": "Làm mới giá mô hình",
+  "aiRates.refresh.report": "Kết quả làm mới giá mô hình",
+  "aiRates.refresh.outcome.updated": "Đã cập nhật",
+  "aiRates.refresh.outcome.unchanged": "Đã mới nhất",
+  "aiRates.refresh.outcome.not_available": "Đặt thủ công",
+  "aiRates.refresh.outcome.unreachable": "Không truy cập được",
+  "aiRates.refresh.outcome.not_bound": "Không dùng",
+  "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
+  "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
+  "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
+  "aiRates.refresh.unchangedCount_other": "{count} giá đã mới nhất",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "contact.readings.title": "Vị thế của liên hệ này",

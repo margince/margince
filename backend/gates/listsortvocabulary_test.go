@@ -34,8 +34,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -164,7 +162,7 @@ func sharedColumnSorts(t *testing.T) map[string]string {
 func goSortVocabulary(t *testing.T, source, name string) []string {
 	t.Helper()
 	constants := gatekit.PackageStringConstants(t, filepath.Dir(source))
-	file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+	file, err := gatekit.ParseFile(source, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", source, err)
 	}

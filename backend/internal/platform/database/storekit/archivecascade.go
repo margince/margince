@@ -53,6 +53,7 @@ type ListMembership struct {
 	ListID    ids.UUID  `json:"list_id"`
 	AddedBy   string    `json:"added_by"`
 	CreatedAt time.Time `json:"created_at"`
+	Note      *string   `json:"note,omitempty"`
 }
 
 // TagAssignment is one taggable row an archive deleted.
@@ -88,17 +89,23 @@ func (c *ArchiveCascade) Retire(ctx context.Context, tx pgx.Tx, table, statement
 	return nil
 }
 
-// DropMemberships runs a DELETE on list_member that answers list_id, added_by
-// and created_at, and keeps what it deleted.
+// DropMemberships runs the owning module's statement that deletes a record's
+// list memberships and records each removal in list_member_event, and keeps
+// what it deleted. The statement binds @record, the record id, and @actor, the
+// acting principal, and answers list_id, added_by, created_at and note.
 func (c *ArchiveCascade) DropMemberships(ctx context.Context, tx pgx.Tx, statement string, id ids.UUID) error {
-	rows, err := tx.Query(ctx, statement, id)
+	actor, err := CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, statement, pgx.StrictNamedArgs{"record": id, "actor": actor})
 	if err != nil {
 		return fmt.Errorf("drop list memberships: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var m ListMembership
-		if err := rows.Scan(&m.ListID, &m.AddedBy, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ListID, &m.AddedBy, &m.CreatedAt, &m.Note); err != nil {
 			return fmt.Errorf("drop list memberships: %w", err)
 		}
 		c.Memberships = append(c.Memberships, m)

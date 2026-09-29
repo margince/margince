@@ -72,7 +72,7 @@ export function CaptureActivityDrawer({
       labelledBy="capture-pipeline-title"
       placement="right"
     >
-      <Heading size="large" id="capture-pipeline-title">
+      <Heading size="large" id="capture-pipeline-title" className="modal-title">
         {t("pipeline.title")}
       </Heading>
       <p className="capture-activity__drawer-sub t-sub">{t("pipeline.sub")}</p>

@@ -14,6 +14,11 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
+import {
+  KeyTestButton,
+  KeyTestOutcome,
+  useTestProviderKey,
+} from "./ai-provider-key-test";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import "./ai-settings.css";
 
@@ -165,6 +170,7 @@ function ProviderKeyRow({
   const [editing, setEditing] = useState(false);
   const save = useSetProviderKey();
   const remove = useRemoveProviderKey();
+  const test = useTestProviderKey();
 
   // The credential leaves React Query's memory as soon as the save settles.
   //
@@ -181,6 +187,15 @@ function ProviderKeyRow({
       save.reset();
     }
   }, [save.isSuccess, save.reset, save]);
+
+  // A test result describes the key that was held when it ran. Once that key
+  // is replaced or removed the result is about nothing on screen.
+  const { reset: resetTest } = test;
+  useEffect(() => {
+    if (save.isSuccess || remove.isSuccess) {
+      resetTest();
+    }
+  }, [save.isSuccess, remove.isSuccess, resetTest]);
 
   const busy = save.isPending || remove.isPending;
   // Trimmed here as well as on the server, so the button does not offer to
@@ -207,16 +222,13 @@ function ProviderKeyRow({
             </span>
           </span>
           <Badge tone={keyStateTone(status, keyless)}>
-            {keyless
-              ? t("aiProviderKeys.keyless")
-              : status.configured
-                ? t("aiProviderKeys.configured")
-                : status.optional
-                  ? t("aiProviderKeys.optional")
-                  : t("aiProviderKeys.absent")}
+            {keyStateLabel(status, keyless, t)}
           </Badge>
           {!keyless && (
             <span className="ai-lane-open">
+              {(status.configured || status.optional) && (
+                <KeyTestButton provider={status.provider} test={test} />
+              )}
               <Button
                 // Closing DROPS what was typed. The field holds a credential,
                 // and one left in state comes back the next time the row is
@@ -237,6 +249,7 @@ function ProviderKeyRow({
             </span>
           )}
         </div>
+        <KeyTestOutcome test={test} keyHeld={status.configured} />
         {editing && (
           <Field
             label={t("aiProviderKeys.field")}
@@ -360,6 +373,18 @@ function ProviderKeyRow({
       </ConfirmModal>
     </PanelRow>
   );
+}
+
+function keyStateLabel(
+  status: ProviderStatus,
+  keyless: boolean,
+  t: ReturnType<typeof useT>,
+): string {
+  if (keyless) return t("aiProviderKeys.keyless");
+  if (status.configured) return t("aiProviderKeys.configured");
+  return status.optional
+    ? t("aiProviderKeys.optional")
+    : t("aiProviderKeys.absent");
 }
 
 // A held key, or none needed, is settled. An optional key not held is no gap —

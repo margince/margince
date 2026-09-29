@@ -31,7 +31,6 @@ import (
 	"bufio"
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -41,6 +40,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // erasureColumnBaseline is what each registered table's uncleared text and
@@ -306,7 +307,7 @@ func sqlConstants(t *testing.T, dirs ...string) map[string]string {
 				continue
 			}
 			path := filepath.Join(dir, entry.Name())
-			parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			parsed, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				t.Fatalf("parse %s: %v", path, err)
 			}
@@ -436,7 +437,7 @@ func cascadeStatements(t *testing.T, consts map[string]string) []string {
 	t.Helper()
 	var out []string
 	for _, path := range erasureCascadeFiles {
-		parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		parsed, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parse %s: %v", path, err)
 		}

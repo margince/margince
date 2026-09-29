@@ -407,6 +407,8 @@ type ListLeadsInput struct {
 	// Sort is the contract's sort spec, validated against the lead
 	// vocabulary plus the workspace's active cf_ columns.
 	Sort *string
+	// Membership narrows to one list's members (list_id).
+	Membership storekit.ListMemberFilter
 }
 
 // leadUniqueViolation maps a lead write's unique-index violation to the

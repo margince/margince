@@ -305,7 +305,6 @@ func txHoldingReceivers(t *testing.T, roots []string) (map[string]map[string][]s
 	tree := moduleRoot(t)
 	out := map[string]map[string][]string{}
 	declared := map[string]map[string]map[string]bool{}
-	fset := token.NewFileSet()
 	for _, root := range roots {
 		err := filepath.WalkDir(filepath.Join(tree, root),
 			func(p string, d fs.DirEntry, err error) error {
@@ -313,7 +312,7 @@ func txHoldingReceivers(t *testing.T, roots []string) (map[string]map[string][]s
 					strings.HasSuffix(p, "_test.go") {
 					return err
 				}
-				file, parseErr := parser.ParseFile(fset, p, nil, 0)
+				file, parseErr := gatekit.ParseFile(p, 0)
 				if parseErr != nil {
 					return parseErr
 				}
@@ -684,7 +683,7 @@ func (s *Store) ClaimAndEnqueue(ctx context.Context, enqueue func(tx pgx.Tx) err
 
 func parseGateFixture(t *testing.T, src string) *ast.File {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "gatefixture.go", src, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "gatefixture.go", src, 0)
 	if err != nil {
 		t.Fatalf("parsing the gate fixture: %v\n%s", err, strings.TrimSpace(src))
 	}

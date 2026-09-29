@@ -120,7 +120,7 @@ export function ExportScenarioDialog({
 
   return (
     <Modal open onClose={onClose} labelledBy={headingId} size="wide">
-      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("aiexport.title")}
       </Heading>
       <div className="form-stack">

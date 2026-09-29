@@ -34,12 +34,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // noSendStatement is the contract's own sentence saying no invite goes out.
@@ -126,14 +126,13 @@ func TestTheBookingContractDoesNotPromiseAnInviteItCannotSend(t *testing.T) {
 // notice.
 func attendeeConsumers(t *testing.T) []string {
 	t.Helper()
-	fset := token.NewFileSet()
 	var found []string
 	err := filepath.Walk("internal", func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 			return err
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

@@ -22,14 +22,14 @@ package gates_test
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -82,7 +82,7 @@ func TestTheTwoResetsPreserveTheSameTables(t *testing.T) {
 // gate reads the declaration the product actually uses rather than a copy.
 func goPreservedTables(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), datasweepFile, nil, 0)
+	file, err := gatekit.ParseFile(datasweepFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", datasweepFile, err)
 	}
@@ -166,7 +166,7 @@ func constantString(t *testing.T, name string) string {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), "internal/compose/"+entry.Name(), nil, 0)
+		file, err := gatekit.ParseFile("internal/compose/"+entry.Name(), 0)
 		if err != nil {
 			continue
 		}

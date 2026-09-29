@@ -19,7 +19,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"slices"
 	"strings"
 	"testing"
@@ -115,7 +114,7 @@ func TestEveryImageShapeTheTreeUsesIsFollowed(t *testing.T) {
 // keysOfPlantedWriter runs the gate's own reader over one planted source file.
 func keysOfPlantedWriter(t *testing.T, body string) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", "package planted\n\nimport \""+storekitPath+"\"\n\n"+body, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "planted.go", "package planted\n\nimport \""+storekitPath+"\"\n\n"+body, 0)
 	if err != nil {
 		t.Fatalf("parsing the planted writer: %v", err)
 	}

@@ -209,17 +209,18 @@ func TestTheOfficialLaneDefaultsToTypeSafesEndpoint(t *testing.T) {
 	}
 }
 
-// A decision adapter publishes no model list, so the picker never dials one
-// for it; and a local one is not refused under sovereign as if it were cloud.
-func TestADecisionProviderIsNeverDialledForAList(t *testing.T) {
+// The profile is the only refusal made before a list is asked: a decision
+// adapter is listed at its host (decisionprobe.go) like any other, and a local
+// one is not refused under sovereign as if it were cloud.
+func TestOnlyTheProfileRefusesAListBeforeItIsAsked(t *testing.T) {
 	cases := []struct {
 		profile  Profile
 		provider string
 		want     ModelAvailability
 	}{
-		{ProfileCloudFrontier, providerJev, AvailabilityNotPublished},
+		{ProfileCloudFrontier, providerJev, AvailabilityOK},
 		{ProfileSovereign, providerJev, AvailabilityProfileForbids},
-		{ProfileSovereign, providerJevCompatible, AvailabilityNotPublished},
+		{ProfileSovereign, providerJevCompatible, AvailabilityOK},
 		{ProfileSovereign, providerOllama, AvailabilityOK},
 		{ProfileSovereign, providerGemini, AvailabilityProfileForbids},
 		{ProfileCloudFrontier, providerGemini, AvailabilityOK},

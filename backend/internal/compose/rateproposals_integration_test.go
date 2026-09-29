@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -31,7 +30,6 @@ import (
 func rateSvc(e *integration.Env) *approvals.Service {
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect(fxRateProposalKind, fxRateAcceptEffect(svc, deals.NewStore(e.DB(), DealsInstallation())))
-	svc.WithEffect(aiModelRateProposalKind, aiModelRateAcceptEffect(svc, ai.NewRateStore(e.DB())))
 	return svc
 }
 
@@ -65,26 +63,6 @@ func TestFxRateProposalApprovalAppliesRow(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM fx_rate WHERE from_currency='USD' AND rate=0.9`); n != 1 {
 		t.Fatalf("USD@0.9 rows = %d, want 1 (effect applied via SetFxRate)", n)
-	}
-}
-
-func TestModelRateProposalApprovalConvertsAndApplies(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
-
-	id := stageProposal(ctx, t, svc, aiModelRateProposalKind, aiModelRateTargetType, e.WS,
-		map[string]string{
-			"provider": "anthropic", "model_id": "m",
-			"input_per_mtok": "5", "output_per_mtok": "25",
-			"cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-		}, "anthropic/m input 5")
-	if _, err := svc.Decide(ctx, id, true, nil); err != nil {
-		t.Fatalf("approve: %v", err)
-	}
-	// USD/MTok 5 -> µUSD 5_000_000.
-	if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='anthropic' AND model_id='m' AND input_per_mtok_microusd=5000000`); n != 1 {
-		t.Fatalf("model row = %d, want 1 with 5_000_000 µUSD", n)
 	}
 }
 
@@ -193,96 +171,6 @@ func TestFxRateProposalApplyMatchingPriorApplies(t *testing.T) {
 	}
 }
 
-// The model-rate mirror of the fx precondition: a proposal whose diffed-
-// against price moved refuses with version skew, leaves the approval
-// approved-unconsumed, and writes nothing.
-func TestModelRateProposalApplyRefusesWhenPriorMoved(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
-	rates := ai.NewRateStore(e.DB())
-
-	if _, err := rates.SetModelRate(ctx, ai.SetModelRateInput{
-		Provider: "acme", ModelID: "m", InputUsd: "5", OutputUsd: "25", CacheReadUsd: "0", CacheWriteUsd: "0",
-	}); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	id := stageProposal(ctx, t, svc, aiModelRateProposalKind, aiModelRateTargetType, e.WS,
-		map[string]any{
-			"provider": "acme", "model_id": "m",
-			"input_per_mtok": "6", "output_per_mtok": "25", "cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-			"expected_prior": map[string]string{
-				"input_per_mtok": "5", "output_per_mtok": "25", "cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-			},
-		}, "acme/m")
-	// The sheet moves after the diff was staged.
-	if _, err := rates.SetModelRate(ctx, ai.SetModelRateInput{
-		Provider: "acme", ModelID: "m", InputUsd: "5.5", OutputUsd: "25", CacheReadUsd: "0", CacheWriteUsd: "0",
-	}); err != nil {
-		t.Fatalf("move: %v", err)
-	}
-	if _, err := svc.Decide(ctx, id, true, nil); !errors.Is(err, apperrors.ErrVersionSkew) {
-		t.Fatalf("approve err = %v, want ErrVersionSkew", err)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='acme' AND model_id='m' AND input_per_mtok_microusd=6000000`); n != 0 {
-		t.Fatal("stale model proposal applied despite moved prior")
-	}
-	if n := e.WsCount(t,
-		`SELECT count(*) FROM approval WHERE id=$1 AND status='approved' AND consumed_at IS NULL`, id); n != 1 {
-		t.Fatal("approval must stay approved-unconsumed after a refused apply")
-	}
-}
-
-// A new-model proposal (no expected_prior — also the shape of a pre-existing
-// pending payload) refuses once the model gets priced before approval.
-func TestModelRateProposalApplyRefusesWhenPriorAppeared(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
-
-	id := stageProposal(ctx, t, svc, aiModelRateProposalKind, aiModelRateTargetType, e.WS,
-		map[string]string{
-			"provider": "acme", "model_id": "new",
-			"input_per_mtok": "3", "output_per_mtok": "15", "cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-		}, "acme/new")
-	if _, err := ai.NewRateStore(e.DB()).SetModelRate(ctx, ai.SetModelRateInput{
-		Provider: "acme", ModelID: "new", InputUsd: "2", OutputUsd: "10", CacheReadUsd: "0", CacheWriteUsd: "0",
-	}); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	if _, err := svc.Decide(ctx, id, true, nil); !errors.Is(err, apperrors.ErrVersionSkew) {
-		t.Fatalf("approve err = %v, want ErrVersionSkew", err)
-	}
-}
-
-// The precondition compares in µUSD: a wire-scale spelling of the same prior
-// ("5" vs a re-rendered "5.00") still matches, and the apply proceeds.
-func TestModelRateProposalApplyMatchingPriorApplies(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
-
-	if _, err := ai.NewRateStore(e.DB()).SetModelRate(ctx, ai.SetModelRateInput{
-		Provider: "acme", ModelID: "m2", InputUsd: "5", OutputUsd: "25", CacheReadUsd: "0", CacheWriteUsd: "0",
-	}); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	id := stageProposal(ctx, t, svc, aiModelRateProposalKind, aiModelRateTargetType, e.WS,
-		map[string]any{
-			"provider": "acme", "model_id": "m2",
-			"input_per_mtok": "6", "output_per_mtok": "25", "cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-			"expected_prior": map[string]string{
-				"input_per_mtok": "5.00", "output_per_mtok": "25", "cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-			},
-		}, "acme/m2")
-	if _, err := svc.Decide(ctx, id, true, nil); err != nil {
-		t.Fatalf("approve: %v", err)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='acme' AND model_id='m2' AND input_per_mtok_microusd=6000000`); n != 1 {
-		t.Fatal("matching-prior model proposal must apply")
-	}
-}
-
 // An apply that crosses UTC midnight between the precondition read and the
 // write must refuse (the write is pinned to the day the precondition
 // sampled, so the append-forward guard fires) — never overwrite the new
@@ -317,45 +205,6 @@ func TestFxRateProposalApplyRefusesAcrossMidnight(t *testing.T) {
 		t.Fatal("the next day's scheduled row must survive a cross-midnight apply")
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM fx_rate WHERE from_currency='SEK' AND rate=1.2`); n != 0 {
-		t.Fatal("a cross-midnight apply must write nothing")
-	}
-}
-
-// The model-rate mirror of the cross-midnight refusal.
-func TestModelRateProposalApplyRefusesAcrossMidnight(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	seed := ai.NewRateStore(e.DB())
-	tomorrow := time.Now().UTC().Add(24 * time.Hour)
-	seedModelRate(ctx, t, seed, "mx", "5", time.Time{})
-	seedModelRate(ctx, t, seed, "mx", "9", tomorrow)
-
-	calls := 0
-	crossing := ai.NewRateStore(e.DB()).WithClock(func() time.Time {
-		calls++
-		if calls == 1 {
-			return time.Now().UTC()
-		}
-		return time.Now().UTC().Add(24 * time.Hour)
-	})
-	svc := approvals.NewService(e.DB())
-	svc.WithEffect(aiModelRateProposalKind, aiModelRateAcceptEffect(svc, crossing))
-
-	id := stageProposal(ctx, t, svc, aiModelRateProposalKind, aiModelRateTargetType, e.WS,
-		map[string]any{
-			"provider": "acme", "model_id": "mx",
-			"input_per_mtok": "6", "output_per_mtok": "25", "cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-			"expected_prior": map[string]string{
-				"input_per_mtok": "5", "output_per_mtok": "25", "cache_read_per_mtok": "0", "cache_write_per_mtok": "0",
-			},
-		}, "acme/mx")
-	if _, err := svc.Decide(ctx, id, true, nil); err == nil {
-		t.Fatal("cross-midnight apply succeeded, want append-forward refusal")
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='acme' AND model_id='mx' AND input_per_mtok_microusd=9000000`); n != 1 {
-		t.Fatal("the next day's scheduled row must survive a cross-midnight apply")
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM ai_model_rate WHERE provider='acme' AND model_id='mx' AND input_per_mtok_microusd=6000000`); n != 0 {
 		t.Fatal("a cross-midnight apply must write nothing")
 	}
 }

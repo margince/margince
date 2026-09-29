@@ -446,6 +446,10 @@ func pathNamesTheRetiredWord(path string) bool {
 // namesTheRetiredWord reports whether a line calls this record by a retired
 // name, once the words that merely resemble it are taken out.
 func namesTheRetiredWord(line string) bool {
+	// Both words, and every stem removed first, spell "person" or "people".
+	if !mayHoldFolded(line, "person", "people") {
+		return false
+	}
 	return theRetiredWord.MatchString(notThisRecord.ReplaceAllString(line, ""))
 }
 

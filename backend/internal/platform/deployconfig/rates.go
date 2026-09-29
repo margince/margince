@@ -15,15 +15,26 @@ import (
 // rates from (defaults to api.frankfurter.dev when empty — read as page text,
 // not parsed JSON); FxCurrencies is the candidate set the FX refresh proposes to
 // bootstrap an empty sheet (worker default: USD/GBP/CHF).
-// ModelPricing maps a provider to its pricing-page URL; absent ⇒ the model-cost
-// refresh no-ops. The FX refresh defaults both its source and candidate set, but
-// extracts with the same model lane, so it no-ops when that lane is absent
-// exactly as the model-cost refresh does. Neither refresh auto-applies — a human
+// The FX refresh defaults both its source and candidate set, and no-ops when the
+// model lane that extracts the page is absent. It never auto-applies — a human
 // approves every staged proposal.
 type RatesConfig struct {
-	Fx           string            `yaml:"fx_source"`
-	FxCurrencies []string          `yaml:"fx_currencies"`
+	Fx           string   `yaml:"fx_source"`
+	FxCurrencies []string `yaml:"fx_currencies"`
+	// ModelPricing is still decoded, and deliberately: the file is parsed with
+	// KnownFields(true), so deleting it would turn an upgrade into a refusal to
+	// boot. Model prices now come from the broker's own catalogue; values here
+	// are IGNORED and Warnings says so.
 	ModelPricing map[string]string `yaml:"model_pricing"`
+}
+
+// Warnings names the settings this block still accepts but no longer acts on,
+// one sentence each, for a role to log at boot.
+func (r RatesConfig) Warnings() []string {
+	if len(r.ModelPricing) == 0 {
+		return nil
+	}
+	return []string{"rates.model_pricing is ignored: model prices are refreshed from the provider's own catalogue with Refresh model prices under Settings. Remove it from margince.yaml."}
 }
 
 // validate fails closed on a malformed candidate set: every fx_currencies entry

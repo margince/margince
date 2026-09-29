@@ -3,10 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
+import { LaneRow } from "./ai-routing-lane";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The installation's tier→model binding: which vendor serves each cost rung,
@@ -38,6 +40,18 @@ const BOUND = {
     frontier: { provider: "gemini", model: "gemini-3.1-pro-preview" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
+};
+
+// Every bound rung answering, the state a working installation is in.
+const HEALTH: components["schemas"]["AiHealth"] = {
+  window_hours: 1,
+  rungs: Object.keys(BOUND.tiers).map((tier) => ({
+    tier,
+    healthy: true,
+    calls: 12,
+    failures: 0,
+    median_latency_ms: 840,
+  })),
 };
 
 // What the price sheet can cost a call on, and what each VENDOR says it serves.
@@ -90,6 +104,7 @@ const VENDOR_LIST: Record<string, unknown> = {
   },
   ollama: { provider: "ollama", models: [{ id: "gemma3:latest" }] },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
+  vllm: { provider: "vllm", models: [], unavailable: "unreachable" },
 };
 
 function story(
@@ -107,12 +122,7 @@ function story(
         return response;
       },
       "GET /ai/status": () => jsonResponse(aiStatus),
-      "POST /ai/routing/preview": () =>
-        jsonResponse({
-          current_version: "routing-v1",
-          features: status.features,
-          unused_tiers: ["frontier"],
-        }),
+      "GET /ai/health": () => jsonResponse(HEALTH),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-keys": () =>
         jsonResponse({
@@ -141,9 +151,9 @@ function story(
 }
 
 const meta: Meta<typeof AiRoutingCard> = {
-  title: "Settings/AI/Models and routing/Model routing",
+  title: "Settings/AI/Models and routing/Model tiers",
   component: AiRoutingCard,
-  subcomponents: { AdapterFields, EmbeddingWidthField },
+  subcomponents: { AdapterFields, EmbeddingWidthField, LaneRow },
 };
 export default meta;
 type Story = StoryObj<typeof AiRoutingCard>;
@@ -208,22 +218,21 @@ export const BoundDark: Story = {
   render: story(BOUND),
 };
 
-export const AdvancedBindings: Story = {
+// One lane's editor, open: provider, model and the vendor's own list. It owns
+// that one binding and saves it alone.
+export const EditingATier: Story = {
   render: story(BOUND),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByText(/advanced.*shared.*bindings/i),
-    );
-    await userEvent.click(
-      canvas.getAllByRole("button", { name: /change/i })[0],
+      (await canvas.findAllByRole("button", { name: /^edit$/i }))[0],
     );
   },
 };
 
 // A decision model bound in front of the ladder. The row offers only the
 // adapters that answer a decision, and says where the bound one processes text
-// from the server's own reading, which the features above repeat per activity.
+// from the server's own reading.
 const DECISION = {
   provider: "jev_compatible",
   model: "typesafe/jev-1.13",
@@ -243,10 +252,4 @@ export const DecisionModel: Story = {
       },
     })),
   }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByText(/advanced.*shared.*bindings/i),
-    );
-  },
 };

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
 import {
   installFetchStub,
@@ -87,9 +88,13 @@ function Dialog({
 /** Choose "A deal", then search for one by name. */
 async function searchForADeal(canvasElement: HTMLElement, term: string) {
   const body = within(canvasElement.ownerDocument.body);
-  await userEvent.click(await body.findByRole("radio", { name: /A deal/ }));
+  await userEvent.click(
+    await body.findByRole("radio", {
+      name: (name) => name.startsWith(en["docs.add.aDeal"]),
+    }),
+  );
   await userEvent.type(
-    await body.findByRole("searchbox", { name: /Search this account/ }),
+    await body.findByRole("searchbox", { name: en["docs.add.dealSearch"] }),
     term,
   );
 }

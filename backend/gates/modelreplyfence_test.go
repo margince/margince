@@ -31,7 +31,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"slices"
@@ -185,7 +184,6 @@ var replyParamNames = []string{"reply", "raw", "text", "modelText", "content", "
 // Production files only: a _test.go file may unmarshal a literal on purpose.
 func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
 	sites := map[string]bool{}
 	// internal/, not internal/compose. The first version of this census walked
 	// compose alone and so never saw the agent loop's own step parser, which
@@ -202,7 +200,7 @@ func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		file, parseErr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if parseErr != nil {
 			// FAIL, never skip: a file this gate cannot read is a file it cannot
 			// clear, and treating it as clean is the under-recognition this
@@ -636,7 +634,7 @@ func ParseSomething(reply string) error {
 ` + funcBody + `
 }
 `
-			fset := token.NewFileSet()
+			fset := gatekit.SourceFileSet()
 			file, err := parser.ParseFile(fset, "p.go", src, parser.SkipObjectResolution)
 			if err != nil {
 				t.Fatalf("parsing the planted source: %v", err)

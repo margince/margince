@@ -104,7 +104,7 @@ UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -137,7 +137,7 @@ check: ## The merge gate: everything a PR must pass
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: vet/lint/arch-lint/test/test-extensions (-j4)"
-	$(MAKE) -j4 vet lint arch-lint test test-extensions
+	$(MAKE) -j4 test lint vet arch-lint test-extensions
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
@@ -206,7 +206,12 @@ vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# is excluded there and read here and nowhere else.
 	$(GOWORK_COMPOSED) $(GO) vet ./...
 
-test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+# The two passes are separate targets so `-j4` runs them side by side: the
+# uncached gates package is the longest single leg of the gate, and queued
+# behind the cached pass it put that pass's whole wall time on the critical path.
+test: test-uncached test-cached ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+
+test-cached: composition
 	# ./... covers UNCACHED_TEST_PKGS too, and the result it computes for them
 	# is thrown away by the uncached pass seconds later. That wasted pass was
 	# the single biggest line in the gate: 316 s of a 648 s check-backend, all
@@ -236,6 +241,8 @@ test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PK
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
 	$(GOWORK_COMPOSED) $(GO) test ./tools/...
+
+test-uncached: composition
 	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects
 	# are files outside the package, so a green here can otherwise be replayed
 	# over a tree that has since changed. Verified once from the other end —

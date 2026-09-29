@@ -38,7 +38,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -273,7 +272,7 @@ func readIntegrationFixtures(
 	scopes := map[string]string{}
 	files := map[string][]*ast.File{}
 	suiteSet := map[string]bool{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 
 	err := filepath.Walk(integrationSuiteRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -282,7 +281,7 @@ func readIntegrationFixtures(
 		if info.IsDir() || !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		parsed, perr := parser.ParseFile(fset, path, nil, 0)
+		parsed, perr := gatekit.ParseFile(path, 0)
 		if perr != nil {
 			return perr
 		}

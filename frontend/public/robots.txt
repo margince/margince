@@ -1,9 +1,15 @@
-# Margince is a private CRM served only to authenticated users; nothing here is
-# meant for a search index. This file tells a COMPLIANT crawler not to fetch the
-# pages; the X-Robots-Tag: noindex header in nginx.conf is what de-indexes a
-# crawler that fetches anyway (and covers non-HTML). The two do not fully layer:
-# a crawler that obeys this file never reads the noindex, so a bare URL-only
-# listing from an external link stays possible — acceptable here, since the only
-# fetchable page is a login screen with no snippet.
+# A shared app link is / plus a #/ fragment no fetcher sends, so a preview reads
+# only the static shell; api paths answer them as any anonymous client.
+User-agent: Twitterbot
+User-agent: LinkedInBot
+User-agent: Slackbot-LinkExpanding
+User-agent: facebookexternalhit
+User-agent: Discordbot
+User-agent: TelegramBot
+User-agent: WhatsApp
+User-agent: SkypeUriPreview
+User-agent: MicrosoftPreview
+Allow: /
+
 User-agent: *
 Disallow: /

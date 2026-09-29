@@ -45,6 +45,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -119,7 +121,7 @@ func captureConcernKinds(t *testing.T) map[string]bool {
 // shorten this side of the census, and a short side reads as agreement.
 func captureConcernKindsIn(t *testing.T, source string) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), source, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(source, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s for its concern vocabulary: %v", source, err)
 	}
@@ -180,7 +182,7 @@ func concernNamed(spec *ast.ValueSpec) bool {
 // which is the shape where both directions pass and neither was checked.
 func watchedConcernKinds(t *testing.T) map[string]bool {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), watchedConcernSource, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(watchedConcernSource, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s for the conditions it draws: %v", watchedConcernSource, err)
 	}

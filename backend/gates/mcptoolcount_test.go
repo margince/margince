@@ -71,7 +71,13 @@ const clientToolCeiling = 100
 //
 // bulk_update_records is one tool for three record types, both verbs and both
 // steps; at 78 it leaves 22 of a client's 100 slots for other servers.
-const publishedToolCeiling = 78
+//
+// read_lists and change_lists raise it to 80. Lists are a new record surface
+// that an agent must be able to find, explain and curate, and twelve list
+// operations ride those two tools as modes. They are two and not one because
+// one verb spends one scope: an agent granted only read must still read lists.
+// That leaves 20 of a client's 100 slots.
+const publishedToolCeiling = 80
 
 type mcpInfoFile struct {
 	Totals struct {

@@ -518,12 +518,10 @@
    lightbox — so one of the three would be the one that went stale. This clears
    every one of them, and what it costs is a title that wraps a word early.
 
-   Three selectors, because "the dialog's first line" has three shapes: the box
-   itself, a head band, and a head band whose first child is a box pairing the
-   title with a subtitle (the meeting brief). Deliberately not a descendant
-   combinator inside the band — that would reach a heading further down it,
-   which is nowhere near the control and would be indented for nothing. */
+   Not a descendant combinator inside the band: it would indent a heading
+   further down, nowhere near the control. */
 .modal > :is(h1, h2, h3, .modal-title):first-child,
+.modal > .form-stack > :is(h1, h2, h3):first-child,
 .modal > .drawer-head > :is(h1, h2, h3, .modal-title):first-child,
 .modal
   > .drawer-head
@@ -678,6 +676,9 @@
    nothing to pay it, and its content sat flush against the drawer's edge. */
 .modal-drawer-wide:not(:has(> .drawer-head)) {
   padding: var(--space-5);
+}
+.modal-drawer:not(.modal-drawer-wide) > .drawer-head {
+  margin-bottom: var(--space-3);
 }
 .modal-drawer-wide > .drawer-head {
   position: sticky;

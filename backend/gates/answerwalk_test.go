@@ -14,7 +14,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"regexp"
@@ -106,7 +105,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err
 			}
-			file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}
@@ -165,7 +164,7 @@ func TestTheAnswerWalkCensusFindsAPlantedBypass(t *testing.T) {
 			"AND r.direction IS DISTINCT FROM 'inbound'`\n",
 	}
 	for name, source := range planted {
-		file, err := parser.ParseFile(token.NewFileSet(), name+".go", source, 0)
+		file, err := parser.ParseFile(gatekit.SourceFileSet(), name+".go", source, 0)
 		if err != nil {
 			t.Fatalf("parsing the planted %s walk: %v", name, err)
 		}
@@ -175,7 +174,7 @@ func TestTheAnswerWalkCensusFindsAPlantedBypass(t *testing.T) {
 	}
 	inboundOnly := "package p\nconst q = `SELECT 1 FROM activity n WHERE n.thread_key = a.thread_key " +
 		"AND n.direction = 'inbound'`\n"
-	file, err := parser.ParseFile(token.NewFileSet(), "inbound.go", inboundOnly, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "inbound.go", inboundOnly, 0)
 	if err != nil {
 		t.Fatalf("parsing the inbound walk: %v", err)
 	}

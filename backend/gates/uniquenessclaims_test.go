@@ -78,7 +78,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"maps"
 	"os"
@@ -87,6 +86,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // allClaims sweeps every claimed tree, failing loudly on a root that finds
@@ -349,7 +350,7 @@ const (
 	down = 4
 )
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", source, parser.ParseComments)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", source, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing the probe: %v", err)
 	}
@@ -462,8 +463,8 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 var shapeCensus = map[string]int{
 	"cannot-drift":   157,
 	"once":           159,
-	"one-of-a-kind":  156,
-	"is-every-named": 85,
+	"one-of-a-kind":  155,
+	"is-every-named": 84,
 	"only-noun":      9,
 	"no-second":      11,
 	"never-twice":    7,
