@@ -197,6 +197,17 @@ export const InlineVerbsWiderThanTheHeader: Story = {
   },
 };
 
+export const NarrowInlineActionsWithExplanation: Story = {
+  ...InlineVerbsWiderThanTheHeader,
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: 390 }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
 // PipelineBoard inside ListSurface (design-system/listsurface.tsx) — the same
 // shell the record tables render into, so the board's header, count and tools
 // row read exactly as a table's would. Four open stages plus one won stage,

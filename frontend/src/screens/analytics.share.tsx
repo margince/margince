@@ -36,7 +36,8 @@ type IssuedShare = Readonly<{ id: string; token: string; expiresAt: string }>;
 export function ForecastShareActions({
   target,
   scope,
-}: Readonly<{ target: string; scope: AnalyticsScope }>) {
+  snapshotId,
+}: Readonly<{ target: string; scope: AnalyticsScope; snapshotId?: string }>) {
   const canList = useCan("forecast", "create");
   const canIssue = useCanWrite("forecast", "create");
   if (!canList) {
@@ -44,7 +45,13 @@ export function ForecastShareActions({
   }
   return (
     <div className="analytics-share-actions">
-      {canIssue && <ShareViewButton target={target} scope={scope} />}
+      {canIssue && (
+        <ShareViewButton
+          target={target}
+          scope={scope}
+          snapshotId={snapshotId}
+        />
+      )}
       <SharedLinksButton canClose={canIssue} />
     </div>
   );
@@ -98,25 +105,27 @@ function ShareDialog({
   const [issued, setIssued] = useState<IssuedShare | null>(null);
 
   const create = useMutation({
-    mutationFn: async () => {
-      // Resolved INSIDE the mutation rather than closed over: a value read at
-      // render time is the one the last render saw, which is the wrong
-      // population exactly when a save races a scope change.
-      const named = writableScope(scope);
-      if (!named) {
-        throw new Error("a share names one population");
+    mutationFn: async (input: {
+      kind: ShareKind;
+      target: string;
+      scope: AnalyticsScope;
+      snapshotId?: string;
+    }) => {
+      const named = writableScope(input.scope);
+      if (!named || (input.kind === "snapshot" && !input.snapshotId)) {
+        throw new Error("Choose a supported population and captured snapshot.");
       }
       const { data, error } = await api.POST("/forecast/shares", {
         body: {
-          kind,
-          target,
+          kind: input.kind,
+          target: input.target,
           // The population the issuer was reading, not the installation. Fixed
           // to the workspace, this shared a wider set than the screen showed —
           // and a share is exactly where that matters, because the recipient
           // never sees the screen it was issued from.
           ...named,
-          ...(kind === "snapshot" && snapshotId
-            ? { snapshot_id: snapshotId }
+          ...(input.kind === "snapshot" && input.snapshotId
+            ? { snapshot_id: input.snapshotId }
             : {}),
         },
       });
@@ -145,7 +154,7 @@ function ShareDialog({
       onClose={onClose}
       title={t("analytics.share.title")}
       confirmLabel={t("analytics.share.create")}
-      onConfirm={() => create.mutate()}
+      onConfirm={() => create.mutate({ kind, target, scope, snapshotId })}
       pending={create.isPending}
       error={create.error ? problemMessageOf(create.error, t) : undefined}
     >

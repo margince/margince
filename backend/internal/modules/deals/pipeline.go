@@ -110,7 +110,7 @@ func (s *Store) GetPipeline(ctx context.Context, id ids.PipelineID) (crmcontract
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readPipeline(ctx, tx, id)
+		out, err = ReadPipelineTx(ctx, tx, id)
 		return err
 	})
 	return out, err
@@ -201,6 +201,14 @@ func (s *Store) DefaultPipeline(ctx context.Context) (crmcontracts.Pipeline, err
 
 // readPipeline is the single-row read every live-only caller uses: a
 // pipeline that has been archived reads as missing.
+// ReadPipelineTx shares the authorized live catalog read with transactional reporting.
+func ReadPipelineTx(ctx context.Context, tx pgx.Tx, id ids.PipelineID) (crmcontracts.Pipeline, error) {
+	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
+		return crmcontracts.Pipeline{}, err
+	}
+	return readPipeline(ctx, tx, id)
+}
+
 func readPipeline(ctx context.Context, tx pgx.Tx, id ids.PipelineID) (crmcontracts.Pipeline, error) {
 	return readPipelineWith(ctx, tx, id, storekit.LiveOnly)
 }
@@ -263,10 +271,10 @@ func readPipelineWith(
 
 // defaultStages is the seeded pipeline shape a fresh workspace gets.
 var defaultStages = []StageInput{
-	{Name: "Qualified", Position: 1, Semantic: "open", WinProbability: 10},
-	{Name: "Discovery", Position: 2, Semantic: "open", WinProbability: 25},
-	{Name: "Proposal", Position: 3, Semantic: "open", WinProbability: 50},
-	{Name: "Negotiation", Position: 4, Semantic: "open", WinProbability: 75},
+	{Name: "Qualified", Position: 1, Semantic: string(DealOpen), WinProbability: 10},
+	{Name: "Discovery", Position: 2, Semantic: string(DealOpen), WinProbability: 25},
+	{Name: "Proposal", Position: 3, Semantic: string(DealOpen), WinProbability: 50},
+	{Name: "Negotiation", Position: 4, Semantic: string(DealOpen), WinProbability: 75},
 	{Name: "Won", Position: 5, Semantic: "won", WinProbability: 100},
 	{Name: "Lost", Position: 6, Semantic: "lost", WinProbability: 0},
 }
@@ -311,7 +319,7 @@ func (s *Store) SeedPipelineTx(ctx context.Context, tx pgx.Tx, name string, open
 	stages := make([]StageInput, 0, len(open)+2)
 	for i, st := range open {
 		stages = append(stages, StageInput{
-			Name: st.Name, Position: i + 1, Semantic: "open", WinProbability: st.WinProbability,
+			Name: st.Name, Position: i + 1, Semantic: string(DealOpen), WinProbability: st.WinProbability,
 		})
 	}
 	stages = append(

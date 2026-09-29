@@ -39,6 +39,7 @@ type Config struct {
 	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
 	CompanyContext CompanyContext  `yaml:"company_context"`
+	Analytics      Analytics       `yaml:"analytics"`
 	Lists          Lists           `yaml:"lists"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
@@ -81,6 +82,10 @@ type Operations struct {
 // Lists switches Live Lists and Shortlists on. They are off until an operator
 // turns them on: the product is being built, and nothing an installation shows
 // should advertise an unfinished surface.
+type Analytics struct {
+	PerformanceEnabled bool `yaml:"performance_enabled"`
+}
+
 type Lists struct {
 	Enabled bool `yaml:"enabled"`
 }

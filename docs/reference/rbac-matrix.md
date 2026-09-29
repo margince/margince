@@ -109,8 +109,14 @@ changes none.
 | `product` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `project` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `relationship` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
+| `report_definition` | CRUD | CRUD | CRUD | CRUD | -R-- | -R-- |
+| `report_edition` | CRU- | CRU- | CRU- | CRU- | -R-- | -R-- |
+| `report_schedule` | CRUD | CRUD | CRUD | CRUD | -R-- | -R-- |
+| `reporting_credit` | -R-- | -R-- | -R-- | -R-- | -R-- | -R-- |
+| `reporting_framework` | -RU- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `retention_policy` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `role_admin` | CRUD | ---- | ---- | ---- | ---- | -R-- |
+| `sales_target` | CRU- | CRU- | CRU- | -R-- | -R-- | -R-- |
 | `saved_view` | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
 | `seat_usage` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
 | `signal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |

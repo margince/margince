@@ -53,9 +53,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 80 | 1746 | 1288 | 3551 | 10% | 19659 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 80 | 2585 | 1807 | 4908 | 14% | 18302 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 80 | — | 26626 | — | — | 81% | — | — | — |
+| `morning_brief` | 5 | 5 of 81 | 1746 | 1288 | 3551 | 10% | 19659 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 81 | 2585 | 1807 | 4908 | 14% | 18302 | 7 | 6 |
+| _whole served catalog's listing, for scale — no run is offered it_ | 81 | — | 27439 | — | — | 83% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 277 tokens, mean 332, across 80 served tools.
+Median 278 tokens, mean 338, across 81 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -138,9 +138,10 @@ a term in an addition.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1010 | — |
+| `run_report` | 1014 | — |
 | `send_company_email` | 823 | — |
 | `send_email` | 754 | — |
+| `compose_analytics_report` | 743 | — |
 | `preview_import` | 725 | — |
 | `list_records` | 721 | 2 scenarios |
 | `log_activity` | 677 | 3 scenarios |
@@ -150,6 +151,7 @@ a term in an addition.
 | `bulk_update_records` | 548 | — |
 | `read_lists` | 528 | — |
 | `forecast_readings` | 509 | — |
+| `read_reporting` | 506 | — |
 | `progress_deal` | 505 | — |
 | `resolve_entities` | 493 | — |
 | `query_workspace` | 484 | — |
@@ -157,7 +159,6 @@ a term in an addition.
 | `run_analytics_query` | 476 | — |
 | `forecast_movement` | 453 | — |
 | `advance_deal` | 446 | — |
-| `compose_analytics_report` | 440 | — |
 | `annotate_brief` | 417 | 2 scenarios |
 | `review_commitments` | 401 | — |
 | `prep_for_meeting` | 394 | — |

@@ -6946,6 +6946,407 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/reporting/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Durably pause every report schedule before rollout rollback. */
+        post: operations["pauseReportingSchedules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get reporting metrics */
+        get: operations["getReportingMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/evaluate.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluate reporting */
+        get: operations["exportReportingEvaluation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/editions/{id}/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export this edition's permitted frozen metrics and chart readings. */
+        get: operations["exportReportingEdition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluate reporting */
+        get: operations["evaluateReporting"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get reporting evidence */
+        get: operations["getReportingEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List reporting reports */
+        get: operations["listReportingReports"];
+        put?: never;
+        /** Create reporting report */
+        post: operations["createReportingReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get reporting report */
+        get: operations["getReportingReport"];
+        put?: never;
+        post?: never;
+        /** Archive reporting report */
+        delete: operations["archiveReportingReport"];
+        options?: never;
+        head?: never;
+        /** Update reporting report */
+        patch: operations["updateReportingReport"];
+        trace?: never;
+    };
+    "/analytics/reports/{id}/evaluation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Evaluate reporting report */
+        get: operations["evaluateReportingReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List reporting targets */
+        get: operations["listReportingTargets"];
+        put?: never;
+        /** Create reporting target */
+        post: operations["createReportingTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/targets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get reporting target */
+        get: operations["getReportingTarget"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update reporting target */
+        patch: operations["updateReportingTarget"];
+        trace?: never;
+    };
+    "/analytics/framework": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get reporting framework */
+        get: operations["getReportingFramework"];
+        /** Publish reporting framework */
+        put: operations["publishReportingFramework"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List reporting schedules */
+        get: operations["listReportingSchedules"];
+        put?: never;
+        /** Create reporting schedule */
+        post: operations["createReportingSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update reporting schedule */
+        patch: operations["updateReportingSchedule"];
+        trace?: never;
+    };
+    "/analytics/reports/{id}/editions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List reporting editions
+         * @description Pages contain at most five editions; each result is projected through current evidence permissions.
+         */
+        get: operations["listReportingEditions"];
+        put?: never;
+        /** Freeze reporting edition */
+        post: operations["freezeReportingEdition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/editions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get reporting edition */
+        get: operations["getReportingEdition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/editions/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get reporting edition evidence */
+        get: operations["getReportingEditionEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/editions/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare reporting editions */
+        get: operations["compareReportingEditions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** List reporting executions */
+        get: operations["listReportingExecutions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/executions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Get reporting execution */
+        get: operations["getReportingExecution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/executions/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry reporting execution */
+        post: operations["retryReportingExecution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/views": {
         parameters: {
             query?: never;
@@ -7441,7 +7842,8 @@ export interface paths {
          *     The drill-through rows reconcile exactly to the explained aggregate (AC-X1).
          *
          *     Query vocabulary: `by` names the plan's grouping dimensions and `agg` its aggregates
-         *     (`fn:field:alias` triplets); **every other query parameter is an equality predicate**
+         *     (`fn:field:alias` triplets). `handle_version`, `scope_kind`, `scope_id`,
+         *     `as_of` and `null` are reserved context keys. Remaining parameters are equality predicates
          *     from the report's closed field vocabulary — the group-key values of the explained row
          *     plus the plan's filters. An empty predicate value matches SQL NULL (the "no owner"
          *     group). An out-of-vocabulary key returns `422 code: report_field_not_allowed`.
@@ -30206,6 +30608,385 @@ export interface components {
          * @enum {string}
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
+        /** @enum {string} */
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing";
+        /** @enum {string} */
+        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading";
+        /** @enum {string} */
+        ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable";
+        ReportingScope: {
+            /** @enum {string} */
+            kind: "owner" | "team" | "workspace" | "managed_teams";
+            /** Format: uuid */
+            id?: string;
+            label?: string;
+        };
+        ReportingWindow: {
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+        };
+        ReportingSelection: {
+            scope: components["schemas"]["ReportingScope"];
+            /** Format: uuid */
+            pipeline_id?: string;
+            /** @enum {string} */
+            period: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+            interval?: components["schemas"]["ReportingWindow"];
+            /** @enum {string} */
+            target_basis: "month" | "fiscal_quarter";
+            /** @enum {string} */
+            close_window: "fiscal_quarter" | "all_open";
+            metrics: components["schemas"]["ReportingMetricID"][];
+            blocks: components["schemas"]["ReportingBlockKind"][];
+        };
+        ReportingContext: {
+            period_kind: string;
+            scope: components["schemas"]["ReportingScope"];
+            /** Format: uuid */
+            pipeline_id?: string;
+            population_fingerprint: string;
+            interval: components["schemas"]["ReportingWindow"];
+            target_interval?: components["schemas"]["ReportingWindow"];
+            close_interval?: components["schemas"]["ReportingWindow"];
+            timezone: string;
+            currency: string;
+            /** Format: date-time */
+            evaluated_at: string;
+            /** Format: date-time */
+            state_at: string;
+            /** Format: int64 */
+            framework_revision: number;
+            definition_version: string;
+            member_ids: string[];
+        };
+        ReportingCoverage: {
+            status: components["schemas"]["ReportingStatus"];
+            reason?: string;
+            /** Format: int64 */
+            eligible_count?: number;
+            /** Format: int64 */
+            priced_count?: number;
+            withheld: boolean;
+        };
+        ReportingEvidenceRef: {
+            metric: components["schemas"]["ReportingMetricID"];
+            context_id: string;
+            group_key?: string;
+            /** Format: date-time */
+            through?: string;
+        };
+        ReportingPoint: {
+            key: string;
+            label: string;
+            /** Format: double */
+            value: number | null;
+            /** Format: double */
+            comparison?: number | null;
+            /** Format: double */
+            target?: number | null;
+            /** Format: double */
+            upper?: number | null;
+            /** Format: int64 */
+            observations?: number;
+            /** Format: date-time */
+            at?: string;
+            evidence?: components["schemas"]["ReportingEvidenceRef"];
+            status: components["schemas"]["ReportingStatus"];
+        };
+        ReportingCaptureStatus: {
+            /** Format: date-time */
+            last_attempt_at: string;
+            /** Format: date-time */
+            last_success_at?: string;
+            failure?: string;
+            /** Format: date-time */
+            next_capture_at: string;
+        };
+        ReportingChart: {
+            kind: components["schemas"]["ReportingBlockKind"];
+            metric: components["schemas"]["ReportingMetricID"];
+            context_id: string;
+            unit: string;
+            coverage: components["schemas"]["ReportingCoverage"];
+            points: components["schemas"]["ReportingPoint"][];
+            capture_status?: components["schemas"]["ReportingCaptureStatus"];
+            /** Format: uuid */
+            snapshot_id?: string;
+            /** Format: uuid */
+            opening_snapshot_id?: string;
+            /** Format: double */
+            allocated_target?: number;
+            /** Format: double */
+            allocation_difference?: number;
+            /** Format: double */
+            opening?: number;
+            /** Format: double */
+            closing?: number;
+            /** Format: double */
+            marker?: number;
+            interval?: components["schemas"]["ReportingWindow"];
+            /** Format: date-time */
+            state_at?: string;
+            comparison_interval?: components["schemas"]["ReportingWindow"];
+        };
+        ReportingMetric: {
+            id: components["schemas"]["ReportingMetricID"];
+            version: string;
+            /** Format: double */
+            value: number | null;
+            unit: string;
+            /** Format: double */
+            numerator?: number;
+            /** Format: double */
+            denominator?: number;
+            /** Format: double */
+            target?: number;
+            /** Format: double */
+            target_actual?: number;
+            /** Format: int64 */
+            target_revision?: number;
+            /** Format: double */
+            attainment?: number;
+            coverage: components["schemas"]["ReportingCoverage"];
+            evidence: components["schemas"]["ReportingEvidenceRef"];
+        };
+        ReportingEvaluation: {
+            evaluation_key: string;
+            context: components["schemas"]["ReportingContext"];
+            selection: components["schemas"]["ReportingSelection"];
+            metrics: components["schemas"]["ReportingMetric"][];
+            charts: components["schemas"]["ReportingChart"][];
+        };
+        ReportingMetricDefinition: {
+            allowed_filters?: string[];
+            attribution?: string;
+            required_fields?: string[];
+            read_object?: string;
+            minimum_cohort?: number;
+            incomplete_policy?: string;
+            frozen_support?: boolean;
+            max_contributions?: number;
+            id: components["schemas"]["ReportingMetricID"];
+            version: string;
+            definition: string;
+            /** @enum {string} */
+            temporal_basis: "event_period" | "state_at";
+            unit: string;
+            supports_target: boolean;
+            blocks: components["schemas"]["ReportingBlockKind"][];
+        };
+        ReportingCatalog: {
+            metrics: components["schemas"]["ReportingMetricDefinition"][];
+        };
+        ReportingReportInput: {
+            name: string;
+            /** @enum {string} */
+            audience: "private" | "team" | "workspace";
+            /** Format: uuid */
+            audience_team_id?: string;
+            selection: components["schemas"]["ReportingSelection"];
+        };
+        ReportingReport: {
+            edition_count?: number;
+            /** Format: date-time */
+            latest_captured_at?: string;
+            /** Format: date-time */
+            next_due_at?: string;
+            cadence?: string;
+            last_status?: string;
+            /** @description Whether the current human may manage this report, before individual object-action grants. */
+            can_manage?: boolean;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            owner_id: string;
+            name: string;
+            /** @enum {string} */
+            audience: "private" | "team" | "workspace";
+            /** Format: uuid */
+            audience_team_id?: string;
+            selection: components["schemas"]["ReportingSelection"];
+            /** Format: int64 */
+            revision: number;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            archived_at?: string;
+        };
+        ReportingTargetInput: {
+            metric: components["schemas"]["ReportingMetricID"];
+            scope: components["schemas"]["ReportingScope"];
+            /** Format: uuid */
+            pipeline_id?: string;
+            /** @enum {string} */
+            period_kind: "month" | "fiscal_quarter";
+            /** Format: date */
+            period_start: string;
+            /** Format: int64 */
+            value: number;
+            reason: string;
+        };
+        ReportingTarget: {
+            /** Format: int64 */
+            allocated_value?: number;
+            /** Format: int64 */
+            allocation_difference?: number;
+            /** Format: uuid */
+            id: string;
+            definition: components["schemas"]["ReportingTargetInput"];
+            interval: components["schemas"]["ReportingWindow"];
+            unit: string;
+            /** Format: int64 */
+            revision: number;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ReportingQualification: {
+            /** Format: uuid */
+            pipeline_id: string;
+            stage_ids: string[];
+        };
+        ReportingCaptureContext: {
+            scope: components["schemas"]["ReportingScope"];
+            /** Format: uuid */
+            pipeline_id?: string;
+        };
+        ReportingFrameworkInput: {
+            qualification: components["schemas"]["ReportingQualification"][];
+            capture_contexts: components["schemas"]["ReportingCaptureContext"][];
+            /** @enum {string} */
+            template: "sales" | "sdr";
+            reason: string;
+        };
+        ReportingFramework: {
+            definition: components["schemas"]["ReportingFrameworkInput"];
+            /** Format: int64 */
+            revision: number;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            effective_at: string;
+        };
+        ReportingScheduleInput: {
+            /** Format: int64 */
+            report_revision: number;
+            /** @enum {string} */
+            frequency: "weekly" | "monthly";
+            day: number;
+            local_time: string;
+            enabled: boolean;
+        };
+        ReportingSchedule: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            report_id: string;
+            /** Format: uuid */
+            owner_id: string;
+            definition: components["schemas"]["ReportingScheduleInput"];
+            timezone: string;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            next_due_at: string;
+            last_status?: string;
+        };
+        ReportingExecution: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            report_id: string;
+            /** Format: int64 */
+            report_revision: number;
+            /** @enum {string} */
+            status: "pending" | "running" | "succeeded" | "partial" | "failed" | "suspended" | "skipped";
+            /** Format: date-time */
+            intended_due_at: string;
+            /** Format: uuid */
+            edition_id?: string;
+            reason?: string;
+            /** Format: int64 */
+            attempt: number;
+        };
+        ReportingEdition: {
+            /** @description Retention removed the readings; dated metadata remains. */
+            expired?: boolean;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            report_id: string;
+            /** Format: int64 */
+            report_revision: number;
+            name: string;
+            /** Format: date-time */
+            captured_at: string;
+            /** Format: date-time */
+            intended_due_at: string;
+            evaluation: components["schemas"]["ReportingEvaluation"];
+            redacted: boolean;
+            withheld: boolean;
+        };
+        ReportingEvidenceRow: {
+            key: string;
+            label: string;
+            /** Format: double */
+            value: number | null;
+            /** Format: date-time */
+            occurred_at?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            source_type?: string;
+            /** Format: uuid */
+            source_id?: string;
+            restricted: boolean;
+        };
+        ReportingEvidence: {
+            context: components["schemas"]["ReportingContext"];
+            metric: components["schemas"]["ReportingMetricID"];
+            rows: components["schemas"]["ReportingEvidenceRow"][];
+            next_cursor?: string;
+            truncated: boolean;
+        };
+        ReportingComparison: {
+            left: components["schemas"]["ReportingEdition"];
+            right: components["schemas"]["ReportingEdition"];
+            compatible: boolean;
+            reason?: string;
+            deltas: components["schemas"]["ReportingDelta"][];
+        };
+        ReportingDelta: {
+            metric: components["schemas"]["ReportingMetricID"];
+            /** Format: double */
+            absolute: number;
+            /** Format: double */
+            percentage?: number;
+        };
+        ReportingReportList: {
+            data: components["schemas"]["ReportingReport"][];
+            next_cursor?: string;
+        };
+        ReportingTargetList: {
+            data: components["schemas"]["ReportingTarget"][];
+            next_cursor?: string;
+        };
+        ReportingScheduleList: {
+            data: components["schemas"]["ReportingSchedule"][];
+            next_cursor?: string;
+        };
+        ReportingEditionList: {
+            data: components["schemas"]["ReportingEdition"][];
+            next_cursor?: string;
+        };
+        ReportingExecutionList: {
+            data: components["schemas"]["ReportingExecution"][];
+            next_cursor?: string;
+        };
         /** @description A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow. */
         SavedView: {
             /** Format: uuid */
@@ -31194,17 +31975,28 @@ export interface components {
              */
             value?: number;
         };
-        /** @description One figure, named by the run it lives in and the cell within it. */
+        /** @description Exactly one live saved-run cell, live catalog metric reference, or frozen edition metric reference. */
         ReportCell: {
+            metric_ref?: components["schemas"]["ReportMetricReference"];
+            edition_ref?: components["schemas"]["ReportEditionReference"];
             /**
              * Format: uuid
              * @description The saved run. Resolved under the reading caller's own authority.
              */
-            run_id: string;
+            run_id?: string;
             /** @description The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell. */
             group?: unknown[];
             /** @description Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick. */
-            column: string;
+            column?: string;
+        } & (unknown | unknown | unknown);
+        ReportMetricReference: {
+            selection: components["schemas"]["ReportingSelection"];
+            metric: components["schemas"]["ReportingMetricID"];
+        };
+        ReportEditionReference: {
+            /** Format: uuid */
+            edition_id: string;
+            metric: components["schemas"]["ReportingMetricID"];
         };
         /** @description The composed document with every figure resolved for this reader. */
         RenderedReport: {
@@ -31218,6 +32010,10 @@ export interface components {
             values: components["schemas"]["RenderedValue"][];
         };
         RenderedValue: {
+            coverage?: components["schemas"]["ReportingCoverage"];
+            context?: components["schemas"]["ReportingContext"];
+            unit?: string;
+            definition_version?: string;
             /** @description The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back. */
             value?: unknown;
             /** @description The privacy floor kept this figure back for this reader. The block still renders — a figure that vanished would leave the report reading as complete while saying less. */
@@ -31378,7 +32174,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage" | "team_oversight" | "team_lead";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -31433,6 +32229,8 @@ export interface components {
         SettingsAvailability: {
             /** @description True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it. */
             company_context: boolean;
+            /** @description Whether analytics.performance_enabled makes saved reporting available. */
+            reporting?: boolean;
             /** @description True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */
@@ -32047,6 +32845,12 @@ export interface components {
             data: components["schemas"]["AuditHistoryEntry"][];
             page: components["schemas"]["PageInfo"];
         };
+        ReportScope: {
+            /** @enum {string} */
+            kind: "owner" | "team" | "workspace";
+            /** Format: uuid */
+            id?: string;
+        };
         /**
          * @description A typed, validated query plan (not free-form SQL). For prebuilt reports, filters
          *     parameterize the plan; for ad-hoc, the object/group_by/aggregates compile to a plan.
@@ -32059,6 +32863,7 @@ export interface components {
          *     reports"). Saved reports are not served; a UUID here is refused.
          */
         RunReportRequest: {
+            scope?: components["schemas"]["ReportScope"];
             /** @description Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary. */
             filters?: {
                 [key: string]: unknown;
@@ -33787,7 +34592,7 @@ export interface components {
          *     Extending this enum means adding a selector in the same change.
          * @enum {string}
          */
-        RetentionScope: "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_day";
+        RetentionScope: "report_edition" | "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_day";
         /**
          * @description What happens to a record past its window. One action per policy row — a ladder is separate
          *     rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
@@ -36315,6 +37120,7 @@ export interface components {
         };
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
+            numeric_summary?: components["schemas"]["WeeklyNumericSummary"];
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -36573,6 +37379,19 @@ export interface components {
              */
             unreconstructible?: number;
         };
+        /** @description Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots. */
+        WeeklyNumericSummary: {
+            version: string;
+            timezone: string;
+            currency: string;
+            interval: components["schemas"]["ReportingWindow"];
+            /** Format: date-time */
+            evaluated_at: string;
+            bookings_coverage: components["schemas"]["ReportingCoverage"];
+            meetings_coverage: components["schemas"]["ReportingCoverage"];
+            /** Format: int64 */
+            won_minor?: number;
+        };
         /**
          * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
          *     which is why they are stored rather than recomputed.
@@ -36611,6 +37430,7 @@ export interface components {
              *     nobody narrated and a week with nothing to say look identical.
              */
             narrated_at?: string | null;
+            numeric_summary?: components["schemas"]["WeeklyNumericSummary"];
             counts: components["schemas"]["WeeklyReviewCounts"];
             /**
              * @description The deals the week is about, won and lost first. Capped for reading — the counts stay
@@ -51539,6 +52359,861 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    pauseReportingSchedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of schedules paused. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": number;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportingMetrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingCatalog"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    exportReportingEvaluation: {
+        parameters: {
+            query: {
+                evaluation_key: string;
+                evaluated_at: string;
+                framework_revision: number;
+                scope_kind?: "owner" | "team" | "workspace";
+                scope_id?: string;
+                pipeline_id?: string;
+                period?: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                start_at?: string;
+                end_at?: string;
+                target_basis?: "month" | "fiscal_quarter";
+                close_window?: "fiscal_quarter" | "all_open";
+                metrics?: components["schemas"]["ReportingMetricID"][];
+                blocks?: components["schemas"]["ReportingBlockKind"][];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    exportReportingEdition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Frozen readings; money values use minor units in the named currency. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    evaluateReporting: {
+        parameters: {
+            query?: {
+                scope_kind?: "owner" | "team" | "workspace";
+                scope_id?: string;
+                pipeline_id?: string;
+                period?: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                start_at?: string;
+                end_at?: string;
+                target_basis?: "month" | "fiscal_quarter";
+                close_window?: "fiscal_quarter" | "all_open";
+                metrics?: components["schemas"]["ReportingMetricID"][];
+                blocks?: components["schemas"]["ReportingBlockKind"][];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingEvaluation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportingEvidence: {
+        parameters: {
+            query: {
+                evaluation_key: string;
+                evaluated_at: string;
+                framework_revision: number;
+                context_id: string;
+                scope_kind?: "owner" | "team" | "workspace";
+                scope_id?: string;
+                pipeline_id?: string;
+                period?: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                start_at?: string;
+                end_at?: string;
+                target_basis?: "month" | "fiscal_quarter";
+                close_window?: "fiscal_quarter" | "all_open";
+                metrics?: components["schemas"]["ReportingMetricID"][];
+                blocks?: components["schemas"]["ReportingBlockKind"][];
+                metric: components["schemas"]["ReportingMetricID"];
+                group_key?: string;
+                through?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingEvidence"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listReportingReports: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+                /** @description Return only reports with an enabled schedule. */
+                scheduled?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReportList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createReportingReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingReportInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportingReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveReportingReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateReportingReport: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingReportInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    evaluateReportingReport: {
+        parameters: {
+            query?: {
+                revision?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingEvaluation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listReportingTargets: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingTargetList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createReportingTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingTargetInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingTarget"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportingTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingTarget"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateReportingTarget: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingTargetInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingTarget"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportingFramework: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingFramework"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    publishReportingFramework: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingFrameworkInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingFramework"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listReportingSchedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingScheduleList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createReportingSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingScheduleInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingSchedule"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateReportingSchedule: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingScheduleInput"];
+            };
+        };
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingSchedule"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listReportingEditions: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingEditionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    freezeReportingEdition: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingExecution"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportingEdition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingEdition"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportingEditionEvidence: {
+        parameters: {
+            query: {
+                metric: components["schemas"]["ReportingMetricID"];
+                context_id: string;
+                group_key?: string;
+                through?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingEvidence"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    compareReportingEditions: {
+        parameters: {
+            query: {
+                left_id: string;
+                right_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingComparison"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listReportingExecutions: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingExecutionList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getReportingExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingExecution"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    retryReportingExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reporting result. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingExecution"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listSavedViews: {
         parameters: {
             query?: {
@@ -52497,6 +54172,12 @@ export interface operations {
     explainReport: {
         parameters: {
             query?: {
+                /** @description Version of a scope-bearing derivation handle; legacy handles omit it. */
+                handle_version?: "2";
+                /** @description Requested population, revalidated against the current reader. */
+                scope_kind?: "workspace" | "team" | "owner";
+                /** @description Team or owner identifier for the requested scope. */
+                scope_id?: string;
                 /** @description The plan's grouping dimensions (each must also appear as a predicate parameter carrying the explained row's group-key value). */
                 by?: string[];
                 /** @description The plan's aggregates as `fn:field:alias` triplets (field empty for `count`), e.g. `sum:amount_minor:unweighted_minor`. */

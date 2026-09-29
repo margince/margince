@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -50,6 +51,9 @@ import (
 // module transport handler set together covers the full contract
 // surface.
 type Server struct {
+	reportingHandlers
+	reportingExportHandlers
+
 	authHandlers
 	contactsHandlers
 	dealsHandlers
@@ -460,7 +464,10 @@ type Server struct {
 	resetRuntime ResetRuntime
 
 	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled bool
+	listsEnabled     bool
+	reportingEnabled bool
 }
 
 var _ crmcontracts.ServerInterface = Server{}
+
+type reportingHandlers = reporting.Handlers

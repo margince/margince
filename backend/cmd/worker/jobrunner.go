@@ -198,7 +198,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		SendDelivery: compose.NewDeliveryStager(pool, sendInserter),
+		ReportingEnabled: cfg.reportingEnabled,
+		SendDelivery:     compose.NewDeliveryStager(pool, sendInserter),
 		// The send lane reads attachment bytes from the same object store
 		// capture writes them to; without it a message carrying files fails at
 		// the read rather than going out without them.

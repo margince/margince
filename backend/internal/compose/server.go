@@ -86,6 +86,10 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
+	srv.authHandlers = srv.WithReportingAvailable(srv.reportingEnabled)
+	if srv.reportingEnabled {
+		srv.reportMetrics = srv.service
+	}
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server

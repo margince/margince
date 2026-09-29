@@ -22,10 +22,11 @@ import (
 
 // workerConfig is the parsed boot configuration of the worker process.
 type workerConfig struct {
-	dsn           string
-	configPath    string
-	publicBaseURL string
-	captureConfig compose.CaptureConfig
+	dsn              string
+	configPath       string
+	publicBaseURL    string
+	reportingEnabled bool
+	captureConfig    compose.CaptureConfig
 	// allowDataReset is operations.allow_data_reset: whether this installation
 	// armed the destructive reset at all. The worker's only stake is the cache
 	// flush it subscribes to, which exists solely to serve that reset — so an

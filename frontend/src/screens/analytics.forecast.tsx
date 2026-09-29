@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Field,
@@ -17,6 +18,7 @@ import { SegmentBar } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import {
   formatDateAbbrev,
+  formatDateTime,
   formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
@@ -452,5 +454,45 @@ function ForecastCallEditor({
         </Field>
       </PanelBody>
     </Panel>
+  );
+}
+
+export function SharedForecastView({ token }: Readonly<{ token: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const query = useQuery({
+    queryKey: ["shared-forecast", token],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/forecast/shared/{token}", {
+        params: { path: { token } },
+      });
+      if (error) throwProblem(error);
+      return data;
+    },
+  });
+  return (
+    <div className="wrap">
+      <QueryGate query={query} pendingLabel={t("analytics.sectionForecast")}>
+        {(view) => (
+          <>
+            <p className="t-caption">
+              {view.kind === "snapshot"
+                ? t("reporting.frozen")
+                : t("reporting.live")}
+              {view.as_of
+                ? ` · ${formatDateTime(view.as_of, locale, zone)}`
+                : ""}
+            </p>
+            {view.withheld && (
+              <Callout tone="warning" title={t("reporting.restricted")}>
+                {t("reporting.restricted")}
+              </Callout>
+            )}
+            <ForecastAnswer readings={view.readings} locale={locale} />
+          </>
+        )}
+      </QueryGate>
+    </div>
   );
 }

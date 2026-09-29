@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // snapshotTeams freezes each live team's week, once the member reviews are in.
@@ -123,19 +122,10 @@ func (w *weeklyGenerateWorker) snapshotTeam(
 }
 
 func (w *weeklyGenerateWorker) snapshotTeamAs(ctx context.Context, wsID ids.UUID, team liveTeam, candidate ids.UUID, now time.Time) error {
-	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, candidate)
+	memberCtx, err := accountableHuman(ctx, w.users, wsID, candidate)
 	if err != nil {
-		return fmt.Errorf("resolving the member's authority: %w", err)
+		return err
 	}
-	memberCtx := principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + candidate.String(),
-		UserID:      candidate,
-		SeatType:    seat,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	})
-	memberCtx = principal.WithCorrelationID(memberCtx, ids.NewV7())
 
 	members, err := w.teamMembers(memberCtx, team.id)
 	if err != nil {

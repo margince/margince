@@ -232,7 +232,9 @@ public.activity_meeting_history.activity_meeting_history_source_pairing CHECK ((
 public.activity_meeting_history.activity_meeting_history_status_check CHECK ((status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))
 public.activity_meeting_history.actor text NOT NULL gen=- def=-
 public.activity_meeting_history.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_meeting_history.customer_eligible_at_change boolean gen=- def=-
 public.activity_meeting_history.effective_at timestamp with time zone NOT NULL gen=- def=-
+public.activity_meeting_history.host_id_at_change uuid gen=- def=-
 public.activity_meeting_history.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_meeting_history.partial_pre_history boolean NOT NULL gen=- def=false
 public.activity_meeting_history.scheduled_start timestamp with time zone gen=- def=-
@@ -585,6 +587,12 @@ public.activity_sales_state.set_by text NOT NULL gen=- def=-
 public.activity_sales_state.thread_key text NOT NULL gen=- def=-
 public.activity_sales_state_pkey CREATE UNIQUE INDEX activity_sales_state_pkey ON public.activity_sales_state USING btree (thread_key, kind, channel_provider)
 public.activity_ts_config(lang text) secdef=false cfg=- acl=- 
+public.advance_report_projection_authority() secdef=false cfg=- acl=- 
+BEGIN
+ UPDATE report_projection_fence SET generation=generation+1 WHERE singleton;
+ RETURN NULL;
+END;
+
 public.agent_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.agent_run.agent_run_approval_fkey FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE SET NULL (approval_id)
 public.agent_run.agent_run_attempt_check CHECK ((attempt >= 1))
@@ -897,6 +905,8 @@ public.app_user.morning_brief_delivery text gen=- def=-
 public.app_user.must_change_password boolean NOT NULL gen=- def=false
 public.app_user.password_hash text gen=- def=-
 public.app_user.quiet_day_notice boolean gen=- def=-
+public.app_user.report_authority_user_change CREATE TRIGGER report_authority_user_change BEFORE UPDATE OF status, archived_at, seat_type, is_agent ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
+public.app_user.report_authority_user_delete CREATE TRIGGER report_authority_user_delete BEFORE DELETE ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.app_user.seat_type text NOT NULL gen=- def='full'::text
 public.app_user.status text NOT NULL gen=- def='active'::text
 public.app_user.timezone text gen=- def=-
@@ -3444,6 +3454,8 @@ public.deal_stage_evidence_pkey CREATE UNIQUE INDEX deal_stage_evidence_pkey ON 
 public.deal_stage_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_history.amount_minor_at_change bigint gen=- def=-
 public.deal_stage_history.approval_id uuid gen=- def=-
+public.deal_stage_history.base_currency_at_change text gen=- def=-
+public.deal_stage_history.base_minor_at_change bigint gen=- def=-
 public.deal_stage_history.changed_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_stage_history.changed_by text NOT NULL gen=- def=-
 public.deal_stage_history.currency_at_change character(3) gen=- def=-
@@ -3457,10 +3469,15 @@ public.deal_stage_history.deal_stage_history_semantic_at_change_check CHECK (((s
 public.deal_stage_history.deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_win_probability_at_change_check CHECK (((win_probability_at_change IS NULL) OR ((win_probability_at_change >= 0) AND (win_probability_at_change <= 100))))
 public.deal_stage_history.from_stage_id uuid gen=- def=-
+public.deal_stage_history.fx_date_at_change date gen=- def=-
+public.deal_stage_history.fx_rate_at_change numeric gen=- def=-
 public.deal_stage_history.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_history.owner_id_at_change uuid gen=- def=-
+public.deal_stage_history.pipeline_id_at_change uuid gen=- def=-
 public.deal_stage_history.reversal_of uuid gen=- def=-
 public.deal_stage_history.semantic_at_change text gen=- def=-
 public.deal_stage_history.to_stage_id uuid NOT NULL gen=- def=-
+public.deal_stage_history.valuation_provenance text gen=- def=-
 public.deal_stage_history.win_probability_at_change smallint gen=- def=-
 public.deal_stage_history_deal_id_id_key CREATE UNIQUE INDEX deal_stage_history_deal_id_id_key ON public.deal_stage_history USING btree (deal_id, id)
 public.deal_stage_history_pkey CREATE UNIQUE INDEX deal_stage_history_pkey ON public.deal_stage_history USING btree (id)
@@ -3678,6 +3695,7 @@ public.field_mask.field_mask_pkey PRIMARY KEY (id)
 public.field_mask.field_mask_role_key_object_field_key UNIQUE (role_key, object, field)
 public.field_mask.id uuid NOT NULL gen=- def=uuidv7()
 public.field_mask.object text NOT NULL gen=- def=-
+public.field_mask.report_authority_field_mask CREATE TRIGGER report_authority_field_mask BEFORE INSERT OR DELETE OR UPDATE ON public.field_mask FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.field_mask.role_key text NOT NULL gen=- def=-
 public.field_mask_pkey CREATE UNIQUE INDEX field_mask_pkey ON public.field_mask USING btree (id)
 public.field_mask_role_key_object_field_key CREATE UNIQUE INDEX field_mask_role_key_object_field_key ON public.field_mask USING btree (role_key, object, field)
@@ -3852,6 +3870,17 @@ public.forecast_call.supersedes_id uuid gen=- def=-
 public.forecast_call.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_call.version bigint NOT NULL gen=- def=1
 public.forecast_call_pkey CREATE UNIQUE INDEX forecast_call_pkey ON public.forecast_call USING btree (id)
+public.forecast_capture_status acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.forecast_capture_status.context_key text NOT NULL gen=- def=-
+public.forecast_capture_status.failure text gen=- def=-
+public.forecast_capture_status.forecast_capture_status_context_key_key UNIQUE (context_key)
+public.forecast_capture_status.forecast_capture_status_pkey PRIMARY KEY (id)
+public.forecast_capture_status.id uuid NOT NULL gen=- def=-
+public.forecast_capture_status.last_attempt_at timestamp with time zone NOT NULL gen=- def=-
+public.forecast_capture_status.last_success_at timestamp with time zone gen=- def=-
+public.forecast_capture_status.next_capture_at timestamp with time zone NOT NULL gen=- def=-
+public.forecast_capture_status_context_key_key CREATE UNIQUE INDEX forecast_capture_status_context_key_key ON public.forecast_capture_status USING btree (context_key)
+public.forecast_capture_status_pkey CREATE UNIQUE INDEX forecast_capture_status_pkey ON public.forecast_capture_status USING btree (id)
 public.forecast_contribution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_contribution.amount_minor bigint gen=- def=-
 public.forecast_contribution.approval_id uuid gen=- def=-
@@ -3902,6 +3931,7 @@ public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
+public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
 public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
 public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
@@ -3913,6 +3943,8 @@ public.forecast_snapshot.local_day date NOT NULL gen=- def=-
 public.forecast_snapshot.open_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.period_end date NOT NULL gen=- def=-
 public.forecast_snapshot.period_start date NOT NULL gen=- def=-
+public.forecast_snapshot.pipeline_id uuid gen=- def=-
+public.forecast_snapshot.population_fingerprint text NOT NULL gen=- def=''::text
 public.forecast_snapshot.priced_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.scope_id uuid gen=- def=-
 public.forecast_snapshot.scope_kind text NOT NULL gen=- def=-
@@ -4188,6 +4220,7 @@ public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.
 public.idx_forecast_contribution_audit CREATE INDEX idx_forecast_contribution_audit ON public.forecast_contribution USING btree (audit_id) WHERE (audit_id IS NOT NULL)
 public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC)
 public.idx_forecast_contribution_snapshot CREATE INDEX idx_forecast_contribution_snapshot ON public.forecast_contribution USING btree (snapshot_id)
+public.idx_forecast_snapshot_context CREATE INDEX idx_forecast_snapshot_context ON public.forecast_snapshot USING btree (scope_kind, scope_id, pipeline_id, taken_at DESC)
 public.idx_forecast_snapshot_period CREATE INDEX idx_forecast_snapshot_period ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, taken_at DESC)
 public.idx_fx_rate_lookup CREATE INDEX idx_fx_rate_lookup ON public.fx_rate USING btree (from_currency, to_currency, rate_date)
 public.idx_graph_contact_edge_b CREATE INDEX idx_graph_contact_edge_b ON public.graph_contact_edge USING btree (contact_b)
@@ -5683,6 +5716,105 @@ public.relationship_nudge_dismissal.set_by text NOT NULL gen=- def=-
 public.relationship_nudge_dismissal_by_reader CREATE INDEX relationship_nudge_dismissal_by_reader ON public.relationship_nudge_dismissal USING btree (reader_id, contact_id)
 public.relationship_nudge_dismissal_pkey CREATE UNIQUE INDEX relationship_nudge_dismissal_pkey ON public.relationship_nudge_dismissal USING btree (contact_id, reader_id)
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
+public.report_contribution_source CREATE INDEX report_contribution_source ON public.report_edition_contribution USING btree (source_type, source_id)
+public.report_definition acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_definition.archived_at timestamp with time zone gen=- def=-
+public.report_definition.audience text NOT NULL gen=- def=-
+public.report_definition.audience_team_id uuid gen=- def=-
+public.report_definition.created_at timestamp with time zone NOT NULL gen=- def=-
+public.report_definition.id uuid NOT NULL gen=- def=-
+public.report_definition.name text NOT NULL gen=- def=-
+public.report_definition.owner_id uuid NOT NULL gen=- def=-
+public.report_definition.report_definition_audience_check CHECK ((audience = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
+public.report_definition.report_definition_audience_team_id_fkey FOREIGN KEY (audience_team_id) REFERENCES team(id)
+public.report_definition.report_definition_check CHECK (((audience = 'team'::text) = (audience_team_id IS NOT NULL)))
+public.report_definition.report_definition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_definition.report_definition_pkey PRIMARY KEY (id)
+public.report_definition.revision bigint NOT NULL gen=- def=-
+public.report_definition.version bigint NOT NULL gen=- def=-
+public.report_definition_library CREATE INDEX report_definition_library ON public.report_definition USING btree (owner_id, audience, name, id) WHERE (archived_at IS NULL)
+public.report_definition_pkey CREATE UNIQUE INDEX report_definition_pkey ON public.report_definition USING btree (id)
+public.report_definition_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_definition_revision.created_at timestamp with time zone NOT NULL gen=- def=-
+public.report_definition_revision.created_by uuid NOT NULL gen=- def=-
+public.report_definition_revision.framework_revision bigint NOT NULL gen=- def=-
+public.report_definition_revision.report_definition_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.report_definition_revision.report_definition_revision_pkey PRIMARY KEY (report_id, revision)
+public.report_definition_revision.report_definition_revision_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id)
+public.report_definition_revision.report_id uuid NOT NULL gen=- def=-
+public.report_definition_revision.revision bigint NOT NULL gen=- def=-
+public.report_definition_revision.selection jsonb NOT NULL gen=- def=-
+public.report_definition_revision_pkey CREATE UNIQUE INDEX report_definition_revision_pkey ON public.report_definition_revision USING btree (report_id, revision)
+public.report_edition acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_edition.captured_at timestamp with time zone NOT NULL gen=- def=-
+public.report_edition.execution_id uuid NOT NULL gen=- def=-
+public.report_edition.expired_at timestamp with time zone gen=- def=-
+public.report_edition.id uuid NOT NULL gen=- def=-
+public.report_edition.intended_due_at timestamp with time zone NOT NULL gen=- def=-
+public.report_edition.manifest jsonb NOT NULL gen=- def=-
+public.report_edition.owner_id uuid NOT NULL gen=- def=-
+public.report_edition.publication_audience text NOT NULL gen=- def=-
+public.report_edition.publication_team_id uuid gen=- def=-
+public.report_edition.redacted_at timestamp with time zone gen=- def=-
+public.report_edition.report_edition_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES report_execution(id)
+public.report_edition.report_edition_execution_id_key UNIQUE (execution_id)
+public.report_edition.report_edition_pkey PRIMARY KEY (id)
+public.report_edition.report_edition_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id)
+public.report_edition.report_id uuid NOT NULL gen=- def=-
+public.report_edition.report_revision bigint NOT NULL gen=- def=-
+public.report_edition_archive CREATE INDEX report_edition_archive ON public.report_edition USING btree (report_id, intended_due_at DESC, id DESC)
+public.report_edition_contribution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_edition_contribution.context_id text NOT NULL gen=- def=-
+public.report_edition_contribution.contribution_key text NOT NULL gen=- def=-
+public.report_edition_contribution.edition_id uuid NOT NULL gen=- def=-
+public.report_edition_contribution.fact jsonb NOT NULL gen=- def=-
+public.report_edition_contribution.group_key text NOT NULL gen=- def=-
+public.report_edition_contribution.metric text NOT NULL gen=- def=-
+public.report_edition_contribution.owner_id uuid gen=- def=-
+public.report_edition_contribution.report_edition_contribution_edition_id_fkey FOREIGN KEY (edition_id) REFERENCES report_edition(id) ON DELETE CASCADE
+public.report_edition_contribution.report_edition_contribution_pkey PRIMARY KEY (edition_id, metric, context_id, contribution_key)
+public.report_edition_contribution.source_id uuid NOT NULL gen=- def=-
+public.report_edition_contribution.source_type text NOT NULL gen=- def=-
+public.report_edition_contribution_pkey CREATE UNIQUE INDEX report_edition_contribution_pkey ON public.report_edition_contribution USING btree (edition_id, metric, context_id, contribution_key)
+public.report_edition_execution_id_key CREATE UNIQUE INDEX report_edition_execution_id_key ON public.report_edition USING btree (execution_id)
+public.report_edition_pkey CREATE UNIQUE INDEX report_edition_pkey ON public.report_edition USING btree (id)
+public.report_execution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_execution.attempt bigint NOT NULL gen=- def=0
+public.report_execution.edition_id uuid gen=- def=-
+public.report_execution.execution_key text NOT NULL gen=- def=-
+public.report_execution.fence bigint NOT NULL gen=- def=0
+public.report_execution.id uuid NOT NULL gen=- def=-
+public.report_execution.intended_due_at timestamp with time zone NOT NULL gen=- def=-
+public.report_execution.interval_end timestamp with time zone NOT NULL gen=- def=-
+public.report_execution.interval_start timestamp with time zone NOT NULL gen=- def=-
+public.report_execution.lease_until timestamp with time zone gen=- def=-
+public.report_execution.owner_id uuid NOT NULL gen=- def=-
+public.report_execution.reason text gen=- def=-
+public.report_execution.report_execution_check CHECK (((retry_base_attempt >= 0) AND (retry_base_attempt <= attempt)))
+public.report_execution.report_execution_execution_key_key UNIQUE (execution_key)
+public.report_execution.report_execution_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_execution.report_execution_pkey PRIMARY KEY (id)
+public.report_execution.report_execution_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision)
+public.report_execution.report_execution_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES report_schedule(id)
+public.report_execution.report_execution_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'succeeded'::text, 'partial'::text, 'failed'::text, 'suspended'::text, 'skipped'::text])))
+public.report_execution.report_id uuid NOT NULL gen=- def=-
+public.report_execution.report_revision bigint NOT NULL gen=- def=-
+public.report_execution.request_hash text NOT NULL gen=- def=-
+public.report_execution.retry_at timestamp with time zone gen=- def=-
+public.report_execution.retry_base_attempt bigint NOT NULL gen=- def=0
+public.report_execution.schedule_id uuid gen=- def=-
+public.report_execution.schedule_version bigint gen=- def=-
+public.report_execution.status text NOT NULL gen=- def=-
+public.report_execution_execution_key_key CREATE UNIQUE INDEX report_execution_execution_key_key ON public.report_execution USING btree (execution_key)
+public.report_execution_pending CREATE INDEX report_execution_pending ON public.report_execution USING btree (status, retry_at, intended_due_at, id)
+public.report_execution_pkey CREATE UNIQUE INDEX report_execution_pkey ON public.report_execution USING btree (id)
+public.report_execution_report_history CREATE INDEX report_execution_report_history ON public.report_execution USING btree (report_id, id DESC)
+public.report_projection_fence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_projection_fence.generation bigint NOT NULL gen=- def=0
+public.report_projection_fence.report_projection_fence_pkey PRIMARY KEY (singleton)
+public.report_projection_fence.report_projection_fence_singleton_check CHECK (singleton)
+public.report_projection_fence.singleton boolean NOT NULL gen=- def=true
+public.report_projection_fence_pkey CREATE UNIQUE INDEX report_projection_fence_pkey ON public.report_projection_fence USING btree (singleton)
 public.report_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_run.asked_by uuid NOT NULL gen=- def=-
 public.report_run.captured_by text NOT NULL gen=- def=-
@@ -5701,6 +5833,42 @@ public.report_run.schema_version text NOT NULL gen=- def=-
 public.report_run.total_safe boolean NOT NULL gen=- def=-
 public.report_run.withheld boolean NOT NULL gen=- def=-
 public.report_run_pkey CREATE UNIQUE INDEX report_run_pkey ON public.report_run USING btree (id)
+public.report_schedule acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.report_schedule.definition jsonb NOT NULL gen=- def=-
+public.report_schedule.enabled boolean NOT NULL gen=- def=-
+public.report_schedule.id uuid NOT NULL gen=- def=-
+public.report_schedule.last_status text gen=- def=-
+public.report_schedule.next_due_at timestamp with time zone NOT NULL gen=- def=-
+public.report_schedule.owner_id uuid NOT NULL gen=- def=-
+public.report_schedule.report_id uuid NOT NULL gen=- def=-
+public.report_schedule.report_revision bigint NOT NULL gen=- def=-
+public.report_schedule.report_schedule_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.report_schedule.report_schedule_pkey PRIMARY KEY (id)
+public.report_schedule.report_schedule_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES report_definition_revision(report_id, revision)
+public.report_schedule.timezone text NOT NULL gen=- def=-
+public.report_schedule.version bigint NOT NULL gen=- def=-
+public.report_schedule_due CREATE INDEX report_schedule_due ON public.report_schedule USING btree (next_due_at, id) WHERE enabled
+public.report_schedule_pkey CREATE UNIQUE INDEX report_schedule_pkey ON public.report_schedule USING btree (id)
+public.reporting_framework acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.reporting_framework.id uuid NOT NULL gen=- def=uuidv7()
+public.reporting_framework.reporting_framework_id_key UNIQUE (id)
+public.reporting_framework.reporting_framework_pkey PRIMARY KEY (singleton)
+public.reporting_framework.reporting_framework_singleton_check CHECK (singleton)
+public.reporting_framework.revision bigint NOT NULL gen=- def=-
+public.reporting_framework.singleton boolean NOT NULL gen=- def=true
+public.reporting_framework.version bigint NOT NULL gen=- def=-
+public.reporting_framework_id_key CREATE UNIQUE INDEX reporting_framework_id_key ON public.reporting_framework USING btree (id)
+public.reporting_framework_pkey CREATE UNIQUE INDEX reporting_framework_pkey ON public.reporting_framework USING btree (singleton)
+public.reporting_framework_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.reporting_framework_revision.created_by uuid NOT NULL gen=- def=-
+public.reporting_framework_revision.definition jsonb NOT NULL gen=- def=-
+public.reporting_framework_revision.effective_at timestamp with time zone NOT NULL gen=- def=-
+public.reporting_framework_revision.reporting_framework_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.reporting_framework_revision.reporting_framework_revision_pkey PRIMARY KEY (revision)
+public.reporting_framework_revision.revision bigint NOT NULL gen=- def=-
+public.reporting_framework_revision_pkey CREATE UNIQUE INDEX reporting_framework_revision_pkey ON public.reporting_framework_revision USING btree (revision)
+public.reporting_primary_credit CREATE INDEX reporting_primary_credit ON public.sdr_handoff_event USING btree (deal_id_at_change, occurred_at, id) WHERE (to_status = 'accepted'::text)
+public.reporting_stage_events CREATE INDEX reporting_stage_events ON public.deal_stage_history USING btree (deal_id, changed_at, id)
 public.restore_drill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.restore_drill.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.restore_drill.finished_at timestamp with time zone gen=- def=-
@@ -5737,6 +5905,7 @@ public.role.is_system boolean NOT NULL gen=- def=false
 public.role.key text NOT NULL gen=- def=-
 public.role.name text NOT NULL gen=- def=-
 public.role.permissions jsonb NOT NULL gen=- def='{}'::jsonb
+public.role.report_authority_role CREATE TRIGGER report_authority_role BEFORE INSERT OR DELETE OR UPDATE ON public.role FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.role.role_key_unique UNIQUE (key)
 public.role.role_pkey PRIMARY KEY (id)
 public.role.trg_role_updated CREATE TRIGGER trg_role_updated BEFORE UPDATE ON public.role FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -5745,6 +5914,7 @@ public.role.version bigint NOT NULL gen=- def=1
 public.role_assignment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.role_assignment.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.role_assignment.id uuid NOT NULL gen=- def=uuidv7()
+public.role_assignment.report_authority_role_assignment CREATE TRIGGER report_authority_role_assignment BEFORE INSERT OR DELETE OR UPDATE ON public.role_assignment FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.role_assignment.role_assignment_pkey PRIMARY KEY (id)
 public.role_assignment.role_assignment_role_id_fkey FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE CASCADE
 public.role_assignment.role_assignment_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
@@ -5775,6 +5945,37 @@ public.runner_job.status text NOT NULL gen=- def='queued'::text
 public.runner_job.trigger_ref text NOT NULL gen=- def=-
 public.runner_job_pkey CREATE UNIQUE INDEX runner_job_pkey ON public.runner_job USING btree (id)
 public.runner_job_trigger_unique CREATE UNIQUE INDEX runner_job_trigger_unique ON public.runner_job USING btree (agent_spec, trigger_ref)
+public.sales_target acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_target.created_at timestamp with time zone NOT NULL gen=- def=-
+public.sales_target.id uuid NOT NULL gen=- def=-
+public.sales_target.metric text NOT NULL gen=- def=-
+public.sales_target.period_end timestamp with time zone NOT NULL gen=- def=-
+public.sales_target.period_kind text NOT NULL gen=- def=-
+public.sales_target.period_start timestamp with time zone NOT NULL gen=- def=-
+public.sales_target.pipeline_id uuid gen=- def=-
+public.sales_target.revision bigint NOT NULL gen=- def=-
+public.sales_target.sales_target_check CHECK ((period_end > period_start))
+public.sales_target.sales_target_check1 CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
+public.sales_target.sales_target_period_kind_check CHECK ((period_kind = ANY (ARRAY['month'::text, 'fiscal_quarter'::text])))
+public.sales_target.sales_target_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
+public.sales_target.sales_target_pkey PRIMARY KEY (id)
+public.sales_target.sales_target_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['owner'::text, 'team'::text, 'workspace'::text])))
+public.sales_target.scope_id uuid gen=- def=-
+public.sales_target.scope_kind text NOT NULL gen=- def=-
+public.sales_target.unit text NOT NULL gen=- def=-
+public.sales_target.version bigint NOT NULL gen=- def=-
+public.sales_target_identity CREATE UNIQUE INDEX sales_target_identity ON public.sales_target USING btree (metric, scope_kind, COALESCE((scope_id)::text, 'workspace'::text), COALESCE((pipeline_id)::text, 'all'::text), period_kind, period_start)
+public.sales_target_pkey CREATE UNIQUE INDEX sales_target_pkey ON public.sales_target USING btree (id)
+public.sales_target_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_target_revision.created_by uuid NOT NULL gen=- def=-
+public.sales_target_revision.definition jsonb NOT NULL gen=- def=-
+public.sales_target_revision.effective_at timestamp with time zone NOT NULL gen=- def=-
+public.sales_target_revision.revision bigint NOT NULL gen=- def=-
+public.sales_target_revision.sales_target_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.sales_target_revision.sales_target_revision_pkey PRIMARY KEY (target_id, revision)
+public.sales_target_revision.sales_target_revision_target_id_fkey FOREIGN KEY (target_id) REFERENCES sales_target(id)
+public.sales_target_revision.target_id uuid NOT NULL gen=- def=-
+public.sales_target_revision_pkey CREATE UNIQUE INDEX sales_target_revision_pkey ON public.sales_target_revision USING btree (target_id, revision)
 public.saved_view acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.saved_view.archived_at timestamp with time zone gen=- def=-
 public.saved_view.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5866,6 +6067,7 @@ public.sdr_handoff.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.sdr_handoff.version bigint NOT NULL gen=- def=1
 public.sdr_handoff_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sdr_handoff_event.actor text NOT NULL gen=- def=-
+public.sdr_handoff_event.deal_id_at_change uuid gen=- def=-
 public.sdr_handoff_event.handoff_id uuid NOT NULL gen=- def=-
 public.sdr_handoff_event.id uuid NOT NULL gen=- def=uuidv7()
 public.sdr_handoff_event.note text gen=- def=-
@@ -5878,6 +6080,7 @@ public.sdr_handoff_event.sdr_handoff_event_reason_id_reason_applies_to_fkey FORE
 public.sdr_handoff_event.sdr_handoff_event_reason_matches CHECK (((reason_applies_to IS NULL) OR (reason_applies_to = to_status)))
 public.sdr_handoff_event.sdr_handoff_event_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL)))
 public.sdr_handoff_event.sdr_handoff_event_status CHECK ((to_status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
+public.sdr_handoff_event.submitter_id_at_change uuid gen=- def=-
 public.sdr_handoff_event.to_status text NOT NULL gen=- def=-
 public.sdr_handoff_event_pkey CREATE UNIQUE INDEX sdr_handoff_event_pkey ON public.sdr_handoff_event USING btree (id)
 public.sdr_handoff_pkey CREATE UNIQUE INDEX sdr_handoff_pkey ON public.sdr_handoff USING btree (id)
@@ -6264,6 +6467,8 @@ public.team.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.team.id uuid NOT NULL gen=- def=uuidv7()
 public.team.name text NOT NULL gen=- def=-
 public.team.parent_team_id uuid gen=- def=-
+public.team.report_authority_team_change CREATE TRIGGER report_authority_team_change BEFORE UPDATE OF archived_at ON public.team FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
+public.team.report_authority_team_delete CREATE TRIGGER report_authority_team_delete BEFORE DELETE ON public.team FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.team.team_name_unique UNIQUE (name)
 public.team.team_parent_team_id_fkey FOREIGN KEY (parent_team_id) REFERENCES team(id) ON DELETE SET NULL (parent_team_id)
 public.team.team_pkey PRIMARY KEY (id)
@@ -6272,6 +6477,7 @@ public.team.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.team_membership acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_membership.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.team_membership.id uuid NOT NULL gen=- def=uuidv7()
+public.team_membership.report_authority_team_membership CREATE TRIGGER report_authority_team_membership BEFORE INSERT OR DELETE OR UPDATE ON public.team_membership FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()
 public.team_membership.team_id uuid NOT NULL gen=- def=-
 public.team_membership.team_membership_pkey PRIMARY KEY (id)
 public.team_membership.team_membership_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
@@ -6300,6 +6506,7 @@ public.team_weekly_review.leads_routed integer NOT NULL gen=- def=0
 public.team_weekly_review.local_week_start date NOT NULL gen=- def=-
 public.team_weekly_review.meetings_held integer NOT NULL gen=- def=0
 public.team_weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
+public.team_weekly_review.numeric_summary jsonb gen=- def=-
 public.team_weekly_review.pipeline_created_minor bigint gen=- def=-
 public.team_weekly_review.pipeline_lost_minor bigint gen=- def=-
 public.team_weekly_review.pipeline_won_minor bigint gen=- def=-
@@ -6505,8 +6712,9 @@ public.uq_deal_suggestion_fingerprint CREATE UNIQUE INDEX uq_deal_suggestion_fin
 public.uq_deal_suggestion_open_company CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id))
 public.uq_forecast_contribution_deal CREATE UNIQUE INDEX uq_forecast_contribution_deal ON public.forecast_contribution USING btree (snapshot_id, deal_id)
-public.uq_forecast_snapshot_daily CREATE UNIQUE INDEX uq_forecast_snapshot_daily ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'daily'::text)
-public.uq_forecast_snapshot_daily_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_daily_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'daily'::text) AND (scope_id IS NULL))
+public.uq_forecast_snapshot_daily CREATE UNIQUE INDEX uq_forecast_snapshot_daily ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE ((trigger = 'daily'::text) AND (pipeline_id IS NULL) AND (population_fingerprint = ''::text))
+public.uq_forecast_snapshot_daily_context CREATE UNIQUE INDEX uq_forecast_snapshot_daily_context ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, pipeline_id, population_fingerprint, base_currency, definition_version, local_day) NULLS NOT DISTINCT WHERE ((trigger = 'daily'::text) AND (population_fingerprint <> ''::text))
+public.uq_forecast_snapshot_daily_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_daily_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'daily'::text) AND (scope_id IS NULL) AND (pipeline_id IS NULL) AND (population_fingerprint = ''::text))
 public.uq_forecast_snapshot_period_close CREATE UNIQUE INDEX uq_forecast_snapshot_period_close ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'period_close'::text)
 public.uq_forecast_snapshot_period_close_workspace CREATE UNIQUE INDEX uq_forecast_snapshot_period_close_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'period_close'::text) AND (scope_id IS NULL))
 public.uq_import_run CREATE UNIQUE INDEX uq_import_run ON public.import_run USING btree (id)
@@ -6924,6 +7132,7 @@ public.weekly_review.meetings_held integer NOT NULL gen=- def=0
 public.weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
 public.weekly_review.narrated_at timestamp with time zone gen=- def=-
 public.weekly_review.narrative text gen=- def=-
+public.weekly_review.numeric_summary jsonb gen=- def=-
 public.weekly_review.pipeline_created_minor bigint gen=- def=-
 public.weekly_review.pipeline_lost_minor bigint gen=- def=-
 public.weekly_review.pipeline_won_minor bigint gen=- def=-

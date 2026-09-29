@@ -10449,6 +10449,999 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------ /views ------------------------------------
+  /admin/reporting/pause:
+    post:
+      tags: [Reports]
+      operationId: pauseReportingSchedules
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      summary: Durably pause every report schedule before rollout rollback.
+      responses:
+        '200':
+          description: Number of schedules paused.
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /analytics/metrics:
+    get:
+      tags:
+      - Reports
+      operationId: getReportingMetrics
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Get reporting metrics
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingCatalog'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /analytics/evaluate.csv:
+    get:
+      tags:
+      - Reports
+      operationId: exportReportingEvaluation
+      summary: Evaluate reporting
+      responses:
+        '409': { $ref: '#/components/responses/Conflict' }
+        '200':
+          description: Reporting result.
+          content:
+            text/csv:
+              schema: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - in: query
+        name: evaluation_key
+        required: true
+        schema: { type: string }
+      - in: query
+        name: evaluated_at
+        required: true
+        schema: { type: string, format: date-time }
+      - in: query
+        name: framework_revision
+        required: true
+        schema: { type: integer, format: int64 }
+      - &id003
+        name: scope_kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - owner
+          - team
+          - workspace
+      - &id004
+        name: scope_id
+        in: query
+        required: false
+        schema: &id001
+          type: string
+          format: uuid
+      - &id005
+        name: pipeline_id
+        in: query
+        required: false
+        schema: *id001
+      - &id006
+        name: period
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - this_month
+          - last_month
+          - last_week
+          - this_quarter
+          - custom
+      - &id007
+        name: start_at
+        in: query
+        required: false
+        schema: &id002
+          type: string
+          format: date-time
+      - &id008
+        name: end_at
+        in: query
+        required: false
+        schema: *id002
+      - &id009
+        name: target_basis
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - month
+          - fiscal_quarter
+      - &id010
+        name: close_window
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - fiscal_quarter
+          - all_open
+      - &id011
+        name: metrics
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingMetricID'
+          maxItems: 8
+      - &id012
+        name: blocks
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingBlockKind'
+          maxItems: 20
+  /analytics/editions/{id}/export.csv:
+    get:
+      tags: [Reports]
+      operationId: exportReportingEdition
+      summary: Export this edition's permitted frozen metrics and chart readings.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Frozen readings; money values use minor units in the named currency.
+          content:
+            text/csv:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /analytics/evaluate:
+    get:
+      tags:
+      - Reports
+      operationId: evaluateReporting
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Evaluate reporting
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEvaluation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - &id003
+        name: scope_kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - owner
+          - team
+          - workspace
+      - &id004
+        name: scope_id
+        in: query
+        required: false
+        schema: &id001
+          type: string
+          format: uuid
+      - &id005
+        name: pipeline_id
+        in: query
+        required: false
+        schema: *id001
+      - &id006
+        name: period
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - this_month
+          - last_month
+          - last_week
+          - this_quarter
+          - custom
+      - &id007
+        name: start_at
+        in: query
+        required: false
+        schema: &id002
+          type: string
+          format: date-time
+      - &id008
+        name: end_at
+        in: query
+        required: false
+        schema: *id002
+      - &id009
+        name: target_basis
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - month
+          - fiscal_quarter
+      - &id010
+        name: close_window
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - fiscal_quarter
+          - all_open
+      - &id011
+        name: metrics
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingMetricID'
+          maxItems: 8
+      - &id012
+        name: blocks
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingBlockKind'
+          maxItems: 20
+  /analytics/evidence:
+    get:
+      tags:
+      - Reports
+      operationId: getReportingEvidence
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Get reporting evidence
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEvidence'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: evaluation_key
+        in: query
+        required: true
+        schema: {type: string, minLength: 64, maxLength: 64}
+      - name: evaluated_at
+        in: query
+        required: true
+        schema: {type: string, format: date-time}
+      - name: framework_revision
+        in: query
+        required: true
+        schema: {type: integer, format: int64, minimum: 0}
+      - name: context_id
+        in: query
+        required: true
+        schema: {type: string, minLength: 1, maxLength: 64}
+      - *id003
+      - *id004
+      - *id005
+      - *id006
+      - *id007
+      - *id008
+      - *id009
+      - *id010
+      - *id011
+      - *id012
+      - name: metric
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/ReportingMetricID'
+      - name: group_key
+        in: query
+        required: false
+        schema: &id013
+          type: string
+      - name: through
+        in: query
+        required: false
+        schema: *id002
+      - &id014
+        name: cursor
+        in: query
+        required: false
+        schema: *id013
+      - &id015
+        name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+  /analytics/reports:
+    get:
+      tags:
+      - Reports
+      operationId: listReportingReports
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: List reporting reports
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReportList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - *id014
+      - *id015
+      - in: query
+        name: scheduled
+        schema: { type: boolean }
+        description: Return only reports with an enabled schedule.
+    post:
+      tags:
+      - Reports
+      operationId: createReportingReport
+      summary: Create reporting report
+      responses:
+        '201':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingReportInput'
+  /analytics/reports/{id}:
+    parameters: &id016
+    - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+      - Reports
+      operationId: getReportingReport
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Get reporting report
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    patch:
+      tags:
+      - Reports
+      operationId: updateReportingReport
+      summary: Update reporting report
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters: &id018
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingReportInput'
+    delete:
+      tags:
+      - Reports
+      operationId: archiveReportingReport
+      summary: Archive reporting report
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/reports/{id}/evaluation:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: evaluateReportingReport
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Evaluate reporting report
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEvaluation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: revision
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+  /analytics/targets:
+    get:
+      tags:
+      - Reports
+      operationId: listReportingTargets
+      summary: List reporting targets
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingTargetList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - *id014
+      - *id015
+    post:
+      tags:
+      - Reports
+      operationId: createReportingTarget
+      summary: Create reporting target
+      responses:
+        '201':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingTarget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingTargetInput'
+  /analytics/targets/{id}:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: getReportingTarget
+      summary: Get reporting target
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingTarget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    patch:
+      tags:
+      - Reports
+      operationId: updateReportingTarget
+      summary: Update reporting target
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingTarget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters: *id018
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingTargetInput'
+  /analytics/framework:
+    get:
+      tags:
+      - Reports
+      operationId: getReportingFramework
+      summary: Get reporting framework
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingFramework'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    put:
+      tags:
+      - Reports
+      operationId: publishReportingFramework
+      summary: Publish reporting framework
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingFramework'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters: *id018
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingFrameworkInput'
+  /analytics/reports/{id}/schedules:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: listReportingSchedules
+      summary: List reporting schedules
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingScheduleList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags:
+      - Reports
+      operationId: createReportingSchedule
+      summary: Create reporting schedule
+      responses:
+        '201':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingSchedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingScheduleInput'
+  /analytics/schedules/{id}:
+    parameters: *id016
+    patch:
+      tags:
+      - Reports
+      operationId: updateReportingSchedule
+      summary: Update reporting schedule
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingSchedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters: *id018
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportingScheduleInput'
+  /analytics/reports/{id}/editions:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: listReportingEditions
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: List reporting editions
+      description: Pages contain at most five editions; each result is projected through current evidence permissions.
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEditionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - *id014
+      - *id015
+    post:
+      tags:
+      - Reports
+      operationId: freezeReportingEdition
+      summary: Freeze reporting edition
+      responses:
+        '202':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingExecution'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+  /analytics/editions/{id}:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: getReportingEdition
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Get reporting edition
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEdition'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /analytics/editions/{id}/evidence:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: getReportingEditionEvidence
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Get reporting edition evidence
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingEvidence'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: metric
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/ReportingMetricID'
+      - name: context_id
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: group_key
+        in: query
+        required: false
+        schema: *id013
+      - name: through
+        in: query
+        required: false
+        schema: *id002
+      - *id014
+      - *id015
+  /analytics/editions/compare:
+    get:
+      tags:
+      - Reports
+      operationId: compareReportingEditions
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
+      summary: Compare reporting editions
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingComparison'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: left_id
+        in: query
+        required: true
+        schema: *id001
+      - name: right_id
+        in: query
+        required: true
+        schema: *id001
+  /analytics/reports/{id}/executions:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: listReportingExecutions
+      summary: List reporting executions
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingExecutionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - *id014
+      - *id015
+  /analytics/executions/{id}:
+    parameters: *id016
+    get:
+      tags:
+      - Reports
+      operationId: getReportingExecution
+      summary: Get reporting execution
+      responses:
+        '200':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingExecution'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /analytics/executions/{id}/retry:
+    parameters: *id016
+    post:
+      tags:
+      - Reports
+      operationId: retryReportingExecution
+      summary: Retry reporting execution
+      responses:
+        '202':
+          description: Reporting result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportingExecution'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      x-agent-access: human-only
+      security:
+      - cookieAuth: []
+
   /views:
     get:
       tags: [Views]
@@ -11294,11 +12287,24 @@ paths:
         The drill-through rows reconcile exactly to the explained aggregate (AC-X1).
 
         Query vocabulary: `by` names the plan's grouping dimensions and `agg` its aggregates
-        (`fn:field:alias` triplets); **every other query parameter is an equality predicate**
+        (`fn:field:alias` triplets). `handle_version`, `scope_kind`, `scope_id`,
+        `as_of` and `null` are reserved context keys. Remaining parameters are equality predicates
         from the report's closed field vocabulary — the group-key values of the explained row
         plus the plan's filters. An empty predicate value matches SQL NULL (the "no owner"
         group). An out-of-vocabulary key returns `422 code: report_field_not_allowed`.
       parameters:
+        - name: handle_version
+          in: query
+          schema: { type: string, enum: ['2'] }
+          description: Version of a scope-bearing derivation handle; legacy handles omit it.
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [workspace, team, owner] }
+          description: Requested population, revalidated against the current reader.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Team or owner identifier for the requested scope.
         - name: by
           in: query
           schema:
@@ -40696,6 +41702,820 @@ components:
       # breaking every caller.
       x-enum-varnames: [SavedViewResourceContacts, SavedViewResourceCompanies, SavedViewResourceDeals, SavedViewResourceActivities, SavedViewResourceLeads, SavedViewResourcePartners, SavedViewResourceProjects]
 
+    ReportingMetricID:
+      type: string
+      enum:
+      - bookings_won
+      - closed_win_rate
+      - open_pipeline
+      - stage_age
+      - qualified_pipeline_created
+      - meetings_held
+      - accepted_opportunities
+      - forecast_landing
+    ReportingBlockKind:
+      type: string
+      enum:
+      - bookings_trend
+      - stage_distribution
+      - owner_attainment
+      - stage_age
+      - sdr_outcomes
+      - target_progress
+      - forecast_support
+      - pipeline_movement
+      - metric_reading
+    ReportingStatus:
+      type: string
+      enum:
+      - ok
+      - no_data
+      - not_configured
+      - insufficient_sample
+      - partial
+      - unsupported
+      - unavailable
+    ReportingScope:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      properties:
+        kind:
+          type: string
+          enum:
+          - owner
+          - team
+          - workspace
+          - managed_teams
+        id: &id002
+          type: string
+          format: uuid
+        label:
+          type: string
+    ReportingWindow:
+      type: object
+      additionalProperties: false
+      required:
+      - start_at
+      - end_at
+      properties:
+        start_at: &id001
+          type: string
+          format: date-time
+        end_at: *id001
+    ReportingSelection:
+      type: object
+      additionalProperties: false
+      required:
+      - scope
+      - period
+      - target_basis
+      - close_window
+      - metrics
+      - blocks
+      properties:
+        scope:
+          $ref: '#/components/schemas/ReportingScope'
+        pipeline_id: *id002
+        period:
+          type: string
+          enum:
+          - this_month
+          - last_month
+          - last_week
+          - this_quarter
+          - custom
+        interval:
+          $ref: '#/components/schemas/ReportingWindow'
+        target_basis:
+          type: string
+          enum:
+          - month
+          - fiscal_quarter
+        close_window:
+          type: string
+          enum:
+          - fiscal_quarter
+          - all_open
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingMetricID'
+          minItems: 1
+          maxItems: 8
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingBlockKind'
+          maxItems: 20
+    ReportingContext:
+      type: object
+      additionalProperties: false
+      required:
+      - period_kind
+      - scope
+      - population_fingerprint
+      - interval
+      - timezone
+      - currency
+      - evaluated_at
+      - state_at
+      - framework_revision
+      - definition_version
+      - member_ids
+      properties:
+        period_kind: {type: string}
+        scope:
+          $ref: '#/components/schemas/ReportingScope'
+        pipeline_id: *id002
+        population_fingerprint:
+          type: string
+        interval:
+          $ref: '#/components/schemas/ReportingWindow'
+        target_interval:
+          $ref: '#/components/schemas/ReportingWindow'
+        close_interval:
+          $ref: '#/components/schemas/ReportingWindow'
+        timezone:
+          type: string
+        currency:
+          type: string
+        evaluated_at: *id001
+        state_at: *id001
+        framework_revision:
+          type: integer
+          format: int64
+        definition_version:
+          type: string
+        member_ids:
+          type: array
+          items: *id002
+    ReportingCoverage:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - withheld
+      properties:
+        status:
+          $ref: '#/components/schemas/ReportingStatus'
+        reason:
+          type: string
+        eligible_count:
+          type: integer
+          format: int64
+          minimum: 0
+        priced_count:
+          type: integer
+          format: int64
+          minimum: 0
+        withheld: &id004
+          type: boolean
+    ReportingEvidenceRef:
+      type: object
+      additionalProperties: false
+      required:
+      - metric
+      - context_id
+      properties:
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+        context_id:
+          type: string
+        group_key:
+          type: string
+        through: *id001
+    ReportingPoint:
+      type: object
+      additionalProperties: false
+      required:
+      - key
+      - label
+      - value
+      - status
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        value:
+          type: number
+          format: double
+          nullable: true
+        comparison:
+          type: number
+          format: double
+          nullable: true
+        target:
+          type: number
+          format: double
+          nullable: true
+        upper:
+          type: number
+          format: double
+          nullable: true
+        observations:
+          type: integer
+          format: int64
+          minimum: 0
+        at: *id001
+        evidence:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+        status:
+          $ref: '#/components/schemas/ReportingStatus'
+    ReportingCaptureStatus:
+      type: object
+      required: [last_attempt_at, next_capture_at]
+      properties:
+        last_attempt_at: {type: string, format: date-time}
+        last_success_at: {type: string, format: date-time}
+        failure: {type: string}
+        next_capture_at: {type: string, format: date-time}
+    ReportingChart:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - metric
+      - context_id
+      - unit
+      - coverage
+      - points
+      properties:
+        kind:
+          $ref: '#/components/schemas/ReportingBlockKind'
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+        context_id:
+          type: string
+        unit:
+          type: string
+        coverage:
+          $ref: '#/components/schemas/ReportingCoverage'
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingPoint'
+        capture_status:
+          $ref: '#/components/schemas/ReportingCaptureStatus'
+        snapshot_id: {type: string, format: uuid}
+        opening_snapshot_id: {type: string, format: uuid}
+        allocated_target: {type: number, format: double}
+        allocation_difference: {type: number, format: double}
+        opening: &id003
+          type: number
+          format: double
+        closing: *id003
+        marker: *id003
+        interval:
+          $ref: '#/components/schemas/ReportingWindow'
+        state_at: *id001
+        comparison_interval:
+          $ref: '#/components/schemas/ReportingWindow'
+    ReportingMetric:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - version
+      - value
+      - unit
+      - coverage
+      - evidence
+      properties:
+        id:
+          $ref: '#/components/schemas/ReportingMetricID'
+        version:
+          type: string
+        value:
+          type: number
+          format: double
+          nullable: true
+        unit:
+          type: string
+        numerator: *id003
+        denominator: *id003
+        target: *id003
+        target_actual: *id003
+        target_revision:
+          type: integer
+          format: int64
+        attainment: *id003
+        coverage:
+          $ref: '#/components/schemas/ReportingCoverage'
+        evidence:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+    ReportingEvaluation:
+      type: object
+      additionalProperties: false
+      required:
+      - evaluation_key
+      - context
+      - selection
+      - metrics
+      - charts
+      properties:
+        evaluation_key: {type: string}
+        context:
+          $ref: '#/components/schemas/ReportingContext'
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingMetric'
+        charts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingChart'
+    ReportingMetricDefinition:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - version
+      - definition
+      - temporal_basis
+      - unit
+      - supports_target
+      - blocks
+      properties:
+        allowed_filters: {type: array, items: {type: string}}
+        attribution: {type: string}
+        required_fields: {type: array, items: {type: string}}
+        read_object: {type: string}
+        minimum_cohort: {type: integer}
+        incomplete_policy: {type: string}
+        frozen_support: {type: boolean}
+        max_contributions: {type: integer}
+        id:
+          $ref: '#/components/schemas/ReportingMetricID'
+        version:
+          type: string
+        definition:
+          type: string
+        temporal_basis:
+          type: string
+          enum:
+          - event_period
+          - state_at
+        unit:
+          type: string
+        supports_target: *id004
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingBlockKind'
+    ReportingCatalog:
+      type: object
+      additionalProperties: false
+      required:
+      - metrics
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingMetricDefinition'
+    ReportingReportInput:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - audience
+      - selection
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        audience:
+          type: string
+          enum:
+          - private
+          - team
+          - workspace
+        audience_team_id: *id002
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
+    ReportingReport:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - owner_id
+      - name
+      - audience
+      - selection
+      - revision
+      - version
+      - created_at
+      properties:
+        edition_count: { type: integer, minimum: 0 }
+        latest_captured_at: { type: string, format: date-time }
+        next_due_at: { type: string, format: date-time }
+        cadence: { type: string }
+        last_status: { type: string }
+        can_manage:
+          type: boolean
+          description: Whether the current human may manage this report, before individual object-action grants.
+        id: *id002
+        owner_id: *id002
+        name:
+          type: string
+        audience:
+          type: string
+          enum:
+          - private
+          - team
+          - workspace
+        audience_team_id: *id002
+        selection:
+          $ref: '#/components/schemas/ReportingSelection'
+        revision:
+          type: integer
+          format: int64
+        version:
+          type: integer
+          format: int64
+        created_at: *id001
+        archived_at: *id001
+    ReportingTargetInput:
+      type: object
+      additionalProperties: false
+      required:
+      - metric
+      - scope
+      - period_kind
+      - period_start
+      - value
+      - reason
+      properties:
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+        scope:
+          $ref: '#/components/schemas/ReportingScope'
+        pipeline_id: *id002
+        period_kind:
+          type: string
+          enum:
+          - month
+          - fiscal_quarter
+        period_start:
+          type: string
+          format: date
+        value:
+          type: integer
+          format: int64
+          minimum: 0
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ReportingTarget:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - definition
+      - interval
+      - unit
+      - revision
+      - version
+      - created_at
+      properties:
+        allocated_value: {type: integer, format: int64}
+        allocation_difference: {type: integer, format: int64}
+        id: *id002
+        definition:
+          $ref: '#/components/schemas/ReportingTargetInput'
+        interval:
+          $ref: '#/components/schemas/ReportingWindow'
+        unit:
+          type: string
+        revision:
+          type: integer
+          format: int64
+        version:
+          type: integer
+          format: int64
+        created_at: *id001
+    ReportingQualification:
+      type: object
+      additionalProperties: false
+      required:
+      - pipeline_id
+      - stage_ids
+      properties:
+        pipeline_id: *id002
+        stage_ids:
+          type: array
+          items: *id002
+          minItems: 1
+    ReportingCaptureContext:
+      type: object
+      additionalProperties: false
+      required:
+      - scope
+      properties:
+        scope:
+          $ref: '#/components/schemas/ReportingScope'
+        pipeline_id: *id002
+    ReportingFrameworkInput:
+      type: object
+      additionalProperties: false
+      required:
+      - qualification
+      - capture_contexts
+      - template
+      - reason
+      properties:
+        qualification:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingQualification'
+        capture_contexts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingCaptureContext'
+          maxItems: 20
+        template:
+          type: string
+          enum:
+          - sales
+          - sdr
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ReportingFramework:
+      type: object
+      additionalProperties: false
+      required:
+      - definition
+      - revision
+      - version
+      - effective_at
+      properties:
+        definition:
+          $ref: '#/components/schemas/ReportingFrameworkInput'
+        revision:
+          type: integer
+          format: int64
+        version:
+          type: integer
+          format: int64
+        effective_at: *id001
+    ReportingScheduleInput:
+      type: object
+      additionalProperties: false
+      required:
+      - report_revision
+      - frequency
+      - day
+      - local_time
+      - enabled
+      properties:
+        report_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        frequency:
+          type: string
+          enum:
+          - weekly
+          - monthly
+        day:
+          type: integer
+          minimum: 1
+          maximum: 31
+        local_time:
+          type: string
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+        enabled: *id004
+    ReportingSchedule:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - report_id
+      - owner_id
+      - definition
+      - timezone
+      - version
+      - next_due_at
+      properties:
+        id: *id002
+        report_id: *id002
+        owner_id: *id002
+        definition:
+          $ref: '#/components/schemas/ReportingScheduleInput'
+        timezone:
+          type: string
+        version:
+          type: integer
+          format: int64
+        next_due_at: *id001
+        last_status:
+          type: string
+    ReportingExecution:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - report_id
+      - report_revision
+      - status
+      - intended_due_at
+      - attempt
+      properties:
+        id: *id002
+        report_id: *id002
+        report_revision:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - pending
+          - running
+          - succeeded
+          - partial
+          - failed
+          - suspended
+          - skipped
+        intended_due_at: *id001
+        edition_id: *id002
+        reason:
+          type: string
+        attempt:
+          type: integer
+          format: int64
+    ReportingEdition:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - report_id
+      - report_revision
+      - name
+      - captured_at
+      - intended_due_at
+      - evaluation
+      - redacted
+      - withheld
+      properties:
+        expired: { type: boolean, description: Retention removed the readings; dated metadata remains. }
+        id: *id002
+        report_id: *id002
+        report_revision:
+          type: integer
+          format: int64
+        name:
+          type: string
+        captured_at: *id001
+        intended_due_at: *id001
+        evaluation:
+          $ref: '#/components/schemas/ReportingEvaluation'
+        redacted: *id004
+        withheld: *id004
+    ReportingEvidenceRow:
+      type: object
+      additionalProperties: false
+      required:
+      - key
+      - label
+      - value
+      - restricted
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        value:
+          type: number
+          format: double
+          nullable: true
+        occurred_at: *id001
+        owner_id: *id002
+        source_type:
+          type: string
+        source_id: *id002
+        restricted: *id004
+    ReportingEvidence:
+      type: object
+      additionalProperties: false
+      required:
+      - context
+      - metric
+      - rows
+      - truncated
+      properties:
+        context:
+          $ref: '#/components/schemas/ReportingContext'
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingEvidenceRow'
+        next_cursor:
+          type: string
+        truncated: *id004
+    ReportingComparison:
+      type: object
+      additionalProperties: false
+      required:
+      - left
+      - right
+      - compatible
+      - deltas
+      properties:
+        left:
+          $ref: '#/components/schemas/ReportingEdition'
+        right:
+          $ref: '#/components/schemas/ReportingEdition'
+        compatible: *id004
+        reason:
+          type: string
+        deltas:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingDelta'
+    ReportingDelta:
+      type: object
+      additionalProperties: false
+      required: [metric, absolute]
+      properties:
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+        absolute:
+          type: number
+          format: double
+        percentage:
+          type: number
+          format: double
+    ReportingReportList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingReport'
+        next_cursor:
+          type: string
+    ReportingTargetList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingTarget'
+        next_cursor:
+          type: string
+    ReportingScheduleList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingSchedule'
+        next_cursor:
+          type: string
+    ReportingEditionList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingEdition'
+        next_cursor:
+          type: string
+    ReportingExecutionList:
+      type: object
+      additionalProperties: false
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingExecution'
+        next_cursor:
+          type: string
+
     SavedView:
       type: object
       description: >-
@@ -42226,9 +44046,14 @@ components:
       additionalProperties: false
     ReportCell:
       type: object
-      description: One figure, named by the run it lives in and the cell within it.
-      required: [run_id, column]
+      description: Exactly one live saved-run cell, live catalog metric reference, or frozen edition metric reference.
+      oneOf:
+        - required: [run_id, column]
+        - required: [metric_ref]
+        - required: [edition_ref]
       properties:
+        metric_ref: { $ref: '#/components/schemas/ReportMetricReference' }
+        edition_ref: { $ref: '#/components/schemas/ReportEditionReference' }
         run_id:
           type: string
           format: uuid
@@ -42245,6 +44070,20 @@ components:
             Which measure of the cell to show. A cell can carry several and a block shows
             one, so which is not a detail a renderer may pick.
       additionalProperties: false
+    ReportMetricReference:
+      type: object
+      additionalProperties: false
+      required: [selection, metric]
+      properties:
+        selection: { $ref: '#/components/schemas/ReportingSelection' }
+        metric: { $ref: '#/components/schemas/ReportingMetricID' }
+    ReportEditionReference:
+      type: object
+      additionalProperties: false
+      required: [edition_id, metric]
+      properties:
+        edition_id: { type: string, format: uuid }
+        metric: { $ref: '#/components/schemas/ReportingMetricID' }
     RenderedReport:
       type: object
       description: The composed document with every figure resolved for this reader.
@@ -42270,6 +44109,10 @@ components:
       type: object
       required: [withheld]
       properties:
+        coverage: { $ref: '#/components/schemas/ReportingCoverage' }
+        context: { $ref: '#/components/schemas/ReportingContext' }
+        unit: { type: string }
+        definition_version: { type: string }
         value:
           nullable: true
           description: >-
@@ -42510,7 +44353,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, seat_usage, team_oversight, team_lead]
+         authentication_policy, oauth_application, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit]
 
     RbacAction:
       type: string
@@ -42643,6 +44486,9 @@ components:
             same predicate `GET /company-context/capabilities` reports as `read_enabled`, and
             the same one its own endpoints gate on. False leaves the Company page to the
             installation and currency settings beside it.
+        reporting:
+          type: boolean
+          description: Whether analytics.performance_enabled makes saved reporting available.
         lists:
           type: boolean
           description: >
@@ -43530,6 +45376,14 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- Reports ----
+    ReportScope:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [owner, team, workspace] }
+        id: { type: string, format: uuid }
+
     RunReportRequest:
       type: object
       description: |
@@ -43543,6 +45397,7 @@ components:
         **`/reports/{report}` path param:** a prebuilt-report key (README "Prebuilt
         reports"). Saved reports are not served; a UUID here is refused.
       properties:
+        scope: { $ref: '#/components/schemas/ReportScope' }
         filters:
           type: object
           additionalProperties: true
@@ -45596,6 +47451,7 @@ components:
 
         Extending this enum means adding a selector in the same change.
       enum:
+        - report_edition
         - lead/unconverted
         - activity
         - activity/transcript
@@ -48200,6 +50056,7 @@ components:
       description: One team's week, as it was measured when the week closed.
       required: [id, team_id, team_name, local_week_start, generated_at, as_of, counts, reps, agenda]
       properties:
+        numeric_summary: { $ref: '#/components/schemas/WeeklyNumericSummary' }
         id: { type: string, format: uuid }
         team_id: { type: string, format: uuid }
         team_name:
@@ -48519,6 +50376,21 @@ components:
             are the current-state figures they always were, and nothing can retroactively make
             them week-end facts.
 
+    WeeklyNumericSummary:
+      type: object
+      additionalProperties: false
+      description: Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
+      required: [version, timezone, currency, interval, evaluated_at, bookings_coverage, meetings_coverage]
+      properties:
+        version: { type: string }
+        timezone: { type: string }
+        currency: { type: string }
+        interval: { $ref: '#/components/schemas/ReportingWindow' }
+        evaluated_at: { type: string, format: date-time }
+        bookings_coverage: { $ref: '#/components/schemas/ReportingCoverage' }
+        meetings_coverage: { $ref: '#/components/schemas/ReportingCoverage' }
+        won_minor: { type: integer, format: int64 }
+
     WeeklyReview:
       type: object
       additionalProperties: false
@@ -48550,6 +50422,7 @@ components:
             When a narrative pass last ran, null when none has. A reader showing a review with
             no sentence must consult this before saying "a quiet week": without it, a week
             nobody narrated and a week with nothing to say look identical.
+        numeric_summary: { $ref: '#/components/schemas/WeeklyNumericSummary' }
         counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
         deals:
           type: array

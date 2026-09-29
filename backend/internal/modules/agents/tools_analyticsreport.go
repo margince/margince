@@ -51,6 +51,7 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 		// than the one round trip it saves.
 		InputSchema: schema(`{
 			"type": "object",
+			"description": "Discover pipeline and stage IDs with list_pipelines.",
 			"required": ["blocks"],
 			"additionalProperties": false,
 			"properties": {
@@ -69,10 +70,12 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 								"type": "array",
 								"items": {
 									"type": "object",
-									"required": ["run_id", "column"],
+									"description":"Choose exactly one saved-run cell, metric_ref, or edition_ref.",
 									"additionalProperties": false,
 									"properties": {
 										"run_id": {"type": "string"},
+                                    "metric_ref": ` + string(reportingMetricInput) + `,
+                                    "edition_ref": {"type":"object","required":["edition_id","metric"],"properties":{"edition_id":{"type":"string","format":"uuid"},"metric":{"type":"string"}},"additionalProperties":false},
 										"column": {"type": "string"},
 										"group": {"type": "array"}
 									}

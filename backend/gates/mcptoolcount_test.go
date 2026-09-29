@@ -77,7 +77,9 @@ const clientToolCeiling = 100
 // operations ride those two tools as modes. They are two and not one because
 // one verb spends one scope: an agent granted only read must still read lists.
 // That leaves 20 of a client's 100 slots.
-const publishedToolCeiling = 80
+// read_reporting groups catalog, evaluation, evidence and saved-edition reads in
+// one read-scope tool. It leaves 19 of the client's 100 slots for other servers.
+const publishedToolCeiling = 81
 
 type mcpInfoFile struct {
 	Totals struct {

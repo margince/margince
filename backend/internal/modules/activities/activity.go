@@ -44,6 +44,7 @@ func activityCapturedPayload(kind, channelProvider string) crmcontracts.PublicEv
 }
 
 type LogActivityInput struct {
+	recordedAt *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
 	// invitedAssignee admits an invited colleague as the task's assignee. Only
@@ -202,6 +203,8 @@ func (s *Store) logActivityAndReadTranscript(
 	if in.RequestActivityID != nil {
 		return s.takeEmailRequest(ctx, tx, in)
 	}
+	at := s.now()
+	in.recordedAt = &at
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err
@@ -374,19 +377,20 @@ func writeActivitySatellites(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput,
 	occurredAt time.Time, by string,
 ) error {
+	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links); err != nil {
+		return err
+	}
 	// The first transition, where this capture named a status. A meeting
 	// arrives `booked` far more often than not, and that booking is the fact
 	// every "how many did we book this period" question counts.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
+		RecordedAt:     in.recordedAt,
 		ActivityID:     id,
 		Status:         meetingStatusOrNone(in.MeetingStatus),
 		ScheduledStart: &occurredAt,
 		SourceSystem:   in.SourceSystem,
 		SourceID:       in.SourceID,
 	}); err != nil {
-		return err
-	}
-	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links); err != nil {
 		return err
 	}
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
@@ -433,6 +437,7 @@ func replayMovedTheMeeting(
 		return replay, nil
 	}
 	return updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), UpdateActivityInput{
+		recordedAt:    in.recordedAt,
 		MeetingStatus: in.MeetingStatus,
 	})
 }

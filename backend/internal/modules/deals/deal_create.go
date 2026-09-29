@@ -336,11 +336,11 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, fmt.Errorf("insert deal: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change)
-		 VALUES ($1, NULL, $2, $3, $4, $5)`,
-		id, in.StageID, born.by, in.AmountMinor, in.Currency); err != nil {
-		return crmcontracts.Deal{}, fmt.Errorf("record stage history: %w", err)
+	if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+		DealID: id, ToStageID: in.StageID, ChangedBy: born.by, OwnerID: uuidOfFilter(in.OwnerID), PipelineID: in.PipelineID.UUID,
+		Amount: in.AmountMinor, Currency: in.Currency,
+	}); err != nil {
+		return crmcontracts.Deal{}, err
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", "deal", id.UUID, nil, map[string]any{dealNameColumn: in.Name})

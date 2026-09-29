@@ -93,6 +93,14 @@ function routes(
     "GET /me": meRoute({}),
     "GET /forecast/assurance": () =>
       run === null ? jsonResponse({}, 404) : jsonResponse(run),
+    "GET /forecast/assurance/preview": () =>
+      jsonResponse({
+        started: false,
+        eligible_deals: 52,
+        findings: [{ type: "close_past", severity: "high", count: 3 }],
+        readiness: "needs_review",
+        sources: RUN.sources,
+      } satisfies components["schemas"]["ForecastAssurancePreview"]),
     "GET /forecast/assurance/exceptions": () =>
       jsonResponse({
         data: findings,

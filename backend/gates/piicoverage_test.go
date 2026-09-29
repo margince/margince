@@ -112,10 +112,12 @@ type piiHandling struct {
 // PII-bearing, and the test then proves erasure and SAR reach it. Keep it
 // in step with the subject data in data-model §3.
 var piiTables = map[string]piiHandling{
-	"contact":        {erasureWrite: true, sarRead: true},
-	"contact_email":  {erasureWrite: true, sarRead: true},
-	"contact_social": {erasureWrite: true, sarRead: true},
-	"contact_phone":  {erasureWrite: true, sarRead: true},
+	"report_edition":              {erasureWrite: true, sarRead: true},
+	"report_edition_contribution": {erasureWrite: true, sarRead: true},
+	"contact":                     {erasureWrite: true, sarRead: true},
+	"contact_email":               {erasureWrite: true, sarRead: true},
+	"contact_social":              {erasureWrite: true, sarRead: true},
+	"contact_phone":               {erasureWrite: true, sarRead: true},
 	// The channel identity binds a human to their Telegram account: the
 	// provider's user id for them plus the @username they message under. Both
 	// identify the subject as directly as an address does, and the id is the
@@ -459,6 +461,7 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
+	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
 	// What this installation CONCLUDED about the subject's correspondence —

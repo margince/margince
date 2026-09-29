@@ -409,6 +409,7 @@ func (w *WeeklyForecast) openingSnapshot(
 		SELECT id FROM forecast_snapshot
 		 WHERE period_start = $1 AND period_end = $2
 		   AND scope_kind = $3 AND scope_id IS NOT DISTINCT FROM $4
+           AND pipeline_id IS NULL
 		   AND local_day = $%d
 		 ORDER BY taken_at DESC
 		 LIMIT 1`, len(args)), args...).Scan(&id)

@@ -12991,6 +12991,369 @@ func (e ReportBlockSeverity) Valid() bool {
 	}
 }
 
+// Defines values for ReportScopeKind.
+const (
+	ReportScopeKindOwner     ReportScopeKind = "owner"
+	ReportScopeKindTeam      ReportScopeKind = "team"
+	ReportScopeKindWorkspace ReportScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportScopeKind enum.
+func (e ReportScopeKind) Valid() bool {
+	switch e {
+	case ReportScopeKindOwner:
+		return true
+	case ReportScopeKindTeam:
+		return true
+	case ReportScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingBlockKind.
+const (
+	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
+	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
+	ReportingBlockKindMetricReading     ReportingBlockKind = "metric_reading"
+	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
+	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
+	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
+	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
+	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
+	ReportingBlockKindTargetProgress    ReportingBlockKind = "target_progress"
+)
+
+// Valid indicates whether the value is a known member of the ReportingBlockKind enum.
+func (e ReportingBlockKind) Valid() bool {
+	switch e {
+	case ReportingBlockKindBookingsTrend:
+		return true
+	case ReportingBlockKindForecastSupport:
+		return true
+	case ReportingBlockKindMetricReading:
+		return true
+	case ReportingBlockKindOwnerAttainment:
+		return true
+	case ReportingBlockKindPipelineMovement:
+		return true
+	case ReportingBlockKindSdrOutcomes:
+		return true
+	case ReportingBlockKindStageAge:
+		return true
+	case ReportingBlockKindStageDistribution:
+		return true
+	case ReportingBlockKindTargetProgress:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingExecutionStatus.
+const (
+	ReportingExecutionStatusFailed    ReportingExecutionStatus = "failed"
+	ReportingExecutionStatusPartial   ReportingExecutionStatus = "partial"
+	ReportingExecutionStatusPending   ReportingExecutionStatus = "pending"
+	ReportingExecutionStatusRunning   ReportingExecutionStatus = "running"
+	ReportingExecutionStatusSkipped   ReportingExecutionStatus = "skipped"
+	ReportingExecutionStatusSucceeded ReportingExecutionStatus = "succeeded"
+	ReportingExecutionStatusSuspended ReportingExecutionStatus = "suspended"
+)
+
+// Valid indicates whether the value is a known member of the ReportingExecutionStatus enum.
+func (e ReportingExecutionStatus) Valid() bool {
+	switch e {
+	case ReportingExecutionStatusFailed:
+		return true
+	case ReportingExecutionStatusPartial:
+		return true
+	case ReportingExecutionStatusPending:
+		return true
+	case ReportingExecutionStatusRunning:
+		return true
+	case ReportingExecutionStatusSkipped:
+		return true
+	case ReportingExecutionStatusSucceeded:
+		return true
+	case ReportingExecutionStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingFrameworkInputTemplate.
+const (
+	ReportingFrameworkInputTemplateSales ReportingFrameworkInputTemplate = "sales"
+	ReportingFrameworkInputTemplateSdr   ReportingFrameworkInputTemplate = "sdr"
+)
+
+// Valid indicates whether the value is a known member of the ReportingFrameworkInputTemplate enum.
+func (e ReportingFrameworkInputTemplate) Valid() bool {
+	switch e {
+	case ReportingFrameworkInputTemplateSales:
+		return true
+	case ReportingFrameworkInputTemplateSdr:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingMetricDefinitionTemporalBasis.
+const (
+	ReportingMetricDefinitionTemporalBasisEventPeriod ReportingMetricDefinitionTemporalBasis = "event_period"
+	ReportingMetricDefinitionTemporalBasisStateAt     ReportingMetricDefinitionTemporalBasis = "state_at"
+)
+
+// Valid indicates whether the value is a known member of the ReportingMetricDefinitionTemporalBasis enum.
+func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
+	switch e {
+	case ReportingMetricDefinitionTemporalBasisEventPeriod:
+		return true
+	case ReportingMetricDefinitionTemporalBasisStateAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingMetricID.
+const (
+	ReportingMetricIDAcceptedOpportunities    ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDBookingsWon              ReportingMetricID = "bookings_won"
+	ReportingMetricIDClosedWinRate            ReportingMetricID = "closed_win_rate"
+	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
+	ReportingMetricIDMeetingsHeld             ReportingMetricID = "meetings_held"
+	ReportingMetricIDOpenPipeline             ReportingMetricID = "open_pipeline"
+	ReportingMetricIDQualifiedPipelineCreated ReportingMetricID = "qualified_pipeline_created"
+	ReportingMetricIDStageAge                 ReportingMetricID = "stage_age"
+)
+
+// Valid indicates whether the value is a known member of the ReportingMetricID enum.
+func (e ReportingMetricID) Valid() bool {
+	switch e {
+	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDBookingsWon:
+		return true
+	case ReportingMetricIDClosedWinRate:
+		return true
+	case ReportingMetricIDForecastLanding:
+		return true
+	case ReportingMetricIDMeetingsHeld:
+		return true
+	case ReportingMetricIDOpenPipeline:
+		return true
+	case ReportingMetricIDQualifiedPipelineCreated:
+		return true
+	case ReportingMetricIDStageAge:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingReportAudience.
+const (
+	ReportingReportAudiencePrivate   ReportingReportAudience = "private"
+	ReportingReportAudienceTeam      ReportingReportAudience = "team"
+	ReportingReportAudienceWorkspace ReportingReportAudience = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportingReportAudience enum.
+func (e ReportingReportAudience) Valid() bool {
+	switch e {
+	case ReportingReportAudiencePrivate:
+		return true
+	case ReportingReportAudienceTeam:
+		return true
+	case ReportingReportAudienceWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingReportInputAudience.
+const (
+	ReportingReportInputAudiencePrivate   ReportingReportInputAudience = "private"
+	ReportingReportInputAudienceTeam      ReportingReportInputAudience = "team"
+	ReportingReportInputAudienceWorkspace ReportingReportInputAudience = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportingReportInputAudience enum.
+func (e ReportingReportInputAudience) Valid() bool {
+	switch e {
+	case ReportingReportInputAudiencePrivate:
+		return true
+	case ReportingReportInputAudienceTeam:
+		return true
+	case ReportingReportInputAudienceWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingScheduleInputFrequency.
+const (
+	ReportingScheduleInputFrequencyMonthly ReportingScheduleInputFrequency = "monthly"
+	ReportingScheduleInputFrequencyWeekly  ReportingScheduleInputFrequency = "weekly"
+)
+
+// Valid indicates whether the value is a known member of the ReportingScheduleInputFrequency enum.
+func (e ReportingScheduleInputFrequency) Valid() bool {
+	switch e {
+	case ReportingScheduleInputFrequencyMonthly:
+		return true
+	case ReportingScheduleInputFrequencyWeekly:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingScopeKind.
+const (
+	ReportingScopeKindManagedTeams ReportingScopeKind = "managed_teams"
+	ReportingScopeKindOwner        ReportingScopeKind = "owner"
+	ReportingScopeKindTeam         ReportingScopeKind = "team"
+	ReportingScopeKindWorkspace    ReportingScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ReportingScopeKind enum.
+func (e ReportingScopeKind) Valid() bool {
+	switch e {
+	case ReportingScopeKindManagedTeams:
+		return true
+	case ReportingScopeKindOwner:
+		return true
+	case ReportingScopeKindTeam:
+		return true
+	case ReportingScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingSelectionCloseWindow.
+const (
+	ReportingSelectionCloseWindowAllOpen       ReportingSelectionCloseWindow = "all_open"
+	ReportingSelectionCloseWindowFiscalQuarter ReportingSelectionCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ReportingSelectionCloseWindow enum.
+func (e ReportingSelectionCloseWindow) Valid() bool {
+	switch e {
+	case ReportingSelectionCloseWindowAllOpen:
+		return true
+	case ReportingSelectionCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingSelectionPeriod.
+const (
+	ReportingSelectionPeriodCustom      ReportingSelectionPeriod = "custom"
+	ReportingSelectionPeriodLastMonth   ReportingSelectionPeriod = "last_month"
+	ReportingSelectionPeriodLastWeek    ReportingSelectionPeriod = "last_week"
+	ReportingSelectionPeriodThisMonth   ReportingSelectionPeriod = "this_month"
+	ReportingSelectionPeriodThisQuarter ReportingSelectionPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ReportingSelectionPeriod enum.
+func (e ReportingSelectionPeriod) Valid() bool {
+	switch e {
+	case ReportingSelectionPeriodCustom:
+		return true
+	case ReportingSelectionPeriodLastMonth:
+		return true
+	case ReportingSelectionPeriodLastWeek:
+		return true
+	case ReportingSelectionPeriodThisMonth:
+		return true
+	case ReportingSelectionPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingSelectionTargetBasis.
+const (
+	ReportingSelectionTargetBasisFiscalQuarter ReportingSelectionTargetBasis = "fiscal_quarter"
+	ReportingSelectionTargetBasisMonth         ReportingSelectionTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the ReportingSelectionTargetBasis enum.
+func (e ReportingSelectionTargetBasis) Valid() bool {
+	switch e {
+	case ReportingSelectionTargetBasisFiscalQuarter:
+		return true
+	case ReportingSelectionTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingStatus.
+const (
+	ReportingStatusInsufficientSample ReportingStatus = "insufficient_sample"
+	ReportingStatusNoData             ReportingStatus = "no_data"
+	ReportingStatusNotConfigured      ReportingStatus = "not_configured"
+	ReportingStatusOk                 ReportingStatus = "ok"
+	ReportingStatusPartial            ReportingStatus = "partial"
+	ReportingStatusUnavailable        ReportingStatus = "unavailable"
+	ReportingStatusUnsupported        ReportingStatus = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the ReportingStatus enum.
+func (e ReportingStatus) Valid() bool {
+	switch e {
+	case ReportingStatusInsufficientSample:
+		return true
+	case ReportingStatusNoData:
+		return true
+	case ReportingStatusNotConfigured:
+		return true
+	case ReportingStatusOk:
+		return true
+	case ReportingStatusPartial:
+		return true
+	case ReportingStatusUnavailable:
+		return true
+	case ReportingStatusUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetInputPeriodKind.
+const (
+	ReportingTargetInputPeriodKindFiscalQuarter ReportingTargetInputPeriodKind = "fiscal_quarter"
+	ReportingTargetInputPeriodKindMonth         ReportingTargetInputPeriodKind = "month"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetInputPeriodKind enum.
+func (e ReportingTargetInputPeriodKind) Valid() bool {
+	switch e {
+	case ReportingTargetInputPeriodKindFiscalQuarter:
+		return true
+	case ReportingTargetInputPeriodKindMonth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveInputCheckOutcome.
 const (
 	ResolveInputCheckOutcomeAddedEvidence ResolveInputCheckOutcome = "added_evidence"
@@ -13053,6 +13416,7 @@ const (
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
 	RetentionScopeRawCapture             RetentionScope = "raw_capture"
+	RetentionScopeReportEdition          RetentionScope = "report_edition"
 )
 
 // Valid indicates whether the value is a known member of the RetentionScope enum.
@@ -13075,6 +13439,8 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeLeadunconverted:
 		return true
 	case RetentionScopeRawCapture:
+		return true
+	case RetentionScopeReportEdition:
 		return true
 	default:
 		return false
@@ -17875,6 +18241,258 @@ func (e DeleteAiModelRateParamsLane) Valid() bool {
 	}
 }
 
+// Defines values for EvaluateReportingParamsScopeKind.
+const (
+	EvaluateReportingParamsScopeKindOwner     EvaluateReportingParamsScopeKind = "owner"
+	EvaluateReportingParamsScopeKindTeam      EvaluateReportingParamsScopeKind = "team"
+	EvaluateReportingParamsScopeKindWorkspace EvaluateReportingParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsScopeKind enum.
+func (e EvaluateReportingParamsScopeKind) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsScopeKindOwner:
+		return true
+	case EvaluateReportingParamsScopeKindTeam:
+		return true
+	case EvaluateReportingParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EvaluateReportingParamsPeriod.
+const (
+	EvaluateReportingParamsPeriodCustom      EvaluateReportingParamsPeriod = "custom"
+	EvaluateReportingParamsPeriodLastMonth   EvaluateReportingParamsPeriod = "last_month"
+	EvaluateReportingParamsPeriodLastWeek    EvaluateReportingParamsPeriod = "last_week"
+	EvaluateReportingParamsPeriodThisMonth   EvaluateReportingParamsPeriod = "this_month"
+	EvaluateReportingParamsPeriodThisQuarter EvaluateReportingParamsPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsPeriod enum.
+func (e EvaluateReportingParamsPeriod) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsPeriodCustom:
+		return true
+	case EvaluateReportingParamsPeriodLastMonth:
+		return true
+	case EvaluateReportingParamsPeriodLastWeek:
+		return true
+	case EvaluateReportingParamsPeriodThisMonth:
+		return true
+	case EvaluateReportingParamsPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EvaluateReportingParamsTargetBasis.
+const (
+	EvaluateReportingParamsTargetBasisFiscalQuarter EvaluateReportingParamsTargetBasis = "fiscal_quarter"
+	EvaluateReportingParamsTargetBasisMonth         EvaluateReportingParamsTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsTargetBasis enum.
+func (e EvaluateReportingParamsTargetBasis) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsTargetBasisFiscalQuarter:
+		return true
+	case EvaluateReportingParamsTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EvaluateReportingParamsCloseWindow.
+const (
+	EvaluateReportingParamsCloseWindowAllOpen       EvaluateReportingParamsCloseWindow = "all_open"
+	EvaluateReportingParamsCloseWindowFiscalQuarter EvaluateReportingParamsCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the EvaluateReportingParamsCloseWindow enum.
+func (e EvaluateReportingParamsCloseWindow) Valid() bool {
+	switch e {
+	case EvaluateReportingParamsCloseWindowAllOpen:
+		return true
+	case EvaluateReportingParamsCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsScopeKind.
+const (
+	ExportReportingEvaluationParamsScopeKindOwner     ExportReportingEvaluationParamsScopeKind = "owner"
+	ExportReportingEvaluationParamsScopeKindTeam      ExportReportingEvaluationParamsScopeKind = "team"
+	ExportReportingEvaluationParamsScopeKindWorkspace ExportReportingEvaluationParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsScopeKind enum.
+func (e ExportReportingEvaluationParamsScopeKind) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsScopeKindOwner:
+		return true
+	case ExportReportingEvaluationParamsScopeKindTeam:
+		return true
+	case ExportReportingEvaluationParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsPeriod.
+const (
+	ExportReportingEvaluationParamsPeriodCustom      ExportReportingEvaluationParamsPeriod = "custom"
+	ExportReportingEvaluationParamsPeriodLastMonth   ExportReportingEvaluationParamsPeriod = "last_month"
+	ExportReportingEvaluationParamsPeriodLastWeek    ExportReportingEvaluationParamsPeriod = "last_week"
+	ExportReportingEvaluationParamsPeriodThisMonth   ExportReportingEvaluationParamsPeriod = "this_month"
+	ExportReportingEvaluationParamsPeriodThisQuarter ExportReportingEvaluationParamsPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsPeriod enum.
+func (e ExportReportingEvaluationParamsPeriod) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsPeriodCustom:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastMonth:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastWeek:
+		return true
+	case ExportReportingEvaluationParamsPeriodThisMonth:
+		return true
+	case ExportReportingEvaluationParamsPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsTargetBasis.
+const (
+	ExportReportingEvaluationParamsTargetBasisFiscalQuarter ExportReportingEvaluationParamsTargetBasis = "fiscal_quarter"
+	ExportReportingEvaluationParamsTargetBasisMonth         ExportReportingEvaluationParamsTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsTargetBasis enum.
+func (e ExportReportingEvaluationParamsTargetBasis) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsTargetBasisFiscalQuarter:
+		return true
+	case ExportReportingEvaluationParamsTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExportReportingEvaluationParamsCloseWindow.
+const (
+	ExportReportingEvaluationParamsCloseWindowAllOpen       ExportReportingEvaluationParamsCloseWindow = "all_open"
+	ExportReportingEvaluationParamsCloseWindowFiscalQuarter ExportReportingEvaluationParamsCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsCloseWindow enum.
+func (e ExportReportingEvaluationParamsCloseWindow) Valid() bool {
+	switch e {
+	case ExportReportingEvaluationParamsCloseWindowAllOpen:
+		return true
+	case ExportReportingEvaluationParamsCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsScopeKind.
+const (
+	GetReportingEvidenceParamsScopeKindOwner     GetReportingEvidenceParamsScopeKind = "owner"
+	GetReportingEvidenceParamsScopeKindTeam      GetReportingEvidenceParamsScopeKind = "team"
+	GetReportingEvidenceParamsScopeKindWorkspace GetReportingEvidenceParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsScopeKind enum.
+func (e GetReportingEvidenceParamsScopeKind) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsScopeKindOwner:
+		return true
+	case GetReportingEvidenceParamsScopeKindTeam:
+		return true
+	case GetReportingEvidenceParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsPeriod.
+const (
+	GetReportingEvidenceParamsPeriodCustom      GetReportingEvidenceParamsPeriod = "custom"
+	GetReportingEvidenceParamsPeriodLastMonth   GetReportingEvidenceParamsPeriod = "last_month"
+	GetReportingEvidenceParamsPeriodLastWeek    GetReportingEvidenceParamsPeriod = "last_week"
+	GetReportingEvidenceParamsPeriodThisMonth   GetReportingEvidenceParamsPeriod = "this_month"
+	GetReportingEvidenceParamsPeriodThisQuarter GetReportingEvidenceParamsPeriod = "this_quarter"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsPeriod enum.
+func (e GetReportingEvidenceParamsPeriod) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsPeriodCustom:
+		return true
+	case GetReportingEvidenceParamsPeriodLastMonth:
+		return true
+	case GetReportingEvidenceParamsPeriodLastWeek:
+		return true
+	case GetReportingEvidenceParamsPeriodThisMonth:
+		return true
+	case GetReportingEvidenceParamsPeriodThisQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsTargetBasis.
+const (
+	GetReportingEvidenceParamsTargetBasisFiscalQuarter GetReportingEvidenceParamsTargetBasis = "fiscal_quarter"
+	GetReportingEvidenceParamsTargetBasisMonth         GetReportingEvidenceParamsTargetBasis = "month"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsTargetBasis enum.
+func (e GetReportingEvidenceParamsTargetBasis) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsTargetBasisFiscalQuarter:
+		return true
+	case GetReportingEvidenceParamsTargetBasisMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetReportingEvidenceParamsCloseWindow.
+const (
+	GetReportingEvidenceParamsCloseWindowAllOpen       GetReportingEvidenceParamsCloseWindow = "all_open"
+	GetReportingEvidenceParamsCloseWindowFiscalQuarter GetReportingEvidenceParamsCloseWindow = "fiscal_quarter"
+)
+
+// Valid indicates whether the value is a known member of the GetReportingEvidenceParamsCloseWindow enum.
+func (e GetReportingEvidenceParamsCloseWindow) Valid() bool {
+	switch e {
+	case GetReportingEvidenceParamsCloseWindowAllOpen:
+		return true
+	case GetReportingEvidenceParamsCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListApprovalsParamsStatus.
 const (
 	ListApprovalsParamsStatusApproved ListApprovalsParamsStatus = "approved"
@@ -19393,6 +20011,42 @@ func (e ListRelationshipsParamsKind) Valid() bool {
 	case ListRelationshipsParamsKindReferredBy:
 		return true
 	case ListRelationshipsParamsKindWorksWith:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExplainReportParamsHandleVersion.
+const (
+	ExplainReportParamsHandleVersionN2 ExplainReportParamsHandleVersion = "2"
+)
+
+// Valid indicates whether the value is a known member of the ExplainReportParamsHandleVersion enum.
+func (e ExplainReportParamsHandleVersion) Valid() bool {
+	switch e {
+	case ExplainReportParamsHandleVersionN2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExplainReportParamsScopeKind.
+const (
+	ExplainReportParamsScopeKindOwner     ExplainReportParamsScopeKind = "owner"
+	ExplainReportParamsScopeKindTeam      ExplainReportParamsScopeKind = "team"
+	ExplainReportParamsScopeKindWorkspace ExplainReportParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ExplainReportParamsScopeKind enum.
+func (e ExplainReportParamsScopeKind) Valid() bool {
+	switch e {
+	case ExplainReportParamsScopeKindOwner:
+		return true
+	case ExplainReportParamsScopeKindTeam:
+		return true
+	case ExplainReportParamsScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -37898,6 +38552,11 @@ type RenderedReport struct {
 
 // RenderedValue defines model for RenderedValue.
 type RenderedValue struct {
+	Context           *ReportingContext  `json:"context,omitempty"`
+	Coverage          *ReportingCoverage `json:"coverage,omitempty"`
+	DefinitionVersion *string            `json:"definition_version,omitempty"`
+	Unit              *string            `json:"unit,omitempty"`
+
 	// Value The figure the database computed, or null when it was withheld. A null with `withheld` false means the cell resolved to no value at all, which is a different fact from one kept back.
 	Value interface{} `json:"value,omitempty"`
 
@@ -37996,17 +38655,29 @@ type ReportBlockKind string
 // ReportBlockSeverity Types a callout, and is meaningless elsewhere. A callout says what the numbers cannot — a partial figure, an unanswerable question, an unsupported grouping — and an untyped one renders as prose, which is how a measured absence becomes indistinguishable from one nobody looked for.
 type ReportBlockSeverity string
 
-// ReportCell One figure, named by the run it lives in and the cell within it.
+// ReportCell Exactly one live saved-run cell, live catalog metric reference, or frozen edition metric reference.
 type ReportCell struct {
 	// Column Which measure of the cell to show. A cell can carry several and a block shows one, so which is not a detail a renderer may pick.
-	Column string `json:"column"`
+	Column     *string                 `json:"column,omitempty"`
+	EditionRef *ReportEditionReference `json:"edition_ref,omitempty"`
 
 	// Group The cell's group key values, one per grouping in the saved question. Omitted for an ungrouped run, which has one cell.
-	Group *[]interface{} `json:"group,omitempty"`
+	Group     *[]interface{}         `json:"group,omitempty"`
+	MetricRef *ReportMetricReference `json:"metric_ref,omitempty"`
 
 	// RunId The saved run. Resolved under the reading caller's own authority.
-	RunId openapi_types.UUID `json:"run_id"`
+	RunId *openapi_types.UUID `json:"run_id,omitempty"`
+	union json.RawMessage
 }
+
+// ReportCell0 defines model for .
+type ReportCell0 = interface{}
+
+// ReportCell1 defines model for .
+type ReportCell1 = interface{}
+
+// ReportCell2 defines model for .
+type ReportCell2 = interface{}
 
 // ReportDerivation The "Explain This Number" resolution (features/03 §1.3): a plain-language definition of
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
@@ -38056,6 +38727,18 @@ type ReportDerivation struct {
 // ReportDocument A report as composed: structure and words, with every figure named by a handle.
 type ReportDocument struct {
 	Blocks []ReportBlock `json:"blocks"`
+}
+
+// ReportEditionReference defines model for ReportEditionReference.
+type ReportEditionReference struct {
+	EditionId openapi_types.UUID `json:"edition_id"`
+	Metric    ReportingMetricID  `json:"metric"`
+}
+
+// ReportMetricReference defines model for ReportMetricReference.
+type ReportMetricReference struct {
+	Metric    ReportingMetricID  `json:"metric"`
+	Selection ReportingSelection `json:"selection"`
 }
 
 // ReportResult defines model for ReportResult.
@@ -38114,6 +38797,407 @@ type ReportRun struct {
 type ReportRunCell struct {
 	// Group The cell's group key values, one per grouping in the SAVED question and in that question's own order. Omitted for an ungrouped run, which has one cell. A null entry means the group whose value is unset, which resolves to the records that have nothing there rather than to none.
 	Group *[]interface{} `json:"group,omitempty"`
+}
+
+// ReportScope defines model for ReportScope.
+type ReportScope struct {
+	Id   *openapi_types.UUID `json:"id,omitempty"`
+	Kind ReportScopeKind     `json:"kind"`
+}
+
+// ReportScopeKind defines model for ReportScope.Kind.
+type ReportScopeKind string
+
+// ReportingBlockKind defines model for ReportingBlockKind.
+type ReportingBlockKind string
+
+// ReportingCaptureContext defines model for ReportingCaptureContext.
+type ReportingCaptureContext struct {
+	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
+	Scope      ReportingScope      `json:"scope"`
+}
+
+// ReportingCaptureStatus defines model for ReportingCaptureStatus.
+type ReportingCaptureStatus struct {
+	Failure       *string    `json:"failure,omitempty"`
+	LastAttemptAt time.Time  `json:"last_attempt_at"`
+	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
+	NextCaptureAt time.Time  `json:"next_capture_at"`
+}
+
+// ReportingCatalog defines model for ReportingCatalog.
+type ReportingCatalog struct {
+	Metrics []ReportingMetricDefinition `json:"metrics"`
+}
+
+// ReportingChart defines model for ReportingChart.
+type ReportingChart struct {
+	AllocatedTarget      *float64                `json:"allocated_target,omitempty"`
+	AllocationDifference *float64                `json:"allocation_difference,omitempty"`
+	CaptureStatus        *ReportingCaptureStatus `json:"capture_status,omitempty"`
+	Closing              *float64                `json:"closing,omitempty"`
+	ComparisonInterval   *ReportingWindow        `json:"comparison_interval,omitempty"`
+	ContextId            string                  `json:"context_id"`
+	Coverage             ReportingCoverage       `json:"coverage"`
+	Interval             *ReportingWindow        `json:"interval,omitempty"`
+	Kind                 ReportingBlockKind      `json:"kind"`
+	Marker               *float64                `json:"marker,omitempty"`
+	Metric               ReportingMetricID       `json:"metric"`
+	Opening              *float64                `json:"opening,omitempty"`
+	OpeningSnapshotId    *openapi_types.UUID     `json:"opening_snapshot_id,omitempty"`
+	Points               []ReportingPoint        `json:"points"`
+	SnapshotId           *openapi_types.UUID     `json:"snapshot_id,omitempty"`
+	StateAt              *time.Time              `json:"state_at,omitempty"`
+	Unit                 string                  `json:"unit"`
+}
+
+// ReportingComparison defines model for ReportingComparison.
+type ReportingComparison struct {
+	Compatible bool             `json:"compatible"`
+	Deltas     []ReportingDelta `json:"deltas"`
+	Left       ReportingEdition `json:"left"`
+	Reason     *string          `json:"reason,omitempty"`
+	Right      ReportingEdition `json:"right"`
+}
+
+// ReportingContext defines model for ReportingContext.
+type ReportingContext struct {
+	CloseInterval         *ReportingWindow     `json:"close_interval,omitempty"`
+	Currency              string               `json:"currency"`
+	DefinitionVersion     string               `json:"definition_version"`
+	EvaluatedAt           time.Time            `json:"evaluated_at"`
+	FrameworkRevision     int64                `json:"framework_revision"`
+	Interval              ReportingWindow      `json:"interval"`
+	MemberIds             []openapi_types.UUID `json:"member_ids"`
+	PeriodKind            string               `json:"period_kind"`
+	PipelineId            *openapi_types.UUID  `json:"pipeline_id,omitempty"`
+	PopulationFingerprint string               `json:"population_fingerprint"`
+	Scope                 ReportingScope       `json:"scope"`
+	StateAt               time.Time            `json:"state_at"`
+	TargetInterval        *ReportingWindow     `json:"target_interval,omitempty"`
+	Timezone              string               `json:"timezone"`
+}
+
+// ReportingCoverage defines model for ReportingCoverage.
+type ReportingCoverage struct {
+	EligibleCount *int64          `json:"eligible_count,omitempty"`
+	PricedCount   *int64          `json:"priced_count,omitempty"`
+	Reason        *string         `json:"reason,omitempty"`
+	Status        ReportingStatus `json:"status"`
+	Withheld      bool            `json:"withheld"`
+}
+
+// ReportingDelta defines model for ReportingDelta.
+type ReportingDelta struct {
+	Absolute   float64           `json:"absolute"`
+	Metric     ReportingMetricID `json:"metric"`
+	Percentage *float64          `json:"percentage,omitempty"`
+}
+
+// ReportingEdition defines model for ReportingEdition.
+type ReportingEdition struct {
+	CapturedAt time.Time           `json:"captured_at"`
+	Evaluation ReportingEvaluation `json:"evaluation"`
+
+	// Expired Retention removed the readings; dated metadata remains.
+	Expired        *bool              `json:"expired,omitempty"`
+	Id             openapi_types.UUID `json:"id"`
+	IntendedDueAt  time.Time          `json:"intended_due_at"`
+	Name           string             `json:"name"`
+	Redacted       bool               `json:"redacted"`
+	ReportId       openapi_types.UUID `json:"report_id"`
+	ReportRevision int64              `json:"report_revision"`
+	Withheld       bool               `json:"withheld"`
+}
+
+// ReportingEditionList defines model for ReportingEditionList.
+type ReportingEditionList struct {
+	Data       []ReportingEdition `json:"data"`
+	NextCursor *string            `json:"next_cursor,omitempty"`
+}
+
+// ReportingEvaluation defines model for ReportingEvaluation.
+type ReportingEvaluation struct {
+	Charts        []ReportingChart   `json:"charts"`
+	Context       ReportingContext   `json:"context"`
+	EvaluationKey string             `json:"evaluation_key"`
+	Metrics       []ReportingMetric  `json:"metrics"`
+	Selection     ReportingSelection `json:"selection"`
+}
+
+// ReportingEvidence defines model for ReportingEvidence.
+type ReportingEvidence struct {
+	Context    ReportingContext       `json:"context"`
+	Metric     ReportingMetricID      `json:"metric"`
+	NextCursor *string                `json:"next_cursor,omitempty"`
+	Rows       []ReportingEvidenceRow `json:"rows"`
+	Truncated  bool                   `json:"truncated"`
+}
+
+// ReportingEvidenceRef defines model for ReportingEvidenceRef.
+type ReportingEvidenceRef struct {
+	ContextId string            `json:"context_id"`
+	GroupKey  *string           `json:"group_key,omitempty"`
+	Metric    ReportingMetricID `json:"metric"`
+	Through   *time.Time        `json:"through,omitempty"`
+}
+
+// ReportingEvidenceRow defines model for ReportingEvidenceRow.
+type ReportingEvidenceRow struct {
+	Key        string              `json:"key"`
+	Label      string              `json:"label"`
+	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
+	Restricted bool                `json:"restricted"`
+	SourceId   *openapi_types.UUID `json:"source_id,omitempty"`
+	SourceType *string             `json:"source_type,omitempty"`
+	Value      *float64            `json:"value"`
+}
+
+// ReportingExecution defines model for ReportingExecution.
+type ReportingExecution struct {
+	Attempt        int64                    `json:"attempt"`
+	EditionId      *openapi_types.UUID      `json:"edition_id,omitempty"`
+	Id             openapi_types.UUID       `json:"id"`
+	IntendedDueAt  time.Time                `json:"intended_due_at"`
+	Reason         *string                  `json:"reason,omitempty"`
+	ReportId       openapi_types.UUID       `json:"report_id"`
+	ReportRevision int64                    `json:"report_revision"`
+	Status         ReportingExecutionStatus `json:"status"`
+}
+
+// ReportingExecutionStatus defines model for ReportingExecution.Status.
+type ReportingExecutionStatus string
+
+// ReportingExecutionList defines model for ReportingExecutionList.
+type ReportingExecutionList struct {
+	Data       []ReportingExecution `json:"data"`
+	NextCursor *string              `json:"next_cursor,omitempty"`
+}
+
+// ReportingFramework defines model for ReportingFramework.
+type ReportingFramework struct {
+	Definition  ReportingFrameworkInput `json:"definition"`
+	EffectiveAt time.Time               `json:"effective_at"`
+	Revision    int64                   `json:"revision"`
+	Version     int64                   `json:"version"`
+}
+
+// ReportingFrameworkInput defines model for ReportingFrameworkInput.
+type ReportingFrameworkInput struct {
+	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
+	Qualification   []ReportingQualification        `json:"qualification"`
+	Reason          string                          `json:"reason"`
+	Template        ReportingFrameworkInputTemplate `json:"template"`
+}
+
+// ReportingFrameworkInputTemplate defines model for ReportingFrameworkInput.Template.
+type ReportingFrameworkInputTemplate string
+
+// ReportingMetric defines model for ReportingMetric.
+type ReportingMetric struct {
+	Attainment     *float64             `json:"attainment,omitempty"`
+	Coverage       ReportingCoverage    `json:"coverage"`
+	Denominator    *float64             `json:"denominator,omitempty"`
+	Evidence       ReportingEvidenceRef `json:"evidence"`
+	Id             ReportingMetricID    `json:"id"`
+	Numerator      *float64             `json:"numerator,omitempty"`
+	Target         *float64             `json:"target,omitempty"`
+	TargetActual   *float64             `json:"target_actual,omitempty"`
+	TargetRevision *int64               `json:"target_revision,omitempty"`
+	Unit           string               `json:"unit"`
+	Value          *float64             `json:"value"`
+	Version        string               `json:"version"`
+}
+
+// ReportingMetricDefinition defines model for ReportingMetricDefinition.
+type ReportingMetricDefinition struct {
+	AllowedFilters   *[]string                              `json:"allowed_filters,omitempty"`
+	Attribution      *string                                `json:"attribution,omitempty"`
+	Blocks           []ReportingBlockKind                   `json:"blocks"`
+	Definition       string                                 `json:"definition"`
+	FrozenSupport    *bool                                  `json:"frozen_support,omitempty"`
+	Id               ReportingMetricID                      `json:"id"`
+	IncompletePolicy *string                                `json:"incomplete_policy,omitempty"`
+	MaxContributions *int                                   `json:"max_contributions,omitempty"`
+	MinimumCohort    *int                                   `json:"minimum_cohort,omitempty"`
+	ReadObject       *string                                `json:"read_object,omitempty"`
+	RequiredFields   *[]string                              `json:"required_fields,omitempty"`
+	SupportsTarget   bool                                   `json:"supports_target"`
+	TemporalBasis    ReportingMetricDefinitionTemporalBasis `json:"temporal_basis"`
+	Unit             string                                 `json:"unit"`
+	Version          string                                 `json:"version"`
+}
+
+// ReportingMetricDefinitionTemporalBasis defines model for ReportingMetricDefinition.TemporalBasis.
+type ReportingMetricDefinitionTemporalBasis string
+
+// ReportingMetricID defines model for ReportingMetricID.
+type ReportingMetricID string
+
+// ReportingPoint defines model for ReportingPoint.
+type ReportingPoint struct {
+	At           *time.Time            `json:"at,omitempty"`
+	Comparison   *float64              `json:"comparison,omitempty"`
+	Evidence     *ReportingEvidenceRef `json:"evidence,omitempty"`
+	Key          string                `json:"key"`
+	Label        string                `json:"label"`
+	Observations *int64                `json:"observations,omitempty"`
+	Status       ReportingStatus       `json:"status"`
+	Target       *float64              `json:"target,omitempty"`
+	Upper        *float64              `json:"upper,omitempty"`
+	Value        *float64              `json:"value"`
+}
+
+// ReportingQualification defines model for ReportingQualification.
+type ReportingQualification struct {
+	PipelineId openapi_types.UUID   `json:"pipeline_id"`
+	StageIds   []openapi_types.UUID `json:"stage_ids"`
+}
+
+// ReportingReport defines model for ReportingReport.
+type ReportingReport struct {
+	ArchivedAt     *time.Time              `json:"archived_at,omitempty"`
+	Audience       ReportingReportAudience `json:"audience"`
+	AudienceTeamId *openapi_types.UUID     `json:"audience_team_id,omitempty"`
+	Cadence        *string                 `json:"cadence,omitempty"`
+
+	// CanManage Whether the current human may manage this report, before individual object-action grants.
+	CanManage        *bool              `json:"can_manage,omitempty"`
+	CreatedAt        time.Time          `json:"created_at"`
+	EditionCount     *int               `json:"edition_count,omitempty"`
+	Id               openapi_types.UUID `json:"id"`
+	LastStatus       *string            `json:"last_status,omitempty"`
+	LatestCapturedAt *time.Time         `json:"latest_captured_at,omitempty"`
+	Name             string             `json:"name"`
+	NextDueAt        *time.Time         `json:"next_due_at,omitempty"`
+	OwnerId          openapi_types.UUID `json:"owner_id"`
+	Revision         int64              `json:"revision"`
+	Selection        ReportingSelection `json:"selection"`
+	Version          int64              `json:"version"`
+}
+
+// ReportingReportAudience defines model for ReportingReport.Audience.
+type ReportingReportAudience string
+
+// ReportingReportInput defines model for ReportingReportInput.
+type ReportingReportInput struct {
+	Audience       ReportingReportInputAudience `json:"audience"`
+	AudienceTeamId *openapi_types.UUID          `json:"audience_team_id,omitempty"`
+	Name           string                       `json:"name"`
+	Selection      ReportingSelection           `json:"selection"`
+}
+
+// ReportingReportInputAudience defines model for ReportingReportInput.Audience.
+type ReportingReportInputAudience string
+
+// ReportingReportList defines model for ReportingReportList.
+type ReportingReportList struct {
+	Data       []ReportingReport `json:"data"`
+	NextCursor *string           `json:"next_cursor,omitempty"`
+}
+
+// ReportingSchedule defines model for ReportingSchedule.
+type ReportingSchedule struct {
+	Definition ReportingScheduleInput `json:"definition"`
+	Id         openapi_types.UUID     `json:"id"`
+	LastStatus *string                `json:"last_status,omitempty"`
+	NextDueAt  time.Time              `json:"next_due_at"`
+	OwnerId    openapi_types.UUID     `json:"owner_id"`
+	ReportId   openapi_types.UUID     `json:"report_id"`
+	Timezone   string                 `json:"timezone"`
+	Version    int64                  `json:"version"`
+}
+
+// ReportingScheduleInput defines model for ReportingScheduleInput.
+type ReportingScheduleInput struct {
+	Day            int                             `json:"day"`
+	Enabled        bool                            `json:"enabled"`
+	Frequency      ReportingScheduleInputFrequency `json:"frequency"`
+	LocalTime      string                          `json:"local_time"`
+	ReportRevision int64                           `json:"report_revision"`
+}
+
+// ReportingScheduleInputFrequency defines model for ReportingScheduleInput.Frequency.
+type ReportingScheduleInputFrequency string
+
+// ReportingScheduleList defines model for ReportingScheduleList.
+type ReportingScheduleList struct {
+	Data       []ReportingSchedule `json:"data"`
+	NextCursor *string             `json:"next_cursor,omitempty"`
+}
+
+// ReportingScope defines model for ReportingScope.
+type ReportingScope struct {
+	Id    *openapi_types.UUID `json:"id,omitempty"`
+	Kind  ReportingScopeKind  `json:"kind"`
+	Label *string             `json:"label,omitempty"`
+}
+
+// ReportingScopeKind defines model for ReportingScope.Kind.
+type ReportingScopeKind string
+
+// ReportingSelection defines model for ReportingSelection.
+type ReportingSelection struct {
+	Blocks      []ReportingBlockKind          `json:"blocks"`
+	CloseWindow ReportingSelectionCloseWindow `json:"close_window"`
+	Interval    *ReportingWindow              `json:"interval,omitempty"`
+	Metrics     []ReportingMetricID           `json:"metrics"`
+	Period      ReportingSelectionPeriod      `json:"period"`
+	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
+	Scope       ReportingScope                `json:"scope"`
+	TargetBasis ReportingSelectionTargetBasis `json:"target_basis"`
+}
+
+// ReportingSelectionCloseWindow defines model for ReportingSelection.CloseWindow.
+type ReportingSelectionCloseWindow string
+
+// ReportingSelectionPeriod defines model for ReportingSelection.Period.
+type ReportingSelectionPeriod string
+
+// ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
+type ReportingSelectionTargetBasis string
+
+// ReportingStatus defines model for ReportingStatus.
+type ReportingStatus string
+
+// ReportingTarget defines model for ReportingTarget.
+type ReportingTarget struct {
+	AllocatedValue       *int64               `json:"allocated_value,omitempty"`
+	AllocationDifference *int64               `json:"allocation_difference,omitempty"`
+	CreatedAt            time.Time            `json:"created_at"`
+	Definition           ReportingTargetInput `json:"definition"`
+	Id                   openapi_types.UUID   `json:"id"`
+	Interval             ReportingWindow      `json:"interval"`
+	Revision             int64                `json:"revision"`
+	Unit                 string               `json:"unit"`
+	Version              int64                `json:"version"`
+}
+
+// ReportingTargetInput defines model for ReportingTargetInput.
+type ReportingTargetInput struct {
+	Metric      ReportingMetricID              `json:"metric"`
+	PeriodKind  ReportingTargetInputPeriodKind `json:"period_kind"`
+	PeriodStart openapi_types.Date             `json:"period_start"`
+	PipelineId  *openapi_types.UUID            `json:"pipeline_id,omitempty"`
+	Reason      string                         `json:"reason"`
+	Scope       ReportingScope                 `json:"scope"`
+	Value       int64                          `json:"value"`
+}
+
+// ReportingTargetInputPeriodKind defines model for ReportingTargetInput.PeriodKind.
+type ReportingTargetInputPeriodKind string
+
+// ReportingTargetList defines model for ReportingTargetList.
+type ReportingTargetList struct {
+	Data       []ReportingTarget `json:"data"`
+	NextCursor *string           `json:"next_cursor,omitempty"`
+}
+
+// ReportingWindow defines model for ReportingWindow.
+type ReportingWindow struct {
+	EndAt   time.Time `json:"end_at"`
+	StartAt time.Time `json:"start_at"`
 }
 
 // RequestAccessResponse defines model for RequestAccessResponse.
@@ -38464,6 +39548,7 @@ type RunReportRequest struct {
 	// Filters Typed predicates (period, status, owner, ...) — keys must be in the report vocabulary.
 	Filters *map[string]interface{} `json:"filters,omitempty"`
 	GroupBy *[]string               `json:"group_by,omitempty"`
+	Scope   *ReportScope            `json:"scope,omitempty"`
 }
 
 // RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
@@ -39505,6 +40590,9 @@ type SettingsAvailability struct {
 
 	// Lists True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
 	Lists *bool `json:"lists,omitempty"`
+
+	// Reporting Whether analytics.performance_enabled makes saved reporting available.
+	Reporting *bool `json:"reporting,omitempty"`
 }
 
 // SettleClaimRequest How a claim finished.
@@ -40467,6 +41555,9 @@ type TeamWeeklyReview struct {
 	GeneratedAt    time.Time            `json:"generated_at"`
 	Id             openapi_types.UUID   `json:"id"`
 	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
+
+	// NumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
+	NumericSummary *WeeklyNumericSummary `json:"numeric_summary,omitempty"`
 
 	// Outlook Where the TEAM's week was landing, one entry per horizon — the week, the month and
 	// the fiscal quarter.
@@ -42065,6 +43156,18 @@ type WeeklyLearningCitation struct {
 // WeeklyLearningCitationSubjectType defines model for WeeklyLearningCitation.SubjectType.
 type WeeklyLearningCitationSubjectType string
 
+// WeeklyNumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
+type WeeklyNumericSummary struct {
+	BookingsCoverage ReportingCoverage `json:"bookings_coverage"`
+	Currency         string            `json:"currency"`
+	EvaluatedAt      time.Time         `json:"evaluated_at"`
+	Interval         ReportingWindow   `json:"interval"`
+	MeetingsCoverage ReportingCoverage `json:"meetings_coverage"`
+	Timezone         string            `json:"timezone"`
+	Version          string            `json:"version"`
+	WonMinor         *int64            `json:"won_minor,omitempty"`
+}
+
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
 // WeeklyReview beside it.
 type WeeklyPlan struct {
@@ -42216,6 +43319,9 @@ type WeeklyReview struct {
 	// It adds nothing: every fact it may state is already in the counts and the lines
 	// beside it, which is what makes the whole lane safe to lose.
 	Narrative *string `json:"narrative,omitempty"`
+
+	// NumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
+	NumericSummary *WeeklyNumericSummary `json:"numeric_summary,omitempty"`
 
 	// Outlook Where the week was landing, one entry per horizon — the week itself, the month, and
 	// the fiscal quarter, because a rep asks three different questions on a Monday.
@@ -44526,6 +45632,169 @@ type GetAiUsageParams struct {
 
 	// To Default: today.
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// CompareReportingEditionsParams defines parameters for CompareReportingEditions.
+type CompareReportingEditionsParams struct {
+	LeftId  openapi_types.UUID `form:"left_id" json:"left_id"`
+	RightId openapi_types.UUID `form:"right_id" json:"right_id"`
+}
+
+// GetReportingEditionEvidenceParams defines parameters for GetReportingEditionEvidence.
+type GetReportingEditionEvidenceParams struct {
+	Metric    ReportingMetricID `form:"metric" json:"metric"`
+	ContextId string            `form:"context_id" json:"context_id"`
+	GroupKey  *string           `form:"group_key,omitempty" json:"group_key,omitempty"`
+	Through   *time.Time        `form:"through,omitempty" json:"through,omitempty"`
+	Cursor    *string           `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit     *int              `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// EvaluateReportingParams defines parameters for EvaluateReporting.
+type EvaluateReportingParams struct {
+	ScopeKind   *EvaluateReportingParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId     *openapi_types.UUID                 `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId  *openapi_types.UUID                 `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	Period      *EvaluateReportingParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
+	StartAt     *time.Time                          `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt       *time.Time                          `form:"end_at,omitempty" json:"end_at,omitempty"`
+	TargetBasis *EvaluateReportingParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
+	CloseWindow *EvaluateReportingParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
+	Metrics     *[]ReportingMetricID                `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks      *[]ReportingBlockKind               `form:"blocks,omitempty" json:"blocks,omitempty"`
+}
+
+// EvaluateReportingParamsScopeKind defines parameters for EvaluateReporting.
+type EvaluateReportingParamsScopeKind string
+
+// EvaluateReportingParamsPeriod defines parameters for EvaluateReporting.
+type EvaluateReportingParamsPeriod string
+
+// EvaluateReportingParamsTargetBasis defines parameters for EvaluateReporting.
+type EvaluateReportingParamsTargetBasis string
+
+// EvaluateReportingParamsCloseWindow defines parameters for EvaluateReporting.
+type EvaluateReportingParamsCloseWindow string
+
+// ExportReportingEvaluationParams defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParams struct {
+	EvaluationKey     string                                      `form:"evaluation_key" json:"evaluation_key"`
+	EvaluatedAt       time.Time                                   `form:"evaluated_at" json:"evaluated_at"`
+	FrameworkRevision int64                                       `form:"framework_revision" json:"framework_revision"`
+	ScopeKind         *ExportReportingEvaluationParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId           *openapi_types.UUID                         `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId        *openapi_types.UUID                         `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	Period            *ExportReportingEvaluationParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
+	StartAt           *time.Time                                  `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt             *time.Time                                  `form:"end_at,omitempty" json:"end_at,omitempty"`
+	TargetBasis       *ExportReportingEvaluationParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
+	CloseWindow       *ExportReportingEvaluationParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
+	Metrics           *[]ReportingMetricID                        `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks            *[]ReportingBlockKind                       `form:"blocks,omitempty" json:"blocks,omitempty"`
+}
+
+// ExportReportingEvaluationParamsScopeKind defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsScopeKind string
+
+// ExportReportingEvaluationParamsPeriod defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsPeriod string
+
+// ExportReportingEvaluationParamsTargetBasis defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsTargetBasis string
+
+// ExportReportingEvaluationParamsCloseWindow defines parameters for ExportReportingEvaluation.
+type ExportReportingEvaluationParamsCloseWindow string
+
+// GetReportingEvidenceParams defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParams struct {
+	EvaluationKey     string                                 `form:"evaluation_key" json:"evaluation_key"`
+	EvaluatedAt       time.Time                              `form:"evaluated_at" json:"evaluated_at"`
+	FrameworkRevision int64                                  `form:"framework_revision" json:"framework_revision"`
+	ContextId         string                                 `form:"context_id" json:"context_id"`
+	ScopeKind         *GetReportingEvidenceParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId           *openapi_types.UUID                    `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId        *openapi_types.UUID                    `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	Period            *GetReportingEvidenceParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
+	StartAt           *time.Time                             `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt             *time.Time                             `form:"end_at,omitempty" json:"end_at,omitempty"`
+	TargetBasis       *GetReportingEvidenceParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
+	CloseWindow       *GetReportingEvidenceParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
+	Metrics           *[]ReportingMetricID                   `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks            *[]ReportingBlockKind                  `form:"blocks,omitempty" json:"blocks,omitempty"`
+	Metric            ReportingMetricID                      `form:"metric" json:"metric"`
+	GroupKey          *string                                `form:"group_key,omitempty" json:"group_key,omitempty"`
+	Through           *time.Time                             `form:"through,omitempty" json:"through,omitempty"`
+	Cursor            *string                                `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit             *int                                   `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetReportingEvidenceParamsScopeKind defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsScopeKind string
+
+// GetReportingEvidenceParamsPeriod defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsPeriod string
+
+// GetReportingEvidenceParamsTargetBasis defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsTargetBasis string
+
+// GetReportingEvidenceParamsCloseWindow defines parameters for GetReportingEvidence.
+type GetReportingEvidenceParamsCloseWindow string
+
+// PublishReportingFrameworkParams defines parameters for PublishReportingFramework.
+type PublishReportingFrameworkParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// ListReportingReportsParams defines parameters for ListReportingReports.
+type ListReportingReportsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Scheduled Return only reports with an enabled schedule.
+	Scheduled *bool `form:"scheduled,omitempty" json:"scheduled,omitempty"`
+}
+
+// UpdateReportingReportParams defines parameters for UpdateReportingReport.
+type UpdateReportingReportParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// ListReportingEditionsParams defines parameters for ListReportingEditions.
+type ListReportingEditionsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// FreezeReportingEditionParams defines parameters for FreezeReportingEdition.
+type FreezeReportingEditionParams struct {
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// EvaluateReportingReportParams defines parameters for EvaluateReportingReport.
+type EvaluateReportingReportParams struct {
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+}
+
+// ListReportingExecutionsParams defines parameters for ListReportingExecutions.
+type ListReportingExecutionsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
+type UpdateReportingScheduleParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// ListReportingTargetsParams defines parameters for ListReportingTargets.
+type ListReportingTargetsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// UpdateReportingTargetParams defines parameters for UpdateReportingTarget.
+type UpdateReportingTargetParams struct {
+	IfMatch string `json:"If-Match"`
 }
 
 // ListApprovalsParams defines parameters for ListApprovals.
@@ -48667,12 +49936,27 @@ type UpdateRelationshipParams struct {
 
 // ExplainReportParams defines parameters for ExplainReport.
 type ExplainReportParams struct {
+	// HandleVersion Version of a scope-bearing derivation handle; legacy handles omit it.
+	HandleVersion *ExplainReportParamsHandleVersion `form:"handle_version,omitempty" json:"handle_version,omitempty"`
+
+	// ScopeKind Requested population, revalidated against the current reader.
+	ScopeKind *ExplainReportParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId Team or owner identifier for the requested scope.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
 	// By The plan's grouping dimensions (each must also appear as a predicate parameter carrying the explained row's group-key value).
 	By *[]string `form:"by,omitempty" json:"by,omitempty"`
 
 	// Agg The plan's aggregates as `fn:field:alias` triplets (field empty for `count`), e.g. `sum:amount_minor:unweighted_minor`.
 	Agg *[]string `form:"agg,omitempty" json:"agg,omitempty"`
 }
+
+// ExplainReportParamsHandleVersion defines parameters for ExplainReport.
+type ExplainReportParamsHandleVersion string
+
+// ExplainReportParamsScopeKind defines parameters for ExplainReport.
+type ExplainReportParamsScopeKind string
 
 // ListLegalHoldsParams defines parameters for ListLegalHolds.
 type ListLegalHoldsParams struct {
@@ -49851,14 +51135,35 @@ type PreviewAiRoutingJSONRequestBody = AiRouting
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 
+// PublishReportingFrameworkJSONRequestBody defines body for PublishReportingFramework for application/json ContentType.
+type PublishReportingFrameworkJSONRequestBody = ReportingFrameworkInput
+
 // RunAnalyticsQueryJSONRequestBody defines body for RunAnalyticsQuery for application/json ContentType.
 type RunAnalyticsQueryJSONRequestBody = AnalyticsQuery
+
+// CreateReportingReportJSONRequestBody defines body for CreateReportingReport for application/json ContentType.
+type CreateReportingReportJSONRequestBody = ReportingReportInput
 
 // RenderAnalyticsReportJSONRequestBody defines body for RenderAnalyticsReport for application/json ContentType.
 type RenderAnalyticsReportJSONRequestBody = ReportDocument
 
+// UpdateReportingReportJSONRequestBody defines body for UpdateReportingReport for application/json ContentType.
+type UpdateReportingReportJSONRequestBody = ReportingReportInput
+
+// CreateReportingScheduleJSONRequestBody defines body for CreateReportingSchedule for application/json ContentType.
+type CreateReportingScheduleJSONRequestBody = ReportingScheduleInput
+
 // ExplainReportRunCellJSONRequestBody defines body for ExplainReportRunCell for application/json ContentType.
 type ExplainReportRunCellJSONRequestBody = ReportRunCell
+
+// UpdateReportingScheduleJSONRequestBody defines body for UpdateReportingSchedule for application/json ContentType.
+type UpdateReportingScheduleJSONRequestBody = ReportingScheduleInput
+
+// CreateReportingTargetJSONRequestBody defines body for CreateReportingTarget for application/json ContentType.
+type CreateReportingTargetJSONRequestBody = ReportingTargetInput
+
+// UpdateReportingTargetJSONRequestBody defines body for UpdateReportingTarget for application/json ContentType.
+type UpdateReportingTargetJSONRequestBody = ReportingTargetInput
 
 // ApproveApprovalBundleJSONRequestBody defines body for ApproveApprovalBundle for application/json ContentType.
 type ApproveApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
@@ -60720,6 +62025,184 @@ func (t *ConfirmPage) UnmarshalJSON(b []byte) error {
 	return err
 }
 
+// AsReportCell0 returns the union data inside the ReportCell as a ReportCell0
+func (t ReportCell) AsReportCell0() (ReportCell0, error) {
+	var body ReportCell0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReportCell0 overwrites any union data inside the ReportCell as the provided ReportCell0
+func (t *ReportCell) FromReportCell0(v ReportCell0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReportCell0 performs a merge with any union data inside the ReportCell, using the provided ReportCell0
+func (t *ReportCell) MergeReportCell0(v ReportCell0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReportCell1 returns the union data inside the ReportCell as a ReportCell1
+func (t ReportCell) AsReportCell1() (ReportCell1, error) {
+	var body ReportCell1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReportCell1 overwrites any union data inside the ReportCell as the provided ReportCell1
+func (t *ReportCell) FromReportCell1(v ReportCell1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReportCell1 performs a merge with any union data inside the ReportCell, using the provided ReportCell1
+func (t *ReportCell) MergeReportCell1(v ReportCell1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsReportCell2 returns the union data inside the ReportCell as a ReportCell2
+func (t ReportCell) AsReportCell2() (ReportCell2, error) {
+	var body ReportCell2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromReportCell2 overwrites any union data inside the ReportCell as the provided ReportCell2
+func (t *ReportCell) FromReportCell2(v ReportCell2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeReportCell2 performs a merge with any union data inside the ReportCell, using the provided ReportCell2
+func (t *ReportCell) MergeReportCell2(v ReportCell2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ReportCell) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	object := make(map[string]json.RawMessage)
+	if t.union != nil {
+		err = json.Unmarshal(b, &object)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if t.Column != nil {
+		object["column"], err = json.Marshal(t.Column)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'column': %w", err)
+		}
+	}
+
+	if t.EditionRef != nil {
+		object["edition_ref"], err = json.Marshal(t.EditionRef)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'edition_ref': %w", err)
+		}
+	}
+
+	if t.Group != nil {
+		object["group"], err = json.Marshal(t.Group)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'group': %w", err)
+		}
+	}
+
+	if t.MetricRef != nil {
+		object["metric_ref"], err = json.Marshal(t.MetricRef)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'metric_ref': %w", err)
+		}
+	}
+
+	if t.RunId != nil {
+		object["run_id"], err = json.Marshal(t.RunId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'run_id': %w", err)
+		}
+	}
+	b, err = json.Marshal(object)
+	return b, err
+}
+
+func (t *ReportCell) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	if err != nil {
+		return err
+	}
+	object := make(map[string]json.RawMessage)
+	err = json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["column"]; found {
+		err = json.Unmarshal(raw, &t.Column)
+		if err != nil {
+			return fmt.Errorf("error reading 'column': %w", err)
+		}
+	}
+
+	if raw, found := object["edition_ref"]; found {
+		err = json.Unmarshal(raw, &t.EditionRef)
+		if err != nil {
+			return fmt.Errorf("error reading 'edition_ref': %w", err)
+		}
+	}
+
+	if raw, found := object["group"]; found {
+		err = json.Unmarshal(raw, &t.Group)
+		if err != nil {
+			return fmt.Errorf("error reading 'group': %w", err)
+		}
+	}
+
+	if raw, found := object["metric_ref"]; found {
+		err = json.Unmarshal(raw, &t.MetricRef)
+		if err != nil {
+			return fmt.Errorf("error reading 'metric_ref': %w", err)
+		}
+	}
+
+	if raw, found := object["run_id"]; found {
+		err = json.Unmarshal(raw, &t.RunId)
+		if err != nil {
+			return fmt.Errorf("error reading 'run_id': %w", err)
+		}
+	}
+
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List deal acquisition sources, active and retired, in display order.
@@ -60815,6 +62298,9 @@ type ServerInterface interface {
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
+	// Durably pause every report schedule before rollout rollback.
+	// (POST /admin/reporting/pause)
+	PauseReportingSchedules(w http.ResponseWriter, r *http.Request)
 	// Reset an installation that armed the capability to its first-boot state.
 	// (POST /admin/reset-data)
 	ResetData(w http.ResponseWriter, r *http.Request)
@@ -60896,24 +62382,108 @@ type ServerInterface interface {
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// Compare reporting editions
+	// (GET /analytics/editions/compare)
+	CompareReportingEditions(w http.ResponseWriter, r *http.Request, params CompareReportingEditionsParams)
+	// Get reporting edition
+	// (GET /analytics/editions/{id})
+	GetReportingEdition(w http.ResponseWriter, r *http.Request, id Id)
+	// Get reporting edition evidence
+	// (GET /analytics/editions/{id}/evidence)
+	GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request, id Id, params GetReportingEditionEvidenceParams)
+	// Export this edition's permitted frozen metrics and chart readings.
+	// (GET /analytics/editions/{id}/export.csv)
+	ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id)
+	// Evaluate reporting
+	// (GET /analytics/evaluate)
+	EvaluateReporting(w http.ResponseWriter, r *http.Request, params EvaluateReportingParams)
+	// Evaluate reporting
+	// (GET /analytics/evaluate.csv)
+	ExportReportingEvaluation(w http.ResponseWriter, r *http.Request, params ExportReportingEvaluationParams)
+	// Get reporting evidence
+	// (GET /analytics/evidence)
+	GetReportingEvidence(w http.ResponseWriter, r *http.Request, params GetReportingEvidenceParams)
+	// Get reporting execution
+	// (GET /analytics/executions/{id})
+	GetReportingExecution(w http.ResponseWriter, r *http.Request, id Id)
+	// Retry reporting execution
+	// (POST /analytics/executions/{id}/retry)
+	RetryReportingExecution(w http.ResponseWriter, r *http.Request, id Id)
 	// The records one cell of an analytics answer was computed from.
 	// (POST /analytics/explain)
 	ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request)
+	// Get reporting framework
+	// (GET /analytics/framework)
+	GetReportingFramework(w http.ResponseWriter, r *http.Request)
+	// Publish reporting framework
+	// (PUT /analytics/framework)
+	PublishReportingFramework(w http.ResponseWriter, r *http.Request, params PublishReportingFrameworkParams)
+	// Get reporting metrics
+	// (GET /analytics/metrics)
+	GetReportingMetrics(w http.ResponseWriter, r *http.Request)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
+	// List reporting reports
+	// (GET /analytics/reports)
+	ListReportingReports(w http.ResponseWriter, r *http.Request, params ListReportingReportsParams)
+	// Create reporting report
+	// (POST /analytics/reports)
+	CreateReportingReport(w http.ResponseWriter, r *http.Request)
 	// Resolve a report document's figures for this reader.
 	// (POST /analytics/reports/render)
 	RenderAnalyticsReport(w http.ResponseWriter, r *http.Request)
+	// Archive reporting report
+	// (DELETE /analytics/reports/{id})
+	ArchiveReportingReport(w http.ResponseWriter, r *http.Request, id Id)
+	// Get reporting report
+	// (GET /analytics/reports/{id})
+	GetReportingReport(w http.ResponseWriter, r *http.Request, id Id)
+	// Update reporting report
+	// (PATCH /analytics/reports/{id})
+	UpdateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingReportParams)
+	// List reporting editions
+	// (GET /analytics/reports/{id}/editions)
+	ListReportingEditions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingEditionsParams)
+	// Freeze reporting edition
+	// (POST /analytics/reports/{id}/editions)
+	FreezeReportingEdition(w http.ResponseWriter, r *http.Request, id Id, params FreezeReportingEditionParams)
+	// Evaluate reporting report
+	// (GET /analytics/reports/{id}/evaluation)
+	EvaluateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params EvaluateReportingReportParams)
+	// List reporting executions
+	// (GET /analytics/reports/{id}/executions)
+	ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams)
+	// List reporting schedules
+	// (GET /analytics/reports/{id}/schedules)
+	ListReportingSchedules(w http.ResponseWriter, r *http.Request, id Id)
+	// Create reporting schedule
+	// (POST /analytics/reports/{id}/schedules)
+	CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id)
 	// The answer a report sentence points at.
 	// (GET /analytics/runs/{run_id})
 	GetReportRun(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
 	// The records behind one cell of a saved run.
 	// (POST /analytics/runs/{run_id}/cells/explain)
 	ExplainReportRunCell(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
+	// Update reporting schedule
+	// (PATCH /analytics/schedules/{id})
+	UpdateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingScheduleParams)
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
+	// List reporting targets
+	// (GET /analytics/targets)
+	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
+	// Create reporting target
+	// (POST /analytics/targets)
+	CreateReportingTarget(w http.ResponseWriter, r *http.Request)
+	// Get reporting target
+	// (GET /analytics/targets/{id})
+	GetReportingTarget(w http.ResponseWriter, r *http.Request, id Id)
+	// Update reporting target
+	// (PATCH /analytics/targets/{id})
+	UpdateReportingTarget(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingTargetParams)
 	// Approve every still-pending member of one bundle.
 	// (POST /approval-bundles/{bundle_id}/approve)
 	ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleId BundleId)
@@ -63077,6 +64647,12 @@ func (_ Unimplemented) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Durably pause every report schedule before rollout rollback.
+// (POST /admin/reporting/pause)
+func (_ Unimplemented) PauseReportingSchedules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Reset an installation that armed the capability to its first-boot state.
 // (POST /admin/reset-data)
 func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
@@ -63239,9 +64815,81 @@ func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Compare reporting editions
+// (GET /analytics/editions/compare)
+func (_ Unimplemented) CompareReportingEditions(w http.ResponseWriter, r *http.Request, params CompareReportingEditionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting edition
+// (GET /analytics/editions/{id})
+func (_ Unimplemented) GetReportingEdition(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting edition evidence
+// (GET /analytics/editions/{id}/evidence)
+func (_ Unimplemented) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request, id Id, params GetReportingEditionEvidenceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export this edition's permitted frozen metrics and chart readings.
+// (GET /analytics/editions/{id}/export.csv)
+func (_ Unimplemented) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Evaluate reporting
+// (GET /analytics/evaluate)
+func (_ Unimplemented) EvaluateReporting(w http.ResponseWriter, r *http.Request, params EvaluateReportingParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Evaluate reporting
+// (GET /analytics/evaluate.csv)
+func (_ Unimplemented) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request, params ExportReportingEvaluationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting evidence
+// (GET /analytics/evidence)
+func (_ Unimplemented) GetReportingEvidence(w http.ResponseWriter, r *http.Request, params GetReportingEvidenceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting execution
+// (GET /analytics/executions/{id})
+func (_ Unimplemented) GetReportingExecution(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retry reporting execution
+// (POST /analytics/executions/{id}/retry)
+func (_ Unimplemented) RetryReportingExecution(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The records one cell of an analytics answer was computed from.
 // (POST /analytics/explain)
 func (_ Unimplemented) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting framework
+// (GET /analytics/framework)
+func (_ Unimplemented) GetReportingFramework(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Publish reporting framework
+// (PUT /analytics/framework)
+func (_ Unimplemented) PublishReportingFramework(w http.ResponseWriter, r *http.Request, params PublishReportingFrameworkParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting metrics
+// (GET /analytics/metrics)
+func (_ Unimplemented) GetReportingMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63251,9 +64899,75 @@ func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List reporting reports
+// (GET /analytics/reports)
+func (_ Unimplemented) ListReportingReports(w http.ResponseWriter, r *http.Request, params ListReportingReportsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create reporting report
+// (POST /analytics/reports)
+func (_ Unimplemented) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Resolve a report document's figures for this reader.
 // (POST /analytics/reports/render)
 func (_ Unimplemented) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive reporting report
+// (DELETE /analytics/reports/{id})
+func (_ Unimplemented) ArchiveReportingReport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting report
+// (GET /analytics/reports/{id})
+func (_ Unimplemented) GetReportingReport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update reporting report
+// (PATCH /analytics/reports/{id})
+func (_ Unimplemented) UpdateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingReportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting editions
+// (GET /analytics/reports/{id}/editions)
+func (_ Unimplemented) ListReportingEditions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingEditionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Freeze reporting edition
+// (POST /analytics/reports/{id}/editions)
+func (_ Unimplemented) FreezeReportingEdition(w http.ResponseWriter, r *http.Request, id Id, params FreezeReportingEditionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Evaluate reporting report
+// (GET /analytics/reports/{id}/evaluation)
+func (_ Unimplemented) EvaluateReportingReport(w http.ResponseWriter, r *http.Request, id Id, params EvaluateReportingReportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting executions
+// (GET /analytics/reports/{id}/executions)
+func (_ Unimplemented) ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting schedules
+// (GET /analytics/reports/{id}/schedules)
+func (_ Unimplemented) ListReportingSchedules(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create reporting schedule
+// (POST /analytics/reports/{id}/schedules)
+func (_ Unimplemented) CreateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63269,9 +64983,39 @@ func (_ Unimplemented) ExplainReportRunCell(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Update reporting schedule
+// (PATCH /analytics/schedules/{id})
+func (_ Unimplemented) UpdateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingScheduleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What questions this caller may ask, and in what words.
 // (GET /analytics/schema)
 func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List reporting targets
+// (GET /analytics/targets)
+func (_ Unimplemented) ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create reporting target
+// (POST /analytics/targets)
+func (_ Unimplemented) CreateReportingTarget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get reporting target
+// (GET /analytics/targets/{id})
+func (_ Unimplemented) GetReportingTarget(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update reporting target
+// (PATCH /analytics/targets/{id})
+func (_ Unimplemented) UpdateReportingTarget(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingTargetParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68744,6 +70488,26 @@ func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// PauseReportingSchedules operation middleware
+func (siw *ServerInterfaceWrapper) PauseReportingSchedules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PauseReportingSchedules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ResetData operation middleware
 func (siw *ServerInterfaceWrapper) ResetData(w http.ResponseWriter, r *http.Request) {
 
@@ -69529,6 +71293,939 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// CompareReportingEditions operation middleware
+func (siw *ServerInterfaceWrapper) CompareReportingEditions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CompareReportingEditionsParams
+
+	// ------------- Required query parameter "left_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "left_id", r.URL.Query(), &params.LeftId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "left_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "left_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "right_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "right_id", r.URL.Query(), &params.RightId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "right_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "right_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompareReportingEditions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingEdition operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingEdition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingEdition(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingEditionEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetReportingEditionEvidenceParams
+
+	// ------------- Required query parameter "metric" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metric", r.URL.Query(), &params.Metric, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metric"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metric", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "context_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "context_id", r.URL.Query(), &params.ContextId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "context_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "context_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group_key", r.URL.Query(), &params.GroupKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "through" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "through", r.URL.Query(), &params.Through, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "through"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "through", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingEditionEvidence(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportReportingEdition operation middleware
+func (siw *ServerInterfaceWrapper) ExportReportingEdition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportReportingEdition(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EvaluateReporting operation middleware
+func (siw *ServerInterfaceWrapper) EvaluateReporting(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EvaluateReportingParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_at", r.URL.Query(), &params.StartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_at", r.URL.Query(), &params.EndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_basis", r.URL.Query(), &params.TargetBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_basis", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_window", r.URL.Query(), &params.CloseWindow, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "blocks" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "blocks", r.URL.Query(), &params.Blocks, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EvaluateReporting(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportReportingEvaluation operation middleware
+func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExportReportingEvaluationParams
+
+	// ------------- Required query parameter "evaluation_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluation_key", r.URL.Query(), &params.EvaluationKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluation_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluation_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "evaluated_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluated_at", r.URL.Query(), &params.EvaluatedAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluated_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluated_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "framework_revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "framework_revision", r.URL.Query(), &params.FrameworkRevision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "framework_revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "framework_revision", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_at", r.URL.Query(), &params.StartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_at", r.URL.Query(), &params.EndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_basis", r.URL.Query(), &params.TargetBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_basis", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_window", r.URL.Query(), &params.CloseWindow, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "blocks" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "blocks", r.URL.Query(), &params.Blocks, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportReportingEvaluation(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetReportingEvidenceParams
+
+	// ------------- Required query parameter "evaluation_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluation_key", r.URL.Query(), &params.EvaluationKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluation_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluation_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "evaluated_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evaluated_at", r.URL.Query(), &params.EvaluatedAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evaluated_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evaluated_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "framework_revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "framework_revision", r.URL.Query(), &params.FrameworkRevision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "framework_revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "framework_revision", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "context_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "context_id", r.URL.Query(), &params.ContextId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "context_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "context_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "start_at", r.URL.Query(), &params.StartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "end_at", r.URL.Query(), &params.EndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "end_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_basis", r.URL.Query(), &params.TargetBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_basis", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_window" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_window", r.URL.Query(), &params.CloseWindow, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_window"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "blocks" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "blocks", r.URL.Query(), &params.Blocks, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "metric" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metric", r.URL.Query(), &params.Metric, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metric"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metric", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "group_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "group_key", r.URL.Query(), &params.GroupKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "group_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "group_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "through" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "through", r.URL.Query(), &params.Through, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "through"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "through", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingEvidence(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingExecution operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingExecution(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingExecution(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetryReportingExecution operation middleware
+func (siw *ServerInterfaceWrapper) RetryReportingExecution(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetryReportingExecution(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ExplainAnalyticsCell operation middleware
 func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
 
@@ -69540,6 +72237,101 @@ func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainAnalyticsCell(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingFramework operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingFramework(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingFramework(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishReportingFramework operation middleware
+func (siw *ServerInterfaceWrapper) PublishReportingFramework(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishReportingFrameworkParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishReportingFramework(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingMetrics(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingMetrics(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69571,6 +72363,93 @@ func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListReportingReports operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingReports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingReportsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scheduled" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scheduled", r.URL.Query(), &params.Scheduled, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scheduled"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scheduled", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingReports(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateReportingReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenderAnalyticsReport operation middleware
 func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
 
@@ -69584,6 +72463,434 @@ func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RenderAnalyticsReport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveReportingReport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingReport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateReportingReportParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReportingReport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingEditions operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingEditions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingEditionsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingEditions(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FreezeReportingEdition operation middleware
+func (siw *ServerInterfaceWrapper) FreezeReportingEdition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params FreezeReportingEditionParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = IdempotencyKey
+
+	} else {
+		err := fmt.Errorf("Header parameter Idempotency-Key is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "Idempotency-Key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FreezeReportingEdition(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EvaluateReportingReport operation middleware
+func (siw *ServerInterfaceWrapper) EvaluateReportingReport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EvaluateReportingReportParams
+
+	// ------------- Optional query parameter "revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "revision", r.URL.Query(), &params.Revision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EvaluateReportingReport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingExecutions operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingExecutionsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingExecutions(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingSchedules operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingSchedules(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingSchedules(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateReportingSchedule operation middleware
+func (siw *ServerInterfaceWrapper) CreateReportingSchedule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateReportingSchedule(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -69657,6 +72964,66 @@ func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateReportingSchedule operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReportingSchedule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateReportingScheduleParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReportingSchedule(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAnalyticsSchema operation middleware
 func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
 
@@ -69668,6 +73035,174 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAnalyticsSchema(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListReportingTargets operation middleware
+func (siw *ServerInterfaceWrapper) ListReportingTargets(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListReportingTargetsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReportingTargets(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateReportingTarget operation middleware
+func (siw *ServerInterfaceWrapper) CreateReportingTarget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateReportingTarget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetReportingTarget operation middleware
+func (siw *ServerInterfaceWrapper) GetReportingTarget(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReportingTarget(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateReportingTarget operation middleware
+func (siw *ServerInterfaceWrapper) UpdateReportingTarget(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateReportingTargetParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateReportingTarget(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -92047,6 +95582,45 @@ func (siw *ServerInterfaceWrapper) ExplainReport(w http.ResponseWriter, r *http.
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ExplainReportParams
 
+	// ------------- Optional query parameter "handle_version" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "handle_version", r.URL.Query(), &params.HandleVersion, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "handle_version"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "handle_version", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "by" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "by", r.URL.Query(), &params.By, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -97940,6 +101514,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/reporting/pause", wrapper.PauseReportingSchedules)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/reset-data", wrapper.ResetData)
 	})
 	r.Group(func(r chi.Router) {
@@ -98021,13 +101598,82 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/compare", wrapper.CompareReportingEditions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/{id}", wrapper.GetReportingEdition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/{id}/evidence", wrapper.GetReportingEditionEvidence)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/editions/{id}/export.csv", wrapper.ExportReportingEdition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/evaluate", wrapper.EvaluateReporting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/evaluate.csv", wrapper.ExportReportingEvaluation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/evidence", wrapper.GetReportingEvidence)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/executions/{id}", wrapper.GetReportingExecution)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/executions/{id}/retry", wrapper.RetryReportingExecution)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/explain", wrapper.ExplainAnalyticsCell)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/framework", wrapper.GetReportingFramework)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/analytics/framework", wrapper.PublishReportingFramework)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/metrics", wrapper.GetReportingMetrics)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports", wrapper.ListReportingReports)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports", wrapper.CreateReportingReport)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/reports/render", wrapper.RenderAnalyticsReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/analytics/reports/{id}", wrapper.ArchiveReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}", wrapper.GetReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/analytics/reports/{id}", wrapper.UpdateReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/editions", wrapper.ListReportingEditions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/editions", wrapper.FreezeReportingEdition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/evaluation", wrapper.EvaluateReportingReport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/executions", wrapper.ListReportingExecutions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/schedules", wrapper.ListReportingSchedules)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/schedules", wrapper.CreateReportingSchedule)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/runs/{run_id}", wrapper.GetReportRun)
@@ -98036,7 +101682,22 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/analytics/runs/{run_id}/cells/explain", wrapper.ExplainReportRunCell)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/analytics/schedules/{id}", wrapper.UpdateReportingSchedule)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/targets", wrapper.CreateReportingTarget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/targets/{id}", wrapper.GetReportingTarget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/analytics/targets/{id}", wrapper.UpdateReportingTarget)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approval-bundles/{bundle_id}/approve", wrapper.ApproveApprovalBundle)
