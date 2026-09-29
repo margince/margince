@@ -656,8 +656,31 @@ describe("useClarifyAnswers — honest failures", () => {
 
   it("never surfaces a raw exception message when something unexpected breaks the round trip, and reports it exactly once", async () => {
     const crash = new TypeError("Cannot read properties of undefined");
-    // The answer arrives and its body cannot be read: past the network, so it
-    // is a fault to report rather than an outage the banner already states.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw crash;
+      }),
+    );
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = setupHook([]);
+
+    act(() => {
+      result.current.answerClarify(entityClarify.id, gradionEntity.name);
+    });
+
+    await waitFor(() => expect(result.current.failure).not.toBeNull());
+    expect(result.current.failure).toEqual({ kind: "unconfirmed" });
+    // The reader is told the choice did not stick; the thing that actually
+    // broke is kept once, by the client's own sink, so an operator reading
+    // the console sees one failure rather than two spellings of it.
+    expect(errorLog).toHaveBeenCalledTimes(1);
+    expect(errorLog).toHaveBeenCalledWith(crash);
+  });
+
+  it("never surfaces a raw exception message when the answer cannot be read, and reports it exactly once", async () => {
+    const crash = new TypeError("Cannot read properties of undefined");
+    // The answer arrives and its body breaks off: a fault past the network.
     const answer = jsonResponse({});
     Object.defineProperty(answer, "text", {
       value: () => Promise.reject(crash),
@@ -675,9 +698,6 @@ describe("useClarifyAnswers — honest failures", () => {
 
     await waitFor(() => expect(result.current.failure).not.toBeNull());
     expect(result.current.failure).toEqual({ kind: "unconfirmed" });
-    // The reader is told the choice did not stick; the thing that actually
-    // broke is kept once, by the client's own sink, so an operator reading
-    // the console sees one failure rather than two spellings of it.
     expect(errorLog).toHaveBeenCalledTimes(1);
     expect(errorLog).toHaveBeenCalledWith(crash);
   });

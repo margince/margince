@@ -104,15 +104,25 @@ describe("the device's own report", () => {
 });
 
 describe("what a request through the api client proves", () => {
-  it("names a server that did not answer on a working network, and clears on any answer", async () => {
-    const { api, connectivityNow, ConnectivityError } = await watched();
+  it("asks /healthz about a refused request, and names Margince only when it fails too", async () => {
+    vi.useFakeTimers({ now: 0 });
+    const { api, connectivityNow, ConnectivityError, heard } = await watched();
     const net = network();
     net.state.api = false;
 
     const failure = await api.GET("/me").catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(ConnectivityError);
-    expect(failure).toMatchObject({ outage: "unreachable", method: "GET" });
+    expect(failure).toMatchObject({
+      outage: "unreachable",
+      method: "GET",
+      unsent: false,
+    });
+    expect(connectivityNow()).toBe("online");
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(net.probes).toEqual([0]);
     expect(connectivityNow()).toBe("unreachable");
+    expect(heard).toHaveBeenCalledTimes(1);
 
     // A 5xx is still an answer: the server is there to refuse.
     vi.stubGlobal(
@@ -123,7 +133,23 @@ describe("what a request through the api client proves", () => {
     expect(connectivityNow()).toBe("online");
   });
 
-  it("puts a failure on an offline device down to the device, not the server", async () => {
+  // A blocked URL or a firewall's 503 on one route: /healthz answers, so the
+  // failure stays that request's own and nothing pauses.
+  it("declares nothing when the probe it sends is answered", async () => {
+    vi.useFakeTimers({ now: 0 });
+    const { api, connectivityNow, heard } = await watched();
+    const net = network();
+    net.state.api = false;
+    net.state.health.push(200);
+
+    await api.GET("/me").catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(net.probes).toEqual([0]);
+    expect(connectivityNow()).toBe("online");
+    expect(heard).not.toHaveBeenCalled();
+  });
+
+  it("knows a request an offline device sent was never sent at all", async () => {
     const { api, connectivityNow } = await watched();
     network().state.api = false;
     goOffline();
@@ -131,7 +157,11 @@ describe("what a request through the api client proves", () => {
     const failure = await api
       .POST("/auth/logout")
       .catch((error: unknown) => error);
-    expect(failure).toMatchObject({ outage: "offline", method: "POST" });
+    expect(failure).toMatchObject({
+      outage: "offline",
+      method: "POST",
+      unsent: true,
+    });
 
     goOnline();
     expect(connectivityNow()).toBe("online");
@@ -140,6 +170,7 @@ describe("what a request through the api client proves", () => {
   // nginx, the Vite proxy and the desktop launcher all answer a bare 502 when
   // the api behind them is down; the api's own 5xx always carries a problem.
   it("takes a proxy's bare gateway answer for Margince gone, and the api's own 5xx for an answer", async () => {
+    vi.useFakeTimers({ now: 0 });
     const { api, connectivityNow } = await watched();
     vi.stubGlobal(
       "fetch",
@@ -156,6 +187,7 @@ describe("what a request through the api client proves", () => {
     // acted before the proxy gave up, so nothing claims it was not saved.
     const refused = await api.POST("/auth/logout");
     expect(refused.response.status).toBe(502);
+    await vi.advanceTimersByTimeAsync(0);
     expect(connectivityNow()).toBe("unreachable");
 
     vi.stubGlobal(
@@ -176,29 +208,34 @@ describe("what a request through the api client proves", () => {
   });
 
   it("reads a proxy that stopped waiting on a model as a slow model, not an outage", async () => {
+    vi.useFakeTimers({ now: 0 });
     const { api, connectivityNow } = await watched();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(null, { status: 504 })),
-    );
+    const gateway = vi.fn(async () => new Response(null, { status: 504 }));
+    vi.stubGlobal("fetch", gateway);
 
     await api.POST("/contacts/{id}/draft-email", {
       params: { path: { id: "p-1" } },
       body: {},
     });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(gateway).toHaveBeenCalledTimes(1);
     expect(connectivityNow()).toBe("online");
   });
 
   it("learns nothing from a request its caller abandoned", async () => {
+    vi.useFakeTimers({ now: 0 });
     const { api, connectivityNow, ConnectivityError } = await watched();
-    network().state.api = false;
+    const net = network();
+    net.state.api = false;
     const abandoned = new AbortController();
     abandoned.abort();
 
     const failure = await api
       .GET("/me", { signal: abandoned.signal })
       .catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(0);
     expect(failure).not.toBeInstanceOf(ConnectivityError);
+    expect(net.probes).toEqual([]);
     expect(connectivityNow()).toBe("online");
   });
 
@@ -223,12 +260,14 @@ describe("what a request through the api client proves", () => {
       .catch((error: unknown) => error);
     await vi.advanceTimersByTimeAsync(store.MODEL_ROUTE_TIMEOUT_MS);
     expect(await draft).toBeInstanceOf(store.RequestTimeoutError);
-    expect(store.connectivityNow()).toBe("online");
+    expect(silent).toHaveBeenCalledTimes(1);
 
     // The stall keeps its own type: a write that timed out may have landed.
     const read = store.api.GET("/me").catch((error: unknown) => error);
     await vi.advanceTimersByTimeAsync(store.REQUEST_TIMEOUT_MS);
     expect(await read).toBeInstanceOf(store.RequestTimeoutError);
+    // The probe it sent stalls as well, and gives up past its own deadline.
+    await vi.advanceTimersByTimeAsync(11_000);
     expect(store.connectivityNow()).toBe("unreachable");
   });
 });
@@ -240,12 +279,14 @@ describe("the probe while Margince is unreachable", () => {
     const net = network();
 
     reportUnreached();
-    expect(heard).toHaveBeenCalledTimes(1);
-    for (const wait of [2_000, 4_000, 8_000, 16_000, 30_000, 30_000]) {
+    for (const wait of [0, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000]) {
       await vi.advanceTimersByTimeAsync(wait);
     }
-    expect(net.probes).toEqual([2_000, 6_000, 14_000, 30_000, 60_000, 90_000]);
+    expect(net.probes).toEqual([
+      0, 2_000, 6_000, 14_000, 30_000, 60_000, 90_000,
+    ]);
     expect(connectivityNow()).toBe("unreachable");
+    expect(heard).toHaveBeenCalledTimes(1);
 
     net.state.health.push(204);
     await vi.advanceTimersByTimeAsync(30_000);
@@ -253,7 +294,7 @@ describe("the probe while Margince is unreachable", () => {
     expect(heard).toHaveBeenCalledTimes(2);
 
     await vi.advanceTimersByTimeAsync(120_000);
-    expect(net.probes).toHaveLength(7);
+    expect(net.probes).toHaveLength(8);
   });
 
   it("gives up on a probe that never answers, and tries again", async () => {
@@ -263,8 +304,8 @@ describe("the probe while Margince is unreachable", () => {
     net.state.stall = true;
 
     reportUnreached();
-    await vi.advanceTimersByTimeAsync(2_000 + 10_000 + 4_000);
-    expect(net.probes).toEqual([2_000, 16_000]);
+    await vi.advanceTimersByTimeAsync(10_000 + 2_000);
+    expect(net.probes).toEqual([0, 12_000]);
   });
 
   it("rests while the tab is hidden and asks at once when it is shown", async () => {
@@ -273,17 +314,19 @@ describe("the probe while Margince is unreachable", () => {
     const net = network();
 
     reportUnreached();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(connectivityNow()).toBe("unreachable");
     hideTab(true);
     await vi.advanceTimersByTimeAsync(150_000);
     // A background request failing while hidden does not wake it either.
     reportUnreached();
     await vi.advanceTimersByTimeAsync(150_000);
-    expect(net.probes).toEqual([]);
+    expect(net.probes).toEqual([0]);
 
     net.state.health.push(200);
     hideTab(false);
     await vi.advanceTimersByTimeAsync(0);
-    expect(net.probes).toEqual([300_000]);
+    expect(net.probes).toEqual([0, 300_000]);
     expect(connectivityNow()).toBe("online");
   });
 
@@ -293,17 +336,32 @@ describe("the probe while Margince is unreachable", () => {
     const net = network();
 
     reportUnreached();
+    await vi.advanceTimersByTimeAsync(0);
     goOffline();
     expect(connectivityNow()).toBe("offline");
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(net.probes).toEqual([]);
+    expect(net.probes).toEqual([0]);
 
     // The server's standing survives the device's: nothing has answered yet.
     goOnline();
     expect(connectivityNow()).toBe("unreachable");
     net.state.health.push(200);
     await vi.advanceTimersByTimeAsync(0);
-    expect(net.probes).toEqual([60_000]);
+    expect(net.probes).toEqual([0, 60_000]);
+    expect(connectivityNow()).toBe("online");
+  });
+
+  it("lets an api answer that lands while the probe is out outrank the probe", async () => {
+    vi.useFakeTimers({ now: 0 });
+    const { reportUnreached, reportReached, connectivityNow } = await watched();
+    const net = network();
+    net.state.stall = true;
+
+    reportUnreached();
+    await vi.advanceTimersByTimeAsync(1_000);
+    reportReached();
+    await vi.advanceTimersByTimeAsync(9_000);
+    expect(net.probes).toEqual([0]);
     expect(connectivityNow()).toBe("online");
   });
 
@@ -315,15 +373,15 @@ describe("the probe while Margince is unreachable", () => {
     listening.push(store.subscribeConnectivity(follower));
 
     expect(store.reportUnreached()).toBeNull();
-    expect(store.connectivityNow()).toBe("online");
     await vi.advanceTimersByTimeAsync(60_000);
     expect(net.probes).toEqual([]);
+    expect(store.connectivityNow()).toBe("online");
 
     const stop = store.watchConnectivity(() => undefined);
     expect(store.reportUnreached()).toBe("unreachable");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(net.probes).toEqual([60_000]);
     expect(follower).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(2_000);
-    expect(net.probes).toEqual([62_000]);
 
     // The follower is released, not left paused behind a banner that is gone.
     stop();
@@ -364,17 +422,13 @@ describe("a surface no banner watches", () => {
 // The session's own connection screen states the outage in its own words, so it
 // may hold one open; what it must never do is check in a loop.
 describe("a screen that states the outage itself", () => {
-  const answered = (status: number) => ({
-    response: new Response(null, { status }),
-  });
-
   it("checks once per mount, never while a check is in flight", async () => {
     const { useOutageRecovery } = await page();
-    let settle: () => void = () => undefined;
+    let settle: (movesOn: boolean) => void = () => undefined;
     const check = vi.fn(
       () =>
-        new Promise<{ response: Response }>((resolve) => {
-          settle = () => resolve(answered(500));
+        new Promise<boolean>((resolve) => {
+          settle = resolve;
         }),
     );
     const recheck = vi.fn();
@@ -384,25 +438,25 @@ describe("a screen that states the outage itself", () => {
     renderHook(() => useOutageRecovery(true, check, recheck));
     expect(check).toHaveBeenCalledTimes(1);
 
-    // A 500 is the api answering: there is no outage to recover from.
-    await act(async () => settle());
+    // An answer the screen would only draw again gives it nothing to move to.
+    await act(async () => settle(false));
     expect(recheck).not.toHaveBeenCalled();
   });
 
-  it("reads the session again when its check finds Margince answering", async () => {
+  it("reads the session again when its check finds an answer to give way to", async () => {
     const { useOutageRecovery } = await page();
     const recheck = vi.fn();
 
-    renderHook(() =>
-      useOutageRecovery(true, async () => answered(200), recheck),
-    );
+    renderHook(() => useOutageRecovery(true, async () => true, recheck));
     await act(async () => undefined);
     expect(recheck).toHaveBeenCalledTimes(1);
   });
 
   it("holds an outage only while it states one", async () => {
+    vi.useFakeTimers({ now: 0 });
     const store = await page();
-    const pending = () => new Promise<{ response: Response }>(() => undefined);
+    network();
+    const pending = () => new Promise<boolean>(() => undefined);
 
     const screen = renderHook(
       ({ active }) => store.useOutageRecovery(active, pending, () => undefined),
@@ -412,6 +466,8 @@ describe("a screen that states the outage itself", () => {
 
     screen.rerender({ active: true });
     expect(store.reportUnreached()).toBe("unreachable");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.connectivityNow()).toBe("unreachable");
 
     screen.unmount();
     expect(store.connectivityNow()).toBe("online");

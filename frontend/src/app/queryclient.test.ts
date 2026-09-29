@@ -292,17 +292,29 @@ describe("while Margince cannot be reached", () => {
     return data;
   }
 
+  // A refused request sends a probe, and only the probe failing too is an outage.
+  async function outageConfirmed() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
+    reportUnreached();
+    await vi.advanceTimersByTimeAsync(0);
+  }
+
   afterEach(() => {
     for (const bannerDown of banners.splice(0)) bannerDown();
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
-  it("tells the data layer about the server, not only about the device", () => {
+  it("tells the data layer about the server, not only about the device", async () => {
     vi.useFakeTimers();
     createQueryClient();
     bannerUp();
-    reportUnreached();
+    await outageConfirmed();
     expect(onlineManager.isOnline()).toBe(false);
     reportReached();
     expect(onlineManager.isOnline()).toBe(true);
@@ -314,7 +326,7 @@ describe("while Margince cannot be reached", () => {
     client.mount();
     bannerUp();
     const read = vi.fn(async () => "fresh");
-    reportUnreached();
+    await outageConfirmed();
 
     const answer = client.fetchQuery({
       queryKey: ["outage-read"],
@@ -335,7 +347,8 @@ describe("while Margince cannot be reached", () => {
     const client = createQueryClient();
     expect(client.getDefaultOptions().mutations?.networkMode).toBe("always");
     bannerUp();
-    reportUnreached();
+    await outageConfirmed();
+    expect(onlineManager.isOnline()).toBe(false);
 
     const observer = new MutationObserver(client, {
       mutationFn: () => Promise.reject(new Error("not reached")),
@@ -389,6 +402,8 @@ describe("while Margince cannot be reached", () => {
     await expect(
       client.fetchQuery({ queryKey: ["gateway", "first"], queryFn: readMe }),
     ).rejects.toBeInstanceOf(ProblemError);
+    // The probe the bare 502 sent gets a bare 502 as well.
+    await vi.advanceTimersByTimeAsync(0);
     const held = client.fetchQuery({
       queryKey: ["gateway", "second"],
       queryFn: readMe,
@@ -413,6 +428,7 @@ describe("the failure sinks during an outage", () => {
       "unreachable",
       new Request("http://localhost/v1/contacts", { method }),
       new TypeError("Failed to fetch"),
+      false,
     );
 
   it("report neither a read nor a write the network refused", async () => {

@@ -1075,8 +1075,10 @@ export const vi = {
   "connectivity.restored": "Đã kết nối lại",
   "connectivity.unsaved.offline":
     "Thiết bị đang ngoại tuyến nên chưa lưu được gì. Hãy thử lại khi có kết nối trở lại.",
-  "connectivity.unsaved.unreachable":
-    "Không kết nối được tới Margince nên chưa lưu được gì. Hãy thử lại khi có kết nối trở lại.",
+  "connectivity.uncertain.offline":
+    "Thiết bị vừa mất kết nối nên thay đổi có thể chưa được lưu. Khi có kết nối trở lại, hãy kiểm tra xem đã lưu chưa rồi mới thử lại.",
+  "connectivity.uncertain.unreachable":
+    "Không kết nối được tới Margince nên thay đổi có thể chưa được lưu. Khi máy chủ phản hồi trở lại, hãy kiểm tra xem đã lưu chưa rồi mới thử lại.",
 
   "state.withheld": "Đã ẩn — vai trò của bạn không đọc được phần này",
   "state.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
@@ -4653,7 +4655,7 @@ export const vi = {
   "settings.installAppHelp":
     "Cài Margince lên thiết bị này thành ứng dụng có cửa sổ và biểu tượng riêng.",
   "settings.installAppManual":
-    "Để cài đặt, chạm Chia sẻ rồi chọn “Thêm vào MH chính”.",
+    "Để cài đặt, chạm “Chia sẻ” rồi chọn “Thêm vào MH chính”.",
   "settings.installAppInstalled": "Đã cài đặt",
   "settings.installAppDismissed":
     "Cài Margince sau qua menu trình duyệt hoặc biểu tượng cài đặt trên thanh địa chỉ.",

@@ -375,6 +375,20 @@ describe("a build that fails", () => {
   }
 
   it("shows the shared line and never our own internals", async () => {
+    stubBuild(() => {
+      throw new TypeError("Cannot read properties of undefined");
+    });
+
+    await pressRebuild();
+
+    expect(
+      await screen.findByText("The request failed. No cause reported."),
+    ).toBeTruthy();
+    // Our own internals never become the reader's sentence.
+    expect(screen.queryByText(/Cannot read properties/)).toBeNull();
+  });
+
+  it("shows the shared line when reading the answer breaks the card", async () => {
     // The server answers, and the card's own reading of the answer breaks.
     stubBuild(() => jsonResponse(null));
 

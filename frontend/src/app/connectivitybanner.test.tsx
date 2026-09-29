@@ -2,17 +2,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { api } from "../api/client";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import type { Connectivity } from "./connectivity";
+import { type Connectivity, subscribeConnectivity } from "./connectivity";
 import { ConnectivityBanner, ConnectivityNotice } from "./connectivitybanner";
+import { createQueryClient } from "./queryclient";
 
 afterEach(() => {
   cleanup();
   Reflect.deleteProperty(navigator, "onLine");
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function inEnglish(ui: ReactNode) {
@@ -90,5 +95,57 @@ describe("the connectivity banner", () => {
       window.dispatchEvent(new Event("offline"));
     });
     expect(screen.getByText(en["connectivity.offline.title"])).toBeTruthy();
+  });
+});
+
+// A content blocker refusing one analytics URL, or a firewall's bare 503 on one
+// route: Margince itself answers, so the banner must not flap on every refetch.
+describe("one refused path while Margince answers", () => {
+  function BlockedRead() {
+    const read = useQuery({
+      queryKey: ["blocked-read"],
+      queryFn: () => api.GET("/me"),
+      retry: false,
+    });
+    return <p>{read.isError ? "read failed" : "reading"}</p>;
+  }
+
+  it("never shows the banner", async () => {
+    vi.useFakeTimers();
+    const probes = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === "/healthz") {
+          probes();
+          return new Response("ok");
+        }
+        throw new TypeError("net::ERR_BLOCKED_BY_CLIENT");
+      }),
+    );
+    const flips = vi.fn();
+    const unsubscribe = subscribeConnectivity(flips);
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        {inEnglish(
+          <>
+            <ConnectivityBanner />
+            <BlockedRead />
+          </>,
+        )}
+      </QueryClientProvider>,
+    );
+
+    for (let elapsed = 0; elapsed < 20_000; elapsed += 250) {
+      await act(() => vi.advanceTimersByTimeAsync(250));
+      expect(
+        screen.queryByText(en["connectivity.unreachable.title"]),
+      ).toBeNull();
+    }
+    expect(screen.getByText("read failed")).toBeTruthy();
+    expect(probes).toHaveBeenCalledTimes(1);
+    expect(flips).not.toHaveBeenCalled();
+    unsubscribe();
   });
 });

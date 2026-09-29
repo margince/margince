@@ -945,14 +945,14 @@ export function Shell({
               onOpenSearch={onOpenSearch}
             />
           )}
-          {/* These advisories stand in the railed shell only. */}
           <ConnectivityBanner />
           <EconomyBanner />
           <EmbedReindexBanner />
           <LicenseBanner />
-          {/* The import's gauge, bottom-centre of this column while mail is
-            arriving: inside `.main`, not beside the edge below, because it is
-            positioned against the content column and not the window. */}
+          {/* The import's gauge, floating bottom-centre of this column for as
+            long as mail is arriving. Inside `.main` rather than beside the
+            edge below, because it is positioned against the content column
+            and not the window. */}
           <CaptureChip linked />
           {/* Focusable only as the skip link's destination — never a tab stop of
             its own, which is what tabIndex -1 buys. A reader who takes the skip

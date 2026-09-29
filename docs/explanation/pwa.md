@@ -13,7 +13,7 @@ allowed so little.
 | Manifest | `frontend/public/manifest.webmanifest` | names the app, its colours, `start_url` and `display: standalone`, which is what makes it installable |
 | Icons | `frontend/public/`: `icon.svg`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `web-app-manifest-192x192.png` and `-512x512.png` | the icons the browser tab, iOS and the manifest name; `frontend/src/app/sharepreview.test.ts` holds each to the size it declares |
 | Service worker | source `frontend/src/offline/serviceworker.js`, emitted as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a navigation the network could not complete with the offline page, and the offline page's own script; nothing else |
-| Offline page | `frontend/src/offline/page.ts` (markup), `present.ts` (language and retry), `offline.css` | tells the reader the device cannot reach Margince, in their language, with a retry |
+| Offline page | `frontend/src/offline/page.ts` (markup), `present.ts` (block, retry, reload on reconnect), `entry.ts`, `offline.css`; emitted as `/assets/offline-<hash>.html` | tells the reader the device cannot reach Margince, in their language, with a retry |
 | Registration and install state | `frontend/src/app/pwa.ts` | registers the worker in a production build; keeps the browser's install offer for the app to present |
 
 Client storage (the reader's language, theme and the rest) lives behind
@@ -43,12 +43,14 @@ always comes from the server.
 
 Navigations into what the api owns on this origin are not intercepted at all,
 not even offline, so an OAuth consent, an MCP discovery document or a
-webhook URL opened in a tab fails the way the browser fails it. The list is
-not typed a second time: the plugin reads the keys of the dev server's proxy
-in `frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`,
-`/.well-known`, `/webhooks`, `/healthz`, `/readyz`, `/metrics`) and matches
-them the way the dev server does, as string prefixes, so `/mcp` covers
-`/mcp-apps` too.
+webhook URL opened in a tab fails the way the browser fails it. The plugin
+reads the list from the keys of the dev server's proxy in
+`frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`,
+`/webhooks`, `/healthz`, `/readyz`, `/metrics`) and matches them the way the
+dev server does, as string prefixes, so `/mcp` covers `/mcp-apps` too. The
+desktop launcher keeps its own copy of the list (`apiPrefixes` in
+`desktop/launcher/web.go`), and `frontend/vite-proxy.test.ts` fails when that
+copy and the proxy keys disagree.
 
 The worker does **not** use navigation preload. With it on, the browser
 requests every navigation in scope before the worker decides, including the
@@ -61,13 +63,21 @@ start-up time preload would hide is paid rarely.
 ## How a build changes the worker
 
 `frontend/scripts/vite-pwa.ts` runs inside `vite build` and emits three
-files: `sw.js`, `offline.html`, and the offline page's one script under
-`assets/`. The worker's source is plain JavaScript, emitted untouched after one
-line that sets `self.__MARGINCE_SW_SETTINGS__` to this build's settings:
+files: `sw.js` at the site root, and under `assets/` the offline page
+(`offline-<hash>.html`) and its one script (`offline-<hash>.js`), each named
+for its content. The page lives under `assets/` for a rolling deploy: a
+replica still on the previous build answers a name it lacks with 404 (nginx's
+`/assets/` location is `try_files $uri =404`), so the new worker's install
+fails and is retried instead of caching the app shell as the offline page.
+The worker's source is plain JavaScript, emitted untouched after one line that
+sets `self.__MARGINCE_SW_SETTINGS__` to this build's settings:
 
 - **the cache name**, `margince-offline-<release>-<digest>`, where the release
   is `MARGINCE_RELEASE_VERSION` (`dev` when unset) and the digest is a hash of
   the offline page, the worker's source and the pass-through list;
+  `workerCacheName` in `vite-pwa.ts` builds it, and `vite-pwa.test.ts` holds
+  that an identical build keeps the name and that any change to those inputs,
+  or to the release, renames it;
 - the offline page's address and its script's content-hashed address;
 - the pass-through prefixes.
 
@@ -80,12 +90,13 @@ On `activate` it deletes **every** cache whose name is not its own (the old
 
 The browser fetches the worker script past its HTTP cache: `pwa.ts` registers
 with `updateViaCache: "none"`, and browsers cap a worker script's HTTP freshness
-at a day in any case. nginx still sends `Cache-Control: no-cache` for `/sw.js`,
-`/offline.html` and `/manifest.webmanifest`, for any shared cache in front of
-it, and answers a missing one with 404 rather than the app shell: a browser
-refuses an HTML page as a worker script and keeps the worker it had. The
-desktop launcher (`desktop/launcher/web.go`) serves these files with no cache
-headers of its own and needs none, for the same reason.
+at a day in any case. nginx still sends `Cache-Control: no-cache` for `/sw.js`
+and `/manifest.webmanifest`, for any shared cache in front of it, and answers a
+missing one with 404 rather than the app shell: a browser refuses an HTML page
+as a worker script and keeps the worker it had. The offline page and its
+script are cached for a year as immutable, which their content-hashed names
+make safe. The desktop launcher (`desktop/launcher/web.go`) serves these files
+with no cache headers of its own and needs none, for the same reason.
 
 The build's own tests load the emitted worker into a stand-in for its global
 scope and drive it: `frontend/scripts/vite-pwa.test.ts`.
@@ -102,11 +113,19 @@ Its script is the one thing it loads. The site's content-security policy
 allows no inline script, so the script is a file of its own under `/assets/`,
 and the worker answers it from the cache it installed it into. The browser's
 HTTP cache is not enough: `vite preview` and the desktop launcher send no
-caching headers, and any browser may drop an entry. The script picks the
-block in the reader's stored language, then the browser's, then English; sets
-the title; and makes "Retry" reload the address the reader asked for, route
-included. Should the script still fail to load, the page reads in English and
-its retry is a plain link that reloads the page without the route.
+caching headers, and any browser may drop an entry.
+
+The script shares the app's code rather than copying it. `startTheme()` from
+`frontend/src/app/theme.ts` sets the stored theme, so an explicit light or dark
+choice holds offline too and "system" follows the device. `preferredLocale()`
+from `frontend/src/i18n/locale.ts`, a module that carries no catalog, picks the
+block: the stored pick, then the browser's language, then English, the same
+answer the app gives before the account says otherwise. The script sets the
+title, makes "Retry" reload the address the reader asked for (route included),
+and reloads by itself on the browser's `online` event, which is what the
+page's sentence promises. Should the script still fail to load, the page reads
+in English and its retry is a plain link that reloads the page without the
+route.
 
 ## Registration and the install offer
 
@@ -114,18 +133,20 @@ its retry is a plain link that reloads the page without the route.
 scope `/`, only in a production build, only where the browser has service
 workers, and only after the window's `load` event, so installing the worker
 never competes with the app's first load. A failed registration is logged with
-`console.warn` and changes nothing else. `design-system/conformance.test.ts`
-fails a source file other than `pwa.ts` that reaches for
-`navigator.serviceWorker`, so a second registrar cannot appear quietly.
+`console.warn` and changes nothing else.
+`frontend/src/app/serviceworker-registrar.test.ts` fails any shipped module but
+`pwa.ts` that names `navigator.serviceWorker` in code, in any script dialect
+under `frontend/src` or an extension's frontend, so a second registrar cannot
+appear quietly.
 
 `listenForInstall()` runs from `main.tsx` before the first render, because the
-browser can make its offer before React mounts. `useInstallState()` answers one
-of:
+browser can make its offer before React mounts. It returns the function that
+removes its listeners. `useInstallState()` answers one of:
 
 | State | Meaning |
 |---|---|
-| `installed` | running as the installed app, or installed during this visit |
-| `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed` |
+| `installed` | running as the installed app (`display-mode: standalone`, or iOS's `navigator.standalone`; a browser without `matchMedia` reads as not installed), or accepted or installed during this visit |
+| `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed`. A browser that refuses to show its dialog (a spent offer) answers `dismissed` and logs a warning, so the row never keeps offering a press that cannot work |
 | `dismissed` | the reader turned the offer down; it holds until the browser offers again (`available`) or the app is installed |
 | `manual-ios` | an iPhone or iPad browser, where Add to Home Screen is done by hand |
 | `unavailable` | nothing this page can offer |
@@ -137,11 +158,11 @@ banner (`app/connectivitybanner.tsx`) says which outage holds:
 
 - **offline**: the browser reports no network (`navigator.onLine` and the
   `online`/`offline` events). Reads pause on every surface, as they always did.
-- **unreachable**: the device is online, and a request to the api rejected at
-  the network level, outlived its client deadline, or got a bare 502, 503 or
-  504: a proxy (nginx, the Vite proxy, the desktop launcher) saying the api is
-  down, since the api writes every 5xx of its own as a problem body. None counts
-  on a model route, where a long wait is the work. Any api answer clears it.
+- **unreachable**: a request to the api rejected at the network level, outlived
+  its client deadline, or got a bare 502, 503 or 504 (a proxy saying the api is
+  down; the api's own 5xx carries a problem body), and a `/healthz` probe sent
+  at once failed too. One refused path on a working server declares nothing.
+  None of it counts on a model route, where a long wait is the work.
 
 **Only a surface that states the outage holds it open**, because a pause nothing
 explains is a page that never loads: the shell's banner, and the connection
@@ -149,12 +170,12 @@ screen a failed first session check draws, which checks once more as it opens
 so the probe can let the reader in unaided. A public page (unsubscribe,
 preferences, booking, a buyer room) states none: a failure there is its own.
 
-The probe asks `/healthz` after 2 seconds, doubling to a 30-second ceiling,
-never while the tab is hidden and at once when the tab or network comes back;
-only a 2xx clears it. React Query's `onlineManager` follows without holding.
-Writes never wait (`networkMode: "always"`): a refused one fails at once as not
-saved, naming the outage, and a proxy's 5xx keeps the shared line, since the api
-may have acted. Neither failure sink logs a refused request.
+Once declared, `/healthz` is asked again after 2 seconds, doubling to a
+30-second ceiling, never while the tab is hidden and at once when the tab or
+network comes back; a 2xx or any api answer clears it. Writes never wait
+(`networkMode: "always"`). One the offline device never sent says it was not
+saved; one cut off in flight may have landed, so it says so and asks the reader
+to check before retrying. A proxy's 5xx keeps the shared failure line.
 
 ## Install on this device
 

@@ -10,31 +10,42 @@ export type Connectivity = "online" | "offline" | "unreachable";
 
 export type Outage = Exclude<Connectivity, "online">;
 
-/** A request that never reached Margince, and which outage stopped it. */
+/** A request that never reached Margince, and which outage stopped it.
+ *  `unsent` when the device was already offline as it left: nothing went out. */
 export class ConnectivityError extends Error {
   readonly outage: Outage;
   readonly method: string;
-  constructor(outage: Outage, request: Request, cause: unknown) {
+  readonly unsent: boolean;
+  constructor(
+    outage: Outage,
+    request: Request,
+    cause: unknown,
+    unsent: boolean,
+  ) {
     super(`${request.method} ${request.url} did not reach Margince`, {
       cause,
     });
     this.name = "ConnectivityError";
     this.outage = outage;
     this.method = request.method;
+    this.unsent = unsent;
   }
 }
 
 const READ_METHODS = new Set(["GET", "HEAD"]);
 
-/** A write the network refused was not saved, and says which outage stopped
- *  it; a read saved nothing, and reruns by itself once the connection is back. */
-export function unsavedWriteKey(error: unknown): MessageKey | null {
+/** What a write the network refused tells the reader. Only one never sent is
+ *  known to be unsaved: a connection cut in flight may have landed it. */
+export function writeFailureKey(error: unknown): MessageKey | null {
   if (!(error instanceof ConnectivityError) || READ_METHODS.has(error.method)) {
     return null;
   }
+  if (error.unsent) {
+    return "connectivity.unsaved.offline";
+  }
   return error.outage === "offline"
-    ? "connectivity.unsaved.offline"
-    : "connectivity.unsaved.unreachable";
+    ? "connectivity.uncertain.offline"
+    : "connectivity.uncertain.unreachable";
 }
 
 /** Proxied to the api on every origin the app is served from. */
@@ -48,6 +59,8 @@ let reached = true;
 let failedProbes = 0;
 let probeTimer: ReturnType<typeof setTimeout> | undefined;
 let probing = false;
+// Counts api answers, so an answer that lands while a probe is out outranks it.
+let answers = 0;
 let published: Connectivity = connectivityNow();
 const subscribers = new Set<() => void>();
 // Only a surface that states the outage may hold one: a pause nothing explains
@@ -94,8 +107,8 @@ function backoff(): number {
 // A hidden tab has nobody to show the answer to.
 function scheduleProbe(delayMs: number): void {
   if (
-    connectivityNow() !== "unreachable" ||
     watchers === 0 ||
+    !deviceOnline() ||
     probeTimer !== undefined ||
     probing ||
     documentHidden()
@@ -108,16 +121,25 @@ function scheduleProbe(delayMs: number): void {
   }, delayMs);
 }
 
+// Only a failed probe declares the outage: one refused path (a blocked URL, a
+// firewall's 503 on one route) would otherwise flip the banner on every refetch.
 async function probe(): Promise<void> {
+  const answersBefore = answers;
   probing = true;
   const healthy = await answersHealthy();
   probing = false;
   if (healthy) {
     reportReached();
-  } else if (connectivityNow() === "unreachable") {
-    failedProbes += 1;
-    scheduleProbe(backoff());
+    return;
   }
+  if (answers !== answersBefore || watchers === 0 || !deviceOnline()) {
+    return;
+  }
+  reached = false;
+  publish();
+  const delayMs = backoff();
+  failedProbes += 1;
+  scheduleProbe(delayMs);
 }
 
 async function answersHealthy(): Promise<boolean> {
@@ -133,7 +155,7 @@ async function answersHealthy(): Promise<boolean> {
     });
     return response.ok;
   } catch {
-    // Unanswered is the verdict this probe was sent to hear.
+    // No answer is the outage the probe looks for, not a fault of its own.
     return false;
   } finally {
     globalThis.clearTimeout(expiry);
@@ -142,14 +164,15 @@ async function answersHealthy(): Promise<boolean> {
 
 /** Any HTTP answer from the api, a 5xx included, proves Margince reachable. */
 export function reportReached(): void {
+  answers += 1;
   reached = true;
   failedProbes = 0;
   cancelProbe();
   publish();
 }
 
-/** A request that never reached the api: the outage a banner now states, or
- *  null where none watches and the failure stays that surface's own to show. */
+/** A request that never reached the api: which outage stopped it, with a probe
+ *  sent to learn whether it is Margince's; null where no surface watches. */
 export function reportUnreached(): Outage | null {
   if (watchers === 0) {
     return null;
@@ -158,18 +181,18 @@ export function reportUnreached(): Outage | null {
     publish();
     return "offline";
   }
-  reached = false;
-  publish();
-  scheduleProbe(backoff());
+  scheduleProbe(0);
   return "unreachable";
 }
 
 // A reader coming back to the tab or the network wants an answer now, not at
 // the end of a backoff that grew while nobody was looking.
 function resumeProbing(): void {
-  failedProbes = 0;
   cancelProbe();
-  scheduleProbe(0);
+  if (connectivityNow() === "unreachable") {
+    failedProbes = 0;
+    scheduleProbe(0);
+  }
 }
 
 function onDeviceOnline(): void {
@@ -218,8 +241,8 @@ export function subscribeConnectivity(notify: () => void): () => void {
   };
 }
 
-// The last watcher gone, the server's standing goes with the probe that kept
-// it, so every follower is released rather than left paused behind nothing.
+// When the last watcher leaves, the outage and its probe go with it, so no
+// follower stays paused with nothing on screen to say why.
 export function watchConnectivity(notify: () => void): () => void {
   const unsubscribe = subscribeConnectivity(notify);
   watchers += 1;
@@ -244,11 +267,11 @@ export function useConnectivity(): Connectivity {
 // One session check in flight at a time, whichever screen sent it.
 let checking = false;
 
-/** A screen that states the outage itself holds it open while `active`, and
- *  checks once so a failure lands while it holds and the probe can end it. */
+/** Holds open the outage a screen states while `active`, checking once so a
+ *  refusal lands meanwhile; `check` is true for an answer it gives way to. */
 export function useOutageRecovery(
   active: boolean,
-  check: () => Promise<{ response: Response }>,
+  check: () => Promise<boolean>,
   recheck: () => void,
 ): void {
   const sent = useRef(false);
@@ -266,12 +289,12 @@ export function useOutageRecovery(
     // and the remount would check again, and again.
     check()
       .then(
-        ({ response }) => {
-          if (response.ok) {
+        (movesOn) => {
+          if (movesOn) {
             recheck();
           }
         },
-        // Refused: the client has recorded the outage this check was sent for.
+        // Refused: the client has already sent the probe this check was for.
         () => undefined,
       )
       .finally(() => {

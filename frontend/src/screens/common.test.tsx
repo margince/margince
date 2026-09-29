@@ -12,11 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
-import {
-  ConnectivityError,
-  connectivityNow,
-  reportReached,
-} from "../app/connectivity";
+import { ConnectivityError, connectivityNow } from "../app/connectivity";
 import { meFixture } from "../app/mefixture";
 import { createQueryClient } from "../app/queryclient";
 import { STORAGE_KEYS } from "../app/storage";
@@ -534,19 +530,32 @@ describe("problemMessageOf", () => {
 });
 
 describe("problemMessageOf, for a request that never reached Margince", () => {
-  const refused = (outage: "offline" | "unreachable", method: string) =>
+  const refused = (
+    outage: "offline" | "unreachable",
+    method: string,
+    unsent = false,
+  ) =>
     new ConnectivityError(
       outage,
       new Request("https://test.local/v1/notes", { method }),
       new TypeError("Failed to fetch"),
+      unsent,
     );
 
-  it("says a write was not saved, and which outage stopped it", () => {
-    expect(problemMessageOf(refused("offline", "POST"), t)).toBe(
+  it("says a write the device never sent was not saved", () => {
+    expect(problemMessageOf(refused("offline", "POST", true), t)).toBe(
       t("connectivity.unsaved.offline"),
     );
+  });
+
+  // A connection cut after the request left may still have landed it, and a
+  // blind retry would then write it twice.
+  it("says a write cut off in flight may have been saved, and to check first", () => {
+    expect(problemMessageOf(refused("offline", "POST"), t)).toBe(
+      t("connectivity.uncertain.offline"),
+    );
     expect(problemMessageOf(refused("unreachable", "PATCH"), t)).toBe(
-      t("connectivity.unsaved.unreachable"),
+      t("connectivity.uncertain.unreachable"),
     );
   });
 
@@ -557,11 +566,11 @@ describe("problemMessageOf, for a request that never reached Margince", () => {
         t,
         t("connectors.loadFailed"),
       ),
-    ).toBe(t("connectivity.unsaved.unreachable"));
+    ).toBe(t("connectivity.uncertain.unreachable"));
   });
 
   it("leaves a read on the ordinary line: it saved nothing and runs again", () => {
-    expect(problemMessageOf(refused("offline", "GET"), t)).toBe(
+    expect(problemMessageOf(refused("offline", "GET", true), t)).toBe(
       t("common.errorNoCause"),
     );
     expect(
@@ -728,11 +737,19 @@ describe("signing out", () => {
 // and must get in without pressing anything once Margince answers again.
 describe("the connection screen after Margince could not be reached", () => {
   const CONNECTION_TITLE = "Margince could not be reached";
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
   let apiUp = false;
+  let sessionAnswer = () => json(meFixture({}));
   let sessionReads = 0;
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     apiUp = false;
+    sessionAnswer = () => json(meFixture({}));
     sessionReads = 0;
     vi.stubGlobal("localStorage", memoryStorage());
     globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -743,15 +760,8 @@ describe("the connection screen after Margince could not be reached", () => {
         if (url.endsWith("/v1/me")) sessionReads += 1;
         if (!apiUp) throw new TypeError("Failed to fetch");
         if (url === "/healthz") return new Response("ok");
-        if (url.endsWith("/v1/me")) {
-          return new Response(JSON.stringify(meFixture({})), {
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        return new Response(JSON.stringify({ code: "unavailable" }), {
-          status: 503,
-          headers: { "Content-Type": "application/problem+json" },
-        });
+        if (url.endsWith("/v1/me")) return sessionAnswer();
+        return json({ code: "unavailable" }, 503);
       }),
     );
   });
@@ -760,6 +770,7 @@ describe("the connection screen after Margince could not be reached", () => {
     // Unmounted first: a shell still reading would reach the real network.
     cleanup();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   async function openWhileUnreachable() {
@@ -771,8 +782,8 @@ describe("the connection screen after Margince could not be reached", () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
-    // One recheck, sent while the screen watches, is what gives it an outage
-    // to hold; the reads it then pauses cannot send another.
+    // One check, sent while the screen watches, is what gives it an outage to
+    // hold; the reads it then pauses cannot send another.
     await waitFor(() => expect(connectivityNow()).toBe("unreachable"));
     expect(sessionReads).toBe(2);
   }
@@ -781,8 +792,7 @@ describe("the connection screen after Margince could not be reached", () => {
     await openWhileUnreachable();
 
     apiUp = true;
-    // What the probe does when /healthz answers it.
-    act(reportReached);
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
 
     await waitFor(() =>
       expect(screen.queryByText(CONNECTION_TITLE)).toBeNull(),
@@ -791,7 +801,7 @@ describe("the connection screen after Margince could not be reached", () => {
   });
 
   it("lets the reader in at once when they press Retry", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     await openWhileUnreachable();
 
     apiUp = true;
@@ -800,5 +810,46 @@ describe("the connection screen after Margince could not be reached", () => {
     await waitFor(() =>
       expect(screen.queryByText(CONNECTION_TITLE)).toBeNull(),
     );
+  });
+
+  // Answered, but with no session in it: the boundary draws this same screen,
+  // so the check must not send the reader round again.
+  it("checks once and stays when Margince answers with no session", async () => {
+    apiUp = true;
+    sessionAnswer = () => json({});
+    rtlRender(
+      <QueryClientProvider client={createQueryClient()}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
+
+    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    expect(sessionReads).toBe(2);
+    expect(screen.getByText(CONNECTION_TITLE)).toBeTruthy();
+  });
+
+  it("gives way to sign-in when its own check is answered 401", async () => {
+    apiUp = true;
+    let answers = 0;
+    sessionAnswer = () => {
+      answers += 1;
+      if (answers === 1) throw new TypeError("Failed to fetch");
+      return json({ status: 401, code: "unauthorized" }, 401);
+    };
+    rtlRender(
+      <QueryClientProvider client={createQueryClient()}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
+
+    expect(
+      await screen.findByRole("heading", { name: "Sign in to Margince" }),
+    ).toBeTruthy();
   });
 });

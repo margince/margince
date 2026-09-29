@@ -2,6 +2,7 @@ import type { paths } from "@composition/schema";
 import createClient from "openapi-fetch";
 import {
   ConnectivityError,
+  connectivityNow,
   reportReached,
   reportUnreached,
 } from "../app/connectivity";
@@ -110,6 +111,7 @@ function reportFailure(
   failure: unknown,
   request: Request,
   deadline: AbortSignal,
+  unsent: boolean,
 ): unknown {
   if (request.signal.aborted) {
     return failure;
@@ -118,7 +120,7 @@ function reportFailure(
     const outage = reportUnreached();
     return outage === null
       ? failure
-      : new ConnectivityError(outage, request, failure);
+      : new ConnectivityError(outage, request, failure, unsent);
   }
   if (modelWaitOf(request) === null) {
     reportUnreached();
@@ -166,6 +168,8 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
       new RequestTimeoutError(request.method, request.url, timeoutMs),
     );
   }, timeoutMs);
+  // Read as the request leaves: a device offline then sent nothing at all.
+  const unsent = connectivityNow() === "offline";
   try {
     const response = await globalThis.fetch(request, {
       signal: deadline.signal,
@@ -173,7 +177,7 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
     reportAnswer(response, request);
     return withGatewayProblem(response, request);
   } catch (failure) {
-    throw reportFailure(failure, request, deadline.signal);
+    throw reportFailure(failure, request, deadline.signal, unsent);
   } finally {
     // Whatever the outcome. A cleared timer is what keeps a settled request
     // from holding the page awake, and — on a request that failed for its own

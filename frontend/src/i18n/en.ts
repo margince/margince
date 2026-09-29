@@ -1115,8 +1115,10 @@ export const en = {
   "connectivity.restored": "Connection restored",
   "connectivity.unsaved.offline":
     "This device is offline, so nothing was saved. Retry when the connection returns.",
-  "connectivity.unsaved.unreachable":
-    "Margince could not be reached, so nothing was saved. Retry when the connection returns.",
+  "connectivity.uncertain.offline":
+    "This device went offline, so the change may not have been saved. When the connection returns, check whether it was saved before retrying.",
+  "connectivity.uncertain.unreachable":
+    "Margince could not be reached, so the change may not have been saved. When the server answers again, check whether it was saved before retrying.",
 
   // The nine-state honesty vocabulary (design-system/surfacestate.tsx). These
   // words belong to the STATE and to no particular surface, which is why they
@@ -4822,7 +4824,7 @@ export const en = {
   "settings.installAppHelp":
     "Adds Margince to this device as an app with its own window and icon.",
   "settings.installAppManual":
-    "To install, tap Share, then “Add to Home Screen”.",
+    "To install, tap “Share”, then “Add to Home Screen”.",
   "settings.installAppInstalled": "Installed",
   "settings.installAppDismissed":
     "Install Margince later from the browser’s menu or the install icon in its address bar.",

@@ -1089,8 +1089,10 @@ export const de = {
   "connectivity.restored": "Verbindung wiederhergestellt",
   "connectivity.unsaved.offline":
     "Dieses Gerät ist offline, daher wurde nichts gespeichert. Versuche es erneut, sobald die Verbindung zurück ist.",
-  "connectivity.unsaved.unreachable":
-    "Margince war nicht erreichbar, daher wurde nichts gespeichert. Versuche es erneut, sobald die Verbindung zurück ist.",
+  "connectivity.uncertain.offline":
+    "Dieses Gerät hat die Verbindung verloren, daher wurde die Änderung vielleicht nicht gespeichert. Prüfe das, sobald die Verbindung zurück ist, bevor du es erneut versuchst.",
+  "connectivity.uncertain.unreachable":
+    "Margince war nicht erreichbar, daher wurde die Änderung vielleicht nicht gespeichert. Prüfe das, sobald der Server wieder antwortet, bevor du es erneut versuchst.",
 
   // Das neunteilige Zustandsvokabular (design-system/surfacestate.tsx):
   // gehört dem ZUSTAND, nicht einer einzelnen Fläche.

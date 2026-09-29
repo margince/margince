@@ -29,7 +29,7 @@ import {
   ProviderButtons,
   startFederatedSignIn,
 } from "./auth-providers";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, sessionAnswers, throwProblem } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
 
@@ -319,14 +319,14 @@ export function AuthScreen({
   );
 }
 
-const readSession = () => api.GET("/me");
-
+// The boundary's non-authentication half (§4): the api cannot be reached or the
+// installation is not ready (503), and neither may read as a wrong password.
 export function AvailabilityScreen({
   kind,
   onRetry,
 }: Readonly<{ kind: "connection" | "installation"; onRetry: () => void }>) {
   const t = useT();
-  useOutageRecovery(kind === "connection", readSession, onRetry);
+  useOutageRecovery(kind === "connection", sessionAnswers, onRetry);
   usePageTitle(t("auth.pageTitle"));
   return (
     <AuthExperience phase="unavailable">
