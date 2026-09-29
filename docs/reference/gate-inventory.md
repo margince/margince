@@ -126,6 +126,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |
 | `promptwindow_test.go` | H1 | runner.MinimumPromptWindow is the SUPPORTED FLOOR — the smallest prompt window any provider this build binds will carry — and this holds it equal to the adapter that owns the figure. |
+| `providercategoryallowlist_test.go` | H2 | The allow-list of provider-defined containers lives in two places — the CHECK on capture\_exclusion and the Go the writer consults — and a set that lives in two places drifts. |
 | `providername_test.go` | H2 | The rule a REGISTERED NAME must satisfy is the contract's, on both surfaces that have one. |
 | `publicevents_test.go` | H3 | The public-events contract as a cross-cutting fitness function (A15): the outbound-webhook surface has three moving parts that must stay in lock-step, and nothing in the build forces them to. |
 | `rbacvocabulary_test.go` | H3 | The RBAC vocabulary is DECLARED in the contract and restated in Go, and the two must not drift. |
