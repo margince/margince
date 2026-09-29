@@ -16,7 +16,7 @@ import (
 // answers the SQL and how many values it bound.
 //
 //craft:ignore naked-any value is a predicate leaf's operand, which spans every scalar shape the filter DSL accepts
-func compileLeaf(t *testing.T, ctx context.Context, store *Store, resource, field, op string, value any) (string, int) {
+func compileLeaf(ctx context.Context, t *testing.T, store *Store, resource, field, op string, value any) (string, int) {
 	t.Helper()
 	engine, ok, err := store.SegmentEngine(ctx, resource)
 	if err != nil || !ok {
@@ -47,12 +47,12 @@ func maskedCtx(masks ...principal.FieldMask) context.Context {
 
 func TestAMaskOnTheDealsMoneyWithholdsTheAmountLeaf(t *testing.T) {
 	store := (&Store{}).WithDealAmount("t.amount_minor")
-	if sql, _ := compileLeaf(t, maskedCtx(), store, "deal", amountField, storekit.OpGt, 100.0); sql == "FALSE" {
+	if sql, _ := compileLeaf(maskedCtx(), t, store, "deal", amountField, storekit.OpGt, 100.0); sql == "FALSE" {
 		t.Fatal("an unmasked reader's amount leaf compiled to FALSE, so the masked case below proves nothing")
 	}
 	masked := maskedCtx(principal.FieldMask{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways})
 	for _, op := range []string{storekit.OpGt, storekit.OpLte, storekit.OpNeq} {
-		if sql, bound := compileLeaf(t, masked, store, "deal", amountField, op, 100.0); sql != "FALSE" || bound != 0 {
+		if sql, bound := compileLeaf(masked, t, store, "deal", amountField, op, 100.0); sql != "FALSE" || bound != 0 {
 			t.Errorf("amount %s compiled to %q with %d values for a reader masked on amount_minor, want FALSE", op, sql, bound)
 		}
 	}
@@ -60,19 +60,19 @@ func TestAMaskOnTheDealsMoneyWithholdsTheAmountLeaf(t *testing.T) {
 
 func TestAMaskOnAContactFieldWithholdsTheLeafOfTheSameName(t *testing.T) {
 	masked := maskedCtx(principal.FieldMask{Object: "contact", Field: emailField, Condition: principal.MaskAlways})
-	if sql, _ := compileLeaf(t, masked, &Store{}, "contact", emailField, storekit.OpNeq, "a@b.example"); sql != "FALSE" {
+	if sql, _ := compileLeaf(masked, t, &Store{}, "contact", emailField, storekit.OpNeq, "a@b.example"); sql != "FALSE" {
 		t.Errorf("email neq compiled to %q for a reader masked on email, want FALSE", sql)
 	}
-	if sql, _ := compileLeaf(t, masked, &Store{}, "contact", titleField, storekit.OpEq, "CTO"); sql == "FALSE" {
+	if sql, _ := compileLeaf(masked, t, &Store{}, "contact", titleField, storekit.OpEq, "CTO"); sql == "FALSE" {
 		t.Error("a mask on email withheld the title leaf beside it")
 	}
 }
 
 func TestADealAmountIsUnpricedUntilComposeInjectsTheRule(t *testing.T) {
-	if sql, _ := compileLeaf(t, maskedCtx(), &Store{}, "deal", amountField, storekit.OpGt, 1.0); sql != "FALSE" {
+	if sql, _ := compileLeaf(maskedCtx(), t, &Store{}, "deal", amountField, storekit.OpGt, 1.0); sql != "FALSE" {
 		t.Errorf("an unwired store compiled the amount to %q, want FALSE", sql)
 	}
-	sql, bound := compileLeaf(t, maskedCtx(), (&Store{}).WithDealAmount("t.worth"), "deal", amountField, storekit.OpGt, 1.0)
+	sql, bound := compileLeaf(maskedCtx(), t, (&Store{}).WithDealAmount("t.worth"), "deal", amountField, storekit.OpGt, 1.0)
 	if sql != "t.worth > $1" || bound != 1 {
 		t.Errorf("the injected amount compiled to %q with %d values, want the injected expression compared", sql, bound)
 	}
@@ -80,7 +80,7 @@ func TestADealAmountIsUnpricedUntilComposeInjectsTheRule(t *testing.T) {
 
 func TestTheEmployerLeafTakesTheEdgeGate(t *testing.T) {
 	without := maskedCtx()
-	if sql, _ := compileLeaf(t, without, &Store{}, "contact", companyIDField, storekit.OpEq, employerID); sql != "FALSE" {
+	if sql, _ := compileLeaf(without, t, &Store{}, "contact", companyIDField, storekit.OpEq, employerID); sql != "FALSE" {
 		t.Errorf("a reader refused relationship:read got %q, want the employer leaf withheld", sql)
 	}
 	with := principal.WithActor(context.Background(), principal.Principal{
@@ -92,7 +92,7 @@ func TestTheEmployerLeafTakesTheEdgeGate(t *testing.T) {
 			RowScope: principal.RowScopeOwn,
 		},
 	})
-	sql, _ := compileLeaf(t, with, &Store{}, "contact", companyIDField, storekit.OpEq, employerID)
+	sql, _ := compileLeaf(with, t, &Store{}, "contact", companyIDField, storekit.OpEq, employerID)
 	if !strings.Contains(sql, "FROM relationship rel") || !strings.Contains(sql, "FROM company ep") {
 		t.Errorf("the employer leaf compiled to %q, want the edge bounded by its endpoints' scope", sql)
 	}

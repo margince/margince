@@ -24,7 +24,7 @@ import (
 // countFor is the engine's count of one leaf, as the given reader.
 //
 //craft:ignore naked-any value is a predicate leaf's operand, which spans every scalar and array shape the filter DSL accepts
-func (f fixture) countFor(t *testing.T, ctx context.Context, field, op string, value any) int {
+func (f fixture) countFor(ctx context.Context, t *testing.T, field, op string, value any) int {
 	t.Helper()
 	engine, _, err := f.lists.SegmentEngine(ctx, "contact")
 	if err != nil {
@@ -75,10 +75,10 @@ func TestAMaskedStandardFieldSelectsNothingEitherWay(t *testing.T) {
 		{"name", "contains", "mira", 1},
 		{"name", "neq", "Masked Mira", 1},
 	} {
-		if got := f.countFor(t, f.ctx, c.field, c.op, c.value); got != c.unmasked {
+		if got := f.countFor(f.ctx, t, c.field, c.op, c.value); got != c.unmasked {
 			t.Fatalf("unmasked %s %s counts %d, want %d — the case proves nothing", c.field, c.op, got, c.unmasked)
 		}
-		if got := f.countFor(t, reader, c.field, c.op, c.value); got != 0 {
+		if got := f.countFor(reader, t, c.field, c.op, c.value); got != 0 {
 			t.Errorf("a reader masked on %s counts %d for %s %v, want 0", c.field, got, c.op, c.value)
 		}
 	}
