@@ -16,10 +16,12 @@ import (
 
 const workingHoursContract = "../../../api/crm.yaml"
 
-// clockPattern reads one named field's `pattern:` out of the WorkingHours
-// schema. The field name is required in the match so a pattern moved to a
-// neighbouring property cannot answer for this one — a census that reads the
-// wrong line reports PASS, which is the one way this must not fail.
+// clockPattern reads the named field's `pattern:` out of the contract, and
+// insists the whole file declares exactly one of them. Nothing in the match
+// ties it to the WorkingHours schema, so a second property spelled the same
+// way would leave this reading somebody else's pattern and still reporting
+// PASS — the one way a parity check must not fail. Two matches is that day
+// arriving, and it is a failure here rather than a silent pass.
 func clockPattern(t *testing.T, field string) *regexp.Regexp {
 	t.Helper()
 	source, err := os.ReadFile(workingHoursContract)
@@ -28,13 +30,15 @@ func clockPattern(t *testing.T, field string) *regexp.Regexp {
 	}
 	find := regexp.MustCompile(`(?m)^[ \t]+` + regexp.QuoteMeta(field) +
 		`:\n[ \t]+type: string\n[ \t]+pattern: '([^']+)'`)
-	match := find.FindSubmatch(source)
-	if match == nil {
-		t.Fatalf("%s declares no `type: string` with a pattern in %s; if the "+
-			"contract moved the field, move this gate with it",
-			field, workingHoursContract)
+	matches := find.FindAllSubmatch(source, -1)
+	if len(matches) != 1 {
+		t.Fatalf("%s declares %d `type: string` properties with a pattern in %s, want "+
+			"exactly one: with more than one, this gate cannot tell which belongs to "+
+			"WorkingHours, and with none the contract moved the field and this gate "+
+			"moves with it",
+			field, len(matches), workingHoursContract)
 	}
-	compiled, err := regexp.Compile(string(match[1]))
+	compiled, err := regexp.Compile(string(matches[0][1]))
 	if err != nil {
 		t.Fatalf("the %s pattern does not compile: %v", field, err)
 	}

@@ -10,6 +10,11 @@ SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE app_user DROP CONSTRAINT app_user_work_days_are_weekdays;
 
+-- The bound this replaces admits `{}`, so a deployed row may hold one and the
+-- ADD below validates every row. NULL is this column's "nobody has chosen",
+-- which is what an empty week already means to every reader of it.
+UPDATE app_user SET work_days = NULL WHERE cardinality(work_days) = 0;
+
 ALTER TABLE app_user ADD CONSTRAINT app_user_work_days_are_weekdays
     CHECK (work_days IS NULL
            OR (cardinality(work_days) BETWEEN 1 AND 7

@@ -29,8 +29,14 @@ var clockTimesAccepted = map[string]int{
 
 // "9:00" is here on purpose: a single-digit hour is the shape a hand-written
 // client sends, and admitting it would make the wire format two formats. "09"
-// carries no colon, so no digit count makes it a time.
-var clockTimesRefused = []string{"", "9:00", "0900", "24:01", "25:00", "09:60", "aa:bb", "09"}
+// carries no colon, so no digit count makes it a time. The signed spellings
+// are the same invariant from the other side: a two-character field whose
+// first character is a sign is two characters long, so a length check alone
+// lets the wire mean something the pattern never admits.
+var clockTimesRefused = []string{
+	"", "9:00", "0900", "24:01", "25:00", "09:60", "aa:bb", "09",
+	"+9:00", "09:+5", "+9:+9",
+}
 
 func TestATimeOnTheWireIsReadAsTheMinuteItNames(t *testing.T) {
 	for written, want := range clockTimesAccepted {
