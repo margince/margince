@@ -30,6 +30,6 @@ By opening this PR I confirm I am **accountable** for this change and can
 [CONTRIBUTING.md](/CONTRIBUTING.md) and the
 [Code of Conduct](/CODE_OF_CONDUCT.md).
 
-If you are not a member of the `margince` organisation, a bot will ask you
+If you are contributing from outside the Margince team, a bot will ask you
 to accept the [Contributor License Agreement](/CLA.md) before this PR can
 merge. One acceptance covers every later contribution.

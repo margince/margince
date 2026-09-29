@@ -209,6 +209,8 @@ var retired = gatekit.Waive(map[string]string{
 		"chose, and a licence is not restyled by a vocabulary rule",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
 		"docscodeofconduct_test.go; its people are human beings, never this record",
+	"CLA.md": "counsel's agreement text, where a person is a party to a contract; rewording it " +
+		"changes what a contributor accepted",
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
