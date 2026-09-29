@@ -211,7 +211,7 @@ type HistoryEntry struct {
 // about a record the reader cannot see now is left out, whatever they could
 // see when it happened.
 func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, cursor string) ([]HistoryEntry, storekit.Page, error) {
-	limit = storekit.ClampLimit(&limit)
+	limit = pageSize(limit)
 	list, err := s.GetList(ctx, listID)
 	if err != nil {
 		return nil, storekit.Page{}, err

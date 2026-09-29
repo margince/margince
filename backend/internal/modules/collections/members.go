@@ -31,13 +31,22 @@ type memberRow struct {
 	Note       *string
 }
 
+// pageSize reads a limit of 0 as none named: the web routes and the agent tool
+// both send 0 when their caller names no limit, which asks for the default page.
+func pageSize(limit int) int {
+	if limit == 0 {
+		return storekit.ClampLimit(nil)
+	}
+	return storekit.ClampLimit(&limit)
+}
+
 // ListMembers reads one page of a list's members that this caller may see.
 // Sharing a list never widens record visibility: a Shortlist member is shown
 // only when its record passes the reader's row scope, and a Live List is the
 // filter evaluated inside that scope, so two readers may see different pages
 // of one list.
 func (s *Store) ListMembers(ctx context.Context, listID ids.ListID, limit int, cursor string) ([]memberRow, storekit.Page, error) {
-	limit = storekit.ClampLimit(&limit)
+	limit = pageSize(limit)
 	// GetList commits before the dynamic branch resolves its vocabulary, which
 	// opens a connection of its own (see evaluateSegment).
 	list, err := s.GetList(ctx, listID)
