@@ -25918,15 +25918,19 @@ components:
       additionalProperties: false
       required: [provider, ok]
       description: >-
-        One vendor's answer to the stored credential. `ok` with `model_count` when it answered;
-        otherwise `reason` names why, and never the vendor's own words.
+        One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says
+        whether the vendor checked the key, and `model_count` is present only when the test listed
+        models. On a failure, `reason` names why, and never in the vendor's own words.
       properties:
         provider:
           type: string
           description: The routing name of the vendor that was asked.
         ok:
           type: boolean
-          description: Whether the vendor answered its model list with this credential.
+          description: >-
+            Whether the test passed: the vendor answered the probe the operation describes for it
+            (a model list, a key endpoint, or the empty decision request) without refusing this
+            credential.
         key_confirmed:
           type: boolean
           description: >-

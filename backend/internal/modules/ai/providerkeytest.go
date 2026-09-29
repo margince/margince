@@ -197,7 +197,8 @@ func keyTestFailure(err error) KeyTestReason {
 	if !errors.As(err, &refused) {
 		return KeyTestUnreachable
 	}
-	if refused.vendor == geminiListVendor && refused.reason == geminiKeyInvalid {
+	if refused.vendor == geminiListVendor && refused.status == http.StatusBadRequest &&
+		refused.reason == geminiKeyInvalid {
 		return KeyTestAuthFailed
 	}
 	switch refused.status {

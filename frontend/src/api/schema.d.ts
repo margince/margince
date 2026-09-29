@@ -17681,11 +17681,11 @@ export interface components {
             /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
             optional: boolean;
         };
-        /** @description One vendor's answer to the stored credential. `ok` with `model_count` when it answered; otherwise `reason` names why, and never the vendor's own words. */
+        /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
         AiProviderKeyTestResult: {
             /** @description The routing name of the vendor that was asked. */
             provider: string;
-            /** @description Whether the vendor answered its model list with this credential. */
+            /** @description Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential. */
             ok: boolean;
             /** @description Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server. */
             key_confirmed?: boolean;

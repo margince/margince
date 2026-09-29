@@ -108,16 +108,21 @@ func (c *decisionClient) typeSafeModels(ctx context.Context) ([]model.Info, erro
 	if err != nil {
 		return nil, err
 	}
+	// A pointer, so a 200 that is not the list — a proxy's `{}` — is told apart
+	// from a list that is empty, and is not read as a confirmed key.
 	var out struct {
-		Models []struct {
+		Models *[]struct {
 			Name string `json:"name"`
 		} `json:"models"`
 	}
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return nil, fmt.Errorf("ai: jev: decode model list: %w", err)
 	}
-	models := make([]model.Info, 0, len(out.Models))
-	for _, m := range out.Models {
+	if out.Models == nil {
+		return nil, fmt.Errorf("ai: jev: the answer carries no model list")
+	}
+	models := make([]model.Info, 0, len(*out.Models))
+	for _, m := range *out.Models {
 		if len(models) == modelListLimit {
 			break
 		}

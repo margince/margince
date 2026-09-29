@@ -20171,7 +20171,7 @@ type AiProviderKeyStatus struct {
 	Provider string `json:"provider"`
 }
 
-// AiProviderKeyTestResult One vendor's answer to the stored credential. `ok` with `model_count` when it answered; otherwise `reason` names why, and never the vendor's own words.
+// AiProviderKeyTestResult One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words.
 type AiProviderKeyTestResult struct {
 	// KeyConfirmed Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server.
 	KeyConfirmed *bool `json:"key_confirmed,omitempty"`
@@ -20179,7 +20179,7 @@ type AiProviderKeyTestResult struct {
 	// ModelCount How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one.
 	ModelCount *int `json:"model_count,omitempty"`
 
-	// Ok Whether the vendor answered its model list with this credential.
+	// Ok Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential.
 	Ok bool `json:"ok"`
 
 	// Provider The routing name of the vendor that was asked.

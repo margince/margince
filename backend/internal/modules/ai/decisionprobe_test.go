@@ -217,3 +217,16 @@ func TestADecisionEndpointThatIsNotAURLIsRefused(t *testing.T) {
 		t.Fatal("an origin of a relative path was built")
 	}
 }
+
+// A 200 that is not TypeSafe's list — a proxy answering `{}` — proves no key
+// and is not a pass; an empty list that IS the list still is.
+func TestAJevAnswerWithNoModelListIsNotAPass(t *testing.T) {
+	for body, wantOK := range map[string]bool{`{}`: false, `{"models":[]}`: true} {
+		host := &scriptedHost{t: t, answer: func(*http.Request) (int, string) { return http.StatusOK, body }}
+		got := probeProviderKey(context.Background(), RoutingConfig{Profile: ProfileCloudFrontier}, providerJev,
+			cloudKeyFor(providerJev, "tk"), host.probes())
+		if got.OK != wantOK {
+			t.Errorf("body %s: got %+v, want ok=%v", body, got, wantOK)
+		}
+	}
+}

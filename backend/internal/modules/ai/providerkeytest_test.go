@@ -202,6 +202,15 @@ func TestGeminiReadsItsInvalidKeyCodeAndNothingElse(t *testing.T) {
 	}
 }
 
+// The code reads as a refused key only on Gemini's 400: a throttle that names
+// it is still a throttle.
+func TestGeminisKeyCodeOnAnotherStatusKeepsThatStatusReading(t *testing.T) {
+	err := &listStatusError{vendor: geminiListVendor, status: http.StatusTooManyRequests, reason: geminiKeyInvalid}
+	if got := keyTestFailure(err); got != KeyTestRateLimited {
+		t.Fatalf("a 429 naming API_KEY_INVALID reads %q, want rate_limited", got)
+	}
+}
+
 // A code only ever arrives as a code: prose in its place is dropped.
 func TestAnErrorCodeIsAdmittedOnlyAsACode(t *testing.T) {
 	if got := errorInfoReason(strings.NewReader(`{"error":{"details":[{"reason":"key sk-live-abc is bad"}]}}`)); got != "" {
