@@ -40,7 +40,7 @@ const PROJECTS = [
 // can be in — assembling, failed, empty and prepared alike — and a per-story
 // copy would be the same two lines eighteen times.
 const meta: Meta<typeof ContactMeetingBrief> = {
-  title: "Records/Contact 360/Meeting brief/Drawer",
+  title: "Records/Record 360/Meeting brief/Drawer",
   component: ContactMeetingBrief,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
