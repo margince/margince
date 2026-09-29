@@ -90,6 +90,7 @@ const VENDOR_LIST: Record<string, unknown> = {
   },
   ollama: { provider: "ollama", models: [{ id: "gemma3:latest" }] },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
+  vllm: { provider: "vllm", models: [], unavailable: "unreachable" },
 };
 
 function story(
@@ -107,6 +108,7 @@ function story(
         return response;
       },
       "GET /ai/status": () => jsonResponse(aiStatus),
+      "GET /ai/health": () => jsonResponse({ window_hours: 1, rungs: [] }),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-keys": () =>
         jsonResponse({

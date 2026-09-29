@@ -146,6 +146,9 @@ export const VENDOR_MODELS: Record<string, unknown> = {
     ],
   },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
+  // ollama is left to the stub's default answer (reachable, nothing pulled);
+  // vllm is the keyless adapter nothing is listening for.
+  vllm: { provider: "vllm", models: [], unavailable: "unreachable" },
 };
 
 export function backendFor(

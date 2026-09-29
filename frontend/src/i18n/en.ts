@@ -235,7 +235,6 @@ export const en = {
   "aiAdmin.impact.fallback": "Fallback chain changed",
   "aiAdmin.impact.unconfigured": "No model configured",
   "aiAdmin.impact.exempt": "Continues beyond allowance",
-  "aiAdmin.impact.same": "Same model selection",
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.cloud": "Cloud provider",
@@ -247,7 +246,6 @@ export const en = {
     "Decision model not used: not certified for this activity.",
   "aiAdmin.decisionSkip.local_only":
     "Decision model not used: this activity takes only a local decision provider.",
-  "aiAdmin.effect": "Effect",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -9013,6 +9011,7 @@ export const en = {
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
     "Read-only: each task’s tier is fixed by contract. Each row leads with the model it runs on now.",
+  "aiTasks.decisionFirst": "Decision model first",
   "workingHours.title": "Bookable hours",
   "workingHours.sub": "Personal setting. Only you set your hours.",
   "workingHours.unsetTitle": "Not set yet",

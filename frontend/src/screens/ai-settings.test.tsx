@@ -185,24 +185,10 @@ afterEach(() => {
 // the confirm dialog that guarded a routing draft across a shared address —
 // behaviour that no longer exists, because leaving the routing page is an
 // address change the app's own unsaved guard sees.
-// The tokens reading, with the compact markers' CASE left to ICU.
-//
-// compactTokens renders through `Intl.NumberFormat("en-GB", { notation:
-// "compact" })`, and whether the thousands marker comes out "k" or "K" is the
-// ICU build Node ships with — ICU 76 draws "k", later builds "K". Pinning the
-// exact string held only on the builds that agree with it, and would have gone
-// red on every pull request the day `setup-node` resolved `node-version: 24` to
-// one that does not. format.test.ts folds the same suffix for the sibling
-// formatter and says so there.
-//
-// ANCHORED, and exact in everything but case. The digits, the separator and the
-// unit are this screen's to promise, and they are what tells "214k of 1m" apart
-// from "214.0k of 1m" and from the uncompacted "214,000 of 1m" — which is why
-// these assert a whole reading rather than a substring of one.
-//
-// Folded HERE and not in compactTokens: the same formatter draws "1 Mio." for
-// `de`, where the case carries meaning.
-const TOKENS_READING = /^214k of 1m$/i;
+
+// Anchored and case-exact: `formatTokens` owns the K/M/B markers, so the ICU
+// build Node ships cannot move this string.
+const TOKENS_READING = /^214K of 1M$/;
 
 const BothStats = () => (
   <>
