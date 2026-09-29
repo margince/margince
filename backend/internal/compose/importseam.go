@@ -83,6 +83,17 @@ func importsOverDB(db *database.DB) agents.Imports {
 	return importSeam{handlers: importHandlers{db: db}}
 }
 
+// importsOr answers the imports reader a role was given, or the one over db
+// when it was given none.
+//
+//nolint:ireturn // the registry takes the interface; which reader stands behind it is this function's whole answer
+func importsOr(given agents.Imports, db *database.DB) agents.Imports {
+	if given != nil {
+		return given
+	}
+	return importsOverDB(db)
+}
+
 func (i importSeam) ProfileSource(
 	ctx context.Context, object, csv string,
 ) (crmcontracts.ImportSourceProfile, error) {

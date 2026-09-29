@@ -15,6 +15,7 @@ import {
   type BulkChangeResult,
   type BulkRow,
 } from "./bulkchange";
+import { ShortlistVerb } from "./bulkshortlist";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 
 type BulkRecordType = components["schemas"]["BulkRecordType"];
@@ -102,6 +103,19 @@ export function BulkVerbs({
         {t("bulk.assign")}
       </Button>
       {children}
+      <ShortlistVerb
+        recordType={recordType}
+        disabled={!idle}
+        onPick={(list) =>
+          setRequest({
+            recordType,
+            verb: "add_to_list",
+            rows: [...rows],
+            list,
+            openId: crypto.randomUUID(),
+          })
+        }
+      />
       <Button disabled={!idle} onClick={() => open("archive")}>
         {t("bulk.archive")}
       </Button>

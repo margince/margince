@@ -800,7 +800,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             if (dirty && !save.isPending) save.mutate(shown);
           }}
         >
-          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3" id={titleId}>
             {t("settings.signature")}
           </Heading>
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
@@ -1243,7 +1243,7 @@ function PassportCard() {
         labelledBy={mintTitleId}
         placement="right"
       >
-        <Heading size="large" className="t-h2" id={mintTitleId}>
+        <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
         </Heading>
         {/* The token region is mounted for the whole life of the drawer rather

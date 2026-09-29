@@ -367,11 +367,13 @@ var tableOwners = map[string]string{
 	"signal":                         "internal/modules/signals",
 	"signal_resolution":              "internal/modules/signals",
 	// collections
-	"list":        "internal/modules/collections",
-	"list_member": "internal/modules/collections",
-	"tag":         "internal/modules/collections",
-	"taggable":    "internal/modules/collections",
-	"saved_view":  "internal/modules/collections",
+	"list":              "internal/modules/collections",
+	"list_member":       "internal/modules/collections",
+	"list_member_event": "internal/modules/collections",
+	"list_revision":     "internal/modules/collections",
+	"tag":               "internal/modules/collections",
+	"taggable":          "internal/modules/collections",
+	"saved_view":        "internal/modules/collections",
 	// privacy (the erasure suppression list is the module's own state;
 	// its other writes are ratified waivers below)
 	"erasure_suppression": "internal/modules/privacy",

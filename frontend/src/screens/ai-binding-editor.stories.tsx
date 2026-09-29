@@ -2,18 +2,34 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import type { ComponentProps } from "react";
+import { userEvent, within } from "storybook/test";
+import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { BindingEditor } from "./ai-binding-editor";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import type { RoutingRead } from "./ai-routing-query";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
-const ROUTING = {
-  profile: "eu_hosted" as const,
+type Routing = components["schemas"]["AiRouting"];
+
+const ROUTING: Routing = {
+  profile: "eu_hosted",
   tiers: {
-    cheap_cloud: { provider: "gemini", model: "gemini-3.1-flash-lite" },
+    local_small: { provider: "ollama", model: "gemma3" },
+    premium: { provider: "gemini", model: "gemini-3.5-flash" },
+    frontier: { provider: "anthropic", model: "claude-opus-4-5" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
 };
+
+const OPENED: RoutingRead = { routing: ROUTING, version: '"routing-v1"' };
+
+// Anthropic takes a key and holds none; Ollama has no entry, so it takes none.
 const KEYS = [
   {
     provider: "gemini",
@@ -29,69 +45,134 @@ const KEYS = [
   },
 ];
 
-function story(routing = ROUTING) {
-  return () => {
+const SHEET = [
+  {
+    provider: "gemini",
+    model_id: "gemini-3.5-flash",
+    lane: "chat" as const,
+    input_per_mtok: "1.50",
+    output_per_mtok: "9.00",
+    cache_read_per_mtok: "0",
+    cache_write_per_mtok: "0",
+    effective_date: "2026-08-12",
+  },
+];
+
+const VENDORS: Record<string, unknown> = {
+  gemini: {
+    provider: "gemini",
+    models: [
+      {
+        id: "gemini-4.0-flash",
+        display_name: "Gemini 4.0 Flash",
+        lane: "chat",
+      },
+      {
+        id: "gemini-3.5-flash",
+        display_name: "Gemini 3.5 Flash",
+        lane: "chat",
+      },
+    ],
+  },
+  anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
+  ollama: { provider: "ollama", models: [{ id: "gemma3" }] },
+};
+
+const REFUSAL = {
+  type: "https://errors.gradion.com/validation_error",
+  title: "Validation failed",
+  status: 422,
+  code: "validation_error",
+  detail: "Provider gemini cannot serve tier premium under this profile.",
+};
+
+function routingRead(): Response {
+  const response = jsonResponse(ROUTING);
+  response.headers.set("ETag", OPENED.version);
+  return response;
+}
+
+function editor(put: RouteMap[string] = routingRead) {
+  return (args: ComponentProps<typeof BindingEditor>) => {
     installFetchStub({
-      "GET /me": () =>
-        jsonResponse(meFixture({ allow: { ai_routing: ["read", "update"] } })),
-      "GET /ai/available-models/gemini": () =>
-        jsonResponse({ provider: "gemini", models: [] }),
-      "GET /ai/available-models/ollama": () =>
-        jsonResponse({ provider: "ollama", models: [{ id: "gemma3:latest" }] }),
-      "GET /ai/available-models/vllm": () =>
-        jsonResponse({
-          provider: "vllm",
-          models: [],
-          unavailable: "unreachable",
-        }),
+      "GET /ai/routing": routingRead,
+      "PUT /ai/routing": put,
+      ...Object.fromEntries(
+        Object.entries(VENDORS).map(([provider, body]) => [
+          `GET /ai/available-models/${provider}`,
+          () => jsonResponse(body),
+        ]),
+      ),
     });
     return (
       <StoryProviders>
-        <BindingEditor
-          opened={{ routing, version: '"routing-v1"' }}
-          initial={{
-            kind: "tier",
-            tier: "cheap_cloud",
-            binding: routing.tiers.cheap_cloud,
-          }}
-          label="Cheap cloud"
-          keys={KEYS}
-          catalogue={[]}
-          canManage
-          onClose={() => undefined}
-        />
+        <BindingEditor {...args} />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof BindingEditor> = {
+async function pressSave(canvasElement: HTMLElement) {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.click(
+    await body.findByRole("button", { name: en["aiRouting.saveBinding"] }),
+  );
+  return body;
+}
+
+const meta = {
   title: "Settings/AI/Models and routing/Binding editor",
   component: BindingEditor,
-};
+  args: {
+    opened: OPENED,
+    initial: {
+      kind: "tier",
+      tier: "premium",
+      binding: { provider: "gemini", model: "gemini-3.5-flash" },
+    },
+    label: "premium",
+    keys: KEYS,
+    catalogue: SHEET,
+    canManage: true,
+    onClose: () => {},
+  },
+  render: editor(),
+} satisfies Meta<typeof BindingEditor>;
 export default meta;
-type Story = StoryObj<typeof BindingEditor>;
 
-export const Editing: Story = { render: story() };
-export const EditingDark: Story = {
-  globals: { theme: "dark" },
-  render: story(),
-};
+type Story = StoryObj<typeof meta>;
 
-// The provider list: the keyed vendor with a key and the keyless one that
-// answers are offered; the vendor without a key, the adapter nothing listens
-// for and fake are not.
-export const ProvidersOffered: Story = {
-  render: story(),
-  play: async () => {
-    const dialog = within(await within(document.body).findByRole("dialog"));
-    await userEvent.click(
-      await dialog.findByRole("combobox", { name: "Provider" }),
-    );
-    const listbox = within(await within(document.body).findByRole("listbox"));
-    await expect(await listbox.findByText("ollama")).toBeInTheDocument();
-    await expect(listbox.queryByText("vllm")).toBeNull();
-    await expect(listbox.queryByText("anthropic")).toBeNull();
-    await expect(listbox.queryByText("fake")).toBeNull();
+export const EditingATier: Story = {};
+
+export const KeyMissing: Story = {
+  args: {
+    initial: {
+      kind: "tier",
+      tier: "frontier",
+      binding: { provider: "anthropic", model: "claude-opus-4-5" },
+    },
+    label: "frontier",
   },
 };
+
+export const ReadOnlySeat: Story = { args: { canManage: false } };
+
+export const SaveRefused: Story = {
+  render: editor(() => jsonResponse(REFUSAL, 422)),
+  play: async ({ canvasElement }) => {
+    const body = await pressSave(canvasElement);
+    await body.findByText(REFUSAL.detail);
+  },
+};
+
+export const ChangedWhileEditing: Story = {
+  render: editor(() =>
+    jsonResponse({ title: "Conflict", status: 409, code: "version_skew" }, 409),
+  ),
+  play: async ({ canvasElement }) => {
+    const body = await pressSave(canvasElement);
+    await body.findByText(en["aiAdmin.routingStale"]);
+  },
+};
+
+export const EditingATierDark: Story = { globals: { theme: "dark" } };

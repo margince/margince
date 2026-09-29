@@ -70,7 +70,9 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"status_changed": true,
 		// A lead's first-response deadline passed unanswered (formulas §18.2).
 		"sla_breached": true,
-		"promoted":     true, "captured": true, "requested": true,
+		// A record joined or left a Shortlist.
+		"member_added": true, "member_removed": true,
+		"promoted": true, "captured": true, "requested": true,
 		"decided": true, "failed": true, "appended": true,
 		"changed": true, "applied": true, "sent": true, "accepted": true,
 		"rejected": true, "superseded": true, "disqualified": true, "demoted": true,

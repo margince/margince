@@ -40,9 +40,14 @@ const (
 
 // A membership or tag comes back only while its list or tag is live.
 const (
-	restoreMembership = `INSERT INTO list_member (list_id, entity_type, entity_id, added_by, created_at)
-	SELECT $1, $2, $3, $4, $5 WHERE EXISTS (SELECT 1 FROM list WHERE id = $1 AND archived_at IS NULL)
-	ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING`
+	restoreMembership = `WITH back AS (
+		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, created_at, note)
+		SELECT @list_id, @entity_type, @entity_id, @added_by, @created_at, @note
+		WHERE EXISTS (SELECT 1 FROM list WHERE id = @list_id AND archived_at IS NULL)
+		ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
+		RETURNING list_id, entity_type, entity_id)
+	INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
+	SELECT list_id, entity_type, entity_id, 'added', 'record_restored', @actor FROM back`
 	restoreTag = `INSERT INTO taggable (tag_id, entity_type, entity_id, assigned_by, assigned_by_kind, assigned_at)
 	SELECT $1, $2, $3, $4, $5, $6 WHERE EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)
 	ON CONFLICT (tag_id, entity_type, entity_id) DO NOTHING`

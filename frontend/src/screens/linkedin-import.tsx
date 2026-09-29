@@ -170,11 +170,11 @@ function LinkedInProfileRow() {
         }
       />
       <Modal open={editing} onClose={close} labelledBy={headingId}>
-        <Heading size="large" id={headingId} className="t-h2">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("linkedinImport.editProfileTitle")}
         </Heading>
         <form
-          className="form-stack li-import-profile-form"
+          className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (dirty) {

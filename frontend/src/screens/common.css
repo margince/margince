@@ -1,16 +1,9 @@
-/* The shapes `common.tsx` draws for every list screen, and the title every
-   modal form built beside them wears. */
+/* The shapes `common.tsx` draws: a list's Load more and QueryGate's failure. */
 
 /* "Load more" stands under the page it extends, spaced off it: it acts on the
    list above rather than being one more row of it. */
 .load-more {
   margin-top: var(--space-3);
-}
-
-/* A modal or form title, held off the body it names. Chained to `.heading`,
-   which zeroes every heading's margin at one class of specificity. */
-.heading.dialog-heading {
-  margin-bottom: var(--space-3);
 }
 
 /* QueryGate's failure: the cause reads under the headline, and Retry stands

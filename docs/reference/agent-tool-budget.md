@@ -53,9 +53,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 78 | 1746 | 1288 | 3551 | 10% | 19659 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 78 | 2585 | 1807 | 4908 | 14% | 18302 | 7 | 6 |
-| _whole served catalog's listing, for scale — no run is offered it_ | 78 | — | 25434 | — | — | 77% | — | — | — |
+| `morning_brief` | 5 | 5 of 80 | 1746 | 1288 | 3551 | 10% | 19659 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 80 | 2585 | 1807 | 4908 | 14% | 18302 | 7 | 6 |
+| _whole served catalog's listing, for scale — no run is offered it_ | 80 | — | 26626 | — | — | 81% | — | — | — |
 
 ### `morning_brief`
 
@@ -129,7 +129,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 274 tokens, mean 325, across 78 served tools.
+Median 277 tokens, mean 332, across 80 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -145,13 +145,15 @@ a term in an addition.
 | `list_records` | 721 | 2 scenarios |
 | `log_activity` | 677 | 3 scenarios |
 | `send_message` | 603 | — |
+| `change_lists` | 592 | — |
 | `update_record` | 581 | — |
+| `bulk_update_records` | 548 | — |
+| `read_lists` | 528 | — |
 | `forecast_readings` | 509 | — |
 | `progress_deal` | 505 | — |
 | `resolve_entities` | 493 | — |
 | `query_workspace` | 484 | — |
 | `create_record` | 481 | — |
-| `bulk_update_records` | 477 | — |
 | `run_analytics_query` | 476 | — |
 | `forecast_movement` | 453 | — |
 | `advance_deal` | 446 | — |

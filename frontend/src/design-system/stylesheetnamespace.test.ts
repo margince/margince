@@ -45,7 +45,6 @@ const namespaces = [
   { prefix: "corrections-", home: "screens/contactcorrections.css" },
   { prefix: "create-", home: "screens/create.css" },
   { prefix: "datefield-", home: "screens/automations.datefield.css" },
-  { prefix: "dialog-", home: "screens/common.css" },
   { prefix: "errorboundary-", home: "app/errorboundary.css" },
   { prefix: "historyfields-", home: "screens/historyfields.css" },
   { prefix: "leadsignals-", home: "screens/leadsignals.css" },

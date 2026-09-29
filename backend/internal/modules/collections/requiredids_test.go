@@ -25,13 +25,16 @@ import (
 )
 
 func TestAnOmittedMemberOrTagTargetIsNamed(t *testing.T) {
-	// AddListMemberRequest.entity_id and ApplyTagRequest.entity_id. Both reach
+	// ListMemberChangeRequest.entity_id and ApplyTagRequest.entity_id. Both reach
 	// auth.EnsureLinkTarget unguarded, whose miss is indistinguishable from a
 	// record the caller cannot see.
 	store := NewStore(nil)
 	ctx := context.Background()
 
-	_, err := store.AddMember(ctx, ids.New[ids.ListKind](), "contact", ids.UUID{})
+	_, err := store.AddMember(ctx, ids.New[ids.ListKind](), MemberChange{EntityType: "contact", Reason: ReasonChosen})
+	faulttest.AssertNamesOmittedID(t, err, "entity_id")
+
+	err = store.RemoveMember(ctx, ids.New[ids.ListKind](), MemberChange{EntityType: "contact", Reason: ReasonChosen})
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
 
 	_, err = store.ApplyTag(ctx, ids.New[ids.TagKind](), "contact", ids.UUID{})

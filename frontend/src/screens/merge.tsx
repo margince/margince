@@ -131,7 +131,7 @@ export function MergeAction<Survivor extends { id: string }>({
         {label}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {label}
         </Heading>
         <p className="mergeaction-lede">{t("merge.pickTarget")}</p>

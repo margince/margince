@@ -24,6 +24,7 @@ function bulkBody(request: BulkChangeRequest) {
       version: requireVersion(row.version),
     })),
     owner_id: request.verb === "reassign_owner" ? request.ownerId : undefined,
+    list_id: request.list?.id,
   };
 }
 

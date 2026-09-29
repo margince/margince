@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { CommissionDecision } from "./commissiondecide";
 import {
   installFetchStub,
@@ -99,7 +100,7 @@ export const ApproveReady: Story = {
   }),
   play: async ({ canvasElement }) => {
     const page = await openDialog(canvasElement, "Approve");
-    await page.findByText(/does not pay anything/);
+    await page.findByText(en["commission.decide.approveConfirm"]);
   },
 };
 
@@ -119,7 +120,7 @@ export const ReverseNeedsReason: Story = {
   play: async ({ canvasElement }) => {
     const page = await openDialog(canvasElement, "Reverse");
     await userEvent.click(page.getByTestId("commission-void-confirm"));
-    await page.findByText(/needs a reason/);
+    await page.findByText(en["commission.decide.reasonRequired"]);
   },
 };
 
@@ -192,6 +193,6 @@ export const ReverseStale: Story = {
   }),
   play: async ({ canvasElement }) => {
     const page = await reverse(canvasElement, "Duplicate accrual");
-    await page.findByText(/reload and try again/);
+    await page.findByText(en["edit.versionSkew"]);
   },
 };

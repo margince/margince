@@ -100,7 +100,7 @@ export function EvidenceModal({
       labelledBy="co-evidence-title"
       placement="right"
     >
-      <Heading size="large" id="co-evidence-title">
+      <Heading size="large" id="co-evidence-title" className="modal-title">
         {t("co.evidence.title")}
       </Heading>
       {receipt.isPending ? (

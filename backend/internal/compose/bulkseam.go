@@ -64,6 +64,8 @@ func bulkChangeFromCommand(cmd agents.BulkChangeCommand) bulkChange {
 		verb:         crmcontracts.BulkVerb(cmd.Verb),
 		items:        items,
 		ownerID:      cmd.OwnerID,
+		listID:       cmd.ListID,
+		note:         cmd.Note,
 		confirmToken: cmd.ConfirmToken,
 	}
 }

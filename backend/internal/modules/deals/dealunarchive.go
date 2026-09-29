@@ -33,9 +33,14 @@ var dealUnarchive = storekit.UnarchiveShape{
 		  AND NOT EXISTS (SELECT 1 FROM company c WHERE c.id IN (r.company_id, r.counterparty_company_id) AND c.archived_at IS NOT NULL)
 		  AND NOT EXISTS (SELECT 1 FROM deal d WHERE d.id = r.deal_id AND d.archived_at IS NOT NULL)
 		  AND NOT EXISTS (SELECT 1 FROM project p WHERE p.id = r.project_id AND p.archived_at IS NOT NULL)`}},
-	Membership: `INSERT INTO list_member (list_id, entity_type, entity_id, added_by, created_at)
-		SELECT $1, $2, $3, $4, $5 WHERE EXISTS (SELECT 1 FROM list WHERE id = $1 AND archived_at IS NULL)
-		ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING`,
+	Membership: `WITH back AS (
+		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, created_at, note)
+		SELECT @list_id, @entity_type, @entity_id, @added_by, @created_at, @note
+		WHERE EXISTS (SELECT 1 FROM list WHERE id = @list_id AND archived_at IS NULL)
+		ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
+		RETURNING list_id, entity_type, entity_id)
+	INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
+	SELECT list_id, entity_type, entity_id, 'added', 'record_restored', @actor FROM back`,
 	Tag: `INSERT INTO taggable (tag_id, entity_type, entity_id, assigned_by, assigned_by_kind, assigned_at)
 		SELECT $1, $2, $3, $4, $5, $6 WHERE EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)
 		ON CONFLICT (tag_id, entity_type, entity_id) DO NOTHING`,

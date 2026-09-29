@@ -86,8 +86,7 @@ func tagLinkFor(entity string) storekit.Field {
 		Expr:       "tg.tag_id",
 		Type:       storekit.FieldID,
 		References: storekit.RefTag,
-		Link: "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = '" + entity +
-			"' AND tg.entity_id = t.id AND %s)",
+		Link:       storekit.TagLinkTemplate(entity),
 	}
 }
 
@@ -372,6 +371,12 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 	for name, field := range core.Fields {
 		merged.Fields[name] = field
 	}
+	// Filtering by a tag reads the tag vocabulary, which is the rule the list
+	// reads' tag parameter keeps too (storekit.TagFilterClause).
+	if tag, ok := merged.Fields[tagFilterField]; ok && tagWordsWithheld(ctx) {
+		tag.Withheld = true
+		merged.Fields[tagFilterField] = tag
+	}
 	if s.catalog == nil {
 		return merged, true, nil
 	}
@@ -461,6 +466,12 @@ func customField(column fieldcatalog.Column) (storekit.Field, bool) {
 // export or a membership read, where the caller sent only an id and a field
 // error would tell them to fix something they never wrote.
 var errNotAFilterTree = errors.New("not a valid filter tree")
+
+// PredicateFromDefinition decodes a filter tree a caller sent into the
+// canonical predicate, refusing one that is not a tree.
+func PredicateFromDefinition(def map[string]any) (storekit.Predicate, error) {
+	return predicateFromDefinition(def)
+}
 
 // predicateFromDefinition decodes a stored filter tree jsonb into the
 // canonical predicate. The stored value IS the tree (and/or/field/op/value) —

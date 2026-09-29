@@ -130,7 +130,7 @@ export function AutomationForm({
     >
       {/* The dialog covers the row that would otherwise have said which
           automation is open, so the heading says it instead. */}
-      <Heading size="large" className="t-h3 modal-title" id={titleId}>
+      <Heading size="large" className="t-h3" id={titleId}>
         {initialName}
       </Heading>
       <p className="t-caption">

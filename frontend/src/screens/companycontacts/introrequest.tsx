@@ -103,7 +103,7 @@ export function IntroRequestModal({
 
   return (
     <Modal open={target !== null} onClose={onClose} labelledBy={titleId}>
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("co.intro.title")}
       </Heading>
       {target && (

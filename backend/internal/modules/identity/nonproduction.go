@@ -79,3 +79,11 @@ func (h Handlers) WithEmbedReindexAvailable(available bool) Handlers {
 func (h Handlers) EmbedReindexAvailable() bool {
 	return h.embedReindexAvailable
 }
+
+// WithListsAvailable injects whether the installation has switched lists on,
+// the same value the list routes, the list_id reads and the agent tools are
+// gated on. Without it /me reports lists absent, failing closed.
+func (h Handlers) WithListsAvailable(available bool) Handlers {
+	h.listsAvailable = available
+	return h
+}

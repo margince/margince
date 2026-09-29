@@ -340,3 +340,23 @@ describe("decode", () => {
     expect(isComplete(restored as Node)).toBe(false);
   });
 });
+
+describe("a relative date operand", () => {
+  it("round-trips through encode and decode as the count the reader typed", () => {
+    const stored = { field: "last_touch", op: "lt", value: { days_ago: 45 } };
+    const restored = decode({ and: [stored] });
+
+    expect(restored).not.toBeNull();
+    expect(isComplete(restored as Node)).toBe(true);
+    expect(encode(restored as Node)).toEqual({ and: [stored] });
+  });
+
+  it("is refused when it is not a whole count of days", () => {
+    expect(
+      decode({ field: "d", op: "lt", value: { days_ago: 4.5 } }),
+    ).toBeNull();
+    expect(
+      decode({ field: "d", op: "lt", value: { days_ago: 3, weeks: 1 } }),
+    ).toBeNull();
+  });
+});

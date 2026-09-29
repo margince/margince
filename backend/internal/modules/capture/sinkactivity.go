@@ -221,6 +221,22 @@ func (s *Sink) finishNewActivity(
 	// when staging ran ahead of that gate. And a replayed message writes no
 	// second copy: every pull minted fresh keys and then skipped the insert, so
 	// a routine backfill left an unreferenced object per attachment per pass.
+	// A thread the classifier has already judged private stores no files at
+	// all. Decided here, before staging, because this is the last point where
+	// the bodies are still only in memory: once stageParts has run they are in
+	// the object store, and the raw original points at them rather than
+	// carrying them.
+	private, verdict, err := threadIsPrivateTx(ctx, tx, rec)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
+	if private {
+		var withheld int
+		rec, withheld = stripPersonalParts(rec)
+		if err := s.personalPartsWithheld(ctx, tx, rec, withheld, verdict); err != nil {
+			return counterpartyDecision{}, err
+		}
+	}
 	staged, err := s.stageParts(ctx, rec)
 	if err != nil {
 		return counterpartyDecision{}, err

@@ -7,7 +7,6 @@
 // pipeline that somebody else may have just changed.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -29,11 +28,17 @@ export function PipelineRetirement({
   pipeline,
   canRetire,
   canRestore,
-}: Readonly<{ pipeline: Pipeline; canRetire: boolean; canRestore: boolean }>) {
+  blockedReasonId,
+}: Readonly<{
+  pipeline: Pipeline;
+  canRetire: boolean;
+  canRestore: boolean;
+  /** The sentence, drawn by the caller, saying why the default cannot retire. */
+  blockedReasonId: string;
+}>) {
   const t = useT();
   const queryClient = useQueryClient();
   const toast = useToast();
-  const blockedId = useId();
   const restore = useMutation({
     mutationFn: async (target: Pipeline) => {
       const { data, error } = await api.POST("/pipelines/{id}/restore", {
@@ -70,35 +75,30 @@ export function PipelineRetirement({
     return null;
   }
   return (
-    <>
-      <ArchiveAction
-        label={t("pipeline.retire")}
-        confirmText={t("pipeline.retireConfirm", { name: pipeline.name })}
-        // The version travels as If-Match: retiring a pipeline somebody has
-        // just renamed or made default is a decision about a record the reader
-        // was not looking at, and an unpinned DELETE cannot be taken back.
-        archive={async () => {
-          const { error } = await api.DELETE("/pipelines/{id}", {
-            params: {
-              path: { id: pipeline.id },
-              ...ifMatch(requireVersion(pipeline.version)),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return pipeline;
-        }}
-        invalidate="pipelines"
-        recordKey="pipeline"
-        archivedMessage={t("pipeline.retired.done", { name: pipeline.name })}
-        onArchived={() => {}}
-        disabledReasonId={pipeline.is_default ? blockedId : undefined}
-      />
-      {pipeline.is_default && (
-        <span id={blockedId}>{t("pipeline.retireBlocked")}</span>
-      )}
-    </>
+    <ArchiveAction
+      label={t("pipeline.retire")}
+      confirmText={t("pipeline.retireConfirm", { name: pipeline.name })}
+      // The version travels as If-Match: retiring a pipeline somebody has
+      // just renamed or made default is a decision about a record the reader
+      // was not looking at, and an unpinned DELETE cannot be taken back.
+      archive={async () => {
+        const { error } = await api.DELETE("/pipelines/{id}", {
+          params: {
+            path: { id: pipeline.id },
+            ...ifMatch(requireVersion(pipeline.version)),
+          },
+        });
+        if (error) {
+          throwProblem(error);
+        }
+        return pipeline;
+      }}
+      invalidate="pipelines"
+      recordKey="pipeline"
+      archivedMessage={t("pipeline.retired.done", { name: pipeline.name })}
+      onArchived={() => {}}
+      disabledReasonId={pipeline.is_default ? blockedReasonId : undefined}
+    />
   );
 }
 

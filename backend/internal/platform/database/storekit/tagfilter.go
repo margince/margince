@@ -113,12 +113,28 @@ func TagFilterClause(ctx context.Context, taggableType, idColumn string, tagIDs 
 // view outlived the tag it names. That view then answers with nothing rather
 // than with a slice its reader cannot explain.
 func tagExists(taggableType, idColumn string, tagIDs []ids.UUID, arg func(any) int) string {
-	return fmt.Sprintf(`EXISTS (
-		SELECT 1 FROM taggable tg
-		  JOIN tag t ON t.id = tg.tag_id
-		WHERE tg.entity_type = $%d AND tg.entity_id = %s
-		  AND tg.tag_id = ANY($%d) AND t.archived_at IS NULL)`,
-		arg(taggableType), idColumn, arg(tagIDs))
+	return liveTagLink(fmt.Sprintf("$%d", arg(taggableType)), idColumn,
+		fmt.Sprintf("tg.tag_id = ANY($%d)", arg(tagIDs)))
+}
+
+// TagLinkTemplate is the EXISTS a filter's tag leaf compiles into, with one %s
+// for the leaf's comparison on tg.tag_id. It reads the same live-tag link the
+// list parameter above reads, so "carries this tag" means one thing on both
+// surfaces: an archived tag is carried by no record.
+//
+// taggableType is a closed record-type word from the caller's own vocabulary,
+// never a request value, which is why it is formatted in rather than bound.
+func TagLinkTemplate(taggableType string) string {
+	return liveTagLink("'"+taggableType+"'", "t.id", "%s")
+}
+
+// liveTagLink renders "this record carries a live tag that meets condition",
+// for the list parameter and the filter leaf alike.
+func liveTagLink(entityType, idColumn, condition string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM taggable tg
+		  JOIN tag live_tag ON live_tag.id = tg.tag_id AND live_tag.archived_at IS NULL
+		WHERE tg.entity_type = %s AND tg.entity_id = %s AND %s)`,
+		entityType, idColumn, condition)
 }
 
 // RowTag is one tag as a list row carries it — the word and its colour, and

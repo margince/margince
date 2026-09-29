@@ -189,7 +189,7 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 	// name other concepts that spell the same word — an approval target, a mirror
 	// object class — and hiding these behind one would assert a correspondence no
 	// gate holds.
-	case "contact", "company", "deal", "lead", "project", "voice_profile":
+	case "contact", "company", "deal", "lead", "project", "voice_profile", "list":
 		return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
 			return auth.EnsureVisible(c, tx, entityType, entityID)
 		})

@@ -79,7 +79,7 @@ export function IntroDecisionDrawer({
       placement="right"
       size="wide"
     >
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("contact.intro.decideTitle", { name: contactName })}
       </Heading>
 
