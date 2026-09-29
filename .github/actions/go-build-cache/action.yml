@@ -76,6 +76,12 @@ runs:
           echo "RESTORE_KEYS"
         } >> "$GITHUB_OUTPUT"
 
+    # The cache holds test results too, and Go replays one only if every file
+    # the test read has the mtime it had then. Writer and readers both stamp.
+    - name: Stamp tracked files with content-derived mtimes
+      shell: bash
+      run: scripts/ci-stable-mtimes.sh
+
     - name: Restore the Go build cache
       if: ${{ inputs.restore == 'true' }}
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

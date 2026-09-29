@@ -26,6 +26,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // typeCheckedSources is parsed source with the type information the census
@@ -64,13 +66,17 @@ var loadCompose = sync.OnceValues(func() (*composeLoad, error) {
 	if err != nil {
 		return nil, err
 	}
+	// go list read the tree for us, out of the test cache's sight.
+	if err := gatekit.DeclareInputs(root); err != nil {
+		return nil, err
+	}
 	imports := map[string]bool{}
 	for _, p := range packages {
 		for _, path := range p.Imports {
 			imports[path] = true
 		}
 	}
-	args := []string{"-export", "-deps", "-f", "{{if .Export}}{{.ImportPath}}\t{{.Export}}{{end}}"}
+	args := []string{"-export", "-deps", "-f", "{{if .Export}}{{.ImportPath}}\t{{.Export}}\t{{.Dir}}{{end}}"}
 	for path := range imports {
 		args = append(args, path)
 	}
@@ -80,8 +86,16 @@ var loadCompose = sync.OnceValues(func() (*composeLoad, error) {
 	}
 	exports := map[string]string{}
 	for line := range strings.Lines(string(out)) {
-		if path, file, ok := strings.Cut(strings.TrimSpace(line), "\t"); ok {
-			exports[path] = file
+		fields := strings.Split(strings.TrimSpace(line), "\t")
+		if len(fields) != 3 {
+			continue
+		}
+		exports[fields[0]] = fields[1]
+		// The export data is keyed on these sources, and only go list saw them.
+		if strings.HasPrefix(fields[0], "github.com/margince/margince/") {
+			if err := gatekit.DeclareInputs(fields[2]); err != nil {
+				return nil, err
+			}
 		}
 	}
 	fset := token.NewFileSet()

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // testCorpusDir resolves the corpus from THIS package's directory, which is
@@ -197,6 +198,12 @@ func TestAITaskListCarriesTheLadderAndScope(t *testing.T) {
 // Asserting only the literal would stay green if the ignore rule were dropped —
 // exactly the change that would start committing fetched pages.
 func TestTheWorkDirIsActuallyIgnored(t *testing.T) {
+	// Every ignore file that can decide the probe path, since git reads them
+	// out of the test cache's sight.
+	if err := gatekit.DeclareInputs("../../../.gitignore", "../../.gitignore",
+		"../../.tmp/.gitignore", "../../"+workDirDefault+"/.gitignore"); err != nil {
+		t.Fatal(err)
+	}
 	out, err := exec.Command("git", "-C", "../..", "check-ignore", "-q", workDirDefault+"/probe.txt").CombinedOutput()
 	if err == nil {
 		return // exit 0: the path is ignored, which is what this pins

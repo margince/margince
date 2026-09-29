@@ -421,6 +421,25 @@ simpler:
   only misses the entries whose inputs changed, so a three-hour-old cache is
   substantially warm and a post-dependency-bump cache still beats a cold one.
 
+### Test results replay only on stable mtimes
+
+The build cache holds test results as well as compiled packages, so a PR whose
+change does not reach a package replays that package's result instead of
+running it. Go checks a cached result against every file the test opened at
+runtime — a migration, a fixture, its own source — by size, mode and **mtime**,
+never content. A fresh checkout stamps every file with the time of checkout, so
+until the action stamped them, each of the 42 packages whose tests read the
+tree re-ran on every job, `internal/compose` and `identity` among them.
+
+[`scripts/ci-stable-mtimes.sh`](../../scripts/ci-stable-mtimes.sh) runs first
+in the action, in the writer and every reader alike. It sets each tracked file's
+mtime from a hash of its bytes, and each directory's from its tracked entries.
+Unchanged content therefore reads as it did in the run that wrote the cache, and
+changed content reads as new. Measured on a simulated fresh checkout, 121 of 163
+unit packages replayed before this and all 163 after. `./gates` and the ai
+module still run uncached on purpose — `UNCACHED_TEST_PKGS` in
+`backend/Makefile` says why.
+
 What this replaced: both refresh steps used to ride inside gating jobs, gated on
 `github.event_name == 'push' && github.ref == 'refs/heads/main'`. The cache was
 therefore seeded only when a `main` push survived to completion — and 64% of them
