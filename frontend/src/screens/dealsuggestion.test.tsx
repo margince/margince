@@ -160,7 +160,6 @@ function stubBackend(opts: {
             id: "u-2",
             email: "kim@acme.test",
             display_name: "Kim Seller",
-            timezone: "UTC",
             status: "active",
             is_agent: false,
           },
