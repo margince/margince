@@ -10207,6 +10207,7 @@ export const en = {
   "lists.note": "Why (optional)",
   "lists.noteHint": "Kept with the change so colleagues can see why.",
   "lists.addToShortlist": "Add to Shortlist",
+  "lists.onShortlists": "On Shortlists",
   "lists.add": "Add",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Pick a Shortlist",

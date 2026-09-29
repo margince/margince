@@ -10058,6 +10058,7 @@ export const de = {
   "lists.noteHint":
     "Wird mit der \u00c4nderung gespeichert, damit das Team den Grund sieht.",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
+  "lists.onShortlists": "Auf Shortlists",
   "lists.add": "Hinzuf\u00fcgen",
   "lists.shortlist": "Shortlist",
   "lists.pickShortlist": "Shortlist w\u00e4hlen",
