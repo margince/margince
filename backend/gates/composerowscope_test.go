@@ -45,7 +45,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"maps"
@@ -963,14 +962,14 @@ func (p tierFile) Line(pos token.Pos) int { return p.fset.Position(pos).Line }
 // exclude them: the obligation binds code that can reach a shipped binary.
 func tierFiles(t *testing.T, root string) []tierFile {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var files []tierFile
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return err
 		}
-		parsed, parseErr := parser.ParseFile(fset, path, nil, 0)
+		parsed, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

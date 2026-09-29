@@ -39,7 +39,10 @@ type aiCertDoc struct {
 	// operator picks a preset and inherits its models, so "how did this model
 	// do" is a question they can only ask after this field has answered which
 	// models are theirs.
-	Presets   []aiCertPreset    `json:"presets"`
+	Presets []aiCertPreset `json:"presets"`
+	// Families is the same records folded a second way, for a reader who starts
+	// from "can I run Margince on Gemini" and has not yet chosen a preset.
+	Families  []aiCertFamily    `json:"families"`
 	Bindings  []aiCertBinding   `json:"bindings"`
 	Sites     []aiCertSite      `json:"sites"`
 	Unclaimed []aiCertUnclaimed `json:"unclaimed_records"`

@@ -18,7 +18,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -26,6 +25,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheObjectsPlatformAuthNamesAreCoreObjects(t *testing.T) {
@@ -52,13 +53,12 @@ func authObjectConstants(t *testing.T) map[string]string {
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
-	fset := token.NewFileSet()
 	out := map[string]string{}
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(dir, entry.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(dir, entry.Name()), 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", entry.Name(), err)
 		}

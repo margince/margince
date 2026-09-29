@@ -27,11 +27,12 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The Go trees this walks — every hand-written module, like the license gate's.
@@ -80,7 +81,7 @@ func TestAPositionalRowScanTargetsItsOwnPackagesStruct(t *testing.T) {
 // count is what tells a silent pass from a walk that read nothing.
 func foreignPositionalScans(t *testing.T, path string) ([]string, int) {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

@@ -20,7 +20,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"strconv"
@@ -215,13 +214,12 @@ func parsePackageFiles(t *testing.T, dir string) []*ast.File {
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}
-	fset := token.NewFileSet()
 	var files []*ast.File
 	for _, path := range sources {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", path, parseErr)
 		}

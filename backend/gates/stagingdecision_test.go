@@ -21,12 +21,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // commsStoreDir holds the delivery store whose staging methods this gate
@@ -36,7 +37,7 @@ const commsStoreDir = "internal/modules/comms"
 func TestEveryStagedDeliveryRecordsWhyItWasAllowed(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	stagers := stagingMethodNames(t, fset)
 
 	staging := map[string]bool{}     // functions that stage a delivery
@@ -142,7 +143,7 @@ func parseTreeUnder(t *testing.T, fset *token.FileSet, root string) []*ast.File 
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

@@ -44,11 +44,12 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -728,13 +729,12 @@ func parseConsentPackage(t *testing.T) map[string]*ast.File {
 	if err != nil {
 		t.Fatalf("listing the consent package: %v", err)
 	}
-	fset := token.NewFileSet()
 	out := map[string]*ast.File{}
 	for _, path := range paths {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

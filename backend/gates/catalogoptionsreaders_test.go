@@ -38,11 +38,12 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The port whose Column type this is about. Only this module can import it —
@@ -114,7 +115,7 @@ func TestOnlyTheDeclaredPackagesReadACustomFieldsOptions(t *testing.T) {
 // reachable, and the selector is the read.
 func readsCatalogOptions(t *testing.T, path string) bool {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

@@ -272,8 +272,7 @@ func sweepGoRecordSourcesUnder(t *testing.T, root string) []gatekit.ParsedFile {
 		if rel == probeFile {
 			return nil
 		}
-		fset := token.NewFileSet()
-		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, parseErr := gatekit.ParseFile(path, parser.ParseComments)
 		if parseErr != nil {
 			return fmt.Errorf("could not read %s, and a source the sweep cannot read may hold a subject "+
 				"this census is never proven against: %w", rel, parseErr)
@@ -331,8 +330,7 @@ func recordSourceSubjectsOutsideRoots(t *testing.T) []string {
 		if rel == probeFile || underAnyRoot(rel) {
 			return nil
 		}
-		fset := token.NewFileSet()
-		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, parseErr := gatekit.ParseFile(path, parser.ParseComments)
 		if parseErr != nil {
 			return fmt.Errorf("could not read %s, and a source the sweep cannot read may hold a subject "+
 				"this census is never proven against: %w", rel, parseErr)
@@ -436,7 +434,7 @@ func f(t T) bool { switch t.SourceSystem { case "ui": return true }; return fals
 func f() bool { m := map[string]any{}; switch { case m["source"] == "ui": return true }; return false }`, true, true},
 	} {
 		t.Run(probe.name, func(t *testing.T) {
-			fset := token.NewFileSet()
+			fset := gatekit.SourceFileSet()
 			file, err := parser.ParseFile(fset, "probe.go", probe.body, parser.ParseComments)
 			if err != nil {
 				t.Fatalf("parsing the planted source: %v", err)

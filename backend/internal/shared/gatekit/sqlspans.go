@@ -5,13 +5,35 @@ package gatekit
 
 // Stepping over the parts of a SQL statement that are not SQL.
 
-import (
-	"regexp"
-	"strings"
-)
+import "strings"
 
-// dollarTagRe matches a dollar-quote opener at the current position.
-var dollarTagRe = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$`)
+// dollarTagAt returns the dollar-quote opener starting text — `$$` or
+// `$ident$` — or "" when there is none. A byte scan, because callers ask at every
+// position of a statement and a regexp there made the gate lane quadratic.
+func dollarTagAt(text string) string {
+	if len(text) < 2 || text[0] != '$' {
+		return ""
+	}
+	if text[1] == '$' {
+		return "$$"
+	}
+	if !identStart(text[1]) {
+		return ""
+	}
+	for i := 2; i < len(text); i++ {
+		switch {
+		case text[i] == '$':
+			return text[:i+1]
+		case !identStart(text[i]) && (text[i] < '0' || text[i] > '9'):
+			return ""
+		}
+	}
+	return ""
+}
+
+func identStart(c byte) bool {
+	return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
 
 // SQLSpanAt returns the length of the quoted or commented run starting at pos
 // and whether it CLOSED, or 0 when the text there is ordinary SQL.
@@ -58,7 +80,7 @@ func SQLSpanAt(text string, pos int) (length int, closed bool) {
 	case strings.HasPrefix(text[pos:], "/*"):
 		return blockCommentSpan(text, pos)
 	}
-	tag := dollarTagRe.FindString(text[pos:])
+	tag := dollarTagAt(text[pos:])
 	if tag == "" {
 		return 0, true
 	}

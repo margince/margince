@@ -31,6 +31,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -215,7 +217,7 @@ func TestGatekitServesTestsOnly(t *testing.T) {
 // and they are exactly the ones an untagged build never compiles.
 func censusFiles(t *testing.T, what string, keep func(path string) bool) ([]parsedFile, *token.FileSet) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var out []parsedFile
 	err := filepath.WalkDir(backendTree, func(walked string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() {
@@ -225,7 +227,7 @@ func censusFiles(t *testing.T, what string, keep func(path string) bool) ([]pars
 		if !strings.HasSuffix(rel, ".go") || !keep(rel) {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, walked, nil, parser.ParseComments)
+		file, parseErr := gatekit.ParseFile(walked, parser.ParseComments)
 		if parseErr != nil {
 			return parseErr
 		}
@@ -390,7 +392,7 @@ func TestTheCensusClassifiesEveryWaiverAndReasonMapSpelling(t *testing.T) {
 func probeDeclaration(t *testing.T, declaration string) (*ast.ValueSpec, string) {
 	t.Helper()
 	source := "package probe\n\nimport \"" + gatekitImportPath + "\"\n\n" + declaration + "\n"
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	file, err := parser.ParseFile(fset, "probe.go", source, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing the probe declaration %q: %v", declaration, err)

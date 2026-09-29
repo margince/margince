@@ -132,7 +132,6 @@ func unitOf(path string) (name, dir string) {
 func parseModules(t *testing.T) []moduleSource {
 	t.Helper()
 	byUnit := map[string]*moduleSource{}
-	fset := token.NewFileSet()
 	for _, root := range seamReachableRoots {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
@@ -145,7 +144,7 @@ func parseModules(t *testing.T) []moduleSource {
 				return nil
 			}
 			name, dir := unitOf(path)
-			file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+			file, parseErr := gatekit.ParseFile(path, parser.ParseComments)
 			if parseErr != nil {
 				return parseErr
 			}

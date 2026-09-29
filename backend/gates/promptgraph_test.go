@@ -14,6 +14,8 @@ import (
 	"go/parser"
 	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // promptPackages is what one file calls the two packages a prompt is minted
@@ -269,7 +271,7 @@ func propagateConduits(g *promptGraph) {
 // graphOf parses one source string into a graph, for the cases above.
 func graphOf(t *testing.T, src, name, dir string, isCert bool) promptGraph {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), name, src, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), name, src, 0)
 	if err != nil {
 		t.Fatalf("parsing the case source: %v", err)
 	}

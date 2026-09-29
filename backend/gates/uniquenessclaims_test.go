@@ -78,7 +78,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"maps"
 	"os"
@@ -87,6 +86,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // allClaims sweeps every claimed tree, failing loudly on a root that finds
@@ -349,7 +350,7 @@ const (
 	down = 4
 )
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", source, parser.ParseComments)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", source, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing the probe: %v", err)
 	}

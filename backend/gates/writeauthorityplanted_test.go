@@ -27,9 +27,10 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // plantedDir is where the synthetic package pretends to live. It only has to
@@ -47,7 +48,7 @@ const plantedDir = "internal/modules/planted"
 // a test of what ships.
 func judgePlantedWrite(t *testing.T, source string) (written, guarded map[string]bool) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	parsed, err := parser.ParseFile(fset, plantedDir+"/planted.go", source, 0)
 	if err != nil {
 		t.Fatalf("parsing the planted source: %v", err)

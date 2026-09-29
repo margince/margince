@@ -39,7 +39,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"go/types"
 	"io/fs"
@@ -114,7 +113,6 @@ type promptPackage struct {
 func promptSurfacePackages(t *testing.T) []promptPackage {
 	t.Helper()
 	byDir := map[string][]*ast.File{}
-	fset := token.NewFileSet()
 	for _, root := range promptSurfaceRoots {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
@@ -130,7 +128,7 @@ func promptSurfacePackages(t *testing.T) []promptPackage {
 				strings.HasSuffix(path, "_gen.go") {
 				return nil
 			}
-			file, parseErr := parser.ParseFile(fset, path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

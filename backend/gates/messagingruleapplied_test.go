@@ -38,8 +38,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"slices"
@@ -270,8 +268,7 @@ func TestEverySendPathThatComposesABodyAsksWhatItOwes(t *testing.T) {
 // looks for a call expression, which a comment or a type reference is not.
 func sendPathCalls(t *testing.T, file, fn string) bool {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(),
-		filepath.Join(repoRoot, file), nil, 0)
+	parsed, err := gatekit.ParseFile(filepath.Join(repoRoot, file), 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", file, err)
 	}
@@ -384,7 +381,7 @@ const rulesLookup = "applicableRules"
 // fixable. The opposite error is the silent one.
 func engineRuleReaders(t *testing.T) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	read := map[string]bool{}
 	for _, file := range parseTreeUnder(t, fset, rulesEngineDir) {
 		for _, decl := range file.Decls {

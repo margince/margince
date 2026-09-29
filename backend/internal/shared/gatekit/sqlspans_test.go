@@ -38,6 +38,10 @@ func TestSQLSpanAt(t *testing.T) {
 		{name: "a dollar-quoted value", text: "x = $$a;b$$ , y", pos: 4, length: 7, closed: true},
 		{name: "a tagged dollar quote", text: "$tag$ where 'it' $tag$", pos: 0, length: 22, closed: true},
 		{name: "an unterminated dollar quote is reported", text: "$tag$ never closed", pos: 0, length: 18, closed: false},
+		{name: "a positional placeholder is not a dollar quote", text: "id = $1 and $2", pos: 5, length: 0, closed: true},
+		{name: "a tag needs its closing dollar", text: "$tag never opened", pos: 0, length: 0, closed: true},
+		{name: "a tag may carry digits after its first letter", text: "$_t1$ x $_t1$", pos: 0, length: 13, closed: true},
+		{name: "a tag may not start with a digit", text: "$1x$ y", pos: 0, length: 0, closed: true},
 		{
 			// A line comment ENDS at the newline; running to the end of the
 			// text is where it ends, not a failure to close.

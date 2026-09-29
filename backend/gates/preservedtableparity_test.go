@@ -149,7 +149,7 @@ func preservedInHarness(t *testing.T) map[string]bool {
 // preservedInSweep reads the keys of the sweep's exemption map out of the AST.
 func preservedInSweep(t *testing.T) map[string]bool {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), sweepList, readGate(t, sweepList),
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), sweepList, readGate(t, sweepList),
 		parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", sweepList, err)

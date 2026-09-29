@@ -25,7 +25,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -125,7 +124,7 @@ func taskConstantsDeclaredInSource(t *testing.T) []string {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(token.NewFileSet(), filepath.Join(dir, entry.Name()), nil, 0)
+		file, parseErr := gatekit.ParseFile(filepath.Join(dir, entry.Name()), 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", entry.Name(), parseErr)
 		}

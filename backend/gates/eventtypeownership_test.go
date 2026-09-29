@@ -27,7 +27,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"maps"
@@ -67,7 +66,7 @@ func payloadEventTypes(t *testing.T) map[string]string {
 	}
 	out := map[string]string{}
 	for _, path := range generated {
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("reading the generated payloads to derive their event types: %v", err)
 		}
@@ -209,7 +208,7 @@ func collectEmitSites(t *testing.T) map[string][]emitSite {
 	t.Helper()
 	types := payloadEventTypes(t)
 	sites := map[string][]emitSite{} // event type → where it is built
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	// Every hand-written tree that could hold a payload literal, and the list is
 	// the whole list rather than the obvious half: cmd and pkg can import
 	// internal/contracts as legally as internal can, so an emitter added under
@@ -222,7 +221,7 @@ func collectEmitSites(t *testing.T) map[string][]emitSite {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

@@ -162,7 +162,6 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	defer deliberatelyNotLiveness.AssertAllMatched(t)
 	defer namesTheSeatRatherThanOffersIt.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	var copies, activatableCopies, halves []string
 	judged, constrained := 0, 0
 	for _, path := range handWrittenGoSources(t) {
@@ -172,7 +171,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 		if slash == liveMemberOwner || filepath.Base(path) == "livemember_test.go" {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -252,7 +251,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 // Every call site names a table alias it wrote itself, and this says so.
 func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var findings []string
 	calls := 0
 	for _, path := range handWrittenGoSources(t) {
@@ -262,7 +261,7 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -817,7 +816,7 @@ func read() string {
 
 func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tc := range liveMemberProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"

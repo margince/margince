@@ -23,11 +23,12 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A precheck reaches WithPrecheck two ways in this tree: passed directly, or
@@ -55,14 +56,13 @@ type composeFile struct {
 
 func parseComposeFiles(t *testing.T, root string) []composeFile {
 	t.Helper()
-	fset := token.NewFileSet()
 	var out []composeFile
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
 		// Parse without comments so a name in prose is not in the tree at all.
-		parsed, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		parsed, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if err != nil {
 			return err
 		}

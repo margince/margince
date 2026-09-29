@@ -20,8 +20,9 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // judgePlanted indexes one synthetic file and answers, per reference site,
@@ -30,7 +31,7 @@ import (
 // rather than on a count.
 func judgePlanted(t *testing.T, source string) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	parsed, err := parser.ParseFile(fset, "planted.go", source, 0)
 	if err != nil {
 		t.Fatalf("parsing the planted source: %v", err)

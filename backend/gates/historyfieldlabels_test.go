@@ -43,7 +43,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -345,7 +344,7 @@ func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
 func callsWithin(t *testing.T, dir string) callIndex {
 	t.Helper()
 	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}}
-	for _, file := range parsePackageDir(t, token.NewFileSet(), dir) {
+	for _, file := range parsePackageDir(t, gatekit.SourceFileSet(), dir) {
 		ast.Inspect(file, func(n ast.Node) bool {
 			if call, isCall := n.(*ast.CallExpr); isCall {
 				if name, isPlain := call.Fun.(*ast.Ident); isPlain {
@@ -423,7 +422,7 @@ func isNilExpr(expr ast.Expr) bool {
 // underneath it.
 func fieldHistoryProjection(t *testing.T) (actions, entities map[string]bool) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	files := parsePackageDir(t, fset, "internal/modules/privacy")
 	consts := stringConsts(t, fset, files)
 	return projectionSetKeys(t, files, consts, "fieldHistoryProjectedActions"),

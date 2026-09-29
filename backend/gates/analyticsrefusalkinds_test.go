@@ -36,8 +36,8 @@ func TestTheRefusalKindEnumIsTheKindsTheEngineConstructs(t *testing.T) {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		fset := gatekit.SourceFileSet()
+		file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if err != nil {
 			return err
 		}
@@ -82,7 +82,7 @@ func TestTheRefusalCensusSeesEveryConstructionShape(t *testing.T) {
 		{"a kind set through a field", `h.refusal.Kind = RefusalPrivacy; return nil`, "", true},
 	} {
 		src := "package p\nfunc f() error {\n" + strings.ReplaceAll(plant.body, "; ", "\n") + "\n}\n"
-		fset := token.NewFileSet()
+		fset := gatekit.SourceFileSet()
 		file, err := parser.ParseFile(fset, "plant.go", src, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("%s: the plant does not parse: %v", plant.shape, err)

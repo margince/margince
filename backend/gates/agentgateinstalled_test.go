@@ -37,9 +37,9 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // theAgentGate is the middleware constructor, and contractRouter is the call
@@ -52,7 +52,7 @@ const (
 func TestTheAgentGateIsWrappedAroundEveryContractRoute(t *testing.T) {
 	t.Parallel()
 
-	file, err := parser.ParseFile(token.NewFileSet(), routingTable, nil, 0)
+	file, err := gatekit.ParseFile(routingTable, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", routingTable, err)
 	}

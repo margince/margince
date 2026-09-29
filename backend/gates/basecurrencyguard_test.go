@@ -29,6 +29,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const dealsDir = "internal/modules/deals"
@@ -41,7 +43,7 @@ func TestTheBaseCurrencyGuardCountsEveryFrozenRate(t *testing.T) {
 	}
 
 	counted := map[string]bool{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	lit := packageVarCompositeLit(t, parsePackageDir(t, fset, dealsDir), "frozenRateTables")
 	for _, elt := range lit.Elts {
 		bl, ok := elt.(*ast.BasicLit)

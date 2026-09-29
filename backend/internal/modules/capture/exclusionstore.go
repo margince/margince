@@ -131,15 +131,27 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 	// container lives in ONE contact's mailbox: a workspace rule naming a label
 	// id would bind every colleague's connection to a place that does not exist
 	// there, and silently match nothing forever.
-	if kind == ExclusionKindContainer && scope != ExclusionScopeUser {
+	value, err := ValidExclusionValue(kind, raw)
+	if err != nil {
+		return Exclusion{}, err
+	}
+	// The database refuses this too, and a constraint violation is a 500. A
+	// container somebody MADE lives in ONE contact's mailbox: a workspace rule
+	// naming that label id would bind every colleague's connection to a place
+	// that does not exist there, and silently match nothing forever.
+	//
+	// A container the PROVIDER defines is the exception, and the reason is that
+	// it is not somebody's label at all — Gmail's categories mean the same
+	// thing in every Gmail mailbox, so a rule over one is a statement about the
+	// installation rather than a reach into a colleague's filing. Checked
+	// against the normalized value, because the allow-list and the constraint
+	// both name the stored form.
+	if kind == ExclusionKindContainer && scope != ExclusionScopeUser &&
+		!IsProviderDefinedContainer(value) {
 		return Exclusion{}, &InvalidExclusionError{
 			Field:  "scope",
 			Reason: "a label or folder rule is your own: only the mailbox's owner has that list",
 		}
-	}
-	value, err := ValidExclusionValue(kind, raw)
-	if err != nil {
-		return Exclusion{}, err
 	}
 	var out Exclusion
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {

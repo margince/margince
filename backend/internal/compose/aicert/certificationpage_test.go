@@ -95,6 +95,7 @@ func TestAICertificationPage(t *testing.T) {
 	doc := buildAICertDoc(rows, unclaimed, corpus, records)
 	doc.Decisions = buildAICertDecisions(decisionRows)
 	doc.Presets = attributeAICertPresets(loadAICertPresets(t), doc, records)
+	doc.Families = buildAICertFamilies(doc)
 	assertAICertDocCoversEverything(t, doc, rows, corpus, records)
 	assertAICertPresetsAreAttributed(t, doc.Presets, doc)
 	assertAICertPresetsReadTheRecords(t, doc.Presets, records)
@@ -107,6 +108,7 @@ func TestAICertificationPage(t *testing.T) {
 	assertAICertPageCoversEverything(t, string(page), doc)
 	assertAICertThresholdsStateTheRule(t, string(page), corpus)
 	assertAICertPresetSectionsCount(t, string(page), doc.Presets)
+	assertAICertFamiliesCoverEveryRecord(t, doc, string(page))
 	syncAICertFile(t, aiCertJSON, encoded)
 	syncAICertFile(t, aiCertPage, page)
 }
@@ -255,10 +257,12 @@ func assertAICertPageCoversEverything(t *testing.T, page string, doc aiCertDoc) 
 func renderAICertPage(doc aiCertDoc, verdictRule string, bars []aiCertQualityBar) []byte {
 	var page strings.Builder
 	writeAICertHead(&page)
+	writeAICertFamilySummary(&page, doc.Families)
 	writeAICertPresetSummary(&page, doc.Presets)
 	writeAICertGrading(&page, verdictRule, doc.Totals.SelfJudged, bars)
 	page.WriteString("## For engineers\n\n")
 	page.WriteString("Everything the grades above are computed from, folded so the page stays short.\n\n")
+	writeAICertFamilyDetail(&page, doc.Families)
 	writeAICertFolded(&page, "Totals, and why the records went stale", func(page *strings.Builder) {
 		writeAICertTotals(page, doc.Totals, doc)
 	})

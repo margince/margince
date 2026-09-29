@@ -8,11 +8,12 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A seat's fitness to receive work has ONE spelling, wherever it is asked.
@@ -133,7 +134,7 @@ func keysOf(m map[string]string) []string {
 func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(moduleRoot(t), "internal", "platform", "auth", "assignscope.go")
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
+	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
@@ -147,7 +148,8 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}
-		body = string(src)[fn.Pos()-1 : fn.End()-1]
+		span := gatekit.SourceFileSet().File(fn.Pos())
+		body = string(src)[span.Offset(fn.Pos()):span.Offset(fn.End())]
 		return false
 	})
 	if body == "" {
