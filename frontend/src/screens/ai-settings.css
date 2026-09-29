@@ -184,11 +184,11 @@
 }
 
 /* The preset's note belongs to the row above it, not to the next field. */
-.binding-provider-row + .t-caption {
+.binding-preset-note {
   margin-top: calc(var(--space-2) * -1);
 }
 
-.binding-provider-row > .btn {
+.binding-preset-action {
   flex: none;
-  margin-bottom: var(--space-1);
+  padding-bottom: var(--space-1);
 }

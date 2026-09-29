@@ -307,7 +307,7 @@ export function ModelPriceDialog({
                     header: t("settings.rates.colModel"),
                     grow: true,
                     render: (row) => (
-                      <>
+                      <span className="rates-manual-model">
                         {row.model_id}
                         {row.effective_date > today() ? (
                           <Badge>
@@ -316,7 +316,7 @@ export function ModelPriceDialog({
                             })}
                           </Badge>
                         ) : null}
-                      </>
+                      </span>
                     ),
                   },
                   {

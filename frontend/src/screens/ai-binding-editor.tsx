@@ -323,24 +323,28 @@ function DecisionFields({
           binding.provider === OPENROUTER_DECISION_PRESET.provider
             ? {
                 action: (
-                  <Button
-                    variant="link"
-                    disabled={disabled}
-                    onClick={() =>
-                      onChange({
-                        ...binding,
-                        base_url: OPENROUTER_DECISION_PRESET.base_url,
-                        model: OPENROUTER_DECISION_PRESET.model,
-                      })
-                    }
-                  >
-                    {t("aiRouting.decisions.preset.openrouter")}
-                  </Button>
+                  <span className="binding-preset-action">
+                    <Button
+                      variant="link"
+                      disabled={disabled}
+                      onClick={() =>
+                        onChange({
+                          ...binding,
+                          base_url: OPENROUTER_DECISION_PRESET.base_url,
+                          model: OPENROUTER_DECISION_PRESET.model,
+                        })
+                      }
+                    >
+                      {t("aiRouting.decisions.preset.openrouter")}
+                    </Button>
+                  </span>
                 ),
                 note: (
-                  <p className="t-caption">
-                    {t("aiRouting.decisions.preset.openrouterKey")}
-                  </p>
+                  <div className="binding-preset-note">
+                    <p className="t-caption">
+                      {t("aiRouting.decisions.preset.openrouterKey")}
+                    </p>
+                  </div>
                 ),
               }
             : undefined
