@@ -76,6 +76,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// was never dialled, and a struct constructor is the wrong place to reach a
 	// database anyway. Every role that serves /v1 comes through here.
 	loadChannelProviderDirectoryOrLog(pool, log)
+	// Said once, where an operator reads it: whether this build knows what the
+	// law requires it to keep.
+	announceStatutoryFloor(log)
 
 	srv := newServer(pool, log, authH, dealsH)
 	for _, opt := range opts {
