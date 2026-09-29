@@ -97,7 +97,7 @@ func TestABrokerFloorRaisesOnlyAModelThatThinksLess(t *testing.T) {
 		"claude reasons at medium by default":       {"anthropic/claude-sonnet-4.6", "low", ""},
 		"a floor above the default is raised to":    {"anthropic/claude-sonnet-4.6", "high", `{"effort":"high"}`},
 		"mistral-small is off; high is its lowest":  {"mistralai/mistral-small-2603", "low", `{"effort":"high"}`},
-		"gemma is off and grades no effort":         {"google/gemma-4-31b-it", "low", `{"enabled":true}`},
+		"gemma is off and grades no effort":         {"google/gemma-4-31b-it", "low", ""},
 		"ministral does not reason":                 {"mistralai/ministral-8b-2512", "low", ""},
 		"an unstated default is sent the floor":     {"vendor/reasons-unstated", "low", `{"effort":"low"}`},
 		"an unlisted model is sent nothing":         {"vendor/unlisted", "low", ""},
@@ -143,7 +143,7 @@ func TestABrokerModelListIsReadOncePerClient(t *testing.T) {
 // asked once per window rather than once per call.
 func TestABrokerModelListFailureIsNotReadAgainOnEveryCall(t *testing.T) {
 	stub := &brokerStub{modelsStatus: http.StatusBadGateway}
-	client := newBrokerClient(t, stub, "google/gemma-4-31b-it", nil)
+	client := newBrokerClient(t, stub, "mistralai/mistral-small-2603", nil)
 	compat, ok := client.(*openAICompatClient)
 	if !ok {
 		t.Fatalf("the broker binding is a %T, not the openai-compatible client", client)
@@ -163,7 +163,7 @@ func TestABrokerModelListFailureIsNotReadAgainOnEveryCall(t *testing.T) {
 	if stub.modelsCalls != 2 {
 		t.Fatalf("model list read %d times once the failure had stood its window, want 2", stub.modelsCalls)
 	}
-	if got := string(stub.chats[3]["reasoning"]); got != `{"enabled":true}` {
+	if got := string(stub.chats[3]["reasoning"]); got != `{"effort":"high"}` {
 		t.Fatalf("reasoning = %s after the list recovered, want the mapped floor", got)
 	}
 }
@@ -304,11 +304,11 @@ func TestAnOllamaFloorSendsTheLeastThinkingThatMeetsIt(t *testing.T) {
 	for name, tc := range map[string]struct {
 		show, floor, want string
 	}{
-		"a boolean model is turned on (gemma4)": {`{"thinking":{"values":[false,true]}}`, "low", "true"},
-		"a graded model gets its lowest (oss)":  {`{"thinking":{"values":["high","medium","low"]}}`, "low", `"low"`},
-		"a high floor gets high":                {`{"thinking":{"values":["low","medium","high"]}}`, "high", `"high"`},
-		"a model that does not think":           {`{"capabilities":["completion"]}`, "low", ""},
-		"no floor keeps the cheapest":           {`{"thinking":{"values":[false,true]}}`, "", "false"},
+		"an on/off model stays off (gemma4)":   {`{"thinking":{"values":[false,true]}}`, "low", "false"},
+		"a graded model gets its lowest (oss)": {`{"thinking":{"values":["high","medium","low"]}}`, "low", `"low"`},
+		"a high floor gets high":               {`{"thinking":{"values":["low","medium","high"]}}`, "high", `"high"`},
+		"a model that does not think":          {`{"capabilities":["completion"]}`, "low", ""},
+		"no floor keeps the cheapest":          {`{"thinking":{"values":[false,true]}}`, "", "false"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			ts := newThinkServer(t, tc.show)
