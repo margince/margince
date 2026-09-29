@@ -49,7 +49,7 @@ export function ListWhy({
       labelledBy={titleId}
       placement="right"
     >
-      <Heading size="large" id={titleId}>
+      <Heading size="large" id={titleId} className="modal-title">
         {t("lists.why.title", { name: record?.name ?? "" })}
       </Heading>
       <SurfaceState
