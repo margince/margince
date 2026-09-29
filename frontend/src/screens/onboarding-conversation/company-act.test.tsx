@@ -93,10 +93,6 @@ it("shows a live legal-entity decision on the surface, never as a QuestionCard i
   expect(
     screen.getAllByRole("radio", { name: "Gradion Holding GmbH" }),
   ).toHaveLength(1);
-
-  // No fieldset-based question card reaches the surface a second time while
-  // the scene owns this decision — the candidate list lives there once.
-  expect(document.querySelectorAll(".ob-conv-question")).toHaveLength(0);
 });
 
 it("keeps a superseded, never-answered re-ask out of the rail once a fresh one takes over", () => {
@@ -131,10 +127,9 @@ it("keeps a superseded, never-answered re-ask out of the rail once a fresh one t
   expect(screen.getAllByRole("radio", { name: "Gradion GmbH" })).toHaveLength(
     1,
   );
-  // The stale re-ask's own candidate list must not survive as a rail card,
-  // answered or not — its answer can never be recorded, so an inert card
+  // The stale re-ask's own candidate list must not survive as a second copy,
+  // answered or not — its answer can never be recorded, so an inert copy
   // would be a dead end that looks exactly like the live one.
-  expect(document.querySelectorAll(".ob-conv-question")).toHaveLength(0);
   expect(
     screen.queryAllByRole("button", { name: "Gradion Holding GmbH" }),
   ).toHaveLength(0);

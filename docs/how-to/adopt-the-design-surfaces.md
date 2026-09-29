@@ -133,9 +133,8 @@ learns one page.
 - What needs you shows the lead row plus at most three, then "N more" into
   the Worklist filtered to this record.
 - Contacts as chips: three named plus "+N"; Stakeholders the same.
-- The page cap (`page.has_more`, `co.commercial.truncated`,
-  `project.deals.more`) keeps its sentences; a count on a truncated page
-  reads "at least N", never N.
+- The page cap (`page.has_more`, `project.deals.more`) keeps its sentences;
+  a count on a truncated page reads "at least N", never N.
 - A long name wraps in the head (`text-wrap: balance`); a long facts line
   wraps into rows; the verbs never wrap onto the name.
 

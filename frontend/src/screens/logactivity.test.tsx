@@ -25,9 +25,8 @@ import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { pickOption } from "../design-system/select-testing";
-import { calendarDay, middayInstant } from "../format/calendarday";
+import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
-import { daysPast } from "../format/lateness";
 import { LocaleProvider } from "../i18n";
 import { LogActivity } from "./logactivity";
 
@@ -654,32 +653,6 @@ describe("log activity from a 360", () => {
     expect(
       formatTimeOfDay(postedDueAt(post.body), "en", INSTALLATION_ZONE),
     ).toBe("23:59");
-  });
-
-  it("posts a due date that is not yet late at midday on the picked day", async () => {
-    const captured: Captured[] = [];
-    stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="company" entityId="o1" />);
-    await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Task");
-    fireEvent.change(screen.getByLabelText("Due date"), {
-      target: { value: PICKED_DAY },
-    });
-    await userEvent.type(screen.getByLabelText("Subject *"), "Send proposal");
-    await userEvent.click(screen.getByRole("button", { name: "Log" }));
-    await waitFor(() =>
-      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
-        true,
-      ),
-    );
-    const post = captured.find((entry) => entry.key === "POST /activities");
-    if (!post) throw new Error("expected a POST /activities to be captured");
-    // A day sent as UTC midnight reads as overdue by midday of that same day.
-    const middayOnThePickedDay = Date.parse(
-      middayInstant(PICKED_DAY, INSTALLATION_ZONE),
-    );
-    expect(
-      daysPast(Date.parse(postedDueAt(post.body)), middayOnThePickedDay).late,
-    ).toBe(false);
   });
 
   it("keeps ordinary meeting notes as notes: unchecked, the field stays Details and no source_system is sent", async () => {

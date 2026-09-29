@@ -23,7 +23,7 @@
 1136 frontend/src/screens/record360/spine.test.tsx
 1160 frontend/src/screens/onboarding-conversation/company-act.tsx
 1120 frontend/src/design-system/conformance.test.ts
-1183 frontend/src/screens/onboarding-conversation/company-act.test.tsx
+1178 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 1016 frontend/src/screens/contactpage.tsx
 1200 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
@@ -86,7 +86,7 @@
 599 frontend/src/screens/users-admin.tsx
 662 frontend/src/screens/worklist.dispositions.tsx
 653 frontend/src/format/format.ts
-736 frontend/src/screens/companytoday.tsx
+734 frontend/src/screens/companytoday.tsx
 716 frontend/src/screens/installation-settings.tsx
 760 frontend/src/screens/extension-access.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx

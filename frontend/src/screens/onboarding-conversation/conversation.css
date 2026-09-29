@@ -61,122 +61,6 @@
   }
 }
 
-.ob-conv-user {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  align-self: flex-end;
-  max-width: 80%;
-  width: fit-content;
-}
-
-.ob-conv-user p {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--r-md) var(--r-lg) var(--r-xs) var(--r-lg);
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-}
-
-/* Content-sized: this outranks the 28px `.avatar-sm` rung every other chip wears. */
-.ob-conv-user .avatar {
-  inline-size: auto;
-  block-size: auto;
-}
-
-.ob-conv-outcome {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-inline-start: var(--space-1) solid var(--success);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-  color: var(--textPrimary);
-}
-
-.ob-conv-outcome p {
-  margin: 0;
-}
-
-.ob-conv-outcome svg {
-  flex: none;
-  inline-size: var(--space-4);
-  block-size: var(--space-4);
-  color: var(--successText);
-}
-
-.ob-conv-question {
-  margin: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--aiMed);
-  border-radius: var(--r-md);
-  background: var(--aiLight);
-  max-width: 44rem;
-}
-
-.ob-conv-question legend {
-  padding-inline: var(--space-1);
-  color: var(--textPrimary);
-}
-
-/* A stacked choice list, not a wrapped chip row: each answer reads its full
-   name and detail rather than truncating into a chip that can spill over its
-   neighbour. */
-.ob-conv-options {
-  display: grid;
-  gap: var(--space-2);
-  margin-block-start: var(--space-2);
-}
-
-/* Scoped under .ob-conv-question rather than bare .ob-conv-option: at equal
-   specificity, source order alone decided the fight with base.css's .btn over
-   align-items and white-space, and .btn was winning — this scope outranks it
-   so the column layout and wrap actually apply. */
-.ob-conv-question .ob-conv-option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: var(--space-1);
-  width: 100%;
-  min-height: 44px;
-  padding: var(--space-2) var(--space-3);
-  /* Long or translated labels wrap inside the row instead of forcing the
-     thread to scroll horizontally. */
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-align: start;
-  height: auto;
-}
-
-.ob-conv-option span {
-  color: var(--textPrimary);
-}
-
-.ob-conv-option small {
-  font-family: var(--fontFamilyBody);
-  overflow-wrap: anywhere;
-}
-
-/* Visual clamp only: garbage-length values stay two lines per part; the
-   full text remains the accessible name (content) and the hover title. */
-.ob-conv-option span,
-.ob-conv-option small {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-}
-
-/* The subordinate escape under the options: present, never competing. */
-.ob-conv-question .ob-conv-question-dismiss {
-  margin-block-start: var(--space-2);
-}
-
 .ob-conv-confirm-skipped {
   display: flex;
   align-items: center;
@@ -186,22 +70,6 @@
 
 .ob-conv-confirm-skipped p {
   margin: 0;
-}
-
-.ob-conv-outcome[data-tone="deferred"] {
-  border-inline-start-color: var(--warningBorder);
-}
-
-.ob-conv-outcome[data-tone="deferred"] svg {
-  color: var(--warningText);
-}
-
-.ob-conv-outcome[data-tone="failure"] {
-  border-inline-start-color: var(--danger);
-}
-
-.ob-conv-outcome[data-tone="failure"] svg {
-  color: var(--dangerText);
 }
 
 .ob-conv-confirm {
@@ -2761,14 +2629,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Keyboard focus on option chips and chip rows reads the same accent-token
- * ring as the atom inputs, not the browser's off-palette native outline. */
-.ob-conv-option:focus-visible {
-  outline: var(--focus-ring-forced);
-  outline-offset: 2px;
-  box-shadow: var(--focus-glow);
 }
 
 /* A finding the narration or a jump just landed on lights up unmistakably —
