@@ -23,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -67,7 +68,7 @@ func main() {
 // readNames parses `ci-stable-mtimes.sh --names`: one top-level entry and its
 // digest variable per line.
 func readNames(path string) (map[string]string, error) {
-	body, err := os.ReadFile(path)
+	body, err := fs.ReadFile(os.DirFS(filepath.Dir(path)), filepath.Base(path))
 	if err != nil {
 		return nil, fmt.Errorf("reading the digest names: %w", err)
 	}
@@ -85,7 +86,9 @@ func readNames(path string) (map[string]string, error) {
 // census judges every log in dir and reports the undeclared reads, sorted, and
 // how many package logs it read.
 func census(dir string, names map[string]string) ([]string, int, error) {
-	entries, err := os.ReadDir(dir)
+	// Rooted at the log directory, so a name read from it cannot reach outside.
+	logs := os.DirFS(dir)
+	entries, err := fs.ReadDir(logs, ".")
 	if err != nil {
 		return nil, 0, fmt.Errorf("reading the test logs: %w", err)
 	}
@@ -96,11 +99,11 @@ func census(dir string, names map[string]string) ([]string, int, error) {
 		if !isLog {
 			continue
 		}
-		pkgDir, err := os.ReadFile(filepath.Join(dir, id+".dir"))
+		pkgDir, err := fs.ReadFile(logs, id+".dir")
 		if err != nil {
 			return nil, 0, fmt.Errorf("finding the directory %s ran in: %w", entry.Name(), err)
 		}
-		log, err := os.Open(filepath.Join(dir, entry.Name()))
+		log, err := logs.Open(entry.Name())
 		if err != nil {
 			return nil, 0, fmt.Errorf("opening %s: %w", entry.Name(), err)
 		}
@@ -186,10 +189,11 @@ func relativeWithin(root, path string) (string, bool) {
 	return rel, rel != ".." && !strings.HasPrefix(rel, "../")
 }
 
-// enclosing is the nearest directory at or above dir holding name.
+// enclosing is the nearest directory at or above dir holding name, asked of
+// each directory as a rooted filesystem so a logged path cannot steer the stat.
 func enclosing(dir, name string) string {
 	for ; ; dir = filepath.Dir(dir) {
-		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+		if _, err := fs.Stat(os.DirFS(dir), name); err == nil {
 			return dir
 		}
 		if filepath.Dir(dir) == dir {
