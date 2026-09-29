@@ -15,21 +15,19 @@
 # which matches every region and so is a vendor preference rather than a
 # location one.
 #
-# What the pin costs, stated plainly: mistralai/mistral-medium-3-5 is Mistral's
-# strongest current model and has NO EU endpoint (the broker lists `mistral` and
-# `mistral/zdr` for it, read 2026-09-24), so it cannot be bound here at all —
-# `premium` and `frontier` both name mistral-small-2603. Two tiers naming one
-# model is the honest reading of a region whose top rung does not exist in it,
-# and it has a price: the two rungs share one upstream endpoint, so a 429 there
-# is met by both.
+# `premium` names mistralai/mistral-medium-3-5, Mistral's flagship, served from
+# the EU endpoint since the broker added `mistral/eu` for it (read 2026-09-29).
+# `frontier` names mistral-small-2603 rather than the flagship a second time. No
+# shipped task leads at frontier, so it is only ever premium's fallback, and a
+# fallback to the same model is the same upstream endpoint: one 429 there would
+# burn both rungs. A different model is a different capacity pool.
 #
 # That 429 is rarely ours. Without a key of its own the broker serves Mistral
-# from ITS key, one capacity pool shared by every account on it, and
-# mistral-small-2603's pool is the one that saturates. No binding here can move
-# the model to a pool of its own — it has exactly one EU endpoint — so the pool
-# is an account setting: attach a Mistral API key to the OpenRouter account
-# (its "bring your own key" integration) and calls draw on that key's limits.
-# A deployment on this preset should, before it relies on premium or frontier.
+# from ITS key, one capacity pool shared by every account on it. Each model
+# here has exactly one EU endpoint, so the pool is an account setting: attach a
+# Mistral API key to the OpenRouter account (its "bring your own key"
+# integration) and calls draw on that key's limits. A deployment on this preset
+# should, before it relies on premium or frontier.
 #
 # `cheap_cloud` deliberately does NOT join them — see the note on that tier.
 #
@@ -43,8 +41,8 @@
 #
 #     make e2e-ai ROUTING=config/presets/openrouter_cloud_eu.yaml
 #
-# The default judge, gpt-oss-120b, is bound on no tier here; mistral-small-2603
-# would grade its own premium and frontier tasks, and the runner refuses that.
+# The default judge (Claude, through `claude -p`) is bound on no tier here, so
+# it grades every task this preset certifies.
 #
 # On the `routing:` block's fields and the measurements behind them:
 # docs/reference/openrouter.md.
@@ -92,7 +90,7 @@ seeds:
           require_parameters: true
       premium:
         provider: openai_compatible
-        model: mistralai/mistral-small-2603
+        model: mistralai/mistral-medium-3-5
         base_url: https://openrouter.ai/api
         routing:
           only: [mistral/eu]

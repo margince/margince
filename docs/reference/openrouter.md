@@ -131,8 +131,8 @@ retention policy rather than a place. Only `only: [<provider>/<region>]` keeps a
 call in a region, and OpenRouter answers 404 when no endpoint matches rather
 than falling back elsewhere. Read a model's endpoints at
 `https://openrouter.ai/api/v1/models/<model id>/endpoints` before binding it: a
-model with no EU endpoint (`mistral-medium-3-5`, when this was written) cannot
-be pinned to the EU at all.
+model with no EU endpoint cannot be pinned to the EU at all, and the list
+changes — `mistral-medium-3-5` had none until the broker added `mistral/eu`.
 
 The embeddings lane takes `only`, `ignore` and `allow_fallbacks` — the fields
 that choose hosts — and refuses the rest, which bound a completion's tail. A

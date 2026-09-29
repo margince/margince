@@ -45,9 +45,9 @@ Commit the records only together with the same `thinking_level:` in
 `openrouter_cloud_eu.yaml` fixes the HOST first and takes whatever Mistral
 weights that host serves, which is a different question from
 `openrouter_cloud.yaml`'s "best model per tier". Two consequences a reader
-should meet before the file: `mistral-medium-3-5` has no EU endpoint, so it
-cannot be bound there and `premium` and `frontier` both land on
-`mistral-small-2603`, sharing one upstream endpoint; and every lane, the
+should meet before the file: `premium` is Mistral's flagship,
+`mistral-medium-3-5`, while `frontier` is `mistral-small-2603` so that premium's
+fallback reaches a different upstream endpoint; and every lane, the
 embeddings lane included, must name an EU-region endpoint in `only:` — a preset
 whose name ends in `_eu.yaml` is held to that by
 `TestAResidencyPresetPinsEveryLaneToAnEURegion`, because an unpinned lane or a
