@@ -5,7 +5,7 @@
 
 package integration
 
-// A list other people work from changes only on purpose: against the version
+// A list colleagues work from changes only on purpose: against the version
 // its author read, never while archived, and with a revision of every change.
 
 import (

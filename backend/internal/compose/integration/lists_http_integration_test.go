@@ -6,7 +6,7 @@
 package integration
 
 // Lists over the wire: absent while an installation has not switched them on,
-// and, once on, the same answer to a person and to the agent acting for them.
+// and, once on, the same answer to a user and to the agent acting for them.
 
 import (
 	"encoding/json"
@@ -63,7 +63,7 @@ type listDTO struct {
 	Health       string `json:"health"`
 }
 
-func TestAPersonAndTheirAgentReadOneListTheSameWay(t *testing.T) {
+func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 	e, agent := listsApp(t, true)
 	var list listDTO
 	if status := e.Call(t, "POST", "/v1/lists", AnyMap{

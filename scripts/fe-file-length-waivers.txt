@@ -11,7 +11,7 @@
 # Format: <frozen-line-count> <path>
 979 frontend/src/screens/webhooks.tsx
 1003 frontend/src/app/shell.tsx
-1008 frontend/src/App.tsx
+1003 frontend/src/App.tsx
 1034 frontend/src/screens/automations.test.tsx
 1041 frontend/src/screens/installation-setup.tsx
 925 frontend/src/screens/auth.tsx
@@ -46,7 +46,7 @@
 1610 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
-1583 frontend/src/screens/leads.tsx
+1582 frontend/src/screens/leads.tsx
 2264 frontend/src/screens/company360.test.tsx
 2243 frontend/src/screens/companies.test.tsx
 2338 frontend/src/screens/companies.tsx
