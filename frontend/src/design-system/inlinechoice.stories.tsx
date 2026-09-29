@@ -58,8 +58,8 @@ export const ReadOnly: Story = {
   ),
 };
 
-// A refused save keeps the picker open on the reader's answer and says why on
-// the ErrorLine beside it.
+// A refused save keeps the picker open on the reader's answer and says why as
+// the field's error beneath it.
 export const RefusedSave: Story = {
   render: () => (
     <InlineChoice
@@ -84,8 +84,10 @@ export const RefusedSave: Story = {
     await userEvent.click(
       await screen.findByRole("option", { name: "Customer" }),
     );
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+    const refusal = await canvas.findByRole("alert");
+    await expect(refusal).toHaveTextContent(
       "Somebody else changed this record.",
     );
+    await expect(refusal).toHaveClass("field-error");
   },
 };

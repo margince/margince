@@ -664,6 +664,7 @@ export type FieldControl = Readonly<{
  */
 export function Field({
   label,
+  labelHidden,
   labelEnd,
   hint,
   hintLive,
@@ -678,6 +679,9 @@ export function Field({
   // read from somewhere carries its provenance in the label row — a confidence
   // meter and a source chip beside the name.
   label: ReactNode;
+  /** The label for assistive tech alone, where the layout already names the
+   *  field: an inline editor opened in place of the value it edits. */
+  labelHidden?: boolean;
   /**
    * What sits at the far end of the label's own line — the "Forgot?" link
    * beside a password, a unit beside an amount. It belongs to the label ROW
@@ -744,18 +748,19 @@ export function Field({
     "aria-describedby": describedBy,
     "aria-invalid": error ? true : undefined,
   });
+  const labelClass = labelHidden ? "sr-only" : "t-label";
   return (
     <div className={["field", className ?? ""].filter(Boolean).join(" ")}>
       {labelEnd ? (
         <span className="field-label-row">
-          <label className="t-label" htmlFor={id}>
+          <label className={labelClass} htmlFor={id}>
             {label}
             {required && <span aria-hidden> *</span>}
           </label>
           {labelEnd}
         </span>
       ) : (
-        <label className="t-label" htmlFor={id}>
+        <label className={labelClass} htmlFor={id}>
           {label}
           {required && <span aria-hidden> *</span>}
         </label>

@@ -3,14 +3,12 @@ import {
   type ReactNode,
   type RefObject,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";
-import { BusyMark } from "./atoms";
-import { ErrorLine } from "./errorline";
+import { BusyMark, Field } from "./atoms";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";
 
@@ -84,7 +82,6 @@ export function InlineChoice({
     onDirtyChange?.(editing && (saving || pending !== value));
   }, [editing, saving, pending, value, onDirtyChange]);
   const [failure, setFailure] = useState<string | null>(null);
-  const container = useRef<HTMLSpanElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   // Set right before a close that should return focus to the resting
   // trigger, read once that trigger has actually remounted (see the effect
@@ -95,8 +92,6 @@ export function InlineChoice({
   // run, `editing` is still true, so the resting button — only rendered in
   // the `!editing` branch — does not exist yet and `trigger.current` is null.
   const restoreFocus = useRef(false);
-  const fieldId = useId();
-  const errorId = useId();
 
   const close = () => {
     setEditing(false);
@@ -178,7 +173,6 @@ export function InlineChoice({
     // control has no other way to back out of.
     // biome-ignore lint/a11y/noStaticElementInteractions: keydown here only ever catches an Escape the Select below already declined to claim; the interactive element is that Select's own trigger.
     <span
-      ref={container}
       className="inlinechoice-edit"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -186,47 +180,42 @@ export function InlineChoice({
         }
       }}
     >
-      <label className={hideLabel ? "sr-only" : undefined} htmlFor={fieldId}>
-        {label}
-        {!hideLabel && ": "}
-      </label>
-      <Select
-        id={fieldId}
-        value={chosen}
-        options={options}
-        // Disabled AND busy, which are not the same claim. `disabled` is what
-        // stops a second choice landing on top of a write that has not answered
-        // yet; `aria-busy` is what says the control is working rather than
-        // refused, and it is what the stylesheet keys the paint off — a write in
-        // flight keeps its full ink and takes the waiting cursor, exactly as
-        // Switch has since it was written.
-        disabled={saving}
-        aria-busy={saving || undefined}
-        aria-invalid={failure ? true : undefined}
-        aria-describedby={failure ? errorId : undefined}
-        // The click that started editing already meant "show me the
-        // options" — opening on mount spends that same click rather than
-        // asking for a second one.
-        openOnMount
-        // Closing the popup without picking anything (a press outside, the
-        // trigger scrolling away) is the one closed transition that is not
-        // also a commit — Select's own `commit` never routes through this,
-        // only `cancel`/an outside dismissal do. Tab is deliberately routed
-        // to `onLeave`, not here: the reader already moved forward, and
-        // refocusing this trigger would drag them back to where they left.
-        onCancel={revert}
-        onLeave={close}
-        onChange={(next) => {
-          setPending(next);
-          void commit(next);
-        }}
-      />
-      {saving && <BusyMark />}
-      {failure && (
-        <ErrorLine inline id={errorId}>
-          {failure}
-        </ErrorLine>
-      )}
+      <Field label={label} labelHidden={hideLabel} error={failure ?? undefined}>
+        {(control) => (
+          <>
+            <Select
+              {...control}
+              value={chosen}
+              options={options}
+              // Disabled AND busy, which are not the same claim. `disabled` is what
+              // stops a second choice landing on top of a write that has not answered
+              // yet; `aria-busy` is what says the control is working rather than
+              // refused, and it is what the stylesheet keys the paint off — a write in
+              // flight keeps its full ink and takes the waiting cursor, exactly as
+              // Switch has since it was written.
+              disabled={saving}
+              aria-busy={saving || undefined}
+              // The click that started editing already meant "show me the
+              // options" — opening on mount spends that same click rather than
+              // asking for a second one.
+              openOnMount
+              // Closing the popup without picking anything (a press outside, the
+              // trigger scrolling away) is the one closed transition that is not
+              // also a commit — Select's own `commit` never routes through this,
+              // only `cancel`/an outside dismissal do. Tab is deliberately routed
+              // to `onLeave`, not here: the reader already moved forward, and
+              // refocusing this trigger would drag them back to where they left.
+              onCancel={revert}
+              onLeave={close}
+              onChange={(next) => {
+                setPending(next);
+                void commit(next);
+              }}
+            />
+            {saving && <BusyMark />}
+          </>
+        )}
+      </Field>
     </span>
   );
 }
