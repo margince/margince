@@ -20,54 +20,75 @@ import { parseSource } from "./source-tree";
  * which stories exist.
  */
 export function storyTitle(path: string, text: string): string | null {
-  const source = parseSource(path, text);
-  const exported = source.statements.find(ts.isExportAssignment);
-  if (!exported) return null;
-  const named = unwrap(exported.expression);
-  const meta = ts.isIdentifier(named)
-    ? metaObjectNamed(source, named.text)
-    : named;
-  if (!meta || !ts.isObjectLiteralExpression(meta)) return null;
-  for (const property of meta.properties) {
-    if (!ts.isPropertyAssignment(property)) continue;
-    if (propertyKey(property.name) !== "title") continue;
-    const value = unwrap(property.initializer);
-    if (ts.isStringLiteralLike(value)) return value.text;
-  }
-  return null;
+  if (path.endsWith(".mdx")) return mdxTitle(text);
+  const title = literalAt(defaultExportObject(parseSource(path, text)), [
+    "title",
+  ]);
+  return title !== undefined && ts.isStringLiteralLike(title)
+    ? title.text
+    : null;
 }
 
-// The key, whichever way it is written. `{ title: … }` and `{ "title": … }` are
-// the same property, but reading the name's SOURCE TEXT compares the quotes
-// too, so the quoted spelling matched nothing and the story fell out of the
-// root check — skipped rather than reported, the one direction this gate must
-// not be wrong in. A computed key is deliberately not resolved: what it
-// evaluates to is not a question the parser can answer, and guessing would be
-// worse than the honest null.
-function propertyKey(name: ts.PropertyName): string | null {
-  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) return name.text;
-  return null;
+// No MDX parser is resolvable here, so the read is strict: one `<Meta>` outside
+// comments and code fences, carrying only a quoted title. Anything else is null.
+function mdxTitle(text: string): string | null {
+  const prose = text
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/^```[^\n]*\n[\s\S]*?^```[^\n]*$/gm, "");
+  const metas = [...prose.matchAll(/<Meta\b[^>]*>/g)];
+  if (metas.length !== 1) return null;
+  return /^<Meta\s+title="([^"{}]+)"\s*\/>$/.exec(metas[0][0])?.[1] ?? null;
 }
 
-function metaObjectNamed(
+// The object literal a module default-exports, directly or through the `const`
+// it names; undefined for anything a literal read cannot resolve.
+export function defaultExportObject(
   source: ts.SourceFile,
-  name: string,
+): ts.ObjectLiteralExpression | undefined {
+  const exported = source.statements.find(ts.isExportAssignment);
+  if (exported === undefined) return undefined;
+  const value = unwrap(exported.expression);
+  const resolved = ts.isIdentifier(value)
+    ? source.statements
+        .filter(ts.isVariableStatement)
+        .flatMap((statement) => statement.declarationList.declarations)
+        .find(
+          (declaration) =>
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === value.text,
+        )?.initializer
+    : value;
+  const object = resolved && unwrap(resolved);
+  return object && ts.isObjectLiteralExpression(object) ? object : undefined;
+}
+
+// `{ title: … }` and `{ "title": … }` are one property.
+// A computed key is not resolved: a guessed title is worse than null.
+export function literalAt(
+  object: ts.ObjectLiteralExpression | undefined,
+  path: string[],
 ): ts.Expression | undefined {
-  for (const statement of source.statements) {
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      if (ts.isIdentifier(declaration.name) && declaration.name.text === name) {
-        return declaration.initializer && unwrap(declaration.initializer);
-      }
+  let value: ts.Expression | undefined = object;
+  for (const key of path) {
+    if (value === undefined || !ts.isObjectLiteralExpression(value)) {
+      return undefined;
     }
+    const property = value.properties
+      .filter(ts.isPropertyAssignment)
+      .find(
+        ({ name }) =>
+          (ts.isIdentifier(name) || ts.isStringLiteral(name)) &&
+          name.text === key,
+      );
+    value = property && unwrap(property.initializer);
   }
-  return undefined;
+  return value;
 }
 
 // The type-only wrappers a story's metadata may be written through. They change
 // nothing about the object underneath, so a scanner that stops at them reads no
 // title where there is one.
-function unwrap(expression: ts.Expression): ts.Expression {
+export function unwrap(expression: ts.Expression): ts.Expression {
   let node = expression;
   while (
     ts.isParenthesizedExpression(node) ||

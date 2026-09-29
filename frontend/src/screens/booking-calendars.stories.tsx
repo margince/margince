@@ -6,7 +6,7 @@ import "./book.css";
 
 const meta: Meta<typeof BookingCalendars> = {
   parameters: { layout: "fullscreen" },
-  title: "Patterns/Booking/BookingCalendars",
+  title: "Patterns/Booking/Calendars",
   component: BookingCalendars,
 };
 export default meta;

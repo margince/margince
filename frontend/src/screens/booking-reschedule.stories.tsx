@@ -8,7 +8,7 @@ import "./book.css";
 
 const meta: Meta<typeof BookingReschedule> = {
   parameters: { layout: "fullscreen" },
-  title: "Patterns/Booking/BookingReschedule",
+  title: "Patterns/Booking/Reschedule",
   component: BookingReschedule,
 };
 export default meta;

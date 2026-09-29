@@ -21,7 +21,7 @@ import { StoryProviders } from "./story-utils";
 // Read every frame in BOTH themes with the toolbar's Theme control.
 
 const meta: Meta<typeof AgendaPanel> = {
-  title: "Shell/Home team agenda",
+  title: "Shell/Home/Team agenda",
   component: AgendaPanel,
 };
 export default meta;

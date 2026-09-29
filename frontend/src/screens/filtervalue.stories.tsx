@@ -13,7 +13,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // Filters builder and the Analytics question builder both draw this, so each
 // kind is shown here on its own rather than inside either host.
 const meta: Meta<typeof ValueControl> = {
-  title: "Patterns/Filter value",
+  title: "Patterns/Filter operand/By value kind",
   component: ValueControl,
   parameters: { layout: "padded" },
 };

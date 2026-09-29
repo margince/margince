@@ -56,7 +56,7 @@ function frame(offered: boolean, answer: () => Promise<Response>) {
 }
 
 const meta: Meta<typeof BriefTeamBoard> = {
-  title: "Shell/Home team board",
+  title: "Shell/Home/Team board",
   component: BriefTeamBoard,
   parameters: { layout: "padded" },
 };

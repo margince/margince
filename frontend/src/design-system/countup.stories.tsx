@@ -9,7 +9,7 @@ import { CountUp } from "./countup";
 // last one is the only one that shows what this is FOR, because a count-up seen
 // once at mount is indistinguishable from a number.
 const meta: Meta<typeof CountUp> = {
-  title: "Onboarding/Count up",
+  title: "Components/Text and data display/Count up",
   component: CountUp,
   parameters: { layout: "centered" },
 };

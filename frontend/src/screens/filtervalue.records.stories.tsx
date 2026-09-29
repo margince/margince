@@ -9,7 +9,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The record half of a filter value: a company found by search, and the
 // records a list clause already holds.
-const meta: Meta = { title: "Patterns/Filter value/Records" };
+const meta: Meta = { title: "Patterns/Filter operand/Records" };
 export default meta;
 
 type Story = StoryObj;

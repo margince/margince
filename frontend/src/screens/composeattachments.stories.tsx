@@ -20,7 +20,7 @@ const BLOCKS: readonly CarriageViolation[] = [
 ];
 
 const meta: Meta = {
-  title: "Patterns/Compose attachments",
+  title: "Patterns/Compose mail/Attachments",
 };
 export default meta;
 

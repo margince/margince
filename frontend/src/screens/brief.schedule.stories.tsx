@@ -59,7 +59,7 @@ const BOOKED = readingsDay({}, [
 const CLEAR = readingsDay({}, []);
 
 const meta: Meta = {
-  title: "Shell/Home schedule",
+  title: "Shell/Home/Schedule",
 };
 export default meta;
 type Story = StoryObj;

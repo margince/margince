@@ -16,7 +16,7 @@ import { NamePrompt } from "./nameprompt";
 // pending and problem states as props rather than owning a mutation. That is
 // what lets a caller's own write drive it.
 const meta: Meta<typeof NamePrompt> = {
-  title: "Patterns/Name prompt",
+  title: "Components/Overlays and layering/Name prompt",
   component: NamePrompt,
   parameters: { layout: "padded" },
   decorators: [

@@ -22,7 +22,7 @@ import "./conversation.css";
 // nothing.
 
 const meta: Meta<typeof ConnectDialog> = {
-  title: "Onboarding/Connect dialog",
+  title: "Onboarding/Conversation/Connect dialog",
   component: ConnectDialog,
   parameters: { layout: "padded" },
 };
