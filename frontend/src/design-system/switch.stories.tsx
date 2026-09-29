@@ -7,7 +7,7 @@ import { LocaleProvider } from "../i18n";
 import { Switch } from "./switch";
 
 const meta: Meta<typeof Switch> = {
-  title: "Design System/Switch",
+  title: "Components/Forms and input/Switch",
   component: Switch,
   parameters: { layout: "padded" },
   decorators: [

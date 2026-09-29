@@ -11,7 +11,7 @@ import { ChoiceList } from "./choicelist";
 // and a group a reader may look at but not change.
 
 const meta: Meta<typeof ChoiceList> = {
-  title: "Design System/ChoiceList",
+  title: "Components/Forms and input/Choice list",
   component: ChoiceList,
   parameters: { layout: "padded" },
 };

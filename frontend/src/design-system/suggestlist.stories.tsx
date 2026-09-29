@@ -18,7 +18,7 @@ import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
  * hook; a real surface reaches for `ComboBox` or `TokenInput`, never this.
  */
 const meta = {
-  title: "Design System/SuggestPopup",
+  title: "Components/Forms and input/Suggest popup",
   parameters: { layout: "padded" },
 } satisfies Meta;
 export default meta;

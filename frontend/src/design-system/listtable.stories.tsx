@@ -15,7 +15,7 @@ import { CellStrip, type ListColumn, ListTable } from "./listtable";
 // wiring here.
 
 const meta: Meta = {
-  title: "Design System/ListTable",
+  title: "Components/Text and data display/List table",
   parameters: { layout: "padded" },
 };
 export default meta;

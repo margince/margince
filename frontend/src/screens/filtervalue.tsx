@@ -17,6 +17,7 @@ import {
   type Reference,
   useReferenceOptions,
 } from "./filterreference";
+import { MoneyControl } from "./filtervalue.money";
 import {
   ChosenRecords,
   chosenIDs,
@@ -43,12 +44,15 @@ export function ValueControl({
   value,
   onChange,
   label,
+  currency,
 }: Readonly<{
   type: VocabularyField["type"];
   /** What an id field's values point at, when the vocabulary named one. */
   references: Reference | undefined;
   /** A picklist's allowed values, when the vocabulary carried them. */
   options: readonly string[] | undefined;
+  /** The currency a money field counts minor units of, when it is known. */
+  currency?: string;
   op: FilterOp;
   value: LeafValue;
   onChange: (next: LeafValue) => void;
@@ -84,6 +88,17 @@ export function ValueControl({
         many={op === "in"}
         value={value}
         onChange={onChange}
+      />
+    );
+  }
+  if (type === "currency" && currency) {
+    return (
+      <MoneyControl
+        op={op}
+        value={value}
+        onChange={onChange}
+        label={label}
+        currency={currency}
       />
     );
   }

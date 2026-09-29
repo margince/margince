@@ -45,7 +45,7 @@ Strongest first:
 | OpenRouter `openai/gpt-oss-120b` | on (mandatory), effort `medium` | nothing | default `medium` meets `low` |
 | OpenRouter `mistralai/mistral-medium-3-5` | on, effort `high` | nothing | default `high` meets `low` |
 | OpenRouter `mistralai/mistral-small-2603` | off; efforts `high`, `none` | `reasoning: {"effort": "high"}` | — |
-| OpenRouter `google/gemma-4-*-it` | off; no efforts listed | `reasoning: {"enabled": true}` | — |
+| OpenRouter `google/gemma-4-*-it` | off; no efforts listed | nothing | on/off only: no effort bounds its thinking |
 | OpenRouter `anthropic/claude-sonnet-4.6` | on, effort `medium` | nothing | default `medium` meets `low` |
 | OpenRouter `mistralai/ministral-*` | does not reason | nothing | the model lists no `reasoning` |
 | OpenRouter, a model on by default that states no effort | on, effort unknown | `reasoning: {"effort": "low"}` | — |
@@ -57,7 +57,7 @@ Strongest first:
 | OpenAI `gpt-5`, `gpt-5.5`, `gpt-5.6`, `gpt-6`, o-series | effort `medium` | nothing | default `medium` meets `low` |
 | OpenAI `o1-mini`, `o1-preview` | no `reasoning.effort` field | nothing | always: the field is a 400 there |
 | OpenAI non-reasoning (`gpt-4.x`, `gpt-5-chat-*`, unknown ids) | no reasoning | nothing | always: the field is a 400 there |
-| Ollama, boolean model (Gemma 4, Qwen3) | adapter sends `think: false` | `think: true` | — |
+| Ollama, boolean model (Gemma 4, Qwen3) | adapter sends `think: false` | `think: false` | on/off only: no effort bounds its thinking |
 | Ollama, graded model (gpt-oss) | adapter sends the lowest level | `think: "low"` | — |
 | Ollama, model that does not think | nothing | nothing | `/api/show` lists no `thinking.values` |
 | vLLM (Qwen3, gpt-oss) | the server's own flags decide | nothing | always: the binding cannot tell which model it serves |
@@ -69,6 +69,10 @@ Notes:
   Effort shapes the whole answer, and its default is already `high`.
 - Budget sizes on Anthropic 4.5 and earlier: `minimal` and `low` 1024 (the API
   minimum), `medium` 4096, `high` 16384.
+- A model that can only switch thinking on or off is left off. A floor names a
+  bounded effort, and on/off thinking has none: on `gemma4:12b` through Ollama,
+  one onboarding turn thought for about 4,300 tokens and 7 minutes, against 110
+  tokens and 15 seconds with thinking off.
 - Thinking counts against the output ceiling on every provider. A floor on a
   small `max_tokens` can leave less room for the answer.
 

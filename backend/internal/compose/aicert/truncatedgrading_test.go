@@ -283,20 +283,23 @@ func TestARejectedCandidateAbortsTheTaskWithNoRecord(t *testing.T) {
 	}
 }
 
-// A withheld run names the binding it was sent to, which is not the identity
-// a served run reports — a native vendor answers with a dated version of the
-// model id it was asked for. Compared as though it had served, it would void a
-// set whose served runs were all one model.
-func TestAWithheldRunNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
+// A withheld or abandoned run names the binding it was sent to, which is not
+// the identity a served run reports — a native vendor answers with a dated
+// version of the model id it was asked for. Compared as though it had served,
+// it would void a set whose served runs were all one model.
+func TestARunWithNoAnswerNeitherSetsNorBreaksTheServedIdentity(t *testing.T) {
 	t.Parallel()
 	withheld := runOutcome{RunResult: RunResult{Withheld: "SAFETY"}, Provider: "gemini", ServedModel: "gemini-flash"}
+	abandoned := runOutcome{RunResult: RunResult{Abandoned: true}, Provider: "gemini", ServedModel: "gemini-flash"}
 	served := runOutcome{Provider: "gemini", ServedModel: "gemini-flash-001"}
 	for name, tc := range map[string]struct {
 		order []runOutcome
 		want  string
 	}{
-		"withheld first": {[]runOutcome{withheld, served, withheld}, served.ServedModel},
-		"served first":   {[]runOutcome{served, withheld, served}, served.ServedModel},
+		"withheld first":         {[]runOutcome{withheld, served, withheld}, served.ServedModel},
+		"served first":           {[]runOutcome{served, withheld, served}, served.ServedModel},
+		"abandoned first":        {[]runOutcome{abandoned, served, abandoned}, served.ServedModel},
+		"served, then abandoned": {[]runOutcome{served, abandoned, served}, served.ServedModel},
 		// Nothing served, so the binding is the only identity there is.
 		"every run withheld": {[]runOutcome{withheld, withheld, withheld}, withheld.ServedModel},
 	} {

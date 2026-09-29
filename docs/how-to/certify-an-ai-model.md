@@ -9,17 +9,14 @@ judge, folds the runs into a `certified` / `supported_degraded` /
 `not_supported` verdict, and commits the result as a JSON record.
 
 This is the **paid, opt-in** lane: real provider calls billed to your own **BYOK**
-(bring-your-own-key) budget, since Margince runs no inference of its own. A
-developer/CI tool, never part of a request path.
+budget, since Margince runs no inference of its own — never part of a request path.
 
 > **Start free.** `make e2e-ai-report` ([§3](#3-read-the-readiness-report)) needs
-> no key, no network and no database: it prints what every shipped site's record
-> already says, including the ones nothing has ever certified. Read it before you
-> spend — it tells you whether the run you are about to pay for is the missing one.
+> no key, network or database, and prints what every shipped site's record says,
+> including the uncertified ones: read it before you pay for a run.
 
-See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md),
-[add-an-ai-task.md](add-an-ai-task.md) (adding one rather than certifying it), [certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane), and
-[reference/ai-certification.md](../reference/ai-certification.md) — the committed page these records render to.
+See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md), [add-an-ai-task.md](add-an-ai-task.md),
+[certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane) and [reference/ai-certification.md](../reference/ai-certification.md), the page these records render to.
 
 ## Prerequisites
 
@@ -294,7 +291,10 @@ tier — three attempts, waiting 2s then 8s. Only an exhausted ladder is retried
 validator failure or a caps miss is a *measurement*, and an exhausted account is
 a human's to fix. A withheld answer fails the run ungraded, naming the filter; a
 rejected request stops the task with no record. A run is re-driven whole, since a
-conversation or tool loop cannot resume mid-way.
+conversation or tool loop cannot resume mid-way. An answer the upstream **breaks
+off** (`ai.ErrAnswerAbandoned`) is re-driven too, and becomes an ungraded
+`invalid` run, counted as `abandoned` on its scenario row, only when every
+attempt breaks off: the model was reached and could not finish.
 
 **Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
 restart replays what it can (`… run(s) replayable`) instead of paying again. A

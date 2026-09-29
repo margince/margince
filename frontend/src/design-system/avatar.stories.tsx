@@ -10,7 +10,7 @@ import { Heading } from "./heading";
 // reader actually learns them by. This gallery is the review surface for it:
 // many records side by side, at every rung, in the places a chip really sits.
 const meta: Meta<typeof Avatar> = {
-  title: "Design System/Avatar",
+  title: "Components/Images and icons/Avatar",
   component: Avatar,
   parameters: { layout: "padded" },
 };

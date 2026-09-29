@@ -406,8 +406,8 @@ type taskAccumulation struct {
 // an error — voiding the whole task's record — when a later run's
 // provider or served model diverges from that baseline.
 func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, outcome runOutcome) error {
-	withheld := outcome.Withheld != ""
-	if acc.identitySet && !withheld && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
+	served := outcome.delivered()
+	if acc.identitySet && served && (outcome.Provider != acc.provider || outcome.ServedModel != acc.servedModel) {
 		return fmt.Errorf(
 			"aicert: task %s scenario %s run %d: candidate served by %s:%s, but run 1 was served by %s:%s — refusing to certify a mixed run set",
 			task, sc.Name, runIndex+1, outcome.Provider, outcome.ServedModel, acc.provider, acc.servedModel,
@@ -419,12 +419,12 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	acc.tokensOutTotal += outcome.TokensOut
 	acc.cachedTokensTotal += outcome.CachedTokens
 	acc.cacheWriteTokensTotal += outcome.CacheWriteTokens
-	// A withheld run names the binding, which stands in only until a served run
-	// supplies the identity that actually answered.
-	if !withheld || !acc.identitySet {
+	// A withheld or abandoned run names the binding, which stands in only until a
+	// served run supplies the identity that actually answered.
+	if served || !acc.identitySet {
 		acc.provider, acc.servedModel, acc.identitySource = outcome.Provider, outcome.ServedModel, outcome.ServedIdentitySource
 	}
-	acc.identitySet = acc.identitySet || !withheld
+	acc.identitySet = acc.identitySet || served
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
 	if outcome.ContextApplied {
 		acc.contextServed++

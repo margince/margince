@@ -9,7 +9,7 @@ import { BarList, Chip, Meter, SegmentBar, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
 const meta: Meta = {
-  title: "Design System/Readings",
+  title: "Components/Text and data display/Readings",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

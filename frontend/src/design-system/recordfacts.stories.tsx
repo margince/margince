@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Fact, RecordFacts } from "./recordfacts";
 
 const meta: Meta<typeof RecordFacts> = {
-  title: "Design System/Record facts",
+  title: "Components/Text and data display/Record facts",
   component: RecordFacts,
 };
 export default meta;

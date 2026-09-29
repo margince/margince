@@ -20,7 +20,7 @@ import { TokenInput, TokenList, type TokenSuggestion } from "./tokeninput";
  * here is a token, so all of it re-resolves.
  */
 const meta = {
-  title: "Design System/Value inputs",
+  title: "Components/Forms and input/Value inputs",
   parameters: { layout: "padded" },
 } satisfies Meta;
 export default meta;

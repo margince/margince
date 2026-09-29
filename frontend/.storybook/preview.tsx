@@ -86,8 +86,41 @@ const preview: Preview = {
   // inside that rule rather than a particular handset. A story opts in with
   // `globals: { viewport: { value: "phone" } }`.
   //
-  // Storybook 9 ships the viewport tool itself, so this adds no addon.
+  // The viewport tool ships with Storybook itself, so this adds no addon.
   parameters: {
+    // A literal: Storybook reads this block out of the file without running it,
+    // and catalog.test.ts holds its order to the README's tables.
+    options: {
+      storySort: {
+        method: "alphabetical",
+        order: [
+          "Foundations",
+          ["Color", "Typography", "Radius", "Brand"],
+          "Components",
+          [
+            "Forms and input",
+            "Images and icons",
+            "Labels",
+            "Layout and structure",
+            "Messaging",
+            "Navigation",
+            "Overlays and layering",
+            "Status indicators",
+            "Text and data display",
+            "Primitives",
+            "AI and provenance",
+          ],
+          "Patterns",
+          "Shell",
+          "Records",
+          "Settings",
+          "Onboarding",
+          "Signed out",
+          "MCP Apps",
+          "Design System",
+        ],
+      },
+    },
     viewport: {
       options: {
         phone: {

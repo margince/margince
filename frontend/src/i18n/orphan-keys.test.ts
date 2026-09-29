@@ -418,6 +418,21 @@ function surfaceEntries(): string[] {
     : [];
 }
 
+/**
+ * The modules the PWA build loads outside the app bundle: the offline page it
+ * renders at build time and the offline script it bundles, read off the script
+ * that names them so a new one is an entry the day it is added.
+ */
+function buildScriptEntries(): string[] {
+  const script = readFileSync(
+    join(FRONTEND_ROOT, "scripts", "vite-pwa.ts"),
+    "utf8",
+  );
+  return [...script.matchAll(/resolve\(FRONTEND, "(src\/[^"]+\.tsx?)"\)/g)].map(
+    ([, source]) => join(FRONTEND_ROOT, source),
+  );
+}
+
 // Not vite.config.ts: loading it runs the composition switch. tsconfig.app.json
 // carries the same vanilla-lane mapping for the compiler.
 function aliases(): Map<string, string> {
@@ -449,7 +464,11 @@ describe("catalog keys against the bundle that renders them", () => {
     LOCALES.map((locale) => join(SRC_ROOT, "i18n", `${locale}.ts`)),
   );
   const graph = moduleGraph({ tree, aliases: aliases(), catalogs });
-  const entries = [...documentEntries(), ...surfaceEntries()];
+  const entries = [
+    ...documentEntries(),
+    ...surfaceEntries(),
+    ...buildScriptEntries(),
+  ];
   const mounted = graph.reach(entries);
   const kept = [...KEPT_UNMOUNTED.keys()];
   const keys = Object.keys(en);
@@ -457,6 +476,7 @@ describe("catalog keys against the bundle that renders them", () => {
   it("derives an entry point from every owner that declares one", () => {
     expect(documentEntries().length).toBeGreaterThan(1);
     expect(surfaceEntries().length).toBeGreaterThan(0);
+    expect(buildScriptEntries().length).toBeGreaterThan(0);
     const missing = [...entries, ...catalogs].filter((path) => !tree.has(path));
     expect(missing, "declared, but not a file in src").toEqual([]);
   });

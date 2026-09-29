@@ -33,7 +33,9 @@ package ai
 //     be a coin toss between the two ways a model can answer wrongly.
 //
 // A request with a thinking floor is sent the least thinking that meets it
-// instead (floorThink): the lowest level at or above it, else `true`. A request
+// instead (floorThink): the lowest level at or above it. A model that can only
+// switch thinking on or off stays off, because a floor names a bounded effort
+// and on/off thinking has none: the unbounded-thinking cost above. A request
 // that names its own value through Request.ProviderOptions["ollama"].think
 // skips all of that — the same seam the gemini and openai adapters read.
 
@@ -55,7 +57,6 @@ const ollamaOptionsNamespace = "ollama"
 
 var (
 	ollamaThinkOff      = json.RawMessage("false")
-	ollamaThinkOn       = json.RawMessage("true")
 	errOllamaThinkShape = errors.New("think must be a boolean or an effort-level string")
 )
 
@@ -177,18 +178,14 @@ func cheapestThink(values []json.RawMessage) json.RawMessage {
 }
 
 // floorThink is the least thinking values offer that meets floor: the lowest
-// level at or above it, else `true`. A model listing neither (it does not
-// think, or the server does not say) is sent nothing, as before the floor.
+// level at or above it. A model grading no level at or above the floor is sent
+// what it would be sent without one (cheapestThink) — never `true`, whose
+// thinking no floor bounds.
 func floorThink(values []json.RawMessage, floor string) json.RawMessage {
 	if level := lowestThinkLevel(values, floor); level != nil {
 		return level
 	}
-	for _, v := range values {
-		if bytes.Equal(v, ollamaThinkOn) {
-			return ollamaThinkOn
-		}
-	}
-	return nil
+	return cheapestThink(values)
 }
 
 // lowestThinkLevel is the shallowest level string in values that meets floor,

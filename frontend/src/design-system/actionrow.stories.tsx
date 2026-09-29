@@ -10,7 +10,7 @@ import { IconAction } from "./iconaction";
 // was the button under their thumb.
 
 const meta: Meta<typeof ActionRow> = {
-  title: "Design System/ActionRow",
+  title: "Components/Layout and structure/Action row",
   component: ActionRow,
   parameters: { layout: "padded" },
 };

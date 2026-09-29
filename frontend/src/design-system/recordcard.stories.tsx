@@ -12,7 +12,7 @@ import { RecordCard } from "./recordcard";
 // actually meets: the two kinds, a record with nothing but a name, one the
 // reader may not open, and the stack they arrive in.
 const meta: Meta<typeof RecordCard> = {
-  title: "Design System/RecordCard",
+  title: "Components/Text and data display/Record card",
   component: RecordCard,
   parameters: { layout: "padded" },
   decorators: [

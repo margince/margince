@@ -227,3 +227,92 @@ func TestATaskThrottledByTheProviderWaitsOnTheThrottlesTimescale(t *testing.T) {
 		}
 	}
 }
+
+// errAbandonedAnswer is a candidate that began its answer and broke off, as a
+// broker reports a model that cannot keep a structured draft inside its schema.
+var errAbandonedAnswer = fmt.Errorf("%w: openai-compat stopped after 230 characters of output: no detail given", ai.ErrAnswerAbandoned)
+
+// A candidate that breaks off its answer on every attempt is measured, not
+// excused as an outage: each run is re-driven in case the break was transient,
+// then scored invalid, and the task keeps a record with an honest band.
+func TestAnAnswerAbandonedOnEveryAttemptIsScoredAsAnInvalidRun(t *testing.T) {
+	waited := recordSleeps(t)
+	candidate := candidateFailingEveryCall(t, errAbandonedAnswer)
+	judge := ai.NewFakeClient()
+	rec, err := certifyAgainst(t, candidate, judge)
+	if err != nil {
+		t.Fatalf("a model that could not finish its answer aborted the task with no record: %v", err)
+	}
+	if rec.Runs != 3 || rec.Reliability != 0 || rec.Verdict != VerdictNotSupported || rec.ReportedInvalid != 3 {
+		t.Errorf("runs=%d reliability=%v verdict=%q invalid=%d, want 3 failed invalid runs and %q",
+			rec.Runs, rec.Reliability, rec.Verdict, rec.ReportedInvalid, VerdictNotSupported)
+	}
+	if len(rec.Scenarios) != 1 || rec.Scenarios[0].Abandoned != 3 {
+		t.Errorf("scenario rows = %+v, want one row naming 3 abandoned runs", rec.Scenarios)
+	}
+	if got, want := len(candidate.Calls()), 3*runAttempts*ladderRungs(t); got != want {
+		t.Errorf("the candidate was called %d times, want %d — every run re-driven through every attempt", got, want)
+	}
+	if got, want := len(*waited), 3*(runAttempts-1); got != want {
+		t.Errorf("waited %d times, want %d — one before each re-drive", got, want)
+	}
+	if got := len(judge.Calls()); got != 0 {
+		t.Errorf("the judge was called %d time(s) for answers that were never finished", got)
+	}
+}
+
+// Only EVERY attempt breaking off is evidence about the model: an attempt that
+// ended on an outage, first or last, leaves the run unmeasured, and the task
+// aborts as it does for any exhausted ladder.
+func TestARunWithAnAttemptLostToAnOutageIsNotScored(t *testing.T) {
+	for _, outage := range []int{1, runAttempts} {
+		t.Run(fmt.Sprintf("outage on attempt %d", outage), func(t *testing.T) {
+			recordSleeps(t)
+			var steps []ai.FakeStep
+			for attempt := 1; attempt <= runAttempts; attempt++ {
+				cause := errAbandonedAnswer
+				if attempt == outage {
+					cause = errDroppedConnection
+				}
+				steps = append(steps, failedWalk(t, cause)...)
+			}
+			_, err := certifyAgainst(t, ai.NewFakeClient().ScriptSteps(steps...), ai.NewFakeClient())
+			if err == nil {
+				t.Fatal("a run with an attempt that never reached the model was scored as a measurement")
+			}
+			if want := fmt.Sprintf("all %d attempts", runAttempts); !strings.Contains(err.Error(), want) {
+				t.Errorf("error %q is not the exhausted-ladder abort (want %q)", err, want)
+			}
+			if !errors.Is(err, errDroppedConnection) {
+				t.Errorf("error %q does not name the outage that left the run unmeasured", err)
+			}
+		})
+	}
+}
+
+// A break-off is re-driven because it can be transient: an attempt that then
+// answers is the run's result, measured and judged like any other.
+func TestARunThatAnswersAfterABreakOffIsScoredOnItsAnswer(t *testing.T) {
+	waited := recordSleeps(t)
+	candidate := ai.NewFakeClient().
+		ScriptSteps(failedWalk(t, errAbandonedAnswer)...).
+		Script(containsWidget, containsWidget, containsWidget)
+	judge := ai.NewFakeClient().Script(opinionsOf(90, 3)...)
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+			maxRuns:       3,
+		})
+	if err != nil {
+		t.Fatalf("a run that answered on its second attempt aborted the task: %v", err)
+	}
+	if rec.Runs != 3 || rec.Reliability != 1 || rec.Scenarios[0].Abandoned != 0 {
+		t.Errorf("runs=%d reliability=%v abandoned=%d, want 3, 1 and 0 — the answer, not the break-off, is the run",
+			rec.Runs, rec.Reliability, rec.Scenarios[0].Abandoned)
+	}
+	if len(*waited) != 1 {
+		t.Errorf("waited %d times, want one wait before the second attempt", len(*waited))
+	}
+}

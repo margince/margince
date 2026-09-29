@@ -131,11 +131,9 @@ type openAICompatLatencyPercentile struct {
 	P90 float64 `json:"p90"`
 }
 
-// openAICompatReasoningWire is the reasoning-model control block. Enabled
-// turns on a model that reasons only when asked and grades no effort.
+// openAICompatReasoningWire is the reasoning-model control block.
 type openAICompatReasoningWire struct {
-	Effort  string `json:"effort,omitempty"`
-	Enabled *bool  `json:"enabled,omitempty"`
+	Effort string `json:"effort,omitempty"`
 }
 
 // providerWire renders the `provider` object, or nil when these preferences

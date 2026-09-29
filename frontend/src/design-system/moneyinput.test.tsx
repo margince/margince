@@ -23,6 +23,39 @@ import { MoneyInput } from "./moneyinput";
 afterEach(cleanup);
 
 describe("MoneyInput", () => {
+  it("empties for good when the caller takes a clear, and keeps the amount when it does not", () => {
+    const onClear = vi.fn();
+    rtlRender(
+      <>
+        <MoneyInput
+          currency="EUR"
+          valueMinor={10000}
+          onChangeMinor={vi.fn()}
+          onClear={onClear}
+          aria-label="Clearable"
+        />
+        <MoneyInput
+          currency="EUR"
+          valueMinor={10000}
+          onChangeMinor={vi.fn()}
+          aria-label="Priced"
+        />
+      </>,
+    );
+    for (const name of ["Clearable", "Priced"]) {
+      const input = screen.getByLabelText(name) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "" } });
+      fireEvent.blur(input);
+    }
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect((screen.getByLabelText("Clearable") as HTMLInputElement).value).toBe(
+      "",
+    );
+    expect((screen.getByLabelText("Priced") as HTMLInputElement).value).toBe(
+      "100.00",
+    );
+  });
+
   it("displays the initial value in major units to two decimals", () => {
     rtlRender(
       <MoneyInput

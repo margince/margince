@@ -206,6 +206,9 @@ type ScenarioRecord struct {
 	// safety stop from a model that answered badly.
 	Withheld        int      `json:"withheld,omitempty"`
 	WithheldReasons []string `json:"withheld_reasons,omitempty"`
+	// Abandoned is how many of these runs the upstream broke off on every
+	// attempt, so a reader can tell a broken-off answer from an invalid one.
+	Abandoned int `json:"abandoned,omitempty"`
 	// Decision is this scenario's own share of a decision record.
 	Decision *DecisionStats `json:"decision,omitempty"`
 }

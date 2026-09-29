@@ -10,7 +10,7 @@ import { Eyebrow } from "./eyebrow";
 // The card on its own, for the states the board canvases (composed.stories.tsx)
 // cannot hold still: a flyout open under a settled pointer.
 const meta: Meta<typeof DealCard> = {
-  title: "Design System/DealCard",
+  title: "Components/Text and data display/Deal card",
   component: DealCard,
   parameters: { layout: "padded" },
 };

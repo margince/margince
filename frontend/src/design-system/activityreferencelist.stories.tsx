@@ -44,7 +44,7 @@ const withheld: ActivityReference = {
 };
 
 const meta = {
-  title: "Design System/ActivityReferenceList",
+  title: "Components/Text and data display/Activity reference list",
   component: ActivityReferenceList,
   decorators: [
     (Story) => (

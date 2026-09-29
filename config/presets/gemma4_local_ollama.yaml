@@ -9,22 +9,18 @@
 # "what does the hardware you bought actually do".
 #
 #     ollama pull gemma4:12b && ollama pull bge-m3
-#     make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
-#       JUDGE=ollama:gpt-oss:20b
+#     make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml
 #
-# The committed records were judged locally, because the lane then held the
-# judge to this file's `sovereign` profile; it now holds only the candidate, so
-# omitting JUDGE= (the default cloud judge) is allowed too. The judge is also
-# NOT resolved from this file — every tier below is Gemma 4, and a judge equal
-# to the candidate grades itself. gpt-oss:20b is a different family that fits
-# beside a 12b on a 24GB machine only by unloading it between calls, so the
-# latency a certification run records includes those reloads; measure serving
-# speed with a direct call, not from a record.
+# The judge is NOT resolved from this file — every tier below is Gemma 4, and a
+# judge equal to the candidate grades itself — so the default cloud judge
+# grades it: a certification run holds only the candidate to `sovereign`. A
+# local judge (JUDGE=ollama:gpt-oss:20b) fits beside a 12b on a 24GB machine
+# only by unloading it between calls, and its reloads then land in the
+# recorded latency; measure serving speed with a direct call, not a record.
 #
-# The committed records cover twelve shipped tasks: six that certified and six
-# that did not (capture_classify, request_settlement, owed_verdict,
-# signal_extract, account_scan, site_triage), so the readiness page shows both
-# ends. The rest of the corpus is uncertified under this binding, not failed.
+# The committed records cover every shipped task this binding can carry, 28
+# of 29 (all but document_extract, below): 8 certified, 6 usable with care, 14
+# not supported. docs/reference/ollama-self-hosting.md section 4 lists them.
 #
 # WHY 12b ON EVERY TIER. Sized for a 24GB Apple-silicon machine, the smallest
 # this preset is meant to run on, with Ollama 0.34 (its server log reports

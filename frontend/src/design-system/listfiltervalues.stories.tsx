@@ -14,7 +14,8 @@ import { type ListChip, Menu } from "./listsurface";
 // the page, where it would have no box and no name.
 
 const meta: Meta = {
-  title: "Design System/Filter values",
+  title: "Components/Forms and input/Filter values",
+  component: ChipValueList,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

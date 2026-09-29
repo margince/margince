@@ -321,8 +321,8 @@ func TestOpenAICompatErrorRedactsTheTypeAsWellAsTheMessage(t *testing.T) {
 
 // A broker that loses its upstream after sending 200 says so in the body, with
 // finish_reason "error": the partial text is not an answer, and the failure is
-// an outage the ladder may walk past, not a verdict about the content.
-func TestOpenAICompatAMidAnswerFailureIsAnOutageNotAnAnswer(t *testing.T) {
+// one the ladder may walk past, not a verdict about the content.
+func TestOpenAICompatAMidAnswerFailureIsAFailureNotAnAnswer(t *testing.T) {
 	for name, body := range map[string]string{
 		"finish_reason error": `{"model":"m","choices":[{"finish_reason":"error","message":{"content":"par"}}]}`,
 		"an error on the choice": `{"model":"m","choices":[{"finish_reason":"stop","error":{"code":502,"message":"upstream went away"},` +

@@ -45,7 +45,11 @@ type runCalls struct {
 	// a measurement of the binding rather than an outage, so the run is
 	// recorded and not re-driven. Text rather than an error, because it is a
 	// finding to record, not a failure for any caller to handle.
-	Withheld                                    string
+	Withheld string
+	// Abandoned says the upstream broke off an answer the candidate had begun
+	// (ai.ErrAnswerAbandoned): no answer, but a model reached, so driveRun
+	// re-drives the run and scores it only when every attempt broke off.
+	Abandoned                                   bool
 	Provider, ServedModel, ServedIdentitySource string
 	TokensIn, TokensOut                         int
 	CachedTokens, CacheWriteTokens              int

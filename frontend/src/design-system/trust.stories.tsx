@@ -22,7 +22,7 @@ import {
 // rather than left to the reviewing machine's browser: the catalog has to say
 // the same words on every screenshot.
 const meta: Meta = {
-  title: "Design System/Trust",
+  title: "Components/AI and provenance/Trust",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

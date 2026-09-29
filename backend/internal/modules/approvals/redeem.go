@@ -62,6 +62,31 @@ func (s *Service) RedeemAndApply(ctx context.Context, id ids.ApprovalID, tool, d
 	})
 }
 
+// RedeemAndApplyPinned is RedeemAndApply for an effect whose write needs the
+// VERSION the approval was pinned to.
+//
+// The pin has to reach the write, and it has to reach it INSIDE this
+// transaction: a correction that carried the version across two transactions
+// compared it against a row another writer could still move in between, so the
+// approver's date could land on a deal they never saw. Handing the pin to the
+// callback keeps the compare in the transaction that makes the change.
+//
+// pinned is false for an approval that carried no version — a create, or a
+// target type with no version column — and the callback is expected to leave
+// its own IfVersion unset in that case rather than compare against zero.
+func (s *Service) RedeemAndApplyPinned(
+	ctx context.Context, id ids.ApprovalID, tool, diffHash string,
+	apply func(tx pgx.Tx, version int64, pinned bool) error,
+) error {
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		version, pinned, err := s.RedeemInTx(ctx, tx, id, tool, diffHash)
+		if err != nil {
+			return err
+		}
+		return apply(tx, version, pinned)
+	})
+}
+
 // RedeemInTx validates and consumes one approval through a caller-owned
 // transaction, answering the version it was pinned to. pinned is false
 // for an approval that carried none — a create, or a target type with no

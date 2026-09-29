@@ -12,7 +12,7 @@ import { type SectionState, SurfaceState } from "./surfacestate";
 // card make the same shape on screen and mean opposite things, and the words
 // are all that separate them.
 const meta: Meta<typeof SurfaceState> = {
-  title: "Design System/SurfaceState",
+  title: "Components/Messaging/Surface state",
   component: SurfaceState,
   parameters: { layout: "padded" },
   decorators: [

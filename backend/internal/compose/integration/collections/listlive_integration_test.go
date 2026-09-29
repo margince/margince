@@ -210,8 +210,10 @@ func TestAMaskedFieldIsHiddenInTheWhy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !why.Member || !why.Clauses.Hidden || why.Clauses.Value != nil {
-		t.Fatalf("a masked reader was shown %+v, want the verdict with the value hidden", why.Clauses)
+	// Not a member for this reader: a masked clause selects nothing, or the
+	// list's membership would name who carries the value the mask withholds.
+	if why.Member || !why.Clauses.Hidden || why.Clauses.Value != nil {
+		t.Fatalf("a masked reader was shown member=%v %+v, want no member and the value hidden", why.Member, why.Clauses)
 	}
 	open, err := f.lists.ExplainMember(f.ctx, list, target)
 	if err != nil {

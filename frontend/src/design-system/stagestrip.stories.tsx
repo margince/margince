@@ -37,7 +37,7 @@ const enterprise: readonly StripStep[] = [
 ];
 
 const meta: Meta<typeof StageStrip> = {
-  title: "Design System/StageStrip",
+  title: "Components/Status indicators/Stage strip",
   component: StageStrip,
   parameters: { layout: "padded" },
   decorators: [

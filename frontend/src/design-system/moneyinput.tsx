@@ -32,6 +32,7 @@ export function MoneyInput({
   onChangeMinor,
   onBlur,
   blankWhenZero = false,
+  onClear,
   ...rest
 }: Readonly<
   Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
@@ -45,6 +46,12 @@ export function MoneyInput({
     // priced yet, where a pre-filled zero is a figure nobody entered — and one
     // a reader then types after, turning 5000 into 0.005000.
     blankWhenZero?: boolean;
+    // Called when the reader empties the box, which then stays empty on blur.
+    //
+    // Opt-in, for a value that may legitimately be absent — a filter operand
+    // the reader is taking back. Without it an emptied box keeps the last
+    // amount, which is right for a priced record (see onChange below).
+    onClear?: () => void;
   }
 >) {
   const digits = minorUnitDigits(currency);
@@ -54,6 +61,9 @@ export function MoneyInput({
       : toMajorUnits(minor, forCurrency).toFixed(minorUnitDigits(forCurrency));
   const [text, setText] = useState(() => asText(valueMinor, currency));
   const lastCommittedMinor = useRef(valueMinor);
+  // Whether the reader's last edit emptied the box through onClear, so blur
+  // leaves it empty rather than restoring the amount it held.
+  const cleared = useRef(false);
   // The currency the text on screen is written in, tracked beside the amount
   // because the SCALE is part of what that text says: an offer switched from
   // EUR to VND holds the same minor integer and must not keep showing the euro
@@ -103,6 +113,10 @@ export function MoneyInput({
         // component that reads a half-deleted buffer as an intention. Changing
         // it here would also make every mid-edit keystroke commit a zero.
         if (event.target.value.trim() === "") {
+          if (onClear) {
+            cleared.current = true;
+            onClear();
+          }
           return;
         }
         // A figure with more decimals than the currency HAS is not committed.
@@ -120,12 +134,15 @@ export function MoneyInput({
         }
         {
           const minor = toMinorUnits(parsed, currency);
+          cleared.current = false;
           lastCommittedMinor.current = minor;
           onChangeMinor(minor);
         }
       }}
       onBlur={(event) => {
-        setText(asText(lastCommittedMinor.current, currency));
+        setText(
+          cleared.current ? "" : asText(lastCommittedMinor.current, currency),
+        );
         onBlur?.(event);
       }}
       {...rest}

@@ -7,7 +7,7 @@ import { LocaleProvider } from "../i18n";
 import { FieldGuard, RoleBadge } from "./rbac";
 
 const meta: Meta<typeof RoleBadge> = {
-  title: "Design System/Role badge and field guard",
+  title: "Components/Labels/Role badge and field guard",
   component: RoleBadge,
   parameters: { layout: "padded" },
   decorators: [

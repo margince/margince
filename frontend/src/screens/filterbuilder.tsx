@@ -18,7 +18,8 @@
 import { X } from "lucide-react";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Select, type SelectOption } from "../design-system/select";
-import { useT } from "../i18n";
+import { forReader } from "../format/collate";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./filterbuilder.css";
 import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
@@ -93,6 +94,21 @@ function emptyValueFor(op: FilterOp): LeafValue {
     return true;
   }
   return op === "in" ? [] : "";
+}
+
+/**
+ * One picker group as options, in the order a reader scans them: by the word
+ * they see, not the wire name — `created_at` and `last_activity_at` would
+ * otherwise sit far from each other under "Created" and "Last activity".
+ */
+function labelledInOrder(
+  fields: readonly VocabularyField[],
+  t: (key: MessageKey) => string,
+  locale: Locale,
+): SelectOption[] {
+  return fields
+    .map((f) => ({ value: f.name, label: fieldLabel(f, t) }))
+    .sort((a, b) => forReader(a.label, b.label, locale));
 }
 
 export type FilterBuilderProps = Readonly<{
@@ -233,7 +249,7 @@ function GroupNode({
  */
 const MAX_GROUP_DEPTH = 4;
 
-/** A new clause starts on the first field a picker would offer. */
+/** A new clause starts on the vocabulary's first field, a reader picks from there. */
 function firstClause(fields: readonly VocabularyField[]): Node {
   const first = fields[0];
   if (!first) {
@@ -278,11 +294,12 @@ function ClauseRow({
   onChange,
 }: ClauseRowProps) {
   const t = useT();
+  const { locale } = useLocale();
   const chosen = fields.find((f) => f.name === field);
   const { core, custom } = groupFields(fields);
   const fieldOptions: SelectOption[] = [
-    ...core.map((f) => ({ value: f.name, label: fieldLabel(f, t) })),
-    ...custom.map((f) => ({ value: f.name, label: fieldLabel(f, t) })),
+    ...labelledInOrder(core, t, locale),
+    ...labelledInOrder(custom, t, locale),
   ];
   const operatorOptions: SelectOption[] = (chosen?.operators ?? []).map(
     (candidate) => ({
@@ -348,6 +365,7 @@ function ClauseRow({
         type={chosen?.type ?? "text"}
         references={chosen?.references}
         options={chosen?.options}
+        currency={chosen?.currency}
         op={op}
         value={value}
         onChange={(nextValue) =>

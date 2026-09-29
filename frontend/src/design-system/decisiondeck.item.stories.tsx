@@ -15,15 +15,15 @@ import { DeckItemCard } from "./decisiondeck.item";
 // an expander, and that the dense line belongs to the list form and never to
 // the stack.
 //
-// The queue around it is `Design System/DecisionDeck`; the card's own states are
-// `Design System/DecisionCard`. This node exists because the assembly sits
+// The queue around it is `Decision deck/Deck`; the card's own states are
+// `Decision card/Card`. This node exists because the assembly sits
 // between them and neither of those frames can show it failing on its own.
 //
 // Both themes: the ground is `.staging-card`'s dashed `--aiMed` over
 // `--aiLight`, the product's one signal that what is on a surface is PROPOSED
 // rather than recorded, and both tokens re-resolve on the flip.
 const meta: Meta<typeof DeckItemCard> = {
-  title: "Design System/DecisionDeck item",
+  title: "Components/AI and provenance/Decision deck/Item",
   component: DeckItemCard,
   parameters: { layout: "padded" },
   decorators: [

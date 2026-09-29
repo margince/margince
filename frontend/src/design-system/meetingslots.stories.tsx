@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { MeetingSlots } from "./meetingslots";
 
 const meta: Meta<typeof MeetingSlots> = {
-  title: "Design System/Meeting slots",
+  title: "Components/Forms and input/Meeting slots",
   component: MeetingSlots,
 };
 export default meta;

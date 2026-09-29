@@ -11,7 +11,9 @@ package ai
 //   - otherwise the lowest listed effort that meets it;
 //   - on, listing no effort at all: the floor itself, since an unstated
 //     default is not known to meet it;
-//   - off, with no effort that meets it: `enabled: true`;
+//   - off, with no effort that meets it: nothing. `enabled: true` would turn on
+//     thinking that no effort bounds, which a floor naming a bounded effort
+//     does not ask for;
 //   - a model listing no reasoning, a request carrying tools, or a list that
 //     cannot be read: nothing.
 //
@@ -75,11 +77,7 @@ func openRouterReasoningFor(meta openRouterReasoning, floor string) *openAICompa
 	if on && len(meta.SupportedEfforts) == 0 {
 		return &openAICompatReasoningWire{Effort: floor}
 	}
-	if on {
-		return nil
-	}
-	enabled := true
-	return &openAICompatReasoningWire{Enabled: &enabled}
+	return nil
 }
 
 // reasoningFloor is the `reasoning` block a request's floor sends on this

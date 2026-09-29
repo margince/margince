@@ -142,12 +142,48 @@ func readGradingRuleGolden(t *testing.T) (rule, digest string) {
 	return rule, digest
 }
 
+// ruleExtension lets the grading code move from one digest to the next under
+// the same gradingRule. It is only for a change that extends the rule to runs
+// no committed record can contain, so no record scores differently under it —
+// a change that could re-score one bumps gradingRule instead. The reason says
+// why no record can: this list is the gate's one exception, and it is read.
+type ruleExtension struct {
+	rule, from, to, reason string
+}
+
+var gradingRuleExtensions = []ruleExtension{{
+	rule: "grading-rule-10",
+	from: "539b61f18ec18e023ba919a2a905bf16287c6fd51f0b893d4516eb80539a398f",
+	to:   "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
+	reason: "runEntry scores an answer the upstream broke off as invalid; before it, such a run " +
+		"stopped its task with no record, so no committed record holds one",
+}}
+
+// extendedDigest is the digest the golden's version accepts once every
+// extension recorded for that version is applied in order.
+func extendedDigest(t *testing.T, goldenDigest string) string {
+	t.Helper()
+	digest := goldenDigest
+	for _, ext := range gradingRuleExtensions {
+		if ext.rule != gradingRule {
+			t.Fatalf("an extension for %q outlived its rule; gradingRule is now %q, so delete it", ext.rule, gradingRule)
+		}
+		if strings.TrimSpace(ext.reason) == "" {
+			t.Fatalf("the extension %s→%s gives no reason; say why no committed record can score differently", ext.from, ext.to)
+		}
+		if ext.from == digest {
+			digest = ext.to
+		}
+	}
+	return digest
+}
+
 // A record is stamped with gradingRule, so the code that grades it may not change
 // under the same version: that would leave every record graded the old way current.
 func TestTheGradingRuleVersionMovesWithItsCode(t *testing.T) {
 	got := gradingRuleDigest(t)
 	goldenRule, goldenDigest := readGradingRuleGolden(t)
-	codeMovedUnderSameRule := goldenRule == gradingRule && goldenDigest != got
+	codeMovedUnderSameRule := goldenRule == gradingRule && extendedDigest(t, goldenDigest) != got
 	if *updateGradingRule {
 		if codeMovedUnderSameRule {
 			t.Fatalf("the grading code changed but gradingRule is still %q; bump it in promptversion.go first", gradingRule)

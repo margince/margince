@@ -114,8 +114,8 @@ export function useFilterPreview(
  * The offerable fields grouped for a picker: core first, then custom.
  *
  * Core-before-custom because a reader looking for "Owner" should not scroll past
- * a workspace's twenty bespoke columns to find it, and within each group by the
- * name the server gave — which is already sorted, so this only splits.
+ * a workspace's twenty bespoke columns to find it. Order within a group is the
+ * picker's to set, by the label it shows.
  */
 export function groupFields(fields: readonly VocabularyField[]) {
   const core: VocabularyField[] = [];
@@ -136,12 +136,17 @@ export function groupFields(fields: readonly VocabularyField[]) {
 // engine field neither map names fails, and so does an entry here for a field
 // no engine has or one History already names.
 const FILTER_ONLY_FIELD_LABELS = new Map<string, MessageKey>([
+  ["amount", "filters.field.amount"],
+  ["city", "filters.field.city"],
   ["classification", "filters.field.classification"],
   ["company_industry", "filters.field.company_industry"],
   ["company_lifecycle", "filters.field.company_lifecycle"],
   ["company_size_band", "filters.field.company_size_band"],
+  ["country", "filters.field.country"],
+  ["created_at", "filters.field.created_at"],
   ["domain", "history.field.domain"],
   ["hosting_provider", "filters.field.hosting_provider"],
+  ["last_activity_at", "filters.field.last_activity_at"],
   ["mail_provider", "filters.field.mail_provider"],
   ["operated_service", "filters.field.operated_service"],
   ["owner_team_id", "filters.field.owner_team_id"],

@@ -17,8 +17,8 @@ On a 24 GB Apple-silicon machine, **serve `Qwen3-14B` (4-bit MLX) if it must be
 vLLM**: of five models it led or tied on six of seven tasks, at 10 to 13
 seconds for a verdict. It is the preset
 [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml), measured
-on every task (section 5): 6 of 28 certified and 2 usable with care, where the
-Ollama Gemma 4 preset certifies 6 of the 12 it was measured on. **If it need not be vLLM, use Ollama with Gemma 4 12B**
+on every task (section 5): 8 of 28 certified and 1 usable with care, where the
+Ollama Gemma 4 preset certifies 8 of 28 and 6 more with care. **If it need not be vLLM, use Ollama with Gemma 4 12B**
 ([ollama-self-hosting.md](ollama-self-hosting.md)): on this machine vLLM is not
 faster for one user, Gemma 4 12B answers gibberish through it (section 2), and
 Gemma 3 12B's structured output loops (section 4).
@@ -212,40 +212,44 @@ Every shipped task this text-only binding can carry was run through it (all but
 
 | task | verdict | pass rate | runs | median s | 95th pct s | output tokens |
 |---|---|---|---|---|---|---|
-| agent_loop | certified | 1.00 | 18 | 6.1 | 29.5 | 18 |
-| brief_ranking | certified | 1.00 | 3 | 9.4 | 9.9 | 73 |
-| cert_judge | certified | 1.00 | 6 | 6.7 | 7.1 | 35 |
-| enrich | certified | 1.00 | 3 | 25.2 | 26.6 | 227 |
-| rate_extract | certified | 1.00 | 9 | 10.3 | 22.9 | 113 |
-| transcript_propose | certified | 1.00 | 9 | 9.8 | 16.4 | 29 |
-| weekly_review | supported, degraded | 0.92 | 12 | 6.7 | 11.6 | 39 |
-| capture_classify | supported, degraded | 0.80 | 15 | 10.5 | 25.6 | 102 |
-| account_scan | not supported | 1.00 | 6 | 18.7 | 27.4 | 118 |
-| draft_reply | not supported | 0.92 | 36 | 14.0 | 61.9 | 164 |
-| deal_health | not supported | 0.89 | 9 | 41.4 | 52.7 | 369 |
-| corpus_ask | not supported | 0.87 | 15 | 19.1 | 50.2 | 92 |
-| site_triage | not supported | 0.87 | 15 | 6.2 | 10.6 | 39 |
-| capture_confidentiality_verdict | not supported | 0.86 | 42 | 10.8 | 13.8 | 71 |
-| cold_start | not supported | 0.85 | 27 | 9.8 | 44.0 | 110 |
-| capture_counterparty_verdict | not supported | 0.81 | 57 | 10.8 | 15.0 | 71 |
-| voice_build | not supported | 0.75 | 12 | 14.9 | 92.2 | 221 |
-| site_fact_extract | not supported | 0.67 | 9 | 20.5 | 32.7 | 173 |
-| offer_draft | not supported | 0.60 | 15 | 12.4 | 45.9 | 167 |
-| site_extract | not supported | 0.60 | 15 | 27.4 | 35.2 | 225 |
-| propose_roles | not supported | 0.56 | 9 | 20.8 | 50.1 | 190 |
-| owed_verdict | not supported | 0.50 | 12 | 16.3 | 26.5 | 143 |
-| request_settlement | not supported | 0.50 | 12 | 21.2 | 24.5 | 140 |
-| signal_extract | not supported | 0.50 | 12 | 12.1 | 16.5 | 66 |
-| summarize | not supported | 0.48 | 27 | 40.0 | 98.2 | 437 |
-| stage_evidence_extract | not supported | 0.33 | 27 | 17.5 | 34.2 | 96 |
-| weekly_learnings | not supported | 0.22 | 9 | 33.9 | 44.7 | 338 |
-| growth_fit | not supported | 0.00 | 3 | 88.0 | 105.7 | 888 |
+| account_scan | certified | 1.00 | 12 | 19.7 | 29.2 | 115 |
+| agent_loop | certified | 1.00 | 18 | 6.2 | 29.0 | 18 |
+| brief_ranking | certified | 1.00 | 9 | 8.1 | 12.9 | 71 |
+| cert_judge | certified | 1.00 | 12 | 9.6 | 12.3 | 42 |
+| enrich | certified | 1.00 | 12 | 49.3 | 154.6 | 297 |
+| rate_extract | certified | 1.00 | 9 | 8.4 | 23.1 | 109 |
+| site_triage | certified | 1.00 | 18 | 8.8 | 49.5 | 39 |
+| transcript_propose | certified | 1.00 | 9 | 9.9 | 23.3 | 29 |
+| corpus_ask | supported, degraded | 0.85 | 33 | 22.7 | 54.6 | 111 |
+| deal_health | not supported | 1.00 | 9 | 90.8 | 117.8 | 387 |
+| weekly_review | not supported | 1.00 | 30 | 30.4 | 44.2 | 43 |
+| draft_reply | not supported | 0.95 | 63 | 46.3 | 189.9 | 149 |
+| cold_start | not supported | 0.88 | 72 | 12.3 | 91.3 | 99 |
+| capture_confidentiality_verdict | not supported | 0.86 | 42 | 10.4 | 11.6 | 70 |
+| offer_draft | not supported | 0.83 | 18 | 15.6 | 86.1 | 173 |
+| voice_build | not supported | 0.83 | 18 | 28.3 | 108.6 | 128 |
+| capture_classify | not supported | 0.80 | 15 | 12.9 | 27.8 | 101 |
+| capture_counterparty_verdict | not supported | 0.77 | 123 | 12.7 | 37.4 | 71 |
+| site_extract | not supported | 0.76 | 45 | 30.4 | 82.1 | 233 |
+| site_fact_extract | not supported | 0.67 | 9 | 48.3 | 67.8 | 197 |
+| stage_evidence_extract | not supported | 0.67 | 30 | 19.0 | 31.9 | 116 |
+| weekly_learnings | not supported | 0.60 | 15 | 36.4 | 66.4 | 226 |
+| summarize | not supported | 0.54 | 57 | 64.7 | 119.0 | 405 |
+| propose_roles | not supported | 0.54 | 24 | 26.3 | 81.6 | 164 |
+| request_settlement | not supported | 0.50 | 12 | 21.5 | 57.6 | 140 |
+| signal_extract | not supported | 0.50 | 12 | 14.2 | 40.4 | 69 |
+| owed_verdict | not supported | 0.47 | 15 | 17.4 | 26.7 | 136 |
+| growth_fit | not supported | 0.00 | 12 | 119.6 | 195.2 | 886 |
 
-6 certified, 2 supported with care, 20 not supported, of 28 scored; the median call
-took 14.9 s. `document_extract` has no record: it sends a PDF, which this
+8 certified, 1 supported with care, 19 not supported, of 28 scored; the median
+call took 19.3 s. These records were re-taken on 2026-09-28/29 under the grading
+rule current then, which re-runs a borderline scenario before deciding it, so a
+row's run count varies. The machine was short of memory for part of that night,
+so read the latency columns as an upper bound and measure serving speed with a
+direct call. `document_extract` has no record: it sends a PDF, which this
 text-only binding does not carry. A pass rate of 1.00 beside "not supported"
-(`account_scan`) is the grading rule at work: every run passed the site's own
-validator, and the judge still scored a scenario below its bar.
+(`deal_health`, `weekly_review`) is the grading rule at work: every run passed
+the site's own validator, and the judge still scored a scenario below its bar.
 
 ## 6. What we changed in the product
 

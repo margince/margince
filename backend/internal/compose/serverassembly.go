@@ -164,8 +164,16 @@ func (o ownDomainReader) ReaderAddresses(
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithLiveSteward(identity.LiveMemberSQL("u"))
+		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf)
 }
+
+// dealWorthTodaySQL is what the filter builder's deal amount compares: the
+// forecast's base value, priced at today's rate for an open deal.
+var dealWorthTodaySQL = BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
+
+// installationBaseCurrencySQL reads the reporting currency inside the filter's
+// own statement, which the segment engine compiles without a Go-side bind.
+const installationBaseCurrencySQL = "(SELECT (bc.value #>> '{}')::text FROM setting bc WHERE bc.key = 'installation.base_currency')"
 
 // newCollectionsHandlers builds the lists/tags/saved-views transport over
 // NewCollectionsStore, so dynamic-list create validation and the members

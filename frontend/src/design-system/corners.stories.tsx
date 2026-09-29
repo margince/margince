@@ -37,7 +37,7 @@ import type { CSSProperties } from "react";
  * rung and nothing moves — that is what the doubling buys.
  */
 const meta = {
-  title: "Design System/Corners",
+  title: "Foundations/Radius",
   parameters: { layout: "centered" },
 } satisfies Meta;
 export default meta;

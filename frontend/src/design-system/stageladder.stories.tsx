@@ -9,7 +9,7 @@ import { StageLadder } from "./stageladder";
 // phases, a lead's rungs. The stories below are the states that differ, which
 // is what the component's props are for.
 const meta: Meta<typeof StageLadder> = {
-  title: "Design System/StageLadder",
+  title: "Components/Forms and input/Stage ladder",
   component: StageLadder,
   parameters: { layout: "padded" },
   decorators: [

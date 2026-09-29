@@ -69,6 +69,9 @@ type Column struct {
 	// The catalogue owns them, as it owns labels: they are per-workspace admin
 	// state, not something the engine or a consumer may derive.
 	Options []string
+	// Currency is a currency column's ISO code, the unit its minor-unit values
+	// count; empty for every other type.
+	Currency string
 }
 
 // Reader answers the active custom-field columns for one core object,

@@ -3,7 +3,8 @@ import { useState } from "react";
 import { ConfirmModal } from "./confirmmodal";
 
 const meta: Meta = {
-  title: "Design System/ConfirmModal",
+  title: "Components/Overlays and layering/Confirm modal",
+  component: ConfirmModal,
   parameters: { layout: "padded" },
 };
 export default meta;

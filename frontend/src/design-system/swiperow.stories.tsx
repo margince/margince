@@ -18,7 +18,7 @@ import { SwipeRow } from "./swiperow";
 // Framed at 390px, because that is the width the control exists for. At any
 // wider size the caller draws its buttons and this never mounts.
 const meta: Meta<typeof SwipeRow> = {
-  title: "Design System/SwipeRow",
+  title: "Components/Forms and input/Swipe row",
   component: SwipeRow,
   parameters: { layout: "padded" },
   decorators: [

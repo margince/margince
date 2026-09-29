@@ -25,7 +25,7 @@ import { Breadcrumb } from "./breadcrumb";
  * Flip the Theme toolbar to check both renderings; every colour is a token.
  */
 const meta: Meta<typeof Breadcrumb> = {
-  title: "Design System/Breadcrumb",
+  title: "Components/Navigation/Breadcrumb",
   component: Breadcrumb,
   parameters: { layout: "padded" },
 };
