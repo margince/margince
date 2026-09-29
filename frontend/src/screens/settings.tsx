@@ -71,6 +71,7 @@ import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
 import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
+import { AiTasksCard } from "./ai-tasks";
 import { AiCallsCard } from "./aicalls";
 import { AiUsageCard } from "./aiusage";
 import { ActorTag } from "./audit";
@@ -316,16 +317,16 @@ export function tabContent(id: SettingsPageId): ReactNode {
               the lanes it qualifies: a binding to a vendor holding no key is
               the thing an operator came here to fix. */}
           <ProvidersStat />
+          <AiProviderKeysCard />
           {/* The price sheet lives on Usage, so the routing card links there
               rather than restating it. Dropping the callback silently removes
               that link — the lane rows then name a model with no way to see
               what it costs. */}
           <AiRoutingCard onPriceSheet={() => navigate(settingsHref("usage"))} />
-          <AiProviderKeysCard />
-          {/* Whether the vendors above are actually ANSWERING. It belongs with
-              the credentials rather than with the bindings, because the three
-              readings are one story told in order — which vendor a lane names,
-              whether we hold a key for it, whether it replied. */}
+          <AiTasksCard />
+          {/* The rows above carry each tier's health in one line; this is the
+              full reading, with the last failure's sentinel, and the only card
+              here a diagnostics-only role (management) can open. */}
           <AiHealthCard />
         </>
       );

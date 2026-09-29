@@ -280,6 +280,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// a second store over the same pool would be a second answer to "what is
 		// still open".
 		WithDomainQuestions(attentionDomainQuestions{store: contacts.NewStore(db)}).
+		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
 		// The figures behind a deal a row names but does not carry — the
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.

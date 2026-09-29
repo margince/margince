@@ -1,16 +1,17 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AiRoutingCard } from "./ai-routing";
 import {
   BOUND,
   backendFor,
-  openLane,
-  previewAndSave,
+  CHANGED_ELSEWHERE,
+  openEditor,
   ROUTING_EDITOR,
   render,
+  saveEditor,
 } from "./ai-routing.testkit";
 import { OPENROUTER_DECISION_PRESET } from "./ai-routing-fields";
 
@@ -34,8 +35,14 @@ describe("the decision model lane", () => {
     await user.click(
       within(absent).getByRole("button", { name: "Add decision model" }),
     );
-    // Adding opens the lane's fields; the row is now a binding like any other.
-    const lane = screen.getByTestId("ai-routing-decisions");
+    // Adding opens the lane's editor, named for the add, with nothing yet to
+    // remove.
+    const lane = await screen.findByRole("dialog", {
+      name: "Add decision model",
+    });
+    expect(
+      within(lane).queryByRole("button", { name: "Remove decision model" }),
+    ).toBeNull();
 
     const provider = within(lane).getByRole("combobox", { name: "Provider" });
     await user.click(provider);
@@ -59,7 +66,7 @@ describe("the decision model lane", () => {
       "http://127.0.0.1:8767/v1/systemone",
     );
 
-    const sent = await previewAndSave(user, backend);
+    const sent = await saveEditor(user, backend);
     expect(sent?.decisions).toEqual({
       provider: "jev_compatible",
       model: "jev-classify",
@@ -67,6 +74,37 @@ describe("the decision model lane", () => {
     });
     // The lanes it sits beside are sent untouched.
     expect(sent?.embeddings.model).toBe("gemini-embedding-001");
+  });
+
+  // An installation that reaches decisions only through OpenRouter holds no
+  // TypeSafe key, so adding opens on the adapter it CAN use rather than on a
+  // refused one.
+  it("adds a decision model on a provider this installation can reach", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, BOUND, {
+      providerKeys: [
+        { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
+        { provider: "jev", configured: false, env_var: "TYPESAFE_API_KEY" },
+        {
+          provider: "jev_compatible",
+          configured: false,
+          env_var: "JEV_COMPATIBLE_API_KEY",
+          optional: true,
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const dialog = await openEditor(
+      user,
+      "ai-routing-decisions",
+      /add decision model/i,
+    );
+    expect(
+      within(dialog).getByRole("combobox", { name: "Provider" }),
+    ).toHaveTextContent("jev_compatible");
+    expect(within(dialog).queryByText("Provider key missing")).toBeNull();
   });
 
   // OpenRouter's endpoint is a URL nobody remembers, so jev_compatible offers
@@ -82,7 +120,7 @@ describe("the decision model lane", () => {
     render(<AiRoutingCard />);
 
     await screen.findByTestId("ai-routing-decisions");
-    const lane = await openLane(user, "ai-routing-decisions");
+    const lane = await openEditor(user, "ai-routing-decisions");
     expect(
       within(lane).getByText(
         /JEV_COMPATIBLE_API_KEY takes your OpenRouter key/,
@@ -98,7 +136,7 @@ describe("the decision model lane", () => {
       OPENROUTER_DECISION_PRESET.model,
     );
 
-    const sent = await previewAndSave(user, backend);
+    const sent = await saveEditor(user, backend);
     expect(sent?.decisions).toEqual({
       provider: "jev_compatible",
       model: "typesafe/jev-1.13",
@@ -118,7 +156,7 @@ describe("the decision model lane", () => {
     render(<AiRoutingCard />);
 
     await screen.findByTestId("ai-routing-decisions");
-    const lane = await openLane(user, "ai-routing-decisions");
+    const lane = await openEditor(user, "ai-routing-decisions");
     expect(
       within(lane).queryByRole("button", { name: "Use OpenRouter" }),
     ).toBeNull();
@@ -141,14 +179,22 @@ describe("the decision model lane", () => {
     render(<AiRoutingCard />);
     await screen.findByText("jev-classify");
 
-    const lane = await openLane(user, "ai-routing-decisions");
+    const lane = await openEditor(user, "ai-routing-decisions");
     await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", { name: "jev" }),
     );
 
-    const sent = await previewAndSave(user, backend);
-    expect(sent?.decisions).toEqual({ provider: "jev", model: "" });
+    const model = within(lane).getByRole("combobox", { name: "Model" });
+    expect(model).toHaveValue("");
+    // An empty model is not a binding, so Save waits for one.
+    expect(
+      within(lane).getByRole("button", { name: /save binding/i }),
+    ).toBeDisabled();
+    await user.type(model, "jev-1.13.0");
+
+    const sent = await saveEditor(user, backend);
+    expect(sent?.decisions).toEqual({ provider: "jev", model: "jev-1.13.0" });
   });
 
   // A decision is billed on its input alone, as an embedding is: the row
@@ -180,48 +226,153 @@ describe("the decision model lane", () => {
     render(<AiRoutingCard />);
     await screen.findByText("jev-latest");
 
-    const lane = await openLane(user, "ai-routing-decisions");
+    const lane = await openEditor(user, "ai-routing-decisions");
     await user.click(
       within(lane).getByRole("button", { name: "Remove decision model" }),
     );
-
-    const sent = await previewAndSave(user, backend);
+    await waitFor(() => expect(backend.getPutCount()).toBe(1));
+    const sent = backend.getCapturedPut();
     expect(sent).not.toHaveProperty("decisions");
     expect(sent?.tiers.premium.model).toBe("gemini-3.5-flash");
   });
 });
 
-it("keeps the draft revision after a background refresh and refuses a conflicting preview", async () => {
-  const user = userEvent.setup({ delay: null });
-  const backend = backendFor(ROUTING_EDITOR);
-  vi.stubGlobal("fetch", backend.fetchMock);
-  const { client } = render(<AiRoutingCard />);
-  await screen.findByText("gemini-3.5-flash");
-  const lane = await openLane(user, "ai-routing-tier-premium");
-  const model = within(lane).getByRole("combobox", { name: "Model" });
-  await user.clear(model);
-  await user.type(model, "my-draft-model");
-  backend.externalChange();
-  await client.invalidateQueries({ queryKey: ["ai-routing"] });
-  await user.click(screen.getByRole("button", { name: /preview effects/i }));
-  await screen.findByText(/model bindings changed while you were editing/i);
-  expect(model).toHaveValue("my-draft-model");
-  expect(screen.getByRole("button", { name: /save routing/i })).toBeDisabled();
-  expect(backend.getCapturedPut()).toBeNull();
-});
+describe("saving one binding", () => {
+  // The editor remembers the binding it opened on. A colleague who re-pointed
+  // THIS lane in the meantime is caught before anything is written, and the
+  // reader's edit stays on screen for a deliberate second Save.
+  it("refuses to overwrite a lane someone else changed since it opened", async () => {
+    const user = userEvent.setup({ delay: null });
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+    const dialog = await openEditor(user, "ai-routing-tier-premium");
+    const model = within(dialog).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "my-draft-model");
 
-it("keeps a manually opened advanced section open after closing a tier editor", async () => {
-  const backend = backendFor(ROUTING_EDITOR, BOUND);
-  vi.stubGlobal("fetch", backend.fetchMock);
-  render(<AiRoutingCard />);
-  const user = userEvent.setup({ delay: null });
-  const summary = await screen.findByText("Advanced: shared model bindings");
-  await user.click(summary);
-  const details = summary.closest("details");
-  expect(details).toHaveAttribute("open");
-  const tier = await openLane(user, "ai-routing-tier-premium");
-  await user.click(within(tier).getByRole("button", { name: "Done" }));
-  expect(details).toHaveAttribute("open");
+    backend.externalChange();
+    await user.click(
+      within(dialog).getByRole("button", { name: /save binding/i }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        /model bindings changed while you were editing/i,
+      ),
+    ).toBeTruthy();
+    expect(backend.getPutCount()).toBe(0);
+    expect(model).toHaveValue("my-draft-model");
+
+    // Saving again is the reader choosing to replace the colleague's binding.
+    const sent = await saveEditor(user, backend);
+    expect(sent?.tiers.premium.model).toBe("my-draft-model");
+  });
+
+  // An edit to ANOTHER lane is not a conflict: the save lands on the latest
+  // document, so the colleague's change travels with it rather than being
+  // reverted by a stale copy.
+  it("keeps a colleague's edit to another lane", async () => {
+    const user = userEvent.setup({ delay: null });
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+    const dialog = await openEditor(user, "ai-routing-tier-cheap_cloud");
+    const model = within(dialog).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-3.5-flash");
+
+    backend.externalChange(CHANGED_ELSEWHERE);
+    const sent = await saveEditor(user, backend);
+
+    expect(sent?.tiers.cheap_cloud.model).toBe("gemini-3.5-flash");
+    expect(sent?.tiers.premium.model).toBe("gemini-3.1-pro-preview");
+  });
+
+  // The window the editor's own re-read cannot close: a write that lands
+  // between that read and the PUT. The server's If-Match catches it, and the
+  // editor answers the 409 the way it answers a caught stale base.
+  it("answers a server conflict with the callout, not a dead form", async () => {
+    const user = userEvent.setup({ delay: null });
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+    const dialog = await openEditor(user, "ai-routing-tier-premium");
+    const model = within(dialog).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "my-draft-model");
+
+    backend.raceNextPut();
+    await user.click(
+      within(dialog).getByRole("button", { name: /save binding/i }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        /model bindings changed while you were editing/i,
+      ),
+    ).toBeTruthy();
+    expect(within(dialog).queryByText(/routing not saved/i)).toBeNull();
+    const sent = await saveEditor(user, backend);
+    expect(sent?.tiers.premium.model).toBe("my-draft-model");
+  });
+
+  // A race on ANOTHER lane is no conflict: the 409 is retried once, and the
+  // re-read shows this lane untouched, so the edit lands with theirs.
+  it("retries a server conflict that came from another lane", async () => {
+    const user = userEvent.setup({ delay: null });
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+    const dialog = await openEditor(user, "ai-routing-tier-cheap_cloud");
+    const model = within(dialog).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-3.5-flash");
+
+    backend.raceNextPut();
+    const sent = await saveEditor(user, backend);
+
+    expect(sent?.tiers.cheap_cloud.model).toBe("gemini-3.5-flash");
+    expect(sent?.tiers.premium.model).toBe("gemini-3.1-pro-preview");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  // The vendor's list is a hint, not a permitted set: an id it does not name
+  // is said so, and still saves.
+  it("hints at a model the vendor does not list, and saves it anyway", async () => {
+    const user = userEvent.setup({ delay: null });
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+    const dialog = await openEditor(user, "ai-routing-tier-premium");
+    const model = within(dialog).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-9-imaginary");
+
+    expect(
+      await within(dialog).findByText(/not in gemini’s published model list/i),
+    ).toBeTruthy();
+    const sent = await saveEditor(user, backend);
+    expect(sent?.tiers.premium.model).toBe("gemini-9-imaginary");
+  });
+
+  it("closes without writing on Cancel", async () => {
+    const user = userEvent.setup({ delay: null });
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("gemini-3.5-flash");
+    const dialog = await openEditor(user, "ai-routing-tier-premium");
+    await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(backend.getPutCount()).toBe(0);
+  });
 });
 
 // Which edits take a binding's broker preferences off. Only a move to another

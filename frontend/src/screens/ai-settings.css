@@ -86,7 +86,19 @@
  * binding they qualify instead of drifting across the row to sit against the
  * button. */
 .ai-lane-open {
+  display: inline-flex;
+  gap: var(--space-2);
   margin-inline-start: auto;
+}
+
+/* The line under a lane: its task count and call health, spaced as one run of
+ * facts that wraps rather than as a second row of columns. */
+.ai-lane-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-1);
 }
 
 /* One provider credential, as a line: who, whether it is keyed, and the way to

@@ -110,7 +110,6 @@
 793 frontend/src/screens/automations.tsx
 859 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
-712 frontend/src/screens/ai-routing.tsx
 855 frontend/src/screens/create.tsx
 815 frontend/src/design-system/decisioncard.tsx
 535 frontend/src/screens/companyheader.tsx

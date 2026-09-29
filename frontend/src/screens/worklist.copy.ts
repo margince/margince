@@ -741,6 +741,7 @@ export function sourceUnavailableText(
 export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
+  deal_suggestion: true,
   task: true,
   weekly_commitment: true,
   brief_item: true,
@@ -761,8 +762,7 @@ export const KNOWN_SOURCES = {
   automation_run: true,
   notice: true,
   introduction_request: true,
-  // An undecided domain. It names no record either — the subject is the domain
-  // itself, and the row is answered in place rather than by opening anything.
+  // An undecided domain: it names no record, and is answered in place.
   domain_question: true,
   // A group of routine decisions, which names no single record.
   batch: true,

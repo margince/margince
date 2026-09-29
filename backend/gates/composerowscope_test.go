@@ -106,6 +106,14 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the company it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
 	"internal/compose:conversationCTE":    "the signal extractor's conversation fold, read by the sweep under the system principal and by the pipeline trace for the message whose ladder is already gated: the single company a thread resolves to is what an extraction is filed against, and the rows go to the model lane or to a rung that names no company",
 
+	// Deal Scout's evidence reads, inside dealScoutWorker, which binds
+	// PrincipalSystem "agent:deal-scout" before any of them (jobs_dealscout.go).
+	// The company each names is what a suggestion is ABOUT and goes to
+	// deals.RecordSuggestionTx, never to a reader; a rep sees the suggestion
+	// only through deals' suggestion visibility clause, which applies the
+	// company's row scope and every evidence item's content gate.
+	"internal/compose:dealScoutSQL": "the scout's one read of meetings, signal pairs and sent documents, under the deal-scout sweep's system principal: every company it names is one a suggestion is filed against, handed to deals.RecordSuggestionTx and never to a reader",
+
 	// The company rollup's tree walk, found by the aliased-column pass:
 	// `parent_company_id` is an FK to company named for its role, so the
 	// name-derived extractor could not see it at all.

@@ -3030,6 +3030,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deal-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open Deal Scout suggestions the caller may see, newest first.
+         * @description A suggestion proposes opening a deal for a company that has no open deal,
+         *     from evidence the scout found: a held meeting with somebody at the company,
+         *     the pair of `new_opportunity` and `commitment_made` signals within thirty
+         *     days, or a proposal or contract sent to it as a document. A suggestion is
+         *     listed only to a reader who may read the company and EVERY piece of its
+         *     evidence. Suggestions are never deals: no deal list, board total, forecast
+         *     or report counts them.
+         */
+        get: operations["listDealSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-suggestions/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open the suggested deal, with the caller's corrections.
+         * @description Creates the deal on the company, files the evidence messages under it and
+         *     acknowledges the signals that raised it, in one transaction. A message the
+         *     caller may not move stays where it is and is listed in
+         *     `unlinked_activity_ids`. Every field of the body is optional; an omitted
+         *     one keeps the suggestion's value, and `amount_minor` and `currency` travel
+         *     together; `no_amount` drops the suggested amount. `409
+         *     suggestion_decided` when the suggestion was already accepted, dismissed
+         *     or superseded, and `409 suggestion_superseded` when the company has an
+         *     open deal by now: the suggestion is retired and no second deal is
+         *     opened. A replay under the same Idempotency-Key answers the first
+         *     result.
+         */
+        post: operations["acceptDealSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-suggestions/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the suggestion is not a deal, for the whole workspace.
+         * @description Audited. Nobody is offered this evidence again, and the company is
+         *     suggested again only on evidence newer than the dismissal. `409
+         *     suggestion_decided` when the suggestion was already decided.
+         */
+        post: operations["dismissDealSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals": {
         parameters: {
             query?: never;
@@ -10247,6 +10331,58 @@ export interface paths {
          *     Audit-only write (no event stream, EVT-NOEVT-3).
          */
         delete: operations["deleteAiProviderKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-keys/{provider}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask one vendor whether the stored credential works (admin/ops).
+         * @description Asks the vendor, with the credential this installation holds, the cheapest authenticated
+         *     question it answers, and says whether it answered. The answer to "is this key any good"
+         *     is the vendor's, and asking before a lane is bound to it is cheaper than finding out at
+         *     the first call. No call is billed:
+         *
+         *     - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
+         *       model list, and `model_count` is its length.
+         *     - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+         *     - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
+         *       public, so listing it would pass any key. It passes with no `model_count`.
+         *     - Any other decision endpoint is sent the decision request with an empty body. 401 or
+         *       403 is a refused key. A 400 or 422 is a pass with `key_confirmed: false`: the server
+         *       answered and did not refuse the key, but may have refused the body before reading it.
+         *       A 200 is not a pass, since no decision server answers an empty request. It passes with
+         *       no `model_count`.
+         *     - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
+         *       on OpenRouter) answers `profile_forbids` without being dialled.
+         *
+         *     No request body. The key is the STORED one, never a candidate sent here: a credential
+         *     that travels only to be tested is still a credential in a request log. The host is the
+         *     adapter's default, or for `openai_compatible` the one a stored binding names — never a
+         *     request parameter, for the reason `/ai/available-models/{provider}` gives.
+         *
+         *     A vendor that could not be asked, or asked and refused, is NOT an error — the response is
+         *     200 with `ok: false` and `reason` naming which. `reason` is a closed vocabulary rather
+         *     than the vendor's own words: those are as often a proxy's HTML as they are a sentence,
+         *     and sometimes carry the very credential being tested.
+         *
+         *     Writes nothing. Governed by `ai_routing` read, the grant `/ai/available-models` already
+         *     makes the same vendor call under.
+         */
+        post: operations["testAiProviderKey"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -17685,7 +17821,7 @@ export interface components {
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -17724,6 +17860,22 @@ export interface components {
             env_var: string;
             /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
             optional: boolean;
+        };
+        /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
+        AiProviderKeyTestResult: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            /** @description Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential. */
+            ok: boolean;
+            /** @description Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server. */
+            key_confirmed?: boolean;
+            /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
+            model_count?: number;
+            /**
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @enum {string}
+             */
+            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
         };
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -19080,6 +19232,101 @@ export interface components {
                     owner_id?: string | null;
                 }[];
             };
+        };
+        /** @description One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal. */
+        DealSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Only open_deal is suggested today.
+             * @enum {string}
+             */
+            kind: "open_deal" | "advance_stage" | "revive";
+            /** @enum {string} */
+            state: "open" | "accepted" | "dismissed" | "superseded";
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            /** Format: uuid */
+            pipeline_id: string;
+            /**
+             * Format: uuid
+             * @description The stage the deal would open in: the default pipeline's first open stage.
+             */
+            stage_id: string;
+            /**
+             * @description Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+             * @enum {string}
+             */
+            name_hint: "proposal_sent" | "opportunity_signalled" | "meeting_held";
+            /**
+             * Format: int64
+             * @description Proposed only when a finished reading of a cited document stated both an amount and a currency.
+             */
+            amount_minor?: number | null;
+            /** @description Present exactly when amount_minor is. */
+            currency?: string | null;
+            /** Format: date */
+            close_date?: string | null;
+            confidence: number;
+            /** Format: date-time */
+            created_at: string;
+            evidence: components["schemas"]["DealSuggestionEvidence"][];
+        };
+        /** @description One cited piece of evidence. Exactly one of the three ids is present, and it matches kind. */
+        DealSuggestionEvidence: {
+            /** @enum {string} */
+            kind: "meeting" | "signal" | "attachment";
+            /**
+             * Format: uuid
+             * @description The held meeting.
+             */
+            activity_id?: string | null;
+            /** Format: uuid */
+            signal_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The document sent to the company.
+             */
+            attachment_id?: string | null;
+            /** Format: date-time */
+            occurred_at: string;
+            /** @description The meeting's subject, the signal's summary or the document's file name. */
+            title: string;
+        };
+        DealSuggestionListResponse: {
+            data: components["schemas"]["DealSuggestion"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        /** @description The caller's corrections. An omitted field keeps the suggestion's value. */
+        AcceptDealSuggestionRequest: {
+            /** @description Without one the deal is named after the company. */
+            name?: string;
+            /** Format: int64 */
+            amount_minor?: number;
+            /** @description Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency. */
+            no_amount?: boolean;
+            currency?: string;
+            /**
+             * Format: uuid
+             * @description Any open stage; the deal opens in that stage's pipeline.
+             */
+            stage_id?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /**
+             * Format: date
+             * @description A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
+             */
+            close_date?: string;
+        };
+        DealSuggestionAcceptance: {
+            suggestion: components["schemas"]["DealSuggestion"];
+            /** Format: uuid */
+            deal_id: string;
+            /** @description Evidence messages the caller may not move, left where they were. */
+            unlinked_activity_ids: string[];
+            acknowledged_signals: number;
         };
         /** @description One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8). */
         DedupeCandidate: {
@@ -36399,6 +36646,8 @@ export interface components {
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
+            /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all. */
+            deal_suggestions_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
             /** @description How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
@@ -36465,7 +36714,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -36917,7 +37166,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -37774,7 +38023,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -43151,6 +43400,131 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listDealSuggestions: {
+        parameters: {
+            query?: {
+                company_id?: string;
+                pipeline_id?: string;
+                stage_id?: string;
+                /** @description Opaque keyset cursor. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of open suggestions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    acceptDealSuggestion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AcceptDealSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal that was opened. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestionAcceptance"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    dismissDealSuggestion: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dismissed suggestion. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSuggestion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDeals: {
@@ -54507,6 +54881,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    testAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the vendor accepted the stored credential, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderKeyTestResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     listAiCalls: {

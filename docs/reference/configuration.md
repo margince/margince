@@ -1335,8 +1335,9 @@ BYOK key is **read from an environment variable** at boot — the routing file
 names only the provider (a stray `api_key:` there is a startup error):
 
 A cloud provider's key lives in the **key vault**, and an admin puts one there
-at Settings → AI → Model provider keys (`PUT /v1/ai/provider-keys/{provider}`).
-The environment variable in the table below is a SEED, not the home: a key found
+at Settings → AI → Models, on the Providers card (`PUT /v1/ai/provider-keys/{provider}`).
+The same card's Test asks the vendor whether the stored key works — what it
+calls for each provider is in [ai-provider-key-test.md](ai-provider-key-test.md). The environment variable in the table below is a SEED, not the home: a key found
 there is sealed on the next boot and the variable can then be deleted. Both
 routes still fail closed — a bound provider with a key by neither is refused at
 construction, naming what is missing.

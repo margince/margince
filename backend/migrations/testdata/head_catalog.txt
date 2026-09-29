@@ -3477,6 +3477,62 @@ public.deal_status_card.payload jsonb NOT NULL gen=- def=-
 public.deal_status_card.user_id uuid NOT NULL gen=- def=-
 public.deal_status_card_deal_ix CREATE INDEX deal_status_card_deal_ix ON public.deal_status_card USING btree (deal_id)
 public.deal_status_card_pkey CREATE UNIQUE INDEX deal_status_card_pkey ON public.deal_status_card USING btree (user_id, deal_id)
+public.deal_suggestion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_suggestion.accepted_deal_id uuid gen=- def=-
+public.deal_suggestion.captured_by text NOT NULL gen=- def=-
+public.deal_suggestion.company_id uuid NOT NULL gen=- def=-
+public.deal_suggestion.confidence numeric(4,3) NOT NULL gen=- def=-
+public.deal_suggestion.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_suggestion.currency text gen=- def=-
+public.deal_suggestion.deal_suggestion_accepted_deal_id_fkey FOREIGN KEY (accepted_deal_id) REFERENCES deal(id) ON DELETE SET NULL
+public.deal_suggestion.deal_suggestion_accepted_names_deal CHECK (((accepted_deal_id IS NULL) OR (state = 'accepted'::text)))
+public.deal_suggestion.deal_suggestion_amount_nonnegative CHECK (((proposed_amount_minor IS NULL) OR (proposed_amount_minor >= 0)))
+public.deal_suggestion.deal_suggestion_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.deal_suggestion.deal_suggestion_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))
+public.deal_suggestion.deal_suggestion_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.deal_suggestion.deal_suggestion_decided_shape CHECK (((state = 'open'::text) = (decided_at IS NULL)))
+public.deal_suggestion.deal_suggestion_evidence_count_check CHECK ((evidence_count > 0))
+public.deal_suggestion.deal_suggestion_kind_check CHECK ((kind = ANY (ARRAY['open_deal'::text, 'advance_stage'::text, 'revive'::text])))
+public.deal_suggestion.deal_suggestion_money_pair CHECK (((proposed_amount_minor IS NULL) = (currency IS NULL)))
+public.deal_suggestion.deal_suggestion_name_hint_check CHECK ((name_hint = ANY (ARRAY['proposal_sent'::text, 'opportunity_signalled'::text, 'meeting_held'::text])))
+public.deal_suggestion.deal_suggestion_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
+public.deal_suggestion.deal_suggestion_pkey PRIMARY KEY (id)
+public.deal_suggestion.deal_suggestion_proposed_stage_id_fkey FOREIGN KEY (proposed_stage_id) REFERENCES stage(id) ON DELETE CASCADE
+public.deal_suggestion.deal_suggestion_state_check CHECK ((state = ANY (ARRAY['open'::text, 'accepted'::text, 'dismissed'::text, 'superseded'::text])))
+public.deal_suggestion.decided_at timestamp with time zone gen=- def=-
+public.deal_suggestion.decided_by uuid gen=- def=-
+public.deal_suggestion.evidence_count integer NOT NULL gen=- def=-
+public.deal_suggestion.evidence_through timestamp with time zone NOT NULL gen=- def=-
+public.deal_suggestion.fingerprint text NOT NULL gen=- def=-
+public.deal_suggestion.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_suggestion.kind text NOT NULL gen=- def='open_deal'::text
+public.deal_suggestion.name_hint text NOT NULL gen=- def=-
+public.deal_suggestion.pipeline_id uuid NOT NULL gen=- def=-
+public.deal_suggestion.proposed_amount_minor bigint gen=- def=-
+public.deal_suggestion.proposed_close_date date gen=- def=-
+public.deal_suggestion.proposed_stage_id uuid NOT NULL gen=- def=-
+public.deal_suggestion.state text NOT NULL gen=- def='open'::text
+public.deal_suggestion.trg_deal_suggestion_updated CREATE TRIGGER trg_deal_suggestion_updated BEFORE UPDATE ON public.deal_suggestion FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_suggestion.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_suggestion.uq_deal_suggestion_fingerprint UNIQUE (fingerprint)
+public.deal_suggestion.version bigint NOT NULL gen=- def=1
+public.deal_suggestion_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_suggestion_evidence.activity_id uuid gen=- def=-
+public.deal_suggestion_evidence.attachment_id uuid gen=- def=-
+public.deal_suggestion_evidence.deal_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.deal_suggestion_evidence.deal_suggestion_evidence_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES attachment(id) ON DELETE CASCADE
+public.deal_suggestion_evidence.deal_suggestion_evidence_kind_check CHECK ((kind = ANY (ARRAY['meeting'::text, 'signal'::text, 'attachment'::text])))
+public.deal_suggestion_evidence.deal_suggestion_evidence_pkey PRIMARY KEY (id)
+public.deal_suggestion_evidence.deal_suggestion_evidence_shape CHECK ((((kind = 'meeting'::text) AND (activity_id IS NOT NULL) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal'::text) AND (signal_id IS NOT NULL) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment'::text) AND (attachment_id IS NOT NULL) AND (activity_id IS NULL) AND (signal_id IS NULL))))
+public.deal_suggestion_evidence.deal_suggestion_evidence_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES signal(id) ON DELETE CASCADE
+public.deal_suggestion_evidence.deal_suggestion_evidence_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES deal_suggestion(id) ON DELETE CASCADE
+public.deal_suggestion_evidence.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_suggestion_evidence.kind text NOT NULL gen=- def=-
+public.deal_suggestion_evidence.occurred_at timestamp with time zone NOT NULL gen=- def=-
+public.deal_suggestion_evidence.signal_id uuid gen=- def=-
+public.deal_suggestion_evidence.suggestion_id uuid NOT NULL gen=- def=-
+public.deal_suggestion_evidence_pkey CREATE UNIQUE INDEX deal_suggestion_evidence_pkey ON public.deal_suggestion_evidence USING btree (id)
+public.deal_suggestion_pkey CREATE UNIQUE INDEX deal_suggestion_pkey ON public.deal_suggestion USING btree (id)
 public.deal_won_without_contract_ix CREATE INDEX deal_won_without_contract_ix ON public.deal USING btree (won_without_contract_reason) WHERE (won_without_contract_reason IS NOT NULL)
 public.dedupe_candidate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.dedupe_candidate.archived_at timestamp with time zone gen=- def=-
@@ -4105,6 +4161,16 @@ public.idx_deal_search CREATE INDEX idx_deal_search ON public.deal USING gin (se
 public.idx_deal_stage CREATE INDEX idx_deal_stage ON public.deal USING btree (stage_id) WHERE (archived_at IS NULL)
 public.idx_deal_stage_history_changed CREATE INDEX idx_deal_stage_history_changed ON public.deal_stage_history USING btree (changed_at)
 public.idx_deal_stalled CREATE INDEX idx_deal_stalled ON public.deal USING btree (last_activity_at) WHERE ((status = 'open'::text) AND (archived_at IS NULL))
+public.idx_deal_suggestion_accepted_deal CREATE INDEX idx_deal_suggestion_accepted_deal ON public.deal_suggestion USING btree (accepted_deal_id) WHERE (accepted_deal_id IS NOT NULL)
+public.idx_deal_suggestion_company CREATE INDEX idx_deal_suggestion_company ON public.deal_suggestion USING btree (company_id, decided_at)
+public.idx_deal_suggestion_decided_by CREATE INDEX idx_deal_suggestion_decided_by ON public.deal_suggestion USING btree (decided_by) WHERE (decided_by IS NOT NULL)
+public.idx_deal_suggestion_evidence_activity CREATE INDEX idx_deal_suggestion_evidence_activity ON public.deal_suggestion_evidence USING btree (activity_id) WHERE (activity_id IS NOT NULL)
+public.idx_deal_suggestion_evidence_attachment CREATE INDEX idx_deal_suggestion_evidence_attachment ON public.deal_suggestion_evidence USING btree (attachment_id) WHERE (attachment_id IS NOT NULL)
+public.idx_deal_suggestion_evidence_signal CREATE INDEX idx_deal_suggestion_evidence_signal ON public.deal_suggestion_evidence USING btree (signal_id) WHERE (signal_id IS NOT NULL)
+public.idx_deal_suggestion_evidence_suggestion CREATE INDEX idx_deal_suggestion_evidence_suggestion ON public.deal_suggestion_evidence USING btree (suggestion_id)
+public.idx_deal_suggestion_open CREATE INDEX idx_deal_suggestion_open ON public.deal_suggestion USING btree (created_at DESC, id DESC) WHERE (state = 'open'::text)
+public.idx_deal_suggestion_pipeline CREATE INDEX idx_deal_suggestion_pipeline ON public.deal_suggestion USING btree (pipeline_id)
+public.idx_deal_suggestion_stage CREATE INDEX idx_deal_suggestion_stage ON public.deal_suggestion USING btree (proposed_stage_id)
 public.idx_dedupe_candidate_left_company CREATE INDEX idx_dedupe_candidate_left_company ON public.dedupe_candidate USING btree (left_company_id)
 public.idx_dedupe_candidate_left_contact CREATE INDEX idx_dedupe_candidate_left_contact ON public.dedupe_candidate USING btree (left_contact_id)
 public.idx_dedupe_candidate_left_lead CREATE INDEX idx_dedupe_candidate_left_lead ON public.dedupe_candidate USING btree (left_lead_id)
@@ -6353,6 +6419,8 @@ public.uq_deal_room_participant_email CREATE UNIQUE INDEX uq_deal_room_participa
 public.uq_deal_room_participant_in_room CREATE UNIQUE INDEX uq_deal_room_participant_in_room ON public.deal_room_participant USING btree (id, room_id)
 public.uq_deal_room_preview_per_rep CREATE UNIQUE INDEX uq_deal_room_preview_per_rep ON public.deal_room_participant USING btree (room_id, invited_by) WHERE ((revoked_at IS NULL) AND preview)
 public.uq_deal_room_session_token CREATE UNIQUE INDEX uq_deal_room_session_token ON public.deal_room_session USING btree (token_hash)
+public.uq_deal_suggestion_fingerprint CREATE UNIQUE INDEX uq_deal_suggestion_fingerprint ON public.deal_suggestion USING btree (fingerprint)
+public.uq_deal_suggestion_open_company CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id))
 public.uq_forecast_contribution_deal CREATE UNIQUE INDEX uq_forecast_contribution_deal ON public.forecast_contribution USING btree (snapshot_id, deal_id)
 public.uq_forecast_snapshot_daily CREATE UNIQUE INDEX uq_forecast_snapshot_daily ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'daily'::text)

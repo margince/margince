@@ -229,8 +229,6 @@ export const vi = {
     "Chỉ người có cả quyền đọc chẩn đoán AI và quyền đọc hạn mức AI mới xem được các tính năng đang hoạt động.",
   "aiAdmin.save": "Lưu hạn mức",
   "aiAdmin.cancel": "Hủy",
-  "aiAdmin.prospective":
-    "Mô hình được chính sách hiện tại chọn. Lời gọi thực tế có thể dùng dự phòng hoặc thất bại; đây không phải trạng thái nhà cung cấp hay bằng chứng mô hình đã được dùng.",
   "aiAdmin.calls": "Xem các lời gọi mô hình thực tế",
   "aiAdmin.website": "Đọc website",
   "aiAdmin.scans": "Quét tài khoản",
@@ -250,7 +248,6 @@ export const vi = {
   "aiAdmin.model": "Mô hình được chính sách chọn",
   "aiAdmin.cloud": "Nhà cung cấp đám mây",
   "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
-  "aiAdmin.editBinding": "Sửa liên kết dùng chung",
   "aiAdmin.decisionFirst":
     "Mô hình quyết định trước ({provider} · {model} · {processing}) → sau đó {ladder}",
   "aiAdmin.decisionSkip.unbound":
@@ -260,8 +257,6 @@ export const vi = {
   "aiAdmin.decisionSkip.local_only":
     "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
   "aiAdmin.effect": "Tác động",
-  "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
-  "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -331,6 +326,38 @@ export const vi = {
   "brief.coverage.source.conversation_claim": "Cam kết với khách hàng",
   "brief.coverage.source.brief_item": "Cập nhật giao dịch",
   "brief.coverage.source.dedupe_candidate": "Hồ sơ có thể trùng",
+  "brief.coverage.source.deal_suggestion": "Cơ hội được gợi ý",
+  "worklist.untitled.deal_suggestion": "Cơ hội được gợi ý từ các tín hiệu",
+  "dealSuggestion.agent": "Trinh sát cơ hội",
+  "dealSuggestion.name": "{company} · {hint}",
+  "dealSuggestion.hint.proposal_sent": "đã gửi báo giá",
+  "dealSuggestion.hint.opportunity_signalled": "có tín hiệu mua",
+  "dealSuggestion.hint.meeting_held": "đã họp",
+  "dealSuggestion.companyTitle": "Cơ hội được gợi ý",
+  "dealSuggestion.open": "Tạo cơ hội này",
+  "dealSuggestion.dismiss": "Không phải cơ hội",
+  "dealSuggestion.dismissed":
+    "Đã bỏ qua cho cả nhóm. Gợi ý chỉ quay lại khi có dấu hiệu mới hơn.",
+  "dealSuggestion.decided":
+    "Gợi ý này đã được quyết định. Hãy tải lại để xem tình trạng.",
+  "dealSuggestion.unavailable": "Không đọc được gợi ý này. Hãy thử lại sau.",
+  "dealSuggestion.failed": "Chưa thực hiện được. Hãy thử lại.",
+  "dealSuggestion.evidence.meeting": "Đã họp: {title}",
+  "dealSuggestion.evidence.signal": "Tín hiệu: {title}",
+  "dealSuggestion.evidence.attachment": "Đã gửi: {title}",
+  "dealSuggestion.acceptTitle": "Tạo cơ hội với {company}",
+  "dealSuggestion.field.name": "Tên cơ hội",
+  "dealSuggestion.field.amount": "Giá trị",
+  "dealSuggestion.field.currency": "Tiền tệ",
+  "dealSuggestion.field.stage": "Giai đoạn",
+  "dealSuggestion.field.owner": "Phụ trách",
+  "dealSuggestion.ownerMe": "Tôi",
+  "dealSuggestion.field.closeDate": "Dự kiến chốt",
+  "dealSuggestion.closeDateHint": "Để trống nếu chưa ai nói thời điểm.",
+  "dealSuggestion.confirm": "Tạo cơ hội",
+  "dealSuggestion.accepted": "Đã tạo cơ hội: {name}.",
+  "dealSuggestion.acceptedUnlinked":
+    "Đã tạo cơ hội: {name}. Một số dấu hiệu vẫn ở chỗ cũ vì quyền hạn không cho phép chuyển chúng.",
   "brief.team.commitmentRate":
     "Đã hoàn thành {done} trên {total} cam kết đến hạn.",
   "brief.team.meetingRate":
@@ -5865,7 +5892,7 @@ export const vi = {
   "overnightGrant.writeFailedTitle": "Thay đổi chưa được lưu",
   "overnightGrant.renewScope":
     "Margince nay làm được nhiều hơn so với khi bạn đồng ý. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
-  "aiHealth.title": "Các tầng mô hình",
+  "aiHealth.title": "Tình trạng gọi theo tầng",
   "aiHealth.sub":
     "Mỗi tầng mô hình có đang trả lời hay không. Một tầng đã ngừng và một tầng chỉ đang thận trọng trông giống hệt nhau ở mọi nơi khác — thư đã thu thập vẫn bị giữ lại trong cả hai trường hợp.",
   "aiHealth.noCalls": "không có mô hình nào được gọi trong {hours} giờ qua",
@@ -8656,16 +8683,11 @@ export const vi = {
     "Điền sẵn endpoint và mô hình của OpenRouter. JEV_COMPATIBLE_API_KEY nhận khóa OpenRouter của bạn.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
-  "aiRouting.lanes.title": "Các làn định tuyến",
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
-  "aiRouting.change": "Đổi",
-  "aiRouting.done": "Xong",
   "aiRouting.noKey": "Chưa có khoá",
   "aiRouting.unpriced": "Chưa định giá",
-  "aiRouting.effect":
-    "Ràng buộc đã lưu sẽ đến mọi tiến trình trong vòng một phút, không cần khởi động lại.",
-  "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
+  "aiProviderKeys.title": "Nhà cung cấp",
   "aiProviderKeys.keyless": "Không cần khoá",
   "aiProviderKeys.field": "Khoá API",
   "aiProviderKeys.save": "Lưu khoá",
@@ -8691,7 +8713,7 @@ export const vi = {
   "aiProviderKeys.remove": "Xóa",
   "aiRouting.withheld":
     "Chỉ người có quyền thay đổi liên kết mô hình mới thấy bản cài đặt này dùng những mô hình nào.",
-  "aiRouting.title": "Định tuyến mô hình",
+  "aiRouting.title": "Các tầng mô hình",
   "aiRouting.sheetAsOf":
     "Danh sách mô hình là bảng giá tính đến {date}. Mọi ID mới hơn mà nhà cung cấp của bạn phục vụ cũng dùng được — cứ gõ vào.",
   "aiRouting.sheetUnknown":
@@ -8700,15 +8722,8 @@ export const vi = {
   "aiRouting.unboundUnkeyed":
     "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy thêm khóa nhà cung cấp mô hình bên dưới, rồi ràng buộc các tầng tại đây. Bản triển khai cũng có thể khai báo ràng buộc đầu tiên tại seeds.ai_routing trong margince.yaml; mục này chỉ được đọc một lần khi tạo tổ chức.",
   "aiRouting.unboundKeyed":
-    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy bắt đầu với mặc định của nhà cung cấp đã có khóa, chỉnh sửa tùy ý rồi lưu.",
+    "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy bắt đầu với mặc định của một nhà cung cấp; bạn có thể đổi từng tầng sau đó.",
   "aiRouting.unboundStart": "Bắt đầu với {provider}",
-  "aiRouting.profile.card": "Hồ sơ triển khai",
-  "aiRouting.profile.label": "Vị trí",
-  "aiRouting.profile.help":
-    "Nơi chạy suy luận. Sovereign nghĩa là không có dữ liệu ra ngoài: chỉ mô hình trên máy chủ của bạn, bị từ chối khi lưu chứ không phải ở lần gọi đầu tiên.",
-  "aiRouting.profile.eu_hosted": "Đặt tại EU",
-  "aiRouting.profile.sovereign": "Sovereign (không ra ngoài)",
-  "aiRouting.profile.cloud_frontier": "Cloud frontier (đám mây cao cấp)",
   "aiRouting.dimensions.label": "Độ rộng vector",
   "aiRouting.dimensions.help":
     "Để trống để dùng mặc định của nhà cung cấp. Giá trị ngoài khoảng 1 đến 2000 sẽ bị từ chối.",
@@ -8736,13 +8751,54 @@ export const vi = {
   "aiRouting.model.label": "Mô hình",
   "aiRouting.model.help":
     "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
-  "aiRouting.save": "Lưu định tuyến",
   "aiRouting.saving": "Đang lưu ràng buộc…",
-  "aiRouting.savedTitle": "Đã lưu định tuyến",
-  "aiRouting.saved": "Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.saveFailed": "Không thể lưu định tuyến",
   "aiRouting.adminOnly":
     "Đổi định tuyến mô hình cần quyền cập nhật định tuyến và đọc hạn mức.",
+  "aiProviderKeys.test": "Kiểm tra",
+  "aiProviderKeys.testing": "Đang kiểm tra khóa…",
+  "aiProviderKeys.connected": "Đã kết nối",
+  "aiProviderKeys.accepted": "Nhà cung cấp đã chấp nhận khóa.",
+  "aiProviderKeys.answered": "Máy chủ đã phản hồi.",
+  "aiProviderKeys.unconfirmed":
+    "Máy chủ đã phản hồi và không từ chối khóa. Máy chủ không thể xác nhận khóa hợp lệ; khóa sai sẽ lộ ra ở quyết định đầu tiên.",
+  "aiProviderKeys.testFailed": "Kiểm tra thất bại",
+  "aiProviderKeys.modelCount_one": "Có {count} mô hình",
+  "aiProviderKeys.modelCount_other": "Có {count} mô hình",
+  "aiProviderKeys.reason.authFailed":
+    "Nhà cung cấp từ chối khóa này. Hãy kiểm tra rồi thay khóa.",
+  "aiProviderKeys.reason.rateLimited":
+    "Nhà cung cấp đang giới hạn tốc độ với khóa này. Khóa có thể vẫn hợp lệ; hãy thử lại sau.",
+  "aiProviderKeys.reason.noKey": "Chưa lưu khóa nào cho nhà cung cấp này.",
+  "aiProviderKeys.reason.noEndpoint":
+    "Chưa có tầng nào dùng nhà cung cấp này nên không có máy chủ để kiểm tra. Hãy ràng buộc một tầng trước.",
+  "aiProviderKeys.reason.profileForbids":
+    "Hồ sơ triển khai này không cho phép truy cập nhà cung cấp này.",
+  "aiProviderKeys.reason.notPublished":
+    "Phiên bản này không thể kiểm tra nhà cung cấp này.",
+  "aiProviderKeys.reason.unreachable":
+    "Nhà cung cấp không phản hồi. Hãy kiểm tra máy chủ và mạng.",
+  "aiRouting.intro":
+    "Chọn nhà cung cấp và mô hình cho từng tầng, cho embeddings và, nếu muốn, cho mô hình quyết định. Ràng buộc đã lưu áp dụng cho mọi tiến trình trong vòng một phút, không cần khởi động lại.",
+  "aiRouting.profileLine":
+    "Hồ sơ triển khai: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một tầng được dùng và do bộ phận vận hành đặt.",
+  "aiRouting.edit": "Sửa",
+  "aiRouting.editTitle": "Sửa ràng buộc {lane}",
+  "aiRouting.saveBinding": "Lưu ràng buộc",
+  "aiRouting.keyMissing": "Thiếu khóa nhà cung cấp",
+  "aiRouting.keyMissingHelp":
+    "{provider} chưa có khóa. Hãy thêm khóa trong mục Nhà cung cấp trước khi ràng buộc mô hình.",
+  "aiRouting.conflictHelp":
+    "Trong lúc bạn sửa, một ràng buộc khác đã được lưu ở đây. Thay đổi của bạn vẫn còn trong biểu mẫu: lưu lại để thay thế, hoặc hủy để giữ bản đã lưu.",
+  "aiRouting.notListed":
+    "Không có trong danh sách mô hình công bố của {provider}. Bạn vẫn có thể lưu nếu nhà cung cấp phục vụ ID này.",
+  "aiRouting.median": "Trung vị {ms} ms",
+  "aiRouting.untracked": "Tình trạng gọi chỉ được theo dõi cho các tầng.",
+  "aiRouting.taskCount_one": "{count} tác vụ",
+  "aiRouting.taskCount_other": "{count} tác vụ",
+  "aiTasks.title": "Tác vụ AI",
+  "aiTasks.intro":
+    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",

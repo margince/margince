@@ -231,8 +231,6 @@ export const de = {
     "Nur Nutzende mit Leserecht für die KI-Diagnose und für das KI-Kontingent sehen, welche Funktionen gerade aktiv sind.",
   "aiAdmin.save": "Kontingent speichern",
   "aiAdmin.cancel": "Abbrechen",
-  "aiAdmin.prospective":
-    "Von der aktuellen Richtlinie gewähltes Modell. Tatsächliche Aufrufe können ausweichen oder fehlschlagen. Anbieterstatus und tatsächlich verwendetes Modell sind hier nicht zu sehen.",
   "aiAdmin.calls": "Tatsächliche Modellaufrufe ansehen",
   "aiAdmin.website": "Website-Lesevorgänge",
   "aiAdmin.scans": "Unternehmensscans",
@@ -252,7 +250,6 @@ export const de = {
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.cloud": "Cloud-Anbieter",
   "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
-  "aiAdmin.editBinding": "Gemeinsame Zuordnung bearbeiten",
   "aiAdmin.decisionFirst":
     "Zuerst Entscheidungsmodell ({provider} · {model} · {processing}) → dann {ladder}",
   "aiAdmin.decisionSkip.unbound":
@@ -262,9 +259,6 @@ export const de = {
   "aiAdmin.decisionSkip.local_only":
     "Entscheidungsmodell nicht genutzt: diese Aktivität nimmt nur einen lokalen Entscheidungsanbieter.",
   "aiAdmin.effect": "Auswirkung",
-  "aiAdmin.advanced": "Erweitert: gemeinsame Modellzuordnungen",
-  "aiAdmin.unused":
-    "Von den aktuell ausgelieferten Tätigkeiten nicht genutzt: {tiers}",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -333,6 +327,40 @@ export const de = {
   "brief.coverage.source.conversation_claim": "Kundenzusagen",
   "brief.coverage.source.brief_item": "Deal-Updates",
   "brief.coverage.source.dedupe_candidate": "Mögliche Duplikate",
+  "brief.coverage.source.deal_suggestion": "Vorgeschlagene Deals",
+  "worklist.untitled.deal_suggestion": "Ein Deal, auf den die Hinweise deuten",
+  "dealSuggestion.agent": "Deal Scout",
+  "dealSuggestion.name": "{company}: {hint}",
+  "dealSuggestion.hint.proposal_sent": "Angebot gesendet",
+  "dealSuggestion.hint.opportunity_signalled": "Kaufsignale",
+  "dealSuggestion.hint.meeting_held": "Termin fand statt",
+  "dealSuggestion.companyTitle": "Vorgeschlagener Deal",
+  "dealSuggestion.open": "Deal anlegen",
+  "dealSuggestion.dismiss": "Kein Deal",
+  "dealSuggestion.dismissed":
+    "Für alle verworfen. Der Vorschlag kommt nur mit neueren Hinweisen wieder.",
+  "dealSuggestion.decided":
+    "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
+  "dealSuggestion.unavailable":
+    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
+  "dealSuggestion.failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+  "dealSuggestion.evidence.meeting": "Termin fand statt: {title}",
+  "dealSuggestion.evidence.signal": "Signal: {title}",
+  "dealSuggestion.evidence.attachment": "Gesendet: {title}",
+  "dealSuggestion.acceptTitle": "Deal mit {company} anlegen",
+  "dealSuggestion.field.name": "Name des Deals",
+  "dealSuggestion.field.amount": "Betrag",
+  "dealSuggestion.field.currency": "Währung",
+  "dealSuggestion.field.stage": "Phase",
+  "dealSuggestion.field.owner": "Verantwortlich",
+  "dealSuggestion.ownerMe": "Selbst",
+  "dealSuggestion.field.closeDate": "Voraussichtlicher Abschluss",
+  "dealSuggestion.closeDateHint":
+    "Lass das Feld leer, solange niemand ein Abschlussdatum genannt hat.",
+  "dealSuggestion.confirm": "Deal anlegen",
+  "dealSuggestion.accepted": "Deal angelegt: {name}.",
+  "dealSuggestion.acceptedUnlinked":
+    "Deal angelegt: {name}. Einige Hinweise bleiben, wo sie waren, weil die Berechtigungen kein Verschieben erlauben.",
   "brief.team.commitmentRate": "Erledigte fällige Zusagen: {done} von {total}.",
   "brief.team.meetingRate":
     "Termine mit erfasstem nächsten Schritt: {done} von {total}.",
@@ -5922,7 +5950,7 @@ export const de = {
   "overnightGrant.writeFailedTitle": "Änderung nicht gespeichert",
   "overnightGrant.renewScope":
     "Margince kann inzwischen mehr als zum Zeitpunkt deines Einverständnisses. Schalte die Option aus und wieder ein, um sie zu erweitern. Bis dahin wird dein Morgenbericht nicht vorbereitet.",
-  "aiHealth.title": "Modellstufen",
+  "aiHealth.title": "Zustand der Stufen",
   "aiHealth.sub":
     "Ob jede Modellstufe antwortet. Eine ausgefallene und eine vorsichtige Modellstufe sehen an anderer Stelle gleich aus; erfasste E-Mails bleiben in beiden Fällen zurückgehalten.",
   "aiHealth.noCalls": "Keine Modellaufrufe in den letzten {hours} h.",
@@ -8731,16 +8759,11 @@ export const de = {
     "Trägt Endpunkt und Modell von OpenRouter ein. JEV_COMPATIBLE_API_KEY nimmt deinen OpenRouter-Schlüssel auf.",
   "aiRouting.decisions.absent":
     "Kein Entscheidungsmodell. Jede Aufgabe nutzt die Modellstufen.",
-  "aiRouting.lanes.title": "Modellstufen",
   "aiRouting.priceSheet": "Preisliste",
   "aiRouting.provider.label": "Anbieter",
-  "aiRouting.change": "Ändern",
-  "aiRouting.done": "Fertig",
   "aiRouting.noKey": "Kein Schlüssel",
   "aiRouting.unpriced": "Ohne Preis",
-  "aiRouting.effect":
-    "Gespeicherte Zuordnungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
-  "aiProviderKeys.title": "Schlüssel der Modellanbieter",
+  "aiProviderKeys.title": "Anbieter",
   "aiProviderKeys.keyless": "Kein Schlüssel nötig",
   "aiProviderKeys.field": "API-Schlüssel",
   "aiProviderKeys.save": "Schlüssel speichern",
@@ -8766,7 +8789,7 @@ export const de = {
   "aiProviderKeys.remove": "Entfernen",
   "aiRouting.withheld":
     "Nur Admins und Operations mit der Berechtigung zum Ändern von Modellzuordnungen sehen, welche Modelle diese Installation verwendet.",
-  "aiRouting.title": "Modell-Routing",
+  "aiRouting.title": "Modellstufen",
   "aiRouting.sheetAsOf":
     "Die Modelllisten stammen aus der Preisliste mit Stand {date}. Jede neuere Modell-ID, die der Anbieter bereitstellt, funktioniert ebenfalls, wenn du sie direkt eingibst.",
   "aiRouting.sheetUnknown":
@@ -8775,15 +8798,8 @@ export const de = {
   "aiRouting.unboundUnkeyed":
     "Es sind keine Modelle zugeordnet, daher sind die KI-Funktionen aus. Füge unten einen Anbieterschlüssel hinzu und ordne dann hier die Modellstufen zu. Eine Installation kann ihre erste Zuordnung auch unter seeds.ai_routing in margince.yaml festlegen; diese wird einmalig gelesen, wenn das Unternehmen angelegt wird.",
   "aiRouting.unboundKeyed":
-    "Es sind keine Modelle zugeordnet, daher sind die KI-Funktionen aus. Beginne mit den Standardwerten eines Anbieters, passe sie bei Bedarf an und speichere.",
+    "Es sind keine Modelle zugeordnet, daher sind die KI-Funktionen aus. Beginne mit den Standardwerten eines Anbieters; jede Stufe kannst du danach ändern.",
   "aiRouting.unboundStart": "Mit {provider} beginnen",
-  "aiRouting.profile.card": "Installationsprofil",
-  "aiRouting.profile.label": "Standort",
-  "aiRouting.profile.help":
-    "Wo die Inferenz läuft. Souverän bedeutet kein Datenabfluss: nur Modelle auf deinen eigenen Hosts; andere werden beim Speichern abgelehnt.",
-  "aiRouting.profile.eu_hosted": "In der EU gehostet",
-  "aiRouting.profile.sovereign": "Souverän (kein Datenabfluss)",
-  "aiRouting.profile.cloud_frontier": "Cloud-Frontier",
   "aiRouting.dimensions.label": "Vektorbreite",
   "aiRouting.dimensions.help":
     "Leer lassen für den Standardwert des Anbieters. Werte außerhalb von 1 bis 2.000 werden abgelehnt.",
@@ -8811,13 +8827,55 @@ export const de = {
   "aiRouting.model.label": "Modell",
   "aiRouting.model.help":
     "Aufgeführt sind die Modelle, für die diese Installation Preise kennt, pro Million Tokens, Eingabe → Ausgabe. Jede andere Modell-ID, die der Anbieter bereitstellt, funktioniert ebenfalls, wenn du sie direkt eingibst.",
-  "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Zuordnung wird gespeichert…",
-  "aiRouting.savedTitle": "Routing gespeichert",
-  "aiRouting.saved": "Alle Prozesse verwenden es jetzt.",
   "aiRouting.saveFailed": "Routing nicht gespeichert",
   "aiRouting.adminOnly":
     "Zum Ändern des Modell-Routings sind die Berechtigungen zum Aktualisieren des Routings und zum Lesen des Kontingents nötig.",
+  "aiProviderKeys.test": "Testen",
+  "aiProviderKeys.testing": "Schlüssel wird getestet …",
+  "aiProviderKeys.connected": "Verbunden",
+  "aiProviderKeys.accepted": "Der Anbieter hat den Schlüssel akzeptiert.",
+  "aiProviderKeys.answered": "Der Server hat geantwortet.",
+  "aiProviderKeys.unconfirmed":
+    "Der Server hat geantwortet und den Schlüssel nicht abgelehnt. Er kann nicht bestätigen, dass der Schlüssel gültig ist; ein falscher Schlüssel zeigt sich bei der ersten Entscheidung.",
+  "aiProviderKeys.testFailed": "Test fehlgeschlagen",
+  "aiProviderKeys.modelCount_one": "{count} Modell verfügbar",
+  "aiProviderKeys.modelCount_other": "{count} Modelle verfügbar",
+  "aiProviderKeys.reason.authFailed":
+    "Der Anbieter hat diesen Schlüssel abgelehnt. Prüfe ihn und ersetze ihn.",
+  "aiProviderKeys.reason.rateLimited":
+    "Der Anbieter drosselt diesen Schlüssel. Er kann trotzdem gültig sein; versuche es später erneut.",
+  "aiProviderKeys.reason.noKey":
+    "Für diesen Anbieter ist kein Schlüssel gespeichert.",
+  "aiProviderKeys.reason.noEndpoint":
+    "Noch keine Stufe nutzt diesen Anbieter, daher gibt es keinen Host zum Testen. Ordne ihm zuerst eine Stufe zu.",
+  "aiProviderKeys.reason.profileForbids":
+    "Dieses Installationsprofil erlaubt keinen Zugriff auf diesen Anbieter.",
+  "aiProviderKeys.reason.notPublished":
+    "Diese Version kann diesen Anbieter nicht testen.",
+  "aiProviderKeys.reason.unreachable":
+    "Der Anbieter hat nicht geantwortet. Prüfe den Host und das Netzwerk.",
+  "aiRouting.intro":
+    "Wähle Anbieter und Modell für jede Stufe, für Embeddings und optional für das Entscheidungsmodell. Gespeicherte Zuordnungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
+  "aiRouting.profileLine":
+    "Installationsprofil: {profile}. Es begrenzt, welche Anbieter eine Stufe nutzen kann, und wird vom Betrieb festgelegt.",
+  "aiRouting.edit": "Bearbeiten",
+  "aiRouting.editTitle": "Zuordnung {lane} bearbeiten",
+  "aiRouting.saveBinding": "Zuordnung speichern",
+  "aiRouting.keyMissing": "Anbieterschlüssel fehlt",
+  "aiRouting.keyMissingHelp":
+    "{provider} hat keinen Schlüssel. Füge unter Anbieter einen hinzu, bevor du ihm ein Modell zuordnest.",
+  "aiRouting.conflictHelp":
+    "Während du bearbeitet hast, wurde hier eine andere Zuordnung gespeichert. Deine Änderung steht noch im Formular: Speichere erneut, um sie zu ersetzen, oder brich ab, um sie zu behalten.",
+  "aiRouting.notListed":
+    "Nicht in der veröffentlichten Modellliste von {provider}. Du kannst die ID trotzdem speichern, wenn der Anbieter sie bedient.",
+  "aiRouting.median": "Median {ms} ms",
+  "aiRouting.untracked": "Der Aufrufzustand wird nur für Stufen erfasst.",
+  "aiRouting.taskCount_one": "{count} Aufgabe",
+  "aiRouting.taskCount_other": "{count} Aufgaben",
+  "aiTasks.title": "KI-Aufgaben",
+  "aiTasks.intro":
+    "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile beginnt mit dem Modell, auf dem sie gerade läuft.",
   "workingHours.title": "Buchbare Zeiten",
   "workingHours.sub":
     "Persönliche Einstellung. Nur du legst deine Zeiten fest.",

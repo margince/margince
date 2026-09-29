@@ -1332,6 +1332,22 @@ kinds:
       workspace.
 
 
+  deal_scout:
+    role: worker
+    fleet: true
+    go_type: DealScoutArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Hourly, like signal_scan, whose signals are half of what it reads: a
+      proposal sent this morning should be a suggestion by lunch, not
+      tomorrow. The pass is a few indexed reads and at most two hundred
+      writes per workspace and calls no model, so five minutes is a ceiling
+      it does not approach.
+
+
   site_deep_read:
     role: worker
     go_type: SiteDeepReadArgs

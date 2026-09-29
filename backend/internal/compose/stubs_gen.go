@@ -215,6 +215,10 @@ func (stubs) SetAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, prov
 	httperr.NotImplemented(w, r, "SetAiProviderKey")
 }
 
+func (stubs) TestAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "TestAiProviderKey")
+}
+
 func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiRouting")
 }
@@ -1325,6 +1329,18 @@ func (stubs) ReplyDealRoomThread(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) ResolveDealRoomThread(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, threadId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ResolveDealRoomThread")
+}
+
+func (stubs) ListDealSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealSuggestionsParams) {
+	httperr.NotImplemented(w, r, "ListDealSuggestions")
+}
+
+func (stubs) AcceptDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AcceptDealSuggestionParams) {
+	httperr.NotImplemented(w, r, "AcceptDealSuggestion")
+}
+
+func (stubs) DismissDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.DismissDealSuggestionParams) {
+	httperr.NotImplemented(w, r, "DismissDealSuggestion")
 }
 
 func (stubs) ListDeals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealsParams) {

@@ -460,5 +460,13 @@ const (
 	// ADR-0061), so narrowing the pass to one seat's rows would leave a
 	// resurrected subject standing everywhere that seat cannot reach. The
 	// reference never leaves: the ids go straight into EraseContact.
-	modulesTierUnscopedCeiling = 106
+	//
+	// 107: activities.HeldMeetingCounterparties is the held-meeting walk Deal
+	// Scout reads, the participant twin of CompanyReachSet above it in the same
+	// census and unscoped for the same reason: it is a derived-table body a
+	// system-principal producer composes, with no seat to narrow to. The
+	// company it names goes to deals.RecordSuggestionTx, and a rep sees the
+	// suggestion only through deals' visibility clause, which applies the
+	// company's row scope and every evidence item's content gate.
+	modulesTierUnscopedCeiling = 107
 )

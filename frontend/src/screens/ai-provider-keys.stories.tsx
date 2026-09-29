@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -35,6 +36,8 @@ function story(
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
       "GET /ai/provider-keys": () => jsonResponse({ providers }),
+      "POST /ai/provider-keys/gemini/test": () =>
+        jsonResponse({ provider: "gemini", ok: true, model_count: 42 }),
     });
     return (
       <StoryProviders>
@@ -119,4 +122,16 @@ export const Withheld: Story = {
 export const MixedDark: Story = {
   globals: { theme: "dark" },
   render: story([gemini, anthropic]),
+};
+
+// A key tested against its vendor: the answer lands on the row it was asked
+// for, as a count on a pass and as the named reason on a failure.
+export const Tested: Story = {
+  render: story([gemini, anthropic]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /^test$/i }),
+    );
+  },
 };

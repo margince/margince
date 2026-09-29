@@ -221,8 +221,6 @@ export const en = {
     "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
   "aiAdmin.save": "Save allowance",
   "aiAdmin.cancel": "Cancel",
-  "aiAdmin.prospective":
-    "Model selected by current policy. Actual calls can use a fallback or fail. It does not show provider status or which model was actually used.",
   "aiAdmin.calls": "Inspect actual model calls",
   "aiAdmin.website": "Website reads",
   "aiAdmin.scans": "Company scans",
@@ -242,7 +240,6 @@ export const en = {
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.cloud": "Cloud provider",
   "aiAdmin.endpoint": "Configured endpoint; location not verified",
-  "aiAdmin.editBinding": "Edit shared binding",
   "aiAdmin.decisionFirst":
     "Decision model first ({provider} · {model} · {processing}) → then {ladder}",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
@@ -251,8 +248,6 @@ export const en = {
   "aiAdmin.decisionSkip.local_only":
     "Decision model not used: this activity takes only a local decision provider.",
   "aiAdmin.effect": "Effect",
-  "aiAdmin.advanced": "Advanced: shared model bindings",
-  "aiAdmin.unused": "Not used by current shipped activities: {tiers}",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -317,6 +312,39 @@ export const en = {
   "brief.coverage.source.conversation_claim": "Customer commitments",
   "brief.coverage.source.brief_item": "Deal updates",
   "brief.coverage.source.dedupe_candidate": "Duplicate candidates",
+  "brief.coverage.source.deal_suggestion": "Suggested deals",
+  "worklist.untitled.deal_suggestion": "A deal the evidence suggests",
+  "dealSuggestion.agent": "Deal Scout",
+  "dealSuggestion.name": "{company}: {hint}",
+  "dealSuggestion.hint.proposal_sent": "proposal sent",
+  "dealSuggestion.hint.opportunity_signalled": "buying signals",
+  "dealSuggestion.hint.meeting_held": "meeting held",
+  "dealSuggestion.companyTitle": "Suggested deal",
+  "dealSuggestion.open": "Open this deal",
+  "dealSuggestion.dismiss": "Not a deal",
+  "dealSuggestion.dismissed":
+    "Dismissed for everyone. It comes back only if newer evidence turns up.",
+  "dealSuggestion.decided":
+    "Someone already decided this suggestion. Reload to see where it stands.",
+  "dealSuggestion.unavailable":
+    "The suggestion could not be read. Try again later.",
+  "dealSuggestion.failed": "That did not go through. Try again.",
+  "dealSuggestion.evidence.meeting": "Meeting held: {title}",
+  "dealSuggestion.evidence.signal": "Signal: {title}",
+  "dealSuggestion.evidence.attachment": "Sent: {title}",
+  "dealSuggestion.acceptTitle": "Open a deal with {company}",
+  "dealSuggestion.field.name": "Deal name",
+  "dealSuggestion.field.amount": "Amount",
+  "dealSuggestion.field.currency": "Currency",
+  "dealSuggestion.field.stage": "Stage",
+  "dealSuggestion.field.owner": "Owner",
+  "dealSuggestion.ownerMe": "Me",
+  "dealSuggestion.field.closeDate": "Expected close",
+  "dealSuggestion.closeDateHint": "Leave it empty if nobody has said when.",
+  "dealSuggestion.confirm": "Open deal",
+  "dealSuggestion.accepted": "Deal opened: {name}.",
+  "dealSuggestion.acceptedUnlinked":
+    "Deal opened: {name}. Some evidence remains in place because permissions do not allow it to be moved.",
   "brief.team.commitmentRate":
     "{done} of {total} due commitments were completed.",
   "brief.team.meetingRate":
@@ -6081,7 +6109,7 @@ export const en = {
   "overnightGrant.writeFailedTitle": "Change was not saved",
   "overnightGrant.renewScope":
     "Margince has gained capabilities since you agreed. Turn this off and on again to extend it. Until then, your Morning brief is not prepared.",
-  "aiHealth.title": "Model tiers",
+  "aiHealth.title": "Tier call health",
   "aiHealth.sub":
     "Whether each model tier responds. A stopped tier and a cautious tier look the same elsewhere; captured mail stays held in both cases.",
   "aiHealth.noCalls": "No model calls in the last {hours}h.",
@@ -8876,16 +8904,11 @@ export const en = {
   "aiRouting.decisions.preset.openrouterKey":
     "Fills in OpenRouter’s endpoint and model. JEV_COMPATIBLE_API_KEY takes your OpenRouter key.",
   "aiRouting.decisions.absent": "No decision model. Every task uses the tiers.",
-  "aiRouting.lanes.title": "Routing tiers",
   "aiRouting.priceSheet": "Price sheet",
   "aiRouting.provider.label": "Provider",
-  "aiRouting.change": "Change",
-  "aiRouting.done": "Done",
   "aiRouting.noKey": "No key",
   "aiRouting.unpriced": "Unpriced",
-  "aiRouting.effect":
-    "Saved bindings reach every process within a minute, without a restart.",
-  "aiProviderKeys.title": "Model provider keys",
+  "aiProviderKeys.title": "Providers",
   "aiProviderKeys.keyless": "No key needed",
   "aiProviderKeys.field": "API key",
   "aiProviderKeys.save": "Save key",
@@ -8911,7 +8934,7 @@ export const en = {
   "aiProviderKeys.remove": "Remove",
   "aiRouting.withheld":
     "Only an administrator or operations user who can change model bindings can see which models this installation uses.",
-  "aiRouting.title": "Model routing",
+  "aiRouting.title": "Model tiers",
   "aiRouting.sheetAsOf":
     "Model lists come from the price sheet as of {date}. Any newer model ID the provider serves also works; type it.",
   "aiRouting.sheetUnknown":
@@ -8920,15 +8943,8 @@ export const en = {
   "aiRouting.unboundUnkeyed":
     "No models are bound, so AI features are off. Add a provider key below, then bind the tiers here. An installation can also set its first binding under seeds.ai_routing in margince.yaml, read once when the company is created.",
   "aiRouting.unboundKeyed":
-    "No models are bound, so AI features are off. Start from a provider’s defaults, adjust as needed and save.",
+    "No models are bound, so AI features are off. Start from a provider’s defaults; you can change any tier afterwards.",
   "aiRouting.unboundStart": "Start from {provider}",
-  "aiRouting.profile.card": "Installation profile",
-  "aiRouting.profile.label": "Location",
-  "aiRouting.profile.help":
-    "Where inference runs. Sovereign means no egress: only models on your own hosts; others are refused when saving.",
-  "aiRouting.profile.eu_hosted": "EU-hosted",
-  "aiRouting.profile.sovereign": "Sovereign (no egress)",
-  "aiRouting.profile.cloud_frontier": "Cloud frontier",
   "aiRouting.dimensions.label": "Vector width",
   "aiRouting.dimensions.help":
     "Leave blank for the provider default. Values outside 1 to 2000 are refused.",
@@ -8956,13 +8972,53 @@ export const en = {
   "aiRouting.model.label": "Model",
   "aiRouting.model.help":
     "Listed models are the ones this installation can price, per 1M tokens in → out. Any other model ID the provider serves also works; type it.",
-  "aiRouting.save": "Save routing",
   "aiRouting.saving": "Saving binding…",
-  "aiRouting.savedTitle": "Routing saved",
-  "aiRouting.saved": "All processes now use it.",
   "aiRouting.saveFailed": "Routing not saved",
   "aiRouting.adminOnly":
     "Changing model routing requires routing-update and allowance-read permission.",
+  "aiProviderKeys.test": "Test",
+  "aiProviderKeys.testing": "Testing key…",
+  "aiProviderKeys.connected": "Connected",
+  "aiProviderKeys.accepted": "The provider accepted the key.",
+  "aiProviderKeys.answered": "The server answered.",
+  "aiProviderKeys.unconfirmed":
+    "The server answered and did not refuse the key. It cannot confirm the key is valid; a wrong key would show at the first decision.",
+  "aiProviderKeys.testFailed": "Test failed",
+  "aiProviderKeys.modelCount_one": "{count} model available",
+  "aiProviderKeys.modelCount_other": "{count} models available",
+  "aiProviderKeys.reason.authFailed":
+    "The provider refused this key. Check it, then replace it.",
+  "aiProviderKeys.reason.rateLimited":
+    "The provider is rate-limiting this key. It may still be valid; try again later.",
+  "aiProviderKeys.reason.noKey": "No key is stored for this provider.",
+  "aiProviderKeys.reason.noEndpoint":
+    "No tier uses this provider yet, so there is no host to test. Bind a tier to it first.",
+  "aiProviderKeys.reason.profileForbids":
+    "This installation profile does not allow access to this provider.",
+  "aiProviderKeys.reason.notPublished": "This build cannot test this provider.",
+  "aiProviderKeys.reason.unreachable":
+    "The provider did not respond. Check the host and the network.",
+  "aiRouting.intro":
+    "Pick a provider and model for each tier, for embeddings and, optionally, for the decision model. Saved bindings reach every process within a minute, without a restart.",
+  "aiRouting.profileLine":
+    "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
+  "aiRouting.edit": "Edit",
+  "aiRouting.editTitle": "Edit {lane} binding",
+  "aiRouting.saveBinding": "Save binding",
+  "aiRouting.keyMissing": "Provider key missing",
+  "aiRouting.keyMissingHelp":
+    "{provider} has no key. Add one under Providers before binding a model to it.",
+  "aiRouting.conflictHelp":
+    "Someone saved a different binding here while you were editing. Your edit is still in the form: save again to replace theirs, or cancel to keep it.",
+  "aiRouting.notListed":
+    "Not in {provider}’s published model list. You can still save it if the provider serves this ID.",
+  "aiRouting.median": "Median {ms} ms",
+  "aiRouting.untracked": "Call health is tracked for tiers only.",
+  "aiRouting.taskCount_one": "{count} task",
+  "aiRouting.taskCount_other": "{count} tasks",
+  "aiTasks.title": "AI tasks",
+  "aiTasks.intro":
+    "Read-only: each task’s tier is fixed by contract. Each row leads with the model it runs on now.",
   "workingHours.title": "Bookable hours",
   "workingHours.sub": "Personal setting. Only you set your hours.",
   "workingHours.unsetTitle": "Not set yet",

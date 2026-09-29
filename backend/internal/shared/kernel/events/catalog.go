@@ -278,6 +278,13 @@ var catalog = map[string]struct {
 	// Product telemetry: the morning Brief was read. Internal only — nothing
 	// subscribes to it, and api/internal-events.yaml says why that file exists.
 	"brief.opened": {briefStreamEntity, 1},
+
+	// Deal Scout's suggestions and the decisions on them. Internal only, and
+	// entity-less for the reason api/internal-events.yaml gives.
+	"deal_suggestion.created":    {dealStreamEntity, 1},
+	"deal_suggestion.accepted":   {dealStreamEntity, 1},
+	"deal_suggestion.dismissed":  {dealStreamEntity, 1},
+	"deal_suggestion.superseded": {dealStreamEntity, 1},
 }
 
 // IsPipelineEvent reports whether an event type is an entity-less

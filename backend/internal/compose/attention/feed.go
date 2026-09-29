@@ -85,9 +85,11 @@ type Clock func() time.Time
 type Service struct {
 	approvals  Approvals
 	duplicates Duplicates
-	tasks      Tasks
-	receipts   Receipts
-	briefing   Briefing
+	// suggestions is OPTIONAL: an unbound feed shows none (suggestionlane.go).
+	suggestions DealSuggestions
+	tasks       Tasks
+	receipts    Receipts
+	briefing    Briefing
 	// commitments is OPTIONAL: nil means this feed serves no commitments lane,
 	// and Assemble then leaves the field unset rather than sending an empty
 	// array. The contract makes the lane optional for exactly that reason.
@@ -339,6 +341,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 			open := count.duplicates
 			out.Counts.DuplicatesOpen = &open
 		}
+		out.Counts.DealSuggestionsOpen = count.suggestions
 	})
 	if err != nil {
 		return crmcontracts.Attention{}, theNight{}, err
@@ -383,13 +386,16 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, theN
 type laneCount struct {
 	items      int
 	duplicates int
+	// suggestions is nil when the reader may not read suggestions at all.
+	suggestions *int
 }
 
-// decisions is the needs_you lane: staged approvals and open duplicate pairs,
-// the two things on this surface a contact alone may answer.
+// decisions is the needs_you lane: staged approvals, open duplicate pairs and
+// Deal Scout's suggestions, the things on this surface a contact alone may
+// answer.
 //
-// Both producers are read to the full page depth and then INTERLEAVED, so one
-// of them cannot bury the other. Reading each to depth and concatenating looks
+// Every producer is read to the full page depth and then INTERLEAVED, so one
+// of them cannot bury the others. Reading each to depth and concatenating looks
 // equivalent and is not: with eleven open pairs and a page of ten, every slot
 // went to duplicates and seventy-nine staged approvals were unreachable from
 // the surface that exists to reach them.
@@ -452,28 +458,15 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	return interleave(duplicates, approvals, depth),
-		laneCount{items: openPairs + openStaged, duplicates: openPairs},
-		nil
-}
-
-// interleave takes from `first` then `second` in turn, up to `limit`, and drains
-// whichever still has items once the other runs dry.
-//
-// The alternation is what keeps a lane honest when one producer floods: a
-// morning's import can raise a hundred duplicate pairs, and the reader still
-// meets their staged decisions on the first screen.
-func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcontracts.AttentionItem {
-	out := make([]crmcontracts.AttentionItem, 0, limit)
-	for i := 0; len(out) < limit && (i < len(first) || i < len(second)); i++ {
-		if i < len(first) {
-			out = append(out, first[i])
-		}
-		if len(out) < limit && i < len(second) {
-			out = append(out, second[i])
-		}
+	suggestions, openSuggested, err := s.openSuggestionItems(ctx, depth)
+	if err != nil {
+		return nil, laneCount{}, err
 	}
-	return out
+	count := laneCount{items: openPairs + openStaged, duplicates: openPairs, suggestions: openSuggested}
+	if openSuggested != nil {
+		count.items += *openSuggested
+	}
+	return interleave(depth, duplicates, approvals, suggestions), count, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

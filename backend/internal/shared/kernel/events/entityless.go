@@ -44,4 +44,10 @@ var pipelineEventTypes = map[string]struct{}{
 	// Allowance policy belongs to installation settings, not a readable domain
 	// record. Only the internal recovery consumer needs its revision notice.
 	"ai_budget.updated": {},
+	// A suggestion is visible only to a reader who may see all of its
+	// evidence, which no subscriber can be held to; the audit row carries it.
+	"deal_suggestion.created":    {},
+	"deal_suggestion.accepted":   {},
+	"deal_suggestion.dismissed":  {},
+	"deal_suggestion.superseded": {},
 }

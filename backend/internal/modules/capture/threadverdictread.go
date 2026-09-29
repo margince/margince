@@ -65,7 +65,7 @@ func ThreadHoldsItsCounterparty(ctx context.Context, tx pgx.Tx, activityID ids.U
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
-		   WHERE a.id = $1 AND `+counterpartyHeldOn("a")+`)`,
+		   WHERE a.id = $1 AND `+CounterpartyHeldOn("a")+`)`,
 		activityID).Scan(&held)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return false, fmt.Errorf("capture: reading whether the thread is held: %w", err)
@@ -73,10 +73,11 @@ func ThreadHoldsItsCounterparty(ctx context.Context, tx pgx.Tx, activityID ids.U
 	return held, nil
 }
 
-// counterpartyHeldOn is the hold ThreadHoldsItsCounterparty describes, as a
-// condition on the activity alias given. The reply evidence asks the same
-// question of a different message, so it takes this rather than a second copy.
-func counterpartyHeldOn(alias string) string {
+// CounterpartyHeldOn is the hold ThreadHoldsItsCounterparty describes, as a
+// condition on the activity alias given. The reply evidence and Deal Scout's
+// evidence ask the same question of other messages, so they take this rather
+// than a second copy.
+func CounterpartyHeldOn(alias string) string {
 	return fmt.Sprintf(`(%[1]s.restricted_at IS NOT NULL
 		OR (%[1]s.audience <> 'workspace' AND %[1]s.audience_reason IN (
 		      'workspace_floor', 'counterparty', 'explicitly_confidential', 'inherited_verdict'))
