@@ -110,12 +110,40 @@ describe("useMemberName", () => {
     expect(result.current.isError).toBe(false);
   });
 
-  it("asks nothing when there is no id to name", () => {
-    const fetchMock = vi.fn();
+  it("asks nothing for a null id, and still names the real one beside it", async () => {
+    const fetchMock = vi.fn(async (request: Request) => {
+      const asked = new URL(request.url).searchParams.getAll("id");
+      expect(asked).toEqual(["u-1"]);
+      return jsonResponse({
+        data: [{ id: "u-1", display_name: "Ada Lovelace" }],
+      });
+    });
     vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
 
-    renderHook(() => useMemberName(null), { wrapper });
+    const { result } = renderHook(
+      () => [useMemberName(null), useMemberName("u-1")],
+      { wrapper },
+    );
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current[1].data).toBe("Ada Lovelace"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a new window once the previous one has closed", async () => {
+    const fetchMock = vi.fn(async (request: Request) => {
+      const asked = new URL(request.url).searchParams.getAll("id");
+      return jsonResponse({
+        data: asked.map((id) => ({ id, display_name: `Name ${id}` })),
+      });
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+
+    const first = renderHook(() => useMemberName("u-1"), { wrapper });
+    await waitFor(() => expect(first.result.current.data).toBe("Name u-1"));
+
+    const second = renderHook(() => useMemberName("u-2"), { wrapper });
+    await waitFor(() => expect(second.result.current.data).toBe("Name u-2"));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

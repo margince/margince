@@ -5,12 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { throwProblem } from "./common";
 
-// Naming a colleague by id.
-//
-// The roster walk names colleagues only as a side effect of listing them, which
-// is why it had to carry invited seats and why its page budget became a naming
-// question. This asks the server the naming question directly, so the walk is
-// once again only about who can be OFFERED work.
+// Names a colleague by id, batching every id asked for within one tick into
+// a single `GET /users/names` request rather than one request per reference.
 
 /** The most seats one request names — the contract's own `id` bound. */
 const SEAT_NAME_BATCH = 100;
@@ -32,6 +28,10 @@ export function useMemberName(id: string | null | undefined) {
     // A colleague's name changes far more rarely than the screens that draw it
     // re-render, so a name already read is not asked for again.
     staleTime: 60_000,
+    // The app default retries a server fault, but each retryer opens its own
+    // window after this batch's has already closed, turning one failed batch
+    // into up to N single-id requests. Re-asked on the next invalidation.
+    retry: false,
   });
 }
 
