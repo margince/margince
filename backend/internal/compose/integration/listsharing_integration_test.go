@@ -189,6 +189,9 @@ func TestALiveListExportHoldsOnlyTheRowsItsReaderMaySee(t *testing.T) {
 			t.Errorf("%s counts %d members (%v), want %d", who, count, err, tc.want)
 		}
 	}
+	if _, err := store.ExplainMember(rep3, list.ID, private); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("another team asked why a hidden record matches and was answered %v, want not found", err)
+	}
 	deps, err := store.Dependencies(rep1, list.ID)
 	if err != nil || len(deps) != 2 || deps[0].Kind != "export" {
 		t.Fatalf("the list names %+v (%v) as its uses, want the two exports", deps, err)
