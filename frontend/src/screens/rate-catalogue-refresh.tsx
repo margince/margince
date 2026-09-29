@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { throwProblem } from "./common";
@@ -84,7 +85,11 @@ export function RefreshSummary({
   const { locale } = useLocale();
   const plural = usePlural();
   if (refresh.error) {
-    return <ErrorLine error={refresh.error} />;
+    return (
+      <PanelBody>
+        <ErrorLine error={refresh.error} />
+      </PanelBody>
+    );
   }
   if (!refresh.data) {
     return null;
@@ -94,14 +99,16 @@ export function RefreshSummary({
     .filter((p) => p.outcome === "unreachable")
     .map((p) => p.provider);
   return (
-    <p className="t-caption" role="status">
-      {plural("aiRates.refresh.updatedCount", updated, {
-        count: formatNumber(updated, locale),
-      })}
-      {unreachable.length > 0
-        ? ` · ${t("aiRates.refresh.outcome.unreachable")}: ${unreachable.join(", ")}`
-        : ""}
-    </p>
+    <PanelBody>
+      <p className="t-caption" role="status">
+        {plural("aiRates.refresh.updatedCount", updated, {
+          count: formatNumber(updated, locale),
+        })}
+        {unreachable.length > 0
+          ? ` · ${t("aiRates.refresh.outcome.unreachable")}: ${unreachable.join(", ")}`
+          : ""}
+      </p>
+    </PanelBody>
   );
 }
 

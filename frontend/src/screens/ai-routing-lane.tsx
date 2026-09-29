@@ -98,7 +98,11 @@ export function TiersTable({
       rung: health?.rungs.find(
         (r) => r.tier === (RUNG_OF[lane.name] ?? lane.name),
       ),
-      tasks: features?.filter((f) => f.leading_tier === lane.name).length,
+      tasks: features?.filter((f) =>
+        lane.name === DECISIONS
+          ? f.decision_first
+          : f.leading_tier === lane.name,
+      ).length,
     })),
     ...(health?.rungs ?? [])
       .filter((r) => !known.has(r.tier))
