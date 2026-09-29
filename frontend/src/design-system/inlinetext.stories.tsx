@@ -40,7 +40,7 @@ function Example({ multiline = false }: { multiline?: boolean }) {
 export const FractionalNumber: Story = { render: () => <Example /> };
 export const Paragraph: Story = { render: () => <Example multiline /> };
 
-// A refused save keeps the draft open and says why on the ErrorLine beneath it.
+// A refused save keeps the draft open and says why as the field's error beneath it.
 export const RefusedSave: Story = {
   render: () => (
     <InlineText
@@ -61,8 +61,10 @@ export const RefusedSave: Story = {
     await userEvent.click(await canvas.findByRole("button"));
     const field = await canvas.findByRole("textbox");
     await userEvent.type(field, "s{Enter}");
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+    const refusal = await canvas.findByRole("alert");
+    await expect(refusal).toHaveTextContent(
       "Somebody else changed this record.",
     );
+    await expect(refusal).toHaveClass("field-error");
   },
 };

@@ -835,10 +835,9 @@ function AuthedApp({
   if (me.isError) {
     const kind =
       me.error instanceof AuthProbeError ? me.error.kind : "connection";
-    // The account is authenticated; what it lacks is a password of its own.
-    // Sending it to the login screen would loop, because the credentials are
-    // correct and using them again lands in the same refusal — so the boundary
-    // renders the one thing that can resolve it.
+    // The account is authenticated but lacks a password of its own. The login
+    // screen would loop, since the same correct credentials meet the same
+    // refusal, so the boundary renders the one thing that can resolve it.
     if (kind === "must-change-password") {
       return (
         <RaillessFrame>
@@ -847,9 +846,10 @@ function AuthedApp({
       );
     }
     if (kind !== "unauthorized") {
+      const retry = () => me.refetch({ cancelRefetch: false });
       return (
         <RaillessFrame>
-          <UnavailableOrClaimable kind={kind} onRetry={() => me.refetch()} />
+          <UnavailableOrClaimable kind={kind} onRetry={retry} />
         </RaillessFrame>
       );
     }

@@ -2291,7 +2291,7 @@ paths:
     patch:
       tags: [Integrations]
       operationId: updateIntegrationsSettings
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Update the installation's provider-lookup posture (admin/ops).
       description: |
@@ -2701,7 +2701,7 @@ paths:
     post:
       tags: [Companies]
       operationId: rejectCompany
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: This is not a company — archive it and refuse its domain as one (admin/ops).
       description: |
@@ -2826,7 +2826,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyLogo
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Stream a company's logo image.
       description: |
@@ -2859,7 +2859,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyLogoIcon
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Stream a company's square logo icon.
       description: |
@@ -11813,7 +11813,7 @@ paths:
     post:
       tags: [Companies]
       operationId: uploadAnchorCompanyLogo
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       # A contact choosing their own company's face. The agent path to this field is the
       # website read, which resolves a mark from the site rather than being handed one.
       x-agent-access: human-only
@@ -11864,7 +11864,7 @@ paths:
     delete:
       tags: [Companies]
       operationId: deleteAnchorCompanyLogo
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Take the installation's own company logo off the record.
       description: |
@@ -11892,7 +11892,7 @@ paths:
     post:
       tags: [Companies]
       operationId: uploadAnchorCompanyLogoIcon
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       # The square mark, on the same terms as the wide one. No agent path at all here:
       # the only machine writer of this slot is the cold-start website read, which
       # parks what it resolves on its dossier for a human to confirm.
@@ -11951,7 +11951,7 @@ paths:
     delete:
       tags: [Companies]
       operationId: deleteAnchorCompanyLogoIcon
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Take the installation's own square logo icon off the record.
       description: |
@@ -13854,7 +13854,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getAuthenticationPolicy
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Which sign-in methods this installation offers.
       description: |
@@ -13932,7 +13932,7 @@ paths:
     patch:
       tags: [Identity]
       operationId: updateInstallationSettings
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Update the installation's settings (admin/ops).
       description: |
@@ -13963,7 +13963,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getInstallationSetup
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: What this installation still has to be configured with before it can be used.
       description: |
@@ -14005,7 +14005,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getOauthApp
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Whether this installation has one vendor's OAuth app, and which one.
       description: |
@@ -14050,7 +14050,7 @@ paths:
     put:
       tags: [Identity]
       operationId: setOauthApp
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Store one vendor's OAuth app for this installation (admin/ops).
       description: |
@@ -14104,7 +14104,7 @@ paths:
     delete:
       tags: [Identity]
       operationId: deleteOauthApp
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Remove one vendor's OAuth app (admin/ops).
       description: |
@@ -14142,7 +14142,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getLicenseEntitlement
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: The installation's entitlement and seat usage (admin/ops).
       description: |
@@ -14188,7 +14188,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getSeatUsage
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: How many full seats this installation is using (capacity, not entitlement).
       description: |
@@ -14231,7 +14231,7 @@ paths:
     get:
       tags: [Agents]
       operationId: listMyAgentGrants
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: The calling rep's own standing answers, one per scheduled agent.
       description: |
@@ -14262,7 +14262,7 @@ paths:
     put:
       tags: [Agents]
       operationId: setMyAgentGrant
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: The calling rep answers for one agent — granting or withdrawing.
       description: |
@@ -14322,7 +14322,7 @@ paths:
     patch:
       tags: [Capture]
       operationId: updateCaptureSettings
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Update the workspace's capture settings (admin/ops).
       description: |
@@ -14472,7 +14472,7 @@ paths:
     post:
       tags: [Capture]
       operationId: addConsumerMailDomain
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Add a consumer-mail domain, or carve one out.
       description: |
@@ -14512,7 +14512,7 @@ paths:
     delete:
       tags: [Capture]
       operationId: removeConsumerMailDomain
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Withdraw a consumer-mail list entry (admin/ops).
       description: |
@@ -14564,7 +14564,7 @@ paths:
     put:
       tags: [Capture]
       operationId: setBlockedDomain
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Block a domain, or unblock one (admin/ops).
       description: |
@@ -14605,7 +14605,7 @@ paths:
     post:
       tags: [Capture]
       operationId: reopenWithheldDomain
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Ask about an undecided domain again (admin/ops).
       description: |
@@ -14646,7 +14646,7 @@ paths:
     post:
       tags: [Capture]
       operationId: keepDomainQuestion
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Answer an open domain question by keeping the company.
       description: |
@@ -14685,7 +14685,7 @@ paths:
     post:
       tags: [Capture]
       operationId: discardDomainQuestion
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Answer an open domain question by excluding the domain from your own capture.
       description: |
@@ -17051,7 +17051,7 @@ paths:
     get:
       tags: [Compliance]
       operationId: getRetentionSettings
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: The installation's retention posture (admin/ops).
       description: |
@@ -17077,7 +17077,7 @@ paths:
     patch:
       tags: [Compliance]
       operationId: updateRetentionSettings
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Set the installation's retention posture (admin/ops).
       description: |
@@ -17288,7 +17288,7 @@ paths:
     get:
       tags: [Compliance]
       operationId: listRetentionPolicies
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: List the installation's retention policies (admin/ops).
       description: |
@@ -17318,7 +17318,7 @@ paths:
     post:
       tags: [Compliance]
       operationId: createRetentionPolicy
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Author a retention policy (admin/ops).
       description: |
@@ -17356,7 +17356,7 @@ paths:
     patch:
       tags: [Compliance]
       operationId: updateRetentionPolicy
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Edit a retention policy (admin/ops).
       description: |
@@ -17383,7 +17383,7 @@ paths:
     delete:
       tags: [Compliance]
       operationId: deleteRetentionPolicy
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Delete a retention policy (admin/ops).
       description: |
@@ -20732,7 +20732,7 @@ paths:
     get:
       tags: [Offers]
       operationId: downloadOfferPdf
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Download the offer's most recently rendered PDF.
       description: |
@@ -22479,6 +22479,58 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /notices:
+    get:
+      tags: [Notices]
+      operationId: listNotices
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: The notification centre — every notice addressed to the acting contact, newest first.
+      description: |
+        The acting human's own notifications, newest first, read and unread; another seat's are
+        not an error, they are absent.
+
+        As against the Worklist's notices lane, which is the ATTENTION half: what is still
+        waiting, capped, and gone the moment somebody settles it. A reader who has answered a
+        notice can still need to find it — what that automation told them on Tuesday — and a
+        lane that forgets the instant they click is a lane they learn not to clear. This is
+        where it stays.
+
+        A rep's own stage moves are absent here exactly as they are from the lane: a move
+        somebody made themselves is not news to them, and the centre is not the place those
+        reappear.
+
+        Human-only. An agent carrying its grantor's authority does not read what the product
+        told its grantor.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 50 }
+          description: |
+            How many lines to answer with. Fifty is both the ceiling and the default, because
+            this is a panel somebody opens rather than a record list somebody exports — the
+            shared list cap of 200 sizes the wrong thing here.
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: |
+            Where to continue, from a prior response's root-level `next_cursor`. Omitted starts
+            at the newest, which is what a reader opening the panel wants.
+
+            NOT the shared keyset cursor the CRUD lists use, which is why this endpoint
+            declares its own: there is no `sort` to fingerprint, the order is always newest
+            first, and the token carries only the last line's `(created_at, id)`. Keyset and
+            never an offset — notices arrive while somebody is reading, and an offset page
+            would show them a line twice for every one that landed above it. A token this
+            endpoint did not mint returns `422 code: malformed_cursor`.
+      responses:
+        '200':
+          description: One window of the caller's notifications, with the centre's whole unread count beside it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Notices]
       operationId: raiseNotice
@@ -22544,6 +22596,33 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /notices/read-all:
+    post:
+      tags: [Notices]
+      operationId: markAllNoticesRead
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Settle the acting contact's whole notification centre in one act.
+      description: |
+        One tap for a reader who has fallen behind: every unread notice they hold is marked
+        read, and their centre comes back clear.
+
+        Always the CALLER's own — there is no id by which one contact clears another's, and an
+        agent carrying its grantor's authority does not answer its grantor's notices for them.
+
+        Idempotent, like settling one notice twice: a second tap on a centre already clear moves
+        no row and records no ledger entry for a change nobody made.
+
+        ONE ledger entry, and no per-notice announcement. A seat clearing a month of notices is
+        one act by one contact, and a `notice.read` event per row would put a hundred messages on
+        the bus for a single tap. A subscriber tracking read state therefore re-reads the lane
+        after this rather than hearing about each line.
+      responses:
+        '204':
+          description: Settled. Clearing an already-clear centre is the same success — the goal state holds.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /brief/items/{itemId}/dismiss:
     parameters:
@@ -22700,7 +22779,7 @@ paths:
     get:
       tags: [Attachments]
       operationId: listAttachments
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: List the attachments hung off one entity (cursor-paginated metadata).
       parameters:
@@ -22726,7 +22805,7 @@ paths:
     post:
       tags: [Attachments]
       operationId: uploadAttachment
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Upload a file and attach it to an entity.
       description: |
@@ -23041,7 +23120,7 @@ paths:
     post:
       tags: [Contacts]
       operationId: importLinkedInConnections
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Import your own LinkedIn connections export.
       description: |
@@ -23087,7 +23166,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getMyLinkedInReach
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Which accounts your imported network reaches.
       parameters:
@@ -23117,7 +23196,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getMyLinkedInAccount
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Your own LinkedIn account as this CRM records it.
       description: |
@@ -23140,7 +23219,7 @@ paths:
     put:
       tags: [Contacts]
       operationId: saveMyLinkedInAccount
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Record or correct your own LinkedIn profile.
       description: |
@@ -23169,7 +23248,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getMyEmailSignature
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: The sign-off appended to mail you send.
       description: |
@@ -23190,7 +23269,7 @@ paths:
     put:
       tags: [Contacts]
       operationId: saveMyEmailSignature
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Write or clear your own sign-off.
       description: |
@@ -23218,7 +23297,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getMyBriefDelivery
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: What the product may send you about your day and your week.
       description: |
@@ -23239,7 +23318,7 @@ paths:
     put:
       tags: [Identity]
       operationId: saveMyBriefDelivery
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Choose what the product may send you.
       description: |
@@ -23268,6 +23347,82 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/notification-preferences:
+    get:
+      tags: [Identity]
+      operationId: listNotificationPreferences
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: How you have asked to be reached, one entry per class of notification.
+      description: |
+        Always the CALLER's own. An admin does not read a colleague's notification settings
+        through this API any more than they read their display language.
+
+        One entry per class the product sends — all of them, every time, in the order a settings
+        screen reads them — each carrying the delivery in EFFECT. Choosing per CLASS rather than
+        per kind is the whole shape: a reader who muted "an automation fired" has not muted
+        "somebody is waiting on your approval", and a kind this build learns to raise arrives
+        under the class it belongs to rather than under a setting nobody was ever shown.
+      responses:
+        '200':
+          description: The caller's whole set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPreferenceList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Identity]
+      operationId: saveNotificationPreference
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Choose where one class of notification reaches you.
+      description: |
+        One class per call; the server answers the whole set so a stale render of one row cannot
+        overwrite another.
+
+        Always the caller's own — there is no id by which one member decides another's, and an
+        agent carrying its grantor's authority does not decide how often the product may
+        interrupt its grantor.
+
+        A save that moves nothing writes nothing and publishes nothing, so a settings page that
+        saves on every render does not fill the ledger with changes nobody made. The
+        announcement carries the NAME of the class and never the choice: what somebody decided
+        about their own interruptions is theirs, and a fan-out carrying the value would tell
+        every subscription owner who had switched their mail off.
+
+        `coach` may be routed but not switched `off`, which is a `422`. A coaching notice is a
+        COLLEAGUE's words placed in this seat's queue rather than the product's own
+        housekeeping: dropping them silently would leave the lead who wrote them believing they
+        had been read.
+
+        `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
+        is the one class a producer stages a message for; the others would record a word the
+        product does not keep, and a reader who chose it would stop watching the screen while
+        waiting for mail that was never going to arrive. `digest` is how every other class
+        reaches a mailbox.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [class, delivery]
+              properties:
+                class: { $ref: '#/components/schemas/NotificationClass' }
+                delivery: { $ref: '#/components/schemas/NotificationDelivery' }
+      responses:
+        '200':
+          description: The caller's whole set, as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPreferenceList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/working-hours:
     get:
       tags: [Identity]
@@ -23322,7 +23477,7 @@ paths:
     put:
       tags: [Identity]
       operationId: saveMyLocale
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Choose the language your own interface is in.
       description: |
@@ -23356,7 +23511,7 @@ paths:
     put:
       tags: [Identity]
       operationId: saveMyDisplayName
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Change the name colleagues see you by.
       description: |
@@ -23794,7 +23949,7 @@ paths:
     get:
       tags: [Attachments]
       operationId: downloadAttachment
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Download an attachment's file bytes.
       description: |
@@ -23810,7 +23965,7 @@ paths:
     delete:
       tags: [Attachments]
       operationId: deleteAttachment
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Archive an attachment (soft delete).
       description: |
@@ -23828,7 +23983,7 @@ paths:
     get:
       tags: [Attachments]
       operationId: getAttachmentExtraction
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
       description: |
@@ -23856,7 +24011,7 @@ paths:
     post:
       tags: [Attachments, AI]
       operationId: readAttachmentForFields
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Read this attached document for the deal facts it states — a background reading that ends in staged, evidence-carrying fields.
       description: |
@@ -23899,7 +24054,7 @@ paths:
     post:
       tags: [Attachments]
       operationId: acceptAttachmentExtraction
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
       description: |
@@ -23960,7 +24115,7 @@ paths:
     post:
       tags: [Attachments]
       operationId: requestAttachmentAccess
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Request access to a restricted attachment (audit row only — no notification system).
       description: |
@@ -23979,7 +24134,7 @@ paths:
     post:
       tags: [Import]
       operationId: uploadImportSource
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Upload a file to import, and read back what its columns actually contain.
       description: |
@@ -24192,7 +24347,7 @@ paths:
     post:
       tags: [Import]
       operationId: undoImportRun
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       summary: Reverse a completed CSV import run.
       description: |
@@ -24281,7 +24436,7 @@ paths:
         place, a past date is refused (422). `to` is resolved to the workspace base
         currency server-side; `from == base` is refused. Human session only
         (x-agent-access: human-only) — an agent never sets a rate directly.
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       requestBody:
         required: true
@@ -24334,7 +24489,7 @@ paths:
         stores µUSD integers. Appends one effective-dated price; same UTC day corrects
         in place, a past date is refused (422). Human session only
         (x-agent-access: human-only). Transparency-only: model prices never gate routing.
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       requestBody:
         required: true
@@ -24361,7 +24516,7 @@ paths:
         currencies this workspace already tracks and stages a confirm-first proposal
         per changed rate into the approvals inbox. Returns immediately; review the
         proposals in the inbox. Human session only (x-agent-access: human-only).
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       responses:
         '202':
@@ -24386,7 +24541,7 @@ paths:
         price is not touched. Runs inline and answers with what happened per provider. A provider
         that publishes no price list reports `not_available`: its prices are set by hand.
         Human session only (x-agent-access: human-only).
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       responses:
         '200':
@@ -24408,7 +24563,7 @@ paths:
         for approval. This operation always answers 501 and is kept for one release so a
         client built against it fails loudly instead of on a missing route. Use
         `POST /ai-model-rates/refresh`. Human session only (x-agent-access: human-only).
-      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       responses:
         '202':
@@ -28893,6 +29048,128 @@ components:
           description: The headline the recipient reads, derived from the kind rather than supplied.
         body: { type: string, description: 'The coach''s note. Absent when none was given.' }
         created_at: { type: string, format: date-time }
+    NotificationClass:
+      type: string
+      description: |
+        A class of notification a seat decides delivery about. Closed, and deliberately coarser
+        than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
+        is waiting on your approval", so the choice is made per class and every kind the product
+        raises is placed in one of them.
+      enum: [automation, lead_sla, approval_pending, capture, coach, system]
+    NotificationDelivery:
+      type: string
+      description: |
+        Where a class of notification reaches its reader.
+
+        `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
+        sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
+        the only class with a sending leg, and taking the word for any other would record a
+        choice the product does not keep; the others answer `422 value_not_allowed` and reach a
+        mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+        following morning, and is accepted for every class.
+
+        `off` records the notice and stops there: no lane, no badge, no message. It does NOT
+        discard it — the centre lists it like any other, because a preference governs DELIVERY
+        and never existence, and a class switched off must not silently drop something that
+        changed what the reader believes about their data. Going to look is not being
+        interrupted.
+      enum: [off, in_app, email, digest]
+    NotificationPreference:
+      type: object
+      description: One class's setting for the calling seat, as it stands.
+      required: [class, delivery, chosen]
+      properties:
+        class: { $ref: '#/components/schemas/NotificationClass' }
+        delivery: { $ref: '#/components/schemas/NotificationDelivery' }
+        chosen:
+          type: boolean
+          description: |
+            Whether the seat DECIDED this, or is following the installation's default. False
+            follows, and moves if that default moves; true is a choice that stays. Rendering the
+            two the same would silently re-decide for everybody on the day a default changed.
+    NotificationPreferenceList:
+      type: object
+      description: |
+        The calling seat's whole set — one entry per class the product sends, always all of them,
+        so a screen rendering one row per class never has to take the others from its own memory.
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NotificationPreference' }
+    NotificationItem:
+      type: object
+      description: |
+        One line of the notification centre: a durable notice addressed to the caller, and
+        whether they have already answered it.
+      required: [id, kind, subject, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          description: |
+            What the notice is about. A plain string and NOT `NoticeKind`: that vocabulary is the
+            coaching one, and the kinds a system flow raises — an automation firing, a lead going
+            past its SLA, a capture backlog stalling — are deliberately absent from it. Read
+            `subject` for the headline and `target` for where to go; a client that switches on
+            this breaks the day a flow raises one more.
+        subject:
+          type: string
+          description: The headline the recipient reads, derived from the kind rather than supplied.
+        body: { type: string, description: 'The notice''s own words beneath the headline. Absent when it had none.' }
+        created_at: { type: string, format: date-time }
+        read_at:
+          type: string
+          format: date-time
+          description: |
+            When the reader settled it. ABSENT means unread. The instant rather than a flag,
+            because the centre renders history: "you read this on Tuesday" is what tells a reader
+            they are looking at something they already dealt with, and a flag cannot say when.
+        target:
+          type: object
+          description: |
+            The record the notice is about, when it is about one. Both halves or neither — a type
+            with no id names a KIND of thing and cannot be opened. Absent is the common case: a
+            capture backlog and a colleague's word are about no single record.
+          required: [type, id]
+          properties:
+            type: { type: string, description: "The record's class, as its own endpoint spells it." }
+            id: { type: string, format: uuid }
+        origin: { $ref: '#/components/schemas/NoticeOrigin' }
+    NotificationPage:
+      type: object
+      description: One window of the calling contact's notification centre.
+      required: [items, unread_count]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NotificationItem' }
+          description: |
+            Newest first, read and unread, including the classes this reader set to `off` —
+            those reach no lane and no badge, and this is where they remain findable. Empty is
+            the honest answer for a seat nothing has told anything.
+        next_cursor:
+          type: string
+          description: |
+            Send this back as `cursor` to continue past the last line of this page.
+
+            ABSENT MEANS THERE IS NOTHING FURTHER BACK. It is deliberately not minted on a final
+            page: a cursor there invites one more request that can only answer empty, and a
+            client walking until the cursor disappears would never stop.
+        unread_count:
+          type: integer
+          description: |
+            How many unsettled notices are waiting on the reader — all of them and not this
+            page's share, because a badge that fell as somebody scrolled would be counting the
+            wrong thing.
+
+            IT COUNTS THE LANE AND NOT THE LIST, so it is the narrower of the two. The reader's
+            own stage moves are outside it, as they are outside `items`. A class they set to
+            `off` is outside it too and still listed in `items`: the count is the interruption
+            they declined, and the line is the record they did not. So one page can show more
+            unsettled lines than the count, and the count can exceed what any one page holds:
+            what it never counts is a row `items` would not reach on some page, because a badge
+            numbering rows the panel cannot list is a badge nobody can clear.
     Problem:
       type: object
       description: RFC 7807 problem+json with a stable machine `code` and structured `details`.
@@ -34150,7 +34427,7 @@ components:
           description: The first minute of the working day, `HH:MM` on the contact's own clock.
         end_time:
           type: string
-          pattern: '^([01][0-9]|2[0-3]:[0-5][0-9]|24:00)$'
+          pattern: '^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
           description: |
             The minute the working day ends, exclusive. `24:00` is the honest
             spelling of "until midnight" and is why this is not the same pattern

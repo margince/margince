@@ -7,6 +7,8 @@ import {
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ConnectivityError, writeFailureKey } from "../app/connectivity";
+import { forgetSeat } from "../app/storage";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import type { Provenance, SourceAuthor } from "../design-system/trust";
@@ -96,28 +98,38 @@ export function useMe(enabled = true) {
     // stale, which is exactly the five-minute window this needs to close.
     refetchOnWindowFocus: "always",
     retry: false,
-    queryFn: async () => {
-      const result = await api.GET("/me").catch(() => null);
-      if (!result) {
-        throw new AuthProbeError("connection", "the API could not be reached");
-      }
-      const { data, error, response } = result;
-      if (error) {
-        throw new AuthProbeError(
-          probeKindFor(response.status, codeInProblemBody(error)),
-          problemMessage(error),
-        );
-      }
-      if (!data?.user) {
-        // The contract makes user required on MeResponse — a payload
-        // without it is not a session, whatever the status code said; a
-        // server answering garbage is an availability problem, not a
-        // credentials one.
-        throw new AuthProbeError("connection", "malformed /me response");
-      }
-      return data;
-    },
+    queryFn: readSession,
   });
+}
+
+// The boundary's one reading of /me; the connection screen's check shares it.
+async function readSession() {
+  const result = await api.GET("/me").catch(() => null);
+  if (!result) {
+    throw new AuthProbeError("connection", "the API could not be reached");
+  }
+  const { data, error, response } = result;
+  if (error) {
+    throw new AuthProbeError(
+      probeKindFor(response.status, codeInProblemBody(error)),
+      problemMessage(error),
+    );
+  }
+  if (!data?.user) {
+    // Without the user the contract requires it is no session, whatever the
+    // status said: a server answering garbage is an availability problem.
+    throw new AuthProbeError("connection", "malformed /me response");
+  }
+  return data;
+}
+
+/** True when /me gives the boundary any answer but the connection screen. */
+export function sessionAnswers(): Promise<boolean> {
+  return readSession().then(
+    () => true,
+    (error: unknown) =>
+      error instanceof AuthProbeError && error.kind !== "connection",
+  );
 }
 
 /**
@@ -141,12 +153,6 @@ export function timelineZoneNotice(
   return undefined;
 }
 
-// AS-1: sign out. Clears ALL cached tenant data on success, then forces the
-// ["me"] probe to re-run → 401 → AuthGate renders the login screen.
-//
-// resetToSignedOut drops every cached answer belonging to the session that just
-// ended, and lands the auth boundary on the login screen.
-//
 // ORDER MATTERS, and it is the whole reason this is one function rather than
 // four spellings. queryClient.clear() destroys every Query object in the cache,
 // INCLUDING ["me"]'s. If ["me"] were reset only after a full clear(),
@@ -162,6 +168,8 @@ export function timelineZoneNotice(
 // happen is a cached answer outliving the member it was fetched for — the next
 // contact to sign in inside the cache lifetime would be served it.
 export function resetToSignedOut(queryClient: QueryClient): Promise<void> {
+  // The next member must not inherit what this one stored in the browser.
+  forgetSeat();
   queryClient.removeQueries({
     predicate: (query) => query.queryKey[0] !== "me",
   });
@@ -645,39 +653,28 @@ export function problemCodeOf(error: unknown): string | null {
   return error instanceof ProblemError ? problemCode(error.problem) : null;
 }
 
-// The ONE way a caught failure becomes words on a screen, on the same terms as
-// problemCodeOf: only a ProblemError carries a server problem, and its RFC-7807
-// detail is a cause the server composed for a reader. Everything else — a
-// rejected fetch, a bug in a handler, a thrown string — reports in wording
-// nobody wrote for a user, and often names our own internals, so it never
-// reaches the screen: the reader gets the shared failure line instead.
+// The ONE way a caught failure becomes words: only a ProblemError's detail was
+// written for a reader, so a bug, a thrown string or a bare fetch error cannot.
 //
-// A ProblemError whose body carried no detail or title is in the same
-// position: a 502 from a proxy, or a refusal the server answered with no body
-// at all, is a failure nobody phrased for a reader. It reads as the shared
-// line too rather than as the developer placeholder problemMessage falls back
-// to. A body that DOES carry text always keeps it — the server's own words
-// can never be replaced from here.
+// A problem body with no words in it, a proxy's 502 among them, reads as the
+// shared line too; a body that carries text always keeps its own.
 //
-// A surface with better words for its own failure passes them as `fallback`:
-// the connector card saying it could not read the connectors beats the generic
-// line there. That is catalog copy the caller has already translated, which is
-// the only other thing allowed through here.
+// A caller's `fallback` is its own translated copy and beats the shared line; a
+// write the network refused beats both, as only it knows whether it was sent.
 export function problemMessageOf(
   error: unknown,
   t: (key: MessageKey) => string,
   fallback?: string,
 ): string {
+  const refusedWrite = writeFailureKey(error);
+  if (refusedWrite !== null) return t(refusedWrite);
   const detail =
     error instanceof ProblemError ? problemDetail(error.problem, t) : null;
   return detail ?? fallback ?? t("common.errorNoCause");
 }
 
-// The counterpart of that rule: the ONE place a failure the reader is NOT
-// shown reaches the console, so a production report of generic copy is still
-// diagnosable. A ProblemError is skipped — its detail is already on the screen
-// in the reader's own words, and logging it would report one failure twice
-// while adding nothing.
+// Its counterpart: the ONE place a failure the reader is NOT shown reaches the
+// console. A ProblemError is already on screen, and an outage on its banner.
 //
 // Wired ONCE, as the client's mutation-cache sink (app/queryclient.ts,
 // FE-PARAM-4), never per mutation and never as a render-time call or an effect
@@ -688,7 +685,7 @@ export function problemMessageOf(
 // including the one where the reader leaves mid-flight and the component that
 // would have hosted an effect is already unmounted when the request settles.
 export function logUnexpectedError(error: unknown): void {
-  if (!(error instanceof ProblemError)) {
+  if (!(error instanceof ProblemError || error instanceof ConnectivityError)) {
     console.error(error);
   }
 }

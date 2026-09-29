@@ -125,6 +125,35 @@ export const SavingCorrection: Story = {
   },
 };
 
+/** A refused correction is the field's own error: under the typed value,
+ *  which survives, and wired to it the way every field's error is. */
+export const CorrectionRefused: Story = {
+  render: verdict({
+    [CORRECT]: () =>
+      jsonResponse(
+        { code: "version_skew", title: "Conflict", detail: "version skew" },
+        409,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    await user.click(
+      await canvas.findByRole("button", { name: en["evidence.correct"] }),
+    );
+    const field = await canvas.findByRole("textbox", {
+      name: en["evidence.correctedValue"],
+    });
+    await user.clear(field);
+    await user.type(field, "Automotive tier-one supply");
+    await user.click(canvas.getByRole("button", { name: en["evidence.save"] }));
+    const refusal = await canvas.findByRole("alert");
+    await expect(refusal).toHaveTextContent(en["edit.versionSkew"]);
+    await expect(refusal).toHaveClass("field-error");
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+  },
+};
+
 /** A refused write, and the claim is still there to rule on — nothing was
  *  consumed by the attempt. The server states this one as the bare sentinel
  *  `permission denied`, so the words under the verbs are the catalog's: a

@@ -15,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { readStoredJson, STORAGE_KEYS, writeStored } from "../app/storage";
 import {
   formatNumber,
   identifierNumber,
@@ -310,18 +311,6 @@ function sizeOf(column: {
 }
 
 /**
- * Column widths outlive the visit: a reader who widened a column to fit their
- * data expects it that way tomorrow, not reset by a reload. Stored per table so
- * two lists never inherit each other's layout, and read defensively — a browser
- * with storage denied still gets a working table, just a forgetful one.
- *
- * The key carries the layout's version: widths written when the columns sized
- * themselves to their content mean something else under shares, and reading
- * them back pins every column at a width nobody chose.
- */
-const WIDTHS_PREFIX = "margince.table.widths.v2.";
-
-/**
  * The table's width floor, as the custom property the stylesheet reads.
  *
  * Declared rather than asserted onto `CSSProperties`: React's own type carries
@@ -334,41 +323,40 @@ function floorStyle(floor: number): FloorStyle {
   return { "--lt-floor": `${floor}px` };
 }
 
+// Stored per table, so a column widened for one list's data stays that way
+// tomorrow and never reshapes another list.
 function readWidths(key?: string): Record<string, number> {
   if (!key) {
     return {};
   }
-  try {
-    const raw = localStorage.getItem(WIDTHS_PREFIX + key);
-    if (!raw) {
-      return {};
-    }
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) {
-      return {};
-    }
-    return Object.fromEntries(
-      Object.entries(parsed).filter(
-        (entry): entry is [string, number] =>
-          typeof entry[1] === "number" && Number.isFinite(entry[1]),
-      ),
-    );
-  } catch {
-    // A malformed or unreadable entry is not worth failing a table render for;
-    // the columns fall back to their content widths.
-    return {};
+  return (
+    readStoredJson(
+      { family: STORAGE_KEYS.tableWidths, member: key },
+      widthsIn,
+    ) ?? {}
+  );
+}
+
+function widthsIn(value: unknown): Record<string, number> | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
   }
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, number] =>
+        typeof entry[1] === "number" && Number.isFinite(entry[1]),
+    ),
+  );
 }
 
 function writeWidths(key: string | undefined, widths: Record<string, number>) {
   if (!key) {
     return;
   }
-  try {
-    localStorage.setItem(WIDTHS_PREFIX + key, JSON.stringify(widths));
-  } catch {
-    // Storage full or denied: the widths still apply for this visit.
-  }
+  writeStored(
+    { family: STORAGE_KEYS.tableWidths, member: key },
+    JSON.stringify(widths),
+  );
 }
 
 /** Placeholder rows while the first page loads: enough to read as a list. */

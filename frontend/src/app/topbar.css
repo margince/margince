@@ -250,7 +250,13 @@
    still a mouse — the floor is about what a thumb can hit, not about how much
    room there is. */
 @media (pointer: coarse) {
-  .topbar-search {
+  .topbar-search,
+  /* The trail's triggers by STRUCTURE, not by name: they are icon-sized by
+     default and one of them wears no class at all, so a list here would be a
+     list somebody has to remember to extend. Grandchildren only — an open
+     menu's own rows are not the strip's targets. */
+  .topbar-trail > button,
+  .topbar-trail > * > button {
     min-height: max(var(--controlHeight), 44px);
   }
 }

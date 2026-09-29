@@ -69,7 +69,6 @@ export const de = {
   "scheduling.resume": "Buchungen aktivieren",
   "scheduling.settings": "Termineinstellungen",
   "scheduling.save": "Einstellungen speichern",
-  "scheduling.saved": "Einstellungen gespeichert",
   "settings.tab.meetings": "Termine",
   "settings.page.meetings.sub":
     "Buchbare Zeiten, Kalender und Buchungseinstellungen.",
@@ -129,9 +128,6 @@ export const de = {
   "scheduling.finishSetup":
     "Kalender in den Termineinstellungen einrichten, um freie Zeiten auszuwählen.",
   "scheduling.readOnlyBadge": "Kalender nur lesbar",
-  "scheduling.connect": "Kalender verbinden oder erneut verbinden",
-  "scheduling.connectionHelp":
-    "Zum Senden von Einladungen ist Schreibzugriff nötig. Verbinde einen nur lesbaren Kalender erneut.",
   "scheduling.accountName":
     "Der Name auf deiner Buchungsseite stammt aus den Kontoeinstellungen.",
   "scheduling.linkNotCreated":
@@ -162,12 +158,10 @@ export const de = {
   "scheduling.guestAgenda": "Was möchtest du besprechen?",
   "scheduling.agenda": "Nachricht an deinen Gast",
   "scheduling.chooseTime": "Zeit auswählen",
-  "scheduling.zone": "Zeitzone",
   "scheduling.date": "Startdatum",
   "scheduling.next": "Weitere Zeiten",
   "scheduling.noTimes":
     "In diesem Zeitraum sind keine Termine frei. Wähle ein anderes Datum.",
-  "scheduling.review": "Einladung prüfen",
   "scheduling.pending": "Deine Einladung wird erstellt…",
   "scheduling.confirmed": "Kalendereinladung erstellt",
   "scheduling.needs_attention": "Einladung braucht Aufmerksamkeit",
@@ -182,7 +176,6 @@ export const de = {
     "Diesen Termin absagen und den Gast benachrichtigen?",
   "scheduling.retry": "Einladung erneut versuchen",
   "scheduling.book": "Termin bestätigen",
-  "scheduling.chooseFirst": "Wähle eine Zeit, um fortzufahren",
   "scheduling.unavailable":
     "Diese Buchungsseite ist nicht verfügbar. Kontaktiere deinen Gastgeber.",
   "scheduling.publicUrlMissing":
@@ -469,10 +462,7 @@ export const de = {
   "trust.systemTag": "Systemaufgabe {job}",
   "trust.systemUnnamed": "Systemaufgabe",
   "trust.connectorTag": "Über {connector}",
-  "trust.dismissed": "Vorschlag ausgeblendet",
   "trust.stagedProposal": "Vorgeschlagener Wert",
-  "trust.resolvedValue": "Übernommener Wert",
-  "trust.editValue": "{description} bearbeiten",
   "trust.evidenceFrom": "Beleg aus {source}",
   "trust.evidenceLine_one": "Zeile {lines}",
   "trust.evidenceLine_other": "Zeilen {lines}",
@@ -742,16 +732,6 @@ export const de = {
   "search.partner.open": "Partnerdatensatz öffnen",
   "search.partner.openNamed": "Partnerdatensatz öffnen für {name}",
 
-  "context.recentTouches": "Letzte Aktivitäten",
-  "context.openTasks": "Offene Aufgaben",
-  "context.relatedContacts": "Zugehörige Kontakte",
-  "context.relatedCompanies": "Zugehörige Unternehmen",
-  "context.relatedProjects": "Zugehörige Projekte",
-  "context.whoKnows": "Verbindungen im Team",
-  "context.relatedDeals": "Zugehörige Deals",
-  "context.title": "Zugehörige Datensätze",
-  "context.empty": "Keine zugehörigen Datensätze.",
-
   "palette.aria": "Befehlspalette",
   "palette.placeholder": "Suchen oder Margince fragen",
   "palette.empty": "Keine Treffer.",
@@ -773,7 +753,6 @@ export const de = {
   "explain.mayHaveMoved":
     "Dieser Link hält nicht fest, wann die Zahl berechnet wurde, daher wurden diese Werte jetzt neu berechnet. Hat sich seitdem ein Wechselkurs geändert, weichen sie möglicherweise von der angeklickten Zahl ab.",
   "explain.title": "So setzt sich diese Zahl zusammen",
-  "explain.rate": "Kurs {rate} am {date}",
   "explain.cell": "{figure} erklären",
   "explain.excluded_one":
     "Bei 1 Datensatz ist ein Feld für deine Rolle ausgeblendet, deshalb fehlt er in dieser Zahl und in den Zeilen darunter.",
@@ -1073,6 +1052,24 @@ export const de = {
   // weniger genommen hat — Seite und Navigation stehen noch.
   "card.errorTitle": "Diese Karte funktioniert nicht mehr",
   "card.errorRetry": "Erneut versuchen",
+
+  "offline.title": "Keine Verbindung zu Margince",
+  "offline.body": "Margince lädt wieder, sobald die Verbindung zurück ist.",
+  "offline.retry": "Erneut versuchen",
+
+  "connectivity.offline.title": "Gerät offline",
+  "connectivity.offline.body":
+    "Änderungen lassen sich erst speichern, wenn die Verbindung zurück ist.",
+  "connectivity.unreachable.title": "Margince nicht erreichbar",
+  "connectivity.unreachable.body":
+    "Änderungen lassen sich erst speichern, wenn der Server wieder antwortet.",
+  "connectivity.restored": "Verbindung wiederhergestellt",
+  "connectivity.unsaved.offline":
+    "Dieses Gerät ist offline, daher wurde nichts gespeichert. Versuche es erneut, sobald die Verbindung zurück ist.",
+  "connectivity.uncertain.offline":
+    "Dieses Gerät hat die Verbindung verloren, daher wurde die Änderung vielleicht nicht gespeichert. Prüfe das, sobald die Verbindung zurück ist, bevor du es erneut versuchst.",
+  "connectivity.uncertain.unreachable":
+    "Margince war nicht erreichbar, daher wurde die Änderung vielleicht nicht gespeichert. Prüfe das, sobald der Server wieder antwortet, bevor du es erneut versuchst.",
 
   // Das neunteilige Zustandsvokabular (design-system/surfacestate.tsx):
   // gehört dem ZUSTAND, nicht einer einzelnen Fläche.
@@ -1608,7 +1605,6 @@ export const de = {
   "finance.status.disputed": "Strittig",
   "finance.status.credited": "Gutgeschrieben",
   "finance.status.void": "Storniert",
-  "commercial.closes": "Abschluss {when}",
   "contracts.title": "Vertr\u00e4ge",
   "contracts.empty": "Noch keine Verträge",
   "contracts.noneActive": "Heute ist kein Vertrag aktiv",
@@ -1725,7 +1721,6 @@ export const de = {
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
-  "co.work.noDeals": "Keine offenen Deals.",
   "co.work.closes": "Abschluss {date}",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -1890,7 +1885,6 @@ export const de = {
   "co.ask.nothing":
     "Keiner der Datensätze, auf die du Zugriff hast, beantwortet diese Frage.",
   "co.ask.failed": "Die Frage wurde nicht beantwortet. Versuche es erneut.",
-  "co.suggest.title": "Margince schlägt vor",
   "co.suggest.kind.no_reply": "Keine Antwort",
   "co.suggest.kind.stalled_deal": "Stockender Deal",
   "co.suggest.kind.no_next_step": "Kein nächster Schritt",
@@ -1935,10 +1929,6 @@ export const de = {
   "co.rail.projects.empty": "Noch keine Projekte.",
 
   "co.commercial.title": "Geschäftliches",
-  "co.commercial.lostFigure": "Verlorene Deals",
-  "co.commercial.allDeals": "Alle Deals",
-  "co.commercial.truncated":
-    "Mehr offene Deals, als hier Platz haben. Öffne „Alle Deals“, um den Rest zu sehen.",
   "linkedinImport.title": "LinkedIn-Verbindungen",
   "linkedinImport.sub":
     "Importiere deinen LinkedIn-Export, um zu sehen, wen dein Team bereits kennt.",
@@ -4694,6 +4684,16 @@ export const de = {
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.displayNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
+  "settings.deviceCard": "Dieses Gerät",
+  "settings.installApp": "Margince-App",
+  "settings.installAppHelp":
+    "Margince wird auf diesem Gerät als App mit eigenem Fenster und Symbol installiert.",
+  "settings.installAppManual":
+    "Zum Installieren tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.",
+  "settings.installAppInstalled": "Installiert",
+  "settings.installAppDismissed":
+    "Installiere Margince später über das Menü des Browsers oder das Installationssymbol in seiner Adressleiste.",
+  "settings.installAppAction": "Installieren",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
   "role.manager": "Teamleitung",
@@ -5237,6 +5237,50 @@ export const de = {
     "Diese Pflichten nennen Kontakte und wie sie erhalten wurden. Deshalb sehen sie nur Nutzende mit Zugriff auf Datenschutzanfragen.",
   "notice.dueAt": "Fällig am {date}",
   "notice.overdue": "Überfällig",
+  "notifications.bell": "Meldungen",
+  // Both forms read the same because "offen" is an adjective: German agrees its
+  // verb with the count, so "wartet"/"warten" would need the pair to differ.
+  "notifications.bellWaiting_one": "Meldungen, {count} offen",
+  "notifications.bellWaiting_other": "Meldungen, {count} offen",
+  "notifications.centre": "Meldungen",
+  "notifications.markAllRead": "Alle als gelesen markieren",
+  "notifications.markRead": "Als gelesen markieren",
+  "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
+  "notifications.markReadFailed":
+    "Diese Meldung wurde nicht als gelesen markiert",
+  "notifications.new": "Neu",
+  "notifications.byAgent": "Von einem Agenten",
+  "notifications.empty":
+    "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
+  "notifications.title": "Wie du von welcher Art erfährst",
+  "notifications.sub":
+    "Jede Meldung bleibt in deinem Meldungszentrum, was du hier auch wählst. Dies entscheidet, was außerdem geschieht, wenn eine eintrifft.",
+  "notifications.saveFailed": "Diese Wahl wurde nicht gespeichert",
+  "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
+  "notifications.class.approval_pending.label":
+    "Freigaben, die auf dich warten",
+  "notifications.class.approval_pending.help":
+    "Jemand braucht deine Entscheidung, damit seine Arbeit weitergehen kann.",
+  "notifications.class.automation.label": "Ausgeführte Automatisierungen",
+  "notifications.class.automation.help":
+    "Eine Regel dieses Unternehmens hat ausgelöst oder konnte es nicht.",
+  "notifications.class.lead_sla.label": "Leads über ihrer Frist",
+  "notifications.class.lead_sla.help":
+    "Ein Lead, den niemand innerhalb der im Team vereinbarten Zeit beantwortet hat.",
+  "notifications.class.capture.label": "E-Mail-Erfassung",
+  "notifications.class.capture.help":
+    "Probleme beim Lesen eines deiner Postfächer oder ein Rückstand, der sich nicht mehr bewegt.",
+  "notifications.class.system.label": "Systemmeldungen",
+  "notifications.class.system.help":
+    "Wartung, ein erreichtes Limit und alles andere, was die Installation dir mitteilen muss.",
+  "notifications.class.coach.label":
+    "Hinweis einer Kollegin oder eines Kollegen",
+  "notifications.class.coach.help":
+    "Jemand aus deinem Team weist auf einen Deal, eine Antwort oder einen Rückstand von dir hin. Diese erreichen dich immer auf irgendeinem Weg und lassen sich daher nicht abschalten.",
+  "notifications.delivery.off": "Aus",
+  "notifications.delivery.in_app": "In der App",
+  "notifications.delivery.email": "E-Mail",
+  "notifications.delivery.digest": "Tägliche Zusammenfassung",
   "privacynotice.title": "Was wir über Sie gespeichert haben",
   "privacynotice.intro":
     "Wir teilen Ihnen das mit, weil das Gesetz es verlangt. Sie müssen nicht antworten und nichts tun.",
@@ -5524,47 +5568,8 @@ export const de = {
   "stage.criteria.kindTermsAccepted": "Bedingungen akzeptiert",
   "stage.criteria.kindCustom": "Eigenes",
 
-  "ob.url": "Website",
-  "ob.urlScheme": "https://",
   "ob.back": "Zurück",
   "ob.restoring": "Einrichtung wird wiederhergestellt…",
-  "ob.readManual": "Manuell eingeben",
-  "ob.coreIntroTitle": "Zuerst der Rechtsträger",
-  "ob.coreIntroBody":
-    "Margince braucht den rechtlichen Namen, die Anschrift und die USt-ID oder Registernummer, danach, was das Unternehmen verkauft und an wen.",
-  "ob.coreLegalKicker": "Zuerst die rechtliche Identität",
-  "ob.corePathLabel": "Was Margince lernt",
-  "ob.corePathLegal": "Rechtliche Identität",
-  "ob.corePathOffer": "Angebot",
-  "ob.corePathCustomer": "Kunden",
-  "ob.coreReadingPage": "Wird gelesen",
-  "ob.coreWebsiteTitle": "Welche Website soll Margince lesen?",
-  "ob.coreWebsiteBody":
-    "Zuerst wird das Impressum gelesen, dann Produkte, Kunden und Positionierung.",
-  "ob.corePreparing": "Lesen von {host} wird vorbereitet",
-  "ob.coreLegalReading": "Rechtliche Identität auf {host} wird gelesen",
-  "ob.coreLegalReadingBody":
-    "Gesucht werden Impressum, Anschrift und Registernummer oder USt-ID. Nicht genannte Angaben bleiben leer.",
-  "ob.coreBusinessReading": "Geschäftsmodell wird erfasst",
-  "ob.coreBusinessReadingBody":
-    "Produkte, Kunden und Positionierung werden mit dem öffentlichen Text verknüpft, der sie belegt.",
-  "ob.coreReady_one": "{count} belegte Unternehmensangabe gefunden",
-  "ob.coreReady_other": "{count} belegte Unternehmensangaben gefunden",
-  "ob.corePartial_one":
-    "{count} verwertbare Angabe gefunden. Einige Lücken bleiben offen.",
-  "ob.corePartial_other":
-    "{count} verwertbare Angaben gefunden. Einige Lücken bleiben offen.",
-  "ob.coreReadyBody":
-    "Noch ist nichts gespeichert. Prüfe zuerst die rechtliche Identität, dann Angebot und Kunden.",
-  "ob.coreDeferredBody": "Das Lesen wird automatisch fortgesetzt.",
-  "ob.coreFailedBody":
-    "Die Website war nicht gut genug lesbar. Statt zu raten, wurde das Lesen beendet. Gib die Angaben manuell ein.",
-  "ob.coreFindingsTitle": "Belegte Befunde",
-  "ob.coreFindingsBody":
-    "Jeder Wert zeigt den öffentlichen Wortlaut, auf dem er beruht. Nicht überprüfbare Werte bleiben leer.",
-  "ob.ai.identity": "Margince",
-  "ob.ai.role": "KI für Unternehmensrecherche",
-  "ob.ai.speaker": "M",
   "ob.ai.speakerName": "Margince",
   "ob.ai.ready": "Bereit für die Recherche",
   "ob.ai.configured": "Konfigurierte KI",
@@ -5590,44 +5595,15 @@ export const de = {
   "ob.ai.tier.premium": "Premium-Reasoning",
   "ob.ai.tier.frontier": "Frontier-Reasoning",
   "ob.ai.tier.localLarge": "lokal, erweitert",
-  // Die Klartext-Zeile im Rail-Footer: Die genauen IDs sind einen Klick
-  // entfernt in der Zeile „Konfigurierte KI“ des Laufzeit-Chips — hier steht
-  // nur, was auf den ersten Blick zählt: wie viele Modelle, und wo sie laufen.
-  "ob.ai.summary.cloud_one": "1 Modell, läuft in der Cloud",
-  "ob.ai.summary.cloud_other": "{count} Modelle, laufen in der Cloud",
-  "ob.ai.summary.local_one": "1 Modell, läuft lokal",
-  "ob.ai.summary.local_other": "{count} Modelle, laufen lokal",
-  "ob.ai.summary.hybrid_one": "1 Modell, teils in der Cloud, teils lokal",
-  "ob.ai.summary.hybrid_other":
-    "{count} Modelle, teils in der Cloud, teils lokal",
-  "ob.ai.summary.development_one": "1 Modell, Entwicklungsmodus",
-  "ob.ai.summary.development_other": "{count} Modelle, Entwicklungsmodus",
-  "ob.ai.summary.none": "Noch kein Modell konfiguriert",
-  "ob.ai.summaryProviders_one": "1 Anbieter konfiguriert",
-  "ob.ai.summaryProviders_other": "{count} Anbieter konfiguriert",
-  "ob.ai.readFirst":
-    "Starte die Unternehmenseinrichtung, bevor du Fragen dazu stellst.",
   "ob.ai.liveArtifact": "Live-Entwurf zur Prüfung",
   "ob.ai.companyKnowledge": "Unternehmenswissen",
   "ob.ai.companyKnowledgeBody":
     "Belege von der Website bleiben von diesem Chat getrennt. Du entscheidest, was Unternehmenskontext wird.",
   "ob.ai.companyKnowledgeManualBody":
     "Deine Antworten und die Vorschläge von Margince bleiben hier bearbeitbar. Du entscheidest, was Unternehmenskontext wird.",
-  "ob.ai.askPlaceholder":
-    "Frage nach einem Befund, korrigiere eine Angabe oder ergänze, was fehlt",
-  "ob.ai.send": "An Margince senden",
-  "ob.ai.reviewBoundary":
-    "Margince kann hier Änderungen vorschlagen und übernimmt sie erst nach deiner Freigabe in den Entwurf.",
   "ob.ai.confirmBoundary":
     "Nichts wird Unternehmenskontext, bevor du diesen Entwurf bestätigst.",
   "ob.ai.confirmCompany": "Unternehmen bestätigen und speichern",
-  "ob.ai.thinking": "Dossier wird geprüft…",
-  "ob.ai.suggestedChanges": "Vorgeschlagene Änderungen am Entwurf",
-  "ob.ai.applyChanges": "In Entwurf übernehmen",
-  "ob.ai.applied": "In Entwurf übernommen",
-  "ob.ai.finding_one": "belegter Befund",
-  "ob.ai.finding_other": "belegte Befunde",
-  "ob.continueManual": "Manuell eingeben",
   "ob.readStatus.queued": "Wird vorbereitet",
   "ob.readStatus.deferred": "Wartet auf KI-Kontingent",
   "ob.readStatus.reading": "Wird gelesen",
@@ -5636,13 +5612,6 @@ export const de = {
   "ob.readStatus.failed": "Eingabe erforderlich",
   "ob.readStatus.confirmed": "Auswahl gespeichert",
   "ob.readStatus.abandoned": "Angehalten",
-  "ob.pagesRead": "gelesene Seiten",
-  "ob.legalEntitiesFound": "gefundene Rechtsträger",
-  "ob.coverageDetails": "Abdeckung und ungelesene Seiten",
-  "ob.legalFoundTitle": "Gefundene Rechtsträger",
-  "ob.legalFoundBody":
-    "Jeder Block zeigt eingetragenen Namen, Anschrift und Registernummer oder USt-ID. Wähle in der Prüfung den richtigen Rechtsträger aus.",
-  "ob.legalEntity": "Rechtsträger",
   "ob.confirmWebsite_one":
     "Basiert auf {count} öffentlichen Seite. Du kannst jeden Wert bearbeiten; unveränderte Werte behalten ihre Belege.",
   "ob.confirmWebsite_other":
@@ -5664,7 +5633,6 @@ export const de = {
   "ob.s1.title": "Unternehmensangaben prüfen",
   "ob.s1.sub":
     "Ausgefüllt sind nur Angaben, die die Website belegt. Korrigiere, was nicht stimmt.",
-  "ob.s1.urlPlaceholder": "deinunternehmen.de",
   "ob.s1.identityLabel": "Rechtsträger",
   "ob.s1.offerLabel": "Produkte und Angebot",
   "ob.s1.customerLabel": "Kunden",
@@ -5675,10 +5643,7 @@ export const de = {
   "ob.s1.saveFailed": "Unternehmen nicht gespeichert",
   "ob.s1.savedNote":
     "Im Unternehmen gespeichert. Änderungen hier werden beim Fortfahren erneut gespeichert.",
-  "ob.readGo": "Website lesen",
-  "ob.urlWillRead": "Margince liest {host}",
   "ob.readFromSite": "von der Website gelesen",
-  "ob.failTitle": "Von dieser Website ließ sich nicht genug lesen",
 
   "ob.manualChapterLegal": "Rechtsträger",
   "ob.manualChapterOffer": "Produkte und Angebot",
@@ -6367,7 +6332,6 @@ export const de = {
   "ob.s4.connectFailed": "Postfach nicht verbunden",
   "ob.s4.notNow": "Nicht jetzt",
 
-  "ob.conv.threadLabel": "Einrichtungsgespräch",
   "ob.conv.read.started": "Ich lese {host} und berichte, was ich finde.",
   "ob.conv.read.pages": "Bisher gelesene Seiten: {pages}.",
   "ob.conv.read.learnedField": "{field} gelernt: {value}",
@@ -6380,8 +6344,6 @@ export const de = {
     "Die Verbindung ist beim Lesen abgebrochen. Was ich gefunden habe, bleibt erhalten.",
   "ob.conv.read.deferred":
     "Das Lesen ist pausiert. Ich setze es automatisch fort.",
-  "ob.conv.clarify.entity":
-    "Die Website nennt mehr als einen Rechtsträger. Für welchen ist diese Installation gedacht?",
   "ob.conv.company.confirmed":
     "Unternehmensprofil bestätigt. Jeder gespeicherte Wert hält seine Quelle fest.",
   "ob.conv.manual.chosen": "Ich gebe es manuell ein.",
@@ -6620,8 +6582,6 @@ export const de = {
   "ob.conv.scene.hideEvidence": "Beleg ausblenden",
   "ob.conv.scene.whyThis": "Was ich gelesen habe",
   "ob.conv.scene.foundOn": "Gefunden auf",
-  "ob.conv.activity.steps_one": "{count} Schritt",
-  "ob.conv.activity.steps_other": "{count} Schritte",
   "ob.conv.showField": "Anzeigen",
   "ob.conv.review.editDirectly": "Felder direkt bearbeiten",
   "ob.conv.review.backToDossier": "Zurück zum Dossier",
@@ -6792,9 +6752,6 @@ export const de = {
   "ob.scan.costUnpriced": " · Nutzung ohne Preisangabe vorhanden",
 
   // --- das Live-Panel: was der Lauf abgedeckt hat und was nicht ----------
-  "ob.live.stateDone": "fertig",
-  "ob.live.stateNow": "läuft",
-  "ob.live.stateWaiting": "wartet",
   "ob.live.review": "Prüfen",
   "ob.live.hide": "Ausblenden",
   "ob.live.countPages": "{read} gelesen · {skipped} übersprungen",
@@ -7480,6 +7437,8 @@ export const de = {
     "Die Formulierungen, die Entwürfe verwenden, wenn sie in deinem Namen schreiben.",
   "settings.page.agents.sub":
     "Was ein Agent unbeaufsichtigt tun darf und welche Clients deine Zugangsdaten halten.",
+  "settings.page.notifications.sub":
+    "Welche Arten von Meldungen dich erreichen, und auf welchem Weg.",
   "settings.page.connections.sub":
     "Postfächer und Adressen, die für diesen Platz gelesen werden.",
   "settings.page.capture-activity.sub":
@@ -7582,14 +7541,11 @@ export const de = {
   "settings.tab.account": "Nutzerkonto",
   "settings.tab.voice": "Schreibstil",
   "settings.tab.agents": "Agenten",
+  "settings.tab.notifications": "Meldungen",
   "settings.tab.connections": "Verbindungen",
-  "settings.tab.general": "Allgemein",
-  "settings.tab.users": "Nutzende und Teams",
   "settings.tab.extensions": "Erweiterungen",
   "settings.tab.integrations": "Anbindungen",
   "settings.tab.capture": "Erfassungsregeln",
-  "settings.tab.data-model": "Datenmodell",
-  "settings.tab.ai": "KI",
   "settings.tab.knowledge": "Wissen",
   "corpusAsk.title": "Deine Dokumente befragen",
   "corpusAsk.sub":
@@ -7768,7 +7724,6 @@ export const de = {
   "pipeline.reason.record_not_available":
     "der Datensatz dieses Schritts wird nicht mehr aufbewahrt oder ist für dich nicht sichtbar; nach dem Löschen eines Datensatzes lässt sich beides nicht unterscheiden",
   "pipeline.status.not_reported": "Hier nicht ausgewiesen",
-  "pipeline.subject.message": "zu dieser Nachricht",
   "pipeline.subject.sender": "zum Absender, nicht nur zu dieser Nachricht",
   "pipeline.subject.domain": "zur Domain des Absenders",
   "pipeline.subject.thread": "zum gesamten Thread",
@@ -7878,8 +7833,6 @@ export const de = {
   "pipeline.reason.would_restore_erased":
     "dies auszuweisen würde Daten wiederherstellen, die eine Löschung entfernt hat",
   "pipeline.reason.no_writer_yet": "diesen Schritt gibt es noch nicht",
-  "settings.tab.maintenance": "Wartung",
-  "settings.tab.license": "Lizenz",
   "license.card.title": "Lizenz und Plätze",
   "license.state.licensed": "Lizenziert",
   "license.state.uncapped": "Lizenziert, ohne Platzbegrenzung",
@@ -9186,14 +9139,6 @@ export const de = {
     "Diese Verbindungsanfrage konnte nicht abgeschlossen werden",
   "consent.invalidBody":
     "Diese Installation autorisiert die Anfrage in dieser Form nicht; die App ist hier möglicherweise nicht mehr registriert. Gehe zurück zur App, die du verbinden wolltest, und starte neu.",
-  "contact.thin.title": "Bekannte Angaben",
-  "contact.thin.known":
-    "Zu {name} erfasst: {what}. Im Unternehmen hat noch niemand einen erfassten Austausch mit diesem Kontakt.",
-  "contact.thin.remediation.capture":
-    "Verbinde ein Postfach, das mit diesem Kontakt schreibt, um diese Seite zu füllen, mit der Quelle jedes Felds.",
-  "contact.thin.remediation.employer":
-    "Ergänze den Arbeitgeber, dann kann Margince auf der Website dieses Unternehmens die Rolle des Kontakts nachlesen.",
-  "contact.thin.logFirst": "Erste Interaktion erfassen",
   "contact.enriched.title": "Angereicherte Angaben",
   "contact.confirm.title_one": "{count} Angabe zu bestätigen",
   "contact.confirm.title_other": "{count} Angaben zu bestätigen",
@@ -9685,8 +9630,6 @@ export const de = {
   "contact.meeting.objective": "Angestrebtes Ergebnis",
   "contact.meeting.openWith": "Einstieg",
   "contact.meeting.arc": "Verlauf der Beziehung",
-  "contact.meeting.arcSub":
-    "Nur die Ereignisse, die für diesen Termin relevant sind.",
   "contact.meeting.close": "Termin abschließen",
   "contact.meeting.advance.minimum": "Mindestziel",
   "contact.meeting.advance.best": "Bestes Ziel",
@@ -10164,17 +10107,9 @@ export const de = {
   "projectCompanies.detachTitle": "Unternehmen aus dem Projekt entfernen?",
   "projectCompanies.detachConfirm": "Unternehmen entfernen",
   "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
-  "contactProjects.title": "Projekte",
-  "contactProjects.empty":
-    "Noch keine Projekte. Dieser Kontakt erscheint hier, sobald er einem Projekt in einer beliebigen Rolle hinzugefügt wurde.",
   "projectRole.customer": "Kunde",
   "projectRole.partner": "Partner",
   "projectRole.subcontractor": "Subunternehmen",
-  "contactRole.sponsor": "Sponsor",
-  "contactRole.projectLead": "Projektleitung",
-  "contactRole.deliveryLead": "Umsetzungsleitung",
-  "contactRole.expert": "Fachexpertise",
-  "contactRole.user": "Nutzende",
   "projectLinks.attach": "Projekt verknüpfen",
   "projectLinks.move": "Zu anderem Projekt verschieben",
   "projectLinks.detach": "Verknüpfung lösen",
@@ -10398,7 +10333,6 @@ export const de = {
   "worklist.disposition.snoozeUntil.reply": "Bis zur Antwort",
   "worklist.disposition.verb.not_mine": "Nicht zuständig",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
-  "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",

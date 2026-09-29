@@ -39,6 +39,7 @@ describe("settingsSearch", () => {
   // password types "account".
   it.each([
     ["password", "account"],
+    ["install", "account"],
     ["calendar", "meetings"],
     ["working hours", "meetings"],
     ["gdpr", "privacy"],
@@ -56,6 +57,7 @@ describe("settingsSearch", () => {
   // a contact composes naturally.
   it.each([
     ["email signature", "account"],
+    ["install app", "account"],
     ["lead source", "leads"],
     ["sign in", "authentication"],
   ] as const)("answers the phrase %p", (query, page) => {

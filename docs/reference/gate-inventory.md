@@ -222,6 +222,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |
+| `emptyarraycheck_test.go` | H2 | array\_length answers NULL for an EMPTY array, not 0, so a CHECK that bounds a length with it evaluates to UNKNOWN for `{}` — and Postgres ACCEPTS a row on an UNKNOWN check. |
 | `emptylistwire_test.go` | H2 | Every list envelope carries its rows in a field the writer can find. |
 | `enteredatwriters_test.go` | H2 | Nothing writes when a record entered the installation. |
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |
@@ -403,6 +404,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
 | `bindableidentityonce_test.go` | H2 | Who may bind an arrival to the activity already holding its identity is decided in ONE place: activities.bindableIdentityUnder, which both exported entry points delegate to. |
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
+| `calendarverbseat_test.go` | H2 | A calendar verb acting on a row it found by the provider's event id proves the acting seat holds that row. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
 | `catalogvocabulary_test.go` | H2 | The tool catalog calls the record a COMPANY, and this is what stops the other word coming back to it. |
 | `commentnamedtests_test.go` | H1 | A test named in a comment exists. |

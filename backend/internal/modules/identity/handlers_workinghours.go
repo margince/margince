@@ -6,7 +6,6 @@ package identity
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -78,14 +77,30 @@ func minutePastMidnight(written string) (int, error) {
 	if !found {
 		return 0, fmt.Errorf("a time is written HH:MM")
 	}
-	hours, hoursErr := strconv.Atoi(hour)
-	minutes, minutesErr := strconv.Atoi(minute)
-	if hoursErr != nil || minutesErr != nil || len(hour) != 2 || len(minute) != 2 {
+	hours, hoursOK := twoDigitField(hour)
+	minutes, minutesOK := twoDigitField(minute)
+	if !hoursOK || !minutesOK {
 		return 0, fmt.Errorf("a time is written HH:MM")
 	}
 	total := hours*60 + minutes
-	if hours < 0 || minutes < 0 || minutes > 59 || total > minutesInADay {
+	if minutes > 59 || total > minutesInADay {
 		return 0, fmt.Errorf("a time is between 00:00 and 24:00")
 	}
 	return total, nil
+}
+
+// twoDigitField reads exactly two digits, and is why this is not strconv.Atoi:
+// Atoi takes a leading sign, so `+9:00` would be read as 09:00 while the
+// contract's clock pattern refuses it — the parser and the pattern would then
+// answer different corpora. Both digits being digits also leaves the field
+// non-negative, so only the upper bounds are worth checking afterwards.
+func twoDigitField(written string) (int, bool) {
+	if len(written) != 2 {
+		return 0, false
+	}
+	tens, units := written[0]-'0', written[1]-'0'
+	if tens > 9 || units > 9 {
+		return 0, false
+	}
+	return int(tens)*10 + int(units), true
 }

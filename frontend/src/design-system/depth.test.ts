@@ -186,10 +186,6 @@ describe("depth", () => {
       // reach past the bar's own box. conversation.css spells out the ordering
       // that keeps the hairline alive in exactly one pixel.
       "src/screens/onboarding-conversation/conversation.css: box-shadow: 0 calc(100vw + 1px) 0 100vw var(--bgElevated), 0 0 0 100vw var(--borderSubtle)",
-      // The live dot and the active journey step on the onboarding rail: lights
-      // again, glowing in their own ink on that surface's dark brand ground.
-      "src/screens/onboarding.css: box-shadow: 0 0 12px var(--aiText)",
-      "src/screens/onboarding.css: box-shadow: 0 0 16px var(--aiMed)",
       // The one genuine drop shadow outside --shadow-pop, and the reason is the
       // ground: this dialog floats on the rail's own dark brand surface, where
       // --shadow-pop is tinted for the page and reads as a grey smear. Tinted

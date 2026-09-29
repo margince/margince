@@ -26,8 +26,8 @@ import {
   jsonResponse,
   stubFetch,
 } from "./company.fixtures";
-import { SuggestionsSection } from "./company360";
 import { companyEditFields, mapCompanyUpdate } from "./companyform";
+import { TodayOnThisAccount } from "./companytoday";
 import { listFetchLimit } from "./listquery";
 import { WriteToHost } from "./writeto";
 
@@ -1328,15 +1328,14 @@ const stalledSuggestion = {
   evidence: [{ entity_type: "deal", entity_id: "d-1" }],
 };
 
-// The suggestion rows and the ask card are components of their own, mounted
-// here directly rather than through the company page, which renders neither.
-// This matters for the "the card is absent" cases below: asserted against a
-// page that never mounts one, they would hold no matter what the card did.
+// The suggestion rows, through the brief the record page mounts them in.
 function renderSuggestionsFor(three60: unknown) {
   render(
-    <SuggestionsSection
+    <TodayOnThisAccount
       companyId="o-1"
       view={three60 as never}
+      loading={false}
+      failed={false}
       onOpenRecord={() => {}}
       onPerform={() => {}}
     />,
@@ -1456,19 +1455,15 @@ describe("CompanyScreen — next-step suggestions", () => {
     expect(screen.queryByText(/more not shown/)).toBeNull();
   });
 
-  it("says nothing at all when the account needs nothing", async () => {
+  it("offers no advice row when the account needs nothing", async () => {
     stubFetch(companyBackstop);
     renderSuggestionsFor(company360);
 
-    // "No advice" is not something a rep acts on, so the card is absent
-    // rather than empty. Asserted against a MOUNTED brief: on a page that
-    // never renders one, this would hold no matter what the component did.
-    await waitFor(() =>
-      expect(screen.queryByText("Worth doing next")).toBeNull(),
-    );
+    await screen.findByRole("heading", { name: "Needs attention" });
+    expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
   });
 
-  it("stays silent rather than claiming no advice when the section is withheld", async () => {
+  it("names the withheld advice rather than claiming nothing needs attention", async () => {
     const three60 = {
       ...company360,
       suggestions: undefined,
@@ -1477,9 +1472,8 @@ describe("CompanyScreen — next-step suggestions", () => {
     stubFetch(companyBackstop, { company360: three60 });
     renderSuggestionsFor(three60);
 
-    await waitFor(() =>
-      expect(screen.queryByText("Worth doing next")).toBeNull(),
-    );
+    await screen.findByText(/^Not included: suggestions\./);
+    expect(screen.queryByText("Nothing needs attention right now.")).toBeNull();
   });
 
   it("dismisses by fingerprint and leaves the row for the server to remove", async () => {
@@ -1504,7 +1498,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     await waitFor(() => expect(dismissed).toBeTruthy());
     // The server decides what survives: the card sends the fingerprint and
     // does NOT hide the row itself. Whether the surrounding page then re-reads
-    // the 360 is the page's business, and this suite mounts the card alone.
+    // the 360 is the page's business, and this suite mounts the brief alone.
     expect(dismissed).toEqual({ fingerprint: "fp-stalled-1" });
     expect(screen.getByText(stalledSuggestion.reason)).toBeTruthy();
   });
@@ -1667,9 +1661,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await screen.findByText("Brandt Automotive GmbH");
 
     // The overview stack: what is worth doing and the pipeline's own figures.
-    // "Worth doing next" is not asserted here — it is advice, and this
-    // fixture's account has none to give; the suggestions suite above
-    // exercises its own presence.
+    // The advice rows are the suggestions suite's above.
     const stack = container.querySelector(".co-overview-stack");
     expect(stack).toBeTruthy();
     // The money is a TAB, so the overview column must not also carry it: a

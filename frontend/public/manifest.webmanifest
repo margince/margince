@@ -2,10 +2,14 @@
   "name": "Margince",
   "short_name": "Margince",
   "description": "Margince updates CRM records from approved customer activity while your team controls its actions, deployment, model and source customization.",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
   "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#FBFCFB",
+  "background_color": "#F1F5F2",
   "theme_color": "#0B7A53",
   "icons": [
     {

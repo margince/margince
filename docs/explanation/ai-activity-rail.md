@@ -162,9 +162,10 @@ code, why it is not shown. The reason lives in the source rather than in a revie
 comment for the same reason: the next author reads the file, not the PR.
 
 Copy is by LITERAL key, never `t(\`agent.activity.${kind}.${state}\`)` — the
-orphan guard in `i18n.test.ts` counts a key as rendered when it starts with a
-template stem, so an interpolated key would vouch for the whole namespace forever
-and a retired kind's copy would sit in three catalogs with nothing to flag it.
+orphan guard in `i18n/orphan-keys.test.ts` counts a key as rendered when it
+starts with a template stem, so an interpolated key would vouch for the whole
+namespace forever and a retired kind's copy would sit in three catalogs with
+nothing to flag it.
 
 **Nine kinds are narrated**, in en/de/vi, total over all six states:
 

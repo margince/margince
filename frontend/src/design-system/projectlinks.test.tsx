@@ -110,8 +110,8 @@ describe("ProjectLinks", () => {
     const user = userEvent.setup();
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
-      // Every real adapter refuses through throwProblem (companyprojects,
-      // contactprojects, projectcompanies all do), so the stand-in refuses the
+      // Every real adapter refuses through throwProblem (companyprojects and
+      // projectcompanies both do), so the stand-in refuses the
       // same way. A plain Error here would be a test supplying its own version
       // of production and proving nothing about it.
       attach: async () => {

@@ -388,6 +388,19 @@ describe("a build that fails", () => {
     expect(screen.queryByText(/Cannot read properties/)).toBeNull();
   });
 
+  it("shows the shared line when reading the answer breaks the card", async () => {
+    // The server answers, and the card's own reading of the answer breaks.
+    stubBuild(() => jsonResponse(null));
+
+    await pressRebuild();
+
+    expect(
+      await screen.findByText("The request failed. No cause reported."),
+    ).toBeTruthy();
+    // Our own internals never become the reader's sentence.
+    expect(screen.queryByText(/Cannot read properties/)).toBeNull();
+  });
+
   // The build the reader actually hits: the POST succeeds, the job runs, and
   // the row comes back `failed` carrying the server's own explanation. That
   // detail used to be dropped on the floor, leaving one fixed sentence to

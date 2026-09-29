@@ -885,24 +885,6 @@
   }
 }
 
-/* The shared figure-block anatomy: an eyebrow, then the figure itself set
-   tabular, then a one-line note where the caller has one. Both the Commercial
-   panel and the Finance panel draw their headline numbers through this one
-   shape, so a reader learns it once. */
-.co-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
-  margin-bottom: var(--space-3);
-}
-.co-figure {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.co-figure-value {
-  font-variant-numeric: tabular-nums;
-}
 /* The finance panel: one decision figure with its reasons, a quieter column
    of context beside it, and the invoice table under both. The two columns are
    separated by a rule rather than by space alone — at this width space reads
@@ -1038,22 +1020,6 @@
   margin-top: var(--space-3);
 }
 
-/* One open deal in the overview's Commercial panel: the name carries the row,
-   with the close date underneath it as a quiet second line rather than
-   competing with the stage badge and the amount on the same line. */
-.co-commercial-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.co-commercial-name {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  text-align: left;
-  min-width: 0;
-}
 /* The overview's chronology: a day heading above the run of entries that
    happened on it, so several messages read as how one day went rather than
    as an undifferentiated list. */

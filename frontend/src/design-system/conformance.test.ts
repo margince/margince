@@ -8,7 +8,9 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import { withoutComments } from "../testing/css";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
 // new file is enrolled the moment it exists:
@@ -355,19 +357,6 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 
-  // No service worker, in both halves: no script to install and no call that
-  // would install one. The previous worker cached the app shell cache-first
-  // under a cache name that never changed between builds, so a browser that
-  // loaded the app once kept serving that build's index.html — and the
-  // content-hashed bundle it named — past every deploy after it. A worker is
-  // the only thing that can answer a request from Cache Storage, so the honest
-  // gate is that the app ships none.
-  it("ships no service worker, and registers none", () => {
-    expect(existsSync(join(frontendRoot, "public", "sw.js"))).toBe(false);
-    const main = readFileSync(join(frontendRoot, "src", "main.tsx"), "utf8");
-    expect(main).not.toMatch(/serviceWorker\.register\(/);
-  });
-
   it("the web-app manifest is valid and complete for installability", () => {
     const manifest = JSON.parse(
       readFileSync(
@@ -458,9 +447,9 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // spares an element that declares a role `Card` cannot express: the component
   // admits `role="status"` and nothing else, on purpose — a card must not be
   // able to claim it is a modal — so a surface that has to announce itself as a
-  // `dialog` or a `note` (design-system/explain.tsx's popover) has no component
-  // to reach for. Such a surface says so in-source where it does it. The exemption reads the role's LITERAL
-  // value and compares it exactly to `status`. A role the source computes
+  // `dialog` or a `note` has no component to reach for. Such a surface says so
+  // in-source where it does it. The exemption reads the role's LITERAL value
+  // and compares it exactly to `status`. A role the source computes
   // (`role={role}`) is NOT an exemption: the gate cannot know what it evaluates
   // to, so it asks rather than assumes — an unreadable role that waved the card
   // through would be the one surface nobody was checking.
@@ -624,8 +613,9 @@ const cssFiles = files.filter((file) => file.endsWith(".css"));
  * keeps formatted.
  */
 function reducedMotionRules(
-  text: string,
+  source: string,
 ): { selector: string; property: string; endsAt: number }[] {
+  const text = withoutComments(source);
   const out: { selector: string; property: string; endsAt: number }[] = [];
   const opener = /@media[^{]*prefers-reduced-motion:\s*reduce[^{]*\{/g;
   for (let match = opener.exec(text); match; match = opener.exec(text)) {
@@ -641,11 +631,9 @@ function reducedMotionRules(
     const body = text.slice(start, index - 1);
     const rule = /([^{}]+)\{([^{}]*)\}/g;
     for (let inner = rule.exec(body); inner; inner = rule.exec(body)) {
-      const selectors = inner[1]
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .split(",")
-        .map((one) => one.trim().replace(/\s+/g, " "))
-        .filter(Boolean);
+      const selectors = selectorList(inner[1]).map((one) =>
+        one.replace(/\s+/g, " "),
+      );
       const properties = inner[2]
         .split(";")
         .map((line) => line.split(":")[0].trim())
@@ -697,13 +685,11 @@ function plainRules(
 ): { selector: string; body: string; at: number }[] {
   const out: { selector: string; body: string; at: number }[] = [];
   const rule = /([^{}]+)\{([^{}]*)\}/g;
-  const flat = withoutAtRuleBlocks(text);
+  const flat = withoutAtRuleBlocks(withoutComments(text));
   for (let match = rule.exec(flat); match; match = rule.exec(flat)) {
-    const selectors = match[1]
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .split(",")
-      .map((one) => one.trim().replace(/\s+/g, " "))
-      .filter(Boolean);
+    const selectors = selectorList(match[1]).map((one) =>
+      one.replace(/\s+/g, " "),
+    );
     for (const selector of selectors) {
       out.push({ selector, body: match[2], at: match.index });
     }

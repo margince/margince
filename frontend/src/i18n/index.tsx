@@ -8,11 +8,27 @@ import {
   useMemo,
   useState,
 } from "react";
+import { STORAGE_KEYS, writeStored } from "../app/storage";
 import { pluralCategory } from "../format/plural";
 import { useDateTimePreferences } from "../format/preferences";
 import { de } from "./de";
 import { en, type MessageKey } from "./en";
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  type Locale,
+  preferredLocale,
+} from "./locale";
 import { vi } from "./vi";
+
+export {
+  DEFAULT_LOCALE,
+  detectLocale,
+  isLocale,
+  LOCALES,
+  type Locale,
+  storedLocale,
+} from "./locale";
 
 // Locale is a presentation concern only (architecture/10 §3): it resolves at
 // the render edge and never participates in storage or math. The resolution
@@ -29,7 +45,7 @@ import { vi } from "./vi";
 // here: it governs what AI writes for the whole team, not what any one contact
 // reads the interface in.
 
-// The catalog registry is what we ship, and `Locale` is written above it
+// The catalog registry is what we ship, and `Locale` is written in ./locale
 // rather than derived from it. The derivation is what a reader would expect
 // and it is not available: `tsc -b` has to SERIALIZE the inferred type into a
 // declaration file, and three catalogs of every message key exceed the length
@@ -41,13 +57,11 @@ import { vi } from "./vi";
 // rejects, and added to `Locale` alone it leaves the record missing a key.
 // Both fail the build.
 //
-// `LOCALES` below does not derive either: it is hand-ordered because it also
+// `LOCALES` does not derive either: it is hand-ordered because it also
 // fixes the order the switcher shows, and both the switcher and browser
 // detection read that written list. `satisfies readonly Locale[]` proves each
 // entry is a real locale — it does not prove the list is COMPLETE.
 // Completeness is enforced by i18n.test.ts.
-export type Locale = "en" | "de" | "vi";
-
 export const catalogs: Record<Locale, Record<MessageKey, string>> = {
   en,
   de,
@@ -72,23 +86,6 @@ export type ExtensionMessageKey = `ext${string}`;
  */
 const unitCopy: Partial<Record<Locale, Record<string, string>>> = extensionCopy;
 
-// Display order for the switcher. `satisfies` proves each entry is a real
-// locale; i18n.test.ts proves the list is exhaustive.
-export const LOCALES = ["en", "de", "vi"] as const satisfies readonly Locale[];
-
-export const DEFAULT_LOCALE: Locale = "en";
-
-/**
- * Whether a string names a language this product speaks.
- *
- * Exported for the public pages: an email's `?lang=` is text a link
- * carried, so it is validated here rather than trusted, and the same
- * predicate that admits a stored pick admits that one.
- */
-export function isLocale(value: string): value is Locale {
-  return LOCALES.some((locale) => locale === value);
-}
-
 // The endonym key for a locale. The template literal is checked against
 // MessageKey, so adding a locale without adding its `locale.name.<code>` key
 // fails the build rather than rendering a raw key at runtime.
@@ -96,66 +93,10 @@ export function localeNameKey(locale: Locale): MessageKey {
   return `locale.name.${locale}`;
 }
 
-// detectLocale reads the visitor's own language preference and maps it to a
-// locale we ship, falling back to the A100 default when none of the shipped
-// locales is asked for. It never throws off-browser (SSR, tests): an absent
-// navigator yields the default.
-export function detectLocale(
-  languages: readonly string[] = globalThis.navigator?.languages ??
-    (globalThis.navigator?.language ? [globalThis.navigator.language] : []),
-): Locale {
-  for (const tag of languages) {
-    const base = tag.toLowerCase().split("-")[0];
-    if (isLocale(base)) {
-      return base;
-    }
-  }
-  return DEFAULT_LOCALE;
-}
-
-// Where an EXPLICIT locale choice is kept so it survives a reload. The reader
-// picks a language on the sign-in screen, and until /v1/me carries a locale
-// this is the only place the choice can live — without it the next load falls
-// back to the browser's preference and silently undoes the pick, which reads as
-// the switcher not working.
-const LOCALE_STORAGE_KEY = "margince.locale";
-
-/**
- * The locale a reader has chosen, if they have chosen one.
- *
- * Only an explicit pick is stored, never the detected default. Persisting what
- * the browser asked for would freeze it: a reader who later changes their
- * browser's language would keep getting the old one from a value they never set.
- *
- * The stored string is validated rather than trusted. It outlives the release
- * that wrote it, so a locale we have since stopped shipping — or a hand-edited
- * value — must fall back to detection instead of reaching the catalogs as a key
- * they have no entry for.
- *
- * Storage is unavailable in some browser modes and throws on ACCESS rather than
- * returning null. That is not an error to report: this value is a preference
- * whose absence already has a defined meaning, and detection is exactly what
- * absence means. A reader in private mode gets the browser's language, which is
- * the same answer they got before this existed.
- */
-export function storedLocale(): Locale | null {
-  try {
-    const stored = globalThis.localStorage?.getItem(LOCALE_STORAGE_KEY);
-    return stored !== null && stored !== undefined && isLocale(stored)
-      ? stored
-      : null;
-  } catch {
-    return null;
-  }
-}
-
+// Until /v1/me carries a locale, storage is the only place a pick made on the
+// sign-in screen can survive a reload.
 function rememberLocale(locale: Locale): void {
-  try {
-    globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, locale);
-  } catch {
-    // Same reasoning as the read: a preference that cannot be kept is a
-    // preference that holds for this session only, not a failure to surface.
-  }
+  writeStored(STORAGE_KEYS.locale, locale);
 }
 
 export function translate(
@@ -302,7 +243,7 @@ export function LocaleProvider({
   // because it is the more specific statement of the same intent — this reader,
   // on this machine, asked for this language.
   const [locale, setLocaleState] = useState<Locale>(
-    () => initial ?? storedLocale() ?? detectLocale(),
+    () => initial ?? preferredLocale(),
   );
   // The signed-in person's own choice, which ARRIVES rather than being present
   // at mount: `/me` resolves after this provider renders, so seeding state once
@@ -340,7 +281,7 @@ export function LocaleProvider({
       // stored value is only ever written by an explicit pick, never by a
       // detected default, so preferring it cannot resurrect something nobody
       // chose.
-      const usable = isLocale(next) ? next : (storedLocale() ?? detectLocale());
+      const usable = isLocale(next) ? next : preferredLocale();
       if (usable === adopted) {
         return;
       }

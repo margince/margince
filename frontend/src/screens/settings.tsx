@@ -121,6 +121,7 @@ import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
+import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OvernightGrantCard } from "./overnight-grant";
@@ -136,6 +137,7 @@ import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
+import { ThisDevicePanel } from "./thisdevice";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -187,13 +189,24 @@ export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return <AccountCard />;
+      return (
+        <>
+          <AccountCard />
+          <ThisDevicePanel />
+        </>
+      );
     case "meetings":
       return <MeetingSettings />;
     case "voice":
       return <VoiceDnaCard />;
     case "agents":
       return <AgentsTab />;
+    // What the product may send this reader, and where. Beside the brief and
+    // weekly nudges on Account rather than merged into them: those two rows are
+    // about a digest the reader subscribes to, and these are about every notice
+    // the product raises whether or not anybody asked for it.
+    case "notifications":
+      return <NotificationSettingsCard />;
     case "connections":
       return <ConnectionsTab />;
     // Beside `connections` and after it on purpose: that page says what you are
@@ -890,12 +903,6 @@ function AppearanceSettingRow() {
 /**
  * The name colleagues see you by.
  *
- * It was written once — by the invite, or by the installation's cold start —
- * and until now nothing could change it. `display_name` had exactly two
- * writers in the backend, both INSERTs, so somebody invited as "j.smith", or
- * married, or simply typed wrong, carried that name beside every record they
- * touched with no way to correct it.
- *
  * The saved answer is read back from `/me` rather than kept here, so the shell's
  * account chip and the roster agree with this row the moment it lands.
  */
@@ -934,27 +941,30 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // what the server checks with `utf8.RuneCountInString`. `String.length` would
   // count UTF-16 units and refuse a name the server admits.
   const tooLong = [...trimmed].length > 255;
+  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
   return (
     <SettingRow
       label={t("settings.displayName")}
       description={t("settings.displayNameHelp")}
       layout="stack"
-      control={(control) => (
-        // The catalogued pairing for an input that commits: the field and the
-        // verb stacked at the row's own measure, the same shape the pipeline
-        // rows use.
+      control={(row) => (
+        // The catalogued pairing of field and verb, as the pipeline rows use.
         <div className="form-stack settingrow-measure">
-          {/* Beside this control, because the server's 422 names it. */}
-          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-          <TextInput
-            {...control}
-            value={shown}
-            // No native `maxLength`: it counts UTF-16 code units, so a name of
-            // emoji or other supplementary characters would be cut at about
-            // half the 255 CHARACTERS the contract and the server admit. The
-            // bound is checked below in runes, the same way the server counts.
-            onChange={(event) => setDraft(event.target.value)}
-          />
+          <Field label={t("settings.displayName")} labelHidden error={refusal}>
+            {(field) => (
+              <TextInput
+                {...field}
+                aria-labelledby={row["aria-labelledby"]}
+                aria-describedby={[field, row]
+                  .map((owner) => owner["aria-describedby"])
+                  .filter(Boolean)
+                  .join(" ")}
+                value={shown}
+                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
+                onChange={(event) => setDraft(event.target.value)}
+              />
+            )}
+          </Field>
           <Button
             disabled={!dirty || trimmed === "" || tooLong || save.isPending}
             onClick={() => save.mutate(trimmed)}

@@ -261,6 +261,49 @@ describe("SettingsScreen RBAC surfaces", () => {
     });
   });
 
+  it("shows a refused name as the field's own error, still described by its help", async () => {
+    const user = userEvent.setup();
+    const backend = settingsBackend();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = input instanceof Request ? input : undefined;
+        const url = String(request ? request.url : input);
+        const method = request?.method ?? init?.method ?? "GET";
+        if (url.includes("/me/display-name") && method === "PUT") {
+          return new Response(
+            JSON.stringify({
+              status: 422,
+              code: "validation_error",
+              detail: "Display name is too long.",
+            }),
+            {
+              status: 422,
+              headers: { "content-type": "application/problem+json" },
+            },
+          );
+        }
+        return backend(input);
+      }),
+    );
+
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+    const field = screen.getByRole("textbox", { name: "Display name" });
+    await user.clear(field);
+    await user.type(field, "Ada Lovelace");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const refusal = await screen.findByRole("alert");
+    expect(refusal).toHaveTextContent("Display name is too long.");
+    expect(refusal).toHaveClass("field-error");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    const describedBy = field.getAttribute("aria-describedby")?.split(" ");
+    expect(describedBy).toContain(refusal.id);
+    expect(describedBy).toHaveLength(2);
+    expect(field).toHaveValue("Ada Lovelace");
+  });
+
   // The control for the case above: Save is withheld until the name actually
   // moves. Without it, a row that always enabled Save would pass the case above
   // and quietly write on every render.

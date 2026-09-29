@@ -39,7 +39,7 @@ and the tightest e2e. Every later page copies its decisions. Files:
 | The 360 | `TodayOnThisAccount` + `VerdictHead` (`HealthStat`/`AccountHealthStat` as the word and dims) + `RecordSpine` + the thread from `useChronologySlots` folded behind "Read the thread · N" | 360 sections, chronology | `today.quiet` (nothing to say draws a calm 360, not an empty pane); `today.failed`; `co.section.unavailable`; withheld sections drop their row and say so once; `since_last_visit` with a withheld baseline never becomes a claim; "Write it again" only when the reader may |
 | Deep-read offer | `DeepReadPanel` **leads the column** instead of the 360 when `nothingOnFile(view)` | | the two honest scan phases; `SiteReadPanel` pages read/skipped and why; 422 no website; 501 seam unwired; `SiteReadDeferral` |
 | What needs you | one list: the moment as the lead row, `co.suggest.*` rows (`draftReply / openDeal / addTask` verbs; `add_task` has no surface, so dismiss only), tasks from `CompanyTasksTab`'s source, the next meeting (`onPrepareMeeting`) | 360 suggestions, tasks, meetings | `co.next.empty`; `co.suggest.more` on the cap; withheld suggestions remove the row, not the verb; `DecisionsChip` count stays in the menu |
-| Commercial (the money) | One pane, the `DESIGN.md` zone: `CompanyContractState` and won/lost on one line, then `CompanyWorkCard`'s open deals with their status clause (`workVerbs`), then the project. `CompanyLastOffer` and the full table live on the Deals tab; the details panel repeats the contract line | `view.deals`, `view.projects` | `contracts.state.none`; `co.commercial.truncated`; `co.work.noDeals` + detail; `co.work.statusesWithheld`; `co.work.countAtLeast`; `leadingDeal` refuses to pick on a truncated page or mixed currencies |
+| Commercial (the money) | One pane, the `DESIGN.md` zone: `CompanyContractState` and won/lost on one line, then `CompanyWorkCard`'s open deals with their status clause (`workVerbs`), then the project. `CompanyLastOffer` and the full table live on the Deals tab; the details panel repeats the contract line | `view.deals`, `view.projects` | `contracts.state.none`; `co.work.statusesWithheld`; `co.work.countAtLeast`; `leadingDeal` refuses to pick on a truncated page or mixed currencies |
 | Ask (prepared questions) | `AssistantPanel` as full-width rows, no free field; the three questions are the ones the server answers (`CompanyQuestion`), so no new keys — a fourth is a server change first | | `co.ask.nothing` |
 | About | `DossierPanel` lead + paragraph + sources, `SignalsSection` rows, `GrowthFitPanel` verdict row (only when `!hasWorkInFlight`), "Profile" link | own reads | `co.dossier.empty` (write it), `co.dossier.stale` "Read over a month ago", `co.dossier.unavailable`; `co.factSuspect.*` shown with evidence |
 | Contacts (chips) | `ContactsSection` (`RAIL_ROW_LIMIT`) as chips with "+N" | 360 | withheld → absent with the sentence |
@@ -76,7 +76,7 @@ state row in §3.2 (this is where "empty", "withheld", "never read" and
 
 ## 4. Contact
 
-Files: `contactpage.tsx`, `contact360.tsx`, `contactrail.tsx`,
+Files: `contactpage.tsx`, `contact360.ts`, `contactrail.tsx`,
 `contacttoday.tsx`, `contactcards.tsx`, `contactmemory.tsx`,
 `contactcorrections.tsx`, `contactnetwork/`.
 
@@ -108,7 +108,7 @@ Files: `contactpage.tsx`, `contact360.tsx`, `contactrail.tsx`,
 - **Details (right, closed).** `ContactRail` stays **one pane with hairline
   slices** (its documented anatomy), plus `ContactEmailPanel` under it.
 - **States to keep:** `contact.page.loading` becomes a skeleton (the one page
-  without one); `contact.page.notOpened`; `ThinState`; `withheldSections`
+  without one); `contact.page.notOpened`; `withheldSections`
   read once; consent verdict from the server key; `provider.profile.neverRun`
   mark on the Research tab (and a cancelled run reads as never run);
   `contact.graph.*` incompleteness on the map; archived verb removal.

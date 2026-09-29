@@ -67,25 +67,12 @@
     radial-gradient(circle at 8% -4%, var(--aiLight), transparent 46%);
 }
 
-/* The transcript is the column's own scroller, and its scroll box begins where
-   the chrome above it ends — so without room of its own a turn sits flush
-   against that edge and the first line reads as a sliced one. The padding is
-   inside the scroll box, where it belongs: it travels with the content instead
-   of shrinking the visible window. `scroll-padding` says the same thing to the
-   browser, so the turn a programmatic scroll brings into view lands below the
-   edge rather than on it. */
-.mw-conversation .ob-conv-thread {
-  padding-block: var(--space-4);
-  scroll-padding-block: var(--space-4);
-}
-
 /*
- * The transcript scrolls with no bar of its own (conversation.css hides it, so
- * the turns are never crossed by one), which left nothing on screen saying the
- * region scrolls at all: a reader had to infer it from a sentence that happened
- * to be cut off. These two say it — a soft shadow pressed in at the top and
- * bottom of the window, so the transcript reads as a view onto something longer
- * rather than as the whole of it.
+ * A transcript that scrolls with no bar of its own leaves nothing on screen
+ * saying the region scrolls at all: a reader has to infer it from a sentence
+ * that happens to be cut off. These two say it — a soft shadow pressed in at
+ * the top and bottom of the window, so the transcript reads as a view onto
+ * something longer rather than as the whole of it.
  *
  * Drawn on the WRAPPER rather than the scroller: the scroller's own background
  * paints under the turns, and a bubble carries an opaque fill, so a shadow
@@ -135,75 +122,6 @@
    bare column between a cut-off sentence and the row. */
 .mw-conversation > .mw-contact {
   margin-block-start: calc(-1 * var(--space-5));
-}
-
-/* --- the step rail ---------------------------------------------------- */
-/* Where the journey is, in five words. Status, never controls: the machine
-   decides what comes next, so no stop may carry the fill, ring and pill
-   geometry of a real control — that recipe belongs to the buttons in the same
-   column, and hue alone is too thin a line between "you may press this" and
-   "this is where you are". State reads as label colour and numeral ring only. */
-
-.mw-steps {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: none;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mw-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  /* The face only: this chrome runs on the body font, where the shared
-     `.t-eyebrow` class the element carries is agnostic. */
-  font-family: var(--fontFamilyBody);
-}
-
-/* The hairline that makes five stops one rail. Drawn, not marked up: a
-   connector element would enter the accessibility tree as content between two
-   stops, and a screen reader would read the gaps. */
-.mw-step + .mw-step::before {
-  content: "";
-  width: 14px;
-  height: 1px;
-  flex: none;
-  background: var(--borderStrong);
-}
-
-.mw-step b {
-  display: grid;
-  width: 17px;
-  height: 17px;
-  place-items: center;
-  /* --borderStrong, matching the connector between stops: the discs and the
-     hairline joining them are one drawing, and two greys made it two. */
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
-}
-
-/* Done carries no label colour of its own: at this size every label needs the
-   AA role, so what separates done from still-to-come is the FILLED numeral
-   below — a difference in shape, not one 2%-apart pair of greys. */
-.mw-step.is-done b {
-  color: var(--textOnStatusControl);
-  border-color: transparent;
-  background: var(--successText);
-}
-
-.mw-step.is-now {
-  color: var(--textPrimary);
-}
-
-.mw-step.is-now b {
-  color: var(--accentText);
-  border-color: var(--accentMed);
 }
 
 /* --- the brand line --------------------------------------------------- */
@@ -432,10 +350,6 @@
    the light theme, so the split that carries the whole two-pane idea would read
    as an accident of the border; --bgCard plus the strong border is a recess a
    reader sees before they read a word of it. */
-/* The artifact pane scrolls without drawing a bar over the content. Only the
-   elements that actually scroll get this: the conversation column is
-   `overflow: hidden` and its transcript owns the scrolling, so the rule belongs
-   there (see .ob-conv-thread) and here — not on the column between them. */
 .mw-artifact {
   scrollbar-width: none;
 }
@@ -566,36 +480,6 @@
   );
 }
 
-/* The stop the journey is standing on breathes, gently: the same claim
-   aria-current makes, said in motion for the eye that is scanning the rail.
-   Behind the numeral (z-index), so the digit never blurs. */
-.mw-shell.is-rail .mw-step.is-now b {
-  position: relative;
-}
-
-.mw-shell.is-rail .mw-step.is-now b::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  z-index: -1;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accentLight);
-  animation: mw-step-breathe 3.4s var(--ease-in-out) infinite;
-}
-
-@keyframes mw-step-breathe {
-  0%,
-  100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.12);
-  }
-}
-
 /* The brand line at rail width holds only the Core and the identity — the
    runtime chip lives in the spend bar directly below. */
 .mw-shell.is-rail .mw-brand {
@@ -722,16 +606,6 @@
     overflow: visible;
   }
 
-  /* The transcript is the conversation's OWN scroller at desktop width
-     (thread.tsx relies on it for follow-the-latest), which is exactly what a
-     stacked phone layout must not keep: two independent scrollers on one
-     screen is the trap this breakpoint exists to avoid. Letting it grow with
-     its content hands the one scroll gesture back to the page. */
-  .mw-conversation .ob-conv-thread {
-    flex: none;
-    overflow: visible;
-  }
-
   /* Same seam, rotated: the trough edge stays the strong border when the split
      becomes a stack, or the stacked panes lose the boundary the columns have. */
   .mw-artifact {
@@ -761,8 +635,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mw-identity i[data-state="working"],
-  .mw-aistat-pop,
-  .mw-shell.is-rail .mw-step.is-now b::after {
+  .mw-aistat-pop {
     animation: none;
   }
   .mw-aistat-caret {

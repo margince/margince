@@ -411,3 +411,56 @@ describe("editing free text where it is read", () => {
     );
   });
 });
+
+// A refusal beside an inline editor is that field's error, whatever refused it:
+// the element, the container that spaces it and the wiring `Field` gives every
+// other field.
+describe("a refused inline save reads as the field's own error", () => {
+  function expectFieldError(control: HTMLElement) {
+    const alert = screen.getByRole("alert");
+    expect(alert.tagName).toBe("P");
+    expect(alert).toHaveClass("field-error");
+    expect(alert.parentElement).toHaveClass("field");
+    expect(alert.parentElement).toContainElement(control);
+    expect(control).toHaveAttribute("aria-invalid", "true");
+    expect(control.getAttribute("aria-describedby")).toBe(alert.id);
+  }
+
+  const refusals = [
+    [
+      "a server's validation",
+      new ProblemError({ code: "validation_error", detail: "Too long." }),
+    ],
+    ["a failure with no cause", new Error("fetch failed")],
+  ] as const;
+
+  it.each(refusals)("on a text field, for %s", async (_name, thrown) => {
+    const user = userEvent.setup();
+    renderText({
+      onSave: vi.fn(async () => {
+        throw thrown;
+      }),
+    });
+    await user.click(screen.getByRole("button", { name: "Change Industry" }));
+    const input = screen.getByLabelText("Industry");
+    await user.clear(input);
+    await user.type(input, "Aerospace{Enter}");
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expectFieldError(input);
+  });
+
+  it.each(refusals)("on a choice, for %s", async (_name, thrown) => {
+    const user = userEvent.setup();
+    renderChoice({
+      onSave: vi.fn(async () => {
+        throw thrown;
+      }),
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Change Account lifecycle" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Customer" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expectFieldError(screen.getByRole("combobox"));
+  });
+});

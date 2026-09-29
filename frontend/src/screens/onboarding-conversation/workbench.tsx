@@ -20,13 +20,8 @@ import { isDetour, railStops, stopState } from "./rail";
 // board, the rail. Acts supply only what differs — the question, the scene that
 // answers it, and the way onward.
 //
-// ONE ROOM, NOT TWO PANES. This shell used to be MarginceWorkbench: a chat rail
-// on the left and a live artifact pane on the right. Onboarding is one question
-// at a time on one stage, and the two organising ideas cannot both be true on
-// the same screen — a reader crossing from the gate into the journey walked out
-// of one room and into another halfway through a single setup. The workbench
-// stays in the design system, for the product after setup, which is where its
-// conversation and its artifact both belong.
+// Not MarginceWorkbench's chat rail beside an artifact pane: a reader crossing
+// from the gate into the journey would change rooms halfway through one setup.
 
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 type AiProfile = components["schemas"]["AiProfile"];

@@ -8,6 +8,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { resolveNesting, subjectOf } from "../../scripts/lib/css-rules";
 import { extensionLayers, filesMatching } from "../../scripts/lib/source-tree";
 import { type CssRule, rulesIn, withoutComments } from "../testing/css";
 import { Heading, type HeadingSize } from "./heading";
@@ -45,38 +46,8 @@ function headingTokens(): string[] {
     .filter((name, index, all) => all.indexOf(name) === index);
 }
 
-// Split at depth 0 only, so `:where(.a, .b)` and `[x="a b"]` stay whole.
-function splitTopLevel(text: string, separator: RegExp): string[] {
-  const parts: string[] = [];
-  let depth = 0;
-  let from = 0;
-  for (let i = 0; i < text.length; i++) {
-    if ("([".includes(text[i])) depth++;
-    else if (")]".includes(text[i])) depth--;
-    else if (depth === 0 && separator.test(text[i])) {
-      parts.push(text.slice(from, i));
-      from = i + 1;
-    }
-  }
-  parts.push(text.slice(from));
-  return parts.map((part) => part.trim()).filter(Boolean);
-}
-
-// `&` stands for the parent; a nested selector without one is its descendant.
 function resolvedSelectors(rule: CssRule): string[] {
-  return [...rule.parents, rule.selector].reduce<string[]>(
-    (outer, list) =>
-      splitTopLevel(list, /,/).flatMap((inner) =>
-        outer.length === 0
-          ? [inner]
-          : outer.map((parent) =>
-              inner.includes("&")
-                ? inner.replaceAll("&", parent)
-                : `${parent} ${inner}`,
-            ),
-      ),
-    [],
-  );
+  return [...rule.parents, rule.selector].reduce<string[]>(resolveNesting, []);
 }
 
 type MarginDeclaration = { selector: string; value: string; line: number };
@@ -99,7 +70,7 @@ function marginDeclarations(css: string): MarginDeclaration[] {
 function weightedHeadingMargins(css: string): string[] {
   return marginDeclarations(css)
     .filter(({ selector }) => {
-      const subject = splitTopLevel(selector, /[\s>+~]/).at(-1) ?? "";
+      const subject = subjectOf(selector);
       const classes = new Set(
         subject
           .replaceAll(/:[\w-]+\((?:[^()]|\([^()]*\))*\)|\[[^\]]*\]/g, "")

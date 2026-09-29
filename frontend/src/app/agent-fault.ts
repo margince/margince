@@ -3,6 +3,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { components } from "../api/schema";
+import { readStoredJson, STORAGE_KEYS, writeStored } from "./storage";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
 
@@ -21,14 +22,18 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
  * list for the rest of the day, which is where a fault belongs after it has been
  * delivered once.
  *
- * The seen marks are per browser and nothing else. There is no server-side read
- * or write for "this contact has been told", and inventing one here would be a
- * durable claim about a contact built out of one tab's local storage. What the
- * mark actually buys is the thing it can honestly buy: a reload, or a second
- * screen in the same browser, does not raise a fault the reader already dealt
- * with.
+ * The seen marks are per browser, so a reload or a second screen does not
+ * re-raise a fault the reader already dealt with.
  */
-const SEEN_KEY = "margince.agent.faults-seen";
+function readSeen(): readonly string[] {
+  return readStoredJson(STORAGE_KEYS.faultsSeen, seenIds) ?? [];
+}
+
+function seenIds(value: unknown): readonly string[] | null {
+  return Array.isArray(value)
+    ? value.filter((id): id is string => typeof id === "string")
+    : null;
+}
 
 /**
  * How many acknowledgements are kept. Faults are rare and the arm behind them is
@@ -51,46 +56,6 @@ function severityOf(state: string): FaultSeverity | null {
     return "error";
   }
   return state === "degraded" ? "warning" : null;
-}
-
-/**
- * The acknowledgements this browser holds.
- *
- * Storage can refuse both halves of this, and a refusal is not an error worth
- * reporting to anybody: private-mode and locked-down profiles throw on access,
- * and what the reader gets then is a fault that raises once per load, which is
- * the safe direction to fail in. The refusal is caught where it happens and
- * turned into the empty answer rather than left to take the rail down.
- */
-function readSeen(): readonly string[] {
-  try {
-    const raw = window.localStorage.getItem(SEEN_KEY);
-    if (raw === null) {
-      return [];
-    }
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((id): id is string => typeof id === "string")
-      : [];
-  } catch (refusedOrCorrupt) {
-    // Both cases end here on purpose: storage this browser will not hand over,
-    // and a value some earlier build wrote in another shape. Neither is
-    // recoverable and both mean the same thing, which is that nothing is known
-    // to have been seen yet.
-    void refusedOrCorrupt;
-    return [];
-  }
-}
-
-function writeSeen(ids: readonly string[]): void {
-  try {
-    window.localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
-  } catch (refused) {
-    // A browser that will not store the mark still gets the fault raised, which
-    // is the behaviour this whole module exists to guarantee. Nothing else in
-    // the rail depends on the write landing.
-    void refused;
-  }
 }
 
 export type AgentFaultReading = Readonly<{
@@ -145,7 +110,7 @@ export function useAgentFault(
         ...unacknowledged.map((entry) => entry.item.id),
         ...current,
       ].slice(0, SEEN_CAP);
-      writeSeen(next);
+      writeStored(STORAGE_KEYS.faultsSeen, JSON.stringify(next));
       return next;
     });
   }, [unacknowledged]);

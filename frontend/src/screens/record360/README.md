@@ -8,8 +8,8 @@ words. This directory is those parts, owned in one place.
 
 It exists because the parts were already shared and had no home. They lived in
 `company360.tsx`, which grew to 3140 lines — six times the repo's 500-line file
-cap — and eighteen other modules imported from it. `contact360.tsx` and
-`network.tsx` reached into a *company* screen for `dealRoleLabel`;
+cap — and eighteen other modules imported from it. `network.tsx` reached into
+a *company* screen for `dealRoleLabel`;
 `dealstatus.tsx` reached in for `SentenceList`. Every one of those imports was
 a shared component wearing one entity's name.
 

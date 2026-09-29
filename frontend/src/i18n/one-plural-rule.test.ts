@@ -391,12 +391,8 @@ describe("one plural rule", () => {
 // THE OTHER SHAPE, and the gate above cannot see it: one key with a count
 // interpolated into it.
 //
-// `ob.conv.activity.steps` was `"{count} steps"` and printed "1 steps" on a
-// cold install, at step 3 of 5, in a browser. There is no ternary and no second
-// arm, so the census above — which asks whether BOTH ARMS of a conditional are
-// catalogue keys — has nothing to inspect. It is not wrong; its subject does
-// not include this class, and a class a census cannot see is one it reports
-// PASS over forever.
+// A value of `"{count} steps"` prints "1 steps" with no ternary and no second
+// arm, so the census above has nothing to inspect and would report PASS forever.
 //
 // WHAT THE SUBJECT IS. A key whose value interpolates `{count}` and carries no
 // `_one`/`_other` sibling. That is the broad reading and it is deliberate: the
@@ -413,14 +409,19 @@ describe("one plural rule", () => {
 // So the corpus is derived from the catalogue and cleared by the register in
 // plural-debt.ts, which is closed and only shrinks.
 describe("one count, one key", () => {
-  const pluralSibling = (key: string): boolean =>
+  const pluralSibling = (
+    catalog: Readonly<Record<string, string>>,
+    key: string,
+  ): boolean =>
     [`${key}_one`, `${key}_other`, `${key}.one`, `${key}.many`].some(
-      (sibling) => Object.hasOwn(en, sibling),
+      (sibling) => Object.hasOwn(catalog, sibling),
     );
 
   /** Every catalogue key that puts a count into a single message. */
-  const singleKeyCounts = (): string[] =>
-    Object.entries(en)
+  const singleKeyCounts = (
+    catalog: Readonly<Record<string, string>> = en,
+  ): string[] =>
+    Object.entries(catalog)
       .filter(
         ([key, value]) =>
           typeof value === "string" &&
@@ -429,7 +430,7 @@ describe("one count, one key", () => {
           !key.endsWith("_other") &&
           !key.endsWith(".one") &&
           !key.endsWith(".many") &&
-          !pluralSibling(key),
+          !pluralSibling(catalog, key),
       )
       .map(([key]) => key)
       .sort();
@@ -467,16 +468,13 @@ describe("one count, one key", () => {
     ).toEqual([]);
   });
 
-  // The census's own census. It reads the catalogue it claims to read, and it
-  // recognises the shape in the spelling the real defect took.
-  it("sees a count interpolated into one key", () => {
-    const registered = [...PLURAL_SINGLE_KEY_DEBT.keys()];
-    expect(registered.length).toBeGreaterThan(50);
-    // The key this issue was filed for is CONVERTED, so it must be absent from
-    // both the census and the register — the one worked example that proves the
-    // way out is a plural pair rather than a line in the list.
-    expect(Object.hasOwn(en, "ob.conv.activity.steps_one")).toBe(true);
-    expect(PLURAL_SINGLE_KEY_DEBT.has("ob.conv.activity.steps")).toBe(false);
+  it("flags a count in one key and passes a count split into two arms", () => {
+    const planted = {
+      "x.steps": "{count} steps",
+      "x.tasks_one": "{count} task",
+      "x.tasks_other": "{count} tasks",
+    };
+    expect(singleKeyCounts(planted)).toEqual(["x.steps"]);
   });
 
   // Every plural base carries both arms and no bare key: a missing arm leaves one

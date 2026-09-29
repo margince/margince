@@ -1745,11 +1745,22 @@
   min-height: 0;
 }
 
-/* `.appbanner` paints nothing and has no rule here on purpose: it is the
- * shell's MARKER on the wrapper a banner mounts in, read by
- * `.main:not(:has(> .appbanner)) > .scroll` above so the content column stops
- * reserving the top bar's height while a banner stands in it. The notice inside
- * the wrapper draws itself, and a wrapper is not a surface. */
+/* The shell banners' slot: outside the scroller, so a state that blocks work
+ * stays in view on a long page, and measured like the scroller beside it. */
+.appbanner {
+  padding-top: var(--space-3);
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+/* The page column's inset, as `.wrap` takes it: the gutter, and on a capped
+ * page the measure centred in what the scrollbar leaves. */
+.appbanner > * {
+  margin-inline: max(
+    var(--pageGutter),
+    calc((100% - var(--pageMeasure, 100%)) / 2 + var(--pageGutter))
+  );
+}
 
 /* The resume-connect banner is the one that sits INSIDE the content column,
  * above the screen it interrupts, so it earns a gap under it. */

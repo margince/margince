@@ -1903,6 +1903,14 @@ func (stubs) SaveMyLocale(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyLocale")
 }
 
+func (stubs) ListNotificationPreferences(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListNotificationPreferences")
+}
+
+func (stubs) SaveNotificationPreference(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveNotificationPreference")
+}
+
 func (stubs) GetMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyWorkingHours")
 }
@@ -1911,8 +1919,16 @@ func (stubs) SaveMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyWorkingHours")
 }
 
+func (stubs) ListNotices(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticesParams) {
+	httperr.NotImplemented(w, r, "ListNotices")
+}
+
 func (stubs) RaiseNotice(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RaiseNotice")
+}
+
+func (stubs) MarkAllNoticesRead(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "MarkAllNoticesRead")
 }
 
 func (stubs) MarkNoticeRead(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
