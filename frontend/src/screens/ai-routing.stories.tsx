@@ -7,6 +7,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
+import { LaneRow } from "./ai-routing-lane";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The installation's tier→model binding: which vendor serves each cost rung,
@@ -139,7 +140,7 @@ function story(
 const meta: Meta<typeof AiRoutingCard> = {
   title: "Settings/AI/Models and routing/Model tiers",
   component: AiRoutingCard,
-  subcomponents: { AdapterFields, EmbeddingWidthField },
+  subcomponents: { AdapterFields, EmbeddingWidthField, LaneRow },
 };
 export default meta;
 type Story = StoryObj<typeof AiRoutingCard>;
