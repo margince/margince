@@ -61,7 +61,7 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 		if err := p.ApplyGuarded(ctx, tx, listObject, id.UUID, in.IfVersion); err != nil {
 			return err
 		}
-		if out, err = scanList(tx.QueryRow(ctx, selectList, id)); err != nil {
+		if out, err = scanList(tx.QueryRow(ctx, selectList, listByID(id))); err != nil {
 			return err
 		}
 		if err := writeRevision(ctx, tx, out); err != nil {
@@ -115,9 +115,9 @@ func listPatch(current listRow, in UpdateListInput) *storekit.Patch {
 	}
 	switch {
 	case in.ClearPurpose && current.Purpose != nil:
-		p.Set("purpose", current.Purpose, nil)
+		p.Set(purposeField, current.Purpose, nil)
 	case in.Purpose != nil:
-		p.Set("purpose", current.Purpose, *in.Purpose)
+		p.Set(purposeField, current.Purpose, *in.Purpose)
 	}
 	if in.Definition != nil {
 		p.Set(definitionField, current.Definition, in.Definition)
@@ -127,19 +127,19 @@ func listPatch(current listRow, in UpdateListInput) *storekit.Patch {
 	}
 	switch {
 	case in.ClearTeam && current.TeamID != nil:
-		p.Set("team_id", current.TeamID, nil)
+		p.Set(teamIDField, current.TeamID, nil)
 	case in.TeamID != nil:
-		p.Set("team_id", current.TeamID, *in.TeamID)
+		p.Set(teamIDField, current.TeamID, *in.TeamID)
 	}
 	if in.StewardID != nil {
-		p.Set("steward_id", current.StewardID, *in.StewardID)
+		p.Set(stewardIDField, current.StewardID, *in.StewardID)
 	}
 	return p
 }
 
 func changedKeys(after map[string]any) []string {
 	keys := make([]string, 0, len(after))
-	for _, key := range []string{nameField, "purpose", definitionField, sharingField, "team_id", "steward_id"} {
+	for _, key := range []string{nameField, purposeField, definitionField, sharingField, teamIDField, stewardIDField} {
 		if _, ok := after[key]; ok {
 			keys = append(keys, key)
 		}
@@ -183,7 +183,7 @@ func (s *Store) setArchived(ctx context.Context, id ids.ListID, archive bool) (l
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
-		if out, err = scanList(tx.QueryRow(ctx, selectList, id)); err != nil {
+		if out, err = scanList(tx.QueryRow(ctx, selectList, listByID(id))); err != nil {
 			return err
 		}
 		return auditArchiveChange(ctx, tx, id, archive, p)
@@ -220,7 +220,7 @@ func editableList(ctx context.Context, tx pgx.Tx, id ids.ListID) (listRow, store
 		return listRow{}, storekit.RowLock{}, err
 	}
 	// Read again under the lock, so the row judged is the row changed.
-	current, err := scanList(tx.QueryRow(ctx, selectList, id))
+	current, err := scanList(tx.QueryRow(ctx, selectList, listByID(id)))
 	if err != nil {
 		return listRow{}, storekit.RowLock{}, err
 	}
@@ -253,8 +253,11 @@ func writeRevision(ctx context.Context, tx pgx.Tx, l listRow) error {
 	}
 	_, err = tx.Exec(ctx, `
 		INSERT INTO list_revision (list_id, version, name, purpose, definition, sharing, team_id, steward_id, changed_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		l.ID, l.Version, l.Name, l.Purpose, l.Definition, l.Sharing, l.TeamID, l.StewardID, actor)
+		VALUES (@list_id, @version, @name, @purpose, @definition, @sharing, @team_id, @steward_id, @changed_by)`,
+		pgx.StrictNamedArgs{
+			listIDField: l.ID, "version": l.Version, nameField: l.Name, purposeField: l.Purpose, definitionField: l.Definition,
+			sharingField: l.Sharing, teamIDField: l.TeamID, stewardIDField: l.StewardID, "changed_by": actor,
+		})
 	if err != nil {
 		return fmt.Errorf("record list revision: %w", err)
 	}

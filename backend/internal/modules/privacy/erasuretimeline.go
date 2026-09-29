@@ -197,15 +197,16 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 // for erasure), not a second selection: a lead matched there by address or by
 // conversion and missed here would keep the subject on a Shortlist.
 func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID, leads []ids.UUID) error {
-	const subject = `(entity_type = 'contact' AND entity_id = $1)
-		OR (entity_type = 'lead' AND entity_id = ANY($2))`
+	const subject = `(entity_type = 'contact' AND entity_id = @contact_id)
+		OR (entity_type = 'lead' AND entity_id = ANY(@leads))`
 	if leads == nil {
 		leads = []ids.UUID{}
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, contactID, leads); err != nil {
+	args := pgx.StrictNamedArgs{"contact_id": contactID, "leads": leads}
+	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, args); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list history: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM list_member WHERE `+subject, contactID, leads); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM list_member WHERE `+subject, args); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list memberships: %w", err)
 	}
 	return nil

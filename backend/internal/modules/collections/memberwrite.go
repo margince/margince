@@ -84,10 +84,13 @@ func (s *Store) AddMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID, c
 	var out memberRow
 	err = rowScanMember(tx.QueryRow(ctx, `
 		INSERT INTO list_member (list_id, entity_type, entity_id, added_by, note)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES (@list_id, @entity_type, @entity_id, @added_by, @note)
 		ON CONFLICT (list_id, entity_type, entity_id) DO NOTHING
 		RETURNING id, list_id, entity_type, entity_id, added_by, created_at, note`,
-		listID, change.EntityType, change.EntityID, actor, change.Note), &out)
+		pgx.StrictNamedArgs{
+			listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID,
+			"added_by": actor, "note": change.Note,
+		}), &out)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return memberRow{}, ErrAlreadyMember
 	}
@@ -105,8 +108,8 @@ func (s *Store) RemoveMemberTx(ctx context.Context, tx pgx.Tx, listID ids.ListID
 		return err
 	}
 	tag, err := tx.Exec(ctx,
-		`DELETE FROM list_member WHERE list_id = $1 AND entity_type = $2 AND entity_id = $3`,
-		listID, change.EntityType, change.EntityID)
+		`DELETE FROM list_member WHERE list_id = @list_id AND entity_type = @entity_type AND entity_id = @entity_id`,
+		pgx.StrictNamedArgs{listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID})
 	if err != nil {
 		return err
 	}
@@ -177,8 +180,11 @@ func admitShortlistChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, ent
 func recordMemberChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, change MemberChange, action, actor string) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		listID, change.EntityType, change.EntityID, action, change.Reason, actor, change.Note); err != nil {
+		VALUES (@list_id, @entity_type, @entity_id, @action, @reason, @actor, @note)`,
+		pgx.StrictNamedArgs{
+			listIDField: listID, entityTypeField: change.EntityType, entityIDField: change.EntityID,
+			"action": action, "reason": change.Reason, "actor": actor, "note": change.Note,
+		}); err != nil {
 		return fmt.Errorf("record the membership change: %w", err)
 	}
 	member := map[string]any{entityTypeField: change.EntityType, entityIDField: change.EntityID}

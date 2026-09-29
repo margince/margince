@@ -101,7 +101,7 @@ func (h Handlers) UpdateList(w http.ResponseWriter, r *http.Request, id crmcontr
 	in := UpdateListInput{
 		Name: req.Name, Purpose: req.Purpose, IfVersion: &req.Version,
 		TeamID: idArg[ids.TeamKind](req.TeamId), StewardID: idArg[ids.UserKind](req.StewardId),
-		ClearPurpose: slices.Contains(cleared, "purpose"), ClearTeam: slices.Contains(cleared, "team_id"),
+		ClearPurpose: slices.Contains(cleared, purposeField), ClearTeam: slices.Contains(cleared, teamIDField),
 	}
 	if req.Definition != nil {
 		in.Definition = *req.Definition

@@ -252,7 +252,7 @@ func (s *Store) MemberFilter(ctx context.Context, listID ids.UUID, entityType st
 		return nil, err
 	}
 	if list.EntityType != entityType {
-		return nil, &BadInputError{Field: "list_id", Reason: "names a list of " + list.EntityType + ", not of " + entityType}
+		return nil, &BadInputError{Field: listIDField, Reason: "names a list of " + list.EntityType + ", not of " + entityType}
 	}
 	if list.ListType == listTypeDynamic {
 		engine, pred, err := s.liveFilter(ctx, list)

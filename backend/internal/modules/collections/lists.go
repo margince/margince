@@ -113,6 +113,15 @@ const definitionField = "definition"
 // path, never prose.
 const entityIDField = "entity_id"
 
+// A list's own columns, as its reads, writes, patches and refusals spell them.
+const (
+	listIDField    = "list_id"
+	listTypeField  = "list_type"
+	purposeField   = "purpose"
+	teamIDField    = "team_id"
+	stewardIDField = "steward_id"
+)
+
 // memberEntityVocabulary renders the accepted set for the refusal message.
 // Derived from the same map the check uses, because a message that restates
 // the vocabulary drifts from it silently — the caller is then told a record
@@ -146,8 +155,10 @@ const listColumns = `l.id, l.name, l.entity_type, l.list_type, l.definition, l.o
 	l.purpose, l.steward_id, l.sharing, l.version, l.created_at, l.updated_at, l.archived_at,
 	(SELECT u.display_name FROM app_user u WHERE u.id = l.steward_id)`
 
-// selectList reads one list row by id, $1.
-const selectList = "SELECT " + listColumns + " FROM list l WHERE l.id = $1"
+// selectList reads one list row by its id, bound through listByID.
+const selectList = "SELECT " + listColumns + " FROM list l WHERE l.id = @id"
+
+func listByID(id ids.ListID) pgx.StrictNamedArgs { return pgx.StrictNamedArgs{"id": id} }
 
 // catalogCap bounds the un-paginated catalog reads. Lists and tags are
 // workspace-curated vocabulary — tens of rows, not record data — which
@@ -265,21 +276,23 @@ func (s *Store) CreateList(ctx context.Context, in CreateListInput) (listRow, er
 		var id ids.ListID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO list (name, entity_type, list_type, definition, owner_id, team_id, purpose, sharing, steward_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-			RETURNING id`,
-			in.Name, in.EntityType, in.ListType, in.Definition, in.OwnerID, in.TeamID,
-			in.Purpose, in.Sharing, in.StewardID).Scan(&id); err != nil {
+			VALUES (@name, @entity_type, @list_type, @definition, @owner_id, @team_id, @purpose, @sharing, @steward_id)
+			RETURNING id`, pgx.StrictNamedArgs{
+			nameField: in.Name, entityTypeField: in.EntityType, listTypeField: in.ListType, definitionField: in.Definition,
+			ownerIDField: in.OwnerID, teamIDField: in.TeamID, purposeField: in.Purpose, sharingField: in.Sharing,
+			stewardIDField: in.StewardID,
+		}).Scan(&id); err != nil {
 			return err
 		}
 		var err error
-		if out, err = scanList(tx.QueryRow(ctx, selectList, id)); err != nil {
+		if out, err = scanList(tx.QueryRow(ctx, selectList, listByID(id))); err != nil {
 			return err
 		}
 		if err := writeRevision(ctx, tx, out); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", listObject, out.ID.UUID, nil, map[string]any{
-			nameField: out.Name, entityTypeField: out.EntityType, "list_type": out.ListType, sharingField: out.Sharing,
+			nameField: out.Name, entityTypeField: out.EntityType, listTypeField: out.ListType, sharingField: out.Sharing,
 		})
 		if err != nil {
 			return err
@@ -329,7 +342,7 @@ func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 		}
 		return nil
 	default:
-		return &BadInputError{Field: "list_type", Reason: "must be static|dynamic"}
+		return &BadInputError{Field: listTypeField, Reason: "must be static|dynamic"}
 	}
 }
 
@@ -363,7 +376,7 @@ func readVisibleList(ctx context.Context, tx pgx.Tx, id ids.ListID) (listRow, er
 	if err := ensureListVisible(ctx, tx, id); err != nil {
 		return listRow{}, err
 	}
-	out, err := scanList(tx.QueryRow(ctx, selectList, id))
+	out, err := scanList(tx.QueryRow(ctx, selectList, listByID(id)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return listRow{}, apperrors.ErrNotFound
 	}

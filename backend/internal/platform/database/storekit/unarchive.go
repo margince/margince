@@ -46,9 +46,9 @@ type UnarchiveShape struct {
 	Taken, TakenFrom, TakenField string
 	// Children restore one retired row ($1) retired at $2, in this order.
 	Children []ChildRestore
-	// Membership re-inserts one list_member row ($1 list, $2 type, $3 record,
-	// $4 added_by, $5 created_at, $6 note) and records it in list_member_event
-	// as restored by $7; Tag re-inserts one taggable row.
+	// Membership re-inserts one list_member row (@list_id, @entity_type,
+	// @entity_id, @added_by, @created_at, @note) and records it in
+	// list_member_event as restored by @actor; Tag re-inserts one taggable row.
 	Membership, Tag string
 	Restored        events.Payload
 }
@@ -192,7 +192,10 @@ func restoreCascade(
 		return nil, err
 	}
 	for _, m := range cascade.Memberships {
-		back, err := TryInSavepoint(ctx, tx, shape.Membership, m.ListID, shape.Table, id, m.AddedBy, m.CreatedAt, m.Note, actor)
+		back, err := TryInSavepoint(ctx, tx, shape.Membership, pgx.StrictNamedArgs{
+			"list_id": m.ListID, "entity_type": shape.Table, "entity_id": id,
+			"added_by": m.AddedBy, "created_at": m.CreatedAt, "note": m.Note, "actor": actor,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("restore the membership of list %s: %w", m.ListID, err)
 		}

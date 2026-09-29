@@ -134,11 +134,11 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 	// cleanup rule removes them with the entity.
 	if err := cascade.DropMemberships(ctx, tx,
 		`WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = $1
+			DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = @record
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
-			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', $2 FROM gone)
+			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
 		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
 		return err
 	}

@@ -91,14 +91,14 @@ func (c *ArchiveCascade) Retire(ctx context.Context, tx pgx.Tx, table, statement
 
 // DropMemberships runs the owning module's statement that deletes a record's
 // list memberships and records each removal in list_member_event, and keeps
-// what it deleted. The statement takes the record id ($1) and the acting
-// principal ($2), and answers list_id, added_by, created_at and note.
+// what it deleted. The statement binds @record, the record id, and @actor, the
+// acting principal, and answers list_id, added_by, created_at and note.
 func (c *ArchiveCascade) DropMemberships(ctx context.Context, tx pgx.Tx, statement string, id ids.UUID) error {
 	actor, err := CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, statement, id, actor)
+	rows, err := tx.Query(ctx, statement, pgx.StrictNamedArgs{"record": id, "actor": actor})
 	if err != nil {
 		return fmt.Errorf("drop list memberships: %w", err)
 	}

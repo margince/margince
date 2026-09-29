@@ -91,8 +91,8 @@ func (s *Store) stewardGone(ctx context.Context, l listRow) (bool, error) {
 	var live bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			"SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND "+s.liveSteward+")",
-			l.StewardID).Scan(&live)
+			"SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = @steward_id AND "+s.liveSteward+")",
+			pgx.StrictNamedArgs{stewardIDField: l.StewardID}).Scan(&live)
 	})
 	return !live, err
 }
@@ -107,9 +107,9 @@ func (s *Store) Dependencies(ctx context.Context, id ids.ListID) ([]listDependen
 		}
 		rows, err := tx.Query(ctx, `
 			SELECT occurred_at, actor_id FROM system_log
-			WHERE action = 'export' AND detail ->> $1 = $2::text
-			ORDER BY occurred_at DESC LIMIT $3`,
-			ExportDetailListID, id.String(), dependencyCap)
+			WHERE action = 'export' AND detail ->> @detail_key = @list_id::text
+			ORDER BY occurred_at DESC LIMIT @cap`,
+			pgx.StrictNamedArgs{"detail_key": ExportDetailListID, listIDField: id.String(), "cap": dependencyCap})
 		if err != nil {
 			return err
 		}
@@ -176,8 +176,8 @@ func (s *Store) explainChosen(ctx context.Context, list listRow, entityID ids.UU
 		var addedAt time.Time
 		err := tx.QueryRow(ctx, `
 			SELECT added_by, created_at, note FROM list_member
-			WHERE list_id = $1 AND entity_type = $2 AND entity_id = $3`,
-			list.ID, list.EntityType, entityID).Scan(&addedBy, &addedAt, &out.Note)
+			WHERE list_id = @list_id AND entity_type = @entity_type AND entity_id = @entity_id`,
+			pgx.StrictNamedArgs{listIDField: list.ID, entityTypeField: list.EntityType, entityIDField: entityID}).Scan(&addedBy, &addedAt, &out.Note)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -310,7 +310,8 @@ func (s *Store) actorNames(ctx context.Context, actors []string) (map[string]str
 		return names, nil
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT id, display_name FROM app_user WHERE id = ANY($1)`, userIDs)
+		rows, err := tx.Query(ctx, `SELECT id, display_name FROM app_user WHERE id = ANY(@ids)`,
+			pgx.StrictNamedArgs{"ids": userIDs})
 		if err != nil {
 			return err
 		}
