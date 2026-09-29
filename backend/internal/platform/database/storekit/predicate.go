@@ -249,23 +249,25 @@ func groupShape(p Predicate) (kind string, children []Predicate, isGroup bool, e
 	}
 }
 
-func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves *int) (string, error) {
+// admitLeaf finds a leaf's field and refuses a leaf the engine may not compile:
+// one too many, an unknown field, or an operator its type or shape cannot take.
+func admitLeaf(p Predicate, fields map[string]Field, leaves *int) (Field, error) {
 	*leaves++
 	if *leaves > PredicateMaxLeaves {
-		return "", &PredicateError{
+		return Field{}, &PredicateError{
 			Field: p.Field, Code: CodeFilterTooLarge,
 			Message: fmt.Sprintf("filter has more than the maximum of %d conditions", PredicateMaxLeaves),
 		}
 	}
 	field, ok := fields[p.Field]
 	if !ok {
-		return "", &PredicateError{
+		return Field{}, &PredicateError{
 			Field: p.Field, Code: CodeFilterFieldNotAllowed,
 			Message: fmt.Sprintf("field %q is not filterable on this resource", p.Field),
 		}
 	}
 	if !operatorsByType[field.Type][p.Op] {
-		return "", &PredicateError{
+		return Field{}, &PredicateError{
 			Field: p.Field, Code: CodeFilterOpNotAllowed,
 			Message: fmt.Sprintf("operator %q does not apply to the %s field %q", p.Op, field.Type, p.Field),
 		}
@@ -273,9 +275,16 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 	// Asked before a withheld field answers FALSE, so a withheld link refuses
 	// exactly the operators its vocabulary entry leaves out.
 	if field.Link != "" && !linkOperators[p.Op] {
-		return "", linkOperatorRefusal(p)
+		return Field{}, linkOperatorRefusal(p)
 	}
+	return field, nil
+}
 
+func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves *int) (string, error) {
+	field, err := admitLeaf(p, fields, leaves)
+	if err != nil {
+		return "", err
+	}
 	if field.Withheld {
 		return "FALSE", nil
 	}
