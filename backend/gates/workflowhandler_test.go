@@ -27,12 +27,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // handlerInterfaceMethods is workflow.Handler's full method set. A
@@ -73,7 +73,6 @@ var expectedHandlerTypes = []string{
 
 func TestWorkflowHandlerMatchAndPlanAreReadOnly(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
 	methodsByType := map[string]map[string]bool{}      // "dir.Type" -> method-name set
 	matchPlanDecls := map[string][]handlerMethodDecl{} // "dir.Type" -> its Match/Plan decls
 
@@ -83,7 +82,7 @@ func TestWorkflowHandlerMatchAndPlanAreReadOnly(t *testing.T) {
 			return err
 		}
 		path = filepath.ToSlash(path)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}

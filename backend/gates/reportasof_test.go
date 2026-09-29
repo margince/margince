@@ -24,9 +24,9 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The file and the struct field whose value must come from the frame.
@@ -39,8 +39,8 @@ const (
 func TestAReportIsLabelledWithTheInstantItWasComputedAt(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, reportOutcomeFile, nil, 0)
+	fset := gatekit.SourceFileSet()
+	file, err := gatekit.ParseFile(reportOutcomeFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", reportOutcomeFile, err)
 	}

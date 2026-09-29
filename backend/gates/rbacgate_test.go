@@ -44,8 +44,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -631,7 +629,6 @@ func receiverName(fn *ast.FuncDecl) string {
 func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 	t.Helper()
 	pkgs := map[string]gatePkg{}
-	fset := token.NewFileSet()
 	for _, root := range storeEntryPointScope.Roots {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
@@ -640,7 +637,7 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 			}
 			path = filepath.ToSlash(path)
 			dir := filepath.ToSlash(filepath.Dir(path))
-			file, parseErr := parser.ParseFile(fset, path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}
@@ -750,7 +747,7 @@ func TestTheAuthDecisionVerbsStillDescribeThePackage(t *testing.T) {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}
@@ -862,7 +859,7 @@ func authPackageDeclares(t *testing.T, name string) bool {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

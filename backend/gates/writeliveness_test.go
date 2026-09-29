@@ -46,8 +46,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -346,7 +344,6 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 	t.Parallel()
 	defer livenessUnstated.AssertAllMatched(t)
 	retirable := retirableTables(t)
-	fset := token.NewFileSet()
 	heldCache := map[string]map[string][]string{}
 	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
@@ -356,7 +353,7 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

@@ -25,8 +25,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"sort"
 	"strings"
@@ -101,7 +99,7 @@ var declaredDifferences = gatekit.Waive(map[string]string{
 // operatorSets reads a matrix declaration and returns, per type, its operators.
 func operatorSets(t *testing.T, path, declName string) map[string][]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

@@ -27,6 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // jobArgsFloor guards against a vacuous pass: a walker that silently
@@ -66,10 +68,10 @@ func parseGoFilesUnder(t *testing.T, dir string) (*token.FileSet, []*ast.File) {
 	if err != nil {
 		t.Fatalf("walking %s: %v", dir, err)
 	}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	files := make([]*ast.File, 0, len(paths))
 	for _, path := range paths {
-		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -125,8 +127,7 @@ func collectUnionTerms(e ast.Expr, into map[string]bool) {
 func declaredKindTypes(t *testing.T) map[string]bool {
 	t.Helper()
 	path := filepath.Join("internal", "compose", "jobkinds_gen.go")
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

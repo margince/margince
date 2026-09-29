@@ -15,13 +15,13 @@ package gates
 import (
 	"go/ast"
 	"go/build"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const modulePath = "github.com/margince/margince/backend"
@@ -239,7 +239,6 @@ func funcsCallingSelector(t *testing.T, dir, pkgIdent, funcName string) []string
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
-	fset := token.NewFileSet()
 	var sites []string
 	for _, entry := range entries {
 		name := entry.Name()
@@ -247,7 +246,7 @@ func funcsCallingSelector(t *testing.T, dir, pkgIdent, funcName string) []string
 			continue
 		}
 		path := filepath.Join(dir, name)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

@@ -46,7 +46,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -231,7 +230,7 @@ func TestNoExtensionMailsWithoutTheDeliveryLane(t *testing.T) {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		file, parseErr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if parseErr != nil {
 			return fmt.Errorf("parsing %s: %w", path, parseErr)
 		}
@@ -327,9 +326,8 @@ func callsSendOnAMailerField(file *ast.File) bool {
 func TestTheRelaySeamStillHasTheShapeThisGateMatches(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
 	path := filepath.Join("internal", "platform", "mailer", "mailer.go")
-	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing the relay seam: %v", err)
 	}

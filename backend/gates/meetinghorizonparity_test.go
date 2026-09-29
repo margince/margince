@@ -24,13 +24,14 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two copies, by the PACKAGE that holds each — module-relative, because
@@ -99,7 +100,7 @@ func meetingHorizonIn(t *testing.T, dir string) string {
 // no such constant.
 func meetingHorizonInFile(t *testing.T, path string) string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

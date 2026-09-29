@@ -23,12 +23,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // sendChokepoints are the two store methods every outbound message passes
@@ -327,7 +328,7 @@ var forwardsAnAlreadyValidatedInput = map[string]bool{
 func TestEverySendDoorValidatesTheClaimedContext(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	// The whole backend tree, because a send door is wherever somebody calls
 	// the chokepoint — cmd/ included, which already owns an outbound mail lane.
 	files := map[string]*ast.File{}
@@ -395,7 +396,7 @@ func TestEverySendDoorValidatesTheClaimedContext(t *testing.T) {
 func TestTheToolSurfaceSpellsTheSendContextOnce(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var declarations []string
 	for path, file := range parseTreeFiles(t, fset, "internal/modules/agents") {
 		for _, decl := range file.Decls {
@@ -547,7 +548,7 @@ func parseTreeFiles(t *testing.T, fset *token.FileSet, root string) map[string]*
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

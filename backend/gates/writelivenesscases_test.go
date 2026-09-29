@@ -19,8 +19,9 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // retirableForCases is the table set the cases are judged against, written out
@@ -199,7 +200,7 @@ func TestTheLivenessCensusJudgesAWriteAndCreditsOnlyAnAnswer(t *testing.T) {
 	t.Parallel()
 	for _, tc := range livenessCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fset := token.NewFileSet()
+			fset := gatekit.SourceFileSet()
 			file, err := parser.ParseFile(fset, "synthetic.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the case source: %v", err)

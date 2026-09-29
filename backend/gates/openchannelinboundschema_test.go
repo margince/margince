@@ -25,14 +25,14 @@ package gates_test
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"sort"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -127,7 +127,7 @@ func compareFieldSets(t *testing.T, label string, fromGo, fromYAML map[string]bo
 // than a copy of it.
 func structJSONFields(t *testing.T, path, structName string) map[string]bool {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

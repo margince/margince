@@ -200,7 +200,7 @@ type callIn struct {
 
 func loadSummaryTree(t *testing.T, root string) *summaryTree {
 	t.Helper()
-	tree := &summaryTree{fset: token.NewFileSet(), pkgs: map[string]*summaryPackage{}}
+	tree := &summaryTree{fset: gatekit.SourceFileSet(), pkgs: map[string]*summaryPackage{}}
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -209,7 +209,7 @@ func loadSummaryTree(t *testing.T, root string) *summaryTree {
 			strings.HasSuffix(p, "_gen.go") || slices.Contains(strings.Split(filepath.ToSlash(p), "/"), "testdata") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(tree.fset, p, nil, parser.SkipObjectResolution)
+		file, parseErr := gatekit.ParseFile(p, parser.SkipObjectResolution)
 		if parseErr != nil {
 			return parseErr
 		}

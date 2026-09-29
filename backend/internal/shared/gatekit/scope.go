@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -111,12 +110,11 @@ func (s Scope) Files(t testing.TB) []ParsedFile {
 // them, because every root owes its own evidence of not being vacuous.
 func (s Scope) sweep(tree string, roots []string) (inside []ParsedFile, outside []string, perRoot []int, err error) {
 	perRoot = make([]int, len(roots))
-	fset := token.NewFileSet()
 	err = filepath.WalkDir(tree, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		subject, isSubject, subjectErr := s.subjectAt(fset, tree, path, entry)
+		subject, isSubject, subjectErr := s.subjectAt(tree, path, entry)
 		if subjectErr != nil {
 			return subjectErr
 		}
@@ -145,7 +143,7 @@ func (s Scope) sweep(tree string, roots []string) (inside []ParsedFile, outside 
 // does not judge, or a file the predicate declines. A file the sweep judges but
 // cannot read is an error, never a silent skip: the roots would then be proven
 // against a tree with a hole in it.
-func (s Scope) subjectAt(fset *token.FileSet, tree, path string, entry fs.DirEntry) (ParsedFile, bool, error) {
+func (s Scope) subjectAt(tree, path string, entry fs.DirEntry) (ParsedFile, bool, error) {
 	if entry.IsDir() {
 		return ParsedFile{}, false, nil
 	}
@@ -157,7 +155,7 @@ func (s Scope) subjectAt(fset *token.FileSet, tree, path string, entry fs.DirEnt
 	if !isSweptSource(rel) {
 		return ParsedFile{}, false, nil
 	}
-	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	file, err := ParseFile(path, parser.ParseComments)
 	if err != nil {
 		return ParsedFile{}, false, fmt.Errorf("could not read %s, and a source the sweep cannot read may hold a subject the roots are then never proven against: %w", rel, err)
 	}

@@ -47,7 +47,6 @@ import (
 	"fmt"
 	"go/build"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path"
@@ -133,7 +132,6 @@ func TestNoIntegrationSuiteOpensAnUnboundedPool(t *testing.T) {
 // a third thing worth not reimplementing.
 func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile {
 	t.Helper()
-	fset := token.NewFileSet()
 	var suites []gatekit.ParsedFile
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(p string, entry fs.DirEntry, walkErr error) error {
@@ -150,7 +148,7 @@ func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile 
 			if !built {
 				return nil
 			}
-			file, parseErr := parser.ParseFile(fset, p, nil, parser.ParseComments)
+			file, parseErr := gatekit.ParseFile(p, parser.ParseComments)
 			if parseErr != nil {
 				return parseErr
 			}
@@ -323,7 +321,7 @@ func TestTheDoorIsRecognisedHoweverTheCallIsSpelled(t *testing.T) {
 		t.Run(probe.what, func(t *testing.T) {
 			t.Parallel()
 			src := "package p\n\nimport \"" + door + "\"\n\n" + probe.body + "\n"
-			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", src, parser.ParseComments)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", src, parser.ParseComments)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

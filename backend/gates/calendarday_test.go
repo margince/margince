@@ -195,7 +195,7 @@ func TestTheMatcherResolvesTheTimeImportAlias(t *testing.T) {
 // exactly as the walk exercises it.
 func fileHasDayTruncation(t *testing.T, src string) bool {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", src, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "fixture.go", src, 0)
 	if err != nil {
 		t.Fatalf("parsing fixture: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
 
 	var sites []string
 	judged := 0
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, root := range []string{"internal", "../extensions"} {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {

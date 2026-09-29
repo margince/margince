@@ -19,8 +19,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -52,7 +50,6 @@ func TestEveryMeetingStatusWriterRecordsHistory(t *testing.T) {
 	t.Parallel()
 	defer writesMeetingStatusWithoutHistory.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	var offences []string
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
@@ -60,7 +57,7 @@ func TestEveryMeetingStatusWriterRecordsHistory(t *testing.T) {
 		if strings.HasSuffix(where, "_test.go") || strings.HasPrefix(where, "internal/contracts/") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", where, err)
 		}

@@ -21,7 +21,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -730,7 +729,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	t.Parallel()
 	defer unguardedByIDUpdates.AssertAllMatched(t)
 	versioned := versionedTables(t)
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	constCache := map[string]map[string]string{}
 	heldCache := map[string]map[string][]string{}
 	judged := 0
@@ -741,7 +740,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

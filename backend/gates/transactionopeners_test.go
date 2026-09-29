@@ -16,11 +16,12 @@ package gates_test
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // databasePackage is the seam this gate is about — where a pool becomes a
@@ -65,7 +66,7 @@ func TestTheDatabasePackageOpensATransactionInOneFunction(t *testing.T) {
 			continue
 		}
 		path := filepath.Join(databasePackage, name)
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -101,7 +102,7 @@ func other(ctx context.Context, pool *pgxpool.Pool) error {
 	return tx.Commit(ctx)
 }
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "fixture.go", source, 0)
 	if err != nil {
 		t.Fatalf("parsing fixture source: %v", err)
 	}
@@ -130,7 +131,7 @@ func other(ctx context.Context, pool *pgxpool.Pool) error {
 	return tx.Commit(ctx)
 }
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "fixture.go", source, 0)
 	if err != nil {
 		t.Fatalf("parsing fixture source: %v", err)
 	}
@@ -159,7 +160,7 @@ func other(ctx context.Context, pool *pgxpool.Pool) error {
 	return tx.Commit(ctx)
 }
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "fixture.go", source, 0)
 	if err != nil {
 		t.Fatalf("parsing fixture source: %v", err)
 	}
@@ -189,7 +190,7 @@ func other(ctx context.Context, pool *pgxpool.Pool) error {
 	return tx.Commit(ctx)
 }
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", source, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "fixture.go", source, 0)
 	if err != nil {
 		t.Fatalf("parsing fixture source: %v", err)
 	}

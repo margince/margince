@@ -73,6 +73,10 @@ func roleKeyComparisons(src string, keys []string) []string {
 // LEGACY_ADMIN_SEGMENT), and failing a constant nobody decides a role with is
 // the noise that gets a gate ignored.
 func roleKeyIsDecidedOn(src, key string) bool {
+	// Every shape below, the bound-key one included, spells the key quoted.
+	if !strings.Contains(src, "\""+key+"\"") && !strings.Contains(src, "'"+key+"'") && !strings.Contains(src, "`"+key+"`") {
+		return false
+	}
 	quoted := "(?:\"" + key + "\"|'" + key + "'|`" + key + "`)"
 	for _, shape := range []*regexp.Regexp{
 		// role === "admin" / role == "admin", and the negated halves. The

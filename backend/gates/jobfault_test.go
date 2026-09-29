@@ -790,7 +790,7 @@ func TestTheJobFaultCensusReadsANamedResultByVariable(t *testing.T) {
 // plantedWorker type-checks one planted file and finds its worker's Work.
 func plantedWorker(t *testing.T, src string) (*packageFuncs, *ast.FuncDecl) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	file, err := parser.ParseFile(fset, filepath.Join("planted", "worker.go"), src, 0)
 	if err != nil {
 		t.Fatalf("parse the planted worker: %v", err)

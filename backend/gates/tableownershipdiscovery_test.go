@@ -15,7 +15,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"sort"
@@ -46,7 +45,6 @@ const platformRoot = "internal/platform"
 func platformStoreDirs(t *testing.T) []string {
 	t.Helper()
 	found := map[string]bool{}
-	fset := token.NewFileSet()
 	err := filepath.WalkDir(platformRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") ||
@@ -54,7 +52,7 @@ func platformStoreDirs(t *testing.T) []string {
 			return err
 		}
 		path = filepath.ToSlash(path)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}
@@ -255,7 +253,7 @@ func TestAStorekitOnlyWriterIsDiscovered(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			parsed, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			parsed, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

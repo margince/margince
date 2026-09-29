@@ -178,7 +178,7 @@ func TestNoMergeGateTestDecidesByTheClock(t *testing.T) {
 	t.Parallel()
 	defer clockBoundsInTheMergeGate.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	// Counted so the gate cannot pass by reading nothing. A walk that found no
 	// test files at all — a moved tree, a changed suffix — reports the same
 	// silence as a clean one, and silence is the one answer a census may not
@@ -192,7 +192,7 @@ func TestNoMergeGateTestDecidesByTheClock(t *testing.T) {
 		if isIntegrationTagged(path) {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			// The error IS the answer: a file this gate cannot parse is a file
 			// it cannot clear, and reporting OK over it is how a census fails
@@ -285,7 +285,7 @@ func TestTheClockBoundDetectorSeesEverySpelling(t *testing.T) {
 			t.Parallel()
 			src := "package p\nimport \"time\"\nfunc f(start, newest, oldest, deadline, issued time.Time) {\n" +
 				k.body + "\n}\n"
-			file, err := parser.ParseFile(token.NewFileSet(), "p.go", src, 0)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "p.go", src, 0)
 			if err != nil {
 				t.Fatalf("parsing the case: %v", err)
 			}

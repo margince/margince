@@ -138,7 +138,7 @@ func eachGoFileInTheModule(t *testing.T, visit func(path string, file *ast.File)
 // and a walk that stopped at its edge would certify a tree it never read.
 func eachGoFileUnder(t *testing.T, roots []string, visit func(path string, file *ast.File)) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, root := range roots {
 		walkGoFilesUnder(t, fset, root, visit)
 	}
@@ -161,7 +161,7 @@ func walkGoFilesUnder(
 		if !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			t.Errorf("parsing %s: %v", path, parseErr)
 			return nil
@@ -524,7 +524,7 @@ func TestTheReaderCensusSeesEachShapeARawReadIsWrittenIn(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			parsed, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			parsed, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

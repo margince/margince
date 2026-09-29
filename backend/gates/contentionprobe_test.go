@@ -93,7 +93,7 @@ type sqlCall struct {
 func TestEveryContentionProbeClearsTheStatsSnapshot(t *testing.T) {
 	t.Parallel()
 	var offenders []string
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 
 	for _, tree := range probeTrees {
 		if _, err := os.Stat(tree); err != nil {
@@ -150,7 +150,7 @@ func scanTree(root string, fset *token.FileSet) ([]string, error) {
 		if !strings.HasSuffix(path, ".go") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		file, parseErr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if parseErr != nil {
 			// Not skipped. A file this gate cannot read is a file it cannot
 			// clear, and a census that quietly drops its unreadable members

@@ -18,7 +18,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -28,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // enumBindings maps "table.column" to the Go type that mirrors it.
@@ -246,7 +247,6 @@ func tableCheckSets(t *testing.T) map[string][]string {
 func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 	t.Helper()
 	var vals []string
-	fset := token.NewFileSet()
 	entries, err := os.ReadDir(pkgDir)
 	if err != nil {
 		t.Fatal(err)
@@ -255,7 +255,7 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(pkgDir, e.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(pkgDir, e.Name()), 0)
 		if err != nil {
 			t.Fatal(err)
 		}
