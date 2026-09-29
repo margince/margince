@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// sourceDealSuggestion names a suggestion row.
 const sourceDealSuggestion = "deal_suggestion"
 
 // DealSuggestions reads the open suggestions THIS reader may see, newest first,

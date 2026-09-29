@@ -332,7 +332,7 @@ export const vi = {
   "brief.coverage.source.brief_item": "Cập nhật giao dịch",
   "brief.coverage.source.dedupe_candidate": "Hồ sơ có thể trùng",
   "brief.coverage.source.deal_suggestion": "Cơ hội được gợi ý",
-  "worklist.untitled.deal_suggestion": "Một cơ hội mà các dấu hiệu gợi ý",
+  "worklist.untitled.deal_suggestion": "Cơ hội được gợi ý từ các tín hiệu",
   "dealSuggestion.agent": "Trinh sát cơ hội",
   "dealSuggestion.name": "{company} · {hint}",
   "dealSuggestion.hint.proposal_sent": "đã gửi báo giá",
@@ -345,6 +345,7 @@ export const vi = {
     "Đã bỏ qua cho cả nhóm. Gợi ý chỉ quay lại khi có dấu hiệu mới hơn.",
   "dealSuggestion.decided":
     "Gợi ý này đã được quyết định. Hãy tải lại để xem tình trạng.",
+  "dealSuggestion.unavailable": "Không đọc được gợi ý này. Hãy thử lại sau.",
   "dealSuggestion.failed": "Chưa thực hiện được. Hãy thử lại.",
   "dealSuggestion.evidence.meeting": "Đã họp: {title}",
   "dealSuggestion.evidence.signal": "Tín hiệu: {title}",
@@ -361,7 +362,7 @@ export const vi = {
   "dealSuggestion.confirm": "Tạo cơ hội",
   "dealSuggestion.accepted": "Đã tạo cơ hội: {name}.",
   "dealSuggestion.acceptedUnlinked":
-    "Đã tạo cơ hội: {name}. Một số dấu hiệu vẫn ở chỗ cũ vì bạn không được phép chuyển chúng.",
+    "Đã tạo cơ hội: {name}. Một số dấu hiệu vẫn ở chỗ cũ vì quyền hạn không cho phép chuyển chúng.",
   "brief.team.commitmentRate":
     "Đã hoàn thành {done} trên {total} cam kết đến hạn.",
   "brief.team.meetingRate":

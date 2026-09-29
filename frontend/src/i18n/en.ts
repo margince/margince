@@ -331,6 +331,8 @@ export const en = {
     "Dismissed for everyone. It comes back only if newer evidence turns up.",
   "dealSuggestion.decided":
     "Someone already decided this suggestion. Reload to see where it stands.",
+  "dealSuggestion.unavailable":
+    "The suggestion could not be read. Try again later.",
   "dealSuggestion.failed": "That did not go through. Try again.",
   "dealSuggestion.evidence.meeting": "Meeting held: {title}",
   "dealSuggestion.evidence.signal": "Signal: {title}",
@@ -347,7 +349,7 @@ export const en = {
   "dealSuggestion.confirm": "Open deal",
   "dealSuggestion.accepted": "Deal opened: {name}.",
   "dealSuggestion.acceptedUnlinked":
-    "Deal opened: {name}. Some of the evidence stays where it was, because you may not move it.",
+    "Deal opened: {name}. Some evidence remains in place because permissions do not allow it to be moved.",
   "brief.team.commitmentRate":
     "{done} of {total} due commitments were completed.",
   "brief.team.meetingRate":

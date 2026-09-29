@@ -24,14 +24,20 @@ export function SuggestionDecision({ item }: Readonly<{ item: WorklistItem }>) {
     Boolean(companyId),
   );
   const suggestion = query.data?.find((one) => one.id === item.id);
-  if (!suggestion) {
-    // Decided since the page was read, or no longer the reader's to see: the
-    // row's own title still says what it was, and there is nothing to answer.
-    return query.isPending ? null : (
-      <p className="t-caption">{t("dealSuggestion.decided")}</p>
-    );
+  if (suggestion) {
+    return <DealSuggestionCard suggestion={suggestion} />;
   }
-  return <DealSuggestionCard suggestion={suggestion} />;
+  if (query.isPending) {
+    return null;
+  }
+  // A read that failed says nothing about the suggestion, so it must not be
+  // told as a decision somebody made.
+  if (query.isError) {
+    return <p className="t-caption">{t("dealSuggestion.unavailable")}</p>;
+  }
+  // Read, and not among them: decided since the page was read, or no longer
+  // the reader's to see. The row still says what it was.
+  return <p className="t-caption">{t("dealSuggestion.decided")}</p>;
 }
 
 // The answers too large for the row's own line, drawn UNDER it.

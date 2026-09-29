@@ -77,4 +77,29 @@ describe("a suggested deal on the Worklist", () => {
     expect(await screen.findByText(en["dealSuggestion.decided"])).toBeTruthy();
     expect(screen.queryByTestId("deal-suggestion")).toBeNull();
   });
+
+  it("says the suggestion could not be read when the read fails", async () => {
+    stub(day({ queue: [suggestionRow()] }));
+    vi.stubGlobal("fetch", failingSuggestions(vi.mocked(globalThis.fetch)));
+    renderWorklist();
+
+    expect(
+      await screen.findByText(en["dealSuggestion.unavailable"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["dealSuggestion.decided"])).toBeNull();
+  });
 });
+
+// The queue's own stub, with the suggestions read answering a server error.
+function failingSuggestions(queue: typeof fetch): typeof fetch {
+  return async (input, init) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.split("?")[0].endsWith("/deal-suggestions")) {
+      return new Response(JSON.stringify({ code: "internal" }), {
+        status: 500,
+        headers: { "Content-Type": "application/problem+json" },
+      });
+    }
+    return queue(input, init);
+  };
+}

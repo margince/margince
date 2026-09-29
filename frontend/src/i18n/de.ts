@@ -347,6 +347,8 @@ export const de = {
     "Für alle verworfen. Der Vorschlag kommt nur mit neueren Hinweisen wieder.",
   "dealSuggestion.decided":
     "Über diesen Vorschlag wurde schon entschieden. Lade neu, um den Stand zu sehen.",
+  "dealSuggestion.unavailable":
+    "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
   "dealSuggestion.failed": "Das hat nicht geklappt. Versuch es noch einmal.",
   "dealSuggestion.evidence.meeting": "Termin fand statt: {title}",
   "dealSuggestion.evidence.signal": "Signal: {title}",
@@ -360,11 +362,11 @@ export const de = {
   "dealSuggestion.ownerMe": "Selbst",
   "dealSuggestion.field.closeDate": "Voraussichtlicher Abschluss",
   "dealSuggestion.closeDateHint":
-    "Leer lassen, solange niemand einen Termin genannt hat.",
+    "Lass das Feld leer, solange niemand ein Abschlussdatum genannt hat.",
   "dealSuggestion.confirm": "Deal anlegen",
   "dealSuggestion.accepted": "Deal angelegt: {name}.",
   "dealSuggestion.acceptedUnlinked":
-    "Deal angelegt: {name}. Einige Hinweise bleiben, wo sie waren, weil du sie nicht verschieben darfst.",
+    "Deal angelegt: {name}. Einige Hinweise bleiben, wo sie waren, weil die Berechtigungen kein Verschieben erlauben.",
   "brief.team.commitmentRate": "Erledigte fällige Zusagen: {done} von {total}.",
   "brief.team.meetingRate":
     "Termine mit erfasstem nächsten Schritt: {done} von {total}.",
