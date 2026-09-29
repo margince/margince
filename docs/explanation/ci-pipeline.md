@@ -150,8 +150,8 @@ What the `backend` scope adds on top of `backend_db`:
 - The rest of what the suite opens: `.github/**`, `.coderabbit.yaml`,
   `.env.example`, `.tool-versions`, `config/**`, `e2e/**`, `tools/**`,
   `user-guide/**`, `Dockerfile*`, `package.json`, `pnpm-lock.yaml`,
-  `renovate.json`, `README.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`,
-  `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`.
+  `renovate.json`, `README.md`, `CHANGELOG.md`, `CLA.md`,
+  `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`.
 
 That list is derived, not remembered: `backend/gates/gatelanetrigger_test.go`
 resolves every path literal in the suite against the tree and fails on one this
