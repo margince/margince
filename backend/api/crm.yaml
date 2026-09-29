@@ -16902,7 +16902,7 @@ paths:
         CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
         otherwise). Replaces the catalog's `options` array and regenerates the physical
         column's CHECK constraint from the new set via the governed engine (the same
-        owner-ALTER-then-downgrade transaction shape as `createCustomField` — this is the
+        one-transaction owner-ALTER shape as `createCustomField` — this is the
         one DDL path rename/retire never touch). Removing every option is refused (422,
         detail "A picklist needs at least one option") — a picklist always keeps at least
         one allowed value. 🟡 like `retireCustomField`: this mutates a schema-adjacent CHECK
