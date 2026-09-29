@@ -735,9 +735,10 @@ them, with AI and provenance as the one category of our own:
 | Primitives | Stack and Row |
 | AI and provenance | What an agent proposed and where a value came from: Decision card, Decision deck, AI pending, Evidence mark, Evidence receipt, Source email panel, Trust, Margince core |
 
-Leaves are Sentence case throughout. Under `Foundations/` and `Components/`,
-`catalog.test.ts` holds it: acronyms stay capitals (`AI`), one title per story
-file, and no title is both a leaf and a group.
+Under `Foundations/` and `Components/`, every segment is Sentence case and a
+declared acronym or proper noun (`AI`, `Margince`) keeps its spelling. There,
+`catalog.test.ts` holds one title per story file and no title that is both a
+leaf and a group.
 
 ## Driving a control in a test
 
