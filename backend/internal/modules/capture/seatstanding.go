@@ -36,6 +36,11 @@ import (
 // A principal with no seat behind it holds NOTHING. That is the one direction
 // this must not fail in: reading "I cannot tell who this is" as "the same seat"
 // would open the case the predicate exists to close.
+//
+// auth.activityMembershipArm spells the same two of these three arms, but for
+// content visibility, composed into wider clauses a caller who may only READ
+// composes too. Sharing it here would hand those clauses the license to
+// CANCEL or MOVE a row that this predicate grants, so it holds its own copy.
 func SeatHoldsActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
 	seat := actorUserID(ctx)
 	if seat == ids.Nil {

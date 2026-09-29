@@ -32,44 +32,34 @@ const (
 	auditFieldDuration   = "duration_seconds"
 )
 
-// MoveCapturedMeetingTx sets a captured meeting's start and length to what the
-// calendar now says, and reports whether anything changed.
+// MoveCapturedMeetingFor sets a captured meeting's start and length to what the
+// calendar now says, and reports whether anything changed — for a caller that
+// must prove its standing first: a connector acting on a row it found by the
+// provider's event id.
 //
 // The same row rules as a cancellation, under the row's own lock: only a
 // meeting, only a live and unrestricted one. A start the calendar could not
 // state (zero) moves nothing — the stored start is better than capture time.
 //
-// A caller acting on somebody else's key proves its standing first
-// (SeatStanding). A provider issues one event id to every calendar holding the
-// event, so a second connection presenting it is ordinarily the same meeting on
-// another attendee's calendar — and ordinarily is not a gate: nothing in the id
-// itself separates that attendee from a connection that simply stated it.
+// A provider issues one event id to every calendar holding the event, so a
+// second connection presenting it is ordinarily the same meeting on another
+// attendee's calendar — and ordinarily is not a gate: nothing in the id itself
+// separates that attendee from a connection that simply stated it. holds
+// (SeatStanding) is what does, decided under the row's own lock.
 //
 // An unchanged start and length write nothing, so a resynced calendar costs no
 // audit row and no event.
-//
-// A caller that must prove its standing first calls MoveCapturedMeetingFor
-// instead; this entry point carries no guard, for the caller named there.
-func MoveCapturedMeetingTx(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, start time.Time, duration *int,
-) (bool, error) {
-	return shiftCapturedMeetingTx(ctx, tx, id, start, duration, nil)
-}
-
-// MoveCapturedMeetingFor is MoveCapturedMeetingTx for a caller that must prove
-// its standing first — a connector acting on a row it found by the provider's
-// event id.
 func MoveCapturedMeetingFor(holds SeatStanding) func(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, start time.Time, duration *int,
 ) (bool, error) {
 	return func(
 		ctx context.Context, tx pgx.Tx, id ids.ActivityID, start time.Time, duration *int,
 	) (bool, error) {
-		return shiftCapturedMeetingTx(ctx, tx, id, start, duration, holds)
+		return moveCapturedMeetingTx(ctx, tx, id, start, duration, holds)
 	}
 }
 
-func shiftCapturedMeetingTx(
+func moveCapturedMeetingTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, start time.Time, duration *int, holds SeatStanding,
 ) (bool, error) {
 	if start.IsZero() {
@@ -88,14 +78,12 @@ func shiftCapturedMeetingTx(
 	if err != nil {
 		return false, fmt.Errorf("activities: reading the meeting being moved: %w", err)
 	}
-	if holds != nil {
-		mine, err := holds(ctx, tx, id)
-		if err != nil {
-			return false, err
-		}
-		if !mine {
-			return false, nil
-		}
+	mine, err := holds(ctx, tx, id)
+	if err != nil {
+		return false, err
+	}
+	if !mine {
+		return false, nil
 	}
 	start = start.UTC()
 	if storedStart.Equal(start) && sameDuration(storedDuration, duration) {

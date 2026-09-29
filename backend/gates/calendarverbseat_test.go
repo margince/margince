@@ -12,9 +12,9 @@ package gates
 //
 // This gate reads how compose wires the two verbs. Each closer and mover must
 // be a CALL to the constructor that carries the standing seam, never the bare
-// writer beside it: the bare writers stay exported for the RSVP backfill, which
-// re-reads a row's own stored original under no seat at all and would be turned
-// into a permanent no-op by a guard.
+// writer beside it: CancelCapturedMeetingTx stays exported for the RSVP
+// backfill, which re-reads a row's own stored original under no seat at all and
+// would be turned into a permanent no-op by a guard.
 //
 // What this gate CANNOT see: whether the seam compose passes answers honestly.
 // A constructor handed a predicate that always says yes passes here. The
@@ -27,6 +27,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -89,6 +90,54 @@ func TestComposeWiresNoUnguardedCalendarVerb(t *testing.T) {
 		if seen[seam] == 0 {
 			t.Errorf("no call to %s found anywhere — the scan for it has stopped working, "+
 				"or the seam was renamed without updating this gate", seam)
+		}
+	}
+}
+
+// meetingSeamPattern is verbGuardConstructor's OWN corpus, derived rather than
+// hand-maintained a second time: every method capture.Sink exports matching it
+// is a calendar verb's seam, and TestEveryCaptureMeetingSeamIsInTheGuardMap
+// below fails if one is missing from the map, so a third seam cannot go
+// unchecked by staying off a list nobody remembered to grow.
+var meetingSeamPattern = regexp.MustCompile(`^With\w*Meeting\w*$`)
+
+// recvTypeName names a method's receiver type, unwrapping the pointer a
+// pointer-receiver method carries.
+func recvTypeName(recv *ast.FieldList) string {
+	if recv == nil || len(recv.List) == 0 {
+		return ""
+	}
+	t := recv.List[0].Type
+	if star, ok := t.(*ast.StarExpr); ok {
+		t = star.X
+	}
+	if ident, ok := t.(*ast.Ident); ok {
+		return ident.Name
+	}
+	return ""
+}
+
+func TestEveryCaptureMeetingSeamIsInTheGuardMap(t *testing.T) {
+	t.Parallel()
+	fset := token.NewFileSet()
+	for _, path := range goSourceFiles(t, "internal/modules/capture") {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || recvTypeName(fn.Recv) != "Sink" || !meetingSeamPattern.MatchString(fn.Name.Name) {
+				continue
+			}
+			if _, guarded := verbGuardConstructor[fn.Name.Name]; !guarded {
+				t.Errorf("capture.Sink exports %s, a calendar verb's seam with no entry in "+
+					"verbGuardConstructor — add it there and to the integration coverage in "+
+					"compose/meetingseat_integration_test.go before this gate can see it", fn.Name.Name)
+			}
 		}
 	}
 }

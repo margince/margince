@@ -11,9 +11,9 @@ package compose
 // The natural key is the provider's own event id, and the provider check in
 // admitCalendarVerb binds it to the acting connector — but not to the seat
 // whose calendar is syncing. A connection stating another seat's event id
-// therefore reached that seat's meeting. The replay path has asked this
-// question since it existed (replayClaimIsProvenTx); the two standalone verbs
-// did not.
+// would otherwise reach that seat's meeting. replayClaimIsProvenTx asks the
+// same question for a replay; CancelCapturedMeetingFor and
+// MoveCapturedMeetingFor ask it for the two standalone verbs.
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // seatHolds answers the predicate for one seat, through the real principal a
@@ -111,9 +112,9 @@ func TestASeatlessPrincipalHoldsNothing(t *testing.T) {
 	}
 }
 
-// The defect, end to end: a calendar connection stating another seat's event id
-// reached that seat's meeting, because the provider check binds the key to the
-// acting CONNECTOR and nothing bound it to the seat.
+// A connection stating another seat's event id would otherwise reach that
+// seat's meeting: the provider check binds the key to the acting CONNECTOR,
+// never to the seat whose calendar is syncing.
 func TestAStrangerCalendarDoesNotCancelThisSeatsMeeting(t *testing.T) {
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
@@ -256,5 +257,62 @@ func TestAParticipantSeatMovesTheMeeting(t *testing.T) {
 
 	if start := readMeetingStart(t, e, captured); !start.Equal(moved) {
 		t.Errorf("a colleague on the meeting left it at %s, want %s", start, moved)
+	}
+}
+
+// replayMeetingUpsert is the record a reschedule replays under the meeting's
+// own natural key — the same subject and body captureMeeting wrote, so a
+// colliding replay is provable by content alone for a seat with no standing of
+// its own.
+func replayMeetingUpsert(start time.Time) connector.NormalizedRecord {
+	return connector.NormalizedRecord{
+		EntityType: "activity",
+		NaturalKey: meetingKey,
+		Fields: capture.ActivityFields{
+			Kind: "meeting", Subject: "Consulting Monthly",
+			Body: "Organizer: client@acme.test", OccurredAt: start,
+		},
+		Source:     calendarSystem + ":" + calendarEvent,
+		CapturedBy: "connector:" + calendarSystem,
+		Raw:        []byte(`{"id":"` + calendarEvent + `"}`),
+	}
+}
+
+// The same standing check, reached through the Upsert replay path rather than
+// through MoveMeeting directly: a colleague who holds the meeting still moves
+// it when a replay reschedules the event.
+func TestAParticipantSeatMovesTheMeetingOnReplay(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	colleague := e.Rep1
+	seatOnMeeting(t, e, captured, colleague)
+	moved := meetingStart.Add(7 * 24 * time.Hour)
+
+	if _, err := movingCalendarSink(e).Upsert(
+		calendarOwnerCtx(e, colleague), replayMeetingUpsert(moved)); err != nil {
+		t.Fatalf("replaying the event: %v", err)
+	}
+
+	if got := readMeetingStart(t, e, captured); !got.Equal(moved) {
+		t.Errorf("the meeting starts %s after a colleague replayed the reschedule, want %s", got, moved)
+	}
+}
+
+// A stranger seat whose replay matches the incumbent on subject and body still
+// does not move the meeting: content proves only that the two mailboxes
+// describe the same event, never that this seat has standing on this row.
+func TestAStrangerSeatDoesNotMoveTheMeetingOnReplay(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	moved := meetingStart.Add(7 * 24 * time.Hour)
+
+	if _, err := movingCalendarSink(e).Upsert(
+		calendarOwnerCtx(e, ids.NewV7()), replayMeetingUpsert(moved)); err != nil {
+		t.Fatalf("replaying the event: %v", err)
+	}
+
+	if got := readMeetingStart(t, e, captured); !got.Equal(meetingStart) {
+		t.Errorf("the meeting starts %s after a stranger's content-matching replay, want it left at %s",
+			got, meetingStart)
 	}
 }
