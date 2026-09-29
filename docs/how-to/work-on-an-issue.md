@@ -109,9 +109,10 @@ body says `Closes #N` merges, but it keeps the labels, so
 [`issue-closed.yml`](../../.github/workflows/issue-closed.yml) strips
 `status: in progress` from an issue the moment it closes. A close no event
 reports — one a workflow makes with its own token — or a failed run is caught
-by its daily sweep instead, within a day. The assignee stays: it is the record
-of who did the work. Closing one by hand needs nothing extra either; the
-workflow owns the label.
+instead by the next daily sweep that runs, best-effort, since GitHub can delay
+or drop a scheduled run. The assignee stays: it is the record of who did the
+work. Closing one by hand needs nothing extra either; the workflow owns the
+label.
 
 **A `status: in progress` on a closed issue is always stale** — take it off. On
 an open issue the rules under [Before you start](#before-you-start) apply

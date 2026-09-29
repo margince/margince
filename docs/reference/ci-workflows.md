@@ -117,11 +117,12 @@ Every other workflow sits beside the gate, deliberately outside it:
 - **`issue-closed.yml`** — on an issue `closed` (a merged `Closes #N`, by hand,
   as not planned or as a duplicate), plus a daily sweep and manual dispatch. It
   removes `status: in progress` and leaves the assignees, who are the record of
-  who did the work: on close it comes off at once, and within a day for a close
-  no event reports (one a workflow makes with `GITHUB_TOKEN`, which starts no
-  run) or a failed run, which the sweep catches. GitHub keeps labels on close,
-  so without it a closed issue reads as somebody's work in progress for ever. It
-  checks nothing out and holds only `issues: write`. **Gates nothing.**
+  who did the work: on close it comes off at once, and at a later sweep for a
+  close no event reports (one a workflow makes with `GITHUB_TOKEN`, which starts
+  no run) or a failed run. The sweep is best-effort: GitHub can delay or drop a
+  scheduled run, so such a label can outlive a day. GitHub keeps labels on
+  close, so without it a closed issue reads as somebody's work in progress for
+  ever. It checks nothing out and holds only `issues: write`. **Gates nothing.**
 
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
