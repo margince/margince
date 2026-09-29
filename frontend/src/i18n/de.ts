@@ -243,7 +243,7 @@ export const de = {
   "aiAdmin.cloud": "Cloud-Anbieter",
   "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
   "aiAdmin.decisionFirst":
-    "Zuerst Entscheidungsmodell ({provider} · {model} · {processing}) → dann {ladder}",
+    "Zuerst Entscheidungsmodell ({provider} · {model}) → dann {ladder}",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "aiAdmin.decisionSkip.uncertified":
@@ -8821,6 +8821,7 @@ export const de = {
   "aiRouting.notListed":
     "Nicht in der veröffentlichten Modellliste von {provider}. Du kannst die ID trotzdem speichern, wenn der Anbieter sie bedient.",
   "aiRouting.median": "Median {ms} ms",
+  "aiTasks.state.idle": "Keine Aufrufe in der letzten Stunde",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile beginnt mit dem Modell, auf dem sie gerade läuft.",

@@ -9,6 +9,7 @@ import {
   AiFeatureTable,
   useAiStatus,
 } from "./ai-admin";
+import { useAiHealth } from "./ai-health";
 import { PanelTitle } from "./ai-terms";
 import { QueryGate } from "./common";
 
@@ -24,6 +25,7 @@ export function AiTasksCard() {
   const canBudget = useCan("ai_budget", "read");
   const canRoute = useCan("ai_routing", "read");
   const status = useAiStatus(canDiagnose && canBudget);
+  const health = useAiHealth(canDiagnose).data;
   // `/ai/status` needs all three: without the diagnostics or budget grant
   // there is no payload, and without routing read its task list is empty —
   // either way the withheld panel says so, rather than drawing a table that
@@ -36,7 +38,9 @@ export function AiTasksCard() {
       <PanelBody>
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
         <QueryGate query={status} pendingLabel={t("aiTasks.title")}>
-          {(current) => <AiFeatureTable rows={current.features} />}
+          {(current) => (
+            <AiFeatureTable rows={current.features} health={health} />
+          )}
         </QueryGate>
       </PanelBody>
     </Panel>

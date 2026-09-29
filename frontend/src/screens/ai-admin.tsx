@@ -25,8 +25,9 @@ import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
-import { decisionSkipLabel, processingLabel } from "./ai-decision-labels";
+import { decisionSkipLabel } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
+import { TaskState } from "./ai-lane-state";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { settingsHref } from "./settingsrouting";
 
@@ -387,7 +388,14 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
 
 // Read-only by design: a task's tier is fixed by the task contract, and the
 // binding a tier names is edited on the Model tiers card.
-export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
+export function AiFeatureTable({
+  rows,
+  health,
+}: Readonly<{
+  rows: Feature[];
+  // Present for a reader who may see how the lanes answer.
+  health?: components["schemas"]["AiHealth"];
+}>) {
   const t = useT();
   // Only a departure from the default is worth a badge; the unchanged case is
   // what every quiet row already says.
@@ -423,7 +431,6 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
     return t("aiAdmin.decisionFirst", {
       provider: decision.provider,
       model: decision.model,
-      processing: processingLabel(decision.processing, t),
       ladder,
     });
   };
@@ -449,6 +456,11 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
                 {row.decision_first ? (
                   <Badge>{t("aiTasks.decisionFirst")}</Badge>
                 ) : null}
+                <TaskState
+                  health={health}
+                  tier={row.leading_tier}
+                  decisionFirst={row.decision_first === true}
+                />
                 {changed ? (
                   <Badge
                     tone={

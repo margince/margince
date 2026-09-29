@@ -233,7 +233,7 @@ export const en = {
   "aiAdmin.cloud": "Cloud provider",
   "aiAdmin.endpoint": "Configured endpoint; location not verified",
   "aiAdmin.decisionFirst":
-    "Decision model first ({provider} · {model} · {processing}) → then {ladder}",
+    "Decision model first ({provider} · {model}) → then {ladder}",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
@@ -8964,6 +8964,7 @@ export const en = {
   "aiRouting.notListed":
     "Not in {provider}’s published model list. You can still save it if the provider serves this ID.",
   "aiRouting.median": "Median {ms} ms",
+  "aiTasks.state.idle": "No calls in the last hour",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
     "Read-only: each task’s tier is fixed by contract. Each row leads with the model it runs on now.",

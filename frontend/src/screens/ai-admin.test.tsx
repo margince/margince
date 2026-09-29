@@ -395,7 +395,7 @@ it("features card says decision model first, and why another feature skips it", 
   // The lane leads, where it processes, and the ladder that answers after it.
   expect(
     await screen.findByText(
-      "Decision model first (jev_compatible · jev-classify · Cloud provider) → then gemini · example-model",
+      "Decision model first (jev_compatible · jev-classify) → then gemini · example-model",
     ),
   ).toBeInTheDocument();
   // A feature the lane does not serve keeps its ladder, with the reason beside it.
