@@ -1,5 +1,6 @@
 import type { paths } from "@composition/schema";
 import createClient from "openapi-fetch";
+import { readStored, STORAGE_KEYS } from "../app/storage";
 import { beginModelCall, endModelCall } from "./model-inflight";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated
@@ -26,15 +27,9 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // The reader's language, read from where the shell stores it. Sent on every
 // request as Accept-Language so a server-side writer — the model-written
 // briefs — answers in the language the reader is reading, rather than making
-// them translate a summary they asked for. Storage can throw (private windows,
-// blocked site data), and a client that cannot read a preference still has to
-// make the call, so a failure is simply no header.
+// them translate a summary they asked for.
 function readerLanguage(): string | undefined {
-  try {
-    return globalThis.localStorage?.getItem("margince.locale") ?? undefined;
-  } catch {
-    return undefined;
-  }
+  return readStored(STORAGE_KEYS.locale) ?? undefined;
 }
 
 // How long a request may stay open before this client stops waiting for it.

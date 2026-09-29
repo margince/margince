@@ -9,6 +9,12 @@ import {
 } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../app/storage";
 import { throwProblem } from "./common";
 import type {
   ImportObject,
@@ -104,32 +110,16 @@ function emptyReport(run: ImportRun): ImportReport {
 // answers 404 to anyone else — so a shareable link would promise something it
 // cannot deliver. The cost of the choice is that the reference is per browser,
 // not per tab: two tabs on this screen remember the same run.
-const REMEMBERED_RUN_KEY = "margince.import.run";
-
-// Storage is unavailable in some embedded contexts; a run this screen cannot
-// remember is an affordance the reader has to reach another way, never an error.
 function readRememberedRun(): string | null {
-  try {
-    return window.localStorage.getItem(REMEMBERED_RUN_KEY);
-  } catch {
-    return null;
-  }
+  return readStored(STORAGE_KEYS.importRun);
 }
 
 function rememberRun(id: string): void {
-  try {
-    window.localStorage.setItem(REMEMBERED_RUN_KEY, id);
-  } catch {
-    // A browser refusing storage must not break the import itself.
-  }
+  writeStored(STORAGE_KEYS.importRun, id);
 }
 
 function forgetRememberedRun(): void {
-  try {
-    window.localStorage.removeItem(REMEMBERED_RUN_KEY);
-  } catch {
-    // Nothing to forget is the state this was trying to reach anyway.
-  }
+  removeStored(STORAGE_KEYS.importRun);
 }
 
 // Which run states still have something for a reader to DO: `complete` can be

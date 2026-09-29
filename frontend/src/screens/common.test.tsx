@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { STORAGE_KEYS } from "../app/storage";
 import { LocaleProvider, translate } from "../i18n";
 import {
   isConsentNotGranted,
@@ -22,6 +23,7 @@ import {
   problemMessageOf,
   provenanceOf,
   QueryStates,
+  resetToSignedOut,
   throwProblem,
 } from "./common";
 import { CreateAction } from "./create";
@@ -646,5 +648,27 @@ describe("what a tool is called on screen", () => {
     );
 
     expect(provenance).toEqual({ kind: "agent", agent: undefined });
+  });
+});
+
+describe("signing out", () => {
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it("forgets what the member left in storage and keeps what no one else inherits", async () => {
+    const declined = `${STORAGE_KEYS.platformDeclined.prefix}account-1`;
+    localStorage.setItem(STORAGE_KEYS.importRun.name, "run-1");
+    sessionStorage.setItem(STORAGE_KEYS.oauthAttempt.name, "gmail");
+    localStorage.setItem(STORAGE_KEYS.theme.name, "dark");
+    localStorage.setItem(declined, "1");
+
+    await resetToSignedOut(new QueryClient());
+
+    expect(localStorage.getItem(STORAGE_KEYS.importRun.name)).toBeNull();
+    expect(sessionStorage.getItem(STORAGE_KEYS.oauthAttempt.name)).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEYS.theme.name)).toBe("dark");
+    expect(localStorage.getItem(declined)).toBe("1");
   });
 });

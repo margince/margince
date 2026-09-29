@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { forgetSeat } from "../app/storage";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import type { Provenance, SourceAuthor } from "../design-system/trust";
@@ -141,12 +142,6 @@ export function timelineZoneNotice(
   return undefined;
 }
 
-// AS-1: sign out. Clears ALL cached tenant data on success, then forces the
-// ["me"] probe to re-run → 401 → AuthGate renders the login screen.
-//
-// resetToSignedOut drops every cached answer belonging to the session that just
-// ended, and lands the auth boundary on the login screen.
-//
 // ORDER MATTERS, and it is the whole reason this is one function rather than
 // four spellings. queryClient.clear() destroys every Query object in the cache,
 // INCLUDING ["me"]'s. If ["me"] were reset only after a full clear(),
@@ -162,6 +157,8 @@ export function timelineZoneNotice(
 // happen is a cached answer outliving the member it was fetched for — the next
 // contact to sign in inside the cache lifetime would be served it.
 export function resetToSignedOut(queryClient: QueryClient): Promise<void> {
+  // Nor may what the member stored in this browser outlive them.
+  forgetSeat();
   queryClient.removeQueries({
     predicate: (query) => query.queryKey[0] !== "me",
   });

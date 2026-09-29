@@ -53,6 +53,7 @@ import { usePopoverDismiss } from "./popover";
 import { useReadingColumn } from "./readingcolumn";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
+import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 import { TopBar } from "./topbar";
 import { usePhoneViewport } from "./viewport";
 import "./shell.css";
@@ -80,26 +81,6 @@ import "./shell.css";
 // had counts are lanes inside Today, which reports its numbers on the page. The
 // prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
-
-const COLLAPSE_KEY = "margince.sidebarCollapsed";
-
-// Storage is unavailable in some embedded contexts; a missing preference is a
-// default, never an error.
-function readStored(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // A browser refusing storage must not break navigation.
-  }
-}
 
 // `narrow` is the panel at its 56px width — the caller's own `collapsed &&
 // !sheetOpen`, which is the condition shell.css already uses for every rule
@@ -817,7 +798,7 @@ export function Shell({
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
   const { gridded, griddedRecord } = useReadingColumn(route);
   const [collapsed, setCollapsed] = useState(
-    () => readStored(COLLAPSE_KEY) === "1",
+    () => readStored(STORAGE_KEYS.sidebarCollapsed) === "1",
   );
   // What the sidebar's walk between levels remembers — where a walk OUT of a
   // level returns to, and whether the level that arrives was asked for and takes
@@ -853,7 +834,7 @@ export function Shell({
   const toggle = useCallback(() => {
     setCollapsed((current) => {
       const next = !current;
-      writeStored(COLLAPSE_KEY, next ? "1" : "0");
+      writeStored(STORAGE_KEYS.sidebarCollapsed, next ? "1" : "0");
       return next;
     });
   }, []);

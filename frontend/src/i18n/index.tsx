@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
 import { pluralCategory } from "../format/plural";
 import { useDateTimePreferences } from "../format/preferences";
 import { de } from "./de";
@@ -113,13 +114,6 @@ export function detectLocale(
   return DEFAULT_LOCALE;
 }
 
-// Where an EXPLICIT locale choice is kept so it survives a reload. The reader
-// picks a language on the sign-in screen, and until /v1/me carries a locale
-// this is the only place the choice can live — without it the next load falls
-// back to the browser's preference and silently undoes the pick, which reads as
-// the switcher not working.
-const LOCALE_STORAGE_KEY = "margince.locale";
-
 /**
  * The locale a reader has chosen, if they have chosen one.
  *
@@ -131,31 +125,16 @@ const LOCALE_STORAGE_KEY = "margince.locale";
  * that wrote it, so a locale we have since stopped shipping — or a hand-edited
  * value — must fall back to detection instead of reaching the catalogs as a key
  * they have no entry for.
- *
- * Storage is unavailable in some browser modes and throws on ACCESS rather than
- * returning null. That is not an error to report: this value is a preference
- * whose absence already has a defined meaning, and detection is exactly what
- * absence means. A reader in private mode gets the browser's language, which is
- * the same answer they got before this existed.
  */
 export function storedLocale(): Locale | null {
-  try {
-    const stored = globalThis.localStorage?.getItem(LOCALE_STORAGE_KEY);
-    return stored !== null && stored !== undefined && isLocale(stored)
-      ? stored
-      : null;
-  } catch {
-    return null;
-  }
+  const stored = readStored(STORAGE_KEYS.locale);
+  return stored !== null && isLocale(stored) ? stored : null;
 }
 
+// Until /v1/me carries a locale, storage is the only place a pick made on the
+// sign-in screen can survive a reload.
 function rememberLocale(locale: Locale): void {
-  try {
-    globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, locale);
-  } catch {
-    // Same reasoning as the read: a preference that cannot be kept is a
-    // preference that holds for this session only, not a failure to surface.
-  }
+  writeStored(STORAGE_KEYS.locale, locale);
 }
 
 export function translate(

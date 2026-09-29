@@ -5,6 +5,12 @@ import type { components } from "@composition/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../app/storage";
 import { Checkbox } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -46,40 +52,25 @@ const GRANTS_KEY = ["agent-grants"] as const;
 // Same mechanism and same scope as the OAuth attempt mark beside it
 // (`onboarding-connect-panels.tsx`): sessionStorage, belonging to the ONE tab
 // that started the trip.
-const OVERNIGHT_CHOICE_KEY = "ob.connect.overnightChoice";
 
 /** Remembers the rep's answer across the OAuth round trip. */
 export function rememberOvernightChoice(wanted: boolean): void {
-  try {
-    sessionStorage.setItem(OVERNIGHT_CHOICE_KEY, wanted ? "yes" : "no");
-  } catch {
-    // Storage can be unavailable (private browsing, disabled). The connect
-    // still works; the answer falls back to the preselected default, which is
-    // the same answer the rep would have been shown had they never touched it.
-  }
+  writeStored(STORAGE_KEYS.overnightChoice, wanted ? "yes" : "no");
 }
 
 /** The remembered answer, or undefined when this tab has none. Undefined is
  * distinct from `false`: it means "not answered here", which is what makes the
  * preselected default correct rather than an override of an opt-out. */
 export function rememberedOvernightChoice(): boolean | undefined {
-  try {
-    const stored = sessionStorage.getItem(OVERNIGHT_CHOICE_KEY);
-    return stored === null ? undefined : stored === "yes";
-  } catch {
-    return undefined;
-  }
+  const stored = readStored(STORAGE_KEYS.overnightChoice);
+  return stored === null ? undefined : stored === "yes";
 }
 
 /** Drops the mark once the step has acted on it, so a later visit to
  * onboarding in the same tab starts from the default rather than from an
  * answer given to a question that has already been settled. */
 export function forgetOvernightChoice(): void {
-  try {
-    sessionStorage.removeItem(OVERNIGHT_CHOICE_KEY);
-  } catch {
-    // Nothing to clear if storage was never available.
-  }
+  removeStored(STORAGE_KEYS.overnightChoice);
 }
 
 /** Reads every scheduled agent's standing answer for the signed-in rep. */
