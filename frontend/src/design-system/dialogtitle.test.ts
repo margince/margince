@@ -251,11 +251,9 @@ const tagCensus = texts.reduce((n, { text }) => {
     n + (text.match(new RegExp(`<(${names.join("|")})\\b`, "g"))?.length ?? 0)
   );
 }, 0);
-const exempt = (t: Title) =>
-  EXCEPTIONS.some(
-    (e) =>
-      t.where.startsWith(`${e.file}:`) && t.classes.join(" ") === e.classes,
-  );
+const matches = (e: (typeof EXCEPTIONS)[number], t: Title) =>
+  t.where.startsWith(`${e.file}:`) && t.classes.join(" ") === e.classes;
+const exempt = (t: Title) => EXCEPTIONS.some((e) => matches(e, t));
 
 const PRELUDE =
   'import { Modal as Dialog } from "./modal";\nimport { Heading as H } from "./heading";';
@@ -336,7 +334,7 @@ describe("a dialog's Heading title has an owner for the space under it (a <p> ti
   it("keeps each exception on the one title that still needs it", () => {
     for (const e of EXCEPTIONS) {
       const still = titles.filter((t) => exempt(t) && t.owner === null);
-      const here = still.filter((t) => t.where.startsWith(e.file));
+      const here = still.filter((t) => matches(e, t));
       expect(here, e.reason).toHaveLength(1);
     }
   });
