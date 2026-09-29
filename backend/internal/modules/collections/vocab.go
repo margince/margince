@@ -233,7 +233,7 @@ var segmentEngines = map[string]storekit.Query{
 	typeContact: {
 		Table:     typeContact,
 		BaseWhere: whereArchivedNull,
-		Fields: withFields(contactStandardFields, map[string]storekit.Field{
+		Fields: withFields(standardFields[typeContact], map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
 			tagFilterField:   tagLinkFor(typeContact),
@@ -247,7 +247,7 @@ var segmentEngines = map[string]storekit.Query{
 		// than as a filterable leaf, so no segment can opt back into it and no
 		// export built on one can carry it.
 		BaseWhere: whereArchivedNull + " AND NOT t.is_anchor",
-		Fields: withFields(companyStandardFields, map[string]storekit.Field{
+		Fields: withFields(standardFields[typeCompany], map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
 			"industry":       {Expr: "t.industry", Type: storekit.FieldText},
@@ -276,7 +276,7 @@ var segmentEngines = map[string]storekit.Query{
 	"deal": {
 		Table:     "deal",
 		BaseWhere: whereArchivedNull,
-		Fields: withFields(dealStandardFields, map[string]storekit.Field{
+		Fields: withFields(standardFields[typeDeal], map[string]storekit.Field{
 			"pipeline_id":        {Expr: "t.pipeline_id", Type: storekit.FieldID, References: storekit.RefPipeline},
 			"stage_id":           {Expr: "t.stage_id", Type: storekit.FieldID, References: storekit.RefStage},
 			ownerIDField:         {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
@@ -304,7 +304,7 @@ var segmentEngines = map[string]storekit.Query{
 	"lead": {
 		Table:     "lead",
 		BaseWhere: whereArchivedNull,
-		Fields: withFields(leadStandardFields, map[string]storekit.Field{
+		Fields: withFields(standardFields[typeLead], map[string]storekit.Field{
 			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,

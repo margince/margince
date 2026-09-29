@@ -59,6 +59,9 @@ type filterCase struct {
 	want   []string
 }
 
+// leaf is one filter clause as the wire spells it.
+//
+//craft:ignore naked-any value is a predicate leaf's operand, which spans every scalar and array shape the filter DSL accepts
 func leaf(field, op string, value any) AnyMap {
 	return AnyMap{"field": field, "op": op, "value": value}
 }

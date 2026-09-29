@@ -112,3 +112,14 @@ func TestAnEmailOperandIsFoldedToTheStoredCase(t *testing.T) {
 		t.Errorf("bound %#v, want the address lowercased as lead_email_norm stores it", args)
 	}
 }
+
+func TestNoEngineLeafShadowsAStandardField(t *testing.T) {
+	for resource, standard := range standardFields {
+		for name, want := range standard {
+			got := segmentEngines[resource].Fields[name]
+			if got.Expr != want.Expr || got.Link != want.Link || got.Type != want.Type {
+				t.Errorf("%s.%s compiles as %+v, not the standard field %+v — two leaves claim one name", resource, name, got, want)
+			}
+		}
+	}
+}

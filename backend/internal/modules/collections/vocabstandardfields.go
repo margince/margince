@@ -10,6 +10,7 @@ package collections
 
 import (
 	"context"
+	"maps"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -109,17 +110,21 @@ var leadStandardFields = map[string]storekit.Field{
 	createdAtField:  dayOf("created_at"),
 }
 
-// withFields is one engine's vocabulary assembled from its parts. A name two
-// parts both claim is a programming error in this package, caught at start-up.
+// standardFields is each engine's standard set, keyed like segmentEngines.
+var standardFields = map[string]map[string]storekit.Field{
+	typeContact: contactStandardFields,
+	typeCompany: companyStandardFields,
+	typeDeal:    dealStandardFields,
+	typeLead:    leadStandardFields,
+}
+
+// withFields is one engine's vocabulary assembled from its parts, a later part
+// winning a name. TestNoEngineLeafShadowsAStandardField holds that no name is
+// claimed twice, so the order never decides anything.
 func withFields(parts ...map[string]storekit.Field) map[string]storekit.Field {
 	out := map[string]storekit.Field{}
 	for _, part := range parts {
-		for name, field := range part {
-			if _, taken := out[name]; taken {
-				panic("collections: the filter field " + name + " is declared twice for one engine")
-			}
-			out[name] = field
-		}
+		maps.Copy(out, part)
 	}
 	return out
 }
