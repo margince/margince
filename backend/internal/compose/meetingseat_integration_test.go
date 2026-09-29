@@ -169,13 +169,46 @@ func TestARefusedCancelDoesNotOpenTheIdentityFallback(t *testing.T) {
 	}
 }
 
+// The zero id is the load-bearing half of the refusal contract: a caller that
+// read the row's real id back would treat the refusal as a find, which is
+// exactly what would send CancelIdentifiedMeeting looking for another meeting
+// under the wrong belief that nothing was captured under the key. Asked
+// directly of the constructor, because the Sink above has its OWN, looser
+// protection (identityMayCancel's bare key-equality EXISTS) that refuses the
+// fallback whenever a row exists in any state — so an end-to-end test through
+// the Sink cannot tell a correct zero id apart from the found row's real one.
+func TestARefusedCancelReturnsTheZeroActivityID(t *testing.T) {
+	e := integration.Setup(t)
+	captureMeeting(t, e, e.AdminUser)
+
+	var id ids.ActivityID
+	var found bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		id, found, err = activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx)(
+			calendarOwnerCtx(e, ids.NewV7()), tx, meetingKey, meetingStart)
+		return err
+	}); err != nil {
+		t.Fatalf("cancelling: %v", err)
+	}
+
+	if !id.IsZero() || found {
+		t.Errorf("a refused cancellation returned id=%s found=%v, want the zero id and false", id, found)
+	}
+}
+
 // The RSVP backfill re-reads a row's OWN stored original under a principal with
 // no seat. It carries its provenance by construction and takes no guard, so a
 // guard that reached it would turn every historical cancellation into a no-op
 // the pass then marks `answered` — and a marked meeting is never offered again.
+//
+// Captured under a DIFFERENT seat than the one driving the call: if a guard
+// were ever wired onto CancelCapturedMeetingTx by mistake, the driving actor
+// holding the row would make the guard answer true anyway, and this test would
+// keep passing over the very regression it exists to catch.
 func TestTheBackfillWriterStillCancelsWithoutASeat(t *testing.T) {
 	e := integration.Setup(t)
-	captured := captureMeeting(t, e, e.AdminUser)
+	captured := captureMeeting(t, e, e.Rep1)
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, _, err := activities.CancelCapturedMeetingTx(
