@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { meFixture } from "../app/mefixture";
 import { useT } from "../i18n";
 import { RefreshModelPrices } from "./rate-catalogue-refresh";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -79,7 +80,16 @@ const UNREACHABLE = {
 
 function band(routes: Parameters<typeof installFetchStub>[0]) {
   return () => {
-    installFetchStub(routes);
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            allow: { ai_model_rate: ["read", "create", "update"] },
+            seat: "full",
+          }),
+        ),
+      ...routes,
+    });
     return (
       <StoryProviders>
         <Band />
