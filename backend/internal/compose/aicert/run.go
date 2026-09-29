@@ -71,6 +71,9 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 		if r.HardPass {
 			row.Passed++
 		}
+		if r.Abandoned {
+			row.Abandoned++
+		}
 		if r.Withheld != "" {
 			row.Withheld++
 			if !slices.Contains(row.WithheldReasons, r.Withheld) {
@@ -140,17 +143,10 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	if pooled.Degraded {
 		return runOutcome{RunResult: RunResult{Degraded: true}}, nil
 	}
-	// An abandoned answer enters the tally as a withheld one does — invalid,
-	// ungraded, never a pass — but only once driveRun finds every attempt broke off.
-	if pooled.Abandoned != nil {
-		scored := candidateSideRun(candidateSide{outcome: aitasks.OutcomeInvalid, scope: aitasks.ScopeOf(factory), pooled: pooled})
-		scored.Ungraded = true
-		return runOutcome{}, abandonedAnswer{scored: scored, err: pooled.Abandoned}
-	}
-	// A withheld run has no reply to validate: the site's own path reads it as
-	// no usable answer, which runEntry records as invalid.
+	// A withheld or abandoned run has no reply to validate: the site's own path
+	// reads it as no usable answer, which runEntry records as invalid.
 	var validated validation
-	if pooled.Withheld == "" {
+	if pooled.Withheld == "" && pooled.Abandoned == nil {
 		if validated, err = validateRun(ctx, prepared, caseTrace, sc, task, pooled, log); err != nil {
 			return runOutcome{}, err
 		}
@@ -163,7 +159,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
-			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "truncated", pooled.Truncated)
+			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "abandoned", pooled.Abandoned != nil, "truncated", pooled.Truncated)
 		outcome.Ungraded = true
 		return outcome, nil
 	}
@@ -249,7 +245,8 @@ type tallyEntry struct {
 // rule: only a run with a whole answer is graded or can pass.
 //
 // A withheld answer counts as invalid, which is what the site's own path reads
-// it as. A cut-off answer counts as whatever the validator made of the fragment
+// it as, and so does an answer the upstream broke off (driveRun re-drives it
+// first, and keeps it only when every attempt broke off). A cut-off answer counts as whatever the validator made of the fragment
 // and is NOT a pass, however it read: a run that counted toward reliability
 // while withholding its score would raise a certified median above what the
 // binding earned. Neither is sent to the judge, whose score is an opinion OF AN
@@ -257,7 +254,7 @@ type tallyEntry struct {
 // reason, a number that reads like quality and is not.
 func runEntry(pooled runCalls, validated validation) tallyEntry {
 	switch {
-	case pooled.Withheld != "":
+	case pooled.Withheld != "" || pooled.Abandoned != nil:
 		return tallyEntry{outcome: aitasks.OutcomeInvalid}
 	case pooled.Truncated:
 		return tallyEntry{outcome: validated.outcome}

@@ -34,10 +34,8 @@ package ai
 //
 // A request with a thinking floor is sent the least thinking that meets it
 // instead (floorThink): the lowest level at or above it. A model that can only
-// switch thinking on is not switched on for a floor: a floor names a bounded
-// effort, and on/off thinking has no bound — measured on gemma4:12b, one
-// onboarding turn thought for 4,300 tokens and 7 minutes against 110 tokens and
-// 15 seconds with it off. A request
+// switch thinking on or off stays off, because a floor names a bounded effort
+// and on/off thinking has none: the unbounded-thinking cost above. A request
 // that names its own value through Request.ProviderOptions["ollama"].think
 // skips all of that — the same seam the gemini and openai adapters read.
 

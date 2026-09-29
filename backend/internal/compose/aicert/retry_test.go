@@ -247,6 +247,9 @@ func TestAnAnswerAbandonedOnEveryAttemptIsScoredAsAnInvalidRun(t *testing.T) {
 		t.Errorf("runs=%d reliability=%v verdict=%q invalid=%d, want 3 failed invalid runs and %q",
 			rec.Runs, rec.Reliability, rec.Verdict, rec.ReportedInvalid, VerdictNotSupported)
 	}
+	if len(rec.Scenarios) != 1 || rec.Scenarios[0].Abandoned != 3 {
+		t.Errorf("scenario rows = %+v, want one row naming 3 abandoned runs", rec.Scenarios)
+	}
 	if got, want := len(candidate.Calls()), 3*runAttempts*ladderRungs(t); got != want {
 		t.Errorf("the candidate was called %d times, want %d — every run re-driven through every attempt", got, want)
 	}

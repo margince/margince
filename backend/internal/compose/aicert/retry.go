@@ -93,7 +93,8 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 	sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, journal taskJournal, run int,
 ) (runOutcome, error) {
 	var lastErr error
-	everyAbandoned := true
+	var brokenOff runOutcome
+	everyBrokenOff := true
 	for attempt := 1; attempt <= runAttempts; attempt++ {
 		if attempt > 1 {
 			log.WarnContext(ctx, "aicert: re-driving a run after the router exhausted every bound tier — the calls the failed attempt made are paid for and discarded",
@@ -103,20 +104,21 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 			}
 		}
 		outcome, err := runOnce(ctx, candidate, candidateRec, judge, judgeRec, sc, task, census, log, trace, run, attempt)
-		if err == nil {
+		switch {
+		case err == nil && !outcome.Abandoned:
 			return outcome, nil
-		}
-		if !worthRedriving(err) {
+		case err == nil:
+			brokenOff, lastErr = outcome, errAnswerBrokenOff
+		case !worthRedriving(err):
 			return runOutcome{}, err
+		default:
+			everyBrokenOff, lastErr = false, err
 		}
-		everyAbandoned = everyAbandoned && errors.As(err, new(abandonedAnswer))
-		lastErr = err
 	}
-	var abandoned abandonedAnswer
-	if everyAbandoned && errors.As(lastErr, &abandoned) {
+	if everyBrokenOff {
 		log.WarnContext(ctx, "aicert: the candidate broke off its answer on every attempt — the run is scored invalid",
-			"task", string(task), "scenario", sc.Name, "run", run, "err", lastErr)
-		return abandoned.scored, nil
+			"task", string(task), "scenario", sc.Name, "run", run)
+		return brokenOff, nil
 	}
 	return runOutcome{}, fmt.Errorf(
 		"every bound tier failed on all %d attempts — re-run the same command once the provider is reachable%s: %w",
@@ -141,12 +143,6 @@ func worthRedriving(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, ai.ErrNoUpstreamHost)
 }
 
-// abandonedAnswer is an attempt whose candidate broke off the answer it had
-// begun, carrying the invalid run it is scored as if no attempt does better.
-type abandonedAnswer struct {
-	scored runOutcome
-	err    error
-}
-
-func (a abandonedAnswer) Error() string { return a.err.Error() }
-func (a abandonedAnswer) Unwrap() error { return a.err }
+// errAnswerBrokenOff is what a re-drive logs and backs off for after an attempt
+// whose candidate broke off its answer.
+var errAnswerBrokenOff = errors.New("the candidate broke off its answer")
