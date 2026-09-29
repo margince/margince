@@ -1,10 +1,9 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronDown, CircleAlert, CircleCheck, Clock } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { CircleAlert, CircleCheck, Clock } from "lucide-react";
+import { Fragment, useEffect, useRef } from "react";
 import { Avatar, Button } from "../../design-system/atoms";
 import { Logomark } from "../../design-system/logomark";
-import { formatNumber } from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useMe } from "../common";
 import type {
@@ -187,65 +186,6 @@ export function jumpToFindings(ids: readonly string[]): void {
   }, JUMP_PULSE_MS);
 }
 
-/**
- * A run of progress narration, folded the way a working agent's activity
- * log folds: one line showing the LATEST step and the count, the full list
- * one press away. Progress is what the AI did — it must be visible as
- * motion and auditable on demand, but it is not a message anyone owes a
- * reply to, so it does not stack bubbles. A step that names fields is a
- * button that jumps to and lights them.
- */
-export function ActivityGroup({
-  entries,
-}: Readonly<{ entries: readonly NarrationEntry[] }>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const latest = entries.at(-1);
-  if (latest === undefined) {
-    return null;
-  }
-  const textOf = (entry: NarrationEntry) =>
-    t(entry.i18nKey, resolvedParams(t, entry.params, entry.paramKeys));
-  return (
-    <div className="ob-conv-activity">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <i aria-hidden />
-        <span>{textOf(latest)}</span>
-        <b className="t-caption">
-          {plural("ob.conv.activity.steps", entries.length, {
-            count: formatNumber(entries.length, locale),
-          })}
-        </b>
-        <ChevronDown aria-hidden />
-      </button>
-      {open && (
-        <ul>
-          {entries.map((entry) =>
-            entry.findingIds !== undefined && entry.findingIds.length > 0 ? (
-              <li key={entry.id}>
-                <button
-                  type="button"
-                  onClick={() => jumpToFindings(entry.findingIds ?? [])}
-                >
-                  {textOf(entry)}
-                </button>
-              </li>
-            ) : (
-              <li key={entry.id}>{textOf(entry)}</li>
-            ),
-          )}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 export function NarrationBubble({
   entry,
   reveal = false,
@@ -323,14 +263,6 @@ export function OutcomeCard({ entry }: Readonly<{ entry: OutcomeEntry }>) {
     </div>
   );
 }
-
-/** What a resolved question recorded: the chosen option, or the dismissal.
- * Read back from the thread's own answer turn — see `selectionFor` in
- * thread.ts — never from a live card, which no longer carries either shape
- * once answered (see QuestionCard below). */
-export type QuestionSelection =
-  | { kind: "option"; value: string }
-  | { kind: "dismissed" };
 
 type QuestionCardProps = Readonly<{
   question: ConversationQuestion;

@@ -15,7 +15,6 @@ import {
   UserTurn,
 } from "./entries";
 import { presenceFor } from "./presence";
-import { ConversationThread } from "./thread";
 
 // A UserTurn draws the signed-in person's Avatar and so calls useMe() —
 // react-query for the client, and GET /me for the answer. Both are decorators
@@ -61,7 +60,11 @@ const question: Extract<ThreadEntry, { kind: "question" }> = {
   id: "question:clarify-entity",
   question: {
     id: "clarify-entity",
-    i18nKey: "ob.conv.clarify.entity",
+    i18nKey: "ob.conv.clarify.question",
+    params: {
+      question:
+        "The site names more than one legal entity. Which one is this installation for?",
+    },
     options: [
       { value: "acme-gmbh", label: "Acme GmbH" },
       { value: "acme-holding", label: "Acme Holding SE" },
@@ -199,25 +202,4 @@ export const OutcomeDeferred: Story = {
 
 export const OutcomeFailure: Story = {
   render: () => <OutcomeCard entry={failureOutcome} />,
-};
-
-export const Thread: Story = {
-  render: () => (
-    <ConversationThread
-      entries={[
-        {
-          kind: "narration",
-          id: "0:pages:5",
-          i18nKey: "ob.conv.read.pages",
-          params: { pages: "5" },
-        },
-        narration,
-        question,
-        userTurn,
-        outcome,
-      ]}
-      pendingQuestionId={null}
-      onAnswer={() => {}}
-    />
-  ),
 };

@@ -108,12 +108,6 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // column, the control constrains itself (`.settingrow-measure`, and each
 // surface's own field widths) — that is a property of the control, which knows
 // how wide it wants to be, not of the page, which does not.
-// Exported for the nav suite, which derives its expected label list from THIS
-// register rather than restating it. A restated list is a second source of truth
-// that nothing updates: the copy in the test omitted `license` for as long as
-// that entry existed, so a fully wired fourteenth tab — register, predicate,
-// content, sidebar deep link, two locales — was invisible to every assertion in
-// the file, including the two that claim to check the whole level.
 // The two audience groups the rail renders, in order. Beside the register they
 // group, so a group added to one is visible from the other.
 
@@ -140,12 +134,7 @@ export const SETTINGS_TABS = [
   group: "you" | "admin";
 }[];
 
-// Exported alongside the register: a caller that needs the label for an entry
-// builds the key from this, and `settings.tab.${SettingsTabId}` is then a
-// literal union TypeScript can check against MessageKey — no assertion, so a
-// typo is a compile error rather than a lookup that silently falls back to the
-// raw key and lets a test validate a label that does not exist.
-export type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
+type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
 
 // Exported for the placement gate below the register: a settings card that
 // configures the INSTALLATION has to sit on an admin entry, and the only way to

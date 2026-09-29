@@ -391,12 +391,8 @@ describe("one plural rule", () => {
 // THE OTHER SHAPE, and the gate above cannot see it: one key with a count
 // interpolated into it.
 //
-// `ob.conv.activity.steps` was `"{count} steps"` and printed "1 steps" on a
-// cold install, at step 3 of 5, in a browser. There is no ternary and no second
-// arm, so the census above — which asks whether BOTH ARMS of a conditional are
-// catalogue keys — has nothing to inspect. It is not wrong; its subject does
-// not include this class, and a class a census cannot see is one it reports
-// PASS over forever.
+// A value of `"{count} steps"` prints "1 steps" with no ternary and no second
+// arm, so the census above has nothing to inspect and would report PASS forever.
 //
 // WHAT THE SUBJECT IS. A key whose value interpolates `{count}` and carries no
 // `_one`/`_other` sibling. That is the broad reading and it is deliberate: the
@@ -467,16 +463,10 @@ describe("one count, one key", () => {
     ).toEqual([]);
   });
 
-  // The census's own census. It reads the catalogue it claims to read, and it
-  // recognises the shape in the spelling the real defect took.
+  // The census's own census: it reads the catalogue it claims to read.
   it("sees a count interpolated into one key", () => {
     const registered = [...PLURAL_SINGLE_KEY_DEBT.keys()];
     expect(registered.length).toBeGreaterThan(50);
-    // The key this issue was filed for is CONVERTED, so it must be absent from
-    // both the census and the register — the one worked example that proves the
-    // way out is a plural pair rather than a line in the list.
-    expect(Object.hasOwn(en, "ob.conv.activity.steps_one")).toBe(true);
-    expect(PLURAL_SINGLE_KEY_DEBT.has("ob.conv.activity.steps")).toBe(false);
   });
 
   // Every plural base carries both arms and no bare key: a missing arm leaves one

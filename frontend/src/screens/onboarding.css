@@ -27,12 +27,6 @@
   margin: 0 auto;
 }
 
-/* wizard column + panels */
-.wiz {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: var(--space-12) var(--space-8) var(--space-16);
-}
 .ob-panel {
   animation: obRise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -291,39 +285,6 @@
   color: var(--success);
 }
 
-.ob-read-panel {
-  position: relative;
-  display: flex;
-  min-height: calc(100vh - 176px);
-  flex-direction: column;
-  justify-content: center;
-  isolation: isolate;
-}
-.ob-read-panel::before {
-  position: absolute;
-  z-index: -1;
-  width: min(940px, 118vw);
-  aspect-ratio: 1.75;
-  left: 50%;
-  top: 48%;
-  content: "";
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  background:
-    radial-gradient(circle at center, var(--accentLight), transparent 47%),
-    repeating-radial-gradient(
-      ellipse at center,
-      transparent 0 72px,
-      color-mix(in srgb, var(--accent) 8%, transparent) 73px,
-      transparent 74px 112px
-    );
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 18% 82%,
-    transparent
-  );
-}
 /* The dialog's two inks, named because the PLATE decides them and every text
    inside reads one of the two. On the onboarding hero it is dark glass and the
    pair is the rail's own, white on a lit backdrop; hosted in the workbench it
@@ -342,16 +303,9 @@
   box-shadow: 0 18px 46px color-mix(in srgb, var(--railBottom) 44%, transparent);
   backdrop-filter: blur(12px);
 }
-.ob-core-kicker,
 .ob-manual-progress {
   font-family: var(--fontFamilyBody);
   color: var(--aiText);
-}
-.ob-core-kicker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
 }
 .ob-core-dialog h1 {
   margin: var(--space-3) 0 0;
@@ -361,211 +315,13 @@
   margin: var(--space-3) auto 0;
   color: var(--ob-dialog-ink-quiet);
 }
-.ob-core-journey {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-1);
-  margin-top: var(--space-4);
-  padding: 0;
-  list-style: none;
-}
-.ob-core-journey::before {
-  position: absolute;
-  top: 13px;
-  right: 15%;
-  left: 15%;
-  height: 1px;
-  content: "";
-  background: var(--railHover);
-}
-.ob-core-journey > li {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  justify-items: center;
-  gap: var(--space-1);
-  color: var(--railIconHover);
-  font-family: var(--fontFamilyBody);
-}
-.ob-core-journey i {
-  display: grid;
-  width: 27px;
-  height: 27px;
-  place-items: center;
-  color: var(--railIconHover);
-  border: 1px solid var(--railHover);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--railActive);
-}
-.ob-core-journey svg {
-  width: 12px;
-}
-.ob-core-journey [data-state="active"] {
-  color: var(--railIconActive);
-}
-.ob-core-journey [data-state="active"] i {
-  color: var(--aiText);
-  border-color: var(--aiText);
-  box-shadow: 0 0 16px var(--aiMed);
-}
-.ob-core-journey [data-state="done"] i {
-  color: var(--textOnStatusControl);
-  border-color: var(--success);
-  background: var(--success);
-}
 
-.ob-core-url {
-  display: flex;
-  align-items: center;
-  margin-top: var(--space-5);
-  overflow: hidden;
-  border: 1px solid var(--railHover);
-  border-radius: var(--r-sm);
-  background: var(--railHover);
-}
-.ob-core-url:focus-within {
-  border-color: var(--aiText);
-  box-shadow: var(--focus-glow-ai);
-}
-.ob-core-url.invalid {
-  border-color: var(--danger);
-}
-.ob-core-url span {
-  padding-left: var(--space-3);
-  color: var(--ob-dialog-ink-quiet);
-}
-/* The shell above owns the box; this owns the inset and the type. The leading
-   inset stays --space-1 because the `https://` prefix sits immediately before
-   it and the two are one string to read. */
-.ob-core-url input {
-  min-width: 0;
-  flex: 1;
-  padding-block: var(--inputPaddingY);
-  padding-inline: var(--space-1) var(--inputPaddingX);
-  font: inherit;
-  color: var(--ob-dialog-ink);
-  border: 0;
-  outline: 0;
-  background: transparent;
-}
-/* The one placeholder in the product that is NOT written as --textSecondary,
-   and the reason is the ground: on the onboarding hero the secondary ink is the
-   rail's own and --textSecondary is a dark grey that disappears into it. The
-   dialog's quiet ink IS the secondary tone of whichever plate this field draws
-   on, so it resolves to the rail's on the hero and to --textSecondary in the
-   workbench, where the hero's answer is the one that disappears. */
-.ob-core-url input::placeholder {
-  color: var(--ob-dialog-ink-quiet);
-}
-.ob-core-dialog .ob-core-url-note {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  color: var(--success);
-}
-.ob-core-url-note svg {
-  width: 12px;
-}
 .ob-core-dialog > .btn {
   width: 100%;
   /* ds:ignore the dialog's one verb pays its interval off the field above it */
   margin-top: var(--space-4);
 }
-.ob-core-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  margin-top: var(--space-3);
-  padding: var(--space-1);
-  /* Inside a dialog this link wears that plate's quiet ink; the fallback is for
-     the ones that stand loose in the transcript, where the rail's tone is still
-     the answer and there is no plate to ask. */
-  color: var(--ob-dialog-ink-quiet, var(--railIconHover));
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-.ob-core-link:hover,
-.ob-core-link:focus-visible {
-  color: var(--ob-dialog-ink, var(--railIconActive));
-}
-.ob-core-link svg {
-  width: 13px;
-}
 
-.ob-core-live {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--aiText);
-  box-shadow: 0 0 12px var(--aiText);
-  animation: ob-core-live 1.4s ease-in-out infinite;
-}
-
-.core-findings {
-  margin-top: var(--space-6);
-  overflow: hidden;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-lg);
-  background: var(--bgElevated);
-  box-shadow: var(--shadow-rest);
-}
-/* The facts block wraps its heading in a <section> of its own, so the card's
-   inset reaches it only if that heading is named here too — a child selector
-   alone left the title printing against the card's border while the grid below
-   it, which pads itself, sat correctly inset. */
-.core-findings > h2,
-.live-fact-preview > h2 {
-  margin: var(--space-5) var(--space-5) 0;
-  font-family: var(--fontFamilyHeading);
-}
-/* That section already carries the interval to the block above it; the heading
-   adding the card's own top step again would open a second gap. */
-.live-fact-preview > h2 {
-  margin-top: 0;
-}
-.core-findings > p {
-  margin: var(--space-1) var(--space-5) 0;
-}
-.legal-preview {
-  padding: var(--space-5);
-  border-bottom: 1px solid var(--borderSubtle);
-  background: color-mix(in srgb, var(--accentLight) 36%, transparent);
-}
-.legal-preview h2 {
-  margin: 0;
-  font-family: var(--fontFamilyHeading);
-}
-.legal-preview > p {
-  max-width: 620px;
-  margin: var(--space-1) 0 0;
-}
-.legal-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-/* What `Card` does not bring: `.card` declares no display, and these lines are a
-   stack with air between them rather than flowing text. */
-.legal-preview-card {
-  display: grid;
-  gap: var(--space-2);
-}
-.legal-preview-card strong,
-.legal-preview-card span,
-.legal-preview-card small {
-  display: block;
-}
-.legal-preview-card small {
-  color: var(--accentText);
-}
 .ob-manual-progress {
   display: flex;
   justify-content: space-between;
@@ -590,74 +346,6 @@
   display: block;
   margin-top: var(--space-2);
 }
-@keyframes ob-core-live {
-  50% {
-    opacity: 0.35;
-  }
-}
-/* `.finding-grid` sizes its columns `1fr 1fr` rather than `minmax(0, 1fr)`, so a
-   grid item's automatic minimum size is its CONTENT — one unbreakable value (a
-   URL, a long domain) widens the column past its share and the row overflows.
-   This is the guard against that, and it is not chrome, so `Card` does not
-   bring it. */
-.finding-card {
-  min-width: 0;
-}
-.finding-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  padding: var(--space-5);
-}
-.finding-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.finding-label svg {
-  width: 12px;
-  color: var(--success);
-}
-.finding-label span {
-  margin-left: auto;
-  color: var(--success);
-}
-.finding-card strong,
-.finding-card blockquote {
-  display: block;
-}
-.finding-card strong {
-  margin-top: var(--space-2);
-}
-.finding-card blockquote {
-  margin: var(--space-2) 0 0;
-}
-.read-coverage {
-  margin: 0 var(--space-5) var(--space-5);
-  padding: var(--space-3);
-  border-radius: var(--r-md);
-  background: var(--bgHover);
-}
-.read-coverage summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
-}
-.read-coverage svg {
-  width: 13px;
-}
-.read-coverage ul {
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
-}
-.read-coverage li {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  overflow-wrap: anywhere;
-}
 
 /* The workbench is Margince's reusable interaction pattern: identity and
    runtime stay fixed while conversation and the reviewable artifact move.
@@ -667,13 +355,8 @@
   display: block;
   width: 100%;
 }
-/* The conversation column's body. It does NOT scroll: every act puts its turns
-   inside ConversationThread, which owns the transcript scroller and the
-   follow-the-latest behaviour that depends on being the element that scrolls.
-   An `overflow` here would make this the outer of two nested scrollers, and the
-   thread's own scroll handler would stop seeing the reader's scrolls.
-   `min-height: 0` is what lets the thread shrink inside it — without it a flex
-   item in a column floors at its content height and the column overflows. */
+/* The conversation column's body. `min-height: 0` lets it shrink: a flex item
+   in a column otherwise floors at its content height and the column overflows. */
 .mw-thread {
   display: flex;
   flex: 1;
@@ -690,80 +373,14 @@
   overflow: clip;
   overflow-clip-margin: var(--mw-gutter, 0px);
 }
-/* The one column body with no ConversationThread inside it, so here the body
-   itself has to be the scroller. It has to be declared BEFORE the breakpoint
-   below, not after it: onboarding-read.tsx puts both classes on one element,
-   both selectors are a single class, and a media query adds no specificity of
-   its own — so whichever of the two is written last is the one that decides
-   what that element does. The mobile reset is the later one. */
-.ob-read-thread {
-  overflow: auto;
-}
-/* Below 900px margince-workbench.css turns the page itself into the scroller
-   (`.mw-shell`/`.mw-body` grow with content) and hands ConversationThread's
-   own root back to document flow (`.mw-conversation .ob-conv-thread`). This
-   wrapper sits between the two: unchanged, its `flex: 1; min-height: 0;
-   overflow: hidden` still fences the thread to whatever bounded height the
-   old fixed-viewport layout gave it, so the transcript scrolls inside that
-   fence instead of the page scrolling past it — the same inner-scroll trap
-   the sibling rule exists to avoid, one level up. */
+/* Below 900px margince-workbench.css makes the page the scroller, so the body
+   grows with its turns instead of fencing them inside a bounded height. */
 @media (max-width: 900px) {
   .mw-thread {
     flex: none;
     min-height: auto;
     overflow: visible;
   }
-}
-/* The speaker takes its own row above the bubble rather than a column beside
-   it. The conversation here is the workbench RAIL — clamp(300px, 26vw, 380px)
-   in margince-workbench.css — where a 30px gutter and the gap after it cost a
-   fifth of the text measure, which is what turned a plain sentence into five
-   two-word lines. Stacked, the bubble gets the rail's full width. */
-.mw-message-assistant {
-  display: grid;
-  gap: var(--space-2);
-}
-.mw-speaker {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  color: var(--railIconActive);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: linear-gradient(145deg, var(--ai), var(--accent));
-  font-family: var(--fontFamilyHeading);
-}
-.mw-message-assistant > div {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-xs) var(--r-md) var(--r-md) var(--r-md);
-  background: var(--bgElevated);
-  box-shadow: var(--shadow-rest);
-}
-.mw-message-assistant h2,
-.mw-message-assistant p {
-  margin: 0;
-}
-.mw-message-assistant h2 {
-  color: var(--textPrimary);
-  font-family: var(--fontFamilyHeading);
-}
-.mw-message-assistant h2 + p,
-.mw-message-assistant p + p {
-  margin-top: var(--space-2);
-}
-.mw-message-user {
-  /* Short of the full rail so the turn still reads as one side of a
-     conversation, but only just: at 82% of a 380px column the inset cost more
-     characters per line than the shape was worth. */
-  max-width: 92%;
-  align-self: flex-end;
-  padding: var(--space-3) var(--space-4);
-  color: var(--textOnAccentControl);
-  border-radius: var(--r-md) var(--r-xs) var(--r-md) var(--r-md);
-  background: var(--accent);
-  overflow-wrap: anywhere;
 }
 /* Flattened onto the conversation column, which is a LIGHT panel: the dialog
    keeps none of its glass here, so it keeps none of the rail's inks either. */
@@ -780,10 +397,7 @@
 .mw-conversation .ob-core-dialog:not(.ob-manual-question) h1 {
   display: none;
 }
-.mw-conversation .ob-core-dialog:not(.ob-manual-question) > p,
-.mw-conversation .ob-core-kicker,
-.mw-conversation .ob-core-journey,
-.mw-conversation .ob-core-url-note {
+.mw-conversation .ob-core-dialog:not(.ob-manual-question) > p {
   display: none;
 }
 .mw-conversation .ob-manual-question h1 {
@@ -791,11 +405,6 @@
 }
 .mw-conversation .ob-manual-question > p {
   margin: var(--space-1) 0 var(--space-3);
-}
-.mw-conversation .ob-core-url {
-  margin-top: 0;
-  border-color: var(--borderStrong);
-  background: var(--bgHover);
 }
 .mw-conversation .ob-core-dialog > .btn {
   /* ds:ignore the workbench draws that same dialog tighter */
@@ -814,37 +423,6 @@
   background: var(--bgCard);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
-}
-.mw-read-activity {
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
-}
-.mw-read-activity > p {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--aiText);
-  font-family: var(--fontFamilyBody);
-}
-.mw-read-activity > p svg {
-  width: 14px;
-  flex: none;
-}
-.mw-read-activity > p strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.mw-read-activity > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-.mw-read-activity b {
-  color: var(--textPrimary);
 }
 /* Pinned to the bottom of the conversation column: `flex: none` so a long
    thread scrolls behind it instead of squeezing the place you type. */
@@ -881,82 +459,6 @@
 .mw-composer > small {
   grid-column: 1 / -1;
 }
-.mw-thinking {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--aiText);
-}
-.mw-thinking span {
-  width: 7px;
-  height: 7px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--ai);
-  animation: ob-core-live 1.4s ease-in-out infinite;
-}
-.mw-citations {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-.mw-citations a {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  color: var(--aiText);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--aiLight);
-  text-decoration: none;
-}
-.mw-citations svg {
-  width: 11px;
-}
-/* What the read proposes changing, inside the reply that proposed it. The
-   ground, the dashed edge and the corner are `.staging-card`'s: none of these
-   values is on the record until Apply, and the dashes are what say so. */
-.mw-proposal {
-  margin-top: var(--space-3);
-}
-/* What is left here is the MEASURE — this card is NESTED, and the staged card's
-   own asymmetric inset is wider than the whole inset of the bubble hosting it,
-   which reads as the bubble's edge drawn wrong. A card's inset by its role
-   instead, which lines up with the bubble's. Two classes, so that measure wins
-   wherever the two sheets land in the bundle. */
-.mw-proposal.staging-card {
-  padding: var(--padCard);
-}
-/* The heading names the machine that wrote the list, so it takes the family's
-   ink — `--aiText` rather than `--ai`, which fails AA on this ground. */
-.mw-proposal > div:first-child {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--aiText);
-}
-.mw-proposal svg {
-  width: 14px;
-}
-.mw-proposal ul {
-  display: grid;
-  gap: var(--space-2);
-  margin: var(--space-3) 0;
-  padding: 0;
-  list-style: none;
-}
-.mw-proposal li {
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-}
-.mw-proposal li strong {
-  color: var(--textPrimary);
-}
 .mw-review-heading {
   padding: var(--space-2) var(--space-1) var(--space-3);
 }
@@ -970,10 +472,6 @@
 }
 .mw-review-heading p {
   margin: var(--space-1) 0 0;
-}
-.mw-review .core-findings {
-  margin-top: 0;
-  box-shadow: none;
 }
 .ob-company-review {
   margin-top: var(--space-6);
@@ -1009,9 +507,6 @@
 }
 .mw-confirm-company p {
   margin: 0;
-}
-.live-fact-preview {
-  margin-top: var(--space-6);
 }
 @media (max-width: 640px) {
   .ob-company-review .ob-companyform {
@@ -1113,42 +608,21 @@
   margin-top: var(--space-3);
 }
 @media (max-width: 720px) {
-  .finding-grid,
-  .fact-grid,
-  .legal-preview-grid {
+  .fact-grid {
     grid-template-columns: 1fr;
-  }
-
-  .ob-read-panel {
-    min-height: calc(100vh - 150px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ob-panel,
-  .ob-spinner,
-  .ob-core-live,
-  .mw-thinking span {
+  .ob-spinner {
     animation: none;
     transition: none;
   }
 }
 
 @media (max-width: 520px) {
-  .wiz {
-    padding-right: var(--space-4);
-    padding-left: var(--space-4);
-  }
-
   .ob-core-dialog {
     padding: var(--space-6) var(--space-5);
-  }
-
-  /* The steps stay on one line — the connector behind them IS the journey, and
-     a stacked column would leave it ruled across the stack. What has to give is
-     the space between them: at this width every label wraps, and 4px apart two
-     wrapped labels read as one paragraph rather than as two stages. */
-  .ob-core-journey {
-    column-gap: var(--space-3);
   }
 }

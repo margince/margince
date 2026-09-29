@@ -438,8 +438,7 @@ function coreStateFor(read: CompanySiteRead): MarginceCoreState {
   // A site read IS intake: pages arriving, one after another — until the
   // extracting phase, where the agent is working over what it has rather than
   // taking more on. Reading the phase as well as the status is what keeps this
-  // orb saying the same thing as the one on the read screen itself
-  // (onboarding-read.tsx), which has always drawn the distinction.
+  // orb saying the same thing as the conversation's own (presence.ts).
   return read.phase === "extracting" ? "working" : "ingest";
 }
 

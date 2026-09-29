@@ -1,41 +1,5 @@
 /* Conversation thread pieces. Colours and spacing read tokens only. */
 
-/* The thread is the ACTUAL scroll container: inside a flex shell it must
- * shrink (min-height: 0) so overflow happens here, where the follow-the-
- * bottom scroll handler is listening, not on some ancestor. */
-.ob-conv-thread {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  gap: var(--space-4);
-  overflow-y: auto;
-  /* Ends at its own last turn rather than handing the leftover gesture to the
-     document, which has no scroll to give and bounces the whole app instead. */
-  overscroll-behavior: contain;
-  padding: var(--space-2) 0;
-  /* The transcript is the conversation column's scroller, and it scrolls without
-     drawing a bar across the turns. The bar is what is hidden, never the
-     scrolling: the wheel, the keyboard and the follow-the-latest behaviour are
-     untouched. */
-  scrollbar-width: none;
-}
-.ob-conv-thread::-webkit-scrollbar {
-  display: none;
-}
-
-/*
- * One avatar size for the whole transcript, and it is the design system's own
- * `.avatar` chip: 28px. The thread used to run three — a 24px speaker circle,
- * a bare 16px glyph for the reader, and a 28px monogram at the rail's foot for
- * the same reader — so the column read as three unrelated components stacked.
- * `--mw-avatar` is the one knob; the speaker below and the reader's `.avatar`
- * both answer to it.
- */
-.ob-conv-thread {
-  --mw-avatar: 28px;
-}
-
 .ob-conv-narration {
   display: flex;
   align-items: flex-start;
@@ -1684,91 +1648,6 @@
   text-align: start;
 }
 
-/* ---- the rail's activity fold ---- */
-/* Progress collapses to one line: the latest step, the count, the caret.
-   Open, it is the audit trail; a step that names fields jumps to them. */
-
-.ob-conv-activity {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.ob-conv-activity > button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2);
-  border: 0;
-  border-radius: var(--r-sm);
-  background: none;
-  cursor: pointer;
-  text-align: start;
-}
-
-.ob-conv-activity > button:hover {
-  background: var(--bgHover);
-}
-
-.ob-conv-activity > button > i {
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--aiText);
-}
-
-.ob-conv-activity > button > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ob-conv-activity > button > b {
-  flex: none;
-  margin-left: auto;
-  font-family: var(--fontFamilyBody);
-  font-variant-numeric: tabular-nums;
-}
-
-.ob-conv-activity > button > svg {
-  width: 12px;
-  height: 12px;
-  flex: none;
-  transition: transform 0.16s ease;
-}
-
-.ob-conv-activity > button[aria-expanded="true"] > svg {
-  transform: rotate(180deg);
-}
-
-.ob-conv-activity > ul {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0 0 0 var(--space-4);
-  list-style: none;
-}
-
-.ob-conv-activity > ul > li > button {
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  text-align: start;
-  text-decoration: underline;
-  text-decoration-color: var(--borderStrong);
-  text-underline-offset: 3px;
-}
-
-.ob-conv-activity > ul > li > button:hover {
-  color: var(--textPrimary);
-}
-
 /* The attention jump inside a message bubble. */
 .ob-conv-jump {
   display: inline-block;
@@ -2872,16 +2751,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* The pinned next-step line between the thread and the composer: one slim
-   button naming the blocking affordance that is scrolled out of view. The
-   button is a `Button` — the fill, the edge and the hover are the variant's,
-   so this line owns only where it sits. */
-.ob-conv-nextstep {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-1) var(--space-4);
 }
 
 /* The rail's composer, one size smaller than the split variant's: a single

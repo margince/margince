@@ -68,7 +68,7 @@ it, so a `?utm=…` never leaks into a screen name.
   of §4 of the design language — `design/00-design-language.md` in the spec
   repo, which the section numbers on this page all refer to:
   `AutonomyDot`, `EvidenceChip`, `ConfidenceMeter`, `ProvenanceTag`,
-  `StagingCard`, `ApprovalGate`, `StagedProposal`, `FieldDiff`), the Margince
+  `StagingCard`, `FieldDiff`), the Margince
   Core (`margince-core*`), and `composed.tsx`, which builds on both
   (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
   the reduced-motion rule — reduced motion jumps to the END state, never to
@@ -273,8 +273,7 @@ The older primitives survive in two places, both deliberate:
   `screens/onboarding-company-form.tsx`), the Company-context settings screen,
   and the record surfaces that show a single provenance line
   (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
-  `StagedProposal`/`FieldDiff`/`ApprovalGate` are the composed forms of the same
-  vocabulary.
+  `StagingCard`/`FieldDiff` are the composed forms of the same vocabulary.
 
 **One open at a time, for pointer *and* keyboard.** A module-level
 `closeOpenMark` holds the single currently-open panel; opening one closes the

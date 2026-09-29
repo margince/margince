@@ -76,7 +76,7 @@ state row in §3.2 (this is where "empty", "withheld", "never read" and
 
 ## 4. Contact
 
-Files: `contactpage.tsx`, `contact360.tsx`, `contactrail.tsx`,
+Files: `contactpage.tsx`, `contact360.ts`, `contactrail.tsx`,
 `contacttoday.tsx`, `contactcards.tsx`, `contactmemory.tsx`,
 `contactcorrections.tsx`, `contactnetwork/`.
 
@@ -108,7 +108,7 @@ Files: `contactpage.tsx`, `contact360.tsx`, `contactrail.tsx`,
 - **Details (right, closed).** `ContactRail` stays **one pane with hairline
   slices** (its documented anatomy), plus `ContactEmailPanel` under it.
 - **States to keep:** `contact.page.loading` becomes a skeleton (the one page
-  without one); `contact.page.notOpened`; `ThinState`; `withheldSections`
+  without one); `contact.page.notOpened`; `withheldSections`
   read once; consent verdict from the server key; `provider.profile.neverRun`
   mark on the Research tab (and a cancelled run reads as never run);
   `contact.graph.*` incompleteness on the map; archived verb removal.

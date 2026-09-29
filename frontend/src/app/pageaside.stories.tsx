@@ -75,7 +75,7 @@ function Record() {
       asideOpen={details.open}
     >
       <Panel title={en["co.commercial.title"]}>
-        <PanelBody>{en["co.work.noDeals"]}</PanelBody>
+        <PanelBody>{en["co.deals.empty"]}</PanelBody>
       </Panel>
     </RecordView>
   );
@@ -100,7 +100,7 @@ function PlainRecord() {
       }
     >
       <Panel title={en["co.commercial.title"]}>
-        <PanelBody>{en["co.work.noDeals"]}</PanelBody>
+        <PanelBody>{en["co.deals.empty"]}</PanelBody>
       </Panel>
     </RecordView>
   );

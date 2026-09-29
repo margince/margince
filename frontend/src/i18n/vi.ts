@@ -74,7 +74,6 @@ export const vi = {
   "scheduling.resume": "Bật đặt lịch",
   "scheduling.settings": "Cài đặt cuộc họp",
   "scheduling.save": "Lưu cài đặt",
-  "scheduling.saved": "Đã lưu cài đặt",
   "settings.tab.meetings": "Cuộc họp",
   "settings.page.meetings.sub": "Giờ làm việc, lịch và tùy chọn đặt lịch.",
   "scheduling.missingSavedCalendar":
@@ -133,9 +132,6 @@ export const vi = {
   "scheduling.finishSetup":
     "Hoàn tất thiết lập lịch trong cài đặt cuộc hẹn để chọn giờ trống.",
   "scheduling.readOnlyBadge": "Lịch chỉ đọc",
-  "scheduling.connect": "Kết nối hoặc kết nối lại lịch",
-  "scheduling.connectionHelp":
-    "Cần quyền ghi lịch để gửi lời mời. Kết nối lại lịch chỉ đọc để cấp quyền.",
   "scheduling.accountName":
     "Tên trên trang đặt lịch được lấy từ cài đặt Tài khoản.",
   "scheduling.linkNotCreated": "Lưu cài đặt cuộc họp để tạo liên kết đặt lịch.",
@@ -164,12 +160,10 @@ export const vi = {
   "scheduling.guestAgenda": "Bạn muốn trao đổi về điều gì?",
   "scheduling.agenda": "Lời nhắn cho khách",
   "scheduling.chooseTime": "Chọn giờ",
-  "scheduling.zone": "Múi giờ",
   "scheduling.date": "Ngày bắt đầu",
   "scheduling.next": "Thêm giờ",
   "scheduling.noTimes":
     "Không còn giờ trống trong khoảng này. Hãy chọn ngày khác.",
-  "scheduling.review": "Xem lại lời mời",
   "scheduling.pending": "Đang tạo lời mời…",
   "scheduling.confirmed": "Đã tạo lời mời trong lịch",
   "scheduling.needs_attention": "Lời mời cần được kiểm tra",
@@ -183,7 +177,6 @@ export const vi = {
   "scheduling.cancelConfirm": "Hủy cuộc họp này và thông báo cho khách mời?",
   "scheduling.retry": "Thử lại lời mời",
   "scheduling.book": "Xác nhận cuộc họp",
-  "scheduling.chooseFirst": "Chọn giờ để tiếp tục",
   "scheduling.unavailable":
     "Trang đặt lịch này không khả dụng. Hãy liên hệ chủ lịch.",
   "scheduling.publicUrlMissing":
@@ -468,10 +461,7 @@ export const vi = {
   "trust.systemTag": "Tiến trình hệ thống {job}",
   "trust.systemUnnamed": "Tiến trình hệ thống",
   "trust.connectorTag": "Qua {connector}",
-  "trust.dismissed": "Đã bỏ qua đề xuất.",
   "trust.stagedProposal": "đề xuất chờ duyệt",
-  "trust.resolvedValue": "giá trị đã chốt",
-  "trust.editValue": "Sửa {description}",
   "trust.evidenceFrom": "Bằng chứng từ {source}",
   "trust.evidenceLine_one": "dòng {lines}",
   "trust.evidenceLine_other": "dòng {lines}",
@@ -738,16 +728,6 @@ export const vi = {
   "search.partner.open": "Mở hồ sơ đối tác",
   "search.partner.openNamed": "Mở hồ sơ đối tác của {name}",
 
-  "context.recentTouches": "Trao đổi gần đây",
-  "context.openTasks": "Công việc đang mở",
-  "context.relatedContacts": "Liên hệ liên quan",
-  "context.relatedCompanies": "Công ty liên quan",
-  "context.relatedProjects": "Dự án liên quan",
-  "context.whoKnows": "Ai biết họ",
-  "context.relatedDeals": "Cơ hội liên quan",
-  "context.title": "Bằng chứng liên quan",
-  "context.empty": "Chưa có gì liên quan.",
-
   "palette.aria": "Bảng lệnh",
   "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
   "palette.empty": "Không có kết quả.",
@@ -770,7 +750,6 @@ export const vi = {
   "explain.mayHaveMoved":
     "Liên kết này không ghi con số được tính vào lúc nào, nên các số dưới đây vừa được tính lại. Nếu tỷ giá đã thay đổi trong khoảng đó, chúng có thể không khớp với con số bạn đã bấm.",
   "explain.title": "Con số này được dựng thế nào",
-  "explain.rate": "tỷ giá {rate} ngày {date}",
   "explain.cell": "Giải thích {figure}",
   "explain.excluded_one":
     "1 bản ghi không có trong con số này và các dòng bên dưới. Một trường của bản ghi đó bị ẩn với vai trò của bạn.",
@@ -1589,7 +1568,6 @@ export const vi = {
   "finance.status.disputed": "Đang tranh chấp",
   "finance.status.credited": "Đã ghi có",
   "finance.status.void": "Đã hủy",
-  "commercial.closes": "chốt {when}",
   "contracts.title": "H\u1ee3p \u0111\u1ed3ng",
   "contracts.empty": "Ch\u01b0a c\u00f3 h\u1ee3p \u0111\u1ed3ng n\u00e0o",
   "contracts.noneActive":
@@ -1717,7 +1695,6 @@ export const vi = {
   "co.next.overdue": "Quá hạn",
   "co.next.due": "Hạn {when}",
   "co.next.undated": "Chưa có hạn",
-  "co.work.noDeals": "Kh\u00f4ng c\u00f3 deal n\u00e0o \u0111ang m\u1edf.",
   "co.work.closes": "ch\u1ed1t {date}",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ dữ liệu của bạn",
@@ -1888,7 +1865,6 @@ export const vi = {
   "co.ask.q.whats_changed": "Gần đây có gì thay đổi?",
   "co.ask.nothing": "Không có gì bạn xem được ở đây trả lời được câu đó.",
   "co.ask.failed": "Không trả lời được câu hỏi đó — hãy thử lại.",
-  "co.suggest.title": "Margince đề xuất",
   "co.suggest.kind.no_reply": "Chưa có hồi đáp",
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có gì lên lịch",
@@ -1933,10 +1909,6 @@ export const vi = {
   "co.rail.projects.empty": "Chưa có dự án.",
 
   "co.commercial.title": "Thương mại",
-  "co.commercial.lostFigure": "Deal đã thua",
-  "co.commercial.allDeals": "Tất cả deal",
-  "co.commercial.truncated":
-    "Tài khoản này có nhiều deal đang mở hơn số hiển thị ở đây. Mở Tất cả deal để xem phần còn lại.",
   "linkedinImport.title": "Kết nối LinkedIn",
   "linkedinImport.sub":
     "Nhập bản xuất của chính bạn để biết đội của bạn đã quen những ai",
@@ -5466,47 +5438,8 @@ export const vi = {
   "stage.criteria.kindTermsAccepted": "Đã chấp nhận điều khoản",
   "stage.criteria.kindCustom": "Tùy chỉnh",
 
-  "ob.url": "Website",
-  "ob.urlScheme": "https://",
   "ob.back": "Quay lại",
   "ob.restoring": "Đang khôi phục thiết lập của bạn…",
-  "ob.readManual": "Bạn tự kể cho tôi",
-  "ob.coreIntroTitle": "Trước tiên, tôi cần biết pháp nhân của bạn.",
-  "ob.coreIntroBody":
-    "Tôi cần tên pháp lý, địa chỉ và mã số thuế. Sau đó tôi tìm hiểu bạn bán gì cho ai.",
-  "ob.coreLegalKicker": "Tôi bắt đầu từ danh tính pháp lý",
-  "ob.corePathLabel": "Những gì tôi sẽ tìm hiểu",
-  "ob.corePathLegal": "Danh tính pháp lý",
-  "ob.corePathOffer": "Sản phẩm dịch vụ",
-  "ob.corePathCustomer": "Khách hàng",
-  "ob.coreReadingPage": "Tôi đang đọc",
-  "ob.coreWebsiteTitle": "Tôi nên đọc website nào?",
-  "ob.coreWebsiteBody":
-    "Tôi đọc phần thông tin pháp lý trước, rồi đến sản phẩm, khách hàng và định vị.",
-  "ob.corePreparing": "Tôi đang chuẩn bị đọc {host}",
-  "ob.coreLegalReading": "Tôi đang đọc danh tính pháp lý trên {host}",
-  "ob.coreLegalReadingBody":
-    "Tôi tìm thông tin pháp lý, địa chỉ và mã số thuế. Gì không nêu thì để trống.",
-  "ob.coreBusinessReading": "Tôi đang tìm hiểu cách công ty vận hành",
-  "ob.coreBusinessReadingBody":
-    "Tôi đang nối sản phẩm, khách hàng và định vị với đúng đoạn văn bản công khai chứng minh cho chúng.",
-  "ob.coreReady_one": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.coreReady_other": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.corePartial_one":
-    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
-  "ob.corePartial_other":
-    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
-  "ob.coreReadyBody":
-    "Tôi chưa lưu gì. Hãy rà soát danh tính pháp lý trước, rồi đến sản phẩm dịch vụ.",
-  "ob.coreDeferredBody": "Tôi sẽ tự động đọc tiếp.",
-  "ob.coreFailedBody":
-    "Tôi không đọc chắc được website này nên dừng thay vì đoán. Bạn tự cho tôi biết nhé.",
-  "ob.coreFindingsTitle": "Những gì tôi tìm được và chứng minh được",
-  "ob.coreFindingsBody":
-    "Mỗi giá trị đều kèm đoạn văn bản công khai. Gì không xác minh được thì để trống.",
-  "ob.ai.identity": "Chào bạn, tôi là Margince",
-  "ob.ai.role": "AI tìm hiểu công ty của bạn",
-  "ob.ai.speaker": "M",
   "ob.ai.speakerName": "Margince",
   "ob.ai.ready": "Tôi đã sẵn sàng tìm hiểu",
   "ob.ai.configured": "AI đã cấu hình",
@@ -5533,42 +5466,15 @@ export const vi = {
   "ob.ai.tier.premium": "suy luận cao cấp",
   "ob.ai.tier.frontier": "suy luận tiên phong",
   "ob.ai.tier.localLarge": "cục bộ, mạnh",
-  // The rail footer's plain-language line: the exact ids sit one click away
-  // in the runtime chip's "Configured AI" row, so this says only what a
-  // non-technical reader needs at a glance — how many models, and where.
-  "ob.ai.summary.cloud_one": "1 mô hình, chạy trên đám mây",
-  "ob.ai.summary.cloud_other": "{count} mô hình, chạy trên đám mây",
-  "ob.ai.summary.local_one": "1 mô hình, chạy cục bộ",
-  "ob.ai.summary.local_other": "{count} mô hình, chạy cục bộ",
-  "ob.ai.summary.hybrid_one": "1 mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.hybrid_other": "{count} mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.development_one": "1 mô hình, chế độ phát triển",
-  "ob.ai.summary.development_other": "{count} mô hình, chế độ phát triển",
-  "ob.ai.summary.none": "Chưa cấu hình mô hình nào",
-  "ob.ai.summaryProviders_one": "1 nhà cung cấp đã cấu hình",
-  "ob.ai.summaryProviders_other": "{count} nhà cung cấp đã cấu hình",
-  "ob.ai.readFirst": "Hãy bắt đầu thiết lập công ty trước khi hỏi về phần này.",
   "ob.ai.liveArtifact": "Bản dựng trực tiếp, rà soát được",
   "ob.ai.companyKnowledge": "Những gì tôi hiểu về công ty của bạn",
   "ob.ai.companyKnowledgeBody":
     "Bằng chứng từ website được giữ tách khỏi cuộc trò chuyện. Bạn quyết định điều gì trở thành thông tin công ty.",
   "ob.ai.companyKnowledgeManualBody":
     "Câu trả lời của bạn và gợi ý của tôi vẫn sửa được ở đây. Bạn quyết định điều gì trở thành thông tin công ty.",
-  "ob.ai.askPlaceholder":
-    "Hỏi tôi về một phát hiện, sửa một chi tiết, hoặc cho biết tôi đã bỏ sót gì…",
-  "ob.ai.send": "Gửi cho Margince",
-  "ob.ai.reviewBoundary":
-    "Ở đây tôi chỉ đề xuất thay đổi. Tôi chỉ áp dụng vào bản nháp của bạn khi bạn duyệt.",
   "ob.ai.confirmBoundary":
     "Không gì trở thành thông tin công ty cho đến khi bạn xác nhận bản nháp này.",
   "ob.ai.confirmCompany": "Xác nhận và lưu công ty",
-  "ob.ai.thinking": "Tôi đang xem lại tập hồ sơ và chuẩn bị câu trả lời…",
-  "ob.ai.suggestedChanges": "Thay đổi được đề xuất cho bản nháp của bạn",
-  "ob.ai.applyChanges": "Áp dụng vào bản nháp",
-  "ob.ai.applied": "Đã áp dụng vào bản nháp",
-  "ob.ai.finding_one": "phát hiện có dẫn nguồn",
-  "ob.ai.finding_other": "phát hiện có dẫn nguồn",
-  "ob.continueManual": "Kể cho tôi thay vì đọc",
   "ob.readStatus.queued": "Tôi đang chuẩn bị",
   "ob.readStatus.deferred": "Tôi đang chờ hạn mức AI",
   "ob.readStatus.reading": "Tôi đang đọc",
@@ -5577,13 +5483,6 @@ export const vi = {
   "ob.readStatus.failed": "Tôi cần bạn giúp",
   "ob.readStatus.confirmed": "Tôi đã lưu lựa chọn của bạn",
   "ob.readStatus.abandoned": "Tôi đã dừng",
-  "ob.pagesRead": "trang tôi đã đọc",
-  "ob.legalEntitiesFound": "pháp nhân tôi tìm được",
-  "ob.coverageDetails": "Những gì tôi đã đọc và không đọc được",
-  "ob.legalFoundTitle": "Pháp nhân tôi tìm được",
-  "ob.legalFoundBody":
-    "Mỗi khối giữ tên đăng ký, địa chỉ và mã số thuế. Bạn chọn pháp nhân của mình khi rà soát.",
-  "ob.legalEntity": "Pháp nhân",
   "ob.confirmWebsite_one":
     "Phần này dựa trên {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
   "ob.confirmWebsite_other":
@@ -5605,7 +5504,6 @@ export const vi = {
   "ob.s1.title": "Rà soát những gì tôi tìm hiểu được về công ty bạn",
   "ob.s1.sub":
     "Tôi chỉ điền những gì chứng minh được từ website của bạn. Hãy sửa lại chỗ nào sai.",
-  "ob.s1.urlPlaceholder": "congtycuaban.com",
   "ob.s1.identityLabel": "Pháp nhân",
   "ob.s1.offerLabel": "Sản phẩm và dịch vụ",
   "ob.s1.customerLabel": "Khách hàng",
@@ -5617,10 +5515,7 @@ export const vi = {
   "ob.s1.saveFailed": "Không lưu được công ty của bạn",
   "ob.s1.savedNote":
     "Đã lưu vào tổ chức của bạn. Sửa gì ở đây rồi tiếp tục là lưu lại lần nữa.",
-  "ob.readGo": "Đọc website của tôi",
-  "ob.urlWillRead": "Tôi sẽ đọc {host}",
   "ob.readFromSite": "đọc từ website",
-  "ob.failTitle": "Tôi đọc được quá ít từ website này",
 
   "ob.manualChapterLegal": "Pháp nhân của bạn",
   "ob.manualChapterOffer": "Sản phẩm và dịch vụ",
@@ -6307,7 +6202,6 @@ export const vi = {
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
-  "ob.conv.threadLabel": "Cuộc trò chuyện onboarding",
   "ob.conv.read.started": "Đang đọc {host}. Tìm được gì tôi sẽ báo bạn.",
   "ob.conv.read.pages": "Số trang đã đọc: {pages}.",
   "ob.conv.read.learnedField": "Đã biết {field}: {value}",
@@ -6319,8 +6213,6 @@ export const vi = {
   "ob.conv.read.deferred": "Lượt đọc đang tạm dừng. Tôi sẽ tự động làm tiếp.",
   "ob.conv.read.pollFailed":
     "Tôi mất kết nối giữa chừng khi đang đọc. Những gì đã tìm được vẫn được giữ.",
-  "ob.conv.clarify.entity":
-    "Website nêu nhiều hơn một pháp nhân. Bản cài đặt này dành cho pháp nhân nào?",
   "ob.conv.company.confirmed":
     "Đã xác nhận hồ sơ công ty. Mọi thứ tôi lưu đều kèm nguồn.",
   "ob.conv.manual.chosen": "Tôi sẽ tự nhập.",
@@ -6554,8 +6446,6 @@ export const vi = {
   "ob.conv.scene.hideEvidence": "ẩn bằng chứng",
   "ob.conv.scene.whyThis": "Tôi đã đọc được gì",
   "ob.conv.scene.foundOn": "Tìm thấy tại",
-  "ob.conv.activity.steps_one": "{count} bước",
-  "ob.conv.activity.steps_other": "{count} bước",
   "ob.conv.showField": "Cho tôi xem",
   "ob.conv.review.editDirectly": "Sửa trực tiếp từng trường",
   "ob.conv.review.backToDossier": "Quay lại tập hồ sơ",
@@ -6724,9 +6614,6 @@ export const vi = {
   "ob.scan.costUnpriced": " · có phần dùng chưa có giá",
 
   // --- the live panel: what the read covered, and what it left ----------
-  "ob.live.stateDone": "xong",
-  "ob.live.stateNow": "đang chạy",
-  "ob.live.stateWaiting": "đang chờ",
   "ob.live.review": "Rà soát",
   "ob.live.hide": "Ẩn đi",
   "ob.live.countPages": "đọc {read} · bỏ qua {skipped}",
@@ -7529,13 +7416,9 @@ export const vi = {
   "settings.tab.voice": "Giọng viết",
   "settings.tab.agents": "Tác nhân",
   "settings.tab.connections": "Kết nối",
-  "settings.tab.general": "Chung",
-  "settings.tab.users": "Người dùng & nhóm",
   "settings.tab.extensions": "Tiện ích mở rộng",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Quy tắc thu thập",
-  "settings.tab.data-model": "Mô hình dữ liệu",
-  "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Tri thức",
   "corpusAsk.title": "Hỏi tài liệu của bạn",
   "corpusAsk.sub":
@@ -7704,7 +7587,6 @@ export const vi = {
   "pipeline.reason.record_not_available":
     "bản ghi của bước này không còn được lưu, hoặc bạn không được đọc — khi bản ghi đã mất thì không thể phân biệt hai điều đó",
   "pipeline.status.not_reported": "Không báo cáo ở đây",
-  "pipeline.subject.message": "về tin nhắn này",
   "pipeline.subject.sender": "về người gửi, không riêng tin nhắn này",
   "pipeline.subject.domain": "về tên miền của người gửi",
   "pipeline.subject.thread": "về toàn bộ cuộc trò chuyện",
@@ -7813,8 +7695,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "settings.tab.maintenance": "Bảo trì",
-  "settings.tab.license": "Giấy phép",
   "license.card.title": "Giấy phép và chỗ ngồi",
   "license.state.licensed": "Đã có giấy phép",
   "license.state.uncapped": "Đã có giấy phép, không giới hạn chỗ",
@@ -9106,14 +8986,6 @@ export const vi = {
   "consent.invalidTitle": "Không hoàn tất được yêu cầu kết nối này",
   "consent.invalidBody":
     "Bản cài đặt này sẽ không cho phép yêu cầu ở dạng hiện tại — có thể ứng dụng không còn được đăng ký ở đây. Hãy quay lại ứng dụng bạn đang kết nối và bắt đầu lại.",
-  "contact.thin.title": "Những gì đã biết đến giờ",
-  "contact.thin.known":
-    "Đã có {what} của {name}, nhưng chưa ai bên mình ghi nhận trao đổi với họ.",
-  "contact.thin.remediation.capture":
-    "Hãy kết nối hộp thư vẫn viết cho họ, trang này sẽ tự đầy lên — mỗi trường kèm nguồn gốc của nó.",
-  "contact.thin.remediation.employer":
-    "Hãy thêm nơi họ làm việc, Margince sẽ đọc website công ty đó để tìm vai trò của họ.",
-  "contact.thin.logFirst": "Ghi nhận tương tác đầu tiên",
   "contact.enriched.title": "Những gì Margince đọc được",
   "contact.confirm.title_one": "{count} thông tin cần xác nhận",
   "contact.confirm.title_other": "{count} thông tin cần xác nhận",
@@ -9580,8 +9452,6 @@ export const vi = {
   "contact.meeting.objective": "Kết quả cần đạt được",
   "contact.meeting.openWith": "Mở đầu bằng",
   "contact.meeting.arc": "Diễn biến quan hệ",
-  "contact.meeting.arcSub":
-    "Chỉ những thời điểm làm thay đổi cuộc trò chuyện hôm nay.",
   "contact.meeting.close": "Kết thúc cuộc họp",
   "contact.meeting.advance.minimum": "Tối thiểu",
   "contact.meeting.advance.best": "Tốt nhất",
@@ -9930,17 +9800,9 @@ export const vi = {
   "projectCompanies.detachTitle": "Bỏ công ty này khỏi dự án?",
   "projectCompanies.detachConfirm": "Bỏ công ty",
   "projectCompanies.searchLabel": "Tìm công ty theo tên",
-  "contactProjects.title": "Dự án",
-  "contactProjects.empty":
-    "Liên hệ này xuất hiện ở đây khi tham gia một dự án: với vai trò người bảo trợ, đầu mối, hoặc bất kỳ ai đang thực hiện.",
   "projectRole.customer": "Khách hàng",
   "projectRole.partner": "Đối tác",
   "projectRole.subcontractor": "Nhà thầu phụ",
-  "contactRole.sponsor": "Người bảo trợ",
-  "contactRole.projectLead": "Trưởng dự án",
-  "contactRole.deliveryLead": "Phụ trách bàn giao",
-  "contactRole.expert": "Chuyên gia",
-  "contactRole.user": "Người dùng",
   "projectLinks.attach": "Liên kết dự án",
   "projectLinks.move": "Chuyển sang dự án khác",
   "projectLinks.detach": "Bỏ liên kết",
@@ -10162,7 +10024,6 @@ export const vi = {
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
-  "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
   "worklist.disposition.doneSnooze_one":
     "Ngày mai sẽ trở lại danh sách của bạn.",
   "worklist.disposition.doneSnooze_other":

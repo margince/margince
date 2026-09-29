@@ -49,7 +49,7 @@ function Shell({ session }: Readonly<{ session: RouteMap[string] }>) {
           title="Company profile"
           sub="The work surface each act fills; here it stands in for one."
         >
-          <div className="mw-review ob-conv-artifact" />
+          <div className="ob-conv-artifact" />
         </ConversationWorkbench>
       </WorkbenchEntranceScope>
     </StoryProviders>

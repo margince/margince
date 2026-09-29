@@ -290,14 +290,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "DealCard takes the record's zone as a required prop for its close date; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
   },
   {
-    file: "design-system/explain.stories.tsx",
-    why: "The FX-lineage panel takes `workspaceZone` as a prop and the story shows what a named one renders.",
-  },
-  {
-    file: "design-system/explain.test.tsx",
-    why: "Same prop, asserted against a fixed rate date.",
-  },
-  {
     file: "design-system/select.stories.tsx",
     why: "The zone picker's option list — IANA names as DATA the control lists, not a zone anything is formatted in.",
   },

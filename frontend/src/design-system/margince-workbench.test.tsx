@@ -48,11 +48,6 @@ function workbench() {
       configured="ollama/gemma3"
       locale="en"
       runtimeLabels={LABELS}
-      steps={[
-        { label: "Read", state: "done" },
-        { label: "Confirm", state: "now" },
-        { label: "Voice", state: "todo" },
-      ]}
     >
       <p>Thread</p>
     </MarginceWorkbench>
@@ -152,64 +147,6 @@ describe("the runtime chip", () => {
     await userEvent.tab();
     expect(chip).toHaveFocus();
     expect(chip).toHaveAttribute("aria-expanded", "true");
-  });
-});
-
-describe("the step rail", () => {
-  it("states where the journey is without offering a control", () => {
-    renderWorkbench();
-
-    const rail = screen.getByRole("list");
-    const stops = [...rail.querySelectorAll("li")];
-    expect(stops.map((stop) => stop.textContent)).toEqual([
-      "1Readdone",
-      "2Confirmin progress",
-      "3Voicewaiting",
-    ]);
-    // The machine decides what comes next, so no stop may look clickable.
-    expect(rail.querySelector("button")).toBeNull();
-    expect(rail.querySelector("a")).toBeNull();
-    expect(stops.map((stop) => stop.className)).toEqual([
-      "mw-step t-eyebrow is-done",
-      "mw-step t-eyebrow is-now",
-      "mw-step t-eyebrow is-todo",
-    ]);
-  });
-
-  // On screen the three states are told apart by label colour and a ring on the
-  // numeral. A reader who gets none of that has to be told, so each stop names
-  // its state in words that never show, and the current one is marked as such.
-  it("says each stop's state in words for assistive tech", () => {
-    renderWorkbench();
-
-    const stops = screen.getAllByRole("listitem");
-    expect(
-      stops.map((stop) => stop.querySelector(".sr-only")?.textContent),
-    ).toEqual(["done", "in progress", "waiting"]);
-  });
-
-  it("marks the stop the journey is on, and only that one", () => {
-    renderWorkbench();
-
-    const stops = screen.getAllByRole("listitem");
-    expect(stops.map((stop) => stop.getAttribute("aria-current"))).toEqual([
-      null,
-      "step",
-      null,
-    ]);
-  });
-
-  // `list-style: none` is enough for Safari to drop list semantics, and with
-  // them the "stop 2 of 3" a screen reader would otherwise announce. The
-  // numeral is decorative precisely because the list position says it.
-  it("keeps list semantics even though the bullets are styled off", () => {
-    renderWorkbench();
-
-    const rail = screen.getByRole("list");
-    expect(rail.tagName).toBe("OL");
-    expect(rail).toHaveAttribute("role", "list");
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
-    expect(rail.querySelector("b")).toHaveAttribute("aria-hidden");
   });
 });
 
