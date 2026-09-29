@@ -8,7 +8,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path/filepath"
 	"sync"
 )
 
@@ -17,21 +16,22 @@ import (
 var sourceFiles = token.NewFileSet()
 
 type parseKey struct {
-	abs, spelled string
-	mode         parser.Mode
-}
-
-// fileStamp is what a cached parse is valid for. A gate that plants a case by
-// rewriting a file reads the rewrite, not the tree it parsed before.
-type fileStamp struct {
-	size, modified int64
+	spelled string
+	mode    parser.Mode
 }
 
 type parsedEntry struct {
-	stamp fileStamp
-	once  sync.Once
-	file  *ast.File
-	err   error
+	info os.FileInfo
+	once sync.Once
+	file *ast.File
+	err  error
+}
+
+// parsedFrom reports whether entry was parsed from the file info describes. The
+// identity check covers a relative path meaning another file once the working
+// directory moves; size and time cover a gate that plants a case by rewriting.
+func (entry *parsedEntry) parsedFrom(info os.FileInfo) bool {
+	return os.SameFile(entry.info, info) && entry.info.Size() == info.Size() && entry.info.ModTime().Equal(info.ModTime())
 }
 
 var (
@@ -56,17 +56,12 @@ func ParseFile(path string, mode parser.Mode) (*ast.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-	key := parseKey{abs: abs, spelled: path, mode: mode}
-	stamp := fileStamp{size: info.Size(), modified: info.ModTime().UnixNano()}
+	key := parseKey{spelled: path, mode: mode}
 
 	parsesMu.Lock()
 	entry, held := parses[key]
-	if !held || entry.stamp != stamp {
-		entry = &parsedEntry{stamp: stamp}
+	if !held || !entry.parsedFrom(info) {
+		entry = &parsedEntry{info: info}
 		parses[key] = entry
 	}
 	parsesMu.Unlock()

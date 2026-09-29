@@ -58,6 +58,27 @@ func TestARewrittenFileIsParsedAgainRatherThanServedStale(t *testing.T) {
 	}
 }
 
+func TestARelativePathNamesTheFileUnderTheCurrentDirectory(t *testing.T) {
+	stamp := time.Unix(1_700_000_000, 0)
+	first, second := t.TempDir(), t.TempDir()
+	writeSource(t, filepath.Join(first, "same.go"), "package first\n", stamp)
+	writeSource(t, filepath.Join(second, "same.go"), "package other\n", stamp)
+
+	t.Chdir(first)
+	if _, err := ParseFile("same.go", 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(second)
+	file, err := ParseFile("same.go", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file.Name.Name != "other" {
+		t.Errorf("same.go under another directory read as package %q: the cache served the file the "+
+			"spelling named before the directory changed", file.Name.Name)
+	}
+}
+
 func TestEachParseModeGetsItsOwnTree(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "commented.go")
 	writeSource(t, path, "// Package commented says so.\npackage commented\n", time.Unix(1_700_000_000, 0))
