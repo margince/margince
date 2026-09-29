@@ -41,7 +41,7 @@ const (
 	TaskOwedVerdict Task = "owed_verdict"
 	// TaskProposeRoles is Read the buying roles out of what a contact has actually written - who signs, who carries it inside, who can stop it. Floor 0.75, higher than enrich's 0.6 because a wrong role misdirects a whole deal while a wrong phone number is a typo. A job title is NEVER evidence: the contract says a role is recorded and never inferred from one, so a proposal citing only a title is dropped. Every proposal quotes the message it was read from, verbatim, and the contact who WROTE that message must be the contact the role is proposed for - both contacts sit in one prompt, so evidence unbound from its author lets one sender hand a role to a colleague they have never spoken for. Written DIRECTLY as a seat, attributed to agent:propose_roles and reversible, per the installation's auto-write posture; the evidence lives on the audit row so a reader can check it, and the ai_suggested mark stays until a human confirms. Degrade is the budget answer but there is no deterministic floor: with no lane the endpoint declares 501 rather than guessing a role from a title.
 	TaskProposeRoles Task = "propose_roles"
-	// TaskRateExtract is extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written.
+	// TaskRateExtract is extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them.
 	TaskRateExtract Task = "rate_extract"
 	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests carrying a later outbound message on the same thread, so a conversation nobody has answered is never judged here and costs nothing. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
@@ -94,7 +94,7 @@ var taskDisplayNames = map[Task]string{
 	TaskOfferDraft:                    "Offer drafting",
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
-	TaskRateExtract:                   "Model pricing extraction",
+	TaskRateExtract:                   "Exchange rate extraction",
 	TaskRequestSettlement:             "Did our reply settle it",
 	TaskSignalExtract:                 "Signal extraction",
 	TaskSiteExtract:                   "Website deep read",
@@ -139,7 +139,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "525a7cf89af46e7516e6d8194cd25a1eafa9b62360f2df49c789c4acdee4c31a"
+const TaskContractHash = "e62a4d8789784f6bc2736d434f3954a0eb9682eb2880c3d75df2b1ec89062ce6"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -320,7 +320,7 @@ var taskStatus = map[Task]string{
 func Status(t Task) string { return taskStatus[t] }
 
 // Site is one named model-invocation site of a task. A task is NOT one
-// prompt: rate_extract has two, cold_start four. Kind says how the site
+// prompt: cold_start and voice_build have four each. Kind says how the site
 // invokes the model, because an agent loop is a cumulative tool-fed
 // window and must not be described as a request factory. Thinking is the
 // level the router asks the site's requests to think at, empty for the
@@ -399,7 +399,6 @@ var taskSites = map[Task][]Site{
 		{Name: "committee", Kind: "one_shot"},
 	},
 	TaskRateExtract: {
-		{Name: "pricing", Kind: "one_shot"},
 		{Name: "fx", Kind: "one_shot"},
 	},
 	TaskRequestSettlement: {

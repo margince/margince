@@ -773,7 +773,7 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         size="wide"
         returnFocusTo={() => opener.current}
       >
-        <Heading size="large" id={titleId}>
+        <Heading size="large" id={titleId} className="modal-title">
           {t("worklist.decision.title")}
         </Heading>
         {usable?.bundle_id ? (

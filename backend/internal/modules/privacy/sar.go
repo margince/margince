@@ -146,6 +146,11 @@ type SARPackage struct {
 	// them, and that round is as much a decision about the subject as the last
 	// one is.
 	HandoffHistory []map[string]any `json:"handoff_history"`
+	// ListMemberships is each Shortlist the subject is on, by name, with who
+	// chose them, when and the note on why. ListMembershipHistory is every
+	// time they were added or taken off one.
+	ListMemberships       []map[string]any `json:"list_memberships"`
+	ListMembershipHistory []map[string]any `json:"list_membership_history"`
 	// ProviderClaims is what a licensed data provider asserted about the
 	// subject and this installation retained — bought from a third party
 	// rather than given by them, which is precisely the holding Art. 15(1)(g)

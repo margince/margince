@@ -73,6 +73,12 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
+	if params.ListId != nil {
+		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, contactEntity); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
+	}
 
 	contacts, page, err := h.store.ListContacts(r.Context(), in)
 	if err != nil {

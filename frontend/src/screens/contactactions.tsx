@@ -10,6 +10,7 @@ import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
+import { AddToShortlistAction } from "./addtoshortlist";
 import { useMe } from "./common";
 import { ContactRecordActions } from "./contactrecordactions";
 import { contactTabRoute } from "./contacttab";
@@ -186,6 +187,7 @@ export function ContactActions({
                 recordId={contactId}
                 disabledReasonId={refusedReasonId}
               />
+              <AddToShortlistAction entityType="contact" entityId={contactId} />
               <Button
                 onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
               >

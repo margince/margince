@@ -135,3 +135,46 @@ func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 	}
 	httperr.WriteJSON(w, http.StatusCreated, toContractModelRate(row))
 }
+
+// WithCatalogueRefresh wires the two reads RefreshAiModelRates needs. Absent
+// them the route answers 501, like any operation this role does not serve.
+func (h Handlers) WithCatalogueRefresh(routing *RoutingStore, catalogue *ModelCatalogue) Handlers {
+	h.refreshRouting, h.refreshCatalogue = routing, catalogue
+	return h
+}
+
+// RefreshAiModelRates re-prices the bound OpenRouter models from the broker's
+// own list and reports what happened per provider. Human-only, like the manual
+// write it stands in for.
+func (h Handlers) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if h.refreshRouting == nil || h.refreshCatalogue == nil {
+		httperr.NotImplemented(w, r, "model price refresh")
+		return
+	}
+	cfg, err := h.refreshRouting.Get(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	report, err := h.rates.RefreshFromCatalogue(r.Context(), cfg, h.refreshCatalogue.List(r.Context(), 0))
+	if err != nil {
+		writeRateErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractRefreshReport(report))
+}
+
+func toContractRefreshReport(report RateRefreshReport) crmcontracts.AiModelRateRefreshReport {
+	out := crmcontracts.AiModelRateRefreshReport{Providers: make([]crmcontracts.AiModelRateProviderRefresh, 0, len(report.Providers))}
+	for _, p := range report.Providers {
+		out.Providers = append(out.Providers, crmcontracts.AiModelRateProviderRefresh{
+			Provider: p.Provider, Outcome: string(p.Outcome),
+			Updated: p.Updated, Unchanged: p.Unchanged, Models: p.Models,
+		})
+	}
+	return out
+}

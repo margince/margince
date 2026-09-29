@@ -520,7 +520,7 @@ function NewTeamAction() {
             if (ready) create.mutate(draft.trim());
           }}
         >
-          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3" id={titleId}>
             {t("users.newTeamLabel")}
           </Heading>
           <Field label={t("users.teamNameLabel")} required>

@@ -119,6 +119,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 				Query:           nil,
 				Cursor:          in.Cursor,
 				nameColumn:      leadNameColumn,
+				Membership:      in.Membership,
 			}.clauses(ctx, active, sorted, arg)
 			if err != nil {
 				return nil, err

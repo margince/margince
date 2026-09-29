@@ -297,6 +297,12 @@ var piiTables = map[string]piiHandling{
 	// has to reach these rows itself.
 	"sdr_handoff":       {erasureWrite: true, sarRead: true},
 	"sdr_handoff_event": {erasureWrite: true, sarRead: true},
+	// A Shortlist membership says somebody chose the subject for a purpose, and
+	// its note says why in a colleague's words; the event row keeps who added or
+	// removed them and that note. Erasure anonymizes the contact in place, so no
+	// archive runs to remove them, and the erasure deletes both itself.
+	"list_member":       {erasureWrite: true, sarRead: true},
+	"list_member_event": {erasureWrite: true, sarRead: true},
 	// The capture disposition ledger keys on the subject's own address and
 	// keeps the display name their mail arrived with (CAP-DDL-8).
 	"capture_pending_counterparty": {erasureWrite: true, sarRead: true},

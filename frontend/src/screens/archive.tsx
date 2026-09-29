@@ -132,7 +132,7 @@ export function ArchiveAction<Archived extends { id: string }>({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
           {label}
         </Heading>
         <p className="archive-confirm">{confirmText}</p>

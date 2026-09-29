@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -93,7 +92,6 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 		deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())
 	svc.WithEffect(fxRateProposalKind, fxRateAcceptEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
-	svc.WithEffect(aiModelRateProposalKind, aiModelRateAcceptEffect(svc, ai.NewRateStore(InstallationDB(pool))))
 	return svc
 }
 

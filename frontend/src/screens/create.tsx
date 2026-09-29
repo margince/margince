@@ -830,7 +830,7 @@ export function CreateRecordModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {title}
       </Heading>
       <RecordFormBody

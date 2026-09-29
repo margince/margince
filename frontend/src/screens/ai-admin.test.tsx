@@ -4,7 +4,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
@@ -78,12 +84,18 @@ function mount(
 it("explains pooled tokens, UTC reset and unchanged model selection", async () => {
   mount();
   expect(
-    await screen.findByText(/22,453,486 of 24,000,000 tokens/),
+    await screen.findByText(/22\.5M of 24M tokens used · 94%/),
+  ).toBeTruthy();
+  expect(screen.getByText(/1\.5M tokens remaining/)).toBeTruthy();
+  expect(
+    screen.getByText("Active full users: 2 × 12M tokens per user per month."),
   ).toBeTruthy();
   expect(
     screen.getByText(/Not an individual quota or a dollar spending cap/),
   ).toBeTruthy();
-  expect(await screen.findByText("Same model selection")).toBeTruthy();
+  expect(await screen.findByText("gemini · example-model")).toBeTruthy();
+  expect(screen.queryByText("Same model selection")).toBeNull();
+  expect(screen.queryByRole("columnheader", { name: "Effect" })).toBeNull();
   expect(screen.getByText(/UTC/)).toBeTruthy();
   expect(screen.queryByText(/own hardware/)).toBeNull();
 });
@@ -133,7 +145,7 @@ it("keeps a rejected draft visible after a concurrent edit", async () => {
 });
 it("allows management to read without offering an editor", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
-  await screen.findByText(/22,453,486 of 24,000,000 tokens/);
+  await screen.findByText(/22\.5M of 24M tokens used/);
   expect(screen.queryByRole("button", { name: "Edit allowance" })).toBeNull();
 });
 
@@ -220,7 +232,7 @@ it("explains each routing impact in operational language", () => {
 });
 it("withholds model identities from an allowance reader without routing access", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
-  await screen.findByText(/22,453,486 of 24,000,000 tokens/);
+  await screen.findByText(/22\.5M of 24M tokens used/);
   expect(screen.queryByText("gemini · example-model")).toBeNull();
 });
 it("reports a failed carrier reading as unavailable", async () => {
@@ -270,6 +282,94 @@ it("saves a fixed company override without discarding the per-user value", async
     },
   ]);
 });
+it("puts decision-first rows on top, then rows that declare a skip, then the rest", () => {
+  const row = (task: string, extra: Partial<typeof feature> = {}) => ({
+    ...feature,
+    task,
+    display_name: `Activity ${task}`,
+    ...extra,
+  });
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          row("a_plain"),
+          row("b_skipped", { decision_skip_reason: "unbound" }),
+          row("c_first", {
+            decision_first: true,
+            decision_candidate: {
+              tier: "decide",
+              provider: "jev_compatible",
+              model: "jev-classify",
+              processing: "cloud_provider",
+            },
+          }),
+          row("d_plain"),
+          row("e_first", { decision_first: true }),
+        ]}
+      />
+    </LocaleProvider>,
+  );
+
+  const order = screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((tr) => within(tr).getByText(/^Activity /).textContent);
+  expect(order).toEqual([
+    "Activity c_first",
+    "Activity e_first",
+    "Activity b_skipped",
+    "Activity a_plain",
+    "Activity d_plain",
+  ]);
+  expect(screen.getAllByText("Decision model first")).toHaveLength(2);
+});
+
+it("shows a badge only for a departure, and no disclosure for a single candidate", () => {
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          feature,
+          {
+            ...feature,
+            task: "embed",
+            display_name: "Embed",
+            budget_exempt: true,
+          },
+        ]}
+      />
+    </LocaleProvider>,
+  );
+  expect(screen.getByText("Continues beyond allowance")).toBeTruthy();
+  expect(screen.queryByText("Decision model first")).toBeNull();
+  expect(screen.queryAllByRole("group")).toHaveLength(0);
+});
+
+it("opens a multi-candidate row to the fallbacks after the lead", async () => {
+  const user = userEvent.setup({ delay: null });
+  const [lead] = feature.effective_candidates;
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          {
+            ...feature,
+            effective_candidates: [
+              lead,
+              { ...lead, tier: "cheap_cloud", model: "fallback-model" },
+            ],
+          },
+        ]}
+      />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByText("gemini · example-model"));
+  const items = screen.getAllByRole("listitem");
+  expect(items).toHaveLength(1);
+  expect(items[0].textContent).toContain("fallback-model");
+});
+
 it("features card says decision model first, and why another feature skips it", async () => {
   mount(undefined, false, {
     ...status,

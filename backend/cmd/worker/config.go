@@ -30,11 +30,10 @@ type workerConfig struct {
 	// armed the destructive reset at all. The worker's only stake is the cache
 	// flush it subscribes to, which exists solely to serve that reset — so an
 	// installation that never armed it holds no subscriber either.
-	allowDataReset    bool
-	ratesFx           string
-	ratesCurrencies   []string
-	ratesModelPricing map[string]string
-	redisAddr         string
+	allowDataReset  bool
+	ratesFx         string
+	ratesCurrencies []string
+	redisAddr       string
 	// redisPassword is the bus credential, empty where the instance requires
 	// none. The bus carries job payloads and therefore CRM data, so an
 	// instance reachable by anything but this deployment has to require one —

@@ -146,7 +146,7 @@ export function OutcomeReviewModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {draftTemplate.label}
       </Heading>
       <div className="form-stack">

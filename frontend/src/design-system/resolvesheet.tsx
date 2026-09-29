@@ -65,7 +65,7 @@ export function ResolveSheet({
       placement="right"
       returnFocusTo={returnFocusTo}
     >
-      <Heading size="large" id={titleID}>
+      <Heading size="large" id={titleID} className="modal-title">
         {labels.title}
       </Heading>
       <ChoiceList

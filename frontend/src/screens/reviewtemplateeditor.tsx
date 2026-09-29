@@ -72,7 +72,11 @@ export function ReviewTemplateEditor({
     );
   return (
     <Modal open onClose={onClose} labelledBy="review-template-heading">
-      <Heading size="large" id="review-template-heading" className="t-h2">
+      <Heading
+        size="large"
+        id="review-template-heading"
+        className="t-h2 modal-title"
+      >
         {template.label}
       </Heading>
       <p>{t("reviewTemplates.editHint")}</p>

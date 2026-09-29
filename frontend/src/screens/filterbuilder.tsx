@@ -65,7 +65,10 @@ const NUMERIC_OPERATOR_KEY: Partial<Record<FilterOp, MessageKey>> = {
   lte: "filters.op.atMost",
 };
 
-function operatorKey(op: FilterOp, type: VocabularyField["type"]): MessageKey {
+export function operatorKey(
+  op: FilterOp,
+  type: VocabularyField["type"],
+): MessageKey {
   if (type === "number" || type === "currency") {
     return NUMERIC_OPERATOR_KEY[op] ?? OPERATOR_KEY[op];
   }

@@ -145,8 +145,8 @@ queues:
   rate_refresh:
     max_workers: 2
     reason: >-
-      Rate refreshes (FX fetch + pricing-page crawl+LLM extract) are likewise
-      long; their own bounded pool keeps a multi-workspace burst from starving
+      The FX rate refresh (page fetch + LLM extract) is likewise long; its own
+      bounded pool keeps a multi-workspace burst from starving
       close-date, reconcile, and capture jobs.
   ai_capture:
     max_workers: 2
@@ -242,23 +242,6 @@ kinds:
       tick repeats anyway — and, because retryable is one of compose's
       activeSweepStates, a backing-off row SUPPRESSES that tick, so the ladder
       would delay the next pass rather than hasten it.
-
-  ai_model_rate_refresh:
-    role: worker
-    go_type: AiModelRateRefreshArgs
-    queue: rate_refresh
-    timeout: 20m
-    opts_owner: caller
-    args:
-      Workspace: id
-      RequestedBy: id
-    reason: >-
-      One fetch-and-extract per configured pricing source, run in series: each
-      is a page crawl plus one model call with the reasoning ladder's own retry
-      headroom, and the loop is as long as ModelPricingSources. An admin
-      triggers it and the sheet is diffed at the end, so a cut-off run stages
-      nothing and the next click starts over — the cap has to clear a realistic
-      provider set rather than a single page.
 
   capture_auto_enrich_sweep:
     role: worker
@@ -878,9 +861,8 @@ kinds:
       RequestedBy: id
     reason: >-
       One page fetch and ONE reasoning-ladder model call, then a staged proposal
-      per changed currency. Ten minutes clears a slow rung of that ladder; the
-      per-source loop that makes ai_model_rate_refresh longer does not exist
-      here, because there is one configured FX source.
+      per changed currency. Ten minutes clears a slow rung of that ladder; there
+      is one configured FX source, so no loop stretches the run.
 
   gmail_sync:
     role: dispatcher

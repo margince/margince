@@ -221,8 +221,14 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 			id, now); err != nil {
 			return fmt.Errorf("archive project stakeholder edges: %w", err)
 		}
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM list_member WHERE entity_type = 'project' AND entity_id = $1`, id); err != nil {
+		var detached storekit.ArchiveCascade
+		if err := detached.DropMemberships(ctx, tx, `WITH gone AS (
+			DELETE FROM list_member WHERE entity_type = 'project' AND entity_id = @record
+			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
+		logged AS (
+			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
+			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
+		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
 			return fmt.Errorf("detach list memberships: %w", err)
 		}
 		if _, err := tx.Exec(ctx,

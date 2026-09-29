@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,6 +34,8 @@ type Handlers struct {
 	stageVCardReview func(ctx context.Context, entry VCardEntry, candidate *ids.ContactID) error
 
 	store *Store
+	// listMembers resolves a list read's list_id; nil while lists are off.
+	listMembers storekit.ListMemberFilterResolver
 	// blob serves the company logo's bytes. Nil is a role that stores no
 	// objects: the logo endpoint then answers 501 rather than nil-derefing,
 	// and no logo can have been resolved for it to serve anyway.

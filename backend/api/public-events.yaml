@@ -38,6 +38,12 @@ components:
         - project.updated
         - project.phase_changed
         - project.archived
+        - list.created
+        - list.updated
+        - list.archived
+        - list.restored
+        - list.member_added
+        - list.member_removed
         - commission.accrued
         - commission.decided
         - contract.created
@@ -780,6 +786,80 @@ components:
       x-entity-type: project
       x-version: 1
       description: Payload for project.archived — a project was archived. Carries no data.
+      additionalProperties: false
+
+    PublicEventListCreated:
+      type: object
+      x-event-type: list.created
+      x-entity-type: list
+      x-version: 1
+      description: >-
+        Payload for list.created — somebody made a Live List (list_type dynamic) or a Shortlist
+        (static). Delivered to a subscriber who may find the list by its sharing.
+      required: [record_type, list_type, sharing]
+      properties:
+        record_type: { type: string, description: 'The record type the list holds.' }
+        list_type: { type: string, description: 'static or dynamic.' }
+        sharing: { type: string, description: 'private, team or workspace.' }
+      additionalProperties: false
+
+    PublicEventListUpdated:
+      type: object
+      x-event-type: list.updated
+      x-entity-type: list
+      x-version: 1
+      description: >-
+        Payload for list.updated — a list's name, purpose, filter, sharing, team or steward
+        changed. The version is the list's new one.
+      required: [version, changed]
+      properties:
+        version: { type: integer, format: int64 }
+        changed: { type: array, items: { type: string } }
+      additionalProperties: false
+
+    PublicEventListArchived:
+      type: object
+      x-event-type: list.archived
+      x-entity-type: list
+      x-version: 1
+      description: Payload for list.archived — a list was archived. Carries no data.
+      additionalProperties: false
+
+    PublicEventListRestored:
+      type: object
+      x-event-type: list.restored
+      x-entity-type: list
+      x-version: 1
+      description: Payload for list.restored — an archived list was brought back. Carries no data.
+      additionalProperties: false
+
+    PublicEventListMemberAdded:
+      type: object
+      x-event-type: list.member_added
+      x-entity-type: dynamic
+      x-version: 1
+      description: >-
+        Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk
+        change. The subject is the RECORD (contact, company, deal, lead or project), so the event
+        reaches only a subscriber who may see that record. It names no list: delivery is decided
+        by the record, and a list its subscriber cannot find must not be named to them. Which list,
+        and the note, stay on the list's history, which is read under the list's own sharing.
+      required: [reason]
+      properties:
+        reason: { type: string, description: 'chosen or bulk.' }
+      additionalProperties: false
+
+    PublicEventListMemberRemoved:
+      type: object
+      x-event-type: list.member_removed
+      x-entity-type: dynamic
+      x-version: 1
+      description: >-
+        Payload for list.member_removed — a record was taken off a Shortlist by hand or in a bulk
+        change. The subject is the record, as for list.member_added.
+      required: [reason]
+      properties:
+        reason: { type: string, description: 'chosen or bulk.' }
       additionalProperties: false
 
     PublicEventDealOwnerChanged:

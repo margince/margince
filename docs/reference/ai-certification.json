@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 47,
-    "sites_best_current": 44,
+    "sites": 46,
+    "sites_best_current": 43,
     "sites_best_partial": 0,
     "sites_best_stale": 3,
     "sites_absent": 0,
-    "scenarios": 157,
+    "scenarios": 156,
     "records": 177,
     "bindings": 17,
     "self_judged_records": 4
@@ -313,7 +313,7 @@
         },
         {
           "task": "rate_extract",
-          "label": "Model pricing extraction",
+          "label": "Exchange rate extraction",
           "tier": "premium",
           "model": {
             "provider": "openai_compatible",
@@ -816,7 +816,7 @@
         },
         {
           "task": "rate_extract",
-          "label": "Model pricing extraction",
+          "label": "Exchange rate extraction",
           "tier": "premium",
           "model": {
             "provider": "gemini",
@@ -1317,7 +1317,7 @@
         },
         {
           "task": "rate_extract",
-          "label": "Model pricing extraction",
+          "label": "Exchange rate extraction",
           "tier": "premium",
           "model": {
             "provider": "ollama",
@@ -1820,7 +1820,7 @@
         },
         {
           "task": "rate_extract",
-          "label": "Model pricing extraction",
+          "label": "Exchange rate extraction",
           "tier": "premium",
           "model": {
             "provider": "openai_compatible",
@@ -2323,7 +2323,7 @@
         },
         {
           "task": "rate_extract",
-          "label": "Model pricing extraction",
+          "label": "Exchange rate extraction",
           "tier": "premium",
           "model": {
             "provider": "openai_compatible",
@@ -2824,7 +2824,7 @@
         },
         {
           "task": "rate_extract",
-          "label": "Model pricing extraction",
+          "label": "Exchange rate extraction",
           "tier": "premium",
           "model": {
             "provider": "vllm",
@@ -3030,10 +3030,10 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 47,
-      "sites_measured": 45,
+      "sites_shipped": 46,
+      "sites_measured": 44,
       "ready": 29,
-      "usable_with_care": 15,
+      "usable_with_care": 14,
       "not_reliable_yet": 1,
       "recheck_pending": 6,
       "models": [
@@ -3083,17 +3083,17 @@
             "model": "gemini-3.5-flash",
             "env": "cloud_frontier"
           },
-          "sites": 13,
-          "sites_current": 7,
+          "sites": 12,
+          "sites_current": 6,
           "sites_partial": 0,
           "sites_stale": 6,
-          "runs": 108,
-          "passed": 108,
+          "runs": 105,
+          "passed": 105,
           "reliability": 1,
           "slowest_p95_ms": 11911,
           "bands": {
             "certified": 7,
-            "supported_degraded": 3,
+            "supported_degraded": 2,
             "not_supported": 3
           }
         }
@@ -3450,20 +3450,6 @@
           "records": 1
         },
         {
-          "key": "rate_extract/pricing",
-          "task": "rate_extract",
-          "best": {
-            "provider": "gemini",
-            "model": "gemini-3.5-flash",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 1
-        },
-        {
           "key": "request_settlement/request_settle",
           "task": "request_settlement",
           "best": {
@@ -3734,12 +3720,12 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 47,
-      "sites_measured": 44,
-      "ready": 22,
+      "sites_shipped": 46,
+      "sites_measured": 43,
+      "ready": 21,
       "usable_with_care": 17,
       "not_reliable_yet": 5,
-      "recheck_pending": 4,
+      "recheck_pending": 3,
       "models": [
         {
           "binding": {
@@ -3747,16 +3733,16 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "sites": 13,
+          "sites": 12,
           "sites_current": 0,
           "sites_partial": 0,
-          "sites_stale": 13,
-          "runs": 111,
-          "passed": 90,
-          "reliability": 0.8108108108108109,
+          "sites_stale": 12,
+          "runs": 108,
+          "passed": 87,
+          "reliability": 0.8055555555555556,
           "slowest_p95_ms": 56477,
           "bands": {
-            "certified": 7,
+            "certified": 6,
             "supported_degraded": 1,
             "not_supported": 5
           }
@@ -3787,17 +3773,17 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "sites": 40,
-          "sites_current": 40,
+          "sites": 39,
+          "sites_current": 39,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 501,
-          "passed": 473,
-          "reliability": 0.9441117764471058,
+          "runs": 498,
+          "passed": 470,
+          "reliability": 0.9437751004016064,
           "slowest_p95_ms": 139188,
           "bands": {
             "certified": 19,
-            "supported_degraded": 16,
+            "supported_degraded": 15,
             "not_supported": 5
           }
         }
@@ -4140,20 +4126,6 @@
           "records": 2
         },
         {
-          "key": "rate_extract/pricing",
-          "task": "rate_extract",
-          "best": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "certified",
-          "state": "stale",
-          "runs": 3,
-          "passed": 3,
-          "records": 2
-        },
-        {
           "key": "request_settlement/request_settle",
           "task": "request_settlement",
           "best": {
@@ -4424,12 +4396,12 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 47,
-      "sites_measured": 46,
-      "ready": 11,
+      "sites_shipped": 46,
+      "sites_measured": 45,
+      "ready": 10,
       "usable_with_care": 7,
       "not_reliable_yet": 28,
-      "recheck_pending": 46,
+      "recheck_pending": 45,
       "models": [
         {
           "binding": {
@@ -4437,16 +4409,16 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "sites": 46,
+          "sites": 45,
           "sites_current": 0,
           "sites_partial": 0,
-          "sites_stale": 46,
-          "runs": 444,
-          "passed": 329,
-          "reliability": 0.740990990990991,
+          "sites_stale": 45,
+          "runs": 441,
+          "passed": 326,
+          "reliability": 0.7392290249433107,
           "slowest_p95_ms": 105742,
           "bands": {
-            "certified": 11,
+            "certified": 10,
             "supported_degraded": 7,
             "not_supported": 28
           }
@@ -4818,20 +4790,6 @@
           "records": 1
         },
         {
-          "key": "rate_extract/pricing",
-          "task": "rate_extract",
-          "best": {
-            "provider": "vllm",
-            "model": "mlx-community/Qwen3-14B-4bit",
-            "env": "sovereign"
-          },
-          "band": "certified",
-          "state": "stale",
-          "runs": 3,
-          "passed": 3,
-          "records": 1
-        },
-        {
           "key": "request_settlement/request_settle",
           "task": "request_settlement",
           "best": {
@@ -5102,12 +5060,12 @@
     {
       "name": "Mistral",
       "answer": "not_yet",
-      "sites_shipped": 47,
-      "sites_measured": 44,
-      "ready": 21,
+      "sites_shipped": 46,
+      "sites_measured": 43,
+      "ready": 20,
       "usable_with_care": 7,
       "not_reliable_yet": 16,
-      "recheck_pending": 16,
+      "recheck_pending": 15,
       "models": [
         {
           "binding": {
@@ -5195,16 +5153,16 @@
             "model": "mistralai/mistral-large-2512",
             "env": "cloud_frontier"
           },
-          "sites": 6,
+          "sites": 5,
           "sites_current": 0,
           "sites_partial": 0,
-          "sites_stale": 6,
-          "runs": 42,
-          "passed": 38,
-          "reliability": 0.9047619047619048,
+          "sites_stale": 5,
+          "runs": 39,
+          "passed": 35,
+          "reliability": 0.8974358974358975,
           "slowest_p95_ms": 4313,
           "bands": {
-            "certified": 4,
+            "certified": 3,
             "supported_degraded": 1,
             "not_supported": 1
           }
@@ -5215,17 +5173,17 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "sites": 6,
-          "sites_current": 6,
+          "sites": 5,
+          "sites_current": 5,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 75,
-          "passed": 69,
-          "reliability": 0.92,
+          "runs": 72,
+          "passed": 66,
+          "reliability": 0.9166666666666666,
           "slowest_p95_ms": 4453,
           "bands": {
             "certified": 3,
-            "supported_degraded": 2,
+            "supported_degraded": 1,
             "not_supported": 1
           }
         },
@@ -5235,17 +5193,17 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "sites": 6,
-          "sites_current": 6,
+          "sites": 5,
+          "sites_current": 5,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 96,
-          "passed": 80,
-          "reliability": 0.8333333333333334,
+          "runs": 93,
+          "passed": 77,
+          "reliability": 0.8279569892473119,
           "slowest_p95_ms": 4105,
           "bands": {
             "certified": 3,
-            "supported_degraded": 2,
+            "supported_degraded": 1,
             "not_supported": 1
           }
         }
@@ -5588,20 +5546,6 @@
           "records": 3
         },
         {
-          "key": "rate_extract/pricing",
-          "task": "rate_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "stale",
-          "runs": 3,
-          "passed": 3,
-          "records": 3
-        },
-        {
           "key": "request_settlement/request_settle",
           "task": "request_settlement",
           "best": {
@@ -5872,7 +5816,7 @@
     {
       "name": "GPT",
       "answer": "not_yet",
-      "sites_shipped": 47,
+      "sites_shipped": 46,
       "sites_measured": 39,
       "ready": 11,
       "usable_with_care": 18,
@@ -6452,12 +6396,12 @@
     {
       "name": "GLM",
       "answer": "not_enough_tested",
-      "sites_shipped": 47,
-      "sites_measured": 5,
-      "ready": 4,
+      "sites_shipped": 46,
+      "sites_measured": 4,
+      "ready": 3,
       "usable_with_care": 0,
       "not_reliable_yet": 1,
-      "recheck_pending": 5,
+      "recheck_pending": 4,
       "models": [
         {
           "binding": {
@@ -6465,16 +6409,16 @@
             "model": "z-ai/glm-5.2",
             "env": "cloud_frontier"
           },
-          "sites": 5,
+          "sites": 4,
           "sites_current": 0,
           "sites_partial": 0,
-          "sites_stale": 5,
-          "runs": 30,
-          "passed": 28,
-          "reliability": 0.9333333333333333,
+          "sites_stale": 4,
+          "runs": 27,
+          "passed": 25,
+          "reliability": 0.9259259259259259,
           "slowest_p95_ms": 18372,
           "bands": {
-            "certified": 4,
+            "certified": 3,
             "supported_degraded": 0,
             "not_supported": 1
           }
@@ -6524,20 +6468,6 @@
           "records": 1
         },
         {
-          "key": "rate_extract/pricing",
-          "task": "rate_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "z-ai/glm-5.2",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "stale",
-          "runs": 3,
-          "passed": 3,
-          "records": 1
-        },
-        {
           "key": "site_extract/profile",
           "task": "site_extract",
           "best": {
@@ -6556,7 +6486,7 @@
     {
       "name": "Claude",
       "answer": "not_enough_tested",
-      "sites_shipped": 47,
+      "sites_shipped": 46,
       "sites_measured": 1,
       "ready": 0,
       "usable_with_care": 0,
@@ -6649,17 +6579,17 @@
         "model": "gemini-3.5-flash",
         "env": "cloud_frontier"
       },
-      "sites": 13,
-      "sites_current": 7,
+      "sites": 12,
+      "sites_current": 6,
       "sites_partial": 0,
       "sites_stale": 6,
-      "runs": 108,
-      "passed": 108,
+      "runs": 105,
+      "passed": 105,
       "reliability": 1,
       "slowest_p95_ms": 11911,
       "bands": {
         "certified": 7,
-        "supported_degraded": 3,
+        "supported_degraded": 2,
         "not_supported": 3
       }
     },
@@ -6669,16 +6599,16 @@
         "model": "gemma4:12b",
         "env": "sovereign"
       },
-      "sites": 13,
+      "sites": 12,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 13,
-      "runs": 111,
-      "passed": 90,
-      "reliability": 0.8108108108108109,
+      "sites_stale": 12,
+      "runs": 108,
+      "passed": 87,
+      "reliability": 0.8055555555555556,
       "slowest_p95_ms": 56477,
       "bands": {
-        "certified": 7,
+        "certified": 6,
         "supported_degraded": 1,
         "not_supported": 5
       }
@@ -6729,17 +6659,17 @@
         "model": "google/gemma-4-31b-it",
         "env": "cloud_frontier"
       },
-      "sites": 40,
-      "sites_current": 40,
+      "sites": 39,
+      "sites_current": 39,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 501,
-      "passed": 473,
-      "reliability": 0.9441117764471058,
+      "runs": 498,
+      "passed": 470,
+      "reliability": 0.9437751004016064,
       "slowest_p95_ms": 139188,
       "bands": {
         "certified": 19,
-        "supported_degraded": 16,
+        "supported_degraded": 15,
         "not_supported": 5
       }
     },
@@ -6829,16 +6759,16 @@
         "model": "mistralai/mistral-large-2512",
         "env": "cloud_frontier"
       },
-      "sites": 6,
+      "sites": 5,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 6,
-      "runs": 42,
-      "passed": 38,
-      "reliability": 0.9047619047619048,
+      "sites_stale": 5,
+      "runs": 39,
+      "passed": 35,
+      "reliability": 0.8974358974358975,
       "slowest_p95_ms": 4313,
       "bands": {
-        "certified": 4,
+        "certified": 3,
         "supported_degraded": 1,
         "not_supported": 1
       }
@@ -6849,17 +6779,17 @@
         "model": "mistralai/mistral-medium-3-5",
         "env": "cloud_frontier"
       },
-      "sites": 6,
-      "sites_current": 6,
+      "sites": 5,
+      "sites_current": 5,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 75,
-      "passed": 69,
-      "reliability": 0.92,
+      "runs": 72,
+      "passed": 66,
+      "reliability": 0.9166666666666666,
       "slowest_p95_ms": 4453,
       "bands": {
         "certified": 3,
-        "supported_degraded": 2,
+        "supported_degraded": 1,
         "not_supported": 1
       }
     },
@@ -6869,17 +6799,17 @@
         "model": "mistralai/mistral-small-2603",
         "env": "eu_hosted"
       },
-      "sites": 6,
-      "sites_current": 6,
+      "sites": 5,
+      "sites_current": 5,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 96,
-      "passed": 80,
-      "reliability": 0.8333333333333334,
+      "runs": 93,
+      "passed": 77,
+      "reliability": 0.8279569892473119,
       "slowest_p95_ms": 4105,
       "bands": {
         "certified": 3,
-        "supported_degraded": 2,
+        "supported_degraded": 1,
         "not_supported": 1
       }
     },
@@ -6909,16 +6839,16 @@
         "model": "z-ai/glm-5.2",
         "env": "cloud_frontier"
       },
-      "sites": 5,
+      "sites": 4,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 5,
-      "runs": 30,
-      "passed": 28,
-      "reliability": 0.9333333333333333,
+      "sites_stale": 4,
+      "runs": 27,
+      "passed": 25,
+      "reliability": 0.9259259259259259,
       "slowest_p95_ms": 18372,
       "bands": {
-        "certified": 4,
+        "certified": 3,
         "supported_degraded": 0,
         "not_supported": 1
       }
@@ -6929,16 +6859,16 @@
         "model": "mlx-community/Qwen3-14B-4bit",
         "env": "sovereign"
       },
-      "sites": 46,
+      "sites": 45,
       "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 46,
-      "runs": 444,
-      "passed": 329,
-      "reliability": 0.740990990990991,
+      "sites_stale": 45,
+      "runs": 441,
+      "passed": 326,
+      "reliability": 0.7392290249433107,
       "slowest_p95_ms": 105742,
       "bands": {
-        "certified": 11,
+        "certified": 10,
         "supported_degraded": 7,
         "not_supported": 28
       }
@@ -13295,242 +13225,6 @@
             "grader_changed": [
               "fx_rates_json_api_grounded",
               "fx_rates_two_pairs_grounded"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "task": "rate_extract",
-      "site": "pricing",
-      "key": "rate_extract/pricing",
-      "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "mistralai/mistral-medium-3-5",
-          "env": "cloud_frontier"
-        },
-        "band": "supported_degraded",
-        "reliability": 1,
-        "state": "current"
-      },
-      "scenarios": [
-        {
-          "name": "pricing_table_two_models_grounded",
-          "expects": "accepted",
-          "graded_by": "mechanical",
-          "file": "backend/internal/compose/aicert/corpus/rate_extract/pricing_grounded.yaml"
-        }
-      ],
-      "records": [
-        {
-          "binding": {
-            "provider": "gemini",
-            "model": "gemini-3.5-flash",
-            "env": "cloud_frontier"
-          },
-          "state": "current",
-          "band": "supported_degraded",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 2665,
-          "latency_p95_ms": 6062,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": ""
-        },
-        {
-          "binding": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 17672,
-          "latency_p95_ms": 33557,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "pricing_table_two_models_grounded"
-            ],
-            "grader_changed": [
-              "pricing_table_two_models_grounded"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "state": "current",
-          "band": "supported_degraded",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 3160,
-          "latency_p95_ms": 36100,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": ""
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-large-2512",
-            "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1848,
-          "latency_p95_ms": 2482,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "pricing_table_two_models_grounded"
-            ],
-            "grader_changed": [
-              "pricing_table_two_models_grounded"
-            ]
-          }
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-medium-3-5",
-            "env": "cloud_frontier"
-          },
-          "state": "current",
-          "band": "supported_degraded",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1466,
-          "latency_p95_ms": 1766,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": ""
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "mistralai/mistral-small-2603",
-            "env": "eu_hosted"
-          },
-          "state": "current",
-          "band": "supported_degraded",
-          "scenarios_measured": 1,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 1347,
-          "latency_p95_ms": 2247,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": ""
-        },
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "z-ai/glm-5.2",
-            "env": "cloud_frontier"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": null,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 4206,
-          "latency_p95_ms": 5262,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
-        },
-        {
-          "binding": {
-            "provider": "vllm",
-            "model": "mlx-community/Qwen3-14B-4bit",
-            "env": "sovereign"
-          },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
-          "scenarios_total": 1,
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "latency_p50_ms": 10304,
-          "latency_p95_ms": 22876,
-          "reported": {
-            "accepted": 3,
-            "wrong_answer": 0,
-            "invalid": 0,
-            "abstained": 0
-          },
-          "stale_reason": "the case and how a run is graded changed under scenario pricing_table_two_models_grounded since the record scored it",
-          "stale_cause": {
-            "case_changed": [
-              "pricing_table_two_models_grounded"
-            ],
-            "grader_changed": [
-              "pricing_table_two_models_grounded"
             ]
           }
         }

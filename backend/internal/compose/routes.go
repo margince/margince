@@ -65,7 +65,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// to remove.
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
-		meetingBriefReader(srv.meetingBriefSvc), srv.log,
+		meetingBriefReader(srv.meetingBriefSvc), srv.log, srv.listsEnabled,
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver reads exactly what the MCP

@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 78,
+    "tools": 80,
     "system_frame_tokens": 516,
-    "tokens": 25434,
-    "median_tool_tokens": 274,
-    "mean_tool_tokens": 325
+    "tokens": 26626,
+    "median_tool_tokens": 277,
+    "mean_tool_tokens": 332
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 78,
+      "of_served_tools": 80,
       "tokens": 3551,
       "listing_tokens": 1746,
       "step_schema_tokens": 1288,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 78,
+      "of_served_tools": 80,
       "tokens": 4908,
       "listing_tokens": 2585,
       "step_schema_tokens": 1807,
@@ -115,8 +115,20 @@
       "tokens": 603
     },
     {
+      "name": "change_lists",
+      "tokens": 592
+    },
+    {
       "name": "update_record",
       "tokens": 581
+    },
+    {
+      "name": "bulk_update_records",
+      "tokens": 548
+    },
+    {
+      "name": "read_lists",
+      "tokens": 528
     },
     {
       "name": "forecast_readings",
@@ -137,10 +149,6 @@
     {
       "name": "create_record",
       "tokens": 481
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 477
     },
     {
       "name": "run_analytics_query",

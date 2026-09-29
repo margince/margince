@@ -113,6 +113,7 @@ Columns:
 | `bulk_update_records` | 🟢 | `write` | — |
 | `invite_meeting` | 🟡 | `send` | yes |
 | `catch_me_up_on` | 🟢 | `read` | — |
+| `change_lists` | 🟢 | `write` | — |
 | `check_availability` | 🟢 | `read` | — |
 | `commit_import` | 🟢 | `write` | — |
 | `create_record` | 🟢 / 🟡 | `write` | — |
@@ -150,6 +151,7 @@ Columns:
 | `read_approval` | 🟢 | `read` | — |
 | `read_import_report` | 🟢 | `read` | — |
 | `read_import_run` | 🟢 | `read` | — |
+| `read_lists` | 🟢 | `read` | — |
 | `read_project_360` | 🟢 | `read` | — |
 | `query_workspace` | 🟢 | `read` | — |
 | `relink_activity` | dynamic | `write` | — |

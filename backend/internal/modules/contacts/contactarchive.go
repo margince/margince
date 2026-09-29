@@ -133,7 +133,13 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 	// Polymorphic membership/tag rows have no archived_at; the §1.10
 	// cleanup rule removes them with the entity.
 	if err := cascade.DropMemberships(ctx, tx,
-		`DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = $1 RETURNING list_id, added_by, created_at`, id.UUID); err != nil {
+		`WITH gone AS (
+			DELETE FROM list_member WHERE entity_type = 'contact' AND entity_id = @record
+			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
+		logged AS (
+			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
+			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
+		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
 		return err
 	}
 	if err := cascade.DropTags(ctx, tx,

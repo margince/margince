@@ -99,7 +99,7 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		items[i] = crmcontracts.BulkItem{Id: outcome.ID, Version: outcome.Version}
 		plan.ownersBefore[outcome.ID] = outcome.OwnerBefore
 	}
-	return bulkChange{recordType: op.recordType, verb: op.verb, items: items, undo: plan}, nil
+	return bulkChange{recordType: op.recordType, verb: op.verb, items: items, listID: op.listID, undo: plan}, nil
 }
 
 // undoOne reverses the change on one record.
@@ -110,6 +110,10 @@ func undoOne(
 	var leftBehind []storekit.LeftBehind
 	var restored storekit.RestoreReport
 	var err error
+	if isListVerb(change.verb) {
+		// The inverse membership change, through the same writer.
+		return applyMembership(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbRemoveFromList)
+	}
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:
 		var skip crmcontracts.BulkSkip

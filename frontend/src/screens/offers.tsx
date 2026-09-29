@@ -194,7 +194,7 @@ function EditOfferHeaderModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 offers-edit-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("offer.edit")}
       </Heading>
       <div className="form-stack">

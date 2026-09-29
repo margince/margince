@@ -506,6 +506,12 @@ const (
 	LinkedinAccountChanged                SubscribableEventType = "linkedin_account.changed"
 	LinkedinMatchDecided                  SubscribableEventType = "linkedin_match.decided"
 	LinkedinNetworkImported               SubscribableEventType = "linkedin_network.imported"
+	ListArchived                          SubscribableEventType = "list.archived"
+	ListCreated                           SubscribableEventType = "list.created"
+	ListMemberAdded                       SubscribableEventType = "list.member_added"
+	ListMemberRemoved                     SubscribableEventType = "list.member_removed"
+	ListRestored                          SubscribableEventType = "list.restored"
+	ListUpdated                           SubscribableEventType = "list.updated"
 	NoticeCreated                         SubscribableEventType = "notice.created"
 	NoticeRead                            SubscribableEventType = "notice.read"
 	OfferAccepted                         SubscribableEventType = "offer.accepted"
@@ -703,6 +709,18 @@ func (e SubscribableEventType) Valid() bool {
 	case LinkedinMatchDecided:
 		return true
 	case LinkedinNetworkImported:
+		return true
+	case ListArchived:
+		return true
+	case ListCreated:
+		return true
+	case ListMemberAdded:
+		return true
+	case ListMemberRemoved:
+		return true
+	case ListRestored:
+		return true
+	case ListUpdated:
 		return true
 	case NoticeCreated:
 		return true
@@ -1738,6 +1756,42 @@ type PublicEventLinkedinNetworkImported struct {
 	Skipped int `json:"skipped"`
 }
 
+// PublicEventListArchived Payload for list.archived — a list was archived. Carries no data.
+type PublicEventListArchived struct{}
+
+// PublicEventListCreated Payload for list.created — somebody made a Live List (list_type dynamic) or a Shortlist (static). Delivered to a subscriber who may find the list by its sharing.
+type PublicEventListCreated struct {
+	// ListType static or dynamic.
+	ListType string `json:"list_type"`
+
+	// RecordType The record type the list holds.
+	RecordType string `json:"record_type"`
+
+	// Sharing private, team or workspace.
+	Sharing string `json:"sharing"`
+}
+
+// PublicEventListMemberAdded Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk change. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
+type PublicEventListMemberAdded struct {
+	// Reason chosen or bulk.
+	Reason string `json:"reason"`
+}
+
+// PublicEventListMemberRemoved Payload for list.member_removed — a record was taken off a Shortlist by hand or in a bulk change. The subject is the record, as for list.member_added.
+type PublicEventListMemberRemoved struct {
+	// Reason chosen or bulk.
+	Reason string `json:"reason"`
+}
+
+// PublicEventListRestored Payload for list.restored — an archived list was brought back. Carries no data.
+type PublicEventListRestored struct{}
+
+// PublicEventListUpdated Payload for list.updated — a list's name, purpose, filter, sharing, team or steward changed. The version is the list's new one.
+type PublicEventListUpdated struct {
+	Changed []string `json:"changed"`
+	Version int64    `json:"version"`
+}
+
 // PublicEventNoticeCreated Payload for notice.created — a durable informational notice was recorded for one contact (notices/store.go's Create). Recording the row IS the delivery on this transport; the entity is the recipient. The content stays on the row: an event fan-out of subject and body would put the same prose on two wires to drift.
 type PublicEventNoticeCreated struct {
 	// Kind The producing flow's own label (automation, lead_sla).
@@ -2659,6 +2713,30 @@ func (PublicEventLinkedinNetworkImported) EventType() string { return "linkedin_
 
 func (PublicEventLinkedinNetworkImported) EntityType() string { return "user" }
 
+func (PublicEventListArchived) EventType() string { return "list.archived" }
+
+func (PublicEventListArchived) EntityType() string { return "list" }
+
+func (PublicEventListCreated) EventType() string { return "list.created" }
+
+func (PublicEventListCreated) EntityType() string { return "list" }
+
+func (PublicEventListMemberAdded) EventType() string { return "list.member_added" }
+
+func (PublicEventListMemberAdded) EntityType() string { return "dynamic" }
+
+func (PublicEventListMemberRemoved) EventType() string { return "list.member_removed" }
+
+func (PublicEventListMemberRemoved) EntityType() string { return "dynamic" }
+
+func (PublicEventListRestored) EventType() string { return "list.restored" }
+
+func (PublicEventListRestored) EntityType() string { return "list" }
+
+func (PublicEventListUpdated) EventType() string { return "list.updated" }
+
+func (PublicEventListUpdated) EntityType() string { return "list" }
+
 func (PublicEventNoticeCreated) EventType() string { return "notice.created" }
 
 func (PublicEventNoticeCreated) EntityType() string { return "user" }
@@ -2912,6 +2990,12 @@ var PublicEventVersions = map[string]int{
 	"linkedin_account.changed":                  1,
 	"linkedin_match.decided":                    1,
 	"linkedin_network.imported":                 1,
+	"list.archived":                             1,
+	"list.created":                              1,
+	"list.member_added":                         1,
+	"list.member_removed":                       1,
+	"list.restored":                             1,
+	"list.updated":                              1,
 	"notice.created":                            1,
 	"notice.read":                               1,
 	"offer.accepted":                            1,

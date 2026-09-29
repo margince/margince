@@ -226,10 +226,6 @@ var decisionGrants = map[string][]grantRequirement{
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},
 	},
-	"ai_model_rate_proposal": {
-		{targetAIModelRate, principal.ActionCreate},
-		{targetAIModelRate, principal.ActionUpdate},
-	},
 	// Accepting a deep site read writes profile fields and category facts
 	// onto the target company — the same update authority enrich needs.
 	"deepread": {{tableCompany, principal.ActionUpdate}},

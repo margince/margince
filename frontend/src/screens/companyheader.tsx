@@ -12,6 +12,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { useT } from "../i18n";
+import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
 import { throwProblem, useViewerId } from "./common";
@@ -468,10 +469,9 @@ export function CompanyActionBadges({
           company={company}
           disabledReasonId={refusedByState}
         />
-        {/* Last, and set apart by the panel's own seam (atoms.css). This is
-            the one verb here a reader cannot walk back from the header, so it
-            does not sit in the run of routine ones where a slipped pointer
-            reaches it. */}
+        <AddToShortlistAction entityType="company" entityId={company.id} />
+        {/* Last, set apart by the panel's seam (atoms.css): the one verb here
+            a reader cannot walk back from the header. */}
         <ArchiveAction
           disabledReasonId={refusedByState}
           label={t("record.archive")}

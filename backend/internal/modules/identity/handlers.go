@@ -113,6 +113,8 @@ type Handlers struct {
 	// embedReindexAvailable is whether an embeddings model is bound, so the
 	// reindex routes serve rather than 501. Injected for the same reason.
 	embedReindexAvailable bool
+	// listsAvailable is the installation's lists.enabled.
+	listsAvailable bool
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (installationbrand.go).
 	installationBrand InstallationBrand

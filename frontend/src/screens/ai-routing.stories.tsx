@@ -3,10 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
+import { LaneRow } from "./ai-routing-lane";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The installation's tier→model binding: which vendor serves each cost rung,
@@ -38,6 +40,18 @@ const BOUND = {
     frontier: { provider: "gemini", model: "gemini-3.1-pro-preview" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
+};
+
+// Every bound rung answering, the state a working installation is in.
+const HEALTH: components["schemas"]["AiHealth"] = {
+  window_hours: 1,
+  rungs: Object.keys(BOUND.tiers).map((tier) => ({
+    tier,
+    healthy: true,
+    calls: 12,
+    failures: 0,
+    median_latency_ms: 840,
+  })),
 };
 
 // What the price sheet can cost a call on, and what each VENDOR says it serves.
@@ -90,6 +104,7 @@ const VENDOR_LIST: Record<string, unknown> = {
   },
   ollama: { provider: "ollama", models: [{ id: "gemma3:latest" }] },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
+  vllm: { provider: "vllm", models: [], unavailable: "unreachable" },
 };
 
 function story(
@@ -107,6 +122,7 @@ function story(
         return response;
       },
       "GET /ai/status": () => jsonResponse(aiStatus),
+      "GET /ai/health": () => jsonResponse(HEALTH),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-keys": () =>
         jsonResponse({
@@ -137,7 +153,7 @@ function story(
 const meta: Meta<typeof AiRoutingCard> = {
   title: "Settings/AI/Models and routing/Model tiers",
   component: AiRoutingCard,
-  subcomponents: { AdapterFields, EmbeddingWidthField },
+  subcomponents: { AdapterFields, EmbeddingWidthField, LaneRow },
 };
 export default meta;
 type Story = StoryObj<typeof AiRoutingCard>;

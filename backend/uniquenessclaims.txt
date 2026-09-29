@@ -81,7 +81,6 @@ internal/compose/capturedomaintriage.go#func startDomainTriageRead
 internal/compose/captureofflinedemo.go#method offlineDemoDirectory.accounts
 internal/compose/certcase_fieldextract.go#method fieldExtractCases.CertifiedScope
 internal/compose/certcase_ratefx_test.go#type fxCompleterStub
-internal/compose/certcase_ratepricing_test.go#type pricingCompleterStub
 internal/compose/channelaxis_fitness_integration_test.go#func TestActivityKindTableMatchesTheContractKindEnum
 internal/compose/channelprovider.go#func CoreChannelProviders
 internal/compose/channelprovider.go#func reservedCoreProviders
@@ -151,6 +150,7 @@ internal/compose/extrouteargs.go#type argumentReader
 internal/compose/extroutes.go#type toolInvoker
 internal/compose/extruntime.go#func BindExtensionCapture
 internal/compose/extruntime.go#method callRuntime.usable
+internal/compose/fxpassages.go#func CountPassages
 internal/compose/gmailpush.go#func handleGmailPush
 internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
@@ -196,7 +196,6 @@ internal/compose/meetingbrief/meeting.go#type meeting.Room
 internal/compose/meetingbrief/meeting.go#type roomScopes
 internal/compose/meetingbrief/model.go#func knownRecords
 internal/compose/meetingbrief/sections.go#var specSequence
-internal/compose/modelraterefresh.go#func CountPassages
 internal/compose/networkseams.go#func toAgentRisks
 internal/compose/oauthedge.go#func sessionDigest
 internal/compose/offerdraft.go#const offerDraftAgentID
@@ -309,7 +308,6 @@ internal/modules/agents/volumerelease.go#type VolumeReleaseRequest.Proposal
 internal/modules/ai/feedback.go#const fieldSubjectType
 internal/modules/ai/feedback.go#type RecordInput.ClaimPath
 internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSentinel
-internal/modules/ai/routing.go#method RoutingConfig.BoundModelIDsByProvider
 internal/modules/ai/sovereignendpoint_test.go#func TestABracketedIPv6EndpointIsAccepted
 internal/modules/ai/voice_sendoutcome_integration_test.go#func TestRecordSendOutcomeCannotReachAnotherWorkspacesSignal
 internal/modules/ai/voicecorpus.go#const CorpusMeterVersion

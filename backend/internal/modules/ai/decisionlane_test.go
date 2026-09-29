@@ -125,9 +125,6 @@ func TestTheDecisionsLaneNamesItsOwnKeyUnlessTheKeyIsOptional(t *testing.T) {
 	if got := cfg.CloudProvidersBound(); !slices.Equal(got, []string{providerGemini}) {
 		t.Errorf("CloudProvidersBound() = %v, want gemini alone: a jev_compatible key is never demanded", got)
 	}
-	if !cfg.BoundModelIDsByProvider()[providerJevCompatible]["typesafe/jev-1.13"] {
-		t.Error("BoundModelIDsByProvider leaves the decisions lane's model out, so its rate is never refreshed")
-	}
 	if meta := embedInclusiveMeta(cfg)[TierDecideLane]; meta.provider != providerJevCompatible || meta.model != "typesafe/jev-1.13" {
 		t.Errorf("routeMeta[decide] = %+v, want the lane's binding", meta)
 	}

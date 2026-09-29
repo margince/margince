@@ -22,6 +22,7 @@ import {
   useMe,
   WriteRefused,
 } from "./common";
+import { RefreshModelPrices } from "./rate-catalogue-refresh";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 import { calendarDay } from "../format/calendarday";
@@ -353,15 +354,14 @@ export function ModelCostsCard() {
   }
 
   return (
-    // The verbs in the action band, for the reason spelled out on FxRatesCard:
-    // beside the title they were an unwrappable row that widened the card past
-    // a 390px viewport.
+    // The verbs in the action band, for the reason on FxRatesCard: beside the
+    // title they were an unwrappable row wider than a 390px viewport.
     <Panel
       title={t("settings.rates.modelTitle")}
       actions={
         canManage ? (
           <>
-            <RefreshFromSources path="/ai-model-rates/propose-refresh" />
+            <RefreshModelPrices />
             <Button variant="primary" onClick={() => setOpen(true)}>
               {t("settings.rates.modelAdd")}
             </Button>

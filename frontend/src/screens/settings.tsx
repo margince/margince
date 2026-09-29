@@ -341,12 +341,13 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "usage":
       return (
         <>
-          {/* What the month has cost, above the breakdown that explains it. */}
+          {/* What the month cost, then the breakdown, then which activity ran
+              on what. */}
           <AiBudgetCard />
-          <AiFeaturesCard />
           <SpendStat />
           <AiUsageCard />
           <ModelPriceDetails />
+          <AiFeaturesCard />
         </>
       );
     case "model-calls":
@@ -805,7 +806,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             if (dirty && !save.isPending) save.mutate(shown);
           }}
         >
-          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3" id={titleId}>
             {t("settings.signature")}
           </Heading>
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
@@ -939,8 +940,7 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       description={t("settings.displayNameHelp")}
       layout="stack"
       control={(row) => (
-        // The catalogued pairing for an input that commits: field and verb
-        // stacked at the row's own measure, as the pipeline rows are.
+        // The catalogued pairing of field and verb, as the pipeline rows use.
         <div className="form-stack settingrow-measure">
           <Field
             label={t("settings.displayName")}
@@ -1253,7 +1253,7 @@ function PassportCard() {
         labelledBy={mintTitleId}
         placement="right"
       >
-        <Heading size="large" className="t-h2" id={mintTitleId}>
+        <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
           {t("settings.mint")}
         </Heading>
         {/* The token region is mounted for the whole life of the drawer rather
