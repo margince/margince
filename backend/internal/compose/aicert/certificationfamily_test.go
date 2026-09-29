@@ -134,7 +134,7 @@ func eligibleFamilyRecords(site aiCertSite, routed map[string]bool) []aiCertReco
 	return eligible
 }
 
-// aiCertPresetRoutes is every task and binding some preset sends a call to:
+// aiCertPresetRoutes marks a task and binding when some preset sends it a call:
 // the rung that answers it, or the one a failed call falls to.
 func aiCertPresetRoutes(presets []aiCertPreset) map[string]bool {
 	routed := map[string]bool{}
