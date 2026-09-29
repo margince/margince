@@ -289,7 +289,7 @@ export function AcceptSuggestionDialog({
     );
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("dealSuggestion.acceptTitle", { company: suggestion.company_name })}
       </Heading>
       <Field label={t("dealSuggestion.field.name")} required>

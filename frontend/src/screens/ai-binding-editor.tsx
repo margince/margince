@@ -119,7 +119,7 @@ export function BindingEditor({
   const busy = !canManage || save.isPending;
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {draft.kind === "decisions" && base.binding === undefined
           ? t("aiRouting.decisions.add")
           : t("aiRouting.editTitle", { lane: label })}
