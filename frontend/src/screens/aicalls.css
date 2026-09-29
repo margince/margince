@@ -27,9 +27,10 @@
   flex-wrap: wrap;
 }
 
-/* The served model is one long unbreakable id (`vendor/model-2603`), and it is
- * what made the table wider than its card. It wraps anywhere instead, so the
- * column gives way and the table fits. */
-.aicalls-model {
+/* A cell holds ids that never break on their own — the served model
+ * (`vendor/model-2603`), a task name — and they are what made the table wider
+ * than its card. They wrap anywhere instead, so the columns give way and the
+ * table fits. */
+.aicalls-table td {
   overflow-wrap: anywhere;
 }

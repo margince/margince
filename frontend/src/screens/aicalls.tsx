@@ -186,7 +186,7 @@ export function AiCallsCard() {
                     // `TableScroll` stays as the containment for a viewport too
                     // narrow for even this.
                     <TableScroll label={t("aicalls.callsLabel")}>
-                      <table className="table">
+                      <table className="table aicalls-table">
                         <thead>
                           <tr>
                             {/* The disclosure column. Named rather than left
@@ -333,7 +333,7 @@ function FragmentRow({
             )}
           </div>
         </td>
-        <td className="aicalls-model">
+        <td>
           {tierLabel(call.tier, t)} · {call.provider}/{call.served_model}
         </td>
         <td>
