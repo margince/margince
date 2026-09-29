@@ -4,8 +4,11 @@
 package gatekit
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -37,6 +40,59 @@ func TestATreeDigestVariableIsNamedForItsEntry(t *testing.T) {
 		if got := TreeDigestVar(top); got != want {
 			t.Errorf("TreeDigestVar(%q) = %q, want %q", top, got, want)
 		}
+	}
+}
+
+// repoRoot is the repository from this package's directory, four levels up.
+const repoRoot = "../../../.."
+
+func TestAPathOutsideTheModuleIsDeclaredByItsTreeDigest(t *testing.T) {
+	var read []string
+	lookup := func(name string) string {
+		read = append(read, name)
+		return ""
+	}
+	if err := DeclareInputs(lookup, repoRoot+"/docs", repoRoot+"/.gitignore"); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeclareListings(lookup, repoRoot+"/config"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"TREE_DIGEST_DOCS", "TREE_DIGEST__GITIGNORE", "TREE_DIGEST_CONFIG"}
+	if strings.Join(read, " ") != strings.Join(want, " ") {
+		t.Errorf("declaring docs/, .gitignore and config/ from inside backend/ read %q, want %q — "+
+			"a digest not read is a change the test cache never sees", read, want)
+	}
+}
+
+func TestAPathInsideTheModuleReadsNoDigest(t *testing.T) {
+	lookup := func(name string) string {
+		t.Errorf("declaring a path inside the module read %s; the cache checks such a path itself", name)
+		return ""
+	}
+	if err := DeclareInputs(lookup, "."); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeclareListings(lookup, "."); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAnInputThatCannotBeStatedIsAnError(t *testing.T) {
+	sealed := filepath.Join(t.TempDir(), "sealed")
+	if err := os.Mkdir(sealed, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(sealed, 0o700); err != nil {
+			t.Errorf("unsealing %s for cleanup: %v", sealed, err)
+		}
+	})
+	if _, err := os.Stat(filepath.Join(sealed, "input")); err == nil || errors.Is(err, fs.ErrNotExist) {
+		t.Skip("this user can stat inside a mode-000 directory (root), so the stat cannot be made to fail")
+	}
+	if err := DeclareInputs(os.Getenv, filepath.Join(sealed, "input")); err == nil {
+		t.Error("an input whose stat failed for a reason other than absence was declared anyway")
 	}
 }
 

@@ -103,11 +103,7 @@ func declareOutsideModule(lookup func(string) string, path string) (bool, error)
 	if Under(slashed, moduleDir) || !Under(slashed, repoDir) || slashed == repoDir {
 		return false, nil
 	}
-	rel, err := filepath.Rel(repo, abs)
-	if err != nil {
-		return false, fmt.Errorf("placing %s in the repository: %w", path, err)
-	}
-	top, _, _ := strings.Cut(filepath.ToSlash(rel), "/")
+	top, _, _ := strings.Cut(strings.TrimPrefix(slashed, repoDir+"/"), "/")
 	// The read is the declaration: the test log records the variable and its value.
 	lookup(TreeDigestVar(top))
 	return true, nil
