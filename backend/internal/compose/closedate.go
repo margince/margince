@@ -176,10 +176,6 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 // automatic-change policy. The update also clears the provisional flag.
 func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		version, pinned, err := svc.Redeem(ctx, approvalID, deals.CloseDateCorrectionKind, diffHash)
-		if err != nil {
-			return err
-		}
 		correction, err := deals.UnmarshalCloseDateCorrection(proposedChange)
 		if err != nil {
 			return err
@@ -199,16 +195,31 @@ func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approval
 		if blocked {
 			return fmt.Errorf("compose: this correction was taken back: %w", apperrors.ErrConflict)
 		}
-		// Redemption validated the pin in ITS transaction and committed; this
-		// write opens another. Carrying the pin into the update puts the
-		// version compare inside the transaction that actually moves the date,
-		// so a deal edited between the two loses to the compare rather than
-		// silently taking a date the approver never saw.
-		update := deals.UpdateDealInput{ExpectedClose: &confirmed}
-		if pinned {
-			update.IfVersion = &version
+		// The catalog read BEFORE the transaction opens, which is what
+		// UpdateDealTx documents: it runs a transaction of its own, and taking
+		// a second connection from inside the caller's would commit separately
+		// and block against a lock that caller already holds.
+		active, err := store.ActiveDealColumns(ctx)
+		if err != nil {
+			return err
 		}
-		_, err = store.UpdateDeal(ctx, correction.DealID, update)
-		return err
+		// ONE transaction: the redemption and the write that answers it commit
+		// together. Redeemed first and committed, a failed update left the
+		// approval consumed with the date never moved and no way back — Decide
+		// refuses a second decision and nothing else drives this effect.
+		//
+		// The pin still travels into the update, so the version compare happens
+		// inside the transaction that moves the date and a deal edited in the
+		// meantime loses to the compare rather than silently taking a date the
+		// approver never saw.
+		return svc.RedeemAndApplyPinned(ctx, approvalID, deals.CloseDateCorrectionKind, diffHash,
+			func(tx pgx.Tx, version int64, pinned bool) error {
+				update := deals.UpdateDealInput{ExpectedClose: &confirmed}
+				if pinned {
+					update.IfVersion = &version
+				}
+				_, err := store.UpdateDealTx(ctx, tx, correction.DealID, update, active)
+				return err
+			})
 	}
 }
