@@ -98,9 +98,9 @@ describe("a Model tiers row's facts", () => {
     await user.keyboard("{Escape}");
 
     // A tier nothing called in the window says so rather than reading healthy,
-    // and a tier no task leads with claims no count.
+    // and a tier no task leads with says so too, so every row has the same shape.
     const premium = screen.getByTestId("ai-routing-tier-premium");
-    expect(within(premium).queryByText(/task/)).toBeNull();
+    expect(within(premium).getByText("0 tasks")).toBeTruthy();
     expect(
       within(premium).getByRole("button", {
         name: /no model calls in the last 1h/i,

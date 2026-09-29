@@ -279,13 +279,13 @@
  * lands on WHICH model runs WHAT and reads the rest only if it wants to. */
 .ai-tier-line {
   display: grid;
-  grid-template-columns: 1.25rem 11rem minmax(0, 1fr) auto;
+  grid-template-columns: 1.25rem 11rem minmax(0, 1fr) 13rem;
   align-items: center;
   gap: var(--space-3);
 }
 
 .ai-tier-line-plain {
-  grid-template-columns: 12rem minmax(0, 1fr) auto;
+  grid-template-columns: 11rem minmax(0, 1fr) 13rem;
 }
 
 .ai-tier-who {
@@ -304,6 +304,10 @@
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
+}
+
+.ai-tier-modelline > .badge {
+  flex: none;
 }
 
 .ai-tier-secondary,
@@ -372,6 +376,7 @@
 .ai-tier-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-3);
 }
 

@@ -211,7 +211,7 @@ function TierLine({
           )}
         </span>
         <span className="ai-tier-actions">
-          {tasks !== undefined && tasks > 0 && (
+          {tasks !== undefined && (
             <TermChip term="task">
               {plural("aiRouting.taskCount", tasks, {
                 count: formatNumber(tasks, locale),
