@@ -32,14 +32,19 @@ const HEALTH = {
 };
 
 // The routing card's own stub, widened by the two reads only a diagnostics
-// seat makes.
-function withDiagnostics(allow: GrantSpec) {
+// seat makes. `health` is what `/ai/health` answers; `null` never answers, the
+// wait a reader sits through before the first health read lands.
+function withDiagnostics(allow: GrantSpec, health: unknown = HEALTH) {
   const backend = backendFor(allow);
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
       if (url.includes("/ai/status")) return jsonResponse(status);
-      if (url.includes("/ai/health")) return jsonResponse(HEALTH);
+      if (url.includes("/ai/health")) {
+        return health === null
+          ? new Promise<Response>(() => {})
+          : jsonResponse(health);
+      }
       return backend.fetchMock(input, init);
     },
   );
@@ -90,8 +95,11 @@ describe("a Model tiers row's facts", () => {
     const cheap = await screen.findByTestId("ai-routing-tier-cheap_cloud");
     expect(await within(cheap).findByText("1 task")).toBeTruthy();
     // The dot names the state and opens the numbers behind it.
+    // Named after its lane, so seven dots are seven controls to a reader.
     await user.click(
-      await within(cheap).findByRole("button", { name: "Responding" }),
+      await within(cheap).findByRole("button", {
+        name: "cheap_cloud: Responding",
+      }),
     );
     expect(await screen.findByText("12 calls, 1 failed")).toBeTruthy();
     expect(screen.getByText("Median 840 ms")).toBeTruthy();
@@ -103,7 +111,7 @@ describe("a Model tiers row's facts", () => {
     expect(within(premium).getByText("0 tasks")).toBeTruthy();
     expect(
       within(premium).getByRole("button", {
-        name: /no model calls in the last 1h/i,
+        name: /^premium: no model calls in the last 1h/i,
       }),
     ).toBeTruthy();
   });
@@ -119,6 +127,69 @@ describe("a Model tiers row's facts", () => {
 
     const cheap = await screen.findByTestId("ai-routing-tier-cheap_cloud");
     expect(within(cheap).queryByText(/task/)).toBeNull();
-    expect(within(cheap).queryByText("Responding")).toBeNull();
+    expect(within(cheap).queryByText(/Responding/)).toBeNull();
+  });
+});
+
+// A reader holding the diagnostics read and not the routing one gets the
+// health rows alone: each rung as a lane, unbound, named as the lane the
+// document would call it.
+describe("the Model tiers card for a diagnostics-only reader", () => {
+  const DIAGNOSTICS: GrantSpec = { ai_diagnostics: ["read"] };
+
+  it("lists every rung that took calls, unbound, under its lane's name", async () => {
+    vi.stubGlobal(
+      "fetch",
+      withDiagnostics(DIAGNOSTICS, {
+        window_hours: 24,
+        rungs: [
+          ...HEALTH.rungs,
+          {
+            tier: "embed",
+            healthy: false,
+            calls: 3,
+            failures: 3,
+            median_latency_ms: 0,
+            last_sentinel: "provider_quota",
+          },
+        ],
+      }),
+    );
+    render(<AiRoutingCard />);
+
+    const cheap = await screen.findByTestId("ai-routing-tier-cheap_cloud");
+    expect(within(cheap).getByText("Not bound")).toBeTruthy();
+    expect(
+      within(cheap).getByRole("button", { name: "cheap_cloud: Responding" }),
+    ).toBeTruthy();
+    const embed = screen.getByTestId("ai-routing-tier-embeddings");
+    expect(within(embed).getByText("embeddings")).toBeTruthy();
+    expect(within(embed).getByText(/provider_quota/)).toBeTruthy();
+    expect(screen.queryByText("embed")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^edit$/i })).toBeNull();
+  });
+
+  it("says no lane took a call rather than drawing an empty list", async () => {
+    vi.stubGlobal(
+      "fetch",
+      withDiagnostics(DIAGNOSTICS, { window_hours: 24, rungs: [] }),
+    );
+    render(<AiRoutingCard />);
+
+    expect(
+      await screen.findByText("No model calls in the last 24h."),
+    ).toBeTruthy();
+    expect(screen.queryByTestId(/^ai-routing-tier-/)).toBeNull();
+  });
+
+  it("waits on the health read rather than showing nothing", async () => {
+    vi.stubGlobal("fetch", withDiagnostics(DIAGNOSTICS, null));
+    render(<AiRoutingCard />);
+
+    expect(await screen.findByRole("status")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    expect(screen.queryByText(/No model calls/)).toBeNull();
   });
 });

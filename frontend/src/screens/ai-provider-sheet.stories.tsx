@@ -165,7 +165,7 @@ export const RemovingAPrice: Story = {
   },
 };
 
-/** A vendor with no price page and no prices: the table says so. */
+/** A vendor with a price page but no prices on the sheet: the table says so. */
 export const NoPrices: Story = { ...List, play: openSheet("anthropic") };
 
 /** The phone: the sheet is a full-screen layer. */

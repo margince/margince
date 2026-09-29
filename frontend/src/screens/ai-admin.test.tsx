@@ -121,6 +121,25 @@ it("previews both fields before writing the allowance with its revision", async 
     },
   ]);
 });
+// A carrier the server could not count is named as such, never as zero: a
+// zero would read as "nothing waiting" on a queue nobody looked at.
+it("names a carrier the preview could not count as unavailable", async () => {
+  const user = userEvent.setup({ delay: null });
+  mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  const waiting = await screen.findByText(
+    "Recorded work waiting on the allowance",
+  );
+  const list = waiting.closest("details");
+  if (!(list instanceof HTMLElement)) {
+    throw new Error("the deferred work is not a disclosure");
+  }
+  expect(within(list).getByText(/Company scans:\s*Unavailable/)).toBeTruthy();
+  expect(within(list).getByText(/Website reads:\s*3/)).toBeTruthy();
+});
 it("keeps a rejected draft visible after a concurrent edit", async () => {
   const user = userEvent.setup({ delay: null });
   mount(undefined, true);

@@ -250,7 +250,7 @@ function ProviderRow({
 
 // The credential controls for ONE vendor, drawn inside its sheet: whether it is
 // keyed, the test, and the paste field that adds, replaces or removes the key.
-export function ProviderConnection({
+function ProviderConnection({
   status,
   canManage,
 }: {
@@ -354,10 +354,8 @@ export function ProviderConnection({
                 : t("aiProviderKeys.absentHint", { envVar: status.env_var })
             }
           >
-            {/* One paste and the verbs that act on it, on one line. It carried
-                `row-inline`, which nothing in this tree styles, so the field,
-                its verb and the removal each took a full-width block of their
-                own. */}
+            {/* One paste and the verbs that act on it, on one line: Save sits
+                where the eye is when the paste ends. */}
             {(control) => (
               <div className="ai-key-entry">
                 <TextInput

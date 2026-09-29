@@ -6,16 +6,17 @@ import type { useT } from "../i18n";
 
 type T = ReturnType<typeof useT>;
 
-// The tier the decision lane stamps on its calls. Not a tier of the ladder: the
-// task contract never declares it, so it is spelled here rather than looked up.
-const DECIDE_TIER = "decide";
+// The rung the decision lane stamps on its calls (decidetrace.go). Not a tier
+// of the ladder: the task contract never declares it, so it is spelled here
+// once and every screen that meets it in a health or usage row imports it.
+export const DECIDE_RUNG = "decide";
 
 // A tier as a reader meets it in a table. Every ladder tier is shown as the
 // routing document spells it, because that is the word an operator greps for;
 // `decide` alone is named, since it is no tier anybody bound and the bare word
 // reads as a verb in a column of nouns.
 export function tierLabel(tier: string, t: T): string {
-  return tier === DECIDE_TIER ? t("aiTier.decide") : tier;
+  return tier === DECIDE_RUNG ? t("aiTier.decide") : tier;
 }
 
 // Why an attempt ran, where the answer is that the decision model before it did

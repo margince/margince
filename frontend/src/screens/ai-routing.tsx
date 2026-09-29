@@ -7,7 +7,8 @@ import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { stable } from "../format/collate";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { useAiStatus } from "./ai-admin";
 import { BindingEditor, reachableProviders } from "./ai-binding-editor";
 import { useAiHealth } from "./ai-health";
@@ -28,9 +29,10 @@ import "./ai-settings.css";
 
 // Which provider and model each tier uses.
 //
-// Read by admin/ops only: `ai_routing` is narrow on both verbs because this is
-// the editable document, and it decides where an installation's correspondence
-// goes.
+// The bindings are read on `ai_routing`, narrow on both verbs because this is
+// the editable document and it decides where an installation's correspondence
+// goes; the health column is read on `ai_diagnostics`, and a reader holding
+// that alone still gets the lanes as rungs, unbound.
 //
 // Each row is a reading; Edit opens a dialog that owns that one binding and
 // saves it alone. The tier vocabulary comes from the task contract rather than
@@ -95,25 +97,32 @@ type Editing = { opened: RoutingRead; initial: SliceValue; label: string };
 // so: an absent card would read as lanes that are fine.
 function HealthOnly() {
   const t = useT();
+  const { locale } = useLocale();
   const canDiagnose = useCan("ai_diagnostics", "read");
-  const health = useAiHealth(canDiagnose).data;
+  const health = useAiHealth(canDiagnose);
   const me = useMe();
   return (
     <Panel title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}>
       <PanelBody>
         {canDiagnose ? (
-          <QueryGate query={me} pendingLabel={t("aiRouting.title")}>
-            {() =>
-              health ? (
+          <QueryGate query={health} pendingLabel={t("aiRouting.title")}>
+            {(read) =>
+              read.rungs.length === 0 ? (
+                <EmptyState>
+                  {t("aiHealth.noCalls", {
+                    hours: formatNumber(read.window_hours, locale),
+                  })}
+                </EmptyState>
+              ) : (
                 <TiersTable
                   lanes={[]}
-                  health={health}
+                  health={read}
                   features={undefined}
                   catalogue={undefined}
                   unkeyed={null}
                   canManage={false}
                 />
-              ) : null
+              )
             }
           </QueryGate>
         ) : (

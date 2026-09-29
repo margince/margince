@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* Settings → AI. Two shapes live here and nothing else: the page header's pair
- * of readings, and the lane row that reports one binding on a single line. */
+/* Settings → AI. The page header's pair of readings, the providers list and
+ * its sheet, and the tier line that reports one binding under its health dot. */
 
 /* The header: the sentence that names the page, then the two readings an
  * operator opens it for. */
@@ -29,61 +29,9 @@
   color: var(--dangerText);
 }
 
-/* One lane, as a line: the lane's name, the vendor, the model it binds, what is
- * wrong with that pairing, and the way in. The model takes the slack because it
- * is the only part whose length is the vendor's to choose; everything else is
- * sized by its own content. Wrapping, because five items on one line is a
- * desktop reading and a phone gets the same facts stacked. */
-.ai-lane {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-/* What this lane is bound to: vendor, model, where it is reached, what it
- * costs, and anything wrong with the pairing. One flex item so the row's two
- * anchors — the lane's name and the way in — keep their edges, and the wrapping
- * happens between the facts instead of stranding the button on a line of its
- * own. */
-.ai-lane-binding {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1 1 14rem;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-/* The lane's own name, which is the row's subject: it holds a column of its own
- * so a reader travels one edge down the card rather than re-finding the name
- * behind a vendor of a different width on every row. */
-.ai-lane-name {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  flex: 0 0 15rem;
-  min-width: 0;
-}
-
-/* What a call on this lane costs. Meta weight beside the model it prices: the
- * figure is why the ladder is ordered the way it is, not a fact about the
- * binding's identity. */
-.ai-lane-price {
-  white-space: nowrap;
-}
-
-/* The model id: the one string here long enough to need the room, and the one
- * that may be truncated without losing the row's meaning — the name and the
- * vendor beside it already say which binding this is. */
-.ai-lane-model {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* The way in, pinned to the row's trailing edge. The slack lives HERE rather
- * than in the model id, so the pills that qualify a binding stay beside the
- * binding they qualify instead of drifting across the row to sit against the
+/* The credential's verbs, pinned to the row's trailing edge. The slack lives
+ * HERE rather than in the variable name, so the pill that qualifies the key
+ * stays beside it instead of drifting across the row to sit against the
  * button. */
 .ai-lane-open {
   display: inline-flex;
@@ -91,19 +39,8 @@
   margin-inline-start: auto;
 }
 
-/* The line under a lane: its task count and call health, spaced as one run of
- * facts that wraps rather than as a second row of columns. */
-.ai-lane-facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-block-start: var(--space-1);
-}
-
 /* One provider credential, as a line: who, whether it is keyed, and the way to
- * change that. Same skeleton as `.ai-lane`, because a reader crossing between
- * the two tabs is answering the same shape of question twice. */
+ * change that. */
 .ai-provider {
   display: flex;
   align-items: center;
@@ -228,12 +165,10 @@
   min-width: 0;
 }
 
-/* Air between a row's reading and the fields it opens — the same interval on
- * both tabs, because the two rows ask the same shape of question. Without it a
+/* Air between a credential's reading and the field it opens. Without it the
  * field's own label sat directly under the last line of the summary and the two
  * read as one block instead of a reading and the thing it opened. */
-.ai-provider + *,
-.ai-lane + * {
+.ai-provider + * {
   margin-top: var(--space-4);
 }
 
@@ -398,4 +333,16 @@
 .ai-modelchain-arrow {
   justify-self: center;
   color: var(--textSecondary);
+}
+
+/* On a phone the provider column would leave the model id no room, so the
+ * chain stacks: each mark over its id, the arrow between the steps. */
+@media (max-width: 720px) {
+  .ai-modelchain {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ai-modelchain-arrow {
+    justify-self: start;
+  }
 }

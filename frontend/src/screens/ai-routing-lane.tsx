@@ -13,7 +13,7 @@ import {
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { tierLabel } from "./ai-decision-labels";
+import { DECIDE_RUNG } from "./ai-decision-labels";
 import {
   inputOnlyLane,
   type ModelCatalogue,
@@ -39,8 +39,21 @@ const DECISIONS = "decisions";
 // The rung each off-ladder lane stamps on its calls (embedlane.go, decidetrace.go).
 const RUNG_OF: Readonly<Record<string, string>> = {
   embeddings: "embed",
-  decisions: "decide",
+  decisions: DECIDE_RUNG,
 };
+
+function rungOf(laneName: string): string {
+  return RUNG_OF[laneName] ?? laneName;
+}
+
+// The lane behind a rung nothing on the page binds, named as its lane would
+// be: a health-only reader meets `embed` as "embeddings", the word the routing
+// document and every gloss use.
+function laneNameOf(rung: string): string {
+  return (
+    Object.keys(RUNG_OF).find((laneName) => RUNG_OF[laneName] === rung) ?? rung
+  );
+}
 
 export type Lane = Readonly<{
   name: string;
@@ -68,9 +81,10 @@ type Row = Readonly<{
  * operator acts on.
  *
  * Health and tasks are reads with their own grants; each half stays silent when
- * its read is not this reader's — an absent dot is not "healthy", and an absent
- * A row with no binding is a rung that still receives
- * calls after its lane left the document.
+ * its read is not this reader's: an absent dot is not "healthy", and an absent
+ * count is not "unused". A row with no binding is a rung that still receives
+ * calls after its lane left the document, or one whose bindings this reader
+ * may not see.
  */
 export function TiersTable({
   lanes,
@@ -91,13 +105,14 @@ export function TiersTable({
   onAddDecisions?: () => void;
 }>) {
   const t = useT();
-  const known = new Set(lanes.map((l) => RUNG_OF[l.name] ?? l.name));
+  const known = new Set(lanes.map((l) => rungOf(l.name)));
   const rows: Row[] = [
     ...lanes.map((lane) => ({
       lane,
-      rung: health?.rungs.find(
-        (r) => r.tier === (RUNG_OF[lane.name] ?? lane.name),
-      ),
+      rung: health?.rungs.find((r) => r.tier === rungOf(lane.name)),
+      // A decision-first task is counted under decisions AND under its leading
+      // tier: it starts on the decision model and falls through to that tier,
+      // so both lanes carry its calls and each row answers "what runs here".
       tasks: features?.filter((f) =>
         lane.name === DECISIONS
           ? f.decision_first
@@ -107,7 +122,7 @@ export function TiersTable({
     ...(health?.rungs ?? [])
       .filter((r) => !known.has(r.tier))
       .map((rung) => ({
-        lane: { name: tierLabel(rung.tier, t), lane: "chat" as const },
+        lane: { name: laneNameOf(rung.tier), lane: "chat" as const },
         rung,
         tasks: undefined,
       })),
@@ -196,7 +211,7 @@ function TierLine({
         data-testid={lane.testId ?? `ai-routing-tier-${lane.name}`}
         className={tierLineClass(health !== undefined)}
       >
-        {health && <HealthDot rung={rung} health={health} />}
+        {health && <HealthDot lane={lane.name} rung={rung} health={health} />}
         <span className="ai-tier-who">
           <span className="ai-tier-name">{lane.name}</span>
           {gloss && <span className="t-caption">{gloss}</span>}
@@ -261,11 +276,13 @@ function BindingLine({
 
 // One dot per lane: green when it answered, red when it did not, grey when it
 // took no calls in the window. It opens a popover with the numbers behind it,
-// the same way the decision table explains its fallback rate.
+// the same way the decision table explains its fallback rate. Its name leads
+// with the lane, so seven dots read as seven different controls.
 function HealthDot({
+  lane,
   rung,
   health,
-}: Readonly<{ rung: Rung | undefined; health: Health }>) {
+}: Readonly<{ lane: string; rung: Rung | undefined; health: Health }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -286,7 +303,7 @@ function HealthDot({
             className={`ai-health-dot ai-health-dot-${state}`}
             aria-hidden
           />
-          <span className="sr-only">{reading}</span>
+          <span className="sr-only">{`${lane}: ${reading}`}</span>
         </>
       }
     >

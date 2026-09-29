@@ -8739,7 +8739,6 @@ export const vi = {
   "aiRouting.notListed":
     "Không có trong danh sách mô hình công bố của {provider}. Bạn vẫn có thể lưu nếu nhà cung cấp phục vụ ID này.",
   "aiRouting.median": "Trung vị {ms} ms",
-  "aiTasks.state.idle": "Không có lệnh gọi trong giờ qua",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
     "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",
