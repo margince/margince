@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 // openAICompatStream reads the OpenAI-compatible SSE stream: `data: {...}`
@@ -20,6 +21,9 @@ type openAICompatStream struct {
 	body    io.ReadCloser
 	scanner *bufio.Scanner
 	end     streamEnd
+	// produced is the answer's length in characters so far, which is how the
+	// terminal tells an abandoned answer from one that never began.
+	produced int
 }
 
 type openAICompatStreamEvent struct {
@@ -78,8 +82,9 @@ func (s *openAICompatStream) read(ctx context.Context, ev openAICompatStreamEven
 		choice.Error = ev.Error
 	}
 	choice.Message.Refusal = choice.Delta.Refusal
+	s.produced += utf8.RuneCountInString(choice.Delta.Content)
 	if choice.FinishReason != "" || choice.Error != nil || choice.Message.Refusal != "" {
-		finish, err := choice.terminal(ctx)
+		finish, err := choice.terminal(ctx, s.produced)
 		if err != nil {
 			return "", err
 		}

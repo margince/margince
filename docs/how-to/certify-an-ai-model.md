@@ -296,6 +296,13 @@ a human's to fix. A withheld answer fails the run ungraded, naming the filter; a
 rejected request stops the task with no record. A run is re-driven whole, since a
 conversation or tool loop cannot resume mid-way.
 
+A candidate that **begins an answer and breaks it off** (a broker's
+`finish_reason: "error"` after output, surfaced as `ai.ErrAnswerAbandoned`) is
+re-driven like an outage, in case the break was a transient crash. If every
+attempt breaks off, the run is scored as a failed, ungraded `invalid` run and the
+task still writes its record: the model was reached and could not finish, which
+is a measurement. Any other exhausted ladder still stops the task with no record.
+
 **Every scored run is journaled** to `.tmp/aicert/resume/` as it is scored, so a
 restart replays what it can (`… run(s) replayable`) instead of paying again. A
 journaled run stands in for a fresh one only when nothing it measured can have

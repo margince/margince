@@ -9,9 +9,18 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 )
+
+// ErrAnswerAbandoned is an upstream that began an answer and stopped part-way,
+// reporting a failure instead of a terminal. The ladder walks past it like any
+// provider failure, since another rung may finish what this one could not. It
+// is named because a model that breaks off its answer on every attempt is a
+// finding about that model, which a caller measuring one must not report as an
+// outage. A failure before any output is no such evidence and stays unnamed.
+var ErrAnswerAbandoned = errors.New("ai: the upstream abandoned an answer it had begun")
 
 // openAICompatChoice is one choice as this wire returns it.
 type openAICompatChoice struct {
@@ -53,12 +62,19 @@ var terminalCode = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{0,63}$`)
 // terminal is the choice's ending in the port's vocabulary: stop and length
 // come back as the finish reason (this wire already spells a cut-off reply
 // model.FinishReasonLength), a refusal or filter as model.ErrOutputWithheld, and
-// an upstream failure as an ordinary provider error the ladder may walk past.
-func (c openAICompatChoice) terminal(ctx context.Context) (string, error) {
+// an upstream failure as a provider error the ladder may walk past, which is
+// ErrAnswerAbandoned once the reply had produced answer text. produced counts
+// that text in characters, including what earlier stream chunks delivered.
+func (c openAICompatChoice) terminal(ctx context.Context, produced int) (string, error) {
 	if c.Error != nil || c.FinishReason == compatFinishError {
 		detail := "no detail given"
 		if c.Error != nil && c.Error.Message != "" {
 			detail = safeProviderText(ctx, c.Error.Message)
+		}
+		// The length and never the text: a half-written answer may quote the
+		// customer data it was drafted from.
+		if produced > 0 {
+			return "", fmt.Errorf("%w: openai-compat stopped after %d characters of output: %s", ErrAnswerAbandoned, produced, detail)
 		}
 		return "", fmt.Errorf("ai: openai-compat: the upstream failed mid-answer: %s", detail)
 	}

@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -155,7 +156,7 @@ func (c *openAICompatClient) completeChat(ctx context.Context, req model.Request
 	resp.CachedTokens, resp.CacheWriteTokens = cacheWithin(out.Usage.PromptTokens,
 		out.Usage.PromptTokensDetails.CachedTokens, out.Usage.PromptTokensDetails.CacheWriteTokens)
 	choice := out.Choices[0]
-	finish, err := choice.terminal(ctx)
+	finish, err := choice.terminal(ctx, utf8.RuneCountInString(choice.Message.Content))
 	if err != nil {
 		return model.Response{}, withSpend(err, resp)
 	}

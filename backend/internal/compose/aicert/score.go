@@ -59,6 +59,15 @@ type RunResult struct {
 	// Withheld is the provider's reason it withheld this run's answer — the
 	// filter or stop that fired — and empty for a run that was answered.
 	Withheld string `json:"withheld,omitempty"`
+	// Abandoned says the candidate broke off its answer on every attempt, so,
+	// like a withheld run, it names the binding rather than a model that served.
+	Abandoned bool `json:"abandoned,omitempty"`
+}
+
+// delivered reports whether a served model answered this run, and so whether
+// its identity says who served the set.
+func (r RunResult) delivered() bool {
+	return r.Withheld == "" && !r.Abandoned
 }
 
 // judgeMedianAndMin answers the median and minimum of the scores a judge
