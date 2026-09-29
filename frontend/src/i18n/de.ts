@@ -4716,6 +4716,16 @@ export const de = {
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.displayNameSave": "Speichern",
   "settings.languageHelp": "Gilt für diese Sitzung.",
+  "settings.deviceCard": "Dieses Gerät",
+  "settings.installApp": "Margince-App",
+  "settings.installAppHelp":
+    "Installiert Margince auf diesem Gerät als App mit eigenem Fenster und Symbol.",
+  "settings.installAppManual":
+    "Zum Installieren tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.",
+  "settings.installAppInstalled": "Installiert",
+  "settings.installAppDismissed":
+    "Installiere Margince später über das Menü des Browsers oder das Installationssymbol in seiner Adressleiste.",
+  "settings.installAppAction": "Installieren",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
   "role.manager": "Teamleitung",

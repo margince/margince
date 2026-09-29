@@ -47,6 +47,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "home",
     "theme",
     "appearance",
+    "install",
   ],
   meetings: [
     "calendar",

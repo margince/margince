@@ -107,14 +107,35 @@ describe("the install state", () => {
     expect(state().kind).toBe("installed");
   });
 
-  it("has nothing to offer after a dismissal, until the browser offers again", async () => {
+  it("is dismissed after a dismissal, until the browser offers again", async () => {
     displayMode(false);
     const { state } = await page();
     offer("dismissed");
     expect(await promptFrom(state())).toBe("dismissed");
-    expect(state().kind).toBe("unavailable");
+    expect(state().kind).toBe("dismissed");
     offer("accepted");
     expect(state().kind).toBe("available");
+  });
+
+  it("is installed when the browser installs it after a dismissal", async () => {
+    displayMode(false);
+    const { state } = await page();
+    offer("dismissed");
+    await promptFrom(state());
+    act(() => {
+      window.dispatchEvent(new Event("appinstalled"));
+    });
+    expect(state().kind).toBe("installed");
+  });
+
+  it("is dismissed again when the second offer is turned down too", async () => {
+    displayMode(false);
+    const { state } = await page();
+    offer("dismissed");
+    await promptFrom(state());
+    offer("dismissed");
+    expect(await promptFrom(state())).toBe("dismissed");
+    expect(state().kind).toBe("dismissed");
   });
 
   it("is installed when the app runs standalone", async () => {

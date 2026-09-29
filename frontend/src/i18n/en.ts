@@ -4822,6 +4822,16 @@ export const en = {
     "Shown to colleagues on records you edit, in pickers and in the audit log.",
   "settings.displayNameSave": "Save",
   "settings.languageHelp": "Applies to this session.",
+  "settings.deviceCard": "This device",
+  "settings.installApp": "Margince app",
+  "settings.installAppHelp":
+    "Adds Margince to this device as an app with its own window and icon.",
+  "settings.installAppManual":
+    "To install, tap Share, then “Add to Home Screen”.",
+  "settings.installAppInstalled": "Installed",
+  "settings.installAppDismissed":
+    "Install Margince later from the browser’s menu or the install icon in its address bar.",
+  "settings.installAppAction": "Install",
   "role.admin": "Admin",
   "role.management": "Management",
   "role.manager": "Team lead",

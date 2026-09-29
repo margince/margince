@@ -135,6 +135,7 @@ import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { TagVocabularyCard } from "./tagadmin";
+import { ThisDevicePanel } from "./thisdevice";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { VoiceDnaCard } from "./voice-dna";
@@ -186,7 +187,12 @@ export function tabContent(id: SettingsPageId): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return <AccountCard />;
+      return (
+        <>
+          <AccountCard />
+          <ThisDevicePanel />
+        </>
+      );
     case "meetings":
       return <MeetingSettings />;
     case "voice":

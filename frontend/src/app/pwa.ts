@@ -9,10 +9,12 @@ export const SERVICE_WORKER_URL = "/sw.js";
 export type InstallOutcome = "accepted" | "dismissed";
 
 /** `manual-ios` is an iPhone or iPad browser, where Add to Home Screen is by
- *  hand; `available.prompt` asks the browser once; `installed` includes this visit. */
+ *  hand; `available.prompt` asks the browser once; `dismissed` is a turned-down
+ *  offer; `installed` includes this visit. */
 export type InstallState =
   | Readonly<{ kind: "installed" }>
   | Readonly<{ kind: "available"; prompt: () => Promise<InstallOutcome> }>
+  | Readonly<{ kind: "dismissed" }>
   | Readonly<{ kind: "manual-ios" }>
   | Readonly<{ kind: "unavailable" }>;
 
@@ -34,6 +36,7 @@ declare global {
 
 let offered: BeforeInstallPromptEvent | null = null;
 let installed = false;
+let dismissed = false;
 let snapshot: InstallState | null = null;
 const subscribers = new Set<() => void>();
 
@@ -65,6 +68,8 @@ function offer(event: BeforeInstallPromptEvent): InstallState {
       // Installed from here: `appinstalled` can arrive later, and nothing is offered meanwhile.
       if (outcome === "accepted") {
         installed = true;
+      } else {
+        dismissed = true;
       }
       refresh();
       return outcome;
@@ -78,6 +83,9 @@ function currentState(): InstallState {
   }
   if (offered !== null) {
     return offer(offered);
+  }
+  if (dismissed) {
+    return { kind: "dismissed" };
   }
   return { kind: appleTouchDevice() ? "manual-ios" : "unavailable" };
 }

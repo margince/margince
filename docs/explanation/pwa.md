@@ -122,6 +122,7 @@ of:
 |---|---|
 | `installed` | running as the installed app, or installed during this visit |
 | `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed` |
+| `dismissed` | the reader turned the offer down; it holds until the browser offers again (`available`) or the app is installed |
 | `manual-ios` | an iPhone or iPad browser, where Add to Home Screen is done by hand |
 | `unavailable` | nothing this page can offer |
 
@@ -153,7 +154,20 @@ the console, where the banner has already said it once.
 
 ## Install on this device
 
-Filled in by the connectivity and install work in this change.
+Settings → Account has a "This device" panel with one row,
+`frontend/src/screens/thisdevice.tsx`, drawn from `useInstallState()` alone:
+
+- `available`: Install asks the browser and pends while its dialog is open.
+- `dismissed`: a sentence naming the browser's menu and its address-bar
+  install icon. Chromium does not offer again in this page session.
+- `manual-ios`: one sentence, Share and then Add to Home Screen.
+- `installed`: the row says so, with nothing to press.
+- `unavailable`: no row and no panel, since a browser that cannot install is a
+  capability this device lacks, not a refusal.
+
+Focus that falls with the button moves to the sentence or the "Installed" that
+replaces it; focus anywhere else stays put. macOS Safari's File › Add to Dock
+gets no row: it needs macOS 14, and Safari reports every macOS as 10.15.7.
 
 ## Turning the worker off in an emergency
 
