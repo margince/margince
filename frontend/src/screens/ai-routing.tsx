@@ -21,7 +21,7 @@ import { DecisionLaneRow, LaneRow } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { RefreshFromSources } from "./rate-refresh";
+import { RefreshModelPrices } from "./rate-catalogue-refresh";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
@@ -242,9 +242,7 @@ function SheetFooter({
           ? t("aiRouting.sheetAsOf", { date: asOf })
           : t("aiRouting.sheetUnknown")}
       </span>
-      {canManage && (
-        <RefreshFromSources path="/ai-model-rates/propose-refresh" />
-      )}
+      {canManage && <RefreshModelPrices />}
     </div>
   );
 }

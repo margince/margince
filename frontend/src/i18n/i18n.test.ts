@@ -158,7 +158,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
-  "ob.ai.speaker",
   "ob.ai.speakerName",
   "auth.title",
 
@@ -222,8 +221,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.linkedin.profilePlaceholder",
   "ob.s4.imapHostPlaceholder",
   "ob.s4.imapEmail",
-  "ob.url",
-  "ob.urlScheme",
   "ob.conv.triage.companyWebsite",
   "ob.conv.clarify.question",
   "ob.conv.clarify.optionDetail",

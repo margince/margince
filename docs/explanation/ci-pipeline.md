@@ -421,6 +421,45 @@ simpler:
   only misses the entries whose inputs changed, so a three-hour-old cache is
   substantially warm and a post-dependency-bump cache still beats a cold one.
 
+### Test results replay only on stable mtimes
+
+The build cache holds test results as well as compiled packages, so a PR whose
+change does not reach a package replays that package's result instead of
+running it. Go checks a cached result against every file the test opened at
+runtime — a migration, a fixture, its own source — by size, mode and **mtime**,
+never content. A fresh checkout stamps every file with the time of checkout, so
+until the action stamped them, each of the 42 packages whose tests read the
+tree re-ran on every job, `internal/compose` and `identity` among them.
+
+[`scripts/ci-stable-mtimes.sh`](../../scripts/ci-stable-mtimes.sh) runs first
+in the action, in the writer and every reader alike. It sets each tracked file's
+mtime from a hash of its bytes, and each directory's from its tracked entries.
+Unchanged content therefore reads as it did in the run that wrote the cache, and
+changed content reads as new. Measured on a simulated fresh checkout, 121 of 163
+unit packages replayed before this and all 163 after. `./gates` and the ai
+module still run uncached on purpose — `UNCACHED_TEST_PKGS` in
+`backend/Makefile` says why.
+
+Two kinds of input stay invisible to that check, and each is declared through
+`gatekit.DeclareInputs`:
+
+- **Files outside the test's module.** Go never rechecks them at all — not
+  `docs/`, `config/`, `frontend/`, nor, for the `backend/tools` module,
+  `backend/` itself. The script exports one digest per top-level entry as
+  `TREE_DIGEST_<NAME>`, a test reading outside its module reads that
+  variable, and Go keys the result on every variable a test reads.
+- **What a child process read.** A test that runs `git ls-files` or `go list`
+  opens nothing itself, so it walks the paths the process read.
+
+The first kind is held by a census, not a scan, because such paths are mostly
+built at run time. Before `cache-warm` saves an entry, it reruns the cached pass
+through [`scripts/testlog-exec.sh`](../../scripts/testlog-exec.sh) with Go's
+test log on, and `backend/tools/check-test-inputs` fails on any package that
+read outside its module without reading the matching digest. A failing census
+withholds the entry, so readers stay on the last one that was honest. The
+second kind is held by a gate: a cached test file that runs `git` or `go` must
+declare its inputs.
+
 What this replaced: both refresh steps used to ride inside gating jobs, gated on
 `github.event_name == 'push' && github.ref == 'refs/heads/main'`. The cache was
 therefore seeded only when a `main` push survived to completion — and 64% of them

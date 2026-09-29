@@ -181,7 +181,7 @@ SITE                      SCOPE            STATUS   SCENARIOS  BAND       PROVID
 agent_loop/morning_brief  single_turn      absent   -          -          -         -                 -          -     -       -            -         -             -        -
 cold_start/acts           single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
 cold_start/company        single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00         27        0             0        0
-rate_extract/pricing      full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
+rate_extract/fx           full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
 ```
 
 **Every row's numbers are that SITE's own.** A record is written per task and a
@@ -345,6 +345,6 @@ are the run's totals.
 ## When certification passes but the field does not
 
 A record measures a model against the CORPUS fixture, so a site certified at 1.00
-can still fail on production input (`rate_extract/pricing`, certified on a
-two-line fixture, failed on a 530 KB catalog). Run a site against real input with
+can still fail on production input (a site certified on a two-line fixture
+can fail on a 530 KB page). Run a site against real input with
 [debug an AI task](debug-an-ai-task.md) (`make ai-probe`).

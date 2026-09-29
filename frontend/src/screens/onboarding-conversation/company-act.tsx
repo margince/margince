@@ -30,7 +30,6 @@ import {
   normalizeUrl,
 } from "../onboarding";
 import { OnboardingGate } from "../onboarding-gate";
-import type { SuggestedCompanyChange } from "../onboarding-read";
 import type {
   ArtifactMode,
   ConfirmRefusal,
@@ -63,6 +62,7 @@ import { gateNoticeFor } from "./gate-notice";
 import { presenceFor } from "./presence";
 import { ProfileDigest } from "./profile-digest";
 import { deckCards, ReviewDeck } from "./review-deck";
+import type { SuggestedCompanyChange } from "./use-clarify-answers";
 import { useClarifyAnswers } from "./use-clarify-answers";
 import { safeStartError, useCompanyRead } from "./use-company-read";
 import type { WizardPersistInput } from "./use-wizard-state";

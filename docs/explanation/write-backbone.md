@@ -218,11 +218,11 @@ already committed:
 
 ## 5. The consumer side — groups & dedupe
 
-`internal/platform/events/subscriber.go` + `dedupe.go`. The catalog declares seventeen consumer
+`internal/platform/events/subscriber.go` + `dedupe.go`. The catalog declares eighteen consumer
 groups; each sees every event once and scales horizontally inside the group. Because Redis groups
 partition only by stream, the workspace and actor filters run in-process.
 
-**What each group does — and which are live.** Thirteen are wired to a subscriber today; the other four
+**What each group does — and which are live.** Fourteen are wired to a subscriber today; the other four
 are catalog-declared placeholders with no consumer yet (honest status — the streams carry events, but
 nothing reads these groups). `TestEveryDeclaredConsumerGroupIsSubscribedSomewhere` in
 `backend/gates/consumerlanes_test.go` holds the split: a new group with neither a lane nor a place in the
@@ -241,6 +241,7 @@ broken and nothing at runtime says a word about it.
 | `cg:contact-auto-enrich` | fill a contact from what their employer's site already published | **live** (worker) |
 | `cg:contact-data` | fill a contact from a licensed provider, spending credits | **live** (worker) |
 | `cg:company-auto-enrich` | queue a company's auto-enrich pass the moment it appears, instead of on the next daily sweep | **live** (worker) |
+| `cg:approval-notify` | on `approval.requested`, put the card in the queue of every seat that could decide it | **live** (worker) |
 | `cg:overnight-agent` | on `approval.decided`, resume the parked Surface-B run with the human's answer | **live** (worker; only when a model is configured) |
 | `cg:workflows` | dispatch the automation/workflow engine off matching events | **live** (worker) |
 | `cg:webhooks` | deliver subscribed events to outbound endpoints | **live** (api's inline relay) |

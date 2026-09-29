@@ -147,7 +147,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer observe.Stop()
 
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context (cmd/api resolves the same path under the same waiver)
-	modelPath, boundModels, err := selectModelPath(ctx, workerModelPathSpec(cfg, deployCfg), pool, logger)
+	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, deployCfg), pool, logger)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
-		logger, cfg, modelPath, boundModels, lanes, weeklyMail, stdout)
+		logger, cfg, modelPath, lanes, weeklyMail, stdout)
 	if err != nil {
 		return err
 	}
@@ -279,6 +279,9 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 		return workerBoot{}, err
 	}
 	cfg.captureConfig = compose.CaptureConfigFromDeploy(deployCfg.Capture, log)
+	for _, warning := range deployCfg.Rates.Warnings() {
+		log.Warn("rates configuration: " + warning)
+	}
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.
 	cfg.captureConfig.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox

@@ -63,7 +63,7 @@ func aiTaskFlagSet(verb string) (*flag.FlagSet, *aiTaskFlags, *cliflags.Env) {
 	fs := flag.NewFlagSet("worker aitask "+verb, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {}
-	fs.StringVar(&cfg.site, "site", "", "invocation site as <task>/<variant> (e.g. rate_extract/pricing)")
+	fs.StringVar(&cfg.site, "site", "", "invocation site as <task>/<variant> (e.g. rate_extract/fx)")
 	fs.StringVar(&cfg.scenarioPath, "scenario", "", "scenario file in the corpus format, carrying both fixture and expectation")
 	fs.StringVar(&cfg.fixturePath, "fixture", "", "fixture JSON file; needs --site, and --expect for sites that validate one")
 	fs.StringVar(&cfg.expectPath, "expect", "", "expected-answer JSON file, the half --fixture does not carry")
@@ -128,7 +128,7 @@ func (c aiTaskFlags) validate() error {
 	switch c.verb {
 	case verbScaffold:
 		if c.arg == "" && c.site == "" {
-			return errors.New("aitask scaffold needs a site: <task>/<variant>, e.g. rate_extract/pricing")
+			return errors.New("aitask scaffold needs a site: <task>/<variant>, e.g. rate_extract/fx")
 		}
 	case verbFetch:
 		if c.arg == "" {

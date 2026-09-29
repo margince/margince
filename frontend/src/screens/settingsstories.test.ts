@@ -108,7 +108,7 @@ describe("the settings stories are filed where the product files them", () => {
   // The number of settings story files in the tree, exact: a story whose title
   // stops resolving drops out of the corpus, and a floor would not notice.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(102);
+    expect(settingsStories.length).toBe(105);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

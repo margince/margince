@@ -10,3 +10,22 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* The catalogue refresh answers in the same breath, one line per provider,
+ * beneath the button rather than beside it: five badges and their counts would
+ * run a panel's action band off a phone. */
+.rates-refresh-report {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.rates-refresh-report > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}

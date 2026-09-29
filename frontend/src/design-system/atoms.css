@@ -933,6 +933,15 @@
   text-decoration: underline;
 }
 
+/* A keyboard reader gets no ring from the bare-link rule in base.css, which
+   scopes itself to `a:not([class])` — so the one anchor the product uses most
+   has to draw its own. */
+.entity-link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
 /* THE COUNT BESIDE AN OPTION, and it is one chip wherever it is drawn: a tab
    strip, a segmented row, any option whose name is followed by how much sits
    behind it. Declared here rather than by each host, because every host that

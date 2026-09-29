@@ -161,16 +161,18 @@ func StampPreviewAvailable(ctx context.Context, tx pgx.Tx, rooms []crmcontracts.
 	for i, room := range rooms {
 		deals[i] = dealOfRoom{DealID: ids.UUID(room.DealId)}
 	}
-	writable, err := auth.StampWritable(ctx, tx, dealTable, deals,
+	// The STAMPED flag, not the returned authority map: only the flag carries
+	// the archived exclusion this answer needs, and an archived deal is
+	// nobody's to present.
+	if _, err := auth.StampWritable(ctx, tx, dealTable, deals,
 		func(d dealOfRoom) ids.UUID { return d.DealID },
-		func(d *dealOfRoom, may bool) { d.Writable = may })
-	if err != nil {
+		func(d *dealOfRoom, may bool) { d.Writable = may }); err != nil {
 		return err
 	}
 	for i := range rooms {
 		// Archived is the room's OWN state, which StampWritable answers for the
 		// deal rather than for the room.
-		available := writable[ids.UUID(rooms[i].DealId)] && rooms[i].State != stateArchived
+		available := deals[i].Writable && rooms[i].State != stateArchived
 		rooms[i].PreviewAvailable = &available
 	}
 	return nil

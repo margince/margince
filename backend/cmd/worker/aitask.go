@@ -261,7 +261,7 @@ func slugify(s string) string {
 func resolveSite(census *aitasks.Registry, siteRef string) (aitasks.Site, error) {
 	task, variant, found := strings.Cut(siteRef, "/")
 	if !found || task == "" || variant == "" {
-		return aitasks.Site{}, fmt.Errorf("aitask: %q is not a site — want <task>/<variant>, e.g. rate_extract/pricing", siteRef)
+		return aitasks.Site{}, fmt.Errorf("aitask: %q is not a site — want <task>/<variant>, e.g. rate_extract/fx", siteRef)
 	}
 	site, ok := census.Lookup(ai.Task(task), variant)
 	if ok {

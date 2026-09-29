@@ -9,20 +9,15 @@ import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import "./rates.css";
 
-/** The two sheets this product re-reads from their sources. */
-type RefreshPath =
-  | "/fx-rates/propose-refresh"
-  | "/ai-model-rates/propose-refresh";
+/** The sheet this product re-reads from its source through an approval. */
+type RefreshPath = "/fx-rates/propose-refresh";
 
-// Asking the product to go and re-read a price sheet from its sources.
+// Asking the product to go and re-read the currency sheet from its source.
 //
-// Its own module because TWO screens offer it — the currency sheet on the
-// company page and the model sheet beside the lanes it prices — and a
-// screen must not reach into another screen for a control. It is not a
-// design-system primitive either: it owns a mutation, an endpoint and its own
-// copy, and the design system's rule is that no copy lives in a primitive. What
-// it is, is one screen-tier capability with two callers, so it lives at screen
-// tier with a file of its own.
+// Its own module because it is a mutation, an endpoint and its own copy, and
+// the design system's rule is that no copy lives in a primitive. The model
+// sheet has its own control (`rate-catalogue-refresh.tsx`): its answer arrives
+// with the response rather than in the approvals inbox.
 
 /**
  * RefreshFromSources enqueues an async refresh that stages proposals into the

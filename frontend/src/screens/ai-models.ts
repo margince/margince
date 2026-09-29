@@ -317,7 +317,7 @@ export function useAvailableModels(
  * and the sheet on what it COSTS, and a reader needs both — an id the sheet
  * still lists but the vendor has retired is worth keeping visible (it may be
  * what this lane is bound to today), and one the vendor serves that nothing has
- * priced is the case the UNPRICED pill was built for.
+ * priced is the case the editor's "not priced" plate was built for.
  *
  * Vendor order first, because a vendor that dates its models returns them
  * newest first and that is the order somebody looking for "the new one" wants;

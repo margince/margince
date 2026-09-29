@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
+import { reachableProviders } from "./ai-binding-editor";
 import { AiRoutingCard } from "./ai-routing";
 import {
   BOUND,
@@ -479,6 +480,10 @@ describe("AiRoutingCard", () => {
     expect(offered).toContain("openai_compatible");
     expect(offered).not.toContain("anthropic");
     expect(offered).not.toContain("openai");
+    // Keyless adapters are offered on the probe's word: ollama answered, vllm
+    // did not, and nothing binds fake.
+    expect(offered).not.toContain("vllm");
+    expect(offered).not.toContain("fake");
     await user.keyboard("{Escape}");
     await user.click(within(tier).getByRole("button", { name: /cancel/i }));
 
@@ -489,6 +494,50 @@ describe("AiRoutingCard", () => {
         .getAllByRole("option")
         .map((o) => o.textContent),
     ).toContain("anthropic");
+  });
+
+  it("offers fake only where a lane is already bound to it, and keeps a lane's own unreachable adapter", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        premium: { provider: "fake", model: "fake-chat" },
+        local_small: { provider: "vllm", model: "some-model" },
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByText("fake-chat");
+
+    // Nothing asks a keyless adapter whether it is up until an editor opens.
+    const probed = () =>
+      backend.fetchMock.mock.calls.filter(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/ai/available-models/ollama",
+        ),
+      ).length;
+    const before = probed();
+
+    const tier = await openEditor(user, "ai-routing-tier-cheap_cloud");
+    await waitFor(() => expect(probed()).toBeGreaterThan(before));
+    await user.click(within(tier).getByRole("combobox", { name: "Provider" }));
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+    expect(offered).toContain("fake");
+    expect(offered).toContain("ollama");
+    expect(offered).not.toContain("vllm");
+    await user.keyboard("{Escape}");
+    await user.click(within(tier).getByRole("button", { name: /cancel/i }));
+
+    const own = await openEditor(user, "ai-routing-tier-local_small");
+    await user.click(within(own).getByRole("combobox", { name: "Provider" }));
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toContain("vllm");
   });
 
   // A lane on a vendor with no key cannot be saved there: it would fail closed
@@ -624,5 +673,79 @@ describe("rebind", () => {
       base_url: "https://openrouter.ai/api",
     });
     expect(next.routing).toEqual({ sort: "throughput" });
+  });
+});
+
+describe("reachableProviders", () => {
+  const keys = [
+    { provider: "gemini", configured: true, env_var: "G", optional: false },
+    { provider: "openai", configured: false, env_var: "O", optional: false },
+    {
+      provider: "jev_compatible",
+      configured: false,
+      env_var: "J",
+      optional: true,
+    },
+  ];
+  const all = ["gemini", "openai", "jev_compatible", "ollama", "vllm", "fake"];
+  const up = { provider: "ollama", models: [] };
+  const down = {
+    provider: "vllm",
+    models: [],
+    unavailable: "unreachable" as const,
+  };
+  const routing = (provider: string) => ({
+    profile: "eu_hosted" as const,
+    tiers: { premium: { provider, model: "m" } },
+    embeddings: { provider: "gemini", model: "e", dimensions: 8 },
+  });
+
+  it.each([
+    {
+      rule: "a keyed vendor needs a sealed key or an optional one",
+      probes: new Map(),
+      routed: "gemini",
+      current: undefined,
+      expected: ["gemini", "jev_compatible"],
+    },
+    {
+      rule: "a keyless adapter needs a probe that answered without unavailable",
+      probes: new Map([
+        ["ollama", up],
+        ["vllm", down],
+      ]),
+      routed: "gemini",
+      current: undefined,
+      expected: ["gemini", "jev_compatible", "ollama"],
+    },
+    {
+      rule: "fake shows once the routing document binds it",
+      probes: new Map(),
+      routed: "fake",
+      current: undefined,
+      expected: ["gemini", "jev_compatible", "fake"],
+    },
+    {
+      rule: "a probe still loading hides its adapter",
+      probes: new Map([["ollama", undefined]]),
+      routed: "gemini",
+      current: undefined,
+      expected: ["gemini", "jev_compatible"],
+    },
+    {
+      rule: "the lane's own provider is always kept",
+      probes: new Map([["vllm", down]]),
+      routed: "gemini",
+      current: "openai",
+      expected: ["gemini", "openai", "jev_compatible"],
+    },
+  ])("$rule", ({ probes, routed, current, expected }) => {
+    expect(
+      reachableProviders(all, keys, current, probes, routing(routed)),
+    ).toEqual(expected);
+  });
+
+  it("hides nothing while the key list has not arrived", () => {
+    expect(reachableProviders(all, undefined, undefined)).toEqual(all);
   });
 });

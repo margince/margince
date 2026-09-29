@@ -2,9 +2,8 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { formatNumber, INTL_LOCALE, ordinalNumber } from "../format/format";
-import { type Locale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { formatNumber, INTL_LOCALE } from "../format/format";
+import type { Locale } from "../i18n";
 import { Avatar } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
@@ -72,6 +71,7 @@ export function MarginceWorkbench({
   locale: Locale;
   runtime?: AiRunSummary;
   runtimeLabels: WorkbenchRuntimeLabels;
+  /** Rail only: the journey's stops, drawn as the progress line. */
   steps?: readonly WorkbenchStep[];
   children: ReactNode;
   artifact?: ReactNode;
@@ -134,17 +134,9 @@ export function MarginceWorkbench({
       )}
     </header>
   );
-  // At rail width five numbered stops wrap into a ragged second line, so the
-  // rail states the journey the way a progress bar does: one sentence naming
-  // where you are, and a segment per stop. The full list stays the split
-  // variant's, where it has the width to be one row.
   const stepRail =
-    steps && steps.length > 0 ? (
-      rail ? (
-        <StepProgress steps={steps} label={stepLabel} />
-      ) : (
-        <StepRail steps={steps} />
-      )
+    rail && steps && steps.length > 0 ? (
+      <StepProgress steps={steps} label={stepLabel} />
     ) : null;
   return (
     <div className={`mw-shell${rail ? " is-rail" : ""}`}>
@@ -178,10 +170,7 @@ export function MarginceWorkbench({
               {stepRail}
             </>
           ) : (
-            <>
-              {stepRail}
-              {brand}
-            </>
+            brand
           )}
           {children}
           {/* The row survives an unresolved identity so its control does not
@@ -214,42 +203,6 @@ export function MarginceWorkbench({
         {artifact && <div className="mw-artifact">{artifact}</div>}
       </div>
     </div>
-  );
-}
-
-// Each stop's state is a claim about the journey, and on screen only colour
-// carries it — so it is also said in words for anyone who cannot see the
-// colour. The vocabulary is the journey's own, shared with the live panel, so
-// the rail and the panel cannot describe the same step two different ways.
-const STEP_STATE_WORD: Readonly<Record<WorkbenchStep["state"], MessageKey>> = {
-  done: "ob.live.stateDone",
-  now: "ob.live.stateNow",
-  todo: "ob.live.stateWaiting",
-};
-
-// The rail states where the journey is without claiming a step is reachable:
-// a `todo` stop is inert text, never a link, because the machine — not the
-// rail — decides what comes next.
-function StepRail({ steps }: Readonly<{ steps: readonly WorkbenchStep[] }>) {
-  const t = useT();
-  return (
-    // The explicit role survives `list-style: none`, which Safari otherwise
-    // treats as a licence to drop list semantics — and position in the list is
-    // the only thing telling a screen reader this is stop two of five.
-    // biome-ignore lint/a11y/noRedundantRoles: the role is what keeps the list a list in Safari/VoiceOver once the bullets are styled off.
-    <ol className="mw-steps" role="list">
-      {steps.map((step, index) => (
-        <li
-          key={step.label}
-          className={`mw-step t-eyebrow is-${step.state}`}
-          aria-current={step.state === "now" ? "step" : undefined}
-        >
-          <b aria-hidden>{ordinalNumber(index + 1)}</b>
-          {step.label}
-          <span className="sr-only">{t(STEP_STATE_WORD[step.state])}</span>
-        </li>
-      ))}
-    </ol>
   );
 }
 

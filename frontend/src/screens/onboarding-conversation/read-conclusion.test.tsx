@@ -269,14 +269,8 @@ describe("the read conclusion ordering contract", () => {
     expect(screen.queryByText(/I could not read/)).toBeNull();
   }, 20000);
 
-  // The read now runs on its own full-screen stage with no composer, so a
-  // question cannot be asked mid-crawl — the tree's own ob.ai.readFirst rule
-  // already says an answer given before the evidence lands is the wrong answer.
-  // What still has to hold is the part that was genuinely at risk: a long run
-  // whose snapshots keep arriving must converge on the review rather than
-  // stalling as the poll count grows. The rail itself never grows a composer
-  // back — the review's own Continue is the surface's action, not the
-  // rail's.
+  // A long run whose snapshots keep arriving must converge on the review rather
+  // than stall as the poll count grows.
   it("a long multi-snapshot run converges on the review", async () => {
     stubApi([midRead, midRead, midRead, midRead, partialRead]);
     render(<OnboardingScreen />);

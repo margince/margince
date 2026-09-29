@@ -43,7 +43,10 @@ func withheldHistoryOf(ctx context.Context, entityType string) (entityFieldMask,
 	// The unconditioned set: history spans rows and times, and a mask that
 	// lifts where the caller may write today says nothing about the row as it
 	// stood when the change was made.
-	withheld := auth.MaskedFields(p, entityType, false)
+	// MaskedHistoryFields, not MaskedFields: a one-to-one extension audits its
+	// images onto the host, so the host's trail serves fields configured under
+	// the extension's own object.
+	withheld := auth.MaskedHistoryFields(p, entityType, false)
 	mask := make(entityFieldMask, len(withheld))
 	for _, field := range withheld {
 		mask[field] = struct{}{}

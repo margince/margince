@@ -166,7 +166,7 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wirePartner(partner))
+	httperr.WriteJSON(w, http.StatusOK, partner)
 }
 
 func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -175,7 +175,7 @@ func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontr
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wirePartner(partner))
+	httperr.WriteJSON(w, http.StatusOK, partner)
 }
 
 func (h Handlers) ListPartners(w http.ResponseWriter, r *http.Request, params crmcontracts.ListPartnersParams) {
@@ -196,9 +196,5 @@ func (h Handlers) ListPartners(w http.ResponseWriter, r *http.Request, params cr
 		writeStoreErr(w, r, err)
 		return
 	}
-	data := make([]crmcontracts.Partner, 0, len(partners))
-	for _, p := range partners {
-		data = append(data, wirePartner(p))
-	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": data, "page": pageInfo(page)})
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": partners, "page": pageInfo(page)})
 }

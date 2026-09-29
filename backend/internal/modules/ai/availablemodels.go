@@ -76,6 +76,10 @@ type AvailableModel struct {
 	// USD-per-million-tokens decimal strings, absent where the vendor
 	// publishes no price.
 	InputPerMtok, OutputPerMtok *string
+	// CacheReadPerMtok and CacheWritePerMtok are the vendor's prompt-cache
+	// prices in the same unit, absent where it publishes none. Only the full
+	// view carries them: they exist for the rate refresh, not for a picker.
+	CacheReadPerMtok, CacheWritePerMtok *string
 	// RankScore is this model's score under AvailableModels.RankedBy, absent
 	// where the list is not ranked.
 	RankScore *string

@@ -161,9 +161,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		FxRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
 			return (&fxRefreshWorker{}).Work(ctx, &river.Job[FxRateRefreshArgs]{})
 		},
-		AiModelRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
-			return (&aiModelRateRefreshWorker{}).Work(ctx, &river.Job[AiModelRateRefreshArgs]{})
-		},
 	}
 }
 
@@ -176,6 +173,11 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 		SendEmailArgs{}.Kind(): func(ctx context.Context) error {
 			return (&commsSendWorker{}).Work(ctx, &river.Job[SendEmailArgs]{
 				Args: SendEmailArgs{DeliveryID: ids.NewV7().String()},
+			})
+		},
+		SendNotificationEmailArgs{}.Kind(): func(ctx context.Context) error {
+			return (&notificationMailWorker{}).Work(ctx, &river.Job[SendNotificationEmailArgs]{
+				Args: SendNotificationEmailArgs{NoticeID: ids.NewV7().String()},
 			})
 		},
 		CaptureBackfillArgs{}.Kind(): func(ctx context.Context) error {

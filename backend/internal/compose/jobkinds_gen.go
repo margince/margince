@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "3b91b38fd4323ea05d3cc55580499a2a28ff552890066af7d8e2de2578668f4d"
+const jobContractHash = "34cdf57109948553cb8170f251fd21e57d5d866c5da34bf64f3c11afd3e273ac"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -31,7 +31,6 @@ type declaredJobArgs interface {
 		AIActivityReconcileArgs |
 		AIActivityRetentionArgs |
 		AIBudgetResumeArgs |
-		AiModelRateRefreshArgs |
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
 		AssuranceRunArgs |
@@ -80,6 +79,8 @@ type declaredJobArgs interface {
 		LinkedInRematchArgs |
 		MailDraftRetentionArgs |
 		MeetingDeliveryArgs |
+		NotificationDigestArgs |
+		SendNotificationEmailArgs |
 		OwedVerdictArgs |
 		ParticipantBackfillArgs |
 		PrivacyRetentionArgs |
@@ -163,6 +164,7 @@ var (
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
+	_ jobs.FleetWide = NotificationDigestArgs{}
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
@@ -180,7 +182,6 @@ var (
 // in its own args.
 var (
 	_ jobs.WorkspaceScoped = AccountScanArgs{}
-	_ jobs.WorkspaceScoped = AiModelRateRefreshArgs{}
 	_ jobs.WorkspaceScoped = AssuranceRunArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
@@ -193,6 +194,7 @@ var (
 	_ jobs.WorkspaceScoped = GmailWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
+	_ jobs.WorkspaceScoped = SendNotificationEmailArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}

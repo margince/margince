@@ -121,6 +121,7 @@ import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
+import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OvernightGrantCard } from "./overnight-grant";
@@ -194,6 +195,12 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return <VoiceDnaCard />;
     case "agents":
       return <AgentsTab />;
+    // What the product may send this reader, and where. Beside the brief and
+    // weekly nudges on Account rather than merged into them: those two rows are
+    // about a digest the reader subscribes to, and these are about every notice
+    // the product raises whether or not anybody asked for it.
+    case "notifications":
+      return <NotificationSettingsCard />;
     case "connections":
       return <ConnectionsTab />;
     // Beside `connections` and after it on purpose: that page says what you are
@@ -335,12 +342,13 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "usage":
       return (
         <>
-          {/* What the month has cost, above the breakdown that explains it. */}
+          {/* What the month cost, then the breakdown, then which activity ran
+              on what. */}
           <AiBudgetCard />
-          <AiFeaturesCard />
           <SpendStat />
           <AiUsageCard />
           <ModelPriceDetails />
+          <AiFeaturesCard />
         </>
       );
     case "model-calls":

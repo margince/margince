@@ -69,10 +69,9 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// whose kind no worker claims, so a trigger without this registration would
 	// drop every mailed card silently.
 	addDeclaredWorker[VCardIngestArgs](reg, newVCardIngestWorker(pool, cfg.Blobstore, log))
-	// Both refreshes read a source the deployment configures. An unconfigured
-	// one — a nil brain, an empty url, no pricing sources — leaves the worker
-	// registered and its producer proposing nothing, which is the honest
-	// answer to "refresh from sources" when there are none.
+	// The refresh reads a source the deployment configures. An unconfigured
+	// one — a nil brain or an empty url — leaves the worker registered and its
+	// producer proposing nothing, which is the honest answer to "refresh from
+	// sources" when there are none.
 	addDeclaredWorker[FxRateRefreshArgs](reg, newFxRefreshWorker(pool, cfg.FxExtractBrain, cfg.FxSourceURL, cfg.FxBootstrapCurrencies, log))
-	addDeclaredWorker[AiModelRateRefreshArgs](reg, newModelCostRefreshWorker(pool, cfg.RateExtractBrain, cfg.ModelPricingSources, cfg.BoundModelIDs, log))
 }
