@@ -23,7 +23,7 @@ git ls-files -s -z | perl -0 -MDigest::SHA=sha1_hex -MTime::HiRes=utime -ne '
 	my ($mode) = split / /, $meta;
 	next if $mode eq "120000" || $mode eq "160000";
 	my $content = Digest::SHA->new(1);
-	$content->addfile($path, "b");
+	$content->addfile("./$path", "b"); # "./" so a file named "-" is not read as stdin
 	my $blob = $content->hexdigest;
 	stamp($path, $blob);
 	my $dir = $path;

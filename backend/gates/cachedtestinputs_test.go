@@ -8,24 +8,28 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A cached test that runs a process to read the tree for it declares what that
-// process read through gatekit.DeclareInputs. Go's test cache sees what the test
-// opens and nothing a child process opens, so a cached pass over the process's
-// answer replays after the tree has changed underneath it. treeReaders are the
-// programs known to read it.
+// A cached test file that runs a process to read the tree for it declares what
+// that process read through gatekit. Go's test cache sees what the test opens
+// and nothing a child process opens, so a cached pass over the process's answer
+// replays after the tree has changed underneath it. The census judges test
+// files, file by file: a production helper that shells out is out of its sight.
 var treeReaders = map[string]bool{"git": true, "go": true}
+
+// launchers run whatever their arguments name, so they read the tree when an
+// argument names a tree reader or cannot be read at all.
+var launchers = map[string]bool{"sh": true, "bash": true, "env": true}
+
+var namesATreeReader = regexp.MustCompile(`\b(git|go)\b`)
 
 // uncachedPackages reads UNCACHED_TEST_PKGS out of the Makefile that runs them,
 // so this gate exempts exactly the packages that never replay.
@@ -47,8 +51,7 @@ func uncachedPackages(t *testing.T) map[string]bool {
 }
 
 // shellsOutForTheTree reports the first process a test file runs that may read
-// the tree for it: git or go by name, or a program it cannot name, which may be
-// either. It answers "" when the file runs none.
+// the tree for it, or "" when the file runs none.
 func shellsOutForTheTree(file *ast.File) string {
 	execName := importAliasOf(file, "os/exec")
 	if execName == "" {
@@ -69,32 +72,47 @@ func shellsOutForTheTree(file *ast.File) string {
 			return true
 		}
 		programAt, runsOne := map[string]int{"Command": 0, "CommandContext": 1}[sel.Sel.Name]
-		if !runsOne || len(call.Args) <= programAt {
-			return true
+		if runsOne && len(call.Args) > programAt {
+			found = treeReaderIn(call.Args[programAt:])
 		}
-		program := "a program named at run time"
-		if lit, isLit := call.Args[programAt].(*ast.BasicLit); isLit && lit.Kind == token.STRING {
-			if name, err := strconv.Unquote(lit.Value); err == nil {
-				if !treeReaders[path.Base(name)] {
-					return true
-				}
-				program = name
-			}
-		}
-		found = program
-		return false
+		return found == ""
 	})
 	return found
 }
 
+// treeReaderIn judges one command line: a tree reader by name, a launcher whose
+// arguments name one or cannot be read, or a program named at run time.
+func treeReaderIn(command []ast.Expr) string {
+	program, literal := gatekit.StringExpr(command[0], nil, gatekit.FoldStrict)
+	if !literal {
+		return "a program named at run time"
+	}
+	switch name := path.Base(program); {
+	case treeReaders[name]:
+		return program
+	case launchers[name]:
+		for _, arg := range command[1:] {
+			text, isLiteral := gatekit.StringExpr(arg, nil, gatekit.FoldStrict)
+			if !isLiteral || namesATreeReader.MatchString(text) {
+				return program + " running a tree reader"
+			}
+		}
+	}
+	return ""
+}
+
 // declaresItsInputs reports whether the file tells the test cache what the
-// process read, through the one helper that does.
+// process read, through gatekit's declarations.
 func declaresItsInputs(file *ast.File) bool {
 	gk := importAliasOf(file, "github.com/margince/margince/backend/internal/shared/gatekit")
+	if gk == "" {
+		return false
+	}
 	declared := false
 	ast.Inspect(file, func(node ast.Node) bool {
-		if sel, isSel := node.(*ast.SelectorExpr); isSel && sel.Sel.Name == "DeclareInputs" {
-			if pkg, isIdent := sel.X.(*ast.Ident); isIdent && gk != "" && pkg.Name == gk {
+		sel, isSel := node.(*ast.SelectorExpr)
+		if isSel && (sel.Sel.Name == "DeclareInputs" || sel.Sel.Name == "DeclareListings") {
+			if pkg, isIdent := sel.X.(*ast.Ident); isIdent && pkg.Name == gk {
 				declared = true
 			}
 		}
@@ -103,7 +121,7 @@ func declaresItsInputs(file *ast.File) bool {
 	return declared
 }
 
-func TestEveryCachedTestThatShellsOutForTheTreeDeclaresWhatItRead(t *testing.T) {
+func TestEveryCachedTestFileThatShellsOutForTheTreeDeclaresItsInputs(t *testing.T) {
 	t.Parallel()
 	uncached := uncachedPackages(t)
 	read, shelling := 0, 0
@@ -147,6 +165,10 @@ func TestTheShellOutCensusJudgesTheSpellingsItMustSee(t *testing.T) {
 		{"go through a context", `exec.CommandContext(ctx, "go", "list")`, true},
 		{"a git binary by path", `exec.Command("/usr/bin/git", "status")`, true},
 		{"a program named at run time", `exec.Command(tool, "x")`, true},
+		{"git behind a shell", `exec.Command("sh", "-c", "git ls-files | wc -l")`, true},
+		{"go behind env", `exec.Command("/usr/bin/env", "go", "list")`, true},
+		{"a shell running a script named at run time", `exec.Command("bash", "-c", script)`, true},
+		{"a shell that reads no tree", `exec.Command("/bin/sh", "-c", "exit 3")`, false},
 		{"a process that reads no tree", `exec.Command("/bin/sleep", "60")`, false},
 	} {
 		source := "package p\nimport \"os/exec\"\nfunc f() { _ = " + tc.body + " }\n"
@@ -158,14 +180,29 @@ func TestTheShellOutCensusJudgesTheSpellingsItMustSee(t *testing.T) {
 			t.Errorf("%s: judged as shelling out for the tree = %v, want %v", tc.name, got, tc.shells)
 		}
 	}
+}
 
-	declared := "package p\nimport (\n\"os/exec\"\n\"github.com/margince/margince/backend/internal/shared/gatekit\"\n)\n" +
-		"func f() { _ = gatekit.DeclareInputs(\".\"); _ = exec.Command(\"git\") }\n"
-	file, err := parser.ParseFile(gatekit.SourceFileSet(), "declared.go", declared, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !declaresItsInputs(file) {
-		t.Error("a file calling gatekit.DeclareInputs was not recognised as declaring its inputs")
+func TestTheShellOutCensusKnowsADeclarationFromALookalike(t *testing.T) {
+	t.Parallel()
+	const gatekitImport = `"github.com/margince/margince/backend/internal/shared/gatekit"`
+	for _, tc := range []struct {
+		name, imports, body string
+		declares            bool
+	}{
+		{"a declared tree", gatekitImport, `gatekit.DeclareInputs(".")`, true},
+		{"a declared listing", gatekitImport, `gatekit.DeclareListings(".")`, true},
+		{"an aliased import", "gk " + gatekitImport, `gk.DeclareInputs(".")`, true},
+		{"another gatekit helper", gatekitImport, `gatekit.SourceFileSet()`, false},
+		{"another package's DeclareInputs", `gatekit "example.com/other"`, `gatekit.DeclareInputs(".")`, false},
+	} {
+		source := "package p\nimport (\n\"os/exec\"\n" + tc.imports + "\n)\n" +
+			"func f() { _ = " + tc.body + "; _ = exec.Command(\"git\") }\n"
+		file, err := parser.ParseFile(gatekit.SourceFileSet(), tc.name+".go", source, 0)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		if got := declaresItsInputs(file); got != tc.declares {
+			t.Errorf("%s: judged as declaring its inputs = %v, want %v", tc.name, got, tc.declares)
+		}
 	}
 }

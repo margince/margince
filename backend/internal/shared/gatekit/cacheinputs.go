@@ -36,3 +36,15 @@ func DeclareInputs(paths ...string) error {
 	}
 	return nil
 }
+
+// DeclareListings is DeclareInputs for directories whose own entries are the
+// input and whose subdirectories are not — a package directory, whose export
+// data depends on its files and on no package nested beneath it.
+func DeclareListings(dirs ...string) error {
+	for _, dir := range dirs {
+		if _, err := os.ReadDir(dir); err != nil {
+			return fmt.Errorf("declaring the listing of %s as a test input: %w", dir, err)
+		}
+	}
+	return nil
+}

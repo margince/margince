@@ -198,10 +198,13 @@ func TestAITaskListCarriesTheLadderAndScope(t *testing.T) {
 // Asserting only the literal would stay green if the ignore rule were dropped —
 // exactly the change that would start committing fetched pages.
 func TestTheWorkDirIsActuallyIgnored(t *testing.T) {
-	// Every ignore file that can decide the probe path, since git reads them
-	// out of the test cache's sight.
-	if err := gatekit.DeclareInputs("../../../.gitignore", "../../.gitignore",
-		"../../.tmp/.gitignore", "../../"+workDirDefault+"/.gitignore"); err != nil {
+	// Every .gitignore on the probe's path, since git reads them out of the test
+	// cache's sight.
+	ignoreFiles := []string{"../../../.gitignore"}
+	for dir := workDirDefault; dir != "."; dir = filepath.Dir(dir) {
+		ignoreFiles = append(ignoreFiles, filepath.Join("../..", dir, ".gitignore"))
+	}
+	if err := gatekit.DeclareInputs(append(ignoreFiles, "../../.gitignore")...); err != nil {
 		t.Fatal(err)
 	}
 	out, err := exec.Command("git", "-C", "../..", "check-ignore", "-q", workDirDefault+"/probe.txt").CombinedOutput()

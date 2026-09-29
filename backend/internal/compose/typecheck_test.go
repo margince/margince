@@ -91,9 +91,10 @@ var loadCompose = sync.OnceValues(func() (*composeLoad, error) {
 			continue
 		}
 		exports[fields[0]] = fields[1]
-		// The export data is keyed on these sources, and only go list saw them.
+		// A package only the subpackages import is outside this test binary's
+		// build ID, so its sources reach the cache only by being declared here.
 		if strings.HasPrefix(fields[0], "github.com/margince/margince/") {
-			if err := gatekit.DeclareInputs(fields[2]); err != nil {
+			if err := gatekit.DeclareListings(fields[2]); err != nil {
 				return nil, err
 			}
 		}
