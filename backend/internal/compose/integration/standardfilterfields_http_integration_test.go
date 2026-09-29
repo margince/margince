@@ -110,8 +110,10 @@ func TestTheStandardContactFieldsSelectTheirRecords(t *testing.T) {
 		{leaf("country", "eq", "FR"), []string{ben}},
 		{leaf("country", "in", []any{"de"}), []string{anna}},
 		{leaf("city", "in", []any{"Leipzig"}), []string{anna}},
-		{leaf("created_at", "gte", daysAgo(0)), []string{anna, ben}},
-		{leaf("created_at", "lt", daysAgo(0)), []string{}},
+		// A day's margin either way: the records were written moments ago, and
+		// a midnight between the write and the read must not move the answer.
+		{leaf("created_at", "gte", daysAgo(1)), []string{anna, ben}},
+		{leaf("created_at", "lt", daysAgo(1)), []string{}},
 		{leaf("last_activity_at", "lt", daysAgo(45)), []string{anna}},
 		{leaf("last_activity_at", "gte", daysAgo(45)), []string{ben}},
 	})
@@ -161,7 +163,7 @@ func TestTheStandardDealFieldsSelectTheirRecordsAndNeverMixCurrencies(t *testing
 		{leaf("amount", "lt", 1_000_000), []string{small}},
 		{leaf("amount", "exists", false), []string{dollars}},
 		{leaf("expected_close_date", "lt", "2027-01-01"), []string{big, dollars}},
-		{leaf("created_at", "gte", daysAgo(0)), []string{big, small, dollars}},
+		{leaf("created_at", "gte", daysAgo(1)), []string{big, small, dollars}},
 		{leaf("last_activity_at", "exists", true), []string{}},
 	})
 }
@@ -190,7 +192,7 @@ func TestTheStandardLeadFieldsSelectTheirRecords(t *testing.T) {
 		{leaf("score", "gte", 85), []string{webinar}},
 		{leaf("score", "gt", 85), []string{}},
 		{leaf("score", "lt", 84.5), []string{manual}},
-		{leaf("created_at", "gte", daysAgo(0)), []string{webinar, manual}},
+		{leaf("created_at", "gte", daysAgo(1)), []string{webinar, manual}},
 	})
 }
 
@@ -225,7 +227,13 @@ func TestAQuietForFortyFiveDaysListHoldsTheQuietContactAndSaysWhy(t *testing.T) 
 		Clauses clauseWire `json:"clauses"`
 	}
 	mustCall(t, e, "GET", "/v1/lists/"+list.ID+"/members/"+quiet+"/why", nil, http.StatusOK, &why)
-	wantDay := time.Now().UTC().AddDate(0, 0, -60).Format(time.DateOnly)
+	// The day as the database reads the instant touch wrote, in its own
+	// session zone — the zone the clause compares in.
+	var wantDay string
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT last_activity_at::date::text FROM contact WHERE id = $1`, quiet).Scan(&wantDay); err != nil {
+		t.Fatal(err)
+	}
 	if !why.Member || why.Clauses.Result == nil || !*why.Clauses.Result ||
 		why.Clauses.Value == nil || *why.Clauses.Value != wantDay {
 		t.Errorf("why for the quiet contact = %+v, want a member whose clause holds on %s", why, wantDay)
