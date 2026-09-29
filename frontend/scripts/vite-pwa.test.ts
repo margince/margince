@@ -345,7 +345,7 @@ describe("the service worker", () => {
       "/oauth/authorize?client_id=x",
       "/.well-known/oauth-authorization-server",
       "/mcp",
-      "/mcp-apps/company-brief.html",
+      "/mcp/sse",
       "/setup",
       "/webhooks/in",
       "/healthz",
@@ -382,6 +382,19 @@ describe("the service worker", () => {
     worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
     const answer = await worker.request("/", "navigate");
     expect(await answer?.text()).toBe(page());
+  });
+
+  it("gives the offline page to a failed navigation that only starts like an api path, a shipped /mcp-apps view among them", async () => {
+    const worker = await installed();
+    worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
+    for (const url of [
+      "/mcp-apps/company-brief.html",
+      "/v1beta",
+      "/setup-guide",
+    ]) {
+      const answer = await worker.request(url, "navigate");
+      expect(await answer?.text(), url).toBe(page());
+    }
   });
 
   it("leaves the failure to the browser when its own cache is gone", async () => {

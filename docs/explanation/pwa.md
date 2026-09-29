@@ -46,8 +46,10 @@ not even offline, so an OAuth consent, an MCP discovery document or a
 webhook URL opened in a tab fails the way the browser fails it. The plugin
 reads the list from the keys of the dev server's proxy in
 `frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`,
-`/webhooks`, `/healthz`, `/readyz`, `/metrics`) and matches them the way the
-dev server does, as string prefixes, so `/mcp` covers `/mcp-apps` too. The
+`/webhooks`, `/healthz`, `/readyz`, `/metrics`) and matches them by whole path
+segment, the way the served app routes them rather than the way the dev server
+does: `/mcp` and `/mcp/…` go to the network untouched, while `/mcp-apps/…`
+is shipped files, and a failed navigation there gets the offline page. The
 desktop launcher keeps its own copy of the list (`apiPrefixes` in
 `desktop/launcher/web.go`), and `frontend/vite-proxy.test.ts` fails when that
 copy and the proxy keys disagree.

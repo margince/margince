@@ -4715,7 +4715,7 @@ export const de = {
   "settings.deviceCard": "Dieses Gerät",
   "settings.installApp": "Margince-App",
   "settings.installAppHelp":
-    "Installiert Margince auf diesem Gerät als App mit eigenem Fenster und Symbol.",
+    "Margince wird auf diesem Gerät als App mit eigenem Fenster und Symbol installiert.",
   "settings.installAppManual":
     "Zum Installieren tippe auf „Teilen“ und dann auf „Zum Home-Bildschirm“.",
   "settings.installAppInstalled": "Installiert",

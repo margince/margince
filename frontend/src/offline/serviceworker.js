@@ -62,8 +62,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   const { pathname } = new URL(event.request.url);
-  // Prefix-matched the way the dev server matches its proxy keys: /mcp owns /mcp-apps.
-  if (settings.passThrough.some((prefix) => pathname.startsWith(prefix))) {
+  // The dev proxy's keys, matched by whole segment as the served app routes them.
+  const owned = (prefix) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`);
+  if (settings.passThrough.some(owned)) {
     return;
   }
   event.respondWith(navigate(event));

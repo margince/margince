@@ -130,8 +130,8 @@ async function buildPwaFiles(
   ];
 }
 
-/** The worker leaves alone every path the dev server proxies to the api;
- *  frontend/vite-proxy.test.ts holds the desktop launcher's list to the same keys. */
+/** The worker leaves alone every path under a key the dev server proxies to the api,
+ *  by whole segment; frontend/vite-proxy.test.ts holds the launcher's list to the keys. */
 export function pwa(options: Readonly<{ release: string }>): Plugin {
   let passThrough: readonly string[] = [];
   return {
