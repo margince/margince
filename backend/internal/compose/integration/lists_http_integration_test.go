@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -74,11 +75,12 @@ func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 	var member, other AnyMap
 	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Quoted Customer"}, nil, &member)
 	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Not Quoted"}, nil, &other)
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
-		"entity_type": "contact", "entity_id": member["id"], "note": "signed the quote",
-	}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("add member → %d", status)
-	}
+	// The member is added through the agent's door, the read through both.
+	added := agent.CallOK(t, "change_lists", map[string]any{
+		"mode": "add_member", "list_id": list.ID, "entity_type": "contact",
+		"record_id": member["id"], "note": "signed the quote",
+	})
+	assertAnswersItsSchema(t, e, "change_lists", added)
 
 	var overHTTP listDTO
 	e.Call(t, "GET", "/v1/lists/"+list.ID, nil, nil, &overHTTP)
@@ -86,7 +88,9 @@ func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 		Mode   string          `json:"mode"`
 		Result json.RawMessage `json:"result"`
 	}
-	agent.CallOK(t, "read_lists", map[string]any{"mode": "get", "list_id": list.ID}).JSON(t, &answer)
+	read := agent.CallOK(t, "read_lists", map[string]any{"mode": "get", "list_id": list.ID})
+	assertAnswersItsSchema(t, e, "read_lists", read)
+	read.JSON(t, &answer)
 	var overMCP listDTO
 	if err := json.Unmarshal(answer.Result, &overMCP); err != nil {
 		t.Fatal(err)
@@ -125,4 +129,17 @@ func countPreviews(t *testing.T, e *apptest.AppEnv) int {
 		t.Fatal(err)
 	}
 	return n
+}
+
+// assertAnswersItsSchema holds a served answer to the output schema its tool
+// advertises, which the dispatcher only logs a miss of.
+func assertAnswersItsSchema(t *testing.T, e *apptest.AppEnv, tool string, got apptest.MCPResult) {
+	t.Helper()
+	spec, ok := compose.NewRegistry(e.Pool, compose.SendPath{}).Spec(tool)
+	if !ok {
+		t.Fatalf("%s is not registered", tool)
+	}
+	if defect := agents.ResultDefect(spec.OutputSchema, json.RawMessage(got.Text)); defect != "" {
+		t.Fatalf("%s answered outside its advertised schema: %s", tool, defect)
+	}
 }

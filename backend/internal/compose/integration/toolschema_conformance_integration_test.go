@@ -357,6 +357,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"read_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
+		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
+	"change_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
+		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
 	"preview_import": "needs an object store to put the source file in; this lane composes none, " +
 		"so the call would exercise the refusal rather than the handler",
 	"read_import_run": "needs a seat holding import_run.read, which this lane's seat does not " +
