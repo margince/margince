@@ -122,12 +122,10 @@ describe("the decision model lane", () => {
     await screen.findByTestId("ai-routing-decisions");
     const lane = await openEditor(user, "ai-routing-decisions");
     expect(
-      within(lane).getByText(
-        /JEV_COMPATIBLE_API_KEY takes your OpenRouter key/,
-      ),
+      within(lane).getByText(/The key goes in JEV_COMPATIBLE_API_KEY/),
     ).toBeInTheDocument();
     await user.click(
-      within(lane).getByRole("button", { name: "Use OpenRouter" }),
+      within(lane).getByRole("button", { name: "Preset: OpenRouter" }),
     );
     expect(within(lane).getByLabelText("Host")).toHaveValue(
       OPENROUTER_DECISION_PRESET.base_url,
@@ -158,7 +156,7 @@ describe("the decision model lane", () => {
     await screen.findByTestId("ai-routing-decisions");
     const lane = await openEditor(user, "ai-routing-decisions");
     expect(
-      within(lane).queryByRole("button", { name: "Use OpenRouter" }),
+      within(lane).queryByRole("button", { name: "Preset: OpenRouter" }),
     ).toBeNull();
   });
 

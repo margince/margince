@@ -24401,7 +24401,8 @@ paths:
 
   # =========================================================================
   #   /fx-rates, /ai-model-rates   (admin/ops-only effective-dated price
-  #   sheets — strict append-forward: today-or-later, no delete)
+  #   sheets — strict append-forward: today-or-later. One date is never
+  #   removed; a model's WHOLE entry can be)
   # =========================================================================
   /fx-rates:
     get:
@@ -24505,6 +24506,41 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Rates]
+      operationId: deleteAiModelRate
+      summary: Remove a model's entry from the price sheet, every effective date of it.
+      description: |
+        Admin/ops-only. Removes a model's whole entry from the sheet, every effective date of
+        it, history included; one date is never removed on its own. `lane` names the lane the
+        sheet files the model under (its latest row's), and a key the sheet does not hold is a
+        404. Past calls of that model become unpriced in cost estimates rather than priced at 0.
+        Gated on the same `ai_model_rate` update grant that corrects a price. The key travels as
+        query parameters because a model id carries slashes. Human session only
+        (x-agent-access: human-only). Audit-only write (no event stream, EVT-NOEVT-3).
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      parameters:
+        - name: provider
+          in: query
+          required: true
+          schema: { type: string }
+        - name: model_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: lane
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [chat, embeddings, decisions]
+      responses:
+        '204': { description: The entry is removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /fx-rates/propose-refresh:
     post:
@@ -24534,8 +24570,9 @@ paths:
       summary: Re-price the models this installation calls from the providers' own catalogues.
       description: |
         Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-        OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and
-        each `openai_compatible` model already on the sheet that the list still names. A model
+        OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
+        while something is bound at OpenRouter, each `openai_compatible` model already on the
+        sheet that the list still names. A self-hosted model priced by hand is never touched. A model
         whose price already matches is left alone and leaves no audit row; a future-dated manual
         price is not touched. Runs inline and answers with what happened per provider. A provider
         that publishes no price list reports `not_available`: its prices are set by hand.
@@ -25513,17 +25550,19 @@ components:
           items: { $ref: '#/components/schemas/AiModelRateProviderRefresh' }
     AiModelRateProviderRefresh:
       type: object
-      required: [provider, outcome, updated, unchanged, models]
+      required: [provider, outcome, updated, unchanged, models, unlisted]
       properties:
         provider: { type: string, description: The provider as the routing document spells it. }
         outcome:
           type: string
-          enum: [updated, unchanged, not_available, unreachable, not_bound]
+          enum: [updated, unchanged, not_available, not_listed, unreachable, not_bound]
           x-go-type: string
           description: |
             `updated` wrote at least one price; `unchanged` found every priced model already
             current; `not_available` means the provider (or the catalogue, for these models)
-            publishes no price to read; `unreachable` means the catalogue could not be read;
+            publishes no price to read; `not_listed` means a bound model is absent from the
+            catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
+            could not be read;
             `not_bound` means nothing this provider serves is bound or on the sheet.
         updated: { type: integer, minimum: 0, description: Prices written today. }
         unchanged: { type: integer, minimum: 0, description: Models already at the catalogue price. }
@@ -25531,6 +25570,10 @@ components:
           type: array
           items: { type: string }
           description: Model ids written this run.
+        unlisted:
+          type: array
+          items: { type: string }
+          description: Bound model ids the catalogue does not name.
     SetAiModelRateRequest:
       type: object
       required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok]

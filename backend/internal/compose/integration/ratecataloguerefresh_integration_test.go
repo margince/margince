@@ -282,3 +282,51 @@ func TestRefreshAiModelRatesRefusesAnAgentBearerOverHTTP(t *testing.T) {
 		t.Errorf("agent POST /ai-model-rates/refresh → %d %q, want 403 permission_denied", status, problem.Code)
 	}
 }
+
+// A misspelt bound id is neither priced nor "set by hand": the list simply does
+// not name it, and the report must say so and carry the id.
+func TestRefreshFromCatalogueNamesABoundModelTheListDoesNotHave(t *testing.T) {
+	e := Setup(t)
+	store := ai.NewRateStore(e.DB()).WithClock(pinnedRateDay)
+
+	report, err := store.RefreshFromCatalogue(e.Admin(), brokerRouting("a/typo", "b/real"),
+		catalogueOf(listed("b/real", "1", "2", nil)))
+	if err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+
+	line := lineOf(t, report, "openai_compatible")
+	if len(line.Unlisted) != 1 || line.Unlisted[0] != "a/typo" {
+		t.Fatalf("line = %+v, want a/typo unlisted", line)
+	}
+	if line.Outcome != ai.RefreshUpdated {
+		t.Errorf("outcome = %q: a run that wrote b/real is updated, with the typo listed beside it", line.Outcome)
+	}
+
+	only, err := store.RefreshFromCatalogue(e.Admin(), brokerRouting("a/typo"), catalogueOf(listed("z/else", "1", "2", nil)))
+	if err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+	if got := lineOf(t, only, "openai_compatible").Outcome; got != ai.RefreshNotListed {
+		t.Errorf("outcome = %q, want not_listed when nothing bound is named", got)
+	}
+}
+
+// Rows on the sheet under a host the refresh does not serve stay as typed.
+func TestRefreshFromCatalogueLeavesASelfHostedSheetRowAlone(t *testing.T) {
+	e := Setup(t)
+	today := pinnedRateDay()
+	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	seedSheetRate(e.Admin(), t, store, "openai_compatible", "meta/llama-4", "0", ai.LaneChat, today)
+	selfHosted := ai.RoutingConfig{Tiers: map[ai.Tier]ai.ProviderConfig{
+		"premium": {Provider: "openai_compatible", Model: "meta/llama-4", BaseURL: "https://llm.internal.test/v1"},
+	}}
+
+	if _, err := store.RefreshFromCatalogue(e.Admin(), selfHosted, catalogueOf(listed("meta/llama-4", "5", "25", nil))); err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+
+	if got := rateAt(e.Admin(), t, store, "openai_compatible", "meta/llama-4"); got.InputUsd != "0" {
+		t.Errorf("a self-hosted model priced 0 by hand became %+v", got)
+	}
+}

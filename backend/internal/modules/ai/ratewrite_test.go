@@ -51,7 +51,8 @@ func TestPrepareModelRateAdmitsEitherWriteGrant(t *testing.T) {
 		"read only": {Read: true},
 		"no grant":  {},
 		// delete is the one verb the sheet never grants (a past-dated row
-		// prices historical usage), so it must not open the write either.
+		// prices historical usage; removing an entry takes update), so it
+		// must not open the write either.
 		"delete only": {Delete: true},
 	}
 	for name, g := range refused {

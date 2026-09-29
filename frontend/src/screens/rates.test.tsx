@@ -87,6 +87,28 @@ function ratesBackend(allow: GrantSpec, seat: "full" | "read", urls: string[]) {
         ],
       });
     }
+    if (url.endsWith("/v1/ai-model-rates/refresh")) {
+      return jsonResponse({
+        providers: [
+          {
+            provider: "anthropic",
+            outcome: "updated",
+            updated: 2,
+            unchanged: 1,
+            models: [],
+            unlisted: [],
+          },
+          {
+            provider: "openai",
+            outcome: "unreachable",
+            updated: 0,
+            unchanged: 0,
+            models: [],
+            unlisted: [],
+          },
+        ],
+      });
+    }
     if (url.includes("/v1/ai-model-rates")) {
       return jsonResponse({
         data: [
@@ -204,6 +226,12 @@ describe("the rate sheets", () => {
       }),
     );
     const dialog = await screen.findByRole("dialog");
+    // The provider is a choice from the vendors the product knows, and only
+    // once one is chosen is there a model box to offer its models.
+    await user.click(
+      within(dialog).getByRole("combobox", { name: "Provider" }),
+    );
+    await user.click(screen.getByRole("option", { name: "gemini" }));
     for (const label of [
       "Provider",
       "Model",
@@ -238,6 +266,19 @@ describe("the rate sheets", () => {
     ).toHaveLength(1);
     // And nothing about reading is withheld or read-only for them.
     expect(screen.queryByText(/your role cannot change rates/i)).toBeNull();
+  });
+
+  // The button runs the refresh inline, so its answer lands on the sheet it
+  // wrote: how many prices moved, and which vendors could not be asked.
+  it("reports what a refresh wrote and which vendors it could not reach", async () => {
+    const user = userEvent.setup();
+    mount(RATE_SETTER);
+    await user.click(
+      await screen.findByRole("button", { name: "Refresh model prices" }),
+    );
+    const report = await screen.findByRole("status");
+    expect(report.textContent).toContain("2 prices written");
+    expect(report.textContent).toContain("Unreachable: openai");
   });
 
   it("hides write affordances for a role granted the read alone", async () => {

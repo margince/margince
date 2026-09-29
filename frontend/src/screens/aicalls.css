@@ -26,3 +26,59 @@
   gap: var(--space-1);
   flex-wrap: wrap;
 }
+
+/* A cell holds ids that never break on their own — the served model
+ * (`vendor/model-2603`), a task name — and they are what made the table wider
+ * than its card. They wrap anywhere instead, so the columns give way and the
+ * table fits. */
+.aicalls-table td {
+  overflow-wrap: anywhere;
+}
+
+/* Cells give up a third of their inline padding so a broker's long model id has
+ * room to wrap rather than to overflow. */
+.aicalls-table th,
+.aicalls-table td {
+  padding-inline: var(--space-2);
+}
+
+/* On a phone the card leaves ~250px, which three columns of ids cannot share
+ * however they wrap. A call becomes a small block instead: the disclosure at
+ * its side, and the task, the model and the figures one under another. The
+ * header row is kept for a screen reader and drawn for nobody, since the lines
+ * carry their own meaning (a tier and a model, "in / out", "ms"). */
+@media (max-width: 720px) {
+  .aicalls-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .aicalls-table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-2);
+    border-bottom: 1px solid var(--borderSubtle);
+  }
+
+  .aicalls-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .aicalls-table td {
+    grid-column: 2;
+    padding-inline: 0;
+    border-bottom: 0;
+  }
+
+  .aicalls-table td:first-child:not(:only-child) {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+
+  .aicalls-table td:only-child {
+    grid-column: 1 / -1;
+  }
+}

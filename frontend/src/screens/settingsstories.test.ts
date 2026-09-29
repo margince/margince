@@ -105,13 +105,12 @@ const everyStory = storyFilesUnder(SCREENS).map((path) => ({
 }));
 
 describe("the settings stories are filed where the product files them", () => {
-  // A floor is not a census. `>40` over 66 stories permits 25 to vanish — a
-  // story whose title stops resolving, or whose root is edited away from
-  // `Settings/`, drops out of the filtered corpus and is never checked again.
-  // So the count is EXACT and derived from the tree: adding or removing a
-  // settings story file is a deliberate edit to this number.
+  // A floor is not a census: a story whose title stops resolving, or whose root
+  // is edited away from `Settings/`, drops out of the filtered corpus and is
+  // never checked again. So the count is EXACT and derived from the tree, and
+  // adding or removing a settings story file is a deliberate edit to this number.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(106);
+    expect(settingsStories.length).toBe(111);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

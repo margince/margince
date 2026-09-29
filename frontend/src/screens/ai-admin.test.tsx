@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { AiBudgetCard, AiFeaturesCard, AiFeatureTable } from "./ai-admin";
+import { AiBudgetCard, AiFeatureTable } from "./ai-admin";
 import { allowance, feature, status } from "./ai-admin.testkit";
 
 afterEach(() => {
@@ -75,7 +75,6 @@ function mount(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <AiBudgetCard />
-        <AiFeaturesCard />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -93,9 +92,6 @@ it("explains pooled tokens, UTC reset and unchanged model selection", async () =
   expect(
     screen.getByText(/Not an individual quota or a dollar spending cap/),
   ).toBeTruthy();
-  expect(await screen.findByText("gemini · example-model")).toBeTruthy();
-  expect(screen.queryByText("Same model selection")).toBeNull();
-  expect(screen.queryByRole("columnheader", { name: "Effect" })).toBeNull();
   expect(screen.getByText(/UTC/)).toBeTruthy();
   expect(screen.queryByText(/own hardware/)).toBeNull();
 });
@@ -125,6 +121,25 @@ it("previews both fields before writing the allowance with its revision", async 
     },
   ]);
 });
+// A carrier the server could not count is named as such, never as zero: a
+// zero would read as "nothing waiting" on a queue nobody looked at.
+it("names a carrier the preview could not count as unavailable", async () => {
+  const user = userEvent.setup({ delay: null });
+  mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  const waiting = await screen.findByText(
+    "Recorded work waiting on the allowance",
+  );
+  const list = waiting.closest("details");
+  if (!(list instanceof HTMLElement)) {
+    throw new Error("the deferred work is not a disclosure");
+  }
+  expect(within(list).getByText(/Company scans:\s*Unavailable/)).toBeTruthy();
+  expect(within(list).getByText(/Website reads:\s*3/)).toBeTruthy();
+});
 it("keeps a rejected draft visible after a concurrent edit", async () => {
   const user = userEvent.setup({ delay: null });
   mount(undefined, true);
@@ -149,24 +164,6 @@ it("allows management to read without offering an editor", async () => {
   expect(screen.queryByRole("button", { name: "Edit allowance" })).toBeNull();
 });
 
-// A reader holding only one of ai_diagnostics:read / ai_budget:read gets the
-// withheld panel rather than a section that silently renders nothing:
-// `/ai/status` refuses both grant combinations server-side, so there is no
-// partial table to show either reader.
-it.each([
-  { ai_diagnostics: ["read"] } satisfies GrantSpec,
-  { ai_budget: ["read"] } satisfies GrantSpec,
-])("explains the withheld AI-activity section for %j", async (allow) => {
-  mount(allow);
-  expect(await screen.findByText("AI by activity")).toBeTruthy();
-  expect(
-    screen.getByText(
-      "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
-    ),
-  ).toBeTruthy();
-  expect(screen.queryByRole("table")).toBeNull();
-});
-
 // A task's tier is fixed by the task contract, and what the tier is bound to
 // is edited on the Model tiers card — so the task table offers no edit of its
 // own, only the resolved chain and where the task sits in the contract.
@@ -180,7 +177,7 @@ it("reads a task's resolved chain with no edit control", async () => {
   expect(
     screen.getByText(`${feature.task} · ${feature.execution_mode}`),
   ).toBeTruthy();
-  await user.click(screen.getByText("gemini · example-model"));
+  await user.click(screen.getByText("example-model"));
   expect(screen.queryByRole("button")).toBeNull();
   expect(screen.queryByText(/edit shared binding/i)).toBeNull();
 });
@@ -233,15 +230,7 @@ it("explains each routing impact in operational language", () => {
 it("withholds model identities from an allowance reader without routing access", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
   await screen.findByText(/22\.5M of 24M tokens used/);
-  expect(screen.queryByText("gemini · example-model")).toBeNull();
-});
-it("reports a failed carrier reading as unavailable", async () => {
-  mount();
-  const user = userEvent.setup({ delay: null });
-  await user.click(
-    await screen.findByText("Recorded work waiting on the allowance"),
-  );
-  expect(screen.getByText(/Company scans: Unavailable/)).toBeTruthy();
+  expect(screen.queryByText("example-model")).toBeNull();
 });
 it("explains the one-user floor when there are no eligible full users", async () => {
   mount(undefined, false, {
@@ -346,8 +335,7 @@ it("shows a badge only for a departure, and no disclosure for a single candidate
   expect(screen.queryAllByRole("group")).toHaveLength(0);
 });
 
-it("opens a multi-candidate row to the fallbacks after the lead", async () => {
-  const user = userEvent.setup({ delay: null });
+it("names only the lead of a multi-candidate row, not the rungs behind it", () => {
   const [lead] = feature.effective_candidates;
   render(
     <LocaleProvider initial="en">
@@ -364,45 +352,45 @@ it("opens a multi-candidate row to the fallbacks after the lead", async () => {
       />
     </LocaleProvider>,
   );
-  await user.click(screen.getByText("gemini · example-model"));
-  const items = screen.getAllByRole("listitem");
-  expect(items).toHaveLength(1);
-  expect(items[0].textContent).toContain("fallback-model");
+  expect(screen.getByText("example-model")).toBeTruthy();
+  expect(screen.queryByText(/fallback-model/)).toBeNull();
 });
 
-it("features card says decision model first, and why another feature skips it", async () => {
-  mount(undefined, false, {
-    ...status,
-    features: [
-      {
-        ...feature,
-        task: "capture_classify",
-        display_name: "Classify correspondence",
-        decision_first: true,
-        decision_candidate: {
-          tier: "decide",
-          provider: "jev_compatible",
-          model: "jev-classify",
-          processing: "cloud_provider",
-        },
-      },
-      {
-        ...feature,
-        task: "deep_read_triage",
-        display_name: "Triage a site",
-        decision_skip_reason: "local_only",
-      },
-    ],
-  });
+it("the task table says decision model first, and why another feature skips it", async () => {
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          {
+            ...feature,
+            task: "capture_classify",
+            display_name: "Classify correspondence",
+            decision_first: true,
+            decision_candidate: {
+              tier: "decide",
+              provider: "jev_compatible",
+              model: "jev-classify",
+              processing: "cloud_provider",
+            },
+          },
+          {
+            ...feature,
+            task: "deep_read_triage",
+            display_name: "Triage a site",
+            decision_skip_reason: "local_only",
+          },
+        ]}
+      />
+    </LocaleProvider>,
+  );
 
   // The lane leads, where it processes, and the ladder that answers after it.
-  expect(
-    await screen.findByText(
-      "Decision model first (jev_compatible · jev-classify · Cloud provider) → then gemini · example-model",
-    ),
-  ).toBeInTheDocument();
+  const decisionRow = (await screen.findByText("jev-classify")).closest("td");
+  expect(decisionRow?.textContent).toBe(
+    "jev_compatiblejev-classify↓thengeminiexample-model",
+  );
   // A feature the lane does not serve keeps its ladder, with the reason beside it.
-  expect(screen.getByText("gemini · example-model")).toBeInTheDocument();
+  expect(screen.getAllByText("example-model")).toHaveLength(2);
   expect(
     screen.getByText(
       "Decision model not used: this activity takes only a local decision provider.",

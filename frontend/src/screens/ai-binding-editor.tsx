@@ -20,7 +20,7 @@ import {
   AdapterFields,
   DECISION_PROVIDERS,
   EmbeddingWidthField,
-  OPENROUTER_DECISION_PRESET,
+  openRouterPreset,
   PROVIDERS,
 } from "./ai-routing-fields";
 import {
@@ -174,7 +174,7 @@ export function BindingEditor({
         {draft.kind === "decisions" && base.binding !== undefined && (
           <span className="actions-lead">
             <Button
-              variant="danger"
+              variant="link"
               disabled={busy}
               onClick={() => submit({ kind: "decisions", binding: undefined })}
             >
@@ -306,39 +306,19 @@ function DecisionFields({
 }>) {
   const t = useT();
   return (
-    <>
-      <AdapterFields
-        label={t("aiRouting.provider.label")}
-        lane="decisions"
-        laneName="decisions"
-        binding={binding}
-        catalogue={catalogue}
-        disabled={disabled}
-        providers={reachableProviders(DECISION_PROVIDERS, keys, current)}
-        onChange={(next) => onChange(reboundDecision(binding, next))}
-      />
-      {binding.provider === OPENROUTER_DECISION_PRESET.provider && (
-        // The endpoint is a full URL nobody remembers, and OpenRouter's is the
-        // one most installations want; the key is the one thing it cannot fill.
-        <div>
-          <Button
-            disabled={disabled}
-            onClick={() =>
-              onChange({
-                ...binding,
-                base_url: OPENROUTER_DECISION_PRESET.base_url,
-                model: OPENROUTER_DECISION_PRESET.model,
-              })
-            }
-          >
-            {t("aiRouting.decisions.preset.openrouter")}
-          </Button>
-          <p className="t-sub">
-            {t("aiRouting.decisions.preset.openrouterKey")}
-          </p>
-        </div>
-      )}
-    </>
+    <AdapterFields
+      label={t("aiRouting.provider.label")}
+      lane="decisions"
+      laneName="decisions"
+      binding={binding}
+      catalogue={catalogue}
+      disabled={disabled}
+      providers={reachableProviders(DECISION_PROVIDERS, keys, current)}
+      onChange={(next) => onChange(reboundDecision(binding, next))}
+      // The endpoint is a full URL nobody remembers, and OpenRouter's is the
+      // one most installations want; the key is the one thing it cannot fill.
+      providerAside={openRouterPreset(binding, disabled, onChange, t)}
+    />
   );
 }
 
@@ -374,7 +354,9 @@ function NotListedHint({
 // the lane's own state from its own editor. A vendor with a key row is usable
 // once a key is sealed; a keyless one (ollama, vllm) once the availability
 // probe reached it; `fake` only where the routing document already binds it.
-// While the key list has not arrived nothing is hidden.
+// While the key list has not arrived nothing is hidden; once it has, a keyless
+// adapter stays out until its probe answers, since an option that appears late
+// costs less than one offered and then refused.
 export function reachableProviders(
   all: readonly string[],
   keys: readonly KeyStatus[] | undefined,

@@ -17854,6 +17854,27 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 	}
 }
 
+// Defines values for DeleteAiModelRateParamsLane.
+const (
+	DeleteAiModelRateParamsLaneChat       DeleteAiModelRateParamsLane = "chat"
+	DeleteAiModelRateParamsLaneDecisions  DeleteAiModelRateParamsLane = "decisions"
+	DeleteAiModelRateParamsLaneEmbeddings DeleteAiModelRateParamsLane = "embeddings"
+)
+
+// Valid indicates whether the value is a known member of the DeleteAiModelRateParamsLane enum.
+func (e DeleteAiModelRateParamsLane) Valid() bool {
+	switch e {
+	case DeleteAiModelRateParamsLaneChat:
+		return true
+	case DeleteAiModelRateParamsLaneDecisions:
+		return true
+	case DeleteAiModelRateParamsLaneEmbeddings:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListApprovalsParamsStatus.
 const (
 	ListApprovalsParamsStatusApproved ListApprovalsParamsStatus = "approved"
@@ -20717,7 +20738,9 @@ type AiModelRateProviderRefresh struct {
 
 	// Outcome `updated` wrote at least one price; `unchanged` found every priced model already
 	// current; `not_available` means the provider (or the catalogue, for these models)
-	// publishes no price to read; `unreachable` means the catalogue could not be read;
+	// publishes no price to read; `not_listed` means a bound model is absent from the
+	// catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
+	// could not be read;
 	// `not_bound` means nothing this provider serves is bound or on the sheet.
 	Outcome string `json:"outcome"`
 
@@ -20726,6 +20749,9 @@ type AiModelRateProviderRefresh struct {
 
 	// Unchanged Models already at the catalogue price.
 	Unchanged int `json:"unchanged"`
+
+	// Unlisted Bound model ids the catalogue does not name.
+	Unlisted []string `json:"unlisted"`
 
 	// Updated Prices written today.
 	Updated int `json:"updated"`
@@ -44448,6 +44474,16 @@ type ResetDataJSONBody struct {
 	Confirmation string `json:"confirmation"`
 }
 
+// DeleteAiModelRateParams defines parameters for DeleteAiModelRate.
+type DeleteAiModelRateParams struct {
+	Provider string                      `form:"provider" json:"provider"`
+	ModelId  string                      `form:"model_id" json:"model_id"`
+	Lane     DeleteAiModelRateParamsLane `form:"lane" json:"lane"`
+}
+
+// DeleteAiModelRateParamsLane defines parameters for DeleteAiModelRate.
+type DeleteAiModelRateParamsLane string
+
 // ListAiModelRatesParams defines parameters for ListAiModelRates.
 type ListAiModelRatesParams struct {
 	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
@@ -60785,6 +60821,9 @@ type ServerInterface interface {
 	// The governed tool surface (registry metadata) for the operator UI.
 	// (GET /agent-tools)
 	ListAgentTools(w http.ResponseWriter, r *http.Request)
+	// Remove a model's entry from the price sheet, every effective date of it.
+	// (DELETE /ai-model-rates)
+	DeleteAiModelRate(w http.ResponseWriter, r *http.Request, params DeleteAiModelRateParams)
 	// List current AI model prices (latest per model), or one model's history.
 	// (GET /ai-model-rates)
 	ListAiModelRates(w http.ResponseWriter, r *http.Request, params ListAiModelRatesParams)
@@ -63047,6 +63086,12 @@ func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
 // The governed tool surface (registry metadata) for the operator UI.
 // (GET /agent-tools)
 func (_ Unimplemented) ListAgentTools(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a model's entry from the price sheet, every effective date of it.
+// (DELETE /ai-model-rates)
+func (_ Unimplemented) DeleteAiModelRate(w http.ResponseWriter, r *http.Request, params DeleteAiModelRateParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68730,6 +68775,71 @@ func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAgentTools(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAiModelRate operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAiModelRate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteAiModelRateParams
+
+	// ------------- Required query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "model_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "model_id", r.URL.Query(), &params.ModelId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "lane" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "lane", r.URL.Query(), &params.Lane, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lane"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lane", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAiModelRate(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -97834,6 +97944,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-tools", wrapper.ListAgentTools)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/ai-model-rates", wrapper.DeleteAiModelRate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai-model-rates", wrapper.ListAiModelRates)

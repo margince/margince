@@ -559,7 +559,7 @@ describe("AiRoutingCard", () => {
     const dialog = await openEditor(user, "ai-routing-tier-premium");
     expect(within(dialog).getByText("Provider key missing")).toBeTruthy();
     expect(
-      await within(dialog).findByText(/this provider has no key/i),
+      await within(dialog).findByText(/no key, so no model list/i),
     ).toBeTruthy();
     expect(
       within(dialog).getByRole("button", { name: /save binding/i }),

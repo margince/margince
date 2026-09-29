@@ -80,6 +80,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as WITHHELD, or the screen states something false. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
+| `frontendpriceinput_test.go` | H3 | The frontend's price pattern accepts exactly what the server's price parser and the contract pattern accept, so a value the form lets through is not refused for its shape. |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails SILENTLY when it falls short. |
 | `frontendproviders_test.go` | H3 | The routing form offers an admin an adapter for every tier, and the frontend cannot read Go, so its PROVIDERS list is a declared mirror of the server's provider registry. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat MAY DO, not which role it holds. |

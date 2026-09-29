@@ -176,3 +176,27 @@ export const ChangedWhileEditing: Story = {
 };
 
 export const EditingATierDark: Story = { globals: { theme: "dark" } };
+
+const DECISIONS = {
+  provider: "jev_compatible",
+  model: "typesafe/jev-router",
+  base_url: "https://openrouter.ai/api/alpha/decisions",
+};
+
+// The decision model bound, so the footer offers to remove it, with the
+// OpenRouter preset beside its provider.
+export const EditingTheDecisionModel: Story = {
+  args: {
+    opened: {
+      routing: { ...ROUTING, decisions: DECISIONS },
+      version: OPENED.version,
+    },
+    initial: { kind: "decisions", binding: DECISIONS },
+    label: "decisions",
+  },
+};
+
+export const EditingTheDecisionModelDark: Story = {
+  ...EditingTheDecisionModel,
+  globals: { theme: "dark" },
+};

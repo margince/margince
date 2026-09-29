@@ -177,13 +177,16 @@ export function AiCallsCard() {
                   {calls.length === 0 ? (
                     <EmptyState>{t("aicalls.empty")}</EmptyState>
                   ) : (
-                    // Six columns of trace, none of them droppable — a call is
-                    // only diagnosable with its model, its tokens and its latency
-                    // side by side. `TableScroll` is the one spelling of that
-                    // containment, the same box DataTable puts every list it
-                    // draws inside (atoms.tsx).
+                    // Every figure of a call stays — a call is only diagnosable
+                    // with its model, its tokens and its latency side by side —
+                    // but they share three columns, not six: the moment and the
+                    // latency ride under the task and the tokens, and the model
+                    // wraps. A table wider than its card scrolls, and an overlay
+                    // scrollbar draws nothing, so it just looks cut off.
+                    // `TableScroll` stays as the containment for a viewport too
+                    // narrow for even this.
                     <TableScroll label={t("aicalls.callsLabel")}>
-                      <table className="table">
+                      <table className="table aicalls-table">
                         <thead>
                           <tr>
                             {/* The disclosure column. Named rather than left
@@ -192,11 +195,14 @@ export function AiCallsCard() {
                             <th className="sr-only">
                               {t("aicalls.col.detail")}
                             </th>
-                            <th>{t("aicalls.col.when")}</th>
-                            <th>{t("aicalls.col.task")}</th>
+                            <th>
+                              {t("aicalls.col.task")} / {t("aicalls.col.when")}
+                            </th>
                             <th>{t("aicalls.col.model")}</th>
-                            <th>{t("aicalls.col.tokens")}</th>
-                            <th>{t("aicalls.col.latency")}</th>
+                            <th>
+                              {t("aicalls.col.tokens")} /{" "}
+                              {t("aicalls.col.latency")}
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -301,9 +307,9 @@ function FragmentRow({
             <ChevronDown className="expander-chevron" aria-hidden />
           </Button>
         </td>
-        <td>{when}</td>
         <td>
           {call.task}
+          <div className="t-caption">{when}</div>
           <div className="aicalls-badges">
             {/* The logical call's flag, not this row's kind: a fallback's
                 terminal row is the completion that answered after the
@@ -330,14 +336,16 @@ function FragmentRow({
         <td>
           {tierLabel(call.tier, t)} · {call.provider}/{call.served_model}
         </td>
-        <td>{tokens}</td>
         <td>
-          {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
+          {tokens}
+          <div className="t-caption">
+            {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
+          </div>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} id={panelId}>
+          <td colSpan={4} id={panelId}>
             <CallDetailPanel id={call.id} captureEnabled={captureEnabled} />
           </td>
         </tr>

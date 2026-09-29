@@ -43,9 +43,12 @@ export type ModelLane = ModelRate["lane"];
 /** The sheet as a caller holds it, before the read has landed. */
 export type ModelCatalogue = readonly ModelRate[] | undefined;
 
-export function useAiModelCatalogue() {
+// `enabled` is for a caller that already knows the read is not this reader's:
+// asking anyway would spend a request on a 403 the empty answer stands in for.
+export function useAiModelCatalogue(enabled = true) {
   return useQuery({
     queryKey: ["ai-model-rates"],
+    enabled,
     // The sheet changes when an operator adds a price, which is not something
     // that happens while somebody is filling in this form.
     staleTime: 5 * 60 * 1000,

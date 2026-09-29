@@ -224,7 +224,6 @@ export const de = {
     "Nur Nutzende mit Leserecht für die KI-Diagnose und für das KI-Kontingent sehen, welche Funktionen gerade aktiv sind.",
   "aiAdmin.save": "Kontingent speichern",
   "aiAdmin.cancel": "Abbrechen",
-  "aiAdmin.calls": "Tatsächliche Modellaufrufe ansehen",
   "aiAdmin.website": "Website-Lesevorgänge",
   "aiAdmin.scans": "Unternehmensscans",
   "aiAdmin.voice": "Aufbau von Stilprofilen",
@@ -240,10 +239,7 @@ export const de = {
   "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus weiter",
   "aiAdmin.activity": "Tätigkeit",
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
-  "aiAdmin.cloud": "Cloud-Anbieter",
-  "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
-  "aiAdmin.decisionFirst":
-    "Zuerst Entscheidungsmodell ({provider} · {model} · {processing}) → dann {ladder}",
+  "aiAdmin.thenLadder": "dann",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "aiAdmin.decisionSkip.uncertified":
@@ -5915,20 +5911,11 @@ export const de = {
   "overnightGrant.writeFailedTitle": "Änderung nicht gespeichert",
   "overnightGrant.renewScope":
     "Margince kann inzwischen mehr als zum Zeitpunkt deines Einverständnisses. Schalte die Option aus und wieder ein, um sie zu erweitern. Bis dahin wird dein Morgenbericht nicht vorbereitet.",
-  "aiHealth.title": "Zustand der Stufen",
-  "aiHealth.sub":
-    "Ob jede Modellstufe antwortet. Eine ausgefallene und eine vorsichtige Modellstufe sehen an anderer Stelle gleich aus; erfasste E-Mails bleiben in beiden Fällen zurückgehalten.",
   "aiHealth.noCalls": "Keine Modellaufrufe in den letzten {hours} h.",
-  "aiHealth.colTier": "Modellstufe",
-  "aiHealth.colState": "Zustand",
-  "aiHealth.colCalls": "Letzte {hours} h",
-  "aiHealth.colLatency": "Median",
-  "aiHealth.colLast": "Letzte Antwort",
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
-  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Zurückgehaltene Threads",
   "heldThreads.sub":
     "Threads, die dein Postfach zurückhält. Gibst du einen Thread frei, können alle Teammitglieder ihn lesen; nur du kannst deine freigeben.",
@@ -8451,7 +8438,8 @@ export const de = {
   "aiusage.decisions.col.asked": "Gefragt",
   "aiusage.decisions.col.passRate": "Bestanden",
   "aiusage.decisions.col.fallbackRate": "Rückfälle",
-  "aiusage.decisions.col.reasons": "Rückfälle nach Grund",
+  "aiusage.decisions.reasonsFor":
+    "Rückfallgründe bei einer Rückfallrate von {rate}",
 
   "aibanner.degraded":
     "80 % des KI-Kontingents erreicht. Prüfe die betroffenen Funktionen.",
@@ -8468,8 +8456,6 @@ export const de = {
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
     "Nur Admins und Operations können das Aufrufprotokoll lesen. Es verzeichnet jeden Modellaufruf der Installation.",
-  "aiHealth.withheld":
-    "Nur Admins und Operations sehen, ob Modellstufen antworten. Das ist Infrastruktur der Installation, keine Daten über deine Arbeit.",
   "aicalls.sub":
     "Jeder Modellaufruf: Routing-Identität, Tokens, Wiederholungen, erfasste Nutzdaten.",
   "aicalls.col.detail": "Details",
@@ -8707,9 +8693,9 @@ export const de = {
     "Typisierte Fragen, vor den Modellstufen gestellt, wo zertifiziert",
   "aiRouting.decisions.add": "Entscheidungsmodell hinzufügen",
   "aiRouting.decisions.remove": "Entscheidungsmodell entfernen",
-  "aiRouting.decisions.preset.openrouter": "OpenRouter verwenden",
+  "aiRouting.decisions.preset.openrouter": "Vorlage: OpenRouter",
   "aiRouting.decisions.preset.openrouterKey":
-    "Trägt Endpunkt und Modell von OpenRouter ein. JEV_COMPATIBLE_API_KEY nimmt deinen OpenRouter-Schlüssel auf.",
+    "Trägt Host und Modell ein. Der Schlüssel gehört in JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent":
     "Kein Entscheidungsmodell. Jede Aufgabe nutzt die Modellstufen.",
   "aiRouting.priceSheet": "Preisliste",
@@ -8758,27 +8744,27 @@ export const de = {
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
-    "Host-Wurzel des Anbieters ohne Versionssegment; /v1 wird angehängt. Erforderlich für openai_compatible, das keinen Standardwert hat.",
+    "Host-Wurzel; /v1 wird angehängt. Erforderlich: Dieser Adapter hat keinen Standardwert.",
   "aiRouting.baseUrl.help.jev":
-    "Vollständige Endpunkt-URL, unverändert verwendet. Leer lassen für die API von TypeSafe selbst, https://api.typesafe.ai/v1/systemone.",
+    "Vollständige Endpunkt-URL. Leer nutzt die API von TypeSafe selbst.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
   "aiRouting.baseUrl.help.jevCompatible":
-    "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich: OpenRouter ist https://openrouter.ai/api/alpha/decisions, ein selbst betriebener Server etwa http://127.0.0.1:8767/v1/systemone.",
+    "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
-    "Nur Preisliste: Dieser Anbieter hat keinen Schlüssel, daher kann seine Modellliste nicht abgerufen werden. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
+    "Kein Schlüssel, daher keine Modellliste. Beliebige Modell-ID eingeben.",
   "aiRouting.models.noEndpoint":
-    "Nur Preisliste: Gib oben den Host ein, um die Modellliste dieses Anbieters abzurufen. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
+    "Host oben eintragen, um die Modellliste zu laden.",
   "aiRouting.models.profileForbids":
-    "Nur Preisliste: Dieses Installationsprofil erlaubt keinen Zugriff auf diesen Anbieter.",
+    "Dieses Profil erlaubt diesen Anbieter nicht.",
   "aiRouting.models.notPublished":
-    "Nur Preisliste: Dieser Anbieter veröffentlicht keine Modellliste.",
+    "Dieser Anbieter veröffentlicht keine Modellliste.",
   "aiRouting.models.unreachable":
-    "Nur Preisliste: Dieser Anbieter hat nicht geantwortet. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
+    "Der Anbieter hat nicht geantwortet. Beliebige Modell-ID eingeben.",
   "aiRouting.model.label": "Modell",
   "aiRouting.model.help":
-    "Aufgeführt sind die Modelle, für die diese Installation Preise kennt, pro Million Tokens, Eingabe → Ausgabe. Jede andere Modell-ID, die der Anbieter bereitstellt, funktioniert ebenfalls, wenn du sie direkt eingibst.",
+    "Ein aufgeführtes Modell wählen oder eine beliebige Modell-ID des Anbieters eingeben.",
   "aiRouting.saving": "Zuordnung wird gespeichert…",
   "aiRouting.saveFailed": "Routing nicht gespeichert",
   "aiRouting.adminOnly":
@@ -8811,6 +8797,17 @@ export const de = {
     "Wähle Anbieter und Modell für jede Stufe, für Embeddings und optional für das Entscheidungsmodell. Gespeicherte Zuordnungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Es begrenzt, welche Anbieter eine Stufe nutzen kann, und wird vom Betrieb festgelegt.",
+  "aiRouting.notBound": "Nicht gebunden",
+  "aiRouting.lastResponse": "Letzte Antwort {when}",
+  "aiTerms.provider": "Anbieter",
+  "aiTerms.providerGloss": "wer aufgerufen wird",
+  "aiTerms.tier": "Stufe",
+  "aiTerms.tierGloss": "eine Art von Arbeit, an ein Modell gebunden",
+  "aiTerms.task": "Aufgabe",
+  "aiTerms.taskGloss": "was das Produkt tut",
+  "aiRouting.taskCount_one": "{count} Aufgabe",
+  "aiRouting.taskCount_other": "{count} Aufgaben",
+  "aiRouting.noPrice": "Kein Preis hinterlegt. Beim Anbieter ergänzen.",
   "aiRouting.edit": "Bearbeiten",
   "aiRouting.editTitle": "Zuordnung {lane} bearbeiten",
   "aiRouting.saveBinding": "Zuordnung speichern",
@@ -8822,9 +8819,6 @@ export const de = {
   "aiRouting.notListed":
     "Nicht in der veröffentlichten Modellliste von {provider}. Du kannst die ID trotzdem speichern, wenn der Anbieter sie bedient.",
   "aiRouting.median": "Median {ms} ms",
-  "aiRouting.untracked": "Der Aufrufzustand wird nur für Stufen erfasst.",
-  "aiRouting.taskCount_one": "{count} Aufgabe",
-  "aiRouting.taskCount_other": "{count} Aufgaben",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile beginnt mit dem Modell, auf dem sie gerade läuft.",
@@ -10912,16 +10906,54 @@ export const de = {
   "aiRates.proposedBasis":
     "„Modellpreise aktualisieren“ schreibt ihn in die Preisliste. Nutzung und Kosten berücksichtigen ihn danach.",
   "aiRates.refresh.button": "Modellpreise aktualisieren",
-  "aiRates.refresh.report": "Aktualisierung der Modellpreise",
   "aiRates.refresh.outcome.updated": "Aktualisiert",
   "aiRates.refresh.outcome.unchanged": "Aktuell",
   "aiRates.refresh.outcome.not_available": "Manuell pflegen",
   "aiRates.refresh.outcome.unreachable": "Nicht erreichbar",
   "aiRates.refresh.outcome.not_bound": "Nicht in Verwendung",
+  "aiRates.refresh.outcome.not_listed": "Nicht in der Liste",
+  "aiRates.refresh.unlisted": "Nicht in der Liste des Anbieters: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
   "aiRates.refresh.unchangedCount_one": "{count} Preis bereits aktuell",
   "aiRates.refresh.unchangedCount_other": "{count} Preise bereits aktuell",
+  "aiProviders.state.active": "Aktiv",
+  "aiProviders.state.ready": "Bereit",
+  "aiProviders.state.needsKey": "Schlüssel fehlt",
+  "aiProviders.state.inactive": "Nicht aktiv",
+  "aiProviders.usedBy": "Verwendet von {roles}",
+  "aiProviders.notUsed": "Nicht verwendet",
+  "aiProviders.opensNewTab": "(Öffnet in einem neuen Tab)",
+  "aiProviders.inUse": "In Verwendung",
+  "aiProviders.unpriced": "{model} ist in Verwendung und hat keinen Preis.",
+  "aiProviders.setPrice": "Preis festlegen",
+  "aiProviders.manage": "Verwalten",
+  "aiProviders.connection": "Verbindung",
+  "aiProviders.prices": "Preise",
+  "aiProviders.addPrice": "Preis hinzufügen",
+  "aiProviders.backToPrices": "← Preise",
+  "aiProviders.priceUnit": "USD pro 1 Mio. Token",
+  "aiProviders.priceSource": "Preisliste des Anbieters ↗",
+  "aiProviders.noPrices":
+    "Für diesen Anbieter sind noch keine Preise hinterlegt.",
+  "aiProviders.colInput": "Eingabe",
+  "aiProviders.colOutput": "Ausgabe",
+  "aiProviders.colCacheRead": "Cache lesen",
+  "aiProviders.colCacheWrite": "Cache schreiben",
+  "aiRates.manual.editing": "{model} bearbeiten · verwendet für {lane}",
+  "aiRates.manual.from": "ab {date}",
+  "aiRates.manual.edit": "Bearbeiten",
+  "aiRates.manual.malformed":
+    "Preise sind einfache Zahlen wie 5 oder 0.25, mit höchstens sechs Nachkommastellen.",
+  "aiRates.manual.lane": "Verwendet für",
+  "aiRates.manual.laneChat": "Chat",
+  "aiRates.manual.laneEmbeddings": "Einbettungen",
+  "aiRates.manual.laneDecisions": "Entscheidungen",
+  "aiRates.remove.verb": "{model} entfernen",
+  "aiRates.remove.title": "Preis für {model} ({lane}) entfernen?",
+  "aiRates.remove.body":
+    "Der Preis für {model} unter {lane} wird entfernt; Kostenschätzungen für frühere Aufrufe dieses Modells gelten dann als ohne Preis.",
+  "aiRates.remove.confirm": "Entfernen",
   "firstRun.ai.foot":
     "Bis du „Weiter“ wählst, wird nichts an den Anbieter gesendet.",
   "contact.readings.title": "Kontaktstatus",

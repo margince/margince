@@ -155,6 +155,10 @@ func (stubs) ListAgentTools(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListAgentTools")
 }
 
+func (stubs) DeleteAiModelRate(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DeleteAiModelRateParams) {
+	httperr.NotImplemented(w, r, "DeleteAiModelRate")
+}
+
 func (stubs) ListAiModelRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiModelRatesParams) {
 	httperr.NotImplemented(w, r, "ListAiModelRates")
 }

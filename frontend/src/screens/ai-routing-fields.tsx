@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { Field, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
@@ -14,6 +15,7 @@ import {
   offeredModels,
   useAvailableModels,
 } from "./ai-models";
+import "./ai-settings.css";
 
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
@@ -137,8 +139,12 @@ export function AdapterFields<B extends TierBindingLike>({
   disabled,
   onChange,
   providers = PROVIDERS,
+  providerAside,
 }: Readonly<{
   label: string;
+  // A preset for THIS lane: the verb beside the provider it belongs to, and the
+  // one line under the row that says what it fills and what it cannot.
+  providerAside?: Readonly<{ action: ReactNode; note: ReactNode }>;
   lane: ModelLane;
   // The adapters this lane may name. Every chat tier and the embedder share
   // one list; the decision lane has its own, because no chat adapter answers a
@@ -163,17 +169,21 @@ export function AdapterFields<B extends TierBindingLike>({
   const host = HOST_FIELDS.get(binding.provider);
   return (
     <>
-      <Field label={label}>
-        {(control) => (
-          <Select
-            {...control}
-            value={binding.provider}
-            disabled={disabled}
-            options={providers.map((p) => ({ value: p, label: p }))}
-            onChange={(provider) => onChange(rebind(binding, { provider }))}
-          />
-        )}
-      </Field>
+      <div className="binding-provider-row">
+        <Field label={label}>
+          {(control) => (
+            <Select
+              {...control}
+              value={binding.provider}
+              disabled={disabled}
+              options={providers.map((p) => ({ value: p, label: p }))}
+              onChange={(provider) => onChange(rebind(binding, { provider }))}
+            />
+          )}
+        </Field>
+        {providerAside?.action}
+      </div>
+      {providerAside?.note}
       {/* What the vendor serves, priced from the sheet where the sheet knows
           it. The list used to be the sheet ALONE, which answers what this
           installation can price rather than what exists — so a model released
@@ -293,4 +303,49 @@ function modelSourceNote(
     default:
       return t("aiRouting.models.unreachable");
   }
+}
+
+/**
+ * The OpenRouter preset for the decision lane, as the verb beside its provider
+ * and the note under the row. Only where the provider is the one OpenRouter
+ * serves: the endpoint is a full URL nobody remembers, and the key is the one
+ * thing the preset cannot fill.
+ */
+export function openRouterPreset<
+  B extends { provider: string; model: string; base_url?: string },
+>(
+  binding: B,
+  disabled: boolean,
+  onChange: (next: B) => void,
+  t: ReturnType<typeof useT>,
+): { action: ReactNode; note: ReactNode } | undefined {
+  if (binding.provider !== OPENROUTER_DECISION_PRESET.provider) {
+    return undefined;
+  }
+  return {
+    action: (
+      <span className="binding-preset-action">
+        <Button
+          variant="link"
+          disabled={disabled}
+          onClick={() =>
+            onChange({
+              ...binding,
+              base_url: OPENROUTER_DECISION_PRESET.base_url,
+              model: OPENROUTER_DECISION_PRESET.model,
+            })
+          }
+        >
+          {t("aiRouting.decisions.preset.openrouter")}
+        </Button>
+      </span>
+    ),
+    note: (
+      <div className="binding-preset-note">
+        <p className="t-caption">
+          {t("aiRouting.decisions.preset.openrouterKey")}
+        </p>
+      </div>
+    ),
+  };
 }

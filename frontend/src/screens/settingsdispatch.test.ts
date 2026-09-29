@@ -73,7 +73,6 @@ const CARDS_THE_REGISTER_REACHED = [
   "KnowledgeCard",
   "AiRoutingCard",
   "AiProviderKeysCard",
-  "AiHealthCard",
   "AutomationsAdmin",
   "AiUsageCard",
   "ModelCostsCard",
