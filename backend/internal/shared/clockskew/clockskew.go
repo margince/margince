@@ -23,7 +23,6 @@ package clockskew
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -82,16 +81,17 @@ func (s Skew) FixtureOffset() time.Duration {
 // Armed reports whether the suite is running at a moved clock at all.
 func (s Skew) Armed() bool { return s.Applier != None }
 
-// FromEnv reads the offset this process was started with.
+// Parse reads `<applier>:<days>`.
 //
 // An unset variable is the ordinary run and not an error. An unparsable one IS
 // an error, and the callers fail on it rather than continuing: a typo that
 // silently shifted nothing would leave the lane reporting PASS over a suite it
 // never moved, which reads exactly like a suite that has no date-fragile
 // fixtures left. That is the shape of failure a drift lane exists to remove.
-func FromEnv() (Skew, error) { return Parse(os.Getenv(EnvVar)) }
-
-// Parse reads `<applier>:<days>`.
+//
+// This package does no reading of its own. Configuration is resolved at the
+// composition root and handed down (OPS-CFG-2), and the drift lane's root is
+// platform/clocktest, which takes the value from the config seam and calls this.
 func Parse(value string) (Skew, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {

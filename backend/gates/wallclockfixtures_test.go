@@ -56,7 +56,7 @@ const ledgerPath = "gates/testdata/wallclockfixtures.txt"
 // clockOwners are the packages whose subject IS the clock, so a wall-time read
 // in their tests is the thing under test rather than a fixture dating itself.
 var clockOwners = []string{
-	"internal/shared/clocktest/",
+	"internal/platform/clocktest/",
 	"internal/shared/clockskew/",
 }
 

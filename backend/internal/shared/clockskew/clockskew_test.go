@@ -109,15 +109,3 @@ func TestTheRenderingIsTheValueThatReproducesIt(t *testing.T) {
 		t.Errorf("Skew{}.String() = %q; want the empty value an unset variable holds", unarmed)
 	}
 }
-
-func TestTheProcessReadsItsOffsetFromTheEnvironment(t *testing.T) {
-	t.Setenv(EnvVar, "fixture:200")
-
-	skew, err := FromEnv()
-	if err != nil {
-		t.Fatalf("FromEnv() = %v; want the offset the process was started with", err)
-	}
-	if skew.FixtureOffset() != 200*24*time.Hour {
-		t.Fatalf("FromEnv() = %+v; want 200 days of fixture offset", skew)
-	}
-}

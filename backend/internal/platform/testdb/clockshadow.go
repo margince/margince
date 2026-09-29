@@ -33,6 +33,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/clockskew"
 )
 
@@ -52,7 +53,7 @@ const shadowSchema = "clockshadow"
 // clock this database reads, and shadowing on top of it would put the database
 // 400 days out while the Go process stood at 200.
 func installClockShadow(ctx context.Context, owner *pgx.Conn) error {
-	skew, err := clockskew.FromEnv()
+	skew, err := clocktest.Skew()
 	if err != nil {
 		return err
 	}
