@@ -155,7 +155,9 @@ default.
    must come from the i18n catalogs (TS AST walk).
 5. No emoji glyphs in source strings — Lucide only; the 🟢/🟡 autonomy
    semantics render through the `.dot` token component.
-6. No service worker ships, and nothing registers one.
+6. One service worker ships, and only `src/app/pwa.ts` registers it. It
+   answers nothing from Cache Storage but the offline page, for a navigation
+   the network could not make ([pwa.md](../docs/explanation/pwa.md)).
 7. WCAG 2.2 AA (axe) in the e2e lane. The perceived-perf budget is not
    here: `make bench-mobile` samples it, because one wall-clock reading on a
    shared runner measures the runner.

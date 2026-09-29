@@ -1082,6 +1082,10 @@ export const de = {
   "card.errorTitle": "Diese Karte funktioniert nicht mehr",
   "card.errorRetry": "Erneut versuchen",
 
+  "offline.title": "Keine Verbindung zu Margince",
+  "offline.body": "Margince lädt wieder, sobald die Verbindung zurück ist.",
+  "offline.retry": "Erneut versuchen",
+
   // Das neunteilige Zustandsvokabular (design-system/surfacestate.tsx):
   // gehört dem ZUSTAND, nicht einer einzelnen Fläche.
   "state.withheld": "Für deine Rolle ausgeblendet",

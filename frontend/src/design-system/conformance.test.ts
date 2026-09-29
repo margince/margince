@@ -355,17 +355,17 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 
-  // No service worker, in both halves: no script to install and no call that
-  // would install one. The previous worker cached the app shell cache-first
-  // under a cache name that never changed between builds, so a browser that
-  // loaded the app once kept serving that build's index.html — and the
-  // content-hashed bundle it named — past every deploy after it. A worker is
-  // the only thing that can answer a request from Cache Storage, so the honest
-  // gate is that the app ships none.
-  it("ships no service worker, and registers none", () => {
-    expect(existsSync(join(frontendRoot, "public", "sw.js"))).toBe(false);
-    const main = readFileSync(join(frontendRoot, "src", "main.tsx"), "utf8");
-    expect(main).not.toMatch(/serviceWorker\.register\(/);
+  // One registrar: a second could install a worker that pins browsers to a build.
+  it("reaches for navigator.serviceWorker in app/pwa.ts alone", () => {
+    const named = files
+      .filter((file) => !/\.test\.tsx?$/.test(file))
+      .filter((file) =>
+        /\bserviceWorker\b/.test(
+          scannableSource(file, readFileSync(file, "utf8")),
+        ),
+      )
+      .map((file) => relative(frontendRoot, file));
+    expect(named).toEqual(["src/app/pwa.ts"]);
   });
 
   it("the web-app manifest is valid and complete for installability", () => {

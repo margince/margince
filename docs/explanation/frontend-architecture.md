@@ -334,7 +334,8 @@ discipline even if the test tree regresses.
 | Action rows | `design-system/actionrow.test.ts` | a container whose element children are two or more buttons and nothing else, that does not get `gap: var(--gapActions)` from a class it names or from its own inline style — including a class **no stylesheet defines**, which is the failure a CSS-only gate cannot see. Waived in line with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` produces a diff in `src/api/schema.d.ts` / `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | formatting and lint findings over `src` + `index.html` |
-| Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus: hard-coded user-facing copy outside the i18n catalogs, a service worker shipped or registered (there is none), an invalid web-app manifest |
+| Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus: hard-coded user-facing copy outside the i18n catalogs, `navigator.serviceWorker` reached for anywhere but `src/app/pwa.ts`, an invalid web-app manifest |
+| Service worker | `frontend/scripts/vite-pwa.test.ts` | the SPA build not emitting `/sw.js`, or the emitted worker answering anything from Cache Storage but a navigation the network could not make, intercepting a path the api owns, or keeping a cache that is not its own ([pwa.md](pwa.md)) |
 | Stylesheet namespaces | `design-system/stylesheetnamespace.test.ts` | a screen's class namespace declared in a stylesheet other than its home sheet, across every `.css` under `frontend/src` and each extension's frontend layer |
 | Token canon | `design-system/tokens.test.ts` | a Ledger-Green value drifting from the design canon |
 | Typecheck + build | `pnpm build` (`tsc -b && vite build`) | any type error |
@@ -367,7 +368,8 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 | | |
 |---|---|
 | The API seam + generated contract types | `frontend/src/api/{client.ts,schema.d.ts,public-events.ts}` |
-| Boot: theme, query client, 403 handling | `frontend/src/main.tsx` |
+| Boot: theme, install offer, service worker, query client, 403 handling | `frontend/src/main.tsx` |
+| Service worker registration, install state / the worker and its offline page | `frontend/src/app/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
 | Route → screen, the auth gate, the onboarding gate | `frontend/src/App.tsx` |
 | Shell frame, sidebar, page heading | `frontend/src/app/{shell.tsx,shell.css}` |
 | Top bar: breadcrumb, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
@@ -389,7 +391,8 @@ frontend lane is separate from the Go merge gate and needs node + pnpm. Run
 ## Where to go next
 
 [company-record-page.md](company-record-page.md) (the biggest
-screen this structure carries) ·
+screen this structure carries) · [pwa.md](pwa.md) (installing the app, the
+service worker and the offline page) ·
 [company-context.md](company-context.md) (the onboarding wizard and the
 company-profile screens) · [architecture.md](architecture.md) (the Go side of
 the same contract) · [../reference/make-targets.md](../reference/make-targets.md)

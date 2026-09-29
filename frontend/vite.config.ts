@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
+import { pwa } from "./scripts/vite-pwa.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
 // The composition alias — the runtime half of the two-lane type story whose
@@ -61,6 +62,8 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
   .map((host) => host.trim())
   .filter((host) => host.length > 0);
 
+const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
+
 export default defineConfig({
   // serveMcpApps is `apply: "serve"` — a dev-only middleware that adds nothing
   // to the SPA build. It has to live HERE rather than in vite.mcp-apps.config.ts
@@ -68,7 +71,7 @@ export default defineConfig({
   // falls through the SPA fallback below to a dev index.html carrying `src=`
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
-  plugins: [react(), tailwindcss(), serveMcpApps()],
+  plugins: [react(), tailwindcss(), serveMcpApps(), pwa({ release })],
   // The release this bundle was built from, compiled IN.
   //
   // It has to be in the bundle rather than read at run time, because the reader
@@ -83,9 +86,7 @@ export default defineConfig({
   // bundle, which is one careless deploy away from shipping a secret to every
   // browser. Empty is the local default, and empty disables the comparison.
   define: {
-    __MARGINCE_RELEASE_VERSION__: JSON.stringify(
-      process.env.MARGINCE_RELEASE_VERSION ?? "",
-    ),
+    __MARGINCE_RELEASE_VERSION__: JSON.stringify(release),
   },
   resolve: {
     // An ARRAY rather than a record, because one entry must match a pattern:

@@ -1103,6 +1103,12 @@ export const en = {
   "card.errorTitle": "This card stopped working",
   "card.errorRetry": "Retry",
 
+  // The page the service worker answers with when the device cannot reach
+  // Margince at all (src/offline/page.ts).
+  "offline.title": "No connection to Margince",
+  "offline.body": "Margince will load again once the connection is back.",
+  "offline.retry": "Retry",
+
   // The nine-state honesty vocabulary (design-system/surfacestate.tsx). These
   // words belong to the STATE and to no particular surface, which is why they
   // are keyed `state.*` rather than under any one screen — the same sentence

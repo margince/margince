@@ -1067,6 +1067,10 @@ export const vi = {
   "card.errorTitle": "Thẻ này đã ngừng hoạt động.",
   "card.errorRetry": "Thử lại",
 
+  "offline.title": "Không kết nối được tới Margince",
+  "offline.body": "Margince sẽ tải lại khi có kết nối trở lại.",
+  "offline.retry": "Thử lại",
+
   "state.withheld": "Đã ẩn — vai trò của bạn không đọc được phần này",
   "state.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
   "state.failed": "Phần này không tải được.",
