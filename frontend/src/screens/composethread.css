@@ -27,6 +27,13 @@
   overflow-y: auto;
   margin-bottom: 0;
 }
+/* Only the editor gives way; every other field keeps its own height and the
+   column scrolls. A child that clips its overflow (the AI card is a Panel) has
+   no content floor in a flex column, so left shrinkable it was squeezed to its
+   border while the column still had room to scroll. */
+.compose-split > .compose-fields > :not(.richtext) {
+  flex-shrink: 0;
+}
 /* The editor is the one child that grows. `.richtext` is the RichText's own
    frame — the body stopped being a textarea when formatting moved into the
    shared drawer — and its editable surface fills it.

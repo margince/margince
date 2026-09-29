@@ -457,6 +457,9 @@ type Server struct {
 	// after it — silently reducing a full wipe to a table sweep, with nothing
 	// failing to say so.
 	resetRuntime ResetRuntime
+
+	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
+	listsEnabled bool
 }
 
 var _ crmcontracts.ServerInterface = Server{}

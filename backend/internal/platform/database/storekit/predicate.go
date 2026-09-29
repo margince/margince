@@ -271,6 +271,9 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		}
 	}
 
+	if field.Withheld {
+		return "FALSE", nil
+	}
 	if field.Link != "" {
 		return compileLinkLeaf(p, field, arg)
 	}
@@ -334,9 +337,9 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 			// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
 			// record with no linked row at all; `<>` here would make one operator
 			// mean two things depending on where the field lives.
-			return fmt.Sprintf("%s IS DISTINCT FROM $%d", field.Expr, arg(value)), nil
+			return fmt.Sprintf("%s IS DISTINCT FROM %s", field.Expr, operandSQL(value, arg)), nil
 		}
-		return fmt.Sprintf("%s %s $%d", field.Expr, comparisonSQL[p.Op], arg(value)), nil
+		return fmt.Sprintf("%s %s %s", field.Expr, comparisonSQL[p.Op], operandSQL(value, arg)), nil
 	}
 }
 
@@ -378,7 +381,7 @@ func compileLinkLeaf(p Predicate, field Field, arg func(any) int) (string, error
 		if err != nil {
 			return "", err
 		}
-		inner, negate = fmt.Sprintf("%s = $%d", field.Expr, arg(value)), p.Op == OpNeq
+		inner, negate = fmt.Sprintf("%s = %s", field.Expr, operandSQL(value, arg)), p.Op == OpNeq
 	default:
 		// An operator that the link shape cannot express: the comparison builds
 		// inside an EXISTS subquery where only certain operators make sense.

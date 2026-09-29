@@ -163,6 +163,16 @@ var catalog = map[string]struct {
 	"lead_source.changed":            {leadStreamEntity, 1},
 	"lead_disqualify_reason.changed": {leadStreamEntity, 1},
 
+	// A list groups customer records of one type, so its lifecycle and its
+	// Shortlist membership ride the contact stream, the customer-record
+	// family's home; a consumer re-reads the member through its own gates.
+	"list.created":        {contactStreamEntity, 1},
+	"list.updated":        {contactStreamEntity, 1},
+	"list.archived":       {contactStreamEntity, 1},
+	"list.restored":       {contactStreamEntity, 1},
+	"list.member_added":   {contactStreamEntity, 1},
+	"list.member_removed": {contactStreamEntity, 1},
+
 	"booking_page.updated":       {identityStreamEntity, 1},
 	"meeting_proposal.updated":   {activityStreamEntity, 1},
 	"meeting_invitation.updated": {activityStreamEntity, 1},

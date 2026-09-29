@@ -2883,16 +2883,22 @@ func (e BulkSkipReason) Valid() bool {
 
 // Defines values for BulkVerb.
 const (
-	BulkVerbArchive       BulkVerb = "archive"
-	BulkVerbReassignOwner BulkVerb = "reassign_owner"
+	BulkVerbAddToList      BulkVerb = "add_to_list"
+	BulkVerbArchive        BulkVerb = "archive"
+	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
+	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
 )
 
 // Valid indicates whether the value is a known member of the BulkVerb enum.
 func (e BulkVerb) Valid() bool {
 	switch e {
+	case BulkVerbAddToList:
+		return true
 	case BulkVerbArchive:
 		return true
 	case BulkVerbReassignOwner:
+		return true
+	case BulkVerbRemoveFromList:
 		return true
 	default:
 		return false
@@ -3774,6 +3780,7 @@ const (
 	Company360SectionsOmittedDeals            Company360SectionsOmitted = "deals"
 	Company360SectionsOmittedHealth           Company360SectionsOmitted = "health"
 	Company360SectionsOmittedLastTouch        Company360SectionsOmitted = "last_touch"
+	Company360SectionsOmittedListMemberships  Company360SectionsOmitted = "list_memberships"
 	Company360SectionsOmittedMoments          Company360SectionsOmitted = "moments"
 	Company360SectionsOmittedNextMeeting      Company360SectionsOmitted = "next_meeting"
 	Company360SectionsOmittedNextSteps        Company360SectionsOmitted = "next_steps"
@@ -3800,6 +3807,8 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedHealth:
 		return true
 	case Company360SectionsOmittedLastTouch:
+		return true
+	case Company360SectionsOmittedListMemberships:
 		return true
 	case Company360SectionsOmittedMoments:
 		return true
@@ -7219,6 +7228,72 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for CreateListRequestEntityType.
+const (
+	CreateListRequestEntityTypeCompany CreateListRequestEntityType = "company"
+	CreateListRequestEntityTypeContact CreateListRequestEntityType = "contact"
+	CreateListRequestEntityTypeDeal    CreateListRequestEntityType = "deal"
+	CreateListRequestEntityTypeLead    CreateListRequestEntityType = "lead"
+	CreateListRequestEntityTypeProject CreateListRequestEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the CreateListRequestEntityType enum.
+func (e CreateListRequestEntityType) Valid() bool {
+	switch e {
+	case CreateListRequestEntityTypeCompany:
+		return true
+	case CreateListRequestEntityTypeContact:
+		return true
+	case CreateListRequestEntityTypeDeal:
+		return true
+	case CreateListRequestEntityTypeLead:
+		return true
+	case CreateListRequestEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateListRequestListType.
+const (
+	CreateListRequestListTypeDynamic CreateListRequestListType = "dynamic"
+	CreateListRequestListTypeStatic  CreateListRequestListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the CreateListRequestListType enum.
+func (e CreateListRequestListType) Valid() bool {
+	switch e {
+	case CreateListRequestListTypeDynamic:
+		return true
+	case CreateListRequestListTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateListRequestSharing.
+const (
+	CreateListRequestSharingPrivate   CreateListRequestSharing = "private"
+	CreateListRequestSharingTeam      CreateListRequestSharing = "team"
+	CreateListRequestSharingWorkspace CreateListRequestSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the CreateListRequestSharing enum.
+func (e CreateListRequestSharing) Valid() bool {
+	switch e {
+	case CreateListRequestSharingPrivate:
+		return true
+	case CreateListRequestSharingTeam:
+		return true
+	case CreateListRequestSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreatePipelineStageSemantic.
 const (
 	CreatePipelineStageSemanticLost CreatePipelineStageSemantic = "lost"
@@ -10285,6 +10360,243 @@ func (e LicenseEntitlementState) Valid() bool {
 	case LicenseEntitlementStateRejected:
 		return true
 	case LicenseEntitlementStateValid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListEntityType.
+const (
+	ListEntityTypeCompany ListEntityType = "company"
+	ListEntityTypeContact ListEntityType = "contact"
+	ListEntityTypeDeal    ListEntityType = "deal"
+	ListEntityTypeLead    ListEntityType = "lead"
+	ListEntityTypeProject ListEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListEntityType enum.
+func (e ListEntityType) Valid() bool {
+	switch e {
+	case ListEntityTypeCompany:
+		return true
+	case ListEntityTypeContact:
+		return true
+	case ListEntityTypeDeal:
+		return true
+	case ListEntityTypeLead:
+		return true
+	case ListEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListHealth.
+const (
+	ListHealthInvalid   ListHealth = "invalid"
+	ListHealthOk        ListHealth = "ok"
+	ListHealthOwnerless ListHealth = "ownerless"
+)
+
+// Valid indicates whether the value is a known member of the ListHealth enum.
+func (e ListHealth) Valid() bool {
+	switch e {
+	case ListHealthInvalid:
+		return true
+	case ListHealthOk:
+		return true
+	case ListHealthOwnerless:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListListType.
+const (
+	ListListTypeDynamic ListListType = "dynamic"
+	ListListTypeStatic  ListListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the ListListType enum.
+func (e ListListType) Valid() bool {
+	switch e {
+	case ListListTypeDynamic:
+		return true
+	case ListListTypeStatic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSharing.
+const (
+	ListSharingPrivate   ListSharing = "private"
+	ListSharingTeam      ListSharing = "team"
+	ListSharingWorkspace ListSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSharing enum.
+func (e ListSharing) Valid() bool {
+	switch e {
+	case ListSharingPrivate:
+		return true
+	case ListSharingTeam:
+		return true
+	case ListSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListClauseVerdictJoin.
+const (
+	ListClauseVerdictJoinAnd ListClauseVerdictJoin = "and"
+	ListClauseVerdictJoinOr  ListClauseVerdictJoin = "or"
+)
+
+// Valid indicates whether the value is a known member of the ListClauseVerdictJoin enum.
+func (e ListClauseVerdictJoin) Valid() bool {
+	switch e {
+	case ListClauseVerdictJoinAnd:
+		return true
+	case ListClauseVerdictJoinOr:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListDependencyKind.
+const (
+	ListDependencyKindExport ListDependencyKind = "export"
+)
+
+// Valid indicates whether the value is a known member of the ListDependencyKind enum.
+func (e ListDependencyKind) Valid() bool {
+	switch e {
+	case ListDependencyKindExport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListHistoryEntryKind.
+const (
+	ListHistoryEntryKindMemberAdded   ListHistoryEntryKind = "member_added"
+	ListHistoryEntryKindMemberRemoved ListHistoryEntryKind = "member_removed"
+	ListHistoryEntryKindRevised       ListHistoryEntryKind = "revised"
+)
+
+// Valid indicates whether the value is a known member of the ListHistoryEntryKind enum.
+func (e ListHistoryEntryKind) Valid() bool {
+	switch e {
+	case ListHistoryEntryKindMemberAdded:
+		return true
+	case ListHistoryEntryKindMemberRemoved:
+		return true
+	case ListHistoryEntryKindRevised:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListHistoryEntryReason.
+const (
+	ListHistoryEntryReasonBulk           ListHistoryEntryReason = "bulk"
+	ListHistoryEntryReasonChosen         ListHistoryEntryReason = "chosen"
+	ListHistoryEntryReasonRecordArchived ListHistoryEntryReason = "record_archived"
+	ListHistoryEntryReasonRecordRestored ListHistoryEntryReason = "record_restored"
+)
+
+// Valid indicates whether the value is a known member of the ListHistoryEntryReason enum.
+func (e ListHistoryEntryReason) Valid() bool {
+	switch e {
+	case ListHistoryEntryReasonBulk:
+		return true
+	case ListHistoryEntryReasonChosen:
+		return true
+	case ListHistoryEntryReasonRecordArchived:
+		return true
+	case ListHistoryEntryReasonRecordRestored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMemberEntityType.
+const (
+	ListMemberEntityTypeCompany ListMemberEntityType = "company"
+	ListMemberEntityTypeContact ListMemberEntityType = "contact"
+	ListMemberEntityTypeDeal    ListMemberEntityType = "deal"
+	ListMemberEntityTypeLead    ListMemberEntityType = "lead"
+	ListMemberEntityTypeProject ListMemberEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListMemberEntityType enum.
+func (e ListMemberEntityType) Valid() bool {
+	switch e {
+	case ListMemberEntityTypeCompany:
+		return true
+	case ListMemberEntityTypeContact:
+		return true
+	case ListMemberEntityTypeDeal:
+		return true
+	case ListMemberEntityTypeLead:
+		return true
+	case ListMemberEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMemberChangeRequestEntityType.
+const (
+	ListMemberChangeRequestEntityTypeCompany ListMemberChangeRequestEntityType = "company"
+	ListMemberChangeRequestEntityTypeContact ListMemberChangeRequestEntityType = "contact"
+	ListMemberChangeRequestEntityTypeDeal    ListMemberChangeRequestEntityType = "deal"
+	ListMemberChangeRequestEntityTypeLead    ListMemberChangeRequestEntityType = "lead"
+	ListMemberChangeRequestEntityTypeProject ListMemberChangeRequestEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListMemberChangeRequestEntityType enum.
+func (e ListMemberChangeRequestEntityType) Valid() bool {
+	switch e {
+	case ListMemberChangeRequestEntityTypeCompany:
+		return true
+	case ListMemberChangeRequestEntityTypeContact:
+		return true
+	case ListMemberChangeRequestEntityTypeDeal:
+		return true
+	case ListMemberChangeRequestEntityTypeLead:
+		return true
+	case ListMemberChangeRequestEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMemberExplanationListType.
+const (
+	ListMemberExplanationListTypeDynamic ListMemberExplanationListType = "dynamic"
+	ListMemberExplanationListTypeStatic  ListMemberExplanationListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the ListMemberExplanationListType enum.
+func (e ListMemberExplanationListType) Valid() bool {
+	switch e {
+	case ListMemberExplanationListTypeDynamic:
+		return true
+	case ListMemberExplanationListTypeStatic:
 		return true
 	default:
 		return false
@@ -14959,6 +15271,27 @@ func (e UpdateLeadRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for UpdateListRequestSharing.
+const (
+	UpdateListRequestSharingPrivate   UpdateListRequestSharing = "private"
+	UpdateListRequestSharingTeam      UpdateListRequestSharing = "team"
+	UpdateListRequestSharingWorkspace UpdateListRequestSharing = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdateListRequestSharing enum.
+func (e UpdateListRequestSharing) Valid() bool {
+	switch e {
+	case UpdateListRequestSharingPrivate:
+		return true
+	case UpdateListRequestSharingTeam:
+		return true
+	case UpdateListRequestSharingWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateOfferLineItemRequestBillingIntervalMonths.
 const (
 	UpdateOfferLineItemRequestBillingIntervalMonthsN1  UpdateOfferLineItemRequestBillingIntervalMonths = 1
@@ -18607,6 +18940,51 @@ func (e ListLeadsParamsSlaState) Valid() bool {
 	case ListLeadsParamsSlaStateBreached:
 		return true
 	case ListLeadsParamsSlaStateWithinTarget:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListListsParamsEntityType.
+const (
+	ListListsParamsEntityTypeCompany ListListsParamsEntityType = "company"
+	ListListsParamsEntityTypeContact ListListsParamsEntityType = "contact"
+	ListListsParamsEntityTypeDeal    ListListsParamsEntityType = "deal"
+	ListListsParamsEntityTypeLead    ListListsParamsEntityType = "lead"
+	ListListsParamsEntityTypeProject ListListsParamsEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListListsParamsEntityType enum.
+func (e ListListsParamsEntityType) Valid() bool {
+	switch e {
+	case ListListsParamsEntityTypeCompany:
+		return true
+	case ListListsParamsEntityTypeContact:
+		return true
+	case ListListsParamsEntityTypeDeal:
+		return true
+	case ListListsParamsEntityTypeLead:
+		return true
+	case ListListsParamsEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListListsParamsListType.
+const (
+	ListListsParamsListTypeDynamic ListListsParamsListType = "dynamic"
+	ListListsParamsListTypeStatic  ListListsParamsListType = "static"
+)
+
+// Valid indicates whether the value is a known member of the ListListsParamsListType enum.
+func (e ListListsParamsListType) Valid() bool {
+	switch e {
+	case ListListsParamsListTypeDynamic:
+		return true
+	case ListListsParamsListTypeStatic:
 		return true
 	default:
 		return false
@@ -22745,14 +23123,22 @@ type BulkChangeExecuteRequest struct {
 	ConfirmToken *string    `json:"confirm_token,omitempty"`
 	Items        []BulkItem `json:"items"`
 
-	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	// ListId The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Note Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.
+	Note *string `json:"note,omitempty"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -22781,7 +23167,9 @@ type BulkChangePreview struct {
 	Sample               []BulkSampleRow `json:"sample"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -22789,14 +23177,22 @@ type BulkChangePreview struct {
 type BulkChangePreviewRequest struct {
 	Items []BulkItem `json:"items"`
 
-	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	// ListId The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Note Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.
+	Note *string `json:"note,omitempty"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -22847,6 +23243,9 @@ type BulkOperation struct {
 	CreatedAt  time.Time        `json:"created_at"`
 	LeftBehind []BulkLeftBehind `json:"left_behind"`
 
+	// ListId The Shortlist a list verb named.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
 	// OwnerId The new owner a reassignment named.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -22861,14 +23260,19 @@ type BulkOperation struct {
 	UndoneBy *openapi_types.UUID `json:"undone_by,omitempty"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
-// BulkRecordState The two facts a bulk change can move on a record.
+// BulkRecordState The facts a bulk change can move on a record.
 type BulkRecordState struct {
-	Archived bool                `json:"archived"`
-	OwnerId  *openapi_types.UUID `json:"owner_id"`
+	Archived bool `json:"archived"`
+
+	// Listed For a list verb, whether the record is on the Shortlist.
+	Listed  *bool               `json:"listed,omitempty"`
+	OwnerId *openapi_types.UUID `json:"owner_id"`
 }
 
 // BulkRecordType The kind of record a bulk change acts on. One change acts on one kind.
@@ -22876,10 +23280,10 @@ type BulkRecordType string
 
 // BulkSampleRow One record the change would alter, as it is and as it would be.
 type BulkSampleRow struct {
-	// After The two facts a bulk change can move on a record.
+	// After The facts a bulk change can move on a record.
 	After BulkRecordState `json:"after"`
 
-	// Before The two facts a bulk change can move on a record.
+	// Before The facts a bulk change can move on a record.
 	Before BulkRecordState    `json:"before"`
 	Id     openapi_types.UUID `json:"id"`
 
@@ -22902,7 +23306,8 @@ type BulkSkip struct {
 
 	// Reason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
 	// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-	// its version moved since the caller read it. `no_change`: it already has this owner.
+	// its version moved since the caller read it. `no_change`: it already has this owner, or is
+	// already on (or already off) the Shortlist.
 	// `anchor_company`: it is the installation's own company, which is never archived.
 	// `not_previewed`: the preview whose token this execution presents did not list it.
 	// `refused`: a single-record rule refuses it; `code` says which.
@@ -22916,7 +23321,8 @@ type BulkSkip struct {
 
 // BulkSkipReason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
 // archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-// its version moved since the caller read it. `no_change`: it already has this owner.
+// its version moved since the caller read it. `no_change`: it already has this owner, or is
+// already on (or already off) the Shortlist.
 // `anchor_company`: it is the installation's own company, which is never archived.
 // `not_previewed`: the preview whose token this execution presents did not list it.
 // `refused`: a single-record rule refuses it; `code` says which.
@@ -22934,7 +23340,9 @@ type BulkUndoRequest struct {
 }
 
 // BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-// `archive` retires it exactly as the single-record archive does.
+// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
@@ -24370,6 +24778,9 @@ type Company360 struct {
 
 	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
+	ListMemberships *[]List `json:"list_memberships,omitempty"`
 
 	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
 	// The schema is `ContactMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
@@ -28894,6 +29305,27 @@ type CreateLeadSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
+// CreateListRequest defines model for CreateListRequest.
+type CreateListRequest struct {
+	Definition *map[string]interface{}     `json:"definition,omitempty"`
+	EntityType CreateListRequestEntityType `json:"entity_type"`
+	ListType   *CreateListRequestListType  `json:"list_type,omitempty"`
+	Name       string                      `json:"name"`
+	Purpose    *string                     `json:"purpose,omitempty"`
+	Sharing    *CreateListRequestSharing   `json:"sharing,omitempty"`
+	StewardId  *openapi_types.UUID         `json:"steward_id,omitempty"`
+	TeamId     *openapi_types.UUID         `json:"team_id,omitempty"`
+}
+
+// CreateListRequestEntityType defines model for CreateListRequest.EntityType.
+type CreateListRequestEntityType string
+
+// CreateListRequestListType defines model for CreateListRequest.ListType.
+type CreateListRequestListType string
+
+// CreateListRequestSharing defines model for CreateListRequest.Sharing.
+type CreateListRequestSharing string
+
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerCompanyId Defaults to the deal's company.
@@ -31136,23 +31568,26 @@ type FilterVocabularyFieldReferences string
 // a folded value has no fragment to match against.
 type FilterVocabularyFieldType string
 
-// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine.
+// FilteredExportRequest A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List whose filter is exported). The slice is always row-scoped to the caller through the one filter engine.
 type FilteredExportRequest struct {
 	// Filter The canonical §13.5 predicate tree (nested and/or groups over typed leaves). Required with `object`.
 	Filter *map[string]interface{}     `json:"filter,omitempty"`
 	Format FilteredExportRequestFormat `json:"format"`
 
-	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
+	// ListId Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Object The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
 	Object *FilteredExportRequestObject `json:"object,omitempty"`
 
-	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object.
+	// ViewId Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
 	ViewId *openapi_types.UUID `json:"view_id,omitempty"`
 }
 
 // FilteredExportRequestFormat defines model for FilteredExportRequest.Format.
 type FilteredExportRequestFormat string
 
-// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
+// FilteredExportRequestObject The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
 type FilteredExportRequestObject string
 
 // FinanceInvoice One mirrored invoice, in the currency it was issued in.
@@ -33390,6 +33825,182 @@ type LinkedInReachResponse struct {
 	// the honest size of what this view cannot show, and because it is the number
 	// that shrinks as accounts are created.
 	UnresolvedConnections int `json:"unresolved_connections"`
+}
+
+// List A Live List (list_type dynamic: its members are its filter's current result) or a Shortlist (static: members chosen by hand). Mirrors the `list` table.
+type List struct {
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// CanEdit Whether this caller holds list authority over the list.
+	CanEdit   bool       `json:"can_edit"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+
+	// Definition A Live List's filter tree; null for a Shortlist.
+	Definition *map[string]interface{} `json:"definition,omitempty"`
+
+	// Dependencies What uses this list. Exports are listed as usage and block nothing.
+	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
+	EntityType   ListEntityType    `json:"entity_type"`
+
+	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+	Health   ListHealth          `json:"health"`
+	Id       openapi_types.UUID  `json:"id"`
+	ListType ListListType        `json:"list_type"`
+	Name     string              `json:"name"`
+	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Purpose What the list is for, in the words of its steward.
+	Purpose *string `json:"purpose,omitempty"`
+
+	// Sharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
+	Sharing ListSharing `json:"sharing"`
+
+	// StewardId Who looks after the list and may change it.
+	StewardId   *openapi_types.UUID `json:"steward_id,omitempty"`
+	StewardName *string             `json:"steward_name,omitempty"`
+
+	// TeamId The team a team list is shared with; null shares it with the teams of its owner.
+	TeamId    *openapi_types.UUID `json:"team_id,omitempty"`
+	UpdatedAt *time.Time          `json:"updated_at,omitempty"`
+	Version   int64               `json:"version"`
+
+	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
+	VisibleCount *int `json:"visible_count,omitempty"`
+}
+
+// ListEntityType defines model for List.EntityType.
+type ListEntityType string
+
+// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+type ListHealth string
+
+// ListListType defines model for List.ListType.
+type ListListType string
+
+// ListSharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
+type ListSharing string
+
+// ListClauseVerdict One node of a Live List's filter judged for one record: a group (`join`, `children`) or a clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the filter treats as not selected.
+type ListClauseVerdict struct {
+	Children *[]ListClauseVerdict `json:"children,omitempty"`
+	Field    *string              `json:"field,omitempty"`
+
+	// Hidden The value is not shown to this caller.
+	Hidden *bool                  `json:"hidden,omitempty"`
+	Join   *ListClauseVerdictJoin `json:"join,omitempty"`
+	Op     *string                `json:"op,omitempty"`
+
+	// Operand The clause's value as the filter states it.
+	Operand interface{} `json:"operand,omitempty"`
+	Result  *bool       `json:"result"`
+
+	// Value The record's current value of the field, as text.
+	Value *string `json:"value,omitempty"`
+}
+
+// ListClauseVerdictJoin defines model for ListClauseVerdict.Join.
+type ListClauseVerdictJoin string
+
+// ListDependency defines model for ListDependency.
+type ListDependency struct {
+	Actor *string `json:"actor,omitempty"`
+
+	// Blocking Whether it refuses a breaking change or archive of the list.
+	Blocking   bool               `json:"blocking"`
+	Kind       ListDependencyKind `json:"kind"`
+	OccurredAt time.Time          `json:"occurred_at"`
+}
+
+// ListDependencyKind defines model for ListDependency.Kind.
+type ListDependencyKind string
+
+// ListHistoryEntry defines model for ListHistoryEntry.
+type ListHistoryEntry struct {
+	Actor      string                  `json:"actor"`
+	ActorName  *string                 `json:"actor_name,omitempty"`
+	Definition *map[string]interface{} `json:"definition,omitempty"`
+	EntityId   *openapi_types.UUID     `json:"entity_id,omitempty"`
+	EntityType *string                 `json:"entity_type,omitempty"`
+	Id         openapi_types.UUID      `json:"id"`
+	Kind       ListHistoryEntryKind    `json:"kind"`
+	Name       *string                 `json:"name,omitempty"`
+	Note       *string                 `json:"note,omitempty"`
+	OccurredAt time.Time               `json:"occurred_at"`
+	Reason     *ListHistoryEntryReason `json:"reason,omitempty"`
+	Sharing    *string                 `json:"sharing,omitempty"`
+	Version    *int64                  `json:"version,omitempty"`
+}
+
+// ListHistoryEntryKind defines model for ListHistoryEntry.Kind.
+type ListHistoryEntryKind string
+
+// ListHistoryEntryReason defines model for ListHistoryEntry.Reason.
+type ListHistoryEntryReason string
+
+// ListHistoryResponse defines model for ListHistoryResponse.
+type ListHistoryResponse struct {
+	Data []ListHistoryEntry `json:"data"`
+	Page PageInfo           `json:"page"`
+}
+
+// ListListResponse defines model for ListListResponse.
+type ListListResponse struct {
+	Data []List   `json:"data"`
+	Page PageInfo `json:"page"`
+}
+
+// ListMember defines model for ListMember.
+type ListMember struct {
+	// AddedBy The principal that added a Shortlist member; `dynamic` for a Live List member.
+	AddedBy    *string              `json:"added_by,omitempty"`
+	CreatedAt  *time.Time           `json:"created_at,omitempty"`
+	EntityId   openapi_types.UUID   `json:"entity_id"`
+	EntityType ListMemberEntityType `json:"entity_type"`
+	Id         openapi_types.UUID   `json:"id"`
+	ListId     openapi_types.UUID   `json:"list_id"`
+	Note       *string              `json:"note,omitempty"`
+}
+
+// ListMemberEntityType defines model for ListMember.EntityType.
+type ListMemberEntityType string
+
+// ListMemberChangeRequest defines model for ListMemberChangeRequest.
+type ListMemberChangeRequest struct {
+	EntityId   openapi_types.UUID                `json:"entity_id"`
+	EntityType ListMemberChangeRequestEntityType `json:"entity_type"`
+
+	// Note Why, in the words of whoever made the change.
+	Note *string `json:"note,omitempty"`
+}
+
+// ListMemberChangeRequestEntityType defines model for ListMemberChangeRequest.EntityType.
+type ListMemberChangeRequestEntityType string
+
+// ListMemberExplanation defines model for ListMemberExplanation.
+type ListMemberExplanation struct {
+	AddedAt     *time.Time `json:"added_at,omitempty"`
+	AddedBy     *string    `json:"added_by,omitempty"`
+	AddedByName *string    `json:"added_by_name,omitempty"`
+
+	// Clauses One node of a Live List's filter judged for one record: a group (`join`, `children`) or a clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the filter treats as not selected.
+	Clauses *ListClauseVerdict `json:"clauses,omitempty"`
+
+	// Eligible For a Live List, whether the record is live and eligible at all, before any clause.
+	Eligible *bool                         `json:"eligible,omitempty"`
+	EntityId openapi_types.UUID            `json:"entity_id"`
+	ListId   openapi_types.UUID            `json:"list_id"`
+	ListType ListMemberExplanationListType `json:"list_type"`
+	Member   bool                          `json:"member"`
+	Note     *string                       `json:"note,omitempty"`
+}
+
+// ListMemberExplanationListType defines model for ListMemberExplanation.ListType.
+type ListMemberExplanationListType string
+
+// ListMemberListResponse defines model for ListMemberListResponse.
+type ListMemberListResponse struct {
+	Data []ListMember `json:"data"`
+	Page PageInfo     `json:"page"`
 }
 
 // LoginRequest defines model for LoginRequest.
@@ -38645,6 +39256,9 @@ type SettingsAvailability struct {
 
 	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
 	EmbeddingReindex bool `json:"embedding_reindex"`
+
+	// Lists True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
+	Lists *bool `json:"lists,omitempty"`
 }
 
 // SettleClaimRequest How a claim finished.
@@ -40453,6 +41067,27 @@ type UpdateLeadSourceRequest struct {
 	Label     *string           `json:"label,omitempty"`
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
+
+// UpdateListRequest defines model for UpdateListRequest.
+type UpdateListRequest struct {
+	// Definition A Live List's new filter tree.
+	Definition *map[string]interface{} `json:"definition,omitempty"`
+	Name       *string                 `json:"name,omitempty"`
+
+	// Purpose Null removes the purpose.
+	Purpose   *string                   `json:"purpose,omitempty"`
+	Sharing   *UpdateListRequestSharing `json:"sharing,omitempty"`
+	StewardId *openapi_types.UUID       `json:"steward_id,omitempty"`
+
+	// TeamId Null shares a team list with the teams of its owner.
+	TeamId *openapi_types.UUID `json:"team_id,omitempty"`
+
+	// Version The version the caller read.
+	Version int64 `json:"version"`
+}
+
+// UpdateListRequestSharing defines model for UpdateListRequest.Sharing.
+type UpdateListRequestSharing string
 
 // UpdateOfferLineItemRequest Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
 type UpdateOfferLineItemRequest struct {
@@ -43195,6 +43830,9 @@ type IncludeArchived = bool
 // Limit defines model for Limit.
 type Limit = int
 
+// ListMembershipFilter defines model for ListMembershipFilter.
+type ListMembershipFilter = openapi_types.UUID
+
 // ProfileFieldKey defines model for ProfileFieldKey.
 type ProfileFieldKey string
 
@@ -44077,6 +44715,13 @@ type ListCompaniesParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
+
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -44870,6 +45515,13 @@ type ListContactsParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
+
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -45655,6 +46307,13 @@ type ListDealsParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
+
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -46233,6 +46892,13 @@ type ListLeadsParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
+	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+	// filter selects now — narrowed before sorting and paging, so the page is the list's members
+	// in the record list's own columns. The list must be one the caller may find and of this
+	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+	// the caller's row scope still applies to every row.
+	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
+
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
 	// `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -46460,6 +47126,56 @@ type ExplainLeadScoreParams struct {
 	// History Return the retained score series instead of the current explanation.
 	History *bool `form:"history,omitempty" json:"history,omitempty"`
 
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListListsParams defines parameters for ListLists.
+type ListListsParams struct {
+	EntityType *ListListsParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+	ListType   *ListListsParamsListType   `form:"list_type,omitempty" json:"list_type,omitempty"`
+
+	// Q Matches the name or purpose, case-insensitively.
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
+// ListListsParamsEntityType defines parameters for ListLists.
+type ListListsParamsEntityType string
+
+// ListListsParamsListType defines parameters for ListLists.
+type ListListsParamsListType string
+
+// ListListHistoryParams defines parameters for ListListHistory.
+type ListListHistoryParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListListMembersParams defines parameters for ListListMembers.
+type ListListMembersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
@@ -49287,6 +50003,18 @@ type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 
 // PromoteLeadJSONRequestBody defines body for PromoteLead for application/json ContentType.
 type PromoteLeadJSONRequestBody = PromoteLeadRequest
+
+// CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
+type CreateListJSONRequestBody = CreateListRequest
+
+// UpdateListJSONRequestBody defines body for UpdateList for application/json ContentType.
+type UpdateListJSONRequestBody = UpdateListRequest
+
+// AddListMemberJSONRequestBody defines body for AddListMember for application/json ContentType.
+type AddListMemberJSONRequestBody = ListMemberChangeRequest
+
+// RemoveListMemberJSONRequestBody defines body for RemoveListMember for application/json ContentType.
+type RemoveListMemberJSONRequestBody = ListMemberChangeRequest
 
 // SaveMailDraftJSONRequestBody defines body for SaveMailDraft for application/json ContentType.
 type SaveMailDraftJSONRequestBody = MailDraftInput
@@ -61008,6 +61736,39 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
+	// Find the lists this caller may see, by name.
+	// (GET /lists)
+	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
+	// Make a Live List (a saved filter) or a Shortlist (chosen records).
+	// (POST /lists)
+	CreateList(w http.ResponseWriter, r *http.Request)
+	// Archive a list. Its members and history stay, read-only.
+	// (DELETE /lists/{id})
+	ArchiveList(w http.ResponseWriter, r *http.Request, id Id)
+	// Read one list, with the count of its members this caller may see.
+	// (GET /lists/{id})
+	GetList(w http.ResponseWriter, r *http.Request, id Id)
+	// Change a list's name, purpose, filter, sharing, team or steward.
+	// (PATCH /lists/{id})
+	UpdateList(w http.ResponseWriter, r *http.Request, id Id)
+	// Read what changed on a list, newest first.
+	// (GET /lists/{id}/history)
+	ListListHistory(w http.ResponseWriter, r *http.Request, id Id, params ListListHistoryParams)
+	// Page through the members of a list this caller may see.
+	// (GET /lists/{id}/members)
+	ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams)
+	// Add one record to a Shortlist, with an optional note on why.
+	// (POST /lists/{id}/members)
+	AddListMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Take one record off a Shortlist, with an optional note on why.
+	// (POST /lists/{id}/members/remove)
+	RemoveListMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Say why a record is, or is not, on a list.
+	// (GET /lists/{id}/members/{recordId}/why)
+	ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID)
+	// Bring an archived list back.
+	// (POST /lists/{id}/restore)
+	RestoreList(w http.ResponseWriter, r *http.Request, id Id)
 	// What the machinery did, what it needs, what it could not finish, and what it is watching.
 	// (GET /magic)
 	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
@@ -64440,6 +65201,72 @@ func (_ Unimplemented) ReopenLead(w http.ResponseWriter, r *http.Request, id Id,
 // Explain This Score — the weighted-factor decomposition behind a lead's score.
 // (GET /leads/{id}/score)
 func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find the lists this caller may see, by name.
+// (GET /lists)
+func (_ Unimplemented) ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Make a Live List (a saved filter) or a Shortlist (chosen records).
+// (POST /lists)
+func (_ Unimplemented) CreateList(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a list. Its members and history stay, read-only.
+// (DELETE /lists/{id})
+func (_ Unimplemented) ArchiveList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read one list, with the count of its members this caller may see.
+// (GET /lists/{id})
+func (_ Unimplemented) GetList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change a list's name, purpose, filter, sharing, team or steward.
+// (PATCH /lists/{id})
+func (_ Unimplemented) UpdateList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read what changed on a list, newest first.
+// (GET /lists/{id}/history)
+func (_ Unimplemented) ListListHistory(w http.ResponseWriter, r *http.Request, id Id, params ListListHistoryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Page through the members of a list this caller may see.
+// (GET /lists/{id}/members)
+func (_ Unimplemented) ListListMembers(w http.ResponseWriter, r *http.Request, id Id, params ListListMembersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add one record to a Shortlist, with an optional note on why.
+// (POST /lists/{id}/members)
+func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take one record off a Shortlist, with an optional note on why.
+// (POST /lists/{id}/members/remove)
+func (_ Unimplemented) RemoveListMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say why a record is, or is not, on a list.
+// (GET /lists/{id}/members/{recordId}/why)
+func (_ Unimplemented) ExplainListMember(w http.ResponseWriter, r *http.Request, id Id, recordId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Bring an archived list back.
+// (POST /lists/{id}/restore)
+func (_ Unimplemented) RestoreList(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71960,6 +72787,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "sort" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -75792,6 +76632,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
 		}
 		return
 	}
@@ -79764,6 +80617,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "sort" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -83390,6 +84256,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "list_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_id", r.URL.Query(), &params.ListId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "sort" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -84238,6 +85117,481 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainLeadScore(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLists operation middleware
+func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListListsParams
+
+	// ------------- Optional query parameter "entity_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "list_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "list_type", r.URL.Query(), &params.ListType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "list_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "list_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLists(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateList operation middleware
+func (siw *ServerInterfaceWrapper) CreateList(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateList(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveList operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetList operation middleware
+func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateList operation middleware
+func (siw *ServerInterfaceWrapper) UpdateList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListListHistory operation middleware
+func (siw *ServerInterfaceWrapper) ListListHistory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListListHistoryParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListListHistory(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListListMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListListMembersParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListListMembers(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddListMember operation middleware
+func (siw *ServerInterfaceWrapper) AddListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddListMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveListMember operation middleware
+func (siw *ServerInterfaceWrapper) RemoveListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveListMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainListMember operation middleware
+func (siw *ServerInterfaceWrapper) ExplainListMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "recordId" -------------
+	var recordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "recordId", chi.URLParam(r, "recordId"), &recordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "recordId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainListMember(w, r, id, recordId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreList operation middleware
+func (siw *ServerInterfaceWrapper) RestoreList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreList(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -97254,6 +98608,39 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists", wrapper.ListLists)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists", wrapper.CreateList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/lists/{id}", wrapper.ArchiveList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}", wrapper.GetList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/lists/{id}", wrapper.UpdateList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}/history", wrapper.ListListHistory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}/members", wrapper.ListListMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/members", wrapper.AddListMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/members/remove", wrapper.RemoveListMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lists/{id}/members/{recordId}/why", wrapper.ExplainListMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/restore", wrapper.RestoreList)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)

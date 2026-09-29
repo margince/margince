@@ -185,6 +185,8 @@ type listFilters struct {
 	// identifier is the record's address or domain table, when it has one.
 	// Empty for a record identified only by name.
 	identifier storekit.Identifier
+	// Membership narrows to one list's members, before sorting and paging.
+	Membership storekit.ListMemberFilter
 }
 
 // capturedByKindClause is the ONE spelling of the provenance filter
@@ -351,6 +353,13 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 	}
 	if f.Query != nil && *f.Query != "" {
 		where = append(where, storekit.QuickFindClauseWith(arg(quickFindTerm(*f.Query, f.entity)), f.nameColumn, f.identifier))
+	}
+	if f.Membership != nil {
+		member, err := f.Membership(f.entity+".id", arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, member)
 	}
 	cfClauses, err := storekit.CustomFilterClauses(active, f.CustomFilters, arg)
 	if err != nil {

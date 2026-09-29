@@ -49,11 +49,7 @@ func recordBulkOperation(ctx context.Context, tx pgx.Tx, batchID ids.UUID, chang
 	if err != nil {
 		return err
 	}
-	named := map[string]ids.UUID{}
-	if change.ownerID != nil {
-		named["owner_id"] = *change.ownerID
-	}
-	params, err := json.Marshal(named)
+	params, err := json.Marshal(bulkParams{OwnerID: change.ownerID, ListID: change.listID})
 	if err != nil {
 		return fmt.Errorf("record the change's parameters: %w", err)
 	}
@@ -102,12 +98,20 @@ func storedResult(run bulkRun) bulkResult {
 	return out
 }
 
+// bulkParams is bulk_operation.params: the verb's parameters as the caller
+// sent them — the new owner, or the Shortlist.
+type bulkParams struct {
+	OwnerID *ids.UUID `json:"owner_id,omitempty"`
+	ListID  *ids.UUID `json:"list_id,omitempty"`
+}
+
 // bulkOperation is one bulk_operation row as its readers need it.
 type bulkOperation struct {
 	id           ids.UUID
 	recordType   crmcontracts.BulkRecordType
 	verb         crmcontracts.BulkVerb
 	ownerID      *ids.UUID
+	listID       *ids.UUID
 	requester    batchRequester
 	changedCount int
 	result       bulkResult
@@ -137,13 +141,11 @@ func readBulkOperation(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkOperati
 	if !mayReadBatch(ctx, op.requester) {
 		return bulkOperation{}, apperrors.ErrNotFound
 	}
-	var named struct {
-		OwnerID *ids.UUID `json:"owner_id"`
-	}
+	var named bulkParams
 	if err := json.Unmarshal(params, &named); err != nil {
 		return bulkOperation{}, fmt.Errorf("read bulk change %s parameters: %w", id, err)
 	}
-	op.ownerID = named.OwnerID
+	op.ownerID, op.listID = named.OwnerID, named.ListID
 	if err := json.Unmarshal(result, &op.result); err != nil {
 		return bulkOperation{}, fmt.Errorf("read bulk change %s result: %w", id, err)
 	}
@@ -192,7 +194,7 @@ func (e *bulkEngine) Status(ctx context.Context, id ids.UUID) (crmcontracts.Bulk
 	}
 	return crmcontracts.BulkOperation{
 		BatchId: openapi_types.UUID(op.id), RecordType: op.recordType, Verb: op.verb,
-		OwnerId: wireOwner(op.ownerID), Changed: op.changedCount, Skipped: skipped, LeftBehind: leftBehind,
+		OwnerId: wireOwner(op.ownerID), ListId: wireOwner(op.listID), Changed: op.changedCount, Skipped: skipped, LeftBehind: leftBehind,
 		UndoOf: wireOwner(op.undoOf), UndoneBy: wireOwner(op.undoneBy), CreatedAt: op.createdAt,
 	}, nil
 }

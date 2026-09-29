@@ -79,6 +79,8 @@ type ListCompaniesInput struct {
 	// CustomFilters carries the request's cf_* query parameters —
 	// equality matches against active custom columns (storekit listquery).
 	CustomFilters map[string]string
+	// Membership narrows to one list's members (list_id).
+	Membership storekit.ListMemberFilter
 }
 
 // companyListFields is the company list's core sortable
@@ -178,6 +180,7 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 		identifier: storekit.Identifier{
 			Table: "company_domain", FK: companyFK, Column: domainColumn,
 		},
+		Membership: in.Membership,
 	}
 }
 

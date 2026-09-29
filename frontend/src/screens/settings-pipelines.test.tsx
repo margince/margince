@@ -480,14 +480,19 @@ describe("PipelinesCard: the ladder", () => {
 });
 
 describe("PipelinesCard: the pipeline's own verbs", () => {
-  // The default's Retire stays VISIBLE and disabled with the reason beside it:
-  // the reason names a remedy this same page offers.
-  it("disables retire on the default pipeline and says why", async () => {
+  // The default's Retire stays VISIBLE and disabled, with the reason in the
+  // row's description: it names a remedy this same page offers, and set beside
+  // the button it took the whole row and crushed the description to a letter.
+  it("disables retire on the default pipeline and says why under the row", async () => {
     server({ allow: { pipeline: ["read", "update", "delete"] } });
     renderPage();
-    expect(
-      await screen.findByText(/Make another pipeline the default first/),
-    ).toBeTruthy();
+    const reason = await screen.findByText(
+      /Make another pipeline the default first/,
+    );
+    expect(reason.closest(".settingrow-description")).not.toBeNull();
+    const retire = screen.getByRole("button", { name: "Retire" });
+    expect(retire.hasAttribute("disabled")).toBe(true);
+    expect(retire.getAttribute("aria-describedby")).toBe(reason.id);
   });
 
   it("retires a pipeline through DELETE with its version, once confirmed", async () => {

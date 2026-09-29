@@ -1340,7 +1340,7 @@ public.bulk_operation acl=margince_owner=arwdDxt/margince_owner,margince_app=arw
 public.bulk_operation.bulk_operation_counts_check CHECK (((changed_count >= 0) AND (skipped_count >= 0)))
 public.bulk_operation.bulk_operation_pkey PRIMARY KEY (id)
 public.bulk_operation.bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text])))
-public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text])))
+public.bulk_operation.bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text])))
 public.bulk_operation.changed_count integer NOT NULL gen=- def=-
 public.bulk_operation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.bulk_operation.id uuid NOT NULL gen=- def=uuidv7()
@@ -4216,7 +4216,10 @@ public.idx_linkedin_connection_match CREATE INDEX idx_linkedin_connection_match 
 public.idx_linkedin_connection_matched_contact CREATE INDEX idx_linkedin_connection_matched_contact ON public.linkedin_connection USING btree (matched_contact_id)
 public.idx_linkedin_connection_owner_user CREATE INDEX idx_linkedin_connection_owner_user ON public.linkedin_connection USING btree (owner_user_id)
 public.idx_list_member_entity CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id)
+public.idx_list_member_event_entity CREATE INDEX idx_list_member_event_entity ON public.list_member_event USING btree (entity_type, entity_id)
+public.idx_list_member_event_list CREATE INDEX idx_list_member_event_list ON public.list_member_event USING btree (list_id, occurred_at DESC, id DESC)
 public.idx_list_member_list CREATE INDEX idx_list_member_list ON public.list_member USING btree (list_id)
+public.idx_list_steward CREATE INDEX idx_list_steward ON public.list USING btree (steward_id)
 public.idx_notice_recipient_user CREATE INDEX idx_notice_recipient_user ON public.notice USING btree (recipient_user_id)
 public.idx_oauth_authorization_code_user CREATE INDEX idx_oauth_authorization_code_user ON public.oauth_authorization_code USING btree (user_id)
 public.idx_oauth_grant_user CREATE INDEX idx_oauth_grant_user ON public.oauth_grant USING btree (user_id)
@@ -4711,10 +4714,15 @@ public.list.list_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::t
 public.list.list_list_type_check CHECK ((list_type = ANY (ARRAY['static'::text, 'dynamic'::text])))
 public.list.list_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.list.list_pkey PRIMARY KEY (id)
+public.list.list_sharing_check CHECK ((sharing = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
+public.list.list_steward_id_fkey FOREIGN KEY (steward_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.list.list_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE SET NULL (team_id)
 public.list.list_type text NOT NULL gen=- def='static'::text
 public.list.name text NOT NULL gen=- def=-
 public.list.owner_id uuid gen=- def=-
+public.list.purpose text gen=- def=-
+public.list.sharing text NOT NULL gen=- def='team'::text
+public.list.steward_id uuid gen=- def=-
 public.list.team_id uuid gen=- def=-
 public.list.trg_list_updated CREATE TRIGGER trg_list_updated BEFORE UPDATE ON public.list FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.list.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4730,9 +4738,43 @@ public.list_member.list_member_entity_type_check CHECK ((entity_type = ANY (ARRA
 public.list_member.list_member_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
 public.list_member.list_member_pkey PRIMARY KEY (id)
 public.list_member.list_member_unique UNIQUE (list_id, entity_type, entity_id)
+public.list_member.note text gen=- def=-
+public.list_member_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.list_member_event.action text NOT NULL gen=- def=-
+public.list_member_event.actor text NOT NULL gen=- def=-
+public.list_member_event.entity_id uuid NOT NULL gen=- def=-
+public.list_member_event.entity_type text NOT NULL gen=- def=-
+public.list_member_event.id uuid NOT NULL gen=- def=uuidv7()
+public.list_member_event.list_id uuid NOT NULL gen=- def=-
+public.list_member_event.list_member_event_action_check CHECK ((action = ANY (ARRAY['added'::text, 'removed'::text])))
+public.list_member_event.list_member_event_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+public.list_member_event.list_member_event_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
+public.list_member_event.list_member_event_pkey PRIMARY KEY (id)
+public.list_member_event.list_member_event_reason_check CHECK ((reason = ANY (ARRAY['chosen'::text, 'bulk'::text, 'record_archived'::text, 'record_restored'::text])))
+public.list_member_event.note text gen=- def=-
+public.list_member_event.occurred_at timestamp with time zone NOT NULL gen=- def=now()
+public.list_member_event.reason text NOT NULL gen=- def=-
+public.list_member_event_pkey CREATE UNIQUE INDEX list_member_event_pkey ON public.list_member_event USING btree (id)
 public.list_member_pkey CREATE UNIQUE INDEX list_member_pkey ON public.list_member USING btree (id)
 public.list_member_unique CREATE UNIQUE INDEX list_member_unique ON public.list_member USING btree (list_id, entity_type, entity_id)
 public.list_pkey CREATE UNIQUE INDEX list_pkey ON public.list USING btree (id)
+public.list_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.list_revision.changed_at timestamp with time zone NOT NULL gen=- def=now()
+public.list_revision.changed_by text NOT NULL gen=- def=-
+public.list_revision.definition jsonb gen=- def=-
+public.list_revision.id uuid NOT NULL gen=- def=uuidv7()
+public.list_revision.list_id uuid NOT NULL gen=- def=-
+public.list_revision.list_revision_list_id_fkey FOREIGN KEY (list_id) REFERENCES list(id) ON DELETE CASCADE
+public.list_revision.list_revision_pkey PRIMARY KEY (id)
+public.list_revision.list_revision_version_key UNIQUE (list_id, version)
+public.list_revision.name text NOT NULL gen=- def=-
+public.list_revision.purpose text gen=- def=-
+public.list_revision.sharing text NOT NULL gen=- def=-
+public.list_revision.steward_id uuid gen=- def=-
+public.list_revision.team_id uuid gen=- def=-
+public.list_revision.version bigint NOT NULL gen=- def=-
+public.list_revision_pkey CREATE UNIQUE INDEX list_revision_pkey ON public.list_revision USING btree (id)
+public.list_revision_version_key CREATE UNIQUE INDEX list_revision_version_key ON public.list_revision USING btree (list_id, version)
 public.mail_draft acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mail_draft.anchor_id uuid NOT NULL gen=- def=-
 public.mail_draft.anchor_type text NOT NULL gen=- def=-

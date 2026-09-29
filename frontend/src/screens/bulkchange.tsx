@@ -50,6 +50,8 @@ export type BulkChangeRequest = Readonly<{
   verb: BulkVerb;
   rows: readonly BulkRow[];
   ownerId?: string;
+  /** The Shortlist a list verb adds to or takes off, and its name. */
+  list?: Readonly<{ id: string; name: string }>;
   openId: string;
   /** Set when this press undoes the change with that batch id. */
   undoOf?: string;
@@ -183,6 +185,13 @@ function SampleState({
   if (verb === "reassign_owner") {
     return <OwnerName ownerId={state.owner_id} unowned={t("list.unowned")} />;
   }
+  if (verb === "add_to_list" || verb === "remove_from_list") {
+    return (
+      <span>
+        {state.listed ? t("bulk.stateListed") : t("bulk.stateNotListed")}
+      </span>
+    );
+  }
   return state.archived ? (
     <Badge tone="warning">{t("record.archived")}</Badge>
   ) : (
@@ -294,6 +303,20 @@ function dialogWords(request: BulkChangeRequest, t: Translate) {
       confirm: t("bulk.confirmArchive", { unit }),
       danger: true,
     };
+  }
+  if (request.verb === "add_to_list" || request.verb === "remove_from_list") {
+    const list = request.list?.name ?? "";
+    return request.verb === "add_to_list"
+      ? {
+          title: t("bulk.titleAddToList", { unit, list }),
+          confirm: t("bulk.confirmAddToList"),
+          danger: false,
+        }
+      : {
+          title: t("bulk.titleRemoveFromList", { unit, list }),
+          confirm: t("bulk.confirmRemoveFromList"),
+          danger: true,
+        };
   }
   return {
     title: t("bulk.titleReassign", { unit }),

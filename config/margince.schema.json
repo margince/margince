@@ -322,6 +322,16 @@
         }
       }
     },
+    "lists": {
+      "description": "Lists switches Live Lists and Shortlists on. They are off until an operator turns them on: the product is being built, and nothing an installation shows should advertise an unfinished surface.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
     "operations": {
       "description": "Operations carries the ops kill switches (OPS-CFG-9): capabilities an installation turns on deliberately, in the file layer, where the deployment reviews them.",
       "type": "object",

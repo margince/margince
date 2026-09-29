@@ -3059,6 +3059,15 @@ export const vi = {
   "bulk.refusal.required": "Liên hệ riêng tư phải có người phụ trách",
   "bulk.confirmReassign": "Đổi người phụ trách",
   "bulk.confirmArchive": "Lưu trữ {unit}",
+  "bulk.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
+  "bulk.titleAddToList":
+    "Th\u00eam {unit} \u0111\u00e3 ch\u1ecdn v\u00e0o {list}?",
+  "bulk.confirmAddToList": "Th\u00eam v\u00e0o danh s\u00e1ch",
+  "bulk.titleRemoveFromList":
+    "G\u1ee1 {unit} \u0111\u00e3 ch\u1ecdn kh\u1ecfi {list}?",
+  "bulk.confirmRemoveFromList": "G\u1ee1 kh\u1ecfi danh s\u00e1ch",
+  "bulk.stateListed": "C\u00f3 trong danh s\u00e1ch",
+  "bulk.stateNotListed": "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch",
   "bulk.doneContacts_one": "Đã thay đổi {count} liên hệ.",
   "bulk.doneContacts_other": "Đã thay đổi {count} liên hệ.",
   "bulk.doneCompanies_one": "Đã thay đổi {count} công ty.",
@@ -9819,6 +9828,157 @@ export const vi = {
   "filters.op.atLeast": "\u00edt nh\u1ea5t l\u00e0",
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
+  "filters.tab.leads": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
+  "filters.matchLeads_one": "{count} kh\u00e1ch ti\u1ec1m n\u0103ng kh\u1edbp",
+  "filters.matchLeads_other":
+    "{count} kh\u00e1ch ti\u1ec1m n\u0103ng kh\u1edbp",
+  "filters.date.on": "V\u00e0o m\u1ed9t ng\u00e0y",
+  "filters.date.daysAgo": "S\u1ed1 ng\u00e0y tr\u01b0\u1edbc",
+  "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",
+  "filters.date.daysAgoCount":
+    "{field}: s\u1ed1 ng\u00e0y tr\u01b0\u1edbc h\u00f4m nay",
+  "filters.saveList": "L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
+  "filters.saveListTitle":
+    "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
+  "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
+  "lists.page": "Danh s\u00e1ch",
+  "lists.section.label": "Hi\u1ec3n th\u1ecb",
+  "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",
+  "lists.section.lists": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.section.build": "T\u1ea1o b\u1ed9 l\u1ecdc",
+  "lists.kind.live": "Danh s\u00e1ch \u0111\u1ed9ng",
+  "lists.kind.shortlist": "Danh s\u00e1ch ch\u1ecdn",
+  "lists.type.contact": "Li\u00ean h\u1ec7",
+  "lists.type.company": "C\u00f4ng ty",
+  "lists.type.deal": "Giao d\u1ecbch",
+  "lists.type.lead": "Kh\u00e1ch ti\u1ec1m n\u0103ng",
+  "lists.type.project": "D\u1ef1 \u00e1n",
+  "lists.sharing.private": "Ch\u1ec9 m\u00ecnh t\u00f4i",
+  "lists.sharing.team": "Nh\u00f3m c\u1ee7a t\u00f4i",
+  "lists.sharing.workspace": "To\u00e0n c\u00f4ng ty",
+  "lists.sharingLabel": "Ai c\u00f3 th\u1ec3 t\u00ecm th\u1ea5y",
+  "lists.sharingHint":
+    "Chia s\u1ebb danh s\u00e1ch kh\u00f4ng cho ai xem b\u1ea3n ghi m\u00e0 h\u1ecd v\u1ed1n kh\u00f4ng \u0111\u01b0\u1ee3c xem.",
+  "lists.health.ownerless": "C\u1ea7n ph\u1ee5 tr\u00e1ch",
+  "lists.health.invalid":
+    "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.library.title": "Danh s\u00e1ch c\u1ee7a nh\u00f3m",
+  "lists.library.search": "T\u00ecm danh s\u00e1ch",
+  "lists.library.all": "T\u1ea5t c\u1ea3",
+  "lists.library.kind": "Lo\u1ea1i danh s\u00e1ch",
+  "lists.library.empty":
+    "Ch\u01b0a c\u00f3 danh s\u00e1ch n\u00e0o. H\u00e3y l\u01b0u m\u1ed9t b\u1ed9 l\u1ecdc th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng ho\u1eb7c t\u1ea1o danh s\u00e1ch ch\u1ecdn.",
+  "lists.library.loading": "\u0110ang t\u1ea3i danh s\u00e1ch",
+  "lists.col.name": "T\u00ean",
+  "lists.col.kind": "Lo\u1ea1i",
+  "lists.col.recordType": "B\u1ea3n ghi",
+  "lists.col.count": "B\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c",
+  "lists.col.steward": "Ph\u1ee5 tr\u00e1ch",
+  "lists.col.sharing": "Chia s\u1ebb v\u1edbi",
+  "lists.noSteward": "Ch\u01b0a c\u00f3 ai",
+  "lists.newShortlist": "Danh s\u00e1ch ch\u1ecdn m\u1edbi",
+  "lists.newShortlistTitle": "T\u1ea1o danh s\u00e1ch ch\u1ecdn",
+  "lists.newShortlistOption":
+    "M\u1ed9t danh s\u00e1ch ch\u1ecdn m\u1edbi\u2026",
+  "lists.recordTypeLabel": "Lo\u1ea1i b\u1ea3n ghi",
+  "lists.name": "T\u00ean",
+  "lists.purpose": "D\u00f9ng \u0111\u1ec3 l\u00e0m g\u00ec",
+  "lists.create": "T\u1ea1o danh s\u00e1ch",
+  "lists.save": "L\u01b0u",
+  "lists.settings": "S\u1eeda danh s\u00e1ch",
+  "lists.settingsTitle": "S\u1eeda danh s\u00e1ch n\u00e0y",
+  "lists.archive": "L\u01b0u tr\u1eef danh s\u00e1ch",
+  "lists.restore": "Kh\u00f4i ph\u1ee5c",
+  "lists.unavailable":
+    "Danh s\u00e1ch ch\u01b0a \u0111\u01b0\u1ee3c b\u1eadt cho h\u1ec7 th\u1ed1ng n\u00e0y.",
+  "lists.gone":
+    "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
+  "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
+  "lists.head.facts":
+    "{type} \u00b7 b\u1ea1n th\u1ea5y {visible} \u00b7 chia s\u1ebb v\u1edbi {sharing} \u00b7 ph\u1ee5 tr\u00e1ch: {steward}",
+  "lists.head.exported_one":
+    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.head.exported_other":
+    "\u0110\u00e3 xu\u1ea5t {count} l\u1ea7n, l\u1ea7n g\u1ea7n nh\u1ea5t v\u00e0o {when}",
+  "lists.archived.title":
+    "Danh s\u00e1ch n\u00e0y \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
+  "lists.archived.body":
+    "Danh s\u00e1ch ch\u1ec9 \u0111\u1ecdc cho \u0111\u1ebfn khi \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c. Th\u00e0nh vi\u00ean v\u00e0 l\u1ecbch s\u1eed v\u1eabn \u0111\u01b0\u1ee3c gi\u1eef.",
+  "lists.invalid.title":
+    "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
+  "lists.invalid.body":
+    "M\u1ed9t tr\u01b0\u1eddng m\u00e0 b\u1ed9 l\u1ecdc d\u00f9ng \u0111\u00e3 thay \u0111\u1ed5i. Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch c\u00f3 th\u1ec3 s\u1eeda b\u1ed9 l\u1ecdc trong tr\u00ecnh t\u1ea1o.",
+  "lists.ownerless.title":
+    "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
+  "lists.ownerless.body":
+    "Th\u00e0nh vi\u00ean ph\u1ee5 tr\u00e1ch \u0111\u00e3 r\u1eddi \u0111i ho\u1eb7c ch\u01b0a t\u1eebng \u0111\u01b0\u1ee3c ch\u1ec9 \u0111\u1ecbnh. Ai c\u00f3 quy\u1ec1n s\u1eeda danh s\u00e1ch n\u00ean nh\u1eadn ph\u1ee5 tr\u00e1ch.",
+  "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
+  "lists.members.title": "Th\u00e0nh vi\u00ean",
+  "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
+  "lists.members.emptyLive":
+    "Kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o b\u1ea1n th\u1ea5y \u0111\u01b0\u1ee3c kh\u1edbp v\u1edbi b\u1ed9 l\u1ecdc c\u1ee7a danh s\u00e1ch.",
+  "lists.members.emptyShortlist":
+    "Ch\u01b0a ch\u1ecdn g\u00ec. Th\u00eam b\u1ea3n ghi t\u1eeb trang b\u1ea3n ghi ho\u1eb7c t\u1eeb m\u1ed9t l\u1ef1a ch\u1ecdn.",
+  "lists.members.projects":
+    "Danh s\u00e1ch d\u1ef1 \u00e1n hi\u1ec3n th\u1ecb th\u00e0nh vi\u00ean trong danh s\u00e1ch D\u1ef1 \u00e1n.",
+  "lists.members.whyColumn": "L\u00fd do",
+  "lists.members.why": "V\u00ec sao?",
+  "lists.members.more": "Xem th\u00eam",
+  "lists.history.title": "Nh\u1eefng thay \u0111\u1ed5i",
+  "lists.history.empty": "Ch\u01b0a c\u00f3 thay \u0111\u1ed5i n\u00e0o.",
+  "lists.history.loading": "\u0110ang t\u1ea3i l\u1ecbch s\u1eed",
+  "lists.history.when": "Khi n\u00e0o",
+  "lists.history.what": "N\u1ed9i dung",
+  "lists.history.who": "Ai",
+  "lists.history.added": "\u0110\u00e3 th\u00eam m\u1ed9t b\u1ea3n ghi",
+  "lists.history.removed": "\u0110\u00e3 g\u1ee1 m\u1ed9t b\u1ea3n ghi",
+  "lists.history.revised": "\u0110\u00e3 s\u1eeda danh s\u00e1ch",
+  "lists.history.reason.chosen": "th\u1ee7 c\u00f4ng",
+  "lists.history.reason.bulk":
+    "trong m\u1ed9t thay \u0111\u1ed5i h\u00e0ng lo\u1ea1t",
+  "lists.history.reason.archived":
+    "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef",
+  "lists.history.reason.restored":
+    "v\u00ec b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c kh\u00f4i ph\u1ee5c",
+  "lists.why.title": "V\u00ec sao {name}",
+  "lists.why.loading": "\u0110ang t\u00ecm l\u00fd do",
+  "lists.why.liveMember":
+    "C\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n \u0111ang ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
+  "lists.why.liveNotMember":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch: b\u1ed9 l\u1ecdc hi\u1ec7n kh\u00f4ng ch\u1ecdn b\u1ea3n ghi n\u00e0y.",
+  "lists.why.notEligible":
+    "Kh\u00f4ng c\u00f3 trong danh s\u00e1ch: b\u1ea3n ghi \u0111\u00e3 \u0111\u01b0\u1ee3c l\u01b0u tr\u1eef ho\u1eb7c kh\u00f4ng th\u1ec3 \u0111\u01b0a v\u00e0o danh s\u00e1ch.",
+  "lists.why.all": "T\u1ea5t c\u1ea3 c\u00e1c \u0111i\u1ec1u ki\u1ec7n",
+  "lists.why.any": "B\u1ea5t k\u1ef3 \u0111i\u1ec1u ki\u1ec7n n\u00e0o",
+  "lists.why.met": "Th\u1ecfa m\u00e3n",
+  "lists.why.unmet": "Kh\u00f4ng th\u1ecfa m\u00e3n",
+  "lists.why.unknown":
+    "Kh\u00f4ng c\u00f3 gi\u00e1 tr\u1ecb \u0111\u1ec3 x\u00e9t",
+  "lists.why.value": "Hi\u1ec7n t\u1ea1i: {value}",
+  "lists.why.empty": "tr\u1ed1ng",
+  "lists.why.hidden": "Gi\u00e1 tr\u1ecb b\u1ecb \u1ea9n v\u1edbi b\u1ea1n",
+  "lists.why.daysAgo_one": "{count} ng\u00e0y tr\u01b0\u1edbc",
+  "lists.why.daysAgo_other": "{count} ng\u00e0y tr\u01b0\u1edbc",
+  "lists.why.chosen": "\u0110\u01b0\u1ee3c {who} ch\u1ecdn v\u00e0o {when}.",
+  "lists.why.someone": "ai \u0111\u00f3",
+  "lists.why.notChosen":
+    "B\u1ea3n ghi n\u00e0y kh\u00f4ng c\u00f3 trong danh s\u00e1ch ch\u1ecdn.",
+  "lists.remove": "G\u1ee1 kh\u1ecfi danh s\u00e1ch ch\u1ecdn",
+  "lists.removeTitle":
+    "G\u1ee1 b\u1ea3n ghi n\u00e0y kh\u1ecfi danh s\u00e1ch ch\u1ecdn?",
+  "lists.note": "L\u00fd do (kh\u00f4ng b\u1eaft bu\u1ed9c)",
+  "lists.noteHint":
+    "\u0110\u01b0\u1ee3c l\u01b0u c\u00f9ng thay \u0111\u1ed5i \u0111\u1ec3 \u0111\u1ed3ng nghi\u1ec7p bi\u1ebft l\u00fd do.",
+  "lists.addToShortlist": "Th\u00eam v\u00e0o danh s\u00e1ch ch\u1ecdn",
+  "lists.onShortlists": "C\u00f3 trong danh s\u00e1ch ch\u1ecdn",
+  "lists.add": "Th\u00eam",
+  "lists.shortlist": "Danh s\u00e1ch ch\u1ecdn",
+  "lists.pickShortlist": "Ch\u1ecdn danh s\u00e1ch",
+  "lists.views.empty":
+    "Ch\u01b0a c\u00f3 b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u cho lo\u1ea1i b\u1ea3n ghi n\u00e0y.",
+  "lists.views.loading":
+    "\u0110ang t\u1ea3i b\u1ed9 l\u1ecdc \u0111\u00e3 l\u01b0u",
+  "lists.history.someone": "Ai \u0111\u00f3",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
   "filters.title": "B\u1ed9 l\u1ecdc & ch\u1ee7 \u0111\u1ec1",
@@ -9831,9 +9991,12 @@ export const vi = {
   "filters.builderTitle": "B\u1ed9 l\u1ecdc",
   "filters.dynamic":
     "\u0110\u1ed9ng \u2014 t\u00ednh l\u1ea1i sau m\u1ecdi s\u1ef1 ki\u1ec7n",
-  "filters.matchContacts": "{count} liên hệ khớp",
-  "filters.matchCompanies": "{count} c\u00f4ng ty kh\u1edbp",
-  "filters.matchDeals": "{count} deal kh\u1edbp",
+  "filters.matchContacts_one": "{count} li\u00ean h\u1ec7 kh\u1edbp",
+  "filters.matchContacts_other": "{count} li\u00ean h\u1ec7 kh\u1edbp",
+  "filters.matchCompanies_one": "{count} c\u00f4ng ty kh\u1edbp",
+  "filters.matchCompanies_other": "{count} c\u00f4ng ty kh\u1edbp",
+  "filters.matchDeals_one": "{count} deal kh\u1edbp",
+  "filters.matchDeals_other": "{count} deal kh\u1edbp",
   "filters.noFilterYet":
     "Th\u00eam \u0111i\u1ec1u ki\u1ec7n \u0111\u1ec3 xem k\u1ebft qu\u1ea3",
   "filters.countUnavailable":

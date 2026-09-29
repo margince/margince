@@ -187,6 +187,31 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	return redacted, nil
 }
 
+// deleteSubjectListMemberships takes the subject off every Shortlist, as the
+// contact and as each lead the same act anonymized, and deletes the history of
+// those memberships. Each row says somebody chose the subject for a purpose,
+// and its note says why in a colleague's words. The act anonymizes in place, so
+// no archive runs and nothing else removes them.
+//
+// The leads are the ones the caller's own anonymize answered (anonymizeLeadTwins
+// for erasure), not a second selection: a lead matched there by address or by
+// conversion and missed here would keep the subject on a Shortlist.
+func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID, leads []ids.UUID) error {
+	const subject = `(entity_type = 'contact' AND entity_id = @contact_id)
+		OR (entity_type = 'lead' AND entity_id = ANY(@leads))`
+	if leads == nil {
+		leads = []ids.UUID{}
+	}
+	args := pgx.StrictNamedArgs{"contact_id": contactID, "leads": leads}
+	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, args); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's list history: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM list_member WHERE `+subject, args); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's list memberships: %w", err)
+	}
+	return nil
+}
+
 // subjectActivityEmbeddingsDelete drops the vectors of the subject's own
 // timeline rows. A held activity keeps its embedding along with its text: the
 // vector is derived from evidence the hold freezes, and destroying it while

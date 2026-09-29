@@ -468,5 +468,12 @@ const (
 	// company it names goes to deals.RecordSuggestionTx, and a rep sees the
 	// suggestion only through deals' visibility clause, which applies the
 	// company's row scope and every evidence item's content gate.
-	modulesTierUnscopedCeiling = 107
+	//
+	// 108, 109: contacts.archiveContactRows and contacts.retireCompanyCascade read
+	// back the ids of the Shortlists an archive took the record off, from the
+	// same statement that deleted the memberships and recorded their removal
+	// in list_member_event. The list ids go into the archive's own audit
+	// evidence, which an un-archive reads to put the memberships back; no
+	// reader is handed one, so there is no list scope to apply.
+	modulesTierUnscopedCeiling = 109
 )

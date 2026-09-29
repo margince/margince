@@ -229,8 +229,10 @@ func TestSubscribableEventTypeEnumMatchesPayloadCatalog(t *testing.T) {
 // event is stale and fails below; a dynamic event in neither set is a silent
 // default and also fails.
 var dynamicProbeResolved = gatekit.Waive(map[string]string{
-	"consent.changed":   "subject is contact XOR lead (consent/store.go stamps sub.entityType) — both hit the row-scope probe branch",
-	"retention.applied": "subject is contact/lead/deal/activity for policy-driven sweeps (all row-scope probed); its ownerless ai_call/ai_call_payload/voice_learning_signal telemetry subjects are the deferredDeliveryEntities half",
+	"consent.changed":     "subject is contact XOR lead (consent/store.go stamps sub.entityType) — both hit the row-scope probe branch",
+	"list.member_added":   "subject is the Shortlist member record — contact, company, deal, lead or project — each hitting the row-scope probe branch, so a subscriber learns of a membership only for a record they may see",
+	"list.member_removed": "subject is the Shortlist member record, as for list.member_added",
+	"retention.applied":   "subject is contact/lead/deal/activity for policy-driven sweeps (all row-scope probed); its ownerless ai_call/ai_call_payload/voice_learning_signal telemetry subjects are the deferredDeliveryEntities half",
 })
 
 func TestEverySubscribableEventIsDeliveryResolvable(t *testing.T) {

@@ -91,6 +91,11 @@ type Field struct {
 	// offers them instead of asking a reader to type one, which is how a typo
 	// became a filter that matched nothing and read as a settled answer.
 	Options []string
+	// Withheld marks a field this caller may not filter by. A leaf naming it
+	// compiles to FALSE whatever its operator, so it selects no rows: rendering
+	// nothing would widen the answer, and a negated leaf that selected every row
+	// would let a reader learn who carries a value by watching the count move.
+	Withheld bool
 }
 
 // Reference is a record type an id field's values point at. Named rather than a

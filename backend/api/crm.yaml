@@ -133,6 +133,8 @@ tags:
     description: Polymorphic activity timeline (email/call/meeting/note/task).
   - name: Leads
     description: Thin, segregated machine/bulk-sourced prospects + promotion.
+  - name: Lists
+    description: Live Lists and Shortlists — named, shared sets of one record type.
   - name: Tags
     description: Tags applicable to contacts/companies/deals/leads.
   - name: Views
@@ -904,6 +906,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
         - $ref: '#/components/parameters/CapturedByKind'
@@ -2499,6 +2502,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
         - name: include_anchor
@@ -4554,6 +4558,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
         - name: pipeline_id
@@ -4923,8 +4928,9 @@ paths:
       summary: Say what one change over a selection of records would do, without doing it.
       description: |
         The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
-        each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`) or
-        `archive`. The answer says which records the change would alter (`affected`), which it
+        each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`),
+        `archive`, or `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`, while lists
+        are switched on). The answer says which records the change would alter (`affected`), which it
         would leave alone and why (`excluded`), and up to three before/after rows to show the user.
 
         Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -8929,6 +8935,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
         - $ref: '#/components/parameters/CapturedByKind'
@@ -10094,6 +10101,264 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
 
   # ------------------------------ /lists ------------------------------------
+  # A list is a named, shared set of one record type: a Live List (list_type
+  # dynamic) whose members are its filter's current result, or a Shortlist
+  # (static) whose members were chosen by hand. Every route answers 404 while
+  # the installation has not switched lists on (`lists.enabled`).
+  /lists:
+    get:
+      tags: [Lists]
+      operationId: listLists
+      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      summary: Find the lists this caller may see, by name.
+      description: |
+        A list is found by its sharing: every seat finds a workspace list, the members of its team
+        (or of its owner's teams) find a team list, and only its owner and steward find a private
+        one. `visible_count` is how many members THIS caller may see, never the list's whole size.
+      parameters:
+        - name: entity_type
+          in: query
+          schema: { type: string, enum: [contact, company, deal, lead, project] }
+        - name: list_type
+          in: query
+          schema: { type: string, enum: [static, dynamic] }
+        - name: q
+          in: query
+          description: Matches the name or purpose, case-insensitively.
+          schema: { type: string }
+        - $ref: '#/components/parameters/IncludeArchived'
+      responses:
+        '200':
+          description: Lists, by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Lists]
+      operationId: createList
+      x-mcp-tool: { verb: change_lists, record_type: list, tier: auto_execute, scope: write }
+      summary: Make a Live List (a saved filter) or a Shortlist (chosen records).
+      description: |
+        A Live List stores the filter tree it was previewed with, validated against the record
+        type's filter vocabulary; a Shortlist stores none. Sharing defaults to `team` and the
+        steward to the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateListRequest' }
+      responses:
+        '201':
+          description: Created list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/List' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /lists/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Lists]
+      operationId: getList
+      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      summary: Read one list, with the count of its members this caller may see.
+      responses:
+        '200':
+          description: The list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/List' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Lists]
+      operationId: updateList
+      x-mcp-tool: { verb: change_lists, record_type: list, tier: auto_execute, scope: write }
+      summary: Change a list's name, purpose, filter, sharing, team or steward.
+      description: |
+        Needs list authority: the list's steward, or a seat with the list update grant that reads
+        every row. `version` must be the one the caller read; a list changed since answers `409`.
+        An archived list is read-only (`409`). Every change is recorded as a revision.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateListRequest' }
+      responses:
+        '200':
+          description: The changed list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/List' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Lists]
+      operationId: archiveList
+      x-mcp-tool: { verb: change_lists, record_type: list, tier: auto_execute, scope: write }
+      summary: Archive a list. Its members and history stay, read-only.
+      responses:
+        '200':
+          description: Archived list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/List' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /lists/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Lists]
+      operationId: restoreList
+      x-mcp-tool: { verb: change_lists, record_type: list, tier: auto_execute, scope: write }
+      summary: Bring an archived list back.
+      responses:
+        '200':
+          description: The restored list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/List' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /lists/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Lists]
+      operationId: listListMembers
+      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      summary: Page through the members of a list this caller may see.
+      description: |
+        A Shortlist's chosen members, with who added each, when and why; or a Live List's filter
+        evaluated now, completely, in pages. Both are row-scoped: a member record this caller
+        cannot see is absent, and nothing says it was there. For member rows with their record's
+        own columns, read the record list (`listContacts`, `listCompanies`, `listDeals`,
+        `listLeads`) with `list_id`.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of members.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListMemberListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Lists]
+      operationId: addListMember
+      x-mcp-tool: { verb: change_lists, record_type: list, tier: auto_execute, scope: write }
+      summary: Add one record to a Shortlist, with an optional note on why.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ListMemberChangeRequest' }
+      responses:
+        '201':
+          description: Added member.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListMember' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /lists/{id}/members/remove:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Lists]
+      operationId: removeListMember
+      x-mcp-tool: { verb: change_lists, record_type: list, tier: auto_execute, scope: write }
+      summary: Take one record off a Shortlist, with an optional note on why.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ListMemberChangeRequest' }
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /lists/{id}/members/{recordId}/why:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: recordId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Lists]
+      operationId: explainListMember
+      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      summary: Say why a record is, or is not, on a list.
+      description: |
+        For a Live List: every clause of the filter with its verdict for this record and the
+        record's current value, evaluated by the same SQL that decides membership. A value this
+        caller may not read (a masked field, a fact on a linked record) is `hidden`. For a
+        Shortlist: who added the record, when, and the note they left. A record this caller cannot
+        see answers `404`, whether or not it is a member.
+      responses:
+        '200':
+          description: The explanation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListMemberExplanation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /lists/{id}/history:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Lists]
+      operationId: listListHistory
+      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      summary: Read what changed on a list, newest first.
+      description: |
+        Every change of the list's definition, and every Shortlist membership change of a record
+        this caller can see now. A change about a record they cannot see is absent.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of history.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListHistoryResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ------------------------- /filters/vocabulary -----------------------------
   /filters/vocabulary:
     get:
@@ -10279,7 +10544,8 @@ paths:
         First-class filtered export (features/10 §3): emits exactly the rows that match the active
         filter AND that the caller may see (row-scoped through the same one filter engine that drives
         lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
-        with a `filter` (the canonical §13.5 predicate) or a `view_id`. Bulk record read
+        with a `filter` (the canonical §13.5 predicate), a `view_id`, or the `list_id` of a Live List
+        (while lists are switched on; the export is then listed on the list as a use). Bulk record read
         that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
         export writes one `audit_log` entry (who exported what slice, when — P7/P12).
       requestBody:
@@ -24705,6 +24971,16 @@ components:
         its pipeline or a partner by its company's name, needs a sort the server cannot express
         yet — and a resource's own list documents which. An out-of-vocabulary field returns
         `422 code: sort_field_not_allowed`.
+    ListMembershipFilter:
+      name: list_id
+      in: query
+      schema: { type: string, format: uuid }
+      description: |
+        Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+        filter selects now — narrowed before sorting and paging, so the page is the list's members
+        in the record list's own columns. The list must be one the caller may find and of this
+        record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+        the caller's row scope still applies to every row.
     IncludeArchived:
       name: include_archived
       in: query
@@ -31561,7 +31837,7 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [contacts, deals, projects, strength, activities, tags, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts]
+            enum: [contacts, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts]
         contacts:
           type: object
           required: [data, page]
@@ -31603,6 +31879,12 @@ components:
         strength: { $ref: '#/components/schemas/CompanyStrength' }
         activities: { $ref: '#/components/schemas/ActivityListResponse' }
         tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        list_memberships:
+          type: array
+          description: >-
+            The Shortlists this company is on that the caller may find. Absent while the
+            installation has not switched lists on.
+          items: { $ref: '#/components/schemas/List' }
         pending_approvals:
           type: object
           required: [data, page]
@@ -35612,8 +35894,10 @@ components:
       type: string
       description: |
         What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-        `archive` retires it exactly as the single-record archive does.
-      enum: [reassign_owner, archive]
+        `archive` retires it exactly as the single-record archive does. `add_to_list` and
+        `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+        `addListMember` and `removeListMember` do, and change nothing on the record itself.
+      enum: [reassign_owner, archive, add_to_list, remove_from_list]
 
     BulkItem:
       type: object
@@ -35634,7 +35918,9 @@ components:
           minItems: 1
           maxItems: 500
           items: { $ref: '#/components/schemas/BulkItem' }
-        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for `archive`.' }
+        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for every other verb.' }
+        list_id: { type: string, format: uuid, description: 'The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.' }
+        note: { type: string, maxLength: 500, description: 'Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.' }
 
     BulkChangeExecuteRequest:
       type: object
@@ -35647,7 +35933,9 @@ components:
           minItems: 1
           maxItems: 500
           items: { $ref: '#/components/schemas/BulkItem' }
-        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for `archive`.' }
+        owner_id: { type: string, format: uuid, description: 'The new owner. Required for `reassign_owner` and refused for every other verb.' }
+        list_id: { type: string, format: uuid, description: 'The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.' }
+        note: { type: string, maxLength: 500, description: 'Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.' }
         confirm_token: { type: string, description: 'The token a preview of exactly this selection returned. Required above 10 records.' }
 
     BulkSkipReason:
@@ -35655,7 +35943,8 @@ components:
       description: |
         Why a record is left alone. `not_found`: the caller cannot see it, or it is already
         archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-        its version moved since the caller read it. `no_change`: it already has this owner.
+        its version moved since the caller read it. `no_change`: it already has this owner, or is
+        already on (or already off) the Shortlist.
         `anchor_company`: it is the installation's own company, which is never archived.
         `not_previewed`: the preview whose token this execution presents did not list it.
         `refused`: a single-record rule refuses it; `code` says which.
@@ -35686,11 +35975,12 @@ components:
 
     BulkRecordState:
       type: object
-      description: The two facts a bulk change can move on a record.
+      description: The facts a bulk change can move on a record.
       required: [owner_id, archived]
       properties:
         owner_id: { type: [string, 'null'], format: uuid }
         archived: { type: boolean }
+        listed: { type: boolean, description: 'For a list verb, whether the record is on the Shortlist.' }
 
     BulkSampleRow:
       type: object
@@ -35769,6 +36059,7 @@ components:
         record_type: { $ref: '#/components/schemas/BulkRecordType' }
         verb: { $ref: '#/components/schemas/BulkVerb' }
         owner_id: { type: string, format: uuid, description: 'The new owner a reassignment named.' }
+        list_id: { type: string, format: uuid, description: 'The Shortlist a list verb named.' }
         changed: { type: integer, description: The number of records changed. }
         skipped:
           type: array
@@ -39480,19 +39771,57 @@ components:
     # ---- List / Tag ----
     List:
       type: object
-      description: A static membership set or a dynamic segment. Mirrors the `list` table.
-      required: [id, name, entity_type, list_type]
+      description: >-
+        A Live List (list_type dynamic: its members are its filter's current result) or a
+        Shortlist (static: members chosen by hand). Mirrors the `list` table.
+      required: [id, name, entity_type, list_type, sharing, version, health, can_edit]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
+        purpose: { type: [string, 'null'], description: 'What the list is for, in the words of its steward.' }
         entity_type: { type: string, enum: [contact, company, deal, lead, project] }
         list_type: { type: string, enum: [static, dynamic], default: static }
-        definition: { type: [object, 'null'], additionalProperties: true, description: Dynamic — validated query plan; static — null. }
+        definition: { type: [object, 'null'], additionalProperties: true, description: 'A Live List''s filter tree; null for a Shortlist.' }
+        sharing:
+          type: string
+          enum: [private, team, workspace]
+          description: >-
+            Who may FIND the list. Never who may see its members: every member read applies the
+            reader's own row scope.
         owner_id: { type: [string, 'null'], format: uuid }
-        team_id: { type: [string, 'null'], format: uuid }
+        team_id: { type: [string, 'null'], format: uuid, description: 'The team a team list is shared with; null shares it with the teams of its owner.' }
+        steward_id: { type: [string, 'null'], format: uuid, description: 'Who looks after the list and may change it.' }
+        steward_name: { type: [string, 'null'] }
+        version: { type: integer, format: int64 }
+        visible_count:
+          type: [integer, 'null']
+          description: >-
+            How many members this caller may see. Null when the list's filter can no longer be
+            evaluated (health `invalid`). Never the list's whole size.
+        health:
+          type: string
+          enum: [ok, ownerless, invalid]
+          description: >-
+            `ownerless` when nobody looks after the list — no steward, or one who can no longer
+            sign in — so somebody should take it over. `invalid` when a Live List's filter no
+            longer compiles.
+        can_edit: { type: boolean, description: 'Whether this caller holds list authority over the list.' }
+        dependencies:
+          type: array
+          description: What uses this list. Exports are listed as usage and block nothing.
+          items: { $ref: '#/components/schemas/ListDependency' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+
+    ListDependency:
+      type: object
+      required: [kind, occurred_at, blocking]
+      properties:
+        kind: { type: string, enum: [export] }
+        occurred_at: { type: string, format: date-time }
+        actor: { type: [string, 'null'] }
+        blocking: { type: boolean, description: 'Whether it refuses a breaking change or archive of the list.' }
 
     ListMember:
       type: object
@@ -39502,8 +39831,113 @@ components:
         list_id: { type: string, format: uuid }
         entity_type: { type: string, enum: [contact, company, deal, lead, project] }
         entity_id: { type: string, format: uuid }
-        added_by: { type: string }
+        added_by: { type: string, description: 'The principal that added a Shortlist member; `dynamic` for a Live List member.' }
         created_at: { type: string, format: date-time }
+        note: { type: [string, 'null'] }
+
+    CreateListRequest:
+      type: object
+      required: [name, entity_type]
+      properties:
+        name: { type: string, minLength: 1 }
+        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        list_type: { type: string, enum: [static, dynamic], default: static }
+        definition: { type: [object, 'null'], additionalProperties: true }
+        purpose: { type: [string, 'null'] }
+        sharing: { type: string, enum: [private, team, workspace], default: team }
+        team_id: { type: [string, 'null'], format: uuid }
+        steward_id: { type: [string, 'null'], format: uuid }
+
+    UpdateListRequest:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, format: int64, description: 'The version the caller read.' }
+        name: { type: string, minLength: 1 }
+        purpose: { type: [string, 'null'], description: 'Null removes the purpose.' }
+        definition: { type: object, additionalProperties: true, description: 'A Live List''s new filter tree.' }
+        sharing: { type: string, enum: [private, team, workspace] }
+        team_id: { type: [string, 'null'], format: uuid, description: 'Null shares a team list with the teams of its owner.' }
+        steward_id: { type: string, format: uuid }
+
+    ListMemberChangeRequest:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        entity_id: { type: string, format: uuid }
+        note: { type: [string, 'null'], maxLength: 500, description: 'Why, in the words of whoever made the change.' }
+
+    ListListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/List' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    ListMemberListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ListMember' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    ListClauseVerdict:
+      type: object
+      description: >-
+        One node of a Live List's filter judged for one record: a group (`join`, `children`) or a
+        clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the
+        filter treats as not selected.
+      required: [result]
+      properties:
+        join: { type: string, enum: [and, or] }
+        children: { type: array, items: { $ref: '#/components/schemas/ListClauseVerdict' } }
+        field: { type: string }
+        op: { type: string }
+        operand: { description: 'The clause''s value as the filter states it.' }
+        result: { type: [boolean, 'null'] }
+        value: { type: [string, 'null'], description: 'The record''s current value of the field, as text.' }
+        hidden: { type: boolean, description: 'The value is not shown to this caller.' }
+
+    ListMemberExplanation:
+      type: object
+      required: [list_id, entity_id, list_type, member]
+      properties:
+        list_id: { type: string, format: uuid }
+        entity_id: { type: string, format: uuid }
+        list_type: { type: string, enum: [static, dynamic] }
+        member: { type: boolean }
+        eligible: { type: boolean, description: 'For a Live List, whether the record is live and eligible at all, before any clause.' }
+        clauses: { $ref: '#/components/schemas/ListClauseVerdict' }
+        added_by: { type: [string, 'null'] }
+        added_by_name: { type: [string, 'null'] }
+        added_at: { type: [string, 'null'], format: date-time }
+        note: { type: [string, 'null'] }
+
+    ListHistoryEntry:
+      type: object
+      required: [id, kind, occurred_at, actor]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [member_added, member_removed, revised] }
+        occurred_at: { type: string, format: date-time }
+        actor: { type: string }
+        actor_name: { type: [string, 'null'] }
+        entity_type: { type: [string, 'null'] }
+        entity_id: { type: [string, 'null'], format: uuid }
+        reason: { type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, null] }
+        note: { type: [string, 'null'] }
+        version: { type: [integer, 'null'], format: int64 }
+        name: { type: [string, 'null'] }
+        definition: { type: [object, 'null'], additionalProperties: true }
+        sharing: { type: [string, 'null'] }
+
+    ListHistoryResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ListHistoryEntry' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
 
     FilterPreviewRequest:
       type: object
@@ -39919,15 +40353,15 @@ components:
       type: object
       description: >-
         A filtered export request. Supply exactly ONE source: an inline `object`
-        (with a required `filter`) or a `view_id` (a saved view whose filter state
-        is exported). The slice is always row-scoped to the caller through the one
-        filter engine.
+        (with a required `filter`), a `view_id` (a saved view whose filter state
+        is exported) or a `list_id` (a Live List whose filter is exported). The
+        slice is always row-scoped to the caller through the one filter engine.
       required: [format]
       properties:
         object:
           type: string
           enum: [contact, company, deal, lead, project]
-          description: The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
+          description: The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
         filter:
           type: object
           additionalProperties: true
@@ -39935,7 +40369,11 @@ components:
         view_id:
           type: string
           format: uuid
-          description: Export the filter state of one of the caller's saved views. Mutually exclusive with object.
+          description: Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
+        list_id:
+          type: string
+          format: uuid
+          description: Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
         format:
           type: string
           enum: [csv, json]
@@ -41814,6 +42252,12 @@ components:
             same predicate `GET /company-context/capabilities` reports as `read_enabled`, and
             the same one its own endpoints gate on. False leaves the Company page to the
             installation and currency settings beside it.
+        lists:
+          type: boolean
+          description: >
+            True when the installation has switched on Live Lists and Shortlists
+            (`lists.enabled`). False while they are being built: the `/lists` routes answer
+            404, no agent tool reaches them, and no screen offers them.
         embedding_reindex:
           type: boolean
           description: >

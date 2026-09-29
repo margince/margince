@@ -26,12 +26,12 @@ This page does not grade single steps or name a best model per site — that is
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 78 |
+| Tools the assistant is offered | 80 |
 | … some case requires | 36 |
 | … some case requires as one of a set | 1 |
-| … **no case requires** | 41 |
+| … **no case requires** | 43 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 13833 |
+| Prompt tokens spent on tools no case requires | 15024 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -58,7 +58,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A — MCP | Surface B — scheduled agents |
 |---|---|---|
 | Who drives it | a contact, watching | a job on a timer, unattended |
-| Menu | 78 tools, the whole catalog | 5 tools, declared per agent |
+| Menu | 80 tools, the whole catalog | 5 tools, declared per agent |
 | A wrong reach | the contact corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -404,7 +404,7 @@ and the case's pass rate belongs to the set rather than to this row — which is
 corpus tests the tool anyway — that lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 41 tools no use case requires, **9 are graded elsewhere** and 32 are untried by any lane.
+So of the 43 tools no use case requires, **9 are graded elsewhere** and 34 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -414,9 +414,11 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `send_email` | 754 | — | — | — |
 | `list_records` | 721 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `send_message` | 603 | — | — | — |
+| `change_lists` | 592 | — | — | — |
+| `bulk_update_records` | 548 | — | — | — |
+| `read_lists` | 528 | — | — | — |
 | `progress_deal` | 505 | — | — | — |
 | `resolve_entities` | 493 | — | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` | — |
-| `bulk_update_records` | 477 | — | — | — |
 | `forecast_movement` | 453 | — | — | — |
 | `advance_deal` | 446 | — | — | — |
 | `annotate_brief` | 417 | `agent_loop` | — | `morning_brief` |

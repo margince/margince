@@ -79,7 +79,7 @@ func (s *Store) RecordTagsFor(ctx context.Context, entityType string, entityID i
 	// The vocabulary is a separate grant, and a caller without it still gets
 	// an answer about the record — just one that says the words are withheld
 	// rather than pretending there are none.
-	withheld := auth.Require(ctx, "tag", principal.ActionRead) != nil
+	withheld := tagWordsWithheld(ctx)
 
 	var out RecordTags
 	out.Withheld = withheld
@@ -145,4 +145,10 @@ func (s *Store) recordTagRows(ctx context.Context, tx pgx.Tx, entityType string,
 		return nil, err
 	}
 	return out, nil
+}
+
+// tagWordsWithheld says the caller holds no read on the tag vocabulary: they
+// may not see which words exist, nor filter records by one.
+func tagWordsWithheld(ctx context.Context) bool {
+	return auth.Require(ctx, "tag", principal.ActionRead) != nil
 }

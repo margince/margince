@@ -22,7 +22,11 @@ import {
   chosenIDs,
   SearchedRecordValue,
 } from "./filtervalue.records";
-import type { FilterOp, LeafValue } from "./segmentpredicate";
+import {
+  type FilterOp,
+  isRelativeDate,
+  type LeafValue,
+} from "./segmentpredicate";
 
 /**
  * The value half of a clause, chosen by operator first and field type second.
@@ -284,14 +288,7 @@ function ScalarValue({
 }>) {
   const t = useT();
   if (type === "date") {
-    const iso = typeof value === "string" ? value : "";
-    return (
-      <DateInput
-        value={iso as "" | `${number}-${number}-${number}`}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-      />
-    );
+    return <DateValue value={value} onChange={onChange} label={label} />;
   }
   if (type === "boolean") {
     return (
@@ -338,4 +335,63 @@ function numberOrText(raw: string): LeafValue {
   }
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : raw;
+}
+
+/** The two ways a date operand is written: a calendar day, or a count back. */
+const DATE_MODES = ["on", "ago"] as const;
+
+/**
+ * A date operand: a calendar day, or a number of days before the day the
+ * filter runs. The second is what a list that must stay current is built on —
+ * "no activity in 45 days" — and a literal date would go stale overnight.
+ *
+ * Switching mode starts the other operand empty rather than converting: a
+ * conversion would write a value the reader did not type.
+ */
+function DateValue({
+  value,
+  onChange,
+  label,
+}: Readonly<{
+  label: string;
+  value: LeafValue;
+  onChange: (next: LeafValue) => void;
+}>) {
+  const t = useT();
+  const mode = isRelativeDate(value) ? "ago" : "on";
+  return (
+    <span className="filter-date-value">
+      <SegmentedControl
+        options={DATE_MODES}
+        value={mode}
+        onChange={(next) => onChange(next === "ago" ? { days_ago: 0 } : "")}
+        labels={{ on: t("filters.date.on"), ago: t("filters.date.daysAgo") }}
+        label={t("filters.date.mode")}
+      />
+      {isRelativeDate(value) ? (
+        <input
+          className="input"
+          inputMode="numeric"
+          value={String(value.days_ago)}
+          onChange={(event) => {
+            const days = Number(event.target.value);
+            onChange({
+              days_ago: Number.isInteger(days) && days >= 0 ? days : 0,
+            });
+          }}
+          aria-label={t("filters.date.daysAgoCount", { field: label })}
+        />
+      ) : (
+        <DateInput
+          value={
+            (typeof value === "string" ? value : "") as
+              | ""
+              | `${number}-${number}-${number}`
+          }
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={label}
+        />
+      )}
+    </span>
+  );
 }
