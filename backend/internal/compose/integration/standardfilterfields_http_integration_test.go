@@ -107,6 +107,7 @@ func TestTheStandardContactFieldsSelectTheirRecords(t *testing.T) {
 		{leaf("company_id", "eq", acme), []string{anna}},
 		{leaf("company_id", "exists", false), []string{ben}},
 		{leaf("country", "eq", "FR"), []string{ben}},
+		{leaf("country", "in", []any{"de"}), []string{anna}},
 		{leaf("city", "in", []any{"Leipzig"}), []string{anna}},
 		{leaf("created_at", "gte", daysAgo(0)), []string{anna, ben}},
 		{leaf("created_at", "lt", daysAgo(0)), []string{}},
@@ -130,7 +131,7 @@ func TestTheStandardCompanyFieldsSelectTheirRecords(t *testing.T) {
 
 	expectSelects(t, e, "company", []filterCase{
 		{leaf("name", "contains", "maschinen"), []string{quiet}},
-		{leaf("country", "eq", "FR"), []string{busy}},
+		{leaf("country", "eq", "fr"), []string{busy}},
 		{leaf("city", "eq", "Leipzig"), []string{quiet}},
 		{leaf("created_at", "gte", daysAgo(1)), []string{quiet, busy}},
 		{leaf("last_activity_at", "lt", daysAgo(45)), []string{quiet}},
@@ -253,4 +254,42 @@ func TestATextClauseExplainsWithTheRecordsOwnValue(t *testing.T) {
 	if !why.Member || why.Clauses.Hidden || why.Clauses.Value == nil || *why.Clauses.Value != "explained@contact.example" {
 		t.Errorf("why = %+v, want a member explained by the stored address", why)
 	}
+}
+
+// touchAt logs a note on one contact at an exact instant.
+func touchAt(t *testing.T, e *apptest.AppEnv, id string, at time.Time) {
+	t.Helper()
+	mustCall(t, e, "POST", "/v1/activities", AnyMap{
+		"kind": "note", "body": "On the stroke", "source": "manual", "occurred_at": at.Format(time.RFC3339),
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": id}},
+	}, http.StatusCreated, nil)
+}
+
+func TestADayRunsFromOneMidnightToTheNext(t *testing.T) {
+	e, _ := listsApp(t, true)
+	var zone string
+	if err := e.Owner.QueryRow(t.Context(), `SELECT current_setting('TimeZone')`).Scan(&zone); err != nil {
+		t.Fatal(err)
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		t.Fatalf("session time zone %q: %v", zone, err)
+	}
+	midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, loc)
+	onTheStroke := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Stroke Of Midnight", "source": "manual"})
+	justBefore := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Second Before", "source": "manual"})
+	lastSecond := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Last Second Of Day", "source": "manual"})
+	touchAt(t, e, onTheStroke, midnight)
+	touchAt(t, e, justBefore, midnight.Add(-time.Second))
+	touchAt(t, e, lastSecond, midnight.Add(24*time.Hour-time.Second))
+
+	expectSelects(t, e, "contact", []filterCase{
+		{leaf("last_activity_at", "eq", "2026-03-10"), []string{onTheStroke, lastSecond}},
+		{leaf("last_activity_at", "eq", "2026-03-09"), []string{justBefore}},
+		{leaf("last_activity_at", "lt", "2026-03-10"), []string{justBefore}},
+		{leaf("last_activity_at", "lte", "2026-03-09"), []string{justBefore}},
+		{leaf("last_activity_at", "gt", "2026-03-09"), []string{onTheStroke, lastSecond}},
+		{leaf("last_activity_at", "gte", "2026-03-11"), []string{}},
+		{leaf("last_activity_at", "neq", "2026-03-10"), []string{justBefore}},
+	})
 }
