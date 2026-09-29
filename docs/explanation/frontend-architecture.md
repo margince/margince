@@ -335,7 +335,7 @@ discipline even if the test tree regresses.
 | Contract type drift | `make frontend-check` | `pnpm gen:api` produces a diff in `src/api/schema.d.ts` / `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | formatting and lint findings over `src` + `index.html` |
 | Conformance suite | `design-system/conformance.test.ts` | the AST-accurate arm of the same rules, plus: hard-coded user-facing copy outside the i18n catalogs, `navigator.serviceWorker` reached for anywhere but `src/app/pwa.ts`, an invalid web-app manifest |
-| Service worker | `frontend/scripts/vite-pwa.test.ts` | the SPA build not emitting `/sw.js`, or the emitted worker answering anything from Cache Storage but a navigation the network could not make, intercepting a path the api owns, or keeping a cache that is not its own ([pwa.md](pwa.md)) |
+| Service worker | `frontend/scripts/vite-pwa.test.ts` | the SPA build not emitting `/sw.js`, or the emitted worker answering anything from Cache Storage but a navigation the network could not make and the offline page's own script, intercepting a path the api owns, or keeping a cache that is not its own ([pwa.md](pwa.md)) |
 | Stylesheet namespaces | `design-system/stylesheetnamespace.test.ts` | a screen's class namespace declared in a stylesheet other than its home sheet, across every `.css` under `frontend/src` and each extension's frontend layer |
 | Token canon | `design-system/tokens.test.ts` | a Ledger-Green value drifting from the design canon |
 | Typecheck + build | `pnpm build` (`tsc -b && vite build`) | any type error |

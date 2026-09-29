@@ -93,11 +93,14 @@ function startWorker(emitted: string, network: (url: string) => Response) {
     },
     caches: {
       open: async (name: string) => ({
-        add: async (request: Navigation) => {
-          const response = await fetch(request);
-          if (!response.ok)
-            throw new TypeError(`${request.url} ${response.status}`);
-          store(name).set(request.url, response);
+        addAll: async (requests: readonly Navigation[]) => {
+          const responses = await Promise.all(requests.map(fetch));
+          for (const [index, response] of responses.entries()) {
+            if (!response.ok) {
+              throw new TypeError(`${requests[index]?.url} ${response.status}`);
+            }
+            store(name).set(requests[index]?.url ?? "", response);
+          }
         },
       }),
       keys: async () => [...stores.keys()],
@@ -208,10 +211,15 @@ describe("the offline page", () => {
 
 describe("the service worker", () => {
   const page = () => emitted("offline.html");
-  const online = (url: string) =>
-    url.endsWith("/offline.html")
-      ? new Response(page(), { headers: { "content-type": "text/html" } })
-      : new Response("app", { status: 200 });
+  const script = () => /src="(\/assets\/[^"]+)"/.exec(page())?.[1] ?? "";
+  const online = (url: string) => {
+    if (url.endsWith("/offline.html")) {
+      return new Response(page(), { headers: { "content-type": "text/html" } });
+    }
+    return url === `${ORIGIN}${script()}`
+      ? new Response(emitted(script().slice(1)))
+      : new Response("app");
+  };
 
   async function installed(network: (url: string) => Response = online) {
     const worker = startWorker(emitted("sw.js"), network);
@@ -219,20 +227,56 @@ describe("the service worker", () => {
     return worker;
   }
 
-  it("precaches the offline page, reads its script through and takes over at once", async () => {
-    const scripts: Response[] = [];
-    const worker = await installed((url) => {
-      const response = online(url);
-      if (url.includes("/assets/offline-")) scripts.push(response);
-      return response;
-    });
+  it("precaches the offline page and its script, and takes over at once", async () => {
+    const worker = await installed();
     const [cache] = [...worker.stores.values()];
-    expect([...(cache?.keys() ?? [])]).toEqual([`${ORIGIN}/offline.html`]);
-    expect(scripts.map((script) => script.bodyUsed)).toEqual([true]);
+    expect([...(cache?.keys() ?? [])]).toEqual([
+      `${ORIGIN}/offline.html`,
+      `${ORIGIN}${script()}`,
+    ]);
     expect(worker.scope.skipWaiting).toHaveBeenCalled();
   });
 
-  it("leaves every request that is not a navigation to the browser", async () => {
+  it("does not install without the offline page's script", async () => {
+    const worker = startWorker(emitted("sw.js"), (url) =>
+      url === `${ORIGIN}${script()}`
+        ? new Response("", { status: 404 })
+        : online(url),
+    );
+    await expect(worker.lifecycle("install")).rejects.toThrow(TypeError);
+    expect(worker.scope.skipWaiting).not.toHaveBeenCalled();
+  });
+
+  it("answers the offline page's script from its cache, with no network at all", async () => {
+    const worker = await installed();
+    worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
+    const answer = await worker.request(script(), "cors");
+    expect(await answer?.text()).toBe(emitted(script().slice(1)));
+  });
+
+  it("fetches the offline page's script when its cache has lost it", async () => {
+    const worker = await installed();
+    worker.stores.clear();
+    const answer = await worker.request(script(), "cors");
+    expect(await answer?.text()).toBe(emitted(script().slice(1)));
+  });
+
+  it("leaves every other built asset to the browser", async () => {
+    const worker = await installed();
+    const others = [...site.keys()].filter(
+      (name) => name.startsWith("assets/") && `/${name}` !== script(),
+    );
+    for (const name of [
+      ...others,
+      "assets/index-Bx1a2b3c.js",
+      "assets/offline-Zz9y8x7w.js",
+    ]) {
+      expect(worker.request(`/${name}`, "cors"), name).toBeUndefined();
+    }
+    expect(worker.request(`${script()}?v=1`, "cors")).toBeUndefined();
+  });
+
+  it("leaves every other request that is not a navigation to the browser", async () => {
     const worker = await installed();
     for (const mode of ["cors", "no-cors", "same-origin"]) {
       expect(worker.request("/assets/index.js", mode)).toBeUndefined();

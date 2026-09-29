@@ -37,7 +37,7 @@ function block(locale: string, copy: OfflineCopy, hidden: boolean): string {
   ].join("\n");
 }
 
-/** Styles are inline because the worker answers with this page and nothing else. */
+/** Styles are inline because the worker serves this page and its script, nothing else. */
 export function renderOfflinePage(css: string, script: string): string {
   const blocks = Object.entries(OFFLINE_CATALOGS).map(([locale, copy], index) =>
     block(locale, copy, index > 0),

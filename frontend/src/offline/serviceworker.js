@@ -1,15 +1,16 @@
-// Answers one request from Cache Storage: a navigation the network could not
-// complete. The build emits this file after one line setting the global below.
+// From Cache Storage it answers a navigation the network could not complete and
+// the offline page's own script; the build puts its settings on a line above.
 const settings = self.__MARGINCE_SW_SETTINGS__;
 const offlinePage = new URL(settings.offlinePage, self.location.origin).href;
+const offlineScript = new URL(settings.offlineScript, self.location.origin)
+  .href;
 
 async function install() {
   const cache = await self.caches.open(settings.cacheName);
-  await cache.add(new Request(offlinePage, { cache: "reload" }));
-  // The page's script reaches the page through the HTTP cache, never through
-  // this worker, so it is fetched once here and read to the end to land there.
-  const script = await self.fetch(settings.offlineScript);
-  await script.arrayBuffer();
+  await cache.addAll([
+    new Request(offlinePage, { cache: "reload" }),
+    new Request(offlineScript, { cache: "reload" }),
+  ]);
   await self.skipWaiting();
 }
 
@@ -23,6 +24,13 @@ async function activate() {
       .map((name) => self.caches.delete(name)),
   );
   await self.clients.claim();
+}
+
+async function cachedScript(request) {
+  const cached = await self.caches.match(offlineScript, {
+    cacheName: settings.cacheName,
+  });
+  return cached ?? self.fetch(request);
 }
 
 async function navigate(event) {
@@ -45,6 +53,11 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  // Content-hashed and named by the offline page alone, so it can pin no build.
+  if (event.request.url === offlineScript) {
+    event.respondWith(cachedScript(event.request));
+    return;
+  }
   if (event.request.mode !== "navigate") {
     return;
   }

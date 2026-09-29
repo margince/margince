@@ -12,7 +12,7 @@ allowed so little.
 |---|---|---|
 | Manifest | `frontend/public/manifest.webmanifest` | names the app, its colours, `start_url` and `display: standalone`, which is what makes it installable |
 | Icons | `frontend/public/`: `icon.svg`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `web-app-manifest-192x192.png` and `-512x512.png` | the icons the browser tab, iOS and the manifest name; `frontend/src/app/sharepreview.test.ts` holds each to the size it declares |
-| Service worker | source `frontend/src/offline/serviceworker.js`, emitted as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a navigation the network could not complete with the offline page, and nothing else |
+| Service worker | source `frontend/src/offline/serviceworker.js`, emitted as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a navigation the network could not complete with the offline page, and the offline page's own script; nothing else |
 | Offline page | `frontend/src/offline/page.ts` (markup), `present.ts` (language and retry), `offline.css` | tells the reader the device cannot reach Margince, in their language, with a retry |
 | Registration and install state | `frontend/src/app/pwa.ts` | registers the worker in a production build; keeps the browser's install offer for the app to present |
 
@@ -20,14 +20,15 @@ Client storage (the reader's language, theme and the rest) lives behind
 `frontend/src/app/storage.ts`; the offline page reads the stored language
 through it like every other reader does.
 
-## The worker answers one request, and only when the network could not
+## The worker answers two requests, and neither is the app
 
-The rule is short: **the worker never answers a request from Cache Storage,
-except a page navigation whose network fetch failed outright.** Every other
-request gets no `respondWith` at all and takes the browser's own path. A
-navigation that reaches the server and comes back with a 404 or a 500 is
-passed through untouched; only a fetch that rejects (no network, no route to
-the host) gets the offline page.
+The rule is short: **the worker answers two requests from Cache Storage and
+no others.** A page navigation whose network fetch failed outright gets the
+offline page. A request for the offline page's own script gets that script,
+from the cache first. Every other request gets no `respondWith` at all and
+takes the browser's own path. A navigation that reaches the server and comes
+back with a 404 or a 500 is passed through untouched; only a fetch that
+rejects (no network, no route to the host) gets the offline page.
 
 That is narrower than a typical PWA on purpose. An earlier worker cached the
 app shell cache-first under a fixed name, `margince-shell-v1`, so its eviction
@@ -35,8 +36,10 @@ step never deleted anything: a browser that loaded the app once kept serving
 that build's `index.html`, and the content-hashed bundle it named, past every
 deploy after it. A shipped screen read as missing for days. A worker that can
 answer the app's own shell from a cache can pin a browser to a build; one that
-answers only the failure case cannot. When the network works, the app always
-comes from the server.
+answers only the failure case cannot. The offline script does not change
+that: its name carries a hash of its content and nothing in the app loads it,
+so serving it from the cache can pin no build. When the network works, the app
+always comes from the server.
 
 Navigations into what the api owns on this origin are not intercepted at all,
 not even offline, so an OAuth consent, an MCP discovery document or a
@@ -70,7 +73,8 @@ line that sets `self.__MARGINCE_SW_SETTINGS__` to this build's settings:
 
 A new release or a changed page gives `sw.js` new bytes. The browser checks
 `/sw.js` on navigation, finds it changed and installs the new worker, which
-precaches the offline page under its own cache name and calls `skipWaiting()`.
+precaches the offline page and its script under its own cache name (both or
+the install fails) and calls `skipWaiting()`.
 On `activate` it deletes **every** cache whose name is not its own (the old
 `margince-shell-v1` included) and calls `clients.claim()`.
 
@@ -95,14 +99,14 @@ document, so its colours, type and button are the product's own in both
 themes.
 
 Its script is the one thing it loads. The site's content-security policy
-allows no inline script, and the worker answers nothing but navigations, so
-the script arrives through the browser's HTTP cache: it is content-hashed under
-`/assets/`, which nginx lets a browser keep for a year, and the worker reads it
-through once when it installs. The script picks the block in the reader's stored language, then
-the browser's, then English; sets the title; and makes "Retry" reload the
-address the reader asked for, route included. Should the browser have dropped
-it from its cache, the page still reads, in English, and its retry is a plain
-link that reloads the page without the route.
+allows no inline script, so the script is a file of its own under `/assets/`,
+and the worker answers it from the cache it installed it into. The browser's
+HTTP cache is not enough: `vite preview` and the desktop launcher send no
+caching headers, and any browser may drop an entry. The script picks the
+block in the reader's stored language, then the browser's, then English; sets
+the title; and makes "Retry" reload the address the reader asked for, route
+included. Should the script still fail to load, the page reads in English and
+its retry is a plain link that reloads the page without the route.
 
 ## Registration and the install offer
 
