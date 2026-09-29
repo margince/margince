@@ -103,7 +103,7 @@ function Band() {
 }
 
 const meta: Meta<typeof RefreshModelPrices> = {
-  title: "AI/Model price refresh",
+  title: "Settings/AI/Models and routing/Refresh model prices",
   component: RefreshModelPrices,
   parameters: { layout: "padded" },
 };
