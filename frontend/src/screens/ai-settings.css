@@ -361,3 +361,17 @@
   align-items: center;
   gap: var(--space-2);
 }
+
+/* A chain of models, one per line: providers in one column so the ids start on
+ * one edge, and the arrow under the mark of the step that hands over. */
+.ai-modelchain {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.ai-modelchain-arrow {
+  justify-self: center;
+  color: var(--textSecondary);
+}

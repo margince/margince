@@ -238,7 +238,7 @@ export const vi = {
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
-  "aiAdmin.thenLadder": "→ sau đó",
+  "aiAdmin.thenLadder": "sau đó",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa liên kết mô hình nào.",
   "aiAdmin.decisionSkip.uncertified":

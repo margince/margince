@@ -28,7 +28,7 @@ import { useLocale, useT } from "../i18n";
 import { decisionSkipLabel } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
 import { TaskState } from "./ai-lane-state";
-import { ModelRef } from "./ai-terms";
+import { ModelChain, ModelRef } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { settingsHref } from "./settingsrouting";
 
@@ -430,11 +430,10 @@ export function AiFeatureTable({
       return ladder;
     }
     return (
-      <span className="ai-tier-modelline">
-        <ModelRef provider={decision.provider} model={decision.model} />
-        <span>{t("aiAdmin.thenLadder")}</span>
-        {ladder}
-      </span>
+      <ModelChain
+        steps={[decision, lead]}
+        connector={t("aiAdmin.thenLadder")}
+      />
     );
   };
   const modelCell = (row: Feature) =>

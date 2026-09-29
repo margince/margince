@@ -395,7 +395,7 @@ it("features card says decision model first, and why another feature skips it", 
   // The lane leads, where it processes, and the ladder that answers after it.
   const decisionRow = (await screen.findByText("jev-classify")).closest("td");
   expect(decisionRow?.textContent).toBe(
-    "jev_compatiblejev-classify→ thengeminiexample-model",
+    "jev_compatiblejev-classify↓thengeminiexample-model",
   );
   // A feature the lane does not serve keeps its ladder, with the reason beside it.
   expect(screen.getAllByText("example-model")).toHaveLength(2);

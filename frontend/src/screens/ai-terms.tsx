@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Layers, ListChecks, Server } from "lucide-react";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 
@@ -34,6 +34,39 @@ export function ModelRef({
     <span className="ai-tier-modelline">
       <TermChip term="provider">{provider}</TermChip>
       <span>{model}</span>
+    </span>
+  );
+}
+
+/**
+ * Models read top to bottom, each with its provider's mark, joined by an arrow
+ * and the word for the step: the decision model first, then the ladder. The
+ * providers share one column, so the model ids start on one edge however long
+ * the provider names run.
+ */
+export function ModelChain({
+  steps,
+  connector,
+}: Readonly<{
+  steps: readonly { provider: string; model: string }[];
+  connector: string;
+}>) {
+  return (
+    <span className="ai-modelchain">
+      {steps.map((step, i) => (
+        <Fragment key={`${step.provider}/${step.model}`}>
+          {i > 0 && (
+            <>
+              <span className="ai-modelchain-arrow" aria-hidden>
+                ↓
+              </span>
+              <span className="t-caption">{connector}</span>
+            </>
+          )}
+          <TermChip term="provider">{step.provider}</TermChip>
+          <span>{step.model}</span>
+        </Fragment>
+      ))}
     </span>
   );
 }
