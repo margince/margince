@@ -23,21 +23,12 @@ import {
   WriteRefused,
 } from "./common";
 import { RefreshModelPrices } from "./rate-catalogue-refresh";
-import { ModelPriceDialog } from "./rate-manual";
+import { ModelPriceDialog, today } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
-import { calendarDay } from "../format/calendarday";
-import { viewerZone } from "../format/timezone";
 
 type FxRate = components["schemas"]["FxRate"];
 type AiModelRate = components["schemas"]["AiModelRate"];
-
-// The reader's own today. These are effective dates a reader reads against
-// their own calendar, and an ISO slice answers about UTC's day — which is
-// yesterday for a reader east of UTC in the small hours.
-function today(): string {
-  return calendarDay(new Date(), viewerZone());
-}
 
 // trimDecimal drops trailing zeros (and a bare trailing dot) so a
 // numeric(20,10) value like "0.9200000000" reads as "0.92".

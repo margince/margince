@@ -8680,9 +8680,9 @@ export const vi = {
     "Câu hỏi có kiểu, hỏi trước các tầng khi đã chứng nhận",
   "aiRouting.decisions.add": "Thêm mô hình quyết định",
   "aiRouting.decisions.remove": "Gỡ mô hình quyết định",
-  "aiRouting.decisions.preset.openrouter": "Dùng OpenRouter",
+  "aiRouting.decisions.preset.openrouter": "Mẫu: OpenRouter",
   "aiRouting.decisions.preset.openrouterKey":
-    "Điền sẵn endpoint và mô hình của OpenRouter. JEV_COMPATIBLE_API_KEY nhận khóa OpenRouter của bạn.",
+    "Điền sẵn host và mô hình. Khóa đặt trong JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các tầng.",
   "aiRouting.priceSheet": "Bảng giá",
@@ -8731,12 +8731,12 @@ export const vi = {
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
-    "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
+    "Gốc host; /v1 được thêm vào. Bắt buộc: bộ chuyển này không có mặc định.",
   "aiRouting.baseUrl.help.jev":
-    "URL endpoint đầy đủ, dùng đúng như đã nhập. Để trống để dùng API của chính TypeSafe, https://api.typesafe.ai/v1/systemone.",
+    "URL endpoint đầy đủ. Để trống để dùng API của chính TypeSafe.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
   "aiRouting.baseUrl.help.jevCompatible":
-    "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc: OpenRouter là https://openrouter.ai/api/alpha/decisions, còn máy chủ tự vận hành có dạng http://127.0.0.1:8767/v1/systemone.",
+    "URL endpoint đầy đủ, dùng đúng như đã nhập. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
@@ -8751,7 +8751,7 @@ export const vi = {
     "Chỉ hiện bảng giá — nhà cung cấp này không phản hồi. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
   "aiRouting.model.label": "Mô hình",
   "aiRouting.model.help":
-    "Danh sách là những mô hình mà bản cài đặt này biết giá, trên mỗi triệu token, đầu vào → đầu ra. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
+    "Chọn một mô hình trong danh sách, hoặc nhập bất kỳ ID nào mà nhà cung cấp phục vụ.",
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saveFailed": "Không thể lưu định tuyến",
   "aiRouting.adminOnly":
@@ -10865,11 +10865,16 @@ export const vi = {
     "Bấm Làm mới giá mô hình để ghi giá này vào bảng giá; sau đó mức dùng và chi phí sẽ tính theo giá đó.",
   "aiRates.refresh.button": "Làm mới giá mô hình",
   "aiRates.refresh.report": "Kết quả làm mới giá mô hình",
+  "aiRates.refresh.colStatus": "Trạng thái",
+  "aiRates.refresh.colDetail": "Chi tiết",
   "aiRates.refresh.outcome.updated": "Đã cập nhật",
   "aiRates.refresh.outcome.unchanged": "Đã mới nhất",
   "aiRates.refresh.outcome.not_available": "Đặt thủ công",
   "aiRates.refresh.outcome.unreachable": "Không truy cập được",
   "aiRates.refresh.outcome.not_bound": "Không dùng",
+  "aiRates.refresh.outcome.not_listed": "Không có trong danh sách",
+  "aiRates.refresh.unlisted":
+    "Không có trong danh sách của nhà môi giới: {ids}",
   "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
   "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
   "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
@@ -10877,11 +10882,17 @@ export const vi = {
   "aiRates.manual.button": "Sửa giá",
   "aiRates.manual.title": "Đặt giá cho {provider}",
   "aiRates.manual.priced": "Các mô hình đã có giá",
+  "aiRates.manual.formTitle": "Thêm hoặc sửa giá",
   "aiRates.manual.edit": "Sửa",
   "aiRates.manual.done": "Xong",
   "aiRates.manual.malformed":
     "Giá là số thường như 5 hoặc 0.25, tối đa sáu chữ số thập phân.",
   "aiRates.manual.saved": "Đã lưu {model}: {price}",
+  "aiRates.manual.lane": "Dùng cho",
+  "aiRates.manual.laneChat": "Trò chuyện",
+  "aiRates.manual.laneEmbeddings": "Nhúng",
+  "aiRates.manual.laneDecisions": "Quyết định",
+  "aiRates.manual.from": "từ {date}",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "contact.readings.title": "Vị thế của liên hệ này",

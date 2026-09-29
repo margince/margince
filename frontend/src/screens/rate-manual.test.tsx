@@ -91,24 +91,67 @@ function mount(ui: React.ReactNode) {
 }
 
 describe("ModelPriceDialog for one provider", () => {
-  it("lists only that provider's priced models and loads one to edit", async () => {
+  it("tabulates only that provider's priced models and loads one to edit", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     mount(<ModelPriceDialog provider="gemini" onClose={() => {}} />);
 
-    const list = await screen.findByRole("list", {
-      name: "Models already priced",
-    });
+    const table = await screen.findByRole("table");
     expect(
-      within(list).getAllByText("gemini-3.5-flash").length,
-    ).toBeGreaterThan(0);
-    expect(within(list).queryByText("claude-x")).toBeNull();
+      within(table)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual([
+      "Model",
+      "Input $/M",
+      "Output $/M",
+      "Cache read $/M",
+      "Cache write $/M",
+      "Edit",
+    ]);
+    const row = within(table)
+      .getAllByText("gemini-3.5-flash")[0]
+      ?.closest("tr");
+    if (!row) throw new Error("the model has no row");
+    expect(within(row).getByText("2.5")).toBeTruthy();
+    expect(within(table).queryByText("claude-x")).toBeNull();
 
     await user.click(
-      within(list).getByRole("button", { name: "Edit gemini-3.5-flash" }),
+      within(row).getByRole("button", { name: "Edit gemini-3.5-flash" }),
     );
     expect(screen.getByLabelText("Input $/M")).toHaveProperty("value", "0.3");
     expect(screen.getByLabelText("Output $/M")).toHaveProperty("value", "2.5");
+    // The row being edited is marked, so the form is not read as a new price.
+    expect(row.className).toContain("row-current");
+  });
+
+  it("files a new model under the lane chosen and edits a row under its own", async () => {
+    const user = userEvent.setup();
+    const posts: Posted[] = [];
+    vi.stubGlobal("fetch", backend(posts));
+    mount(<ModelPriceDialog provider="gemini" onClose={() => {}} />);
+
+    await user.type(screen.getByLabelText("Model"), "embed-9");
+    await user.click(screen.getByRole("combobox", { name: "Used for" }));
+    await user.click(screen.getByRole("option", { name: "Embeddings" }));
+    await user.type(screen.getByLabelText("Input $/M"), "0.1");
+    await user.type(screen.getByLabelText("Output $/M"), "0");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByRole("status");
+    expect(posts[0]?.body).toMatchObject({
+      model_id: "embed-9",
+      lane: "embeddings",
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Edit gemini-3.5-flash" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(posts).toHaveLength(2));
+    expect(posts[1]?.body).toMatchObject({
+      model_id: "gemini-3.5-flash",
+      lane: "chat",
+    });
   });
 
   it("writes the price as typed, zero included, and shows what it saved", async () => {
@@ -190,6 +233,7 @@ describe("the refresh report's Set by hand rows", () => {
         updated: 0,
         unchanged: 0,
         models: [],
+        unlisted: [],
       },
       {
         provider: "openai_compatible",
@@ -197,6 +241,7 @@ describe("the refresh report's Set by hand rows", () => {
         updated: 1,
         unchanged: 0,
         models: ["a/b"],
+        unlisted: [],
       },
     ],
   };
@@ -220,7 +265,7 @@ describe("the refresh report's Set by hand rows", () => {
     await user.click(
       screen.getByRole("button", { name: "Refresh model prices" }),
     );
-    await screen.findByRole("list", { name: "Model price refresh" });
+    await screen.findByRole("table");
     return user;
   }
 

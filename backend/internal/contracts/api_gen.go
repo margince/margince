@@ -20663,7 +20663,9 @@ type AiModelRateProviderRefresh struct {
 
 	// Outcome `updated` wrote at least one price; `unchanged` found every priced model already
 	// current; `not_available` means the provider (or the catalogue, for these models)
-	// publishes no price to read; `unreachable` means the catalogue could not be read;
+	// publishes no price to read; `not_listed` means a bound model is absent from the
+	// catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
+	// could not be read;
 	// `not_bound` means nothing this provider serves is bound or on the sheet.
 	Outcome string `json:"outcome"`
 
@@ -20672,6 +20674,9 @@ type AiModelRateProviderRefresh struct {
 
 	// Unchanged Models already at the catalogue price.
 	Unchanged int `json:"unchanged"`
+
+	// Unlisted Bound model ids the catalogue does not name.
+	Unlisted []string `json:"unlisted"`
 
 	// Updated Prices written today.
 	Updated int `json:"updated"`

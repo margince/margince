@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
@@ -137,8 +138,11 @@ export function AdapterFields<B extends TierBindingLike>({
   disabled,
   onChange,
   providers = PROVIDERS,
+  providerAside,
 }: Readonly<{
   label: string;
+  // A preset for THIS lane, drawn beside the provider it belongs to.
+  providerAside?: ReactNode;
   lane: ModelLane;
   // The adapters this lane may name. Every chat tier and the embedder share
   // one list; the decision lane has its own, because no chat adapter answers a
@@ -163,17 +167,20 @@ export function AdapterFields<B extends TierBindingLike>({
   const host = HOST_FIELDS.get(binding.provider);
   return (
     <>
-      <Field label={label}>
-        {(control) => (
-          <Select
-            {...control}
-            value={binding.provider}
-            disabled={disabled}
-            options={providers.map((p) => ({ value: p, label: p }))}
-            onChange={(provider) => onChange(rebind(binding, { provider }))}
-          />
-        )}
-      </Field>
+      <div className="binding-provider-row">
+        <Field label={label}>
+          {(control) => (
+            <Select
+              {...control}
+              value={binding.provider}
+              disabled={disabled}
+              options={providers.map((p) => ({ value: p, label: p }))}
+              onChange={(provider) => onChange(rebind(binding, { provider }))}
+            />
+          )}
+        </Field>
+        {providerAside}
+      </div>
       {/* What the vendor serves, priced from the sheet where the sheet knows
           it. The list used to be the sheet ALONE, which answers what this
           installation can price rather than what exists — so a model released

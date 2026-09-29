@@ -26,9 +26,9 @@ func jobQueues() map[string]river.QueueConfig {
 		// same species as a deep read: its own bounded pool keeps it from
 		// holding default workers while the object store answers.
 		capturePartSlimQueue: {MaxWorkers: capturePartSlimMaxWorkers},
-		// Rate refreshes (FX fetch + pricing-page crawl+LLM extract) are
-		// likewise long; their own bounded pool keeps a multi-workspace
-		// burst from starving close-date, reconcile, and capture jobs.
+		// The FX rate refresh (fetch + LLM extract) is likewise long; its own
+		// bounded pool keeps a multi-workspace burst from starving
+		// close-date, reconcile, and capture jobs.
 		rateRefreshQueue: {MaxWorkers: rateRefreshMaxWorkers},
 		// The AI-backed capture passes make serial model calls, so a
 		// fanned-out fleet of them would occupy every default worker and

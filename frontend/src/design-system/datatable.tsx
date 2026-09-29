@@ -16,12 +16,15 @@ export function DataTable<Row>({
   rows,
   rowKey,
   onRowClick,
+  rowClassName,
   label,
 }: Readonly<{
   columns: DataTableColumn<Row>[];
   rows: Row[];
   rowKey: (row: Row) => string;
   onRowClick?: (row: Row) => void;
+  /** A class for one row, for a state the row is in (`row-current`). */
+  rowClassName?: (row: Row) => string | undefined;
   /** What the scroll region is called once the table is wider than its box. */
   label: string;
 }>) {
@@ -41,7 +44,11 @@ export function DataTable<Row>({
           {rows.map((row) => (
             <tr
               key={rowKey(row)}
-              className={onRowClick ? "rowlink" : undefined}
+              className={
+                [onRowClick ? "rowlink" : "", rowClassName?.(row) ?? ""]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
               onClick={onRowClick ? () => onRowClick(row) : undefined}
             >
               {columns.map((column) => (

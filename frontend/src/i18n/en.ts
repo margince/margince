@@ -8900,9 +8900,9 @@ export const en = {
     "Typed questions, asked before the tiers where certified",
   "aiRouting.decisions.add": "Add decision model",
   "aiRouting.decisions.remove": "Remove decision model",
-  "aiRouting.decisions.preset.openrouter": "Use OpenRouter",
+  "aiRouting.decisions.preset.openrouter": "Preset: OpenRouter",
   "aiRouting.decisions.preset.openrouterKey":
-    "Fills in OpenRouter’s endpoint and model. JEV_COMPATIBLE_API_KEY takes your OpenRouter key.",
+    "Fills in host and model. The key goes in JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent": "No decision model. Every task uses the tiers.",
   "aiRouting.priceSheet": "Price sheet",
   "aiRouting.provider.label": "Provider",
@@ -8950,12 +8950,12 @@ export const en = {
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Host",
   "aiRouting.baseUrl.help":
-    "Provider host root without a version segment; /v1 is added. Required for openai_compatible, which has no default.",
+    "Host root; /v1 is added. Required: this adapter has no default.",
   "aiRouting.baseUrl.help.jev":
-    "Full endpoint URL, used as written. Leave blank for TypeSafe’s own API, https://api.typesafe.ai/v1/systemone.",
+    "Full endpoint URL. Blank uses TypeSafe’s own API.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
   "aiRouting.baseUrl.help.jevCompatible":
-    "Full endpoint URL, used as written. Required: OpenRouter is https://openrouter.ai/api/alpha/decisions, and a self-hosted server looks like http://127.0.0.1:8767/v1/systemone.",
+    "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
@@ -8970,7 +8970,7 @@ export const en = {
     "Price sheet only: this provider did not respond. Any model ID it serves still works; type it.",
   "aiRouting.model.label": "Model",
   "aiRouting.model.help":
-    "Listed models are the ones this installation can price, per 1M tokens in → out. Any other model ID the provider serves also works; type it.",
+    "Pick a listed model, or type any ID the provider serves.",
   "aiRouting.saving": "Saving binding…",
   "aiRouting.saveFailed": "Routing not saved",
   "aiRouting.adminOnly":
@@ -11134,11 +11134,15 @@ export const en = {
     "Refresh model prices writes it to the sheet. Usage and spend include it from then on.",
   "aiRates.refresh.button": "Refresh model prices",
   "aiRates.refresh.report": "Model price refresh",
+  "aiRates.refresh.colStatus": "Status",
+  "aiRates.refresh.colDetail": "Detail",
   "aiRates.refresh.outcome.updated": "Updated",
   "aiRates.refresh.outcome.unchanged": "Up to date",
   "aiRates.refresh.outcome.not_available": "Set by hand",
   "aiRates.refresh.outcome.unreachable": "Unreachable",
   "aiRates.refresh.outcome.not_bound": "Not in use",
+  "aiRates.refresh.outcome.not_listed": "Not in the list",
+  "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",
   "aiRates.refresh.unchangedCount_one": "{count} price already current",
@@ -11146,11 +11150,17 @@ export const en = {
   "aiRates.manual.button": "Edit prices",
   "aiRates.manual.title": "Set prices for {provider}",
   "aiRates.manual.priced": "Models already priced",
+  "aiRates.manual.formTitle": "Add or change a price",
   "aiRates.manual.edit": "Edit",
   "aiRates.manual.done": "Done",
   "aiRates.manual.malformed":
     "Prices are plain numbers such as 5 or 0.25, with at most six decimals.",
   "aiRates.manual.saved": "Saved {model}: {price}",
+  "aiRates.manual.lane": "Used for",
+  "aiRates.manual.laneChat": "Chat",
+  "aiRates.manual.laneEmbeddings": "Embeddings",
+  "aiRates.manual.laneDecisions": "Decisions",
+  "aiRates.manual.from": "from {date}",
   "firstRun.ignite.title": "Model connected",
   "firstRun.ignite.sub":
     "The key is stored and the model responded. This is what changes.",

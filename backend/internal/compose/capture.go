@@ -146,6 +146,15 @@ func WithCaptureConfig(cfg CaptureConfig) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.captureConfig = cfg }
 }
 
+// WarnStaleRates says once, at boot, which `rates:` settings the file still
+// carries and nothing acts on. Both roles call it: the api serves the request
+// the operator believed the key governed, and the worker used to run the job.
+func WarnStaleRates(r deployconfig.RatesConfig, log *slog.Logger) {
+	for _, warning := range r.Warnings() {
+		log.Warn("rates configuration: " + warning)
+	}
+}
+
 // CaptureConfigFromDeploy maps the deployment's `capture:` block onto the
 // compose suppression config the Sink gates read (CAP-PARAM-6, ADR-0072).
 //

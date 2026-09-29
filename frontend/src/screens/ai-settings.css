@@ -167,3 +167,16 @@
   gap: var(--space-3);
   flex-wrap: wrap;
 }
+
+/* The provider select with its lane's preset beside it. The select keeps the
+ * row's width; the preset sits on the select's baseline, not the label's. */
+.binding-provider-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.binding-provider-row > .field {
+  flex: 1 1 200px;
+}

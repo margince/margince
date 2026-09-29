@@ -4,30 +4,28 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
-import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
+import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { Select } from "../design-system/select";
 import { calendarDay } from "../format/calendarday";
 import { formatUsdPerMTok } from "../format/format";
+import { PER_MTOK_PRICE } from "../format/priceinput";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import type { ModelLane } from "./ai-models";
 import {
   offeredModels,
-  unreadablePrice,
   useAiModelCatalogue,
   useAvailableModels,
 } from "./ai-models";
 import { problemMessageOf, throwProblem, WriteRefused } from "./common";
 
-// What the server's pattern for a per-MTok price accepts: a plain non-negative
-// decimal, up to twelve whole digits and six fractional. Zero is a price (a
-// local model costs nothing to call), so it passes.
-const PRICE = /^[0-9]{1,12}(\.[0-9]{1,6})?$/;
-
 // The reader's own today, for the same reason the sheets read effective dates
-// against their calendar rather than UTC's.
-function today(): string {
+// against their calendar rather than UTC's. Shared with the currency sheet.
+export function today(): string {
   return calendarDay(new Date(), viewerZone());
 }
 
@@ -57,6 +55,9 @@ export function ModelPriceDialog({
   const [cacheRead, setCacheRead] = useState("0");
   const [cacheWrite, setCacheWrite] = useState("0");
   const [effectiveDate, setEffectiveDate] = useState(today());
+  // What the model is FOR. Always sent: a price filed without one is filed as
+  // chat, and a new embedder then never reaches the embeddings picker.
+  const [lane, setLane] = useState<ModelLane>("chat");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const sheet = useAiModelCatalogue();
@@ -76,6 +77,7 @@ export function ModelPriceDialog({
           output_per_mtok: output.trim(),
           cache_read_per_mtok: cacheRead.trim() || "0",
           cache_write_per_mtok: cacheWrite.trim() || "0",
+          lane,
           effective_date: effectiveDate,
         },
       });
@@ -108,7 +110,7 @@ export function ModelPriceDialog({
   );
   const decimals = [input, output, cacheRead || "0", cacheWrite || "0"];
   const malformed = decimals.some(
-    (v) => v.trim() !== "" && !PRICE.test(v.trim()),
+    (v) => v.trim() !== "" && !PER_MTOK_PRICE.test(v.trim()),
   );
 
   // One box of this dialog. `Field` owns the id and hands it to the input.
@@ -141,44 +143,63 @@ export function ModelPriceDialog({
     setSaved(null);
     setError(null);
     setModelId(row.model_id);
+    setLane(row.lane);
+    // A scheduled price is edited on its own date; an in-force one, from today.
+    setEffectiveDate(
+      row.effective_date > today() ? row.effective_date : today(),
+    );
     setInput(row.input_per_mtok);
     setOutput(row.output_per_mtok);
     setCacheRead(row.cache_read_per_mtok);
     setCacheWrite(row.cache_write_per_mtok);
   };
 
+  const pricedModels = fixedProvider !== undefined && existing.length > 0;
+  const submit = (
+    <div className="actions rates-manual-actions">
+      <Button variant="ghost" onClick={onClose}>
+        {fixedProvider === undefined
+          ? t("create.cancel")
+          : t("aiRates.manual.done")}
+      </Button>
+      <Button
+        variant="primary"
+        onClick={() => {
+          setError(null);
+          setSaved(null);
+          save.mutate();
+        }}
+        disabled={
+          save.isPending ||
+          malformed ||
+          provider.trim() === "" ||
+          modelId.trim() === "" ||
+          input.trim() === "" ||
+          output.trim() === ""
+        }
+      >
+        {t("settings.rates.setRate")}
+      </Button>
+    </div>
+  );
+
   return (
-    <Modal open onClose={onClose} labelledBy={labelId}>
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={labelId}
+      size={fixedProvider === undefined ? "default" : "wide"}
+    >
       <Heading size="large" id={labelId} className="t-h2 modal-title">
         {fixedProvider === undefined
           ? t("settings.rates.modelModalTitle")
           : t("aiRates.manual.title", { provider: fixedProvider })}
       </Heading>
       <div className="form-stack">
-        {existing.length > 0 ? (
-          <ul
-            className="rates-manual-list"
-            aria-label={t("aiRates.manual.priced")}
-          >
-            {existing.map((row) => (
-              <li key={row.model_id}>
-                <span>{row.model_id}</span>
-                <span className="t-caption">
-                  {unreadablePrice(row.input_per_mtok) ||
-                  unreadablePrice(row.output_per_mtok)
-                    ? ""
-                    : t("aiAdmin.rates", {
-                        input: formatUsdPerMTok(row.input_per_mtok, locale),
-                        output: formatUsdPerMTok(row.output_per_mtok, locale),
-                      })}
-                </span>
-                <Button variant="ghost" onClick={() => edit(row)}>
-                  {t("aiRates.manual.edit")}
-                  <span className="sr-only"> {row.model_id}</span>
-                </Button>
-              </li>
-            ))}
-          </ul>
+        {fixedProvider !== undefined ? (
+          <Heading size="small" className="t-h3">
+            {t("aiRates.manual.formTitle")}
+          </Heading>
         ) : null}
         {fixedProvider === undefined
           ? field(t("settings.rates.colProvider"), typedProvider, setProvider, {
@@ -199,7 +220,7 @@ export function ModelPriceDialog({
                   available.data,
                   sheet.data,
                   fixedProvider,
-                  "chat",
+                  lane,
                   locale,
                 )}
                 onChange={(next) => {
@@ -210,25 +231,54 @@ export function ModelPriceDialog({
             )}
           </Field>
         )}
-        {field(t("settings.rates.colInput"), input, setInput, {
-          placeholder: "5.00",
-        })}
-        {field(t("settings.rates.colOutput"), output, setOutput, {
-          placeholder: "25.00",
-        })}
-        {field(t("settings.rates.colCacheRead"), cacheRead, setCacheRead)}
-        {field(t("settings.rates.colCacheWrite"), cacheWrite, setCacheWrite)}
-        <Field label={t("settings.rates.colEffective")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="date"
-              min={today()}
-              value={effectiveDate}
-              onChange={(e) => setEffectiveDate(e.target.value)}
-            />
-          )}
-        </Field>
+        <div className="form-row">
+          <Field label={t("aiRates.manual.lane")}>
+            {(control) => (
+              <Select
+                {...control}
+                value={lane}
+                options={[
+                  { value: "chat", label: t("aiRates.manual.laneChat") },
+                  {
+                    value: "embeddings",
+                    label: t("aiRates.manual.laneEmbeddings"),
+                  },
+                  {
+                    value: "decisions",
+                    label: t("aiRates.manual.laneDecisions"),
+                  },
+                ]}
+                onChange={(next) => {
+                  setSaved(null);
+                  setLane(next as ModelLane);
+                }}
+              />
+            )}
+          </Field>
+          <Field label={t("settings.rates.colEffective")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="date"
+                min={today()}
+                value={effectiveDate}
+                onChange={(e) => setEffectiveDate(e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+        <div className="form-row">
+          {field(t("settings.rates.colInput"), input, setInput, {
+            placeholder: "5.00",
+          })}
+          {field(t("settings.rates.colOutput"), output, setOutput, {
+            placeholder: "25.00",
+          })}
+        </div>
+        <div className="form-row">
+          {field(t("settings.rates.colCacheRead"), cacheRead, setCacheRead)}
+          {field(t("settings.rates.colCacheWrite"), cacheWrite, setCacheWrite)}
+        </div>
         {malformed ? (
           <ErrorLine>{t("aiRates.manual.malformed")}</ErrorLine>
         ) : null}
@@ -238,31 +288,78 @@ export function ModelPriceDialog({
           </p>
         ) : null}
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
-        <div className="form-actions">
-          <Button variant="ghost" onClick={onClose}>
-            {fixedProvider === undefined
-              ? t("create.cancel")
-              : t("aiRates.manual.done")}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setError(null);
-              setSaved(null);
-              save.mutate();
-            }}
-            disabled={
-              save.isPending ||
-              malformed ||
-              provider.trim() === "" ||
-              modelId.trim() === "" ||
-              input.trim() === "" ||
-              output.trim() === ""
-            }
-          >
-            {t("settings.rates.setRate")}
-          </Button>
-        </div>
+        {pricedModels ? (
+          <>
+            <Heading size="small" className="t-h3">
+              {t("aiRates.manual.priced")}
+            </Heading>
+            <div className="rates-manual-table">
+              <DataTable
+                label={t("aiRates.manual.priced")}
+                rows={existing}
+                rowKey={(row) => row.model_id}
+                rowClassName={(row) =>
+                  row.model_id === modelId.trim() ? "row-current" : undefined
+                }
+                columns={[
+                  {
+                    key: "model",
+                    header: t("settings.rates.colModel"),
+                    grow: true,
+                    render: (row) => (
+                      <>
+                        {row.model_id}
+                        {row.effective_date > today() ? (
+                          <Badge>
+                            {t("aiRates.manual.from", {
+                              date: row.effective_date,
+                            })}
+                          </Badge>
+                        ) : null}
+                      </>
+                    ),
+                  },
+                  {
+                    key: "in",
+                    header: t("settings.rates.colInput"),
+                    align: "end",
+                    render: (row) => row.input_per_mtok,
+                  },
+                  {
+                    key: "out",
+                    header: t("settings.rates.colOutput"),
+                    align: "end",
+                    render: (row) => row.output_per_mtok,
+                  },
+                  {
+                    key: "cr",
+                    header: t("settings.rates.colCacheRead"),
+                    align: "end",
+                    render: (row) => row.cache_read_per_mtok,
+                  },
+                  {
+                    key: "cw",
+                    header: t("settings.rates.colCacheWrite"),
+                    align: "end",
+                    render: (row) => row.cache_write_per_mtok,
+                  },
+                  {
+                    key: "edit",
+                    header: t("aiRates.manual.edit"),
+                    align: "end",
+                    render: (row) => (
+                      <Button variant="ghost" onClick={() => edit(row)}>
+                        {t("aiRates.manual.edit")}
+                        <span className="sr-only"> {row.model_id}</span>
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
+            </div>
+          </>
+        ) : null}
+        {submit}
       </div>
     </Modal>
   );

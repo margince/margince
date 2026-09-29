@@ -80,6 +80,40 @@ func TestCatalogueTargetsAddTheSheetsOpenAICompatibleRowsWithoutRefilingThem(t *
 	}
 }
 
+// A self-hosted server priced by hand shares its model ids with nobody's
+// catalogue by intent; when the ids coincide the broker's price must not land on it.
+func TestCatalogueTargetsLeaveASelfHostedSheetRowAloneWhenNothingIsBoundAtOpenRouter(t *testing.T) {
+	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{
+		"premium": {Provider: providerOpenAICompatible, Model: "meta/llama-4", BaseURL: "https://llm.internal.test/v1"},
+	}}
+	sheet := []ModelRateRow{{Provider: providerOpenAICompatible, ModelID: "meta/llama-4"}}
+
+	if got := targetsOf(cfg, sheet...); len(got) != 0 {
+		t.Errorf("targets = %v, want none: nothing is bound at OpenRouter", got)
+	}
+}
+
+func TestCatalogueTargetsAreStableAcrossRuns(t *testing.T) {
+	cfg := RoutingConfig{
+		Tiers: map[Tier]ProviderConfig{
+			"premium": openRouterBinding("a/shared"), "cheap_cloud": openRouterBinding("a/shared"),
+			"frontier": openRouterBinding("b/other"), "local_small": openRouterBinding("c/third"),
+		},
+		Embeddings: EmbeddingsConfig{ProviderConfig: openRouterBinding("a/shared")},
+	}
+	first := catalogueTargets(cfg, nil)
+	for range 50 {
+		if got := catalogueTargets(cfg, nil); !slices.Equal(got, first) {
+			t.Fatalf("targets changed between runs: %v then %v", first, got)
+		}
+	}
+	for _, target := range first {
+		if target.modelID == "a/shared" && target.lane != LaneChat {
+			t.Errorf("a model bound as a tier and as the embedder is filed %q, want chat (tiers first)", target.lane)
+		}
+	}
+}
+
 func TestCatalogueTargetsAreEmptyWhereNothingIsBoundAtOpenRouter(t *testing.T) {
 	if got := targetsOf(RoutingConfig{}); len(got) != 0 {
 		t.Errorf("an unbound installation has targets: %v", got)
@@ -190,6 +224,22 @@ func TestTheReportNamesEveryKnownProvider(t *testing.T) {
 		if got[vendor] != RefreshNotAvailable {
 			t.Errorf("%s = %q, want not_available: it publishes no price list", vendor, got[vendor])
 		}
+	}
+}
+
+func TestABoundModelTheCatalogueDoesNotNameIsReportedNotListed(t *testing.T) {
+	report := reportProviders(map[string]*ProviderRefresh{
+		providerOpenAICompatible: {Provider: providerOpenAICompatible, Unlisted: []string{"a/typo"}},
+	}, false)
+
+	var got ProviderRefresh
+	for _, p := range report.Providers {
+		if p.Provider == providerOpenAICompatible {
+			got = p
+		}
+	}
+	if got.Outcome != RefreshNotListed || !slices.Equal(got.Unlisted, []string{"a/typo"}) {
+		t.Errorf("line = %+v, want not_listed carrying the id", got)
 	}
 }
 

@@ -25,3 +25,12 @@
 .table:has(.datatable-grow) :is(th, td):not(.datatable-grow) {
   white-space: nowrap;
 }
+
+/* The row a form beside the table is editing. A tint and a leading edge, so the
+ * state does not rest on colour alone. */
+.table tbody tr.row-current td {
+  background: var(--bgHover);
+}
+.table tbody tr.row-current td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}

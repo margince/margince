@@ -17346,17 +17346,21 @@ export interface components {
             /**
              * @description `updated` wrote at least one price; `unchanged` found every priced model already
              *     current; `not_available` means the provider (or the catalogue, for these models)
-             *     publishes no price to read; `unreachable` means the catalogue could not be read;
+             *     publishes no price to read; `not_listed` means a bound model is absent from the
+             *     catalogue altogether, so its id may be misspelt; `unreachable` means the catalogue
+             *     could not be read;
              *     `not_bound` means nothing this provider serves is bound or on the sheet.
              * @enum {string}
              */
-            outcome: "updated" | "unchanged" | "not_available" | "unreachable" | "not_bound";
+            outcome: "updated" | "unchanged" | "not_available" | "not_listed" | "unreachable" | "not_bound";
             /** @description Prices written today. */
             updated: number;
             /** @description Models already at the catalogue price. */
             unchanged: number;
             /** @description Model ids written this run. */
             models: string[];
+            /** @description Bound model ids the catalogue does not name. */
+            unlisted: string[];
         };
         SetAiModelRateRequest: {
             provider: string;

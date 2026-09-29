@@ -27,6 +27,7 @@ const REPORT = {
       updated: 3,
       unchanged: 1,
       models: ["mistralai/mistral-small-2603", "google/gemma-4-31b-it"],
+      unlisted: ["mistralai/mistal-small-2603"],
     },
     {
       provider: "jev_compatible",
@@ -34,6 +35,7 @@ const REPORT = {
       updated: 0,
       unchanged: 1,
       models: [],
+      unlisted: [],
     },
     {
       provider: "gemini",
@@ -41,6 +43,7 @@ const REPORT = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
     {
       provider: "anthropic",
@@ -48,6 +51,7 @@ const REPORT = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
     {
       provider: "ollama",
@@ -55,6 +59,7 @@ const REPORT = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
   ],
 };
@@ -67,6 +72,7 @@ const UNREACHABLE = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
     {
       provider: "gemini",
@@ -74,6 +80,7 @@ const UNREACHABLE = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
   ],
 };

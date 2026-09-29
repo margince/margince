@@ -16,33 +16,33 @@
  * run a panel's action band off a phone. */
 .rates-refresh-report {
   flex-basis: 100%;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-1);
+  min-width: 0;
 }
 
-.rates-refresh-report > li {
-  display: flex;
+/* The detail cell holds up to three small facts and a verb; they wrap together. */
+.rates-refresh-detail {
+  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
 }
 
-/* The models the sheet already prices for a provider, each with the verb that
- * loads it into the form below. */
-.rates-manual-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-1);
+/* The set-by-hand dialog: the price table scrolls inside its own region so the
+ * form and the footer stay in view, and the footer stays put while the dialog
+ * body scrolls on a short screen. */
+.rates-manual-table {
+  max-height: 32dvh;
+  overflow-y: auto;
 }
 
-.rates-manual-list > li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+.rates-manual-table .badge {
+  margin-inline-start: var(--space-2);
+}
+
+.rates-manual-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--bgElevated);
+  padding-block: var(--space-3) 0;
+  border-top: 1px solid var(--borderSubtle);
 }

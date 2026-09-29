@@ -29,6 +29,7 @@ const REPORT = {
       updated: 2,
       unchanged: 1,
       models: ["a/b", "c/d"],
+      unlisted: ["e/typo"],
     },
     {
       provider: "gemini",
@@ -36,6 +37,7 @@ const REPORT = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
     {
       provider: "jev_compatible",
@@ -43,6 +45,7 @@ const REPORT = {
       updated: 0,
       unchanged: 0,
       models: [],
+      unlisted: [],
     },
   ],
 };
@@ -67,21 +70,21 @@ describe("RefreshModelPrices", () => {
   it("posts the refresh and lists one line per provider", async () => {
     const user = userEvent.setup();
     const { fetchMock } = mount(() => jsonResponse(REPORT));
-    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
 
     await user.click(
       screen.getByRole("button", { name: "Refresh model prices" }),
     );
 
-    const report = await screen.findByRole("list", {
-      name: "Model price refresh",
-    });
-    const lines = within(report).getAllByRole("listitem");
+    const report = await screen.findByRole("table");
+    const lines = within(report).getAllByRole("row").slice(1);
     expect(lines).toHaveLength(3);
     expect(within(lines[0]).getByText("Updated")).toBeTruthy();
     expect(within(lines[0]).getByText("openai_compatible")).toBeTruthy();
     expect(within(lines[0]).getByText("2 prices written")).toBeTruthy();
     expect(within(lines[0]).getByText("1 price already current")).toBeTruthy();
+    // A bound id the list does not name is spelt out, so a typo can be found.
+    expect(within(lines[0]).getByText(/e\/typo/)).toBeTruthy();
     // A vendor with no price list says so and counts nothing.
     expect(within(lines[1]).getByText("Set by hand")).toBeTruthy();
     expect(within(lines[1]).queryByText(/prices? written/)).toBeNull();
@@ -102,7 +105,7 @@ describe("RefreshModelPrices", () => {
     await user.click(
       screen.getByRole("button", { name: "Refresh model prices" }),
     );
-    await screen.findByRole("list");
+    await screen.findByRole("table");
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["ai-model-rates"] });
   });
 
@@ -124,7 +127,7 @@ describe("RefreshModelPrices", () => {
       screen.getByRole("button", { name: "Refresh model prices" }),
     );
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
     expect(
       screen.getByRole("button", { name: "Refresh model prices" }),
     ).toHaveProperty("disabled", false);

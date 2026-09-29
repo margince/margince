@@ -35,8 +35,8 @@
   overflow-wrap: anywhere;
 }
 
-/* Four columns in a card a phone leaves ~250px for: the cell padding gives up
- * a third so the ids have room to wrap rather than to overflow. */
+/* Cells give up a third of their inline padding so a broker's long model id has
+ * room to wrap rather than to overflow. */
 .aicalls-table th,
 .aicalls-table td {
   padding-inline: var(--space-2);

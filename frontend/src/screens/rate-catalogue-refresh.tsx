@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanUpsert } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -24,9 +25,13 @@ const OUTCOME_TONE = {
   updated: "success",
   unchanged: "default",
   not_available: "info",
+  not_listed: "warning",
   unreachable: "danger",
   not_bound: "default",
-} as const satisfies Record<Outcome, "success" | "default" | "info" | "danger">;
+} as const satisfies Record<
+  Outcome,
+  "success" | "default" | "info" | "warning" | "danger"
+>;
 
 /**
  * RefreshModelPrices re-prices the models this installation calls from the
@@ -66,26 +71,55 @@ export function RefreshModelPrices() {
         {t("aiRates.refresh.button")}
       </Button>
       {refresh.data ? (
-        <ul
-          className="rates-refresh-report"
-          aria-label={t("aiRates.refresh.report")}
-        >
-          {refresh.data.providers.map((p) => (
-            <li key={p.provider}>
-              <Badge tone={OUTCOME_TONE[p.outcome]}>
-                {t(`aiRates.refresh.outcome.${p.outcome}` as const)}
-              </Badge>
-              <span>{p.provider}</span>
-              <ProviderCounts provider={p} />
-              {p.outcome === "not_available" && canSet ? (
-                <Button variant="ghost" onClick={() => setSetting(p.provider)}>
-                  {t("aiRates.manual.button")}
-                  <span className="sr-only"> {p.provider}</span>
-                </Button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <div className="rates-refresh-report">
+          <DataTable
+            label={t("aiRates.refresh.report")}
+            rows={refresh.data.providers}
+            rowKey={(p) => p.provider}
+            columns={[
+              {
+                key: "provider",
+                header: t("settings.rates.colProvider"),
+                render: (p) => p.provider,
+              },
+              {
+                key: "status",
+                header: t("aiRates.refresh.colStatus"),
+                render: (p) => (
+                  <Badge tone={OUTCOME_TONE[p.outcome]}>
+                    {t(`aiRates.refresh.outcome.${p.outcome}` as const)}
+                  </Badge>
+                ),
+              },
+              {
+                key: "detail",
+                header: t("aiRates.refresh.colDetail"),
+                grow: true,
+                render: (p) => (
+                  <span className="rates-refresh-detail">
+                    <ProviderCounts provider={p} />
+                    {p.unlisted.length > 0 ? (
+                      <span className="t-caption">
+                        {t("aiRates.refresh.unlisted", {
+                          ids: p.unlisted.join(", "),
+                        })}
+                      </span>
+                    ) : null}
+                    {p.outcome === "not_available" && canSet ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setSetting(p.provider)}
+                      >
+                        {t("aiRates.manual.button")}
+                        <span className="sr-only"> {p.provider}</span>
+                      </Button>
+                    ) : null}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </div>
       ) : null}
       <ErrorLine error={refresh.error} inline />
       {setting !== null ? (
