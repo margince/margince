@@ -21,7 +21,7 @@ import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
+import { rosterOwnerName, useRoster } from "./entityref";
 import { useMemberName } from "./membernames";
 import { MergeAction } from "./merge";
 import { ShareAction } from "./share";
@@ -182,19 +182,6 @@ export function CompanyLifecycleControl({
   );
 }
 
-// What to call an owner the roster's answer does not name. "No longer in the
-// user list" is a claim about a read that came back WITHOUT them, so it is the
-// only reading this screen supplies; still reading, read failed and walk stopped
-// short belong to the roster and are spelled once there. Shared by every control
-// here that names the current owner, so none goes on making the claim alone.
-function unresolvedOwnerLabel(
-  roster: Readonly<{ isPending: boolean; isError: boolean }>,
-  partial: boolean,
-  t: ReturnType<typeof useT>,
-): string {
-  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
-}
-
 // Exported for the same reason as useCompanyFieldPatch/useCompanyReadOnlyReason
 // above: the rail's Details grid edits the SAME field through the SAME
 // roster read, the SAME not-in-roster fallback and the SAME
@@ -224,24 +211,28 @@ export function CompanyOwnerControl({
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
   const ownerName = useMemberName(company.owner_id);
-  const rosterPartial = useRosterPartial("user", true);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
   // The current owner may not be offerable (invited, deactivated, or past the
-  // walk), and a select whose value is no option renders blank. An invited one
-  // is named; for the rest, `unresolvedOwnerLabel` says which honest sentence.
+  // walk), and a select whose value is no option renders blank. Named by id
+  // regardless — `rosterOwnerName` says the honest sentence for the rest.
   if (
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)
   ) {
     owners.unshift({
       value: company.owner_id,
-      label:
-        (typeof ownerName.data === "string" ? ownerName.data : null) ??
-        unresolvedOwnerLabel(roster, rosterPartial, t),
+      // `company.owner_id` is truthy in this branch, so `unowned` is never
+      // read; passed anyway so the call reads the same as every other one.
+      label: rosterOwnerName(
+        company.owner_id,
+        ownerName,
+        t,
+        t("co.pulse.unowned"),
+      ),
     });
   }
   // "Unowned" is offered only while the account IS unowned. `owner_id` cannot
@@ -279,7 +270,7 @@ export function CompanyOwnerControl({
         }
         return (
           owners.find((user) => user.value === value)?.label ??
-          unresolvedOwnerLabel(roster, rosterPartial, t)
+          rosterOwnerName(company.owner_id, ownerName, t, t("co.pulse.unowned"))
         );
       }}
       // Taking an unowned account goes through the claim, the door open to

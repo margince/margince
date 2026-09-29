@@ -367,7 +367,7 @@ function useAudienceSentence(
   if (yours) {
     return t(copy.privateYours);
   }
-  return typeof name.data === "string"
+  return name.data != null
     ? t(copy.privateOf, { owner: name.data })
     : t(copy.privateOfOwner);
 }

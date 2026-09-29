@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import type { components } from "../api/schema";
 import { ENTITY, type EntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
 import { useT } from "../i18n";
@@ -32,6 +31,7 @@ import { type RosterKind, type useRoster, useRosterWalk } from "./roster";
 // text and never touches the ENTITY registry, which has no `user`/`team`
 // entry. A user is named by id (`/users/names`); a team is still named off
 // the roster walk — see `RosterRef`.
+
 export {
   ENTITY_NAME_KEY,
   fetchEntityName,
@@ -45,9 +45,6 @@ export {
   useRosterPartialHint,
 } from "./roster";
 export type EntityRefKind = EntityKind | RosterKind;
-
-type User = components["schemas"]["User"];
-type Team = components["schemas"]["Team"];
 
 /**
  * What a roster that could not name an id is allowed to say.
@@ -75,14 +72,26 @@ export function rosterReading(
 }
 
 /**
+ * What a reading is allowed to say once there is no name to show:
+ * `unlisted` is the CALLER's sentence, because only the caller knows what the
+ * id was for — an account's owner, a request's assignee — and it is the one
+ * reading that claims the read answered about them. The other two readings
+ * say the same thing wherever they happen: a read still in flight has said
+ * nothing yet, and one that failed has said nothing about THIS id.
+ */
+function missLabel(
+  reading: NameReading,
+  t: ReturnType<typeof useT>,
+  unlisted: string,
+): string {
+  if (reading === "pending") {
+    return t("common.loading");
+  }
+  return reading === "failed" ? t("ref.nameLoadFailed") : unlisted;
+}
+
+/**
  * What to call a roster id the walk could not name.
- *
- * `unlisted` is the CALLER's sentence, because only the caller knows what the id
- * was for — an account's owner, a request's assignee — and it is the one reading
- * that claims the roster answered about them. The other two readings say the
- * same thing wherever they happen: a read still in flight has said nothing yet,
- * and a read that failed or stopped short of the workspace has said nothing
- * about THIS id.
  *
  * A picker whose current value matches no option renders blank (`Select` falls
  * back to its placeholder, and to a non-breaking space without one), which is
@@ -95,11 +104,7 @@ export function rosterMissLabel(
   t: ReturnType<typeof useT>,
   unlisted: string,
 ): string {
-  const reading = rosterReading(roster, partial);
-  if (reading === "pending") {
-    return t("common.loading");
-  }
-  return reading === "failed" ? t("ref.nameLoadFailed") : unlisted;
+  return missLabel(rosterReading(roster, partial), t, unlisted);
 }
 
 function UnnamedRef({
@@ -117,13 +122,6 @@ function UnnamedRef({
     return <span title={id}>{t("ref.nameLoadFailed")}</span>;
   }
   return <span title={id}>{id}</span>;
-}
-
-function rosterName(kind: RosterKind, entry: User | Team): string | null {
-  if (kind === "user") {
-    return (entry as User).display_name ?? null;
-  }
-  return (entry as Team).name ?? null;
 }
 
 /**
@@ -237,8 +235,10 @@ function TeamRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
   const supplied = usableName(name);
   const roster = useRosterWalk("team", supplied == null);
   const match = roster.data?.entries.find((entry) => entry.id === id);
+  // `match` is `User | Team`; only a Team has `name`, so the property check
+  // narrows it without a cast.
   const resolved =
-    supplied ?? (match ? usableName(rosterName("team", match)) : null);
+    supplied ?? (match && "name" in match ? usableName(match.name) : null);
   return resolvedOrFallback(
     id,
     resolved,
@@ -313,28 +313,20 @@ function RecordRef({
 }
 
 /**
- * rosterOwnerName names a record's owner off ONE roster page — the read a
- * record header already makes — rather than walking the whole roster for a
- * single name. An owner the page does not carry gets the roster's own
- * reading of why, never a bare id.
+ * rosterOwnerName names a record's owner by id — the same by-id read every
+ * other reference in this file resolves through, never a walk. An owner the
+ * read has not named yet gets that read's own reading of why, never a bare id.
  */
 export function rosterOwnerName(
   ownerId: string | null | undefined,
-  roster: ReturnType<typeof useRoster>,
-  partial: boolean,
+  name: ReturnType<typeof useMemberName>,
   t: ReturnType<typeof useT>,
   unowned: string,
 ): string {
   if (!ownerId) {
     return unowned;
   }
-  const found = (roster.data ?? []).find(
-    (entry) => "display_name" in entry && entry.id === ownerId,
-  );
-  if (found && "display_name" in found) {
-    return found.display_name;
-  }
-  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
+  return name.data ?? missLabel(readingOf(name), t, t("ref.notInRoster"));
 }
 
 /**
@@ -346,6 +338,12 @@ export function rosterOwnerName(
  * of it has to assemble a query for. Null is BOTH "unowned" and "the roster
  * cannot name this id" — on a card the two draw the same nothing, and the
  * table's owner column is where they are told apart.
+ *
+ * Still walks rather than reading `useMemberName` by id: its callers label
+ * every card on a board in one synchronous pass over already-loaded data, not
+ * one component per id, and a hook cannot be called from inside that loop.
+ * Moving this onto the by-id read is a rendering-shape change to the board's
+ * cards, not a call-site swap.
  */
 export type OwnerNaming = (ownerId: string | null | undefined) => string | null;
 

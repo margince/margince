@@ -426,9 +426,10 @@ describe("EntityRef", () => {
     expect(await screen.findByText("Dana Kessler")).toBeTruthy();
     // The walk is the picker's read, and naming no longer arms it.
     expect(
-      fetchMock.mock.calls.every(([request]) =>
-        new URL((request as Request).url).pathname.endsWith("/users/names"),
-      ),
+      fetchMock.mock.calls.every(([input]) => {
+        const request = input instanceof Request ? input : new Request(input);
+        return new URL(request.url).pathname.endsWith("/users/names");
+      }),
     ).toBe(true);
   });
 
@@ -456,11 +457,11 @@ describe("EntityRef", () => {
 // The roster walk: `/users` and `/teams` are keyset-paged, so ONE page is not
 // the roster. Every picker built on `useRoster` inherits what the walk sees —
 // which is why the walk carries whether it reached the end. A team reference
-// still names itself off this same walk (`RosterRef`'s team arm), so it stands
-// in here for the cases that used to be exercised through a user reference.
-// Three facts are asserted: the walk follows the cursor it was given, it stops
-// at a bound rather than trusting a cursor forever, and neither the stop nor a
-// failed page is allowed to read as a complete roster.
+// is named off this same walk (`RosterRef`'s team arm); a user reference is
+// named by id and never walks, so these three facts are proven against a
+// team: the walk follows the cursor it was given, it stops at a bound rather
+// than trusting a cursor forever, and neither the stop nor a failed page is
+// allowed to read as a complete roster.
 
 // Pages of a workspace roster, served the way the contract serves them: each
 // response hands back the cursor of the NEXT page, and the last hands back
@@ -525,8 +526,8 @@ function stubEndlessRoster() {
   return cursors;
 }
 
-// The `/teams` counterparts of the two stubs above, for the walk mechanics a
-// team reference still exercises — naming a user no longer does.
+// The `/teams` counterparts of the two stubs above: a team reference walks
+// to name itself, and a user reference is named by id instead.
 function stubPagedTeamRoster(
   pages: ReadonlyArray<ReadonlyArray<{ id: string; name: string }>>,
 ) {
@@ -683,7 +684,10 @@ describe("invited seats", () => {
     ).toBeTruthy();
     const asked = vi
       .mocked(fetch)
-      .mock.calls.map(([request]) => new URL((request as Request).url))
+      .mock.calls.map(([input]) => {
+        const request = input instanceof Request ? input : new Request(input);
+        return new URL(request.url);
+      })
       .find((url) => url.pathname.endsWith("/users"));
     expect(asked?.searchParams.has("include_invited")).toBe(false);
   });

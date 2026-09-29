@@ -205,12 +205,3 @@ export function RosterPartialNote({
     </p>
   );
 }
-
-/** The display name of one member of a roster read, or undefined. */
-export function memberName(
-  entries: readonly RosterEntry[] | undefined,
-  id: string,
-): string | undefined {
-  const found = entries?.find((entry) => entry.id === id);
-  return found && "display_name" in found ? found.display_name : undefined;
-}
