@@ -137,21 +137,29 @@ func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-order")
 	first := inviteAndLogin(t, e, "first@acme.test", "Ada First", "rep")
 	second := inviteAndLogin(t, e, "second@acme.test", "Bo Second", "rep")
+	third := inviteAndLogin(t, e, "third@acme.test", "Cy Third", "rep")
+	fourth := inviteAndLogin(t, e, "fourth@acme.test", "Dee Fourth", "rep")
 
-	// Asked youngest-first, which is the reverse of the creation order the
-	// roster's own reads use — so an answer that followed the table rather than
-	// the request would come back the other way round.
+	// Asked as an interleaving — neither the creation order above nor its
+	// exact reverse — and across four seats rather than two: with only two,
+	// a handler that ranged the map SeatNames returns instead of walking the
+	// request would still match this order about half the time.
 	asked := []openapi_types.UUID{
-		openapi_types.UUID(second.UserID.UUID),
+		openapi_types.UUID(third.UserID.UUID),
 		openapi_types.UUID(first.UserID.UUID),
+		openapi_types.UUID(fourth.UserID.UUID),
+		openapi_types.UUID(second.UserID.UUID),
 	}
 	body := nameSeatsBody(t, e, e.admin, asked)
-	if len(body.Data) != 2 {
-		t.Fatalf("two colleagues were asked about; %d came back", len(body.Data))
+	if len(body.Data) != 4 {
+		t.Fatalf("four colleagues were asked about; %d came back", len(body.Data))
 	}
-	if body.Data[0].DisplayName != "Bo Second" || body.Data[1].DisplayName != "Ada First" {
-		t.Fatalf("the answer follows the order asked; it came back as %q, %q",
-			body.Data[0].DisplayName, body.Data[1].DisplayName)
+	wantOrder := []string{"Cy Third", "Ada First", "Dee Fourth", "Bo Second"}
+	for i, want := range wantOrder {
+		if body.Data[i].DisplayName != want {
+			t.Fatalf("the answer follows the order asked; position %d is %q, want %q",
+				i, body.Data[i].DisplayName, want)
+		}
 	}
 }
 
