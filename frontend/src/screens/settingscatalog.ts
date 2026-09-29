@@ -274,16 +274,13 @@ export const SETTINGS_PAGES = [
     // Passports, connected agents and the autonomy choice are all this reader's.
     changes: always,
   },
-  // SELF, and the only scope it could be: both endpoints behind this page read
-  // and write the CALLING seat's rows, so there is nothing on it an admin sets
-  // for somebody else and no grant that could withhold it.
   {
     id: "notifications",
     group: "me",
     scope: "self",
     requires: always,
-    // Every row is this reader's own choice about their own mail and their own
-    // notification centre, so acting on it needs no grant.
+    // Both endpoints read and write the CALLING seat's rows, so there is
+    // nothing here an admin sets for somebody else and no grant to withhold.
     changes: always,
   },
   // MIXED, not self: most of its cards are the reader's own, and ConnectorsCard

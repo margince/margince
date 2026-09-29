@@ -34677,9 +34677,10 @@ type NotificationPage struct {
 	// IT COUNTS THE LANE AND NOT THE LIST, so it is the narrower of the two. The reader's
 	// own stage moves are outside it, as they are outside `items`. A class they set to
 	// `off` is outside it too and still listed in `items`: the count is the interruption
-	// they declined, and the line is the record they did not. So `unread_count` can be
-	// lower than the unsettled lines on the page, and never higher — a badge numbering
-	// rows the panel does not list is a badge nobody can clear.
+	// they declined, and the line is the record they did not. So one page can show more
+	// unsettled lines than the count, and the count can exceed what any one page holds:
+	// what it never counts is a row `items` would not reach on some page, because a badge
+	// numbering rows the panel cannot list is a badge nobody can clear.
 	UnreadCount int `json:"unread_count"`
 }
 
