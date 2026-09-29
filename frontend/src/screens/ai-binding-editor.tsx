@@ -172,7 +172,7 @@ export function BindingEditor({
       )}
       <div className="actions">
         {draft.kind === "decisions" && base.binding !== undefined && (
-          <span className="actions-lead binding-remove">
+          <span className="actions-lead">
             <Button
               variant="link"
               disabled={busy}
