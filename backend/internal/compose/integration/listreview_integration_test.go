@@ -43,7 +43,8 @@ func dealWithHiddenCompany(t *testing.T, e *Env) (collections.CreateListInput, i
 	company := e.SeedCompany(t, "Hidden Account", &e.Rep1)
 	e.MakeCapturePrivate(t, "company", company, e.Rep1)
 	companyID := ids.From[ids.CompanyKind](company)
-	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+	// Created by the capturer, the one seat that may name the company.
+	deal, err := e.Deals.CreateDeal(e.As(e.Rep1, []ids.UUID{e.Team1}, dealListPerms()), deals.CreateDealInput{
 		Name: "Deal on a hidden account", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
