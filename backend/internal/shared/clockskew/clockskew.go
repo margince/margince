@@ -131,11 +131,17 @@ func (s Skew) String() string {
 }
 
 // ShadowLimits states what the Database applier cannot move, for the lane that
-// runs under it to print. Both holes are properties of Postgres rather than of
-// the shadowing, so neither can be closed by writing it more carefully:
-// CURRENT_TIMESTAMP is a reserved keyword the parser resolves without consulting
-// search_path, and a column DEFAULT binds pg_catalog.now() when the DDL runs,
-// long before any shadow exists.
+// runs under it to print. The two holes are not the same kind of hole, which is
+// measurable and was measured:
+//
+//   - CURRENT_TIMESTAMP is a reserved keyword the parser resolves without
+//     consulting search_path. Nothing closes this one.
+//   - A column DEFAULT binds whatever now() resolved to WHEN THE DDL RAN. The
+//     migrations build the template before any shadow exists, so their defaults
+//     keep the real date — a default written after the shadow does shift. It
+//     could be closed by shadowing before migrating, at the price of a template
+//     whose DDL no longer says what production's says, which is a worse thing
+//     for a reproduction aid to carry than a known-weaker shift.
 //
 // A reader who does not know this reads a green Database run as the verdict a
 // Machine run gives. It is not one, and saying so is the difference between a
