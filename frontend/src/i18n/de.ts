@@ -8814,15 +8814,15 @@ export const de = {
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
-    "Nur Preisliste: Dieser Anbieter hat keinen Schlüssel, daher kann seine Modellliste nicht abgerufen werden. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
+    "Kein Schlüssel, daher keine Modellliste. Beliebige Modell-ID eingeben.",
   "aiRouting.models.noEndpoint":
-    "Nur Preisliste: Gib oben den Host ein, um die Modellliste dieses Anbieters abzurufen. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
+    "Host oben eintragen, um die Modellliste zu laden.",
   "aiRouting.models.profileForbids":
-    "Nur Preisliste: Dieses Installationsprofil erlaubt keinen Zugriff auf diesen Anbieter.",
+    "Dieses Profil erlaubt diesen Anbieter nicht.",
   "aiRouting.models.notPublished":
-    "Nur Preisliste: Dieser Anbieter veröffentlicht keine Modellliste.",
+    "Dieser Anbieter veröffentlicht keine Modellliste.",
   "aiRouting.models.unreachable":
-    "Nur Preisliste: Dieser Anbieter hat nicht geantwortet. Jede Modell-ID, die er bereitstellt, funktioniert trotzdem, wenn du sie direkt eingibst.",
+    "Der Anbieter hat nicht geantwortet. Beliebige Modell-ID eingeben.",
   "aiRouting.model.label": "Modell",
   "aiRouting.model.help":
     "Ein aufgeführtes Modell wählen oder eine beliebige Modell-ID des Anbieters eingeben.",

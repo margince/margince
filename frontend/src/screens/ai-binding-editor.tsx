@@ -320,28 +320,32 @@ function DecisionFields({
         // The endpoint is a full URL nobody remembers, and OpenRouter's is the
         // one most installations want; the key is the one thing it cannot fill.
         providerAside={
-          binding.provider === OPENROUTER_DECISION_PRESET.provider ? (
-            <Button
-              variant="link"
-              disabled={disabled}
-              onClick={() =>
-                onChange({
-                  ...binding,
-                  base_url: OPENROUTER_DECISION_PRESET.base_url,
-                  model: OPENROUTER_DECISION_PRESET.model,
-                })
+          binding.provider === OPENROUTER_DECISION_PRESET.provider
+            ? {
+                action: (
+                  <Button
+                    variant="link"
+                    disabled={disabled}
+                    onClick={() =>
+                      onChange({
+                        ...binding,
+                        base_url: OPENROUTER_DECISION_PRESET.base_url,
+                        model: OPENROUTER_DECISION_PRESET.model,
+                      })
+                    }
+                  >
+                    {t("aiRouting.decisions.preset.openrouter")}
+                  </Button>
+                ),
+                note: (
+                  <p className="t-caption">
+                    {t("aiRouting.decisions.preset.openrouterKey")}
+                  </p>
+                ),
               }
-            >
-              {t("aiRouting.decisions.preset.openrouter")}
-            </Button>
-          ) : undefined
+            : undefined
         }
       />
-      {binding.provider === OPENROUTER_DECISION_PRESET.provider && (
-        <p className="t-caption">
-          {t("aiRouting.decisions.preset.openrouterKey")}
-        </p>
-      )}
     </>
   );
 }

@@ -8740,15 +8740,14 @@ export const vi = {
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
   "aiRouting.models.noKey":
-    "Chỉ hiện bảng giá — nhà cung cấp này chưa có khoá nên không thể hỏi nó phục vụ những gì. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
-  "aiRouting.models.noEndpoint":
-    "Chỉ hiện bảng giá — điền host ở trên rồi mới hỏi được nhà cung cấp này. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+    "Chưa có khóa nên không có danh sách mô hình. Hãy nhập ID bất kỳ.",
+  "aiRouting.models.noEndpoint": "Nhập host ở trên để tải danh sách mô hình.",
   "aiRouting.models.profileForbids":
-    "Chỉ hiện bảng giá — hồ sơ triển khai này không cho phép tiếp cận nhà cung cấp đó.",
+    "Hồ sơ này không cho phép nhà cung cấp này.",
   "aiRouting.models.notPublished":
-    "Chỉ hiện bảng giá — nhà cung cấp này không công bố danh sách mô hình.",
+    "Nhà cung cấp này không công bố danh sách mô hình.",
   "aiRouting.models.unreachable":
-    "Chỉ hiện bảng giá — nhà cung cấp này không phản hồi. Mọi ID nó phục vụ vẫn dùng được: cứ gõ vào.",
+    "Nhà cung cấp không phản hồi. Hãy nhập ID bất kỳ.",
   "aiRouting.model.label": "Mô hình",
   "aiRouting.model.help":
     "Chọn một mô hình trong danh sách, hoặc nhập bất kỳ ID nào mà nhà cung cấp phục vụ.",

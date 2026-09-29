@@ -178,5 +178,11 @@
 }
 
 .binding-provider-row > .field {
-  flex: 1 1 200px;
+  flex: 1 1 0;
+  min-width: 11rem;
+}
+
+.binding-provider-row > .btn {
+  flex: none;
+  margin-bottom: var(--space-1);
 }

@@ -141,8 +141,9 @@ export function AdapterFields<B extends TierBindingLike>({
   providerAside,
 }: Readonly<{
   label: string;
-  // A preset for THIS lane, drawn beside the provider it belongs to.
-  providerAside?: ReactNode;
+  // A preset for THIS lane: the verb beside the provider it belongs to, and the
+  // one line under the row that says what it fills and what it cannot.
+  providerAside?: Readonly<{ action: ReactNode; note: ReactNode }>;
   lane: ModelLane;
   // The adapters this lane may name. Every chat tier and the embedder share
   // one list; the decision lane has its own, because no chat adapter answers a
@@ -179,8 +180,9 @@ export function AdapterFields<B extends TierBindingLike>({
             />
           )}
         </Field>
-        {providerAside}
+        {providerAside?.action}
       </div>
+      {providerAside?.note}
       {/* What the vendor serves, priced from the sheet where the sheet knows
           it. The list used to be the sheet ALONE, which answers what this
           installation can price rather than what exists — so a model released

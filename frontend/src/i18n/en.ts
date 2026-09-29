@@ -8958,16 +8958,13 @@ export const en = {
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
     "https://openrouter.ai/api/alpha/decisions",
-  "aiRouting.models.noKey":
-    "Price sheet only: this provider has no key, so its model list cannot be requested. Any model ID it serves still works; type it.",
-  "aiRouting.models.noEndpoint":
-    "Price sheet only: enter the host above to request this provider’s model list. Any model ID it serves still works; type it.",
+  "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
+  "aiRouting.models.noEndpoint": "Enter the host above to load its model list.",
   "aiRouting.models.profileForbids":
-    "Price sheet only: this installation profile does not allow access to this provider.",
-  "aiRouting.models.notPublished":
-    "Price sheet only: this provider publishes no model list.",
+    "This profile does not allow this provider.",
+  "aiRouting.models.notPublished": "This provider publishes no model list.",
   "aiRouting.models.unreachable":
-    "Price sheet only: this provider did not respond. Any model ID it serves still works; type it.",
+    "The provider did not respond. Type any ID it serves.",
   "aiRouting.model.label": "Model",
   "aiRouting.model.help":
     "Pick a listed model, or type any ID the provider serves.",
