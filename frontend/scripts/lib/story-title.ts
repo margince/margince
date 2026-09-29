@@ -1,26 +1,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { readFileSync } from "node:fs";
 import ts from "typescript";
-import { parseSource } from "./source-tree";
+import { parseSource } from "./source-tree.ts";
 
 /**
- * The Storybook sidebar path a story file claims, or null.
+ * The Storybook sidebar path a story file or docs page claims, or null.
  *
- * Resolves the DEFAULT EXPORT rather than reading the first `title:` in the
- * file, because a story's fixture data carries titles of its own —
+ * A CSF file is read at its DEFAULT EXPORT rather than at the first `title:`,
+ * because a story's fixture data carries titles of its own —
  * dealroomthreads.stories.tsx opens with `title: "Commercial terms v4"`, the
  * name of a document in the fixture, and a scanner reading the first match
- * would file that story under a root called "Commercial terms v4".
+ * would file that story under a root called "Commercial terms v4". An `.mdx`
+ * page is read by Storybook's own MDX analyser, so it is filed as Storybook
+ * files it.
  *
- * Shared rather than copied: two gates ask this question — the design-system
- * catalog checks every story's ROOT, and the settings catalog checks that every
- * settings story is filed under a group and page the catalog actually declares.
- * A second parser would drift from this one and the two would disagree about
- * which stories exist.
+ * Every gate that files stories by title reads it here: a second parser would
+ * drift from this one, and the two would disagree about which stories exist.
  */
-export function storyTitle(path: string, text: string): string | null {
-  if (path.endsWith(".mdx")) return mdxTitle(text);
+export async function storyTitle(
+  path: string,
+  text: string,
+): Promise<string | null> {
+  if (path.endsWith(".mdx")) return docsTitle(text);
   const title = literalAt(defaultExportObject(parseSource(path, text)), [
     "title",
   ]);
@@ -29,15 +32,28 @@ export function storyTitle(path: string, text: string): string | null {
     : null;
 }
 
-// No MDX parser is resolvable here, so the read is strict: one `<Meta>` outside
-// comments and code fences, carrying only a quoted title. Anything else is null.
-function mdxTitle(text: string): string | null {
-  const prose = text
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
-    .replace(/^```[^\n]*\n[\s\S]*?^```[^\n]*$/gm, "");
-  const metas = [...prose.matchAll(/<Meta\b[^>]*>/g)];
-  if (metas.length !== 1) return null;
-  return /^<Meta\s+title="([^"{}]+)"\s*\/>$/.exec(metas[0][0])?.[1] ?? null;
+export type TitledFile = { path: string; title: string | null };
+
+export function titledStories(files: string[]): Promise<TitledFile[]> {
+  return Promise.all(
+    files.map(async (path) => ({
+      path,
+      title: await storyTitle(path, readFileSync(path, "utf8")),
+    })),
+  );
+}
+
+// Loaded on first use: the analyser pulls in Storybook's server, which a gate
+// reading only CSF files has no need of.
+async function docsTitle(text: string): Promise<string | null> {
+  const { analyzeMdx } = await import("storybook/internal/core-server");
+  try {
+    return (await analyzeMdx(text)).title ?? null;
+  } catch (refused) {
+    // Storybook's indexer refuses this page too; null reports it as untitled.
+    if (refused instanceof Error) return null;
+    throw refused;
+  }
 }
 
 // The object literal a module default-exports, directly or through the `const`
@@ -88,7 +104,7 @@ export function literalAt(
 // The type-only wrappers a story's metadata may be written through. They change
 // nothing about the object underneath, so a scanner that stops at them reads no
 // title where there is one.
-export function unwrap(expression: ts.Expression): ts.Expression {
+function unwrap(expression: ts.Expression): ts.Expression {
   let node = expression;
   while (
     ts.isParenthesizedExpression(node) ||

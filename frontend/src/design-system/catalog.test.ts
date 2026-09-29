@@ -66,7 +66,7 @@ import {
 } from "../../scripts/lib/design-catalog";
 import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 import { storyCensus } from "../../scripts/lib/story-files";
-import { storyTitle } from "../../scripts/lib/story-title";
+import { titledStories } from "../../scripts/lib/story-title";
 
 const frontendRoot = resolve(__dirname, "..", "..");
 const srcDir = join(frontendRoot, "src");
@@ -193,6 +193,7 @@ const primitiveModules = filesUnder(dsDir).filter(
 
 const { suffixes: storySuffixList, files: storyFiles } =
   storyCensus(frontendRoot);
+const titled = await titledStories(storyFiles);
 
 describe("the catalog indexes this directory", () => {
   // A census that reads a smaller tree reports the same word a clean one does.
@@ -253,15 +254,14 @@ describe("the catalog indexes this directory", () => {
   });
 
   it("reads a title off every story file", () => {
-    const untitled = storyFiles
-      .filter((path) => storyTitle(path, readFileSync(path, "utf8")) === null)
-      .map((path) => relative(frontendRoot, path));
+    const untitled = titled
+      .filter(({ title }) => title === null)
+      .map(({ path }) => relative(frontendRoot, path));
     expect(untitled).toEqual([]);
   });
 
   it("files every story under a documented root", () => {
-    const stray = storyFiles.flatMap((path) => {
-      const title = storyTitle(path, readFileSync(path, "utf8"));
+    const stray = titled.flatMap(({ path, title }) => {
       if (title === null) return [];
       const root = title.split("/")[0];
       return documentedRoots.has(root)

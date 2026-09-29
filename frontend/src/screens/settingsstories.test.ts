@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { storyCensus } from "../../scripts/lib/story-files";
-import { storyTitle } from "../../scripts/lib/story-title";
+import { titledStories } from "../../scripts/lib/story-title";
 import { translate } from "../i18n";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 
@@ -76,24 +75,18 @@ const ACROSS_PAGE_STORIES = new Set([
   "Settings/Across pages/Units offered in settings",
 ]);
 
-// Every story file under src/, not screens/ alone: a settings card's story can
-// sit beside a component that lives elsewhere, as mail-history's does.
-const settingsStories = storyCensus(frontendRoot)
-  .files.map((path) => ({
-    path: relative(srcDir, path),
-    title: storyTitle(path, readFileSync(path, "utf8")),
-  }))
+// Every story file Storybook loads: a settings card's story can sit beside a
+// component outside screens/, as mail-history's does.
+const settingsStories = (await titledStories(storyCensus(frontendRoot).files))
+  .map(({ path, title }) => ({ path: relative(srcDir, path), title }))
   .filter(
     (story): story is { path: string; title: string } =>
       story.title?.startsWith("Settings/") ?? false,
   );
 
 describe("the settings stories are filed where the product files them", () => {
-  // A floor is not a census. `>40` over 66 stories permits 25 to vanish — a
-  // story whose title stops resolving, or whose root is edited away from
-  // `Settings/`, drops out of the filtered corpus and is never checked again.
-  // So the count is EXACT and derived from the tree: adding or removing a
-  // settings story file is a deliberate edit to this number.
+  // Pinned by hand rather than floored: a story retitled away from `Settings/`
+  // drops out of the corpus above, and only an exact count notices it go.
   it("reads every settings story, and says how many that is", () => {
     expect(settingsStories.length).toBe(107);
   });

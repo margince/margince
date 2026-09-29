@@ -78,14 +78,14 @@ export const SourcedAndAlerting: Story = {
 // — the last slot takes the rest of its row rather than sitting alone beside
 // empty cells under a stub of rule.
 //
-// Opened at 1024px, under the 68rem where the strip folds; at full width both
-// strips are one even row and nothing is stretched.
+// Opened where the strip's container is under `max-width: 66rem`, the rule it
+// folds at; at full width both strips are one even row and nothing is stretched.
 export const FoldsWithoutAnOrphan: Story = {
   parameters: {
     viewport: {
       options: {
         folded: {
-          name: "Folded (under 68rem)",
+          name: "Folded (container max 66rem)",
           styles: { width: "1024px", height: "720px" },
         },
       },

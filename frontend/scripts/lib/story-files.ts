@@ -4,8 +4,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { filesMatching, parseSource } from "./source-tree";
-import { defaultExportObject, literalAt } from "./story-title";
+import { filesMatching, parseSource } from "./source-tree.ts";
+import { defaultExportObject, literalAt } from "./story-title.ts";
 
 // The endings `.storybook/main.ts`'s `stories` globs match, or null for a glob
 // this cannot turn into endings, so a census built on it fails closed.
@@ -57,4 +57,9 @@ export function storyCensus(frontendRoot: string): StoryCensus {
       new RegExp(`(${escaped.join("|")})$`),
     ),
   };
+}
+
+// A docs page rather than a file of stories: it renders prose, not a component.
+export function isDocsPage(path: string): boolean {
+  return path.endsWith(".mdx");
 }

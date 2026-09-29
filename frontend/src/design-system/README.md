@@ -712,7 +712,7 @@ rather than the file:
 | `Foundations/` | The rules under every component, one node per topic: `Color`, `Typography`, `Radius`, `Brand`. |
 | `Components/` | One node per component in this directory, under the category below that says what it is for. |
 | `Patterns/` | Screen-tier building blocks that are not a page: the query gate, the create/edit/merge/share actions, the composer. |
-| `Shell/` | The application frame. |
+| `Shell/` | The application frame and the Home page. |
 | `Records/` | The screens a rep works in, and the cards on them (`Company 360/`, `Company rail/`). |
 | `Settings/` | `<Group>/<Page>/<Card>`, mirroring the settings catalog one for one: the seven groups of `SETTINGS_GROUPS` and the pages of `SETTINGS_PAGES`, under their own sidebar labels. `screens/settingsstories.test.ts` holds the two together, so a story filed under a group or page the catalog does not declare fails. |
 | `Onboarding/`, `Signed out/` | The first run, and the pages reachable without a session. |

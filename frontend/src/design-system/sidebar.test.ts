@@ -6,7 +6,8 @@
 //
 // ## Arms, one subject
 //
-// 1. Every root the catalog documents holds at least one story or docs page.
+// 1. Every root the catalog documents holds a story, or a docs page for
+//    `Get started/`, and the introduction lists the roots in the same order.
 // 2. Every `Components/` and `Foundations/` story sits on a shelf the catalog
 //    declares, and every declared shelf holds one.
 // 3. Under every shaped root, titles are Sentence case, one per file, and never
@@ -22,15 +23,21 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { readDesignCatalog } from "../../scripts/lib/design-catalog";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { storyCensus } from "../../scripts/lib/story-files";
+import { isDocsPage, storyCensus } from "../../scripts/lib/story-files";
 import {
   defaultExportObject,
   literalAt,
-  storyTitle,
+  titledStories,
 } from "../../scripts/lib/story-title";
 
 const frontendRoot = resolve(__dirname, "..", "..");
 const previewPath = join(frontendRoot, ".storybook", "preview.tsx");
+const introductionPath = join(
+  frontendRoot,
+  "src",
+  "design-system",
+  "introduction.mdx",
+);
 
 const { roots, categories, topics } = readDesignCatalog(frontendRoot);
 
@@ -58,9 +65,7 @@ const PROPER_NOUNS = new Map([
 ]);
 const ACRONYMS = new Map([
   ["AI", "the agent tier, as the product's copy writes it"],
-  ["MCP", "the Model Context Protocol"],
   ["IMAP", "the mail protocol, as the copy writes it"],
-  ["VAT", "the tax, as the copy writes it"],
   ["DNA", "Voice DNA, the product's name for a writing voice"],
 ]);
 
@@ -70,11 +75,34 @@ function rootOf(title: string): string {
   return title.split("/")[0];
 }
 
+// The one root that holds docs pages rather than stories.
+const DOCS_ROOT = "Get started";
+
 function emptyRootFindings(filed: Filed[], documented: string[]): string[] {
-  const reached = new Set(filed.map(({ title }) => rootOf(title)));
-  return documented
-    .filter((root) => !reached.has(root))
-    .map((root) => `${root}/ is documented and holds no story`);
+  return documented.flatMap((root) => {
+    const docs = root === DOCS_ROOT;
+    const held = filed.some(
+      ({ path, title }) => rootOf(title) === root && isDocsPage(path) === docs,
+    );
+    if (held) return [];
+    return [
+      `${root}/ is documented and holds no ${docs ? "docs page" : "story"}`,
+    ];
+  });
+}
+
+// The bolded names on the bullets under the introduction's "Where things are".
+function introductionRoots(mdx: string): string[] {
+  const lines = mdx.split("\n");
+  const start = lines.indexOf("## Where things are");
+  if (start < 0) return [];
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((line) => line.startsWith("## "));
+  return (end < 0 ? rest : rest.slice(0, end))
+    .filter((line) => line.startsWith("- "))
+    .flatMap((line) =>
+      [...line.matchAll(/\*\*([^*]+)\*\*/g)].map((match) => match[1]),
+    );
 }
 
 // `deepest` is one level past `shallowest`: a component's sub-node, as Decision
@@ -227,13 +255,13 @@ function sidebarOrder(path: string, text: string): SidebarOrder | null {
   return sorted.length > 0 ? { roots: sorted, children } : null;
 }
 
+const filed = (await titledStories(storyCensus(frontendRoot).files)).flatMap(
+  ({ path, title }) =>
+    title === null ? [] : [{ path: relative(frontendRoot, path), title }],
+);
+
 describe("the sidebar is shelved the way the catalog says", () => {
-  const filed = storyCensus(frontendRoot).files.flatMap((path) => {
-    const title = storyTitle(path, readFileSync(path, "utf8"));
-    return title === null
-      ? []
-      : [{ path: relative(frontendRoot, path), title }];
-  });
+  const introduced = introductionRoots(readFileSync(introductionPath, "utf8"));
   const shaped = filed.filter(({ title }) =>
     SHAPED_ROOTS.includes(rootOf(title)),
   );
@@ -251,6 +279,7 @@ describe("the sidebar is shelved the way the catalog says", () => {
       shaped.filter(({ title }) => rootOf(title) === "Foundations").length,
     ).toBeGreaterThanOrEqual(topics.length);
     expect(order).not.toBeNull();
+    expect(introduced.length).toBeGreaterThan(4);
   });
 
   it("exempts only roots the catalog documents", () => {
@@ -261,6 +290,10 @@ describe("the sidebar is shelved the way the catalog says", () => {
 
   it("fills every root the catalog documents", () => {
     expect(emptyRootFindings(filed, roots)).toEqual([]);
+  });
+
+  it("introduces the roots the catalog documents, in its order", () => {
+    expect(introduced).toEqual(roots);
   });
 
   it("files every component under a declared category", () => {
@@ -296,16 +329,48 @@ describe("the sidebar detectors report what they are for", () => {
   const probe = join(frontendRoot, "src", "design-system", "probe.tsx");
   const script = join(frontendRoot, "src", "design-system", "probe.ts");
 
-  it("sees a documented root with no story", () => {
+  it("sees a documented root with no story, or no docs page", () => {
     expect(
       emptyRootFindings(
         [
-          { path: "a", title: "Get started/Introduction" },
-          { path: "b", title: "Shell/Top bar" },
+          { path: "a.mdx", title: "Get started/Introduction" },
+          { path: "b.stories.tsx", title: "Shell/Top bar" },
         ],
         ["Get started", "Shell", "Records"],
       ),
     ).toEqual(["Records/ is documented and holds no story"]);
+    expect(
+      emptyRootFindings(
+        [
+          { path: "a.stories.tsx", title: "Get started/Introduction" },
+          { path: "b.mdx", title: "Shell/Overview" },
+        ],
+        ["Get started", "Shell"],
+      ),
+    ).toEqual([
+      "Get started/ is documented and holds no docs page",
+      "Shell/ is documented and holds no story",
+    ]);
+  });
+
+  it("reads the introduction's roots off its list, and nothing else", () => {
+    const mdx = [
+      "The **Theme** control is above.",
+      "## Where things are",
+      "",
+      "- **Get started**: this page.",
+      "- **Onboarding** and **Signed out**: the first run.",
+      "  a wrapped line with **Not a root**",
+      "",
+      "## Checking a story",
+      "- **Phone** at 390px.",
+    ].join("\n");
+    expect(introductionRoots(mdx)).toEqual([
+      "Get started",
+      "Onboarding",
+      "Signed out",
+    ]);
+    expect(introductionRoots("- **Shell**: the frame.")).toEqual([]);
   });
 
   it("sees a title off the declared shelves, and a shelf with no story", () => {
@@ -346,6 +411,7 @@ describe("the sidebar detectors report what they are for", () => {
       "1ALERT",
       "360View",
       "SMTP relay",
+      "MCP server",
       "Stat Äpfel",
       "ärger",
       "Ai pending",
@@ -368,7 +434,6 @@ describe("the sidebar detectors report what they are for", () => {
       "AI-drafted reply",
       "Margince’s core",
       "Margince's core",
-      "MCP server",
       "IMAP connect form",
       "LinkedIn import",
       "OAuth return",
