@@ -95,6 +95,20 @@ function emptyValueFor(op: FilterOp): LeafValue {
   return op === "in" ? [] : "";
 }
 
+/**
+ * One picker group as options, in the order a reader scans them: by the word
+ * they see, not the wire name — `created_at` and `last_activity_at` would
+ * otherwise sit far from each other under "Created" and "Last activity".
+ */
+function labelledInOrder(
+  fields: readonly VocabularyField[],
+  t: (key: MessageKey) => string,
+): SelectOption[] {
+  return fields
+    .map((f) => ({ value: f.name, label: fieldLabel(f, t) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export type FilterBuilderProps = Readonly<{
   tree: Node;
   onChange: (next: Node) => void;
@@ -233,7 +247,7 @@ function GroupNode({
  */
 const MAX_GROUP_DEPTH = 4;
 
-/** A new clause starts on the first field a picker would offer. */
+/** A new clause starts on the vocabulary's first field, a reader picks from there. */
 function firstClause(fields: readonly VocabularyField[]): Node {
   const first = fields[0];
   if (!first) {
@@ -281,8 +295,8 @@ function ClauseRow({
   const chosen = fields.find((f) => f.name === field);
   const { core, custom } = groupFields(fields);
   const fieldOptions: SelectOption[] = [
-    ...core.map((f) => ({ value: f.name, label: fieldLabel(f, t) })),
-    ...custom.map((f) => ({ value: f.name, label: fieldLabel(f, t) })),
+    ...labelledInOrder(core, t),
+    ...labelledInOrder(custom, t),
   ];
   const operatorOptions: SelectOption[] = (chosen?.operators ?? []).map(
     (candidate) => ({

@@ -12,6 +12,7 @@ package storekit
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -146,7 +147,7 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 	}
 	switch field.Type {
 	case FieldText, FieldPicklist, FieldMultiselect:
-		return scalarStringOperand(value, invalid, "a string")
+		return scalarStringOperand(value, invalid, field.FoldCase)
 	case FieldDomain:
 		return scalarDomainOperand(value, invalid)
 	case FieldID:
@@ -168,14 +169,17 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 }
 
 // scalarStringOperand is scalarOperand's text/picklist branch: any plain
-// string is a valid bind value, so there is nothing to validate beyond
-// the type itself.
+// string is a valid bind value, so there is nothing to validate beyond the
+// type itself, and a field whose column is stored lowercased folds it.
 //
-//craft:ignore naked-any value is a decoded JSON filter operand and the return a bind parameter — both inherit scalarOperand's own span across the SQL scalar types
-func scalarStringOperand(value any, invalid func(string) error, want string) (any, error) {
+//craft:ignore naked-any value is a decoded JSON filter operand — it inherits scalarOperand's own span across the SQL scalar types
+func scalarStringOperand(value any, invalid func(string) error, fold bool) (string, error) {
 	s, ok := value.(string)
 	if !ok {
-		return nil, invalid(want)
+		return "", invalid("a string")
+	}
+	if fold {
+		return strings.ToLower(s), nil
 	}
 	return s, nil
 }

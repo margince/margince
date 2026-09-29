@@ -270,6 +270,11 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 			Message: fmt.Sprintf("operator %q does not apply to the %s field %q", p.Op, field.Type, p.Field),
 		}
 	}
+	// Asked before a withheld field answers FALSE, so a withheld link refuses
+	// exactly the operators its vocabulary entry leaves out.
+	if field.Link != "" && !linkOperators[p.Op] {
+		return "", linkOperatorRefusal(p)
+	}
 
 	if field.Withheld {
 		return "FALSE", nil
@@ -343,6 +348,18 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 	}
 }
 
+// linkOperatorRefusal is the answer to an operator the link shape cannot
+// express: the comparison builds inside an EXISTS subquery, where ordering and
+// substring match have no spelling. No surface OFFERS one — OperatorsFor narrows
+// a linked field's set to linkOperators — so this guards a filter that NAMES one
+// anyway (a saved segment, a hand-written body).
+func linkOperatorRefusal(p Predicate) error {
+	return &PredicateError{
+		Field: p.Field, Code: CodeFilterOpNotAllowed,
+		Message: fmt.Sprintf("operator %q does not apply to the linked field %q", p.Op, p.Field),
+	}
+}
+
 // compileLinkLeaf compiles a leaf whose fact lives on a linked row. The
 // comparison is built against the column inside the subquery and then wrapped,
 // and a negation applies to the WRAPPER: "does not carry this tag" is
@@ -383,16 +400,17 @@ func compileLinkLeaf(p Predicate, field Field, arg func(any) int) (string, error
 		}
 		inner, negate = fmt.Sprintf("%s = %s", field.Expr, operandSQL(value, arg)), p.Op == OpNeq
 	default:
-		// An operator that the link shape cannot express: the comparison builds
-		// inside an EXISTS subquery where only certain operators make sense.
-		// linkOperators names exactly the cases above, and no surface OFFERS an
-		// operator this branch would refuse — OperatorsFor narrows a linked
-		// field's advertised set to that same map. So this is the guard for a
-		// filter that NAMES one anyway (a saved segment, a hand-written body),
-		// not a state a picker can put a reader in.
-		return "", &PredicateError{
-			Field: p.Field, Code: CodeFilterOpNotAllowed,
-			Message: fmt.Sprintf("operator %q does not apply to the linked field %q", p.Op, p.Field),
+		// linkOperators names exactly the cases above and compileLeaf refuses
+		// every other one first; this is the switch's own guard.
+		return "", linkOperatorRefusal(p)
+	}
+	if field.LinkScope != nil {
+		bound, err := field.LinkScope(arg)
+		if err != nil {
+			return "", err
+		}
+		if bound != "" {
+			inner = "(" + inner + ") AND " + bound
 		}
 	}
 	sql := fmt.Sprintf(field.Link, inner)

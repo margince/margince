@@ -96,6 +96,14 @@ type Field struct {
 	// nothing would widen the answer, and a negated leaf that selected every row
 	// would let a reader learn who carries a value by watching the count move.
 	Withheld bool
+	// FoldCase lowercases a text operand before it binds, for a column its
+	// writer stores lowercased (an email address under a CHECK), so `Anna@X.io`
+	// finds the row holding `anna@x.io`. `contains` needs no fold: it is ILIKE.
+	FoldCase bool
+	// LinkScope bounds which linked rows a Link leaf may find, rendered per
+	// statement because the bound binds the caller's own values. Nil means the
+	// link row carries no read rule beyond the record it hangs off.
+	LinkScope func(arg func(any) int) (string, error)
 }
 
 // Reference is a record type an id field's values point at. Named rather than a

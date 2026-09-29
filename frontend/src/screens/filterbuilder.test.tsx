@@ -507,7 +507,7 @@ describe("editing the tree", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Field" }),
-      "created at",
+      "Created",
     );
 
     // A date has no `contains`, so the clause falls back to the new field's first
