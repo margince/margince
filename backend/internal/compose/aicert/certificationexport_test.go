@@ -3,6 +3,8 @@
 
 package aicert
 
+import "github.com/margince/margince/backend/internal/modules/ai"
+
 // The verdict rule's thresholds, reached by the certification page so its
 // plain-words grading summary quotes the rule rather than restating it.
 const (
@@ -41,3 +43,11 @@ const (
 	MajorityNumerator   = majorityNumerator
 	MajorityDenominator = majorityDenominator
 )
+
+// BoundRung and RungsBound are the rungs a routed run certifies a task on, which
+// the page reads to say which model answers a feature and which one it falls to.
+type BoundRung = boundRung
+
+func RungsBound(routing ai.RoutingConfig, task ai.Task) []BoundRung {
+	return boundLadder(routing, task)
+}

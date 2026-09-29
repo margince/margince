@@ -38,14 +38,14 @@ func aiCertWhereDataGoes(p aiCertPreset) string {
 	}
 }
 
-// The four grades a reader sees, and the two answers a preset can give instead.
+// The four grades a reader sees, and the answer a preset gives instead when it
+// binds no model for a feature.
 const (
-	aiCertReady     = "✅ Ready"
-	aiCertCare      = "⚠️ Usable with care"
-	aiCertNotYet    = "❌ Not reliable yet"
-	aiCertUnproven  = "❔ Not measured"
-	aiCertOff       = "➖ Off"
-	aiCertNotServed = "🔒 Not served here"
+	aiCertReady    = "✅ Ready"
+	aiCertCare     = "⚠️ Usable with care"
+	aiCertNotYet   = "❌ Not reliable yet"
+	aiCertUnproven = "❔ Not measured"
+	aiCertOff      = "➖ Off"
 )
 
 // aiCertVerdictSource is the file whose Verdict doc comment states the rule.
@@ -120,10 +120,10 @@ func assertAICertPresetSectionsCount(t *testing.T, page string, presets []aiCert
 		want := map[string]int{
 			aiCertReady: p.Bands.Certified, aiCertCare: p.Bands.SupportedDegraded,
 			aiCertNotYet: p.Bands.NotSupported, aiCertUnproven: p.Untested, aiCertOff: p.Unbound,
-			aiCertNotServed: p.NotServed,
 		}
 		for grade, count := range want {
-			if got := strings.Count(section, "| "+grade+" |"); got != count {
+			got := strings.Count(section, "| "+grade+" |") + strings.Count(section, "| "+grade+"<br>")
+			if got != count {
 				t.Errorf("preset %s's section shows %d feature(s) %s; the document counts %d", p.File, got, grade, count)
 			}
 		}
@@ -180,13 +180,16 @@ func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
 }
 
 // writeAICertLegend says what each grade means for the reader's own decision:
-// what was measured, and what to do about it. Off and not served are listed only
-// when a preset shows them, so the legend never explains a mark the page lacks.
+// what was measured, and what to do about it. Off and the private-mail note are
+// explained only when a preset shows them, so the legend never explains a mark
+// the page lacks.
 func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
-	anyOff, anyNotServed := false, false
+	anyOff, anyPrivateMail := false, false
 	for _, p := range presets {
 		anyOff = anyOff || p.Unbound > 0
-		anyNotServed = anyNotServed || p.NotServed > 0
+		for _, row := range p.Tasks {
+			anyPrivateMail = anyPrivateMail || row.SendsPrivateMailTo != ""
+		}
 	}
 	page.WriteString("**What the grades mean**\n\n")
 	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
@@ -199,10 +202,15 @@ func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
 	if anyOff {
 		fmt.Fprintf(page, "| %s | This preset has no model for the feature. | Nothing — the feature is switched off. |\n", aiCertOff)
 	}
-	if anyNotServed {
-		fmt.Fprintf(page, "| %s | The feature reads data that must stay on your own servers, and this preset "+
-			"has only cloud models for it, so the product never sends it there. | "+
-			"Bind a model running on your own servers to one of its tiers, or leave the feature off. |\n", aiCertNotServed)
+	page.WriteString("\nThe small line under a grade names the model that answers the feature and its tier,\n")
+	page.WriteString("then the model a failed call falls back to and that model's own grade on the feature.\n")
+	page.WriteString("The router falls back only when a call fails — an error, a timeout, an answer broken\n")
+	page.WriteString("off midway — and never because an answer was wrong, so a fallback does not rescue a\n")
+	page.WriteString("feature graded below.\n")
+	if anyPrivateMail {
+		page.WriteString("\n*sends private mail to* marks a feature that reads the private content of a mailbox\n")
+		page.WriteString("(`local_only` in `backend/api/ai-tasks.yaml`) on a preset whose model for it is not on\n")
+		page.WriteString("your own servers: that mail leaves your machine for the provider named.\n")
 	}
 	page.WriteString("\n*re-check pending* after a grade means the product has changed since it was\n")
 	page.WriteString("measured. The grade is the last one we have, and it is shown until the next test replaces it.\n")
@@ -214,7 +222,7 @@ func aiCertPresetName(p aiCertPreset) string { return strings.TrimSuffix(p.File,
 // aiCertBottomLine is the preset's one-line answer. A count read from stale
 // grades says so, or the summary row would state old measurements as current.
 func aiCertBottomLine(p aiCertPreset) string {
-	line := fmt.Sprintf("%d of %d features ready", p.Bands.Certified, len(p.Tasks)-p.NotServed)
+	line := fmt.Sprintf("%d of %d features ready", p.Bands.Certified, len(p.Tasks))
 	measured, stale := aiCertStaleGrades(p)
 	switch stale {
 	case 0:
@@ -227,9 +235,6 @@ func aiCertBottomLine(p aiCertPreset) string {
 	}
 	if p.Unbound > 0 {
 		line += fmt.Sprintf(", %d switched off", p.Unbound)
-	}
-	if p.NotServed > 0 {
-		line += fmt.Sprintf(", %d not served (local-only data)", p.NotServed)
 	}
 	return line
 }
@@ -282,17 +287,12 @@ func writeAICertPresetDetail(page *strings.Builder, p aiCertPreset) {
 	page.WriteString("| Feature | Can I use it? | In plain words |\n|---|---|---|\n")
 	for _, row := range rows {
 		fmt.Fprintf(page, "| %s <sub>`%s`</sub> | %s | %s |\n",
-			row.Label, row.Task, aiCertGrade(row), aiCertPlainWords(row))
+			row.Label, row.Task, aiCertGradeCell(row), aiCertPlainWords(row))
 	}
 	page.WriteString("\n<details>\n<summary>Which models this preset uses</summary>\n\n")
 	page.WriteString("| Tier | Provider | Model |\n|---|---|---|\n")
 	for _, tier := range p.Tiers {
 		fmt.Fprintf(page, "| `%s` | `%s` | `%s` |\n", tier.Tier, tier.Provider, tier.Model)
-	}
-	if p.NotServed > 0 {
-		page.WriteString("\nA feature marked " + aiCertNotServed + " is `local_only` in `backend/api/ai-tasks.yaml`: its\n")
-		page.WriteString("data may reach only a model on your own servers, and every rung this preset binds for it\n")
-		page.WriteString("is a cloud model, so the router refuses it instead of sending it there.\n")
 	}
 	page.WriteString("\nEach feature walks its own ladder of tiers until it reaches one this preset\n")
 	page.WriteString("binds; this is the rung and the model it lands on, and the record behind its grade.\n\n")
@@ -305,13 +305,48 @@ func writeAICertPresetDetail(page *strings.Builder, p aiCertPreset) {
 	page.WriteString("\n</details>\n\n")
 }
 
+// aiCertGradeCell is the grade with the route behind it on a smaller line, so
+// a reader sees which model earned it without opening the tier table.
+func aiCertGradeCell(row aiCertPresetTask) string {
+	if row.Tier == "" {
+		return aiCertGrade(row)
+	}
+	return aiCertGrade(row) + "<br><sub>" + aiCertRouteLine(row) + "</sub>"
+}
+
+// aiCertRouteLine names the model that answers a feature, its tier, and the
+// model a failed call falls to with that model's own grade on the feature.
+func aiCertRouteLine(row aiCertPresetTask) string {
+	line := aiCertShortModel(row.Model.Model) + " · " + row.Tier
+	fallback := row.Fallback
+	switch {
+	case fallback == nil:
+	case fallback.SameModel:
+		line += " → " + fallback.Tier + " is the same model, so no separate fallback"
+	case fallback.Band == "":
+		line += " → " + aiCertShortModel(fallback.Model.Model) + ", not measured on this feature"
+	default:
+		line += " → " + aiCertShortModel(fallback.Model.Model) + ", " + bandGrade(fallback.Band) + staleMark(fallback.State)
+	}
+	if row.Abandoned > 0 {
+		line += fmt.Sprintf("; %d of %d runs broke off", row.Abandoned, row.Runs)
+		if fallback != nil && !fallback.SameModel {
+			line += " and would have gone to " + aiCertShortModel(fallback.Model.Model)
+		} else {
+			line += ", with no other model to take them"
+		}
+	}
+	if row.SendsPrivateMailTo != "" {
+		line += "; sends private mail to " + row.SendsPrivateMailTo
+	}
+	return line
+}
+
 // aiCertGrade is the answer to "can I use it?" for one feature. Off and not
 // measured are different answers: the first is the preset's choice, the
 // second a gap in the testing.
 func aiCertGrade(row aiCertPresetTask) string {
 	switch {
-	case row.NotServed:
-		return aiCertNotServed
 	case row.Tier == "":
 		return aiCertOff
 	case row.Band == "":
@@ -332,8 +367,6 @@ func aiCertGrade(row aiCertPresetTask) string {
 // product as it ships.
 func aiCertPlainWords(row aiCertPresetTask) string {
 	switch {
-	case row.NotServed:
-		return "Not served on this preset — local-only data, and it has no local model for it"
 	case row.Tier == "":
 		return "Off — this preset has no model for it"
 	case row.Band == "":
@@ -578,8 +611,6 @@ func aiCertCell(value string) string {
 // engineers' section.
 func aiCertStateWords(row aiCertPresetTask) string {
 	switch {
-	case row.NotServed:
-		return "not served — local-only data"
 	case row.Tier == "":
 		return "off"
 	case row.Band == "":
@@ -625,6 +656,32 @@ func TestAPresetsBottomLineSaysHowManyGradesArePending(t *testing.T) {
 			}
 			if got := aiCertBottomLine(preset); got != tc.want {
 				t.Errorf("bottom line = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// The legend says a fallback answers only a failed call, so no reader takes a
+// fallback's grade for a second chance at a wrong answer, and it explains the
+// private-mail note only on a page that shows one.
+func TestTheLegendSaysAFallbackAnswersOnlyAFailedCall(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		mailTo   string
+		wantNote bool
+	}{
+		{"no feature sends private mail", "", false},
+		{"a feature sends private mail", "broker.example", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var page strings.Builder
+			writeAICertLegend(&page, []aiCertPreset{{Tasks: []aiCertPresetTask{{Tier: "local_small", SendsPrivateMailTo: tc.mailTo}}}})
+			legend := page.String()
+			if !strings.Contains(legend, "never because an answer was wrong") {
+				t.Errorf("the legend does not say a fallback answers only a failed call:\n%s", legend)
+			}
+			if got := strings.Contains(legend, "*sends private mail to*"); got != tc.wantNote {
+				t.Errorf("legend explains the private-mail note = %v, want %v", got, tc.wantNote)
 			}
 		})
 	}
