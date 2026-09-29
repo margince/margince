@@ -44,10 +44,10 @@ const (
 	MajorityDenominator = majorityDenominator
 )
 
-// BoundRung and BoundLadder are the rungs a routed run certifies a task on, which
+// BoundRung and RungsBound are the rungs a routed run certifies a task on, which
 // the page reads to say which model answers a feature and which one it falls to.
 type BoundRung = boundRung
 
-func BoundLadder(routing ai.RoutingConfig, task ai.Task) []BoundRung {
+func RungsBound(routing ai.RoutingConfig, task ai.Task) []BoundRung {
 	return boundLadder(routing, task)
 }

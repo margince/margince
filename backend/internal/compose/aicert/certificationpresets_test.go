@@ -193,7 +193,7 @@ func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aic
 // next one down, so reporting the primary would credit a model it never reaches.
 func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertPresetTask) aiCertPresetTask {
 	row := aiCertPresetTask{Task: task, Label: ai.DisplayName(ai.Task(task))}
-	rungs := aicert.BoundLadder(preset.routing(), ai.Task(task))
+	rungs := aicert.RungsBound(preset.routing(), ai.Task(task))
 	if len(rungs) == 0 {
 		return row
 	}
