@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { providerCompletedProfile } from "./contactprovider.fixtures";
 import { ContactResearchTab } from "./contactresearch";
-import { StoryProviders } from "./story-utils";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The Research tab's own gallery: the two halves it stacks (the bought
 // provider snapshot and the enrichment evidence sidecar), the tab-wide empty
@@ -67,11 +68,17 @@ const populated: View = {
 /** Both halves populated: a bought snapshot and enrichment evidence with a
  *  provenance mark per value. */
 export const Populated: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactResearchTab view={populated} />
-    </StoryProviders>
-  ),
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { contact: ["read"] } })),
+    });
+    return (
+      <StoryProviders>
+        <ContactResearchTab view={populated} />
+      </StoryProviders>
+    );
+  },
 };
 
 const empty: View = {
@@ -121,11 +128,17 @@ const neverBought: View = {
  *  naming the lookup carries the whole invitation, above evidence the app's own
  *  capture already found for free. */
 export const NeverBought: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactResearchTab view={neverBought} />
-    </StoryProviders>
-  ),
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { contact: ["read"] } })),
+    });
+    return (
+      <StoryProviders>
+        <ContactResearchTab view={neverBought} />
+      </StoryProviders>
+    );
+  },
 };
 
 const providerWithheld: View = {
@@ -139,9 +152,15 @@ const providerWithheld: View = {
  *  still has evidence to show — withheld and empty are different facts, and
  *  only the provider half is the withheld one here. */
 export const ProviderWithheld: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactResearchTab view={providerWithheld} />
-    </StoryProviders>
-  ),
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { contact: ["read"] } })),
+    });
+    return (
+      <StoryProviders>
+        <ContactResearchTab view={providerWithheld} />
+      </StoryProviders>
+    );
+  },
 };
