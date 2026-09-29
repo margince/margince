@@ -1,8 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { ASYNC_UTIL_TIMEOUT_MS } from "../vitest.budget";
-import { parseSource } from "./lib/source-tree";
+import { parseSource, resolveRelative } from "./lib/source-tree";
 
 // Reads a test file and works out, for every test in it, how long that test is
 // ALLOWED to spend waiting — the sum of the budgets of the waiters it runs in
@@ -171,24 +170,6 @@ function exportedConsts(source: ts.SourceFile): Map<string, number> {
   return known;
 }
 
-/** `./use-company-read` next to the importer, with the extension it actually has. */
-function resolveModule(
-  fromFile: string,
-  specifier: string,
-): string | undefined {
-  if (!specifier.startsWith(".")) return undefined;
-  const base = resolve(dirname(fromFile), specifier);
-  for (const candidate of [
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}/index.ts`,
-    `${base}/index.tsx`,
-  ]) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return undefined;
-}
-
 /** The numeric constants ONE named import brings in, added to `into`. */
 function takeImport(
   statement: ts.ImportDeclaration,
@@ -198,7 +179,7 @@ function takeImport(
   if (!ts.isStringLiteral(statement.moduleSpecifier)) return;
   const bindings = statement.importClause?.namedBindings;
   if (!bindings || !ts.isNamedImports(bindings)) return;
-  const target = resolveModule(file, statement.moduleSpecifier.text);
+  const target = resolveRelative(file, statement.moduleSpecifier.text);
   if (!target) return;
   const theirs = exportedConsts(parse(target));
   for (const element of bindings.elements) {
