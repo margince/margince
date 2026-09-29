@@ -13149,6 +13149,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Name the colleagues behind a set of ids. Read-only.
+         * @description The display names behind ids the caller already holds — a record's owner, an activity's
+         *     author, an assignee on a card. Any authenticated member may ask, for the reason the
+         *     roster itself is readable by any member: a seat is not a record, `app_user` carries no
+         *     owner and no capture privacy, so a row-scope clause here would invent a rule this table
+         *     has never had.
+         *
+         *     It answers every NON-ARCHIVED seat — active, invited and deactivated alike. A record
+         *     outlives the colleague who owned it, and `POST /users/former` exists to create
+         *     deactivated seats precisely so imported history can name its author; archiving is the
+         *     act that withdraws a seat from the reads that name a timeline row, so an archived seat
+         *     is absent here.
+         *
+         *     An id this answer omits is not an error: it is archived, or this installation never held
+         *     it, and the caller renders the id it already has.
+         *
+         *     Not a page. There is no cursor, no `q` and no limit — the caller names what it wants and
+         *     gets at most that. Naming more than 100 colleagues in one request is `422`.
+         */
+        get: operations["nameSeats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/role": {
         parameters: {
             query?: never;
@@ -31789,6 +31825,15 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        /** @description A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them. */
+        SeatName: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+        };
+        SeatNameListResponse: {
+            data: components["schemas"]["SeatName"][];
         };
         /** @description A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into. */
         FormerMemberRequest: {
@@ -61293,6 +61338,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    nameSeats: {
+        parameters: {
+            query: {
+                /** @description The seats to name. Repeat the parameter for several, up to 100; more is `422`. */
+                id: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The names, for the ids that resolved to one. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeatNameListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     changeUserRole: {
