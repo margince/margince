@@ -20,7 +20,7 @@ import {
   AdapterFields,
   DECISION_PROVIDERS,
   EmbeddingWidthField,
-  OPENROUTER_DECISION_PRESET,
+  openRouterPreset,
   PROVIDERS,
 } from "./ai-routing-fields";
 import {
@@ -319,36 +319,7 @@ function DecisionFields({
         onChange={(next) => onChange(reboundDecision(binding, next))}
         // The endpoint is a full URL nobody remembers, and OpenRouter's is the
         // one most installations want; the key is the one thing it cannot fill.
-        providerAside={
-          binding.provider === OPENROUTER_DECISION_PRESET.provider
-            ? {
-                action: (
-                  <span className="binding-preset-action">
-                    <Button
-                      variant="link"
-                      disabled={disabled}
-                      onClick={() =>
-                        onChange({
-                          ...binding,
-                          base_url: OPENROUTER_DECISION_PRESET.base_url,
-                          model: OPENROUTER_DECISION_PRESET.model,
-                        })
-                      }
-                    >
-                      {t("aiRouting.decisions.preset.openrouter")}
-                    </Button>
-                  </span>
-                ),
-                note: (
-                  <div className="binding-preset-note">
-                    <p className="t-caption">
-                      {t("aiRouting.decisions.preset.openrouterKey")}
-                    </p>
-                  </div>
-                ),
-              }
-            : undefined
-        }
+        providerAside={openRouterPreset(binding, disabled, onChange, t)}
       />
     </>
   );

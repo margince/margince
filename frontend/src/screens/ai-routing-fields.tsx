@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { Field, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
@@ -303,4 +303,49 @@ function modelSourceNote(
     default:
       return t("aiRouting.models.unreachable");
   }
+}
+
+/**
+ * The OpenRouter preset for the decision lane, as the verb beside its provider
+ * and the note under the row. Only where the provider is the one OpenRouter
+ * serves: the endpoint is a full URL nobody remembers, and the key is the one
+ * thing the preset cannot fill.
+ */
+export function openRouterPreset<
+  B extends { provider: string; model: string; base_url?: string },
+>(
+  binding: B,
+  disabled: boolean,
+  onChange: (next: B) => void,
+  t: ReturnType<typeof useT>,
+): { action: ReactNode; note: ReactNode } | undefined {
+  if (binding.provider !== OPENROUTER_DECISION_PRESET.provider) {
+    return undefined;
+  }
+  return {
+    action: (
+      <span className="binding-preset-action">
+        <Button
+          variant="link"
+          disabled={disabled}
+          onClick={() =>
+            onChange({
+              ...binding,
+              base_url: OPENROUTER_DECISION_PRESET.base_url,
+              model: OPENROUTER_DECISION_PRESET.model,
+            })
+          }
+        >
+          {t("aiRouting.decisions.preset.openrouter")}
+        </Button>
+      </span>
+    ),
+    note: (
+      <div className="binding-preset-note">
+        <p className="t-caption">
+          {t("aiRouting.decisions.preset.openrouterKey")}
+        </p>
+      </div>
+    ),
+  };
 }
