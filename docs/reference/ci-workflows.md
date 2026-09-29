@@ -3,7 +3,7 @@
 `ci.yml` is the merge gate, and `_lane-integration.yml` / `_lane-frontend.yml` are
 part of it — called by it, never triggered on their own (see
 [Two lanes are called](../explanation/ci-pipeline.md#two-lanes-are-called-not-inlined)).
-Nine workflows sit beside the gate, deliberately outside it:
+Every other workflow sits beside the gate, deliberately outside it:
 
 - **`cache-warm.yml`** — the Go build cache's only writer, on `main` every three
   hours plus manual dispatch. **Gates nothing**: a red or cancelled run costs
@@ -113,6 +113,13 @@ Nine workflows sit beside the gate, deliberately outside it:
   [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh),
   which reads its evidence from the environment so every arm is drivable from a
   fixture (`make test-closing-declaration`).
+
+- **`issue-closed.yml`** — on an issue `closed`, however it closed: a merged
+  `Closes #N`, by hand, as not planned or as a duplicate. It removes
+  `status: in progress` and leaves the assignees, who are the record of who did
+  the work. GitHub keeps labels on close, so without it a closed issue reads as
+  somebody's work in progress for ever. It checks nothing out and holds only
+  `issues: write`. **Gates nothing.**
 
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`

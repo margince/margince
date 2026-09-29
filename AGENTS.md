@@ -92,7 +92,8 @@ is their call — takeover comment first, then reassign. No claim expires. Claim
 yours: `gh issue edit <n> --add-assignee @me --add-label "status: in progress"`,
 then re-read and stand down if somebody else appeared. Claim the sub-issue,
 never its tracker; releasing is assignee off, the label off once nobody else
-holds it, and a comment saying where you stopped.
+holds it, and a comment saying where you stopped. Closing strips the label
+(`issue-closed.yml`), so a `Closes #N` merge needs no release.
 [docs/how-to/work-on-an-issue.md](docs/how-to/work-on-an-issue.md) has the rest.
 
 **A security hole is never a public issue.** [SECURITY.md](SECURITY.md) routes an

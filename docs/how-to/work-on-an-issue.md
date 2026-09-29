@@ -100,8 +100,16 @@ replaced without being told.
 
 ## Release it when you stop
 
-Finishing is nothing extra: a merged pull request whose body says `Closes #N`
-closes the issue and retires the claim with it.
+Finishing is nothing extra. GitHub closes the issue when a pull request whose
+body says `Closes #N` merges, but it keeps the labels, so
+[`issue-closed.yml`](../../.github/workflows/issue-closed.yml) strips
+`status: in progress` from every issue that closes, however it closed. The
+assignee stays: it is the record of who did the work. Closing one by hand needs
+nothing extra either; the workflow owns the label, so only check that it went.
+
+**A `status: in progress` on a closed issue is always stale** — take it off. On
+an open issue the rules under [Before you start](#before-you-start) apply
+unchanged.
 
 Stopping **without** finishing is the case that needs you. Unassign yourself and
 say where you stopped, always:

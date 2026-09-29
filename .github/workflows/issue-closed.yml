@@ -1,0 +1,32 @@
+# GitHub keeps labels on a closed issue, so without this a finished claim reads
+# as work in progress for ever. The assignee stays as the record of who did it.
+name: issue-closed
+
+on:
+  issues:
+    types: [closed]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  release-claim:
+    name: release the in-progress claim
+    if: "contains(github.event.issue.labels.*.name, 'status: in progress')"
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Remove status in progress
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          LABEL: "status: in progress"
+        # A label already gone from the issue is a no-op for gh; only a label
+        # missing from the repository fails, and that should.
+        run: gh issue edit "$ISSUE" --repo "$REPO" --remove-label "$LABEL"
