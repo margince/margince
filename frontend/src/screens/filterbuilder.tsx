@@ -18,7 +18,8 @@
 import { X } from "lucide-react";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Select, type SelectOption } from "../design-system/select";
-import { useT } from "../i18n";
+import { forReader } from "../format/collate";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./filterbuilder.css";
 import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
@@ -103,10 +104,11 @@ function emptyValueFor(op: FilterOp): LeafValue {
 function labelledInOrder(
   fields: readonly VocabularyField[],
   t: (key: MessageKey) => string,
+  locale: Locale,
 ): SelectOption[] {
   return fields
     .map((f) => ({ value: f.name, label: fieldLabel(f, t) }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => forReader(a.label, b.label, locale));
 }
 
 export type FilterBuilderProps = Readonly<{
@@ -292,11 +294,12 @@ function ClauseRow({
   onChange,
 }: ClauseRowProps) {
   const t = useT();
+  const { locale } = useLocale();
   const chosen = fields.find((f) => f.name === field);
   const { core, custom } = groupFields(fields);
   const fieldOptions: SelectOption[] = [
-    ...labelledInOrder(core, t),
-    ...labelledInOrder(custom, t),
+    ...labelledInOrder(core, t, locale),
+    ...labelledInOrder(custom, t, locale),
   ];
   const operatorOptions: SelectOption[] = (chosen?.operators ?? []).map(
     (candidate) => ({
