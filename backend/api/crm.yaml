@@ -40437,6 +40437,16 @@ components:
 
             Never present on a custom field: the catalog's six types include no
             `id`, so only a core field can carry a reference.
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: |
+            For a `currency` field, the ISO 4217 code its values are counted in: the
+            installation's base currency for a deal's `amount`, the field's own currency
+            for a custom one. The operand is a whole number of that currency's minor
+            units (cents for EUR, whole yen for JPY), so a builder that lets a reader
+            type an amount scales it by the currency's exponent. Absent for every other
+            type, and where this reader may not learn the currency.
 
     Tag:
       type: object

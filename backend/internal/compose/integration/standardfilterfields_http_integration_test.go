@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -292,4 +293,32 @@ func TestADayRunsFromOneMidnightToTheNext(t *testing.T) {
 		{leaf("last_activity_at", "gte", "2026-03-11"), []string{}},
 		{leaf("last_activity_at", "neq", "2026-03-10"), []string{justBefore}},
 	})
+}
+
+func TestAMoneyFieldTellsTheBuilderWhichCurrencyItCounts(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
+	e.BootstrapWorkspace(t)
+	var custom AnyMap
+	mustCall(t, e, "POST", "/v1/custom-fields", AnyMap{
+		"object": "deal", "label": "Setup Fee", "type": "currency", "currency": "JPY", "source": "manual",
+	}, http.StatusCreated, &custom)
+	column, _ := custom["column_name"].(string)
+
+	var vocabulary struct {
+		Fields []struct {
+			Name     string  `json:"name"`
+			Currency *string `json:"currency"`
+		} `json:"fields"`
+	}
+	mustCall(t, e, "GET", "/v1/filters/vocabulary?resource=deal", nil, http.StatusOK, &vocabulary)
+	currencies := map[string]string{}
+	for _, field := range vocabulary.Fields {
+		if field.Currency != nil {
+			currencies[field.Name] = *field.Currency
+		}
+	}
+	want := map[string]string{"amount": "EUR", column: "JPY"}
+	if len(currencies) != len(want) || currencies["amount"] != "EUR" || currencies[column] != "JPY" {
+		t.Errorf("currencies = %v, want %v: the base currency for the amount, the field's own for a custom one, none elsewhere", currencies, want)
+	}
 }

@@ -451,7 +451,8 @@ func customField(column fieldcatalog.Column) (storekit.Field, bool) {
 		// Straight from the catalogue, which owns them for the same reason it owns
 		// labels: they are per-workspace admin state. Empty for every non-picklist
 		// type, which is what the column itself reports.
-		Options: column.Options,
+		Options:  column.Options,
+		Currency: column.Currency,
 	}, true
 }
 

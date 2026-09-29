@@ -15,7 +15,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf } from "./common";
@@ -137,20 +137,51 @@ function Verdict({
   const op = t(
     operatorKey((node.op ?? "eq") as FilterOp, field?.type ?? "text"),
   );
+  const money =
+    field?.type === "currency" && field.currency ? field.currency : undefined;
+  const shown = (raw: unknown) =>
+    money ? moneyText(raw, money, locale) : undefined;
   return (
     <p className="lists-why-clause">
       <VerdictMark result={node.result} />
       <span>
         {label} {op}{" "}
-        <strong>{operandText(node.operand, t, plural, locale)}</strong>
+        <strong>
+          {shown(node.operand) ?? operandText(node.operand, t, plural, locale)}
+        </strong>
       </span>
       <span className="t-caption">
         {node.hidden
           ? t("lists.why.hidden")
-          : t("lists.why.value", { value: node.value ?? t("lists.why.empty") })}
+          : t("lists.why.value", {
+              value:
+                node.value == null
+                  ? t("lists.why.empty")
+                  : (shown(node.value) ?? node.value),
+            })}
       </span>
     </p>
   );
+}
+
+/**
+ * A money operand or value — minor units of the field's currency — as the
+ * reader reads money, or undefined for anything that is not an amount.
+ */
+export function moneyText(
+  raw: unknown,
+  currency: string,
+  locale: Locale,
+): string | undefined {
+  const one = (v: unknown) =>
+    typeof v === "number" || (typeof v === "string" && /^-?\d+$/.test(v))
+      ? formatMoney(Number(v), currency, locale)
+      : undefined;
+  if (Array.isArray(raw)) {
+    const each = raw.map(one);
+    return each.every((v) => v !== undefined) ? each.join(", ") : undefined;
+  }
+  return one(raw);
 }
 
 /** A clause's operand as the filter states it. */

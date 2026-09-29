@@ -10,10 +10,15 @@ package collections
 
 import (
 	"context"
+	"errors"
 	"maps"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
@@ -139,6 +144,33 @@ func withFields(parts ...map[string]storekit.Field) map[string]storekit.Field {
 func (s *Store) WithDealAmount(expr string) *Store {
 	s.dealAmount = expr
 	return s
+}
+
+// WithBaseCurrency injects the reader of the installation's base currency,
+// which a core money field is counted in. identity owns the setting.
+func (s *Store) WithBaseCurrency(read func(ctx context.Context, tx pgx.Tx) (string, error)) *Store {
+	s.baseCurrencyOf = read
+	return s
+}
+
+// readableBaseCurrency is the base currency when the vocabulary carries a core
+// money field and this reader may read the setting, and "" otherwise: an
+// unknown currency leaves the operand in minor units, it does not fail the read.
+func (s *Store) readableBaseCurrency(ctx context.Context, fields map[string]storekit.Field) (string, error) {
+	if s.baseCurrencyOf == nil || fields[amountField].Type != storekit.FieldCurrency {
+		return "", nil
+	}
+	var base string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		base, err = s.baseCurrencyOf(ctx, tx)
+		return err
+	})
+	var unset settings.UnsetValue
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.As(err, &unset) {
+		return "", nil
+	}
+	return base, err
 }
 
 // bindDealAmount prices the amount leaf with the injected expression.

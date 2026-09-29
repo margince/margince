@@ -365,6 +365,7 @@ function ClauseRow({
         type={chosen?.type ?? "text"}
         references={chosen?.references}
         options={chosen?.options}
+        currency={chosen?.currency}
         op={op}
         value={value}
         onChange={(nextValue) =>

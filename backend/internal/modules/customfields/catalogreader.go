@@ -71,7 +71,7 @@ func (s *Service) queryColumns(ctx context.Context, whereTail string, args ...an
 			// COALESCE because options is NULL for every non-picklist type, and an
 			// empty jsonb array decodes to the empty set a caller means to read.
 			fmt.Sprintf(
-				`SELECT column_name, type, COALESCE(options, '[]'::jsonb)
+				`SELECT column_name, type, COALESCE(options, '[]'::jsonb), COALESCE(currency, '')
 				   FROM custom_field WHERE object = $1 %s`, whereTail),
 			args...)
 		if err != nil {
@@ -83,7 +83,7 @@ func (s *Service) queryColumns(ctx context.Context, whereTail string, args ...an
 				c          fieldcatalog.Column
 				optionsRaw []byte
 			)
-			if err := rows.Scan(&c.Name, &c.Type, &optionsRaw); err != nil {
+			if err := rows.Scan(&c.Name, &c.Type, &optionsRaw, &c.Currency); err != nil {
 				return err
 			}
 			// Decoded through the module's own spelling rather than by scanning

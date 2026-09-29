@@ -30011,6 +30011,15 @@ export interface components {
              * @enum {string}
              */
             references?: "tag" | "app_user" | "team" | "company" | "pipeline" | "stage" | "project";
+            /**
+             * @description For a `currency` field, the ISO 4217 code its values are counted in: the
+             *     installation's base currency for a deal's `amount`, the field's own currency
+             *     for a custom one. The operand is a whole number of that currency's minor
+             *     units (cents for EUR, whole yen for JPY), so a builder that lets a reader
+             *     type an amount scales it by the currency's exponent. Absent for every other
+             *     type, and where this reader may not learn the currency.
+             */
+            currency?: string;
         };
         /** @description A tag. Mirrors the `tag` table. */
         Tag: {

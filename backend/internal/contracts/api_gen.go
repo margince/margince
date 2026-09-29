@@ -31572,6 +31572,14 @@ type FilterVocabularyResource string
 
 // FilterVocabularyField One field a filter clause may name, with what it accepts.
 type FilterVocabularyField struct {
+	// Currency For a `currency` field, the ISO 4217 code its values are counted in: the
+	// installation's base currency for a deal's `amount`, the field's own currency
+	// for a custom one. The operand is a whole number of that currency's minor
+	// units (cents for EUR, whole yen for JPY), so a builder that lets a reader
+	// type an amount scales it by the currency's exponent. Absent for every other
+	// type, and where this reader may not learn the currency.
+	Currency *string `json:"currency,omitempty"`
+
 	// Custom Whether this is a workspace-defined custom-field column. Where true,
 	// `name` is the catalog's `column_name` — join on it to show an admin's
 	// `label`, which the catalog owns and this vocabulary does not.
