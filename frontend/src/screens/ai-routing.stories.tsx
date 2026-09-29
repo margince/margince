@@ -108,6 +108,7 @@ function story(
         return response;
       },
       "GET /ai/status": () => jsonResponse(aiStatus),
+      "GET /ai/health": () => jsonResponse({ window_hours: 1, rungs: [] }),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-keys": () =>
         jsonResponse({
