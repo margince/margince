@@ -47,11 +47,11 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `source_author_name` | `text` |  | Optional `text`. |
 | `visibility` | `text` | yes | Who this record is for. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `legal_hold` | `boolean` | yes | True while a hold is preserving this record: no retention sweep touches it, and an erasure against it is refused. |
+| `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -123,7 +123,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `domain` | `text` | yes | Lowercased, no scheme, no www. |
 | `is_primary` | `boolean` | yes | Required `boolean`, defaulting to `false`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -173,7 +173,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `site_read_id` | `uuid` |  | Points at `site_read.id` — deleting the parent keeps this row and clears the link. |
 | `status` | `text` | yes | One of `pending`, `company`, `personal`, `provider`, `no_site`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `source` | `text` |  | Which internal channel the record arrived by. |
+| `source` | `text` |  | One of `site_read`, `heuristic`, `human`. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -211,7 +211,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid` | yes | The stored row, so a brief sentence written from this fact can cite something the reader can open. |
 | `captured_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `category` | `text` | yes | One of `company`, `offering`, `market`, `signal`. |
 | `company_id` | `uuid` | yes | Points at `company.id` — deleting the parent deletes this row. |
@@ -226,9 +226,9 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `verified_at` | `timestamp with time zone` |  | When a human last confirmed this claim (PO-DDL-N-2). |
 | `verified_by` | `uuid` |  | The human who confirmed the claim. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | One of `human`, `site_read`, `connector`, `migration`, `technical_lookup`. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `bigint` | yes | The row's version, for the `If-Match` a correction or a removal sends. |
 
 **Points at**
 
@@ -287,7 +287,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid` | yes | The stored row, so a dossier sentence written from this field can cite something the reader can open. |
 | `captured_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `company_id` | `uuid` | yes | Points at `company.id` — deleting the parent deletes this row. |
 | `confidence` | `real` |  | Optional `real`. |
@@ -299,9 +299,9 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `verified_at` | `timestamp with time zone` |  | When a human last confirmed this claim (PO-DDL-N-2). |
 | `verified_by` | `uuid` |  | The human who confirmed the claim. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | One of `human`, `site_read`, `connector`, `migration`. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `bigint` | yes | The row's version, for the `If-Match` a correction sends. |
 
 **Points at**
 
@@ -460,11 +460,11 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `title` | `text` |  | Denormalized current title; authoritative title is on the employment relationship. |
 | `visibility` | `text` | yes | Who this record is for. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `legal_hold` | `boolean` | yes | True while a hold is preserving this record: no retention sweep touches it, and an erasure against it is refused. |
+| `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -590,7 +590,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `is_primary` | `boolean` | yes | At most one primary per type (DB-enforced). |
 | `position` | `integer` | yes | Explicit ordering. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -634,7 +634,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `position` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `superseded_phone_id` | `uuid` |  | Points at `contact_phone.id` — deleting the parent keeps this row and clears the link. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -679,9 +679,9 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `superseded_value` | `text` |  | What this field held before a newer statement replaced it. |
 | `value` | `text` | yes | Required `text`. |
 | `value_key` | `text` | yes | What tells two rows of one field apart: the E.164 number for a `phone` row, empty for every other field. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | `agent:enrich` until a human edits the field, `human:<uuid>` after — this is how the page says "corrected by you". |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel that produced it, e.g. `capture_enrich` or `site_read`. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -1001,12 +1001,12 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `status_set_by` | `text` |  | Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. |
 | `title` | `text` |  | Optional `text`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `legal_hold` | `boolean` | yes | True while a hold is preserving this record: no retention sweep touches it, and an erasure against it is refused. |
+| `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
+| `source` | `text` | yes | The stored source key. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -1239,7 +1239,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `synced_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `tombstoned_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | One of `portability_api`, `csv_export`. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -1425,7 +1425,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `started_at` | `date` |  | Optional `date`. |
 | `started_precision` | `text` |  | One of `day`, `month`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |

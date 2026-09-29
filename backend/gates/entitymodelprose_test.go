@@ -15,16 +15,21 @@ package gates
 //
 // Three sources, in falling order of authority:
 //
-//  1. HOUSE. The columns almost every table carries. They mean the same thing
-//     everywhere, so they are written once here rather than 268 times in the
-//     contract, and a reader who has learnt `version` on one page has learnt it
-//     on all of them.
-//  2. CONTRACT. api/crm.yaml's description for the matching field. Hand-written,
+//  1. CONTRACT. api/crm.yaml's description for the matching field. Hand-written,
 //     reviewed and already gated — the one place in this tree where somebody has
 //     said what a field is FOR rather than what it holds.
-//  3. DERIVED. What the catalog can prove: the type, whether it is required,
-//     what it references, and the few CHECK shapes that describe one column on
-//     their own.
+//  2. DERIVED. What the catalog can prove about THIS column: what it references,
+//     and the few CHECK shapes that describe one column on their own.
+//  3. HOUSE. The columns almost every table carries. They mean the same thing
+//     everywhere, so they are written once here rather than 275 times.
+//
+// House comes LAST, and only when the column wears the convention's type,
+// because it is the one source keyed by name alone — it cannot tell two columns
+// apart. Let it win and it overwrites the specific with the generic:
+// `consent_text_version.version` is TEXT, the published version of a consent
+// document, and the write backbone's counter sentence on it is not vague but
+// false. `capture_owner_identity.source` is one of user/provider/delivered_to,
+// which is not "which internal channel the record arrived by" either.
 //
 // A CHECK only reaches a column's sentence when it mentions that column and no
 // other. The rest are real conditional logic — "this is set only when that is" —
@@ -42,21 +47,47 @@ import (
 
 // houseColumns are the conventions the write backbone puts on nearly every
 // table. Keyed by column name alone: that is what makes them conventions.
-// gatekit:fixture the sentence each house column gets on every page
-var houseColumns = map[string]string{
-	"id":             "Primary key.",
-	"created_at":     "When the row was created. Set once.",
-	"updated_at":     "When the row last changed. Refreshed on every write.",
-	"archived_at":    "Soft-delete marker. `NULL` means live, and nearly every read filters on it.",
-	"version":        "Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting.",
-	"captured_by":    "Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body.",
-	"source":         "Which internal channel the record arrived by.",
-	"source_system":  "The outside system the record came from, when it came from one.",
-	"raw":            "The unparsed upstream payload the row was built from, kept for replay and debugging.",
-	"legal_hold":     "True while a hold is preserving this record: no retention sweep touches it, and an erasure against it is refused.",
-	"correlation_id": "Ties this row to the one request that produced it.",
-	"workspace_id":   "The workspace the row belongs to.",
-	"search_tsv":     "Full-text search vector, maintained by the database.",
+// houseColumn is a convention: the sentence, and the types the convention wears.
+// The types are what stop the name alone speaking for a column that merely
+// shares it.
+type houseColumn struct {
+	dataTypes []string
+	sentence  string
+}
+
+var houseColumns = map[string]houseColumn{
+	"id":             {[]string{"uuid"}, "Primary key."},
+	"created_at":     {[]string{timestamptz}, "When the row was created. Set once."},
+	"updated_at":     {[]string{timestamptz}, "When the row last changed. Refreshed on every write."},
+	"archived_at":    {[]string{timestamptz}, "Soft-delete marker. `NULL` means live, and nearly every read filters on it."},
+	"version":        {[]string{"bigint", "integer"}, "Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting."},
+	"captured_by":    {[]string{"text"}, "Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body."},
+	"source":         {[]string{"text"}, "Which internal channel the record arrived by."},
+	"source_system":  {[]string{"text"}, "The outside system the record came from, when it came from one."},
+	"raw":            {[]string{"jsonb"}, "The unparsed upstream payload the row was built from, kept for replay and debugging."},
+	"legal_hold":     {[]string{"boolean"}, "True while a hold is preserving this record: no retention sweep touches it, and an erasure against it is refused."},
+	"correlation_id": {[]string{"uuid"}, "Ties this row to the one request that produced it."},
+	"workspace_id":   {[]string{"uuid"}, "The workspace the row belongs to."},
+	"search_tsv":     {[]string{"tsvector"}, "Full-text search vector, maintained by the database."},
+}
+
+// timestamptz is spelled out once because Postgres prints it long and four
+// entries above would otherwise each carry the same mouthful.
+const timestamptz = "timestamp with time zone"
+
+// houseSentence is the convention's sentence for this column, or "" when the
+// column only shares a name with it.
+func houseSentence(column emColumn) string {
+	convention, named := houseColumns[column.name]
+	if !named {
+		return ""
+	}
+	for _, dataType := range convention.dataTypes {
+		if column.dataType == dataType {
+			return convention.sentence
+		}
+	}
+	return ""
 }
 
 // The CHECK shapes a single column's sentence can be built from. Each is
@@ -85,29 +116,38 @@ const enumsShown = 6
 // matching field.
 //
 // The component name IS the table name, snake-cased: the contract-first rule
-// makes `FxRate` the shape of a `fx_rate` row. Wrappers — a request body, a list
-// response — snake-case to a name no table has, so they drop out without a list
-// here saying which ones to skip.
+// makes `FxRate` the shape of a `fx_rate` row. A list response or a create body
+// snake-cases to a name no table has, so it drops out without a list here
+// saying which ones to skip.
+//
+// The exception is the write shape that is the ONLY description of a column:
+// `WorklistPinRequest` says what a worklist pin's `source` is and nothing named
+// `WorklistPin` exists. Those are read in a second pass, so a component that
+// names the table outright always wins, and only against a column the table
+// actually has — a wrapper whose fields are not that table's columns still
+// contributes nothing.
 func contractDescriptions(t *testing.T, schema *emSchema) map[string]string {
 	t.Helper()
 	out := map[string]string{}
 	schemas := crmYAMLSchemas(t)
-	// Components in name order, and the first description of a field wins.
-	// Two components can snake-case to one table — a read shape and a summary
-	// of the same record — and a map walk would hand the page a different one
-	// of them on every run.
-	for _, component := range sortedKeys(schemas) {
-		table, ok := schema.tables[snakeCase(component)]
-		if !ok {
-			continue
-		}
-		for _, property := range sortedKeys(schemas[component].Properties) {
-			described := strings.TrimSpace(schemas[component].Properties[property].Description)
-			key := table.name + "." + property
-			if described == "" || out[key] != "" || !tableHasColumn(table, property) {
+	for _, wrappers := range []bool{false, true} {
+		// Components in name order, and the first description of a field wins.
+		// Two components can snake-case to one table — a read shape and a
+		// summary of the same record — and a map walk would hand the page a
+		// different one of them on every run.
+		for _, component := range sortedKeys(schemas) {
+			table, ok := schema.tables[tableNameFor(component, wrappers)]
+			if !ok {
 				continue
 			}
-			out[key] = firstSentence(described)
+			for _, property := range sortedKeys(schemas[component].Properties) {
+				described := strings.TrimSpace(schemas[component].Properties[property].Description)
+				key := table.name + "." + property
+				if described == "" || out[key] != "" || !tableHasColumn(table, property) {
+					continue
+				}
+				out[key] = firstSentence(described)
+			}
 		}
 	}
 	return out
@@ -115,9 +155,6 @@ func contractDescriptions(t *testing.T, schema *emSchema) map[string]string {
 
 // columnSentence is what the page prints in a column's last cell.
 func columnSentence(schema *emSchema, table *emTable, column emColumn, contract map[string]string) string {
-	if house, ok := houseColumns[column.name]; ok {
-		return house
-	}
 	if column.generated {
 		return "Computed by the database. It cannot be written directly."
 	}
@@ -129,6 +166,9 @@ func columnSentence(schema *emSchema, table *emTable, column emColumn, contract 
 	}
 	if derived := fromOwnChecks(table, column); derived != "" {
 		return derived
+	}
+	if house := houseSentence(column); house != "" {
+		return house
 	}
 	return plainSentence(column)
 }
@@ -252,6 +292,26 @@ func tableHasColumn(table *emTable, name string) bool {
 	return false
 }
 
+// wrapperSuffixes name a component that carries a record's fields without being
+// the record: the body of a write. They are tried only after every component
+// that names a table outright.
+var wrapperSuffixes = []string{"Request", "Response", "Input", "Payload", "Body"}
+
+// tableNameFor is the table a component describes. On the wrapper pass a
+// component keeping its own name contributes nothing, so a plain `Contact` is
+// not read twice.
+func tableNameFor(component string, wrappers bool) string {
+	if !wrappers {
+		return snakeCase(component)
+	}
+	for _, suffix := range wrapperSuffixes {
+		if trimmed := strings.TrimSuffix(component, suffix); trimmed != component {
+			return snakeCase(trimmed)
+		}
+	}
+	return ""
+}
+
 // snakeCase turns a contract component name into the table name it describes.
 func snakeCase(name string) string {
 	var out strings.Builder
@@ -281,7 +341,7 @@ func sortedColumns(table *emTable) []emColumn {
 		switch {
 		case column.name == "id":
 			key = append(key, column)
-		case houseColumns[column.name] != "":
+		case houseSentence(column) != "":
 			house = append(house, column)
 		default:
 			own = append(own, column)

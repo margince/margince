@@ -339,7 +339,7 @@ The 17 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `policy_version` | `text` |  | Optional `text`. |
 | `purpose_id` | `uuid` | yes | Points at `consent_purpose.id` — the parent cannot be deleted while this row points at it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | How consent was captured (e.g. webform, import, double_opt_in). |
 
 **Points at**
 
@@ -440,7 +440,7 @@ The 17 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `published_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `purpose_id` | `uuid` |  | Points at `consent_purpose.id` — the parent cannot be deleted while this row points at it. |
 | `subject_line` | `text` |  | Optional `text`. |
-| `version` | `text` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `text` | yes | Required `text`. |
 
 **Points at**
 

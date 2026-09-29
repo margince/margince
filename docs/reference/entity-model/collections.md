@@ -162,7 +162,7 @@ The 7 tables owned by `collections`, as the migrations build them. [Back to the 
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `bigint` | yes | Optimistic-concurrency version; echo it in If-Match on update. |
 
 **Points at**
 
@@ -197,7 +197,7 @@ The 7 tables owned by `collections`, as the migrations build them. [Back to the 
 | `name` | `text` | yes | Required `text`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 

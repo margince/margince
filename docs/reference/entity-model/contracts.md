@@ -34,7 +34,7 @@ The 1 table owned by `contracts`, as the migrations build them. [Back to the ent
 | `value_basis` | `text` | yes | What `value_minor` measures (CONTRACT-PARAM-2). |
 | `value_minor` | `bigint` |  | Total contract value in minor units, or twelve months of billing when `value_basis` is `annualized_12m`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | The principal that recorded this agreement, prefixed by kind ("human:<id>" / "agent:<id>"). |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |

@@ -24,7 +24,7 @@ The 1 table owned by `commissions`, as the migrations build them. [Back to the e
 | `status` | `text` | yes | One of `accrued`, `approved`, `paid`, `void`. |
 | `trigger_event_id` | `uuid` |  | The won-deal transition that produced this entry; null on one a human created. |
 | `void_reason` | `text` |  | Required on a void; what a partner dispute is answered from. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |

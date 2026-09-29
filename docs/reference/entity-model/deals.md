@@ -109,11 +109,11 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `won_without_contract_detail` | `text` |  | Required when the reason is `other`, which explains nothing on its own. |
 | `won_without_contract_reason` | `text` |  | Why this deal was won with no contract behind it (ADR-0109 §6). |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `legal_hold` | `boolean` | yes | True while a hold is preserving this record: no retention sweep touches it, and an erasure against it is refused. |
+| `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -583,7 +583,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `terms_text` | `text` |  | Optional `text`. |
 | `valid_until` | `date` |  | Optional `date`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -692,7 +692,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `name` | `text` | yes | Unique per workspace among live (non-archived) templates. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -760,9 +760,9 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `unit` | `text` | yes | 'unit' \| 'hour' \| 'day' \| … — display only, free text. |
 | `unit_price_minor` | `bigint` | yes | Integer minor units (P11); no float money. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |

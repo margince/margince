@@ -177,7 +177,7 @@ The 7 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `state` | `text` | yes | One of `checked`, `stale`, `unavailable`, `permission_limited`, `not_connected`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | One of `mail`, `calendar`, `documents`, `contracts`, `offers`, `incumbent`. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 

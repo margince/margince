@@ -43,7 +43,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `source_ref` | `text` | yes | Required `text`. |
 | `status` | `text` | yes | One of `pending`, `validating`, `awaiting_approval`, `running`, `complete`, `failed` and 2 more. |
 | `undo_report` | `jsonb` |  | Optional `jsonb`. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |

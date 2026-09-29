@@ -430,10 +430,10 @@ The 19 tables owned by `identity`, as the migrations build them. [Back to the en
 | `key` | `text` | yes | The stable key a role assignment and every refusal names (`admin`, `rep`, …). |
 | `name` | `text` | yes | The operator-facing label. |
 | `permissions` | `jsonb` | yes | Required `jsonb`, defaulting to `'{}'::jsonb`. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
+| `archived_at` | `timestamp with time zone` |  | When the role was archived. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `bigint` | yes | The row's optimistic-concurrency version (`RowVersion` semantics, data-model §1.3a). |
 
 **Rules**
 

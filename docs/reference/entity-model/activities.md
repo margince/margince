@@ -60,12 +60,12 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `subject` | `text` |  | Optional `text`. |
 | `thread_key` | `text` |  | The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
-| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
+| `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
-| `source_system` | `text` |  | The outside system the record came from, when it came from one. |
+| `source_system` | `text` |  | Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -617,7 +617,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `supersedes_id` | `uuid` |  | The document this one replaces. |
 | `title` | `text` |  | A display name distinct from the filename — what a reader looks for, rather than what arrived. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
+| `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
@@ -655,7 +655,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid` | yes | This reading's own id. |
 | `activity_announced_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `attachment_id` | `uuid` | yes | Points at `attachment.id` — deleting the parent deletes this row. |
 | `attempt` | `integer` | yes | Required `integer`, defaulting to `1`. |
@@ -756,7 +756,7 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bcc_addresses` | `text[]` | yes | Required `text[]`, defaulting to `'{}'::text[]`. |
 | `body` | `text` | yes | Required `text`, defaulting to `''::text`. |
 | `cc_addresses` | `text[]` | yes | Required `text[]`, defaulting to `'{}'::text[]`. |
-| `html_body` | `text` |  | Optional `text`. |
+| `html_body` | `text` |  | The editor's markup beside the plain body, so reopening restores the formatting. |
 | `subject` | `text` | yes | Required `text`, defaulting to `''::text`. |
 | `to_addresses` | `text[]` | yes | Required `text[]`, defaulting to `'{}'::text[]`. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
@@ -978,9 +978,9 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 |---|---|---|---|
 | `pinned_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `reader_id` | `uuid` | yes | Points at `app_user.id` — deleting the parent deletes this row. |
-| `row_id` | `text` | yes | Required `text`. |
+| `row_id` | `text` | yes | The row's own id within that lane. |
 | `set_by` | `text` | yes | Required `text`. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The lane the row came from. |
 
 **Points at**
 

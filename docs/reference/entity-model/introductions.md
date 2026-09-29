@@ -20,7 +20,7 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 | `forwardable_note` | `text` | yes | The prospect-facing copy the colleague can paste. |
 | `internal_reason` | `text` | yes | Why the requester is asking. |
 | `introduced_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
-| `introducer_user_id` | `uuid` | yes | Points at `app_user.id` — the parent cannot be deleted while this row points at it. |
+| `introducer_user_id` | `uuid` | yes | The colleague being asked. |
 | `name_drop_allowed` | `boolean` | yes | Whether the requester asked for permission to mention the colleague's name. |
 | `name_dropped_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `note_ai_generated` | `boolean` | yes | Whether a model wrote any of the note. |
@@ -38,7 +38,7 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `integer` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `integer` | yes | The row's version, sent back on every write. |
 
 **Points at**
 

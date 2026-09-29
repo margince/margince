@@ -367,7 +367,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `user_id` | `uuid` | yes | Points at `app_user.id` — deleting the parent deletes this row. |
 | `value` | `text` | yes | The folded address or domain. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | One of `user`, `provider`, `delivered_to`. |
 
 **Points at**
 
@@ -622,7 +622,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `stage` | `text` | yes | Required `text`. |
 | `subject` | `text` |  | Optional `text`, at most 300 characters. |
 | `user_id` | `uuid` |  | Optional `uuid`. |
-| `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
+| `source_system` | `text` | yes | Required `text`, at most 128 characters. |
 
 **Rules**
 
@@ -713,7 +713,7 @@ The 22 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `domain` | `text` | yes | The domain, IDNA-folded and lowercased. |
 | `verified` | `boolean` | yes | Whether a human vouched for this domain. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | Who contributed the row. |
 
 **Rules**
 

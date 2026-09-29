@@ -487,7 +487,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
-| `version` | `bigint` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `bigint` | yes | Row concurrency version; distinct from the immutable artifact's profile_version. |
 
 **Points at**
 
