@@ -148,9 +148,21 @@ func TestErasureTakesEveryAnonymizedLeadOffItsShortlists(t *testing.T) {
 	const address = "listed-lead@erasure.example"
 	name := "Listed Lead"
 	email := address
+	// The contact first, so the lead is a separate row matched to them by
+	// address alone: creating the contact after would take the lead with it.
+	subject, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "The Same Person", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Email: &email, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND promoted_contact_id IS NULL`, lead.Id); n != 1 {
+		t.Fatal("the lead was promoted, so this test would not reach a lead matched by address alone")
 	}
 	list, err := store.CreateList(e.Admin(), collections.CreateListInput{Name: "Lead picks", EntityType: "lead"})
 	if err != nil {
@@ -159,13 +171,6 @@ func TestErasureTakesEveryAnonymizedLeadOffItsShortlists(t *testing.T) {
 	if _, err := store.AddMember(e.Admin(), list.ID, collections.MemberChange{
 		EntityType: "lead", EntityID: ids.UUID(lead.Id), Reason: collections.ReasonChosen,
 	}); err != nil {
-		t.Fatal(err)
-	}
-	subject, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-		FullName: "The Same Person", Source: "manual",
-		Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
-	})
-	if err != nil {
 		t.Fatal(err)
 	}
 	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(subject.Id), "test"); err != nil {
