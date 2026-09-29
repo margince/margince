@@ -234,20 +234,20 @@ func TestAQuietForFortyFiveDaysListHoldsTheQuietContactAndSaysWhy(t *testing.T) 
 func TestATextClauseExplainsWithTheRecordsOwnValue(t *testing.T) {
 	e, _ := listsApp(t, true)
 	named := createdID(t, e, "/v1/contacts", AnyMap{
-		"full_name": "Explained Person", "source": "manual",
-		"emails": []AnyMap{{"email": "explained@person.example", "is_primary": true}},
+		"full_name": "Explained Contact", "source": "manual",
+		"emails": []AnyMap{{"email": "explained@contact.example", "is_primary": true}},
 	})
 	var list listWire
 	mustCall(t, e, "POST", "/v1/lists", AnyMap{
 		"name": "By address", "entity_type": "contact", "list_type": "dynamic",
-		"definition": leaf("email", "eq", "Explained@Person.example"),
+		"definition": leaf("email", "eq", "Explained@Contact.example"),
 	}, http.StatusCreated, &list)
 	var why struct {
 		Member  bool       `json:"member"`
 		Clauses clauseWire `json:"clauses"`
 	}
 	mustCall(t, e, "GET", "/v1/lists/"+list.ID+"/members/"+named+"/why", nil, http.StatusOK, &why)
-	if !why.Member || why.Clauses.Hidden || why.Clauses.Value == nil || *why.Clauses.Value != "explained@person.example" {
+	if !why.Member || why.Clauses.Hidden || why.Clauses.Value == nil || *why.Clauses.Value != "explained@contact.example" {
 		t.Errorf("why = %+v, want a member explained by the stored address", why)
 	}
 }
