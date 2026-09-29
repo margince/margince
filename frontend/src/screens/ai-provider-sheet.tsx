@@ -11,6 +11,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAiModelCatalogue } from "./ai-models";
 import { pricingPageFor } from "./ai-provider-links";
+import type { ProviderUse } from "./ai-routing-query";
 import {
   type ModelPriceRefresh,
   ProviderRefreshLine,
@@ -21,7 +22,7 @@ import "./ai-settings.css";
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
 type SheetRow = components["schemas"]["AiModelRate"];
 
-export type ProviderUsage = { for: string[]; baseUrls: string[] };
+export type ProviderUsage = ProviderUse;
 
 // Whether a vendor can be called (`usable`) crossed with whether routing binds
 // it. Four readings, and the two worth a reader's attention are the off-diagonal
@@ -132,7 +133,10 @@ function ProviderPrices({
   const canWrite = useCanUpsert("ai_model_rate");
   const sheet = useAiModelCatalogue();
   // The row being edited, `{}` for a new price, nothing while the table shows.
-  const [form, setForm] = useState<{ initial?: SheetRow } | null>(null);
+  const [form, setForm] = useState<{
+    initial?: SheetRow;
+    draft?: { model: string; lane: ProviderUse["models"][number]["lane"] };
+  } | null>(null);
   // Swapping the table for the form unmounts the button that was pressed, which
   // drops focus onto the page. Focus follows the swap: into the form's first
   // field, and back to the verb that opens it.
@@ -151,6 +155,11 @@ function ProviderPrices({
   if (!canRead) return null;
   const rows = (sheet.data ?? []).filter((r) => r.provider === provider);
   const page = pricingPageFor(provider, usage?.baseUrls ?? []);
+  // Models routing runs on this vendor that the sheet cannot price: the reason
+  // a lane elsewhere on the page says "no price".
+  const unpriced = (usage?.models ?? []).filter(
+    (m) => !rows.some((r) => r.model_id === m.model && r.lane === m.lane),
+  );
   return (
     <section className="ai-sheet-section" ref={section}>
       <div className="ai-sheet-heading">
@@ -173,6 +182,8 @@ function ProviderPrices({
           <PriceForm
             provider={provider}
             initial={form.initial}
+            draft={form.draft}
+            boundModels={usage?.models.map((m) => m.model)}
             onDone={() => setForm(null)}
             onCancel={() => setForm(null)}
           />
@@ -195,6 +206,15 @@ function ProviderPrices({
             ) : null}
           </p>
           <ProviderRefreshLine refresh={refresh} provider={provider} />
+          {canWrite &&
+            unpriced.map((m) => (
+              <p key={`${m.lane}/${m.model}`} className="t-sub">
+                {t("aiProviders.unpriced", { model: m.model })}{" "}
+                <Button variant="link" onClick={() => setForm({ draft: m })}>
+                  {t("aiProviders.setPrice")}
+                </Button>
+              </p>
+            ))}
           {rows.length === 0 ? (
             <p className="t-sub">{t("aiProviders.noPrices")}</p>
           ) : (

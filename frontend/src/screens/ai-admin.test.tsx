@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { AiBudgetCard, AiFeaturesCard, AiFeatureTable } from "./ai-admin";
+import { AiBudgetCard, AiFeatureTable } from "./ai-admin";
 import { allowance, feature, status } from "./ai-admin.testkit";
 
 afterEach(() => {
@@ -75,7 +75,6 @@ function mount(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <AiBudgetCard />
-        <AiFeaturesCard />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -93,9 +92,6 @@ it("explains pooled tokens, UTC reset and unchanged model selection", async () =
   expect(
     screen.getByText(/Not an individual quota or a dollar spending cap/),
   ).toBeTruthy();
-  expect(await screen.findByText("example-model")).toBeTruthy();
-  expect(screen.queryByText("Same model selection")).toBeNull();
-  expect(screen.queryByRole("columnheader", { name: "Effect" })).toBeNull();
   expect(screen.getByText(/UTC/)).toBeTruthy();
   expect(screen.queryByText(/own hardware/)).toBeNull();
 });
@@ -147,24 +143,6 @@ it("allows management to read without offering an editor", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
   await screen.findByText(/22\.5M of 24M tokens used/);
   expect(screen.queryByRole("button", { name: "Edit allowance" })).toBeNull();
-});
-
-// A reader holding only one of ai_diagnostics:read / ai_budget:read gets the
-// withheld panel rather than a section that silently renders nothing:
-// `/ai/status` refuses both grant combinations server-side, so there is no
-// partial table to show either reader.
-it.each([
-  { ai_diagnostics: ["read"] } satisfies GrantSpec,
-  { ai_budget: ["read"] } satisfies GrantSpec,
-])("explains the withheld AI-activity section for %j", async (allow) => {
-  mount(allow);
-  expect(await screen.findByText("AI by activity")).toBeTruthy();
-  expect(
-    screen.getByText(
-      "Only a user with both AI diagnostics read and AI allowance read can see which features are live now.",
-    ),
-  ).toBeTruthy();
-  expect(screen.queryByRole("table")).toBeNull();
 });
 
 // A task's tier is fixed by the task contract, and what the tier is bound to
@@ -234,14 +212,6 @@ it("withholds model identities from an allowance reader without routing access",
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
   await screen.findByText(/22\.5M of 24M tokens used/);
   expect(screen.queryByText("example-model")).toBeNull();
-});
-it("reports a failed carrier reading as unavailable", async () => {
-  mount();
-  const user = userEvent.setup({ delay: null });
-  await user.click(
-    await screen.findByText("Recorded work waiting on the allowance"),
-  );
-  expect(screen.getByText(/Company scans: Unavailable/)).toBeTruthy();
 });
 it("explains the one-user floor when there are no eligible full users", async () => {
   mount(undefined, false, {
@@ -367,30 +337,33 @@ it("names only the lead of a multi-candidate row, not the rungs behind it", () =
   expect(screen.queryByText(/fallback-model/)).toBeNull();
 });
 
-it("features card says decision model first, and why another feature skips it", async () => {
-  mount(undefined, false, {
-    ...status,
-    features: [
-      {
-        ...feature,
-        task: "capture_classify",
-        display_name: "Classify correspondence",
-        decision_first: true,
-        decision_candidate: {
-          tier: "decide",
-          provider: "jev_compatible",
-          model: "jev-classify",
-          processing: "cloud_provider",
-        },
-      },
-      {
-        ...feature,
-        task: "deep_read_triage",
-        display_name: "Triage a site",
-        decision_skip_reason: "local_only",
-      },
-    ],
-  });
+it("the task table says decision model first, and why another feature skips it", async () => {
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          {
+            ...feature,
+            task: "capture_classify",
+            display_name: "Classify correspondence",
+            decision_first: true,
+            decision_candidate: {
+              tier: "decide",
+              provider: "jev_compatible",
+              model: "jev-classify",
+              processing: "cloud_provider",
+            },
+          },
+          {
+            ...feature,
+            task: "deep_read_triage",
+            display_name: "Triage a site",
+            decision_skip_reason: "local_only",
+          },
+        ]}
+      />
+    </LocaleProvider>,
+  );
 
   // The lane leads, where it processes, and the ladder that answers after it.
   const decisionRow = (await screen.findByText("jev-classify")).closest("td");

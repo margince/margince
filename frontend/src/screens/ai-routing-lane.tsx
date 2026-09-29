@@ -166,6 +166,8 @@ function TierLine({
   const { lane, rung, tasks } = row;
   const { binding } = lane;
   const failing = rung !== undefined && !rung.healthy;
+  // A bound model the sheet cannot price says so, in the price's own place: the
+  // second line is always there, and a blank one reads as a price of nothing.
   const price = binding
     ? priceLabel(
         catalogue,
@@ -174,7 +176,7 @@ function TierLine({
         lane.lane,
         locale,
         t,
-      )
+      ) || t("aiRouting.noPrice")
     : "";
   // The small line: what the binding costs and where it points — or, when the
   // lane is failing, what it said, which matters more than either.

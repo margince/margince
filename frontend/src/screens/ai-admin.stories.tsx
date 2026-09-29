@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { meFixture } from "../app/mefixture";
-import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
+import { AiBudgetCard } from "./ai-admin";
 import { allowance, feature, status } from "./ai-admin.testkit";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -53,7 +53,6 @@ function story(
       <StoryProviders>
         <div className="settings-stack">
           <AiBudgetCard />
-          <AiFeaturesCard />
         </div>
       </StoryProviders>
     );

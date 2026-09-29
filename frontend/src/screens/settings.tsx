@@ -67,7 +67,7 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
-import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
+import { AiBudgetCard } from "./ai-admin";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
@@ -345,7 +345,6 @@ export function tabContent(id: SettingsPageId): ReactNode {
           <SpendStat />
           <AiUsageCard />
           <ModelPriceDetails />
-          <AiFeaturesCard />
         </>
       );
     case "model-calls":

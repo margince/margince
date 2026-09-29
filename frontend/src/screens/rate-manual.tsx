@@ -21,6 +21,7 @@ import {
   useAiModelCatalogue,
   useAvailableModels,
 } from "./ai-models";
+import { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
 import { problemMessageOf, throwProblem, WriteRefused } from "./common";
 
 // The reader's own today, for the same reason the sheets read effective dates
@@ -69,10 +70,16 @@ export function ModelPriceDialog({
 export function PriceForm({
   provider: fixedProvider,
   initial,
+  draft,
+  boundModels,
   onDone,
   onCancel,
 }: Readonly<{
   provider?: string;
+  // A model to start the form on, for one that is in use and has no price.
+  draft?: { model: string; lane: ModelLane };
+  // The models routing binds on this vendor, offered first in the model box.
+  boundModels?: readonly string[];
   initial?: SheetRow;
   onDone: () => void;
   onCancel: () => void;
@@ -81,7 +88,9 @@ export function PriceForm({
   const qc = useQueryClient();
   const [typedProvider, setProvider] = useState("");
   const provider = initial?.provider ?? fixedProvider ?? typedProvider;
-  const [modelId, setModelId] = useState(initial?.model_id ?? "");
+  const [modelId, setModelId] = useState(
+    initial?.model_id ?? draft?.model ?? "",
+  );
   const [input, setInput] = useState(initial?.input_per_mtok ?? "");
   const [output, setOutput] = useState(initial?.output_per_mtok ?? "");
   const [cacheRead, setCacheRead] = useState(
@@ -93,7 +102,9 @@ export function PriceForm({
   const [effectiveDate, setEffectiveDate] = useState(startDate(initial));
   // What the model is FOR. Always sent: a price filed without one is filed as
   // chat, and a new embedder then never reaches the embeddings picker.
-  const [lane, setLane] = useState<ModelLane>(initial?.lane ?? "chat");
+  const [lane, setLane] = useState<ModelLane>(
+    initial?.lane ?? draft?.lane ?? "chat",
+  );
   const [error, setError] = useState<string | null>(null);
 
   const save = useMutation({
@@ -167,6 +178,7 @@ export function PriceForm({
           modelId={modelId}
           onModel={setModelId}
           lane={lane}
+          boundModels={boundModels}
         />
       )}
       <div className="form-row">
@@ -225,8 +237,9 @@ export function PriceForm({
   );
 }
 
-// Who and what a NEW price is for. A vendor's own sheet fixes the provider and
-// offers what it serves; the free-form add asks for both as text.
+// Who and what a NEW price is for. A vendor's own sheet fixes the provider; the
+// free-form add picks one from the vendors the product knows. Either way the
+// model box is the same one, offering what that vendor serves.
 function NewPriceIdentity({
   fixedProvider,
   typedProvider,
@@ -234,6 +247,7 @@ function NewPriceIdentity({
   modelId,
   onModel,
   lane,
+  boundModels,
 }: Readonly<{
   fixedProvider: string | undefined;
   typedProvider: string;
@@ -241,37 +255,49 @@ function NewPriceIdentity({
   modelId: string;
   onModel: (next: string) => void;
   lane: ModelLane;
+  boundModels?: readonly string[];
 }>) {
   const t = useT();
-  if (fixedProvider !== undefined) {
-    return (
-      <VendorModelField
-        provider={fixedProvider}
-        lane={lane}
-        value={modelId}
-        onChange={onModel}
-      />
-    );
-  }
-  const text = (label: string, value: string, set: (v: string) => void) => (
-    <Field label={label}>
-      {(control) => (
-        <TextInput
-          {...control}
-          value={value}
-          inputMode="text"
-          onChange={(e) => set(e.target.value)}
-        />
-      )}
-    </Field>
-  );
+  const provider = fixedProvider ?? typedProvider;
   return (
     <>
-      {text(t("settings.rates.colProvider"), typedProvider, onProvider)}
-      {text(t("settings.rates.colModel"), modelId, onModel)}
+      {fixedProvider === undefined && (
+        <Field label={t("settings.rates.colProvider")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={typedProvider}
+              options={PRICED_PROVIDERS.map((value) => ({
+                value,
+                label: value,
+              }))}
+              onChange={(next) => {
+                onProvider(next);
+                onModel("");
+              }}
+            />
+          )}
+        </Field>
+      )}
+      {provider !== "" && (
+        <VendorModelField
+          provider={provider}
+          lane={lane}
+          value={modelId}
+          onChange={onModel}
+          bound={boundModels}
+        />
+      )}
     </>
   );
 }
+
+// The vendors a price can be filed under: the chat adapters and the decision
+// ones, without the test adapter.
+const PRICED_PROVIDERS: readonly string[] = [
+  ...PROVIDERS.filter((p) => p !== "fake"),
+  ...DECISION_PROVIDERS,
+];
 
 const LANE_LABEL = {
   chat: "aiRates.manual.laneChat",
@@ -315,11 +341,13 @@ function VendorModelField({
   lane,
   value,
   onChange,
+  bound,
 }: Readonly<{
   provider: string;
   lane: ModelLane;
   value: string;
   onChange: (next: string) => void;
+  bound?: readonly string[];
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -331,16 +359,28 @@ function VendorModelField({
         <ComboBox
           {...control}
           value={value}
-          suggestions={offeredModels(
-            available.data,
-            sheet.data,
-            provider,
-            lane,
-            locale,
+          suggestions={withBound(
+            offeredModels(available.data, sheet.data, provider, lane, locale),
+            bound,
+            t("aiProviders.inUse"),
           )}
           onChange={onChange}
         />
       )}
     </Field>
   );
+}
+
+// The models routing already runs on this vendor go first: they are the ones a
+// missing price is most likely to be missing for.
+function withBound(
+  offered: ReturnType<typeof offeredModels>,
+  bound: readonly string[] | undefined,
+  hint: string,
+): ReturnType<typeof offeredModels> {
+  const inUse = new Set(bound ?? []);
+  return [
+    ...(bound ?? []).map((value) => ({ value, hint })),
+    ...offered.filter((s) => !inUse.has(s.value)),
+  ];
 }

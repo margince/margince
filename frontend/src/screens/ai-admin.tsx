@@ -6,7 +6,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
   Badge,
@@ -30,7 +29,6 @@ import { decisionFirstOrder } from "./ai-feature-order";
 import { TaskState } from "./ai-lane-state";
 import { ModelChain, ModelRef } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { settingsHref } from "./settingsrouting";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
@@ -329,32 +327,6 @@ export function AiFeaturesWithheldPanel() {
     <Panel title={t("aiAdmin.features")}>
       <PanelBody>
         <EmptyState>{t("aiAdmin.featuresWithheld")}</EmptyState>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-export function AiFeaturesCard() {
-  const t = useT();
-  const canSee = useCan("ai_diagnostics", "read");
-  const canBudget = useCan("ai_budget", "read");
-  const canRoute = useCan("ai_routing", "read");
-  const query = useAiStatus(canSee && canBudget);
-  if (!canSee || !canBudget) return <AiFeaturesWithheldPanel />;
-  return (
-    <Panel title={t("aiAdmin.features")}>
-      <PanelBody>
-        <QueryGate query={query} pendingLabel={t("aiAdmin.features")}>
-          {(status) => (
-            <>
-              {canRoute && <AiFeatureTable rows={status.features} />}
-              <DeferredWork rows={status.deferred_work} />
-              <a href={routeHash(settingsHref("model-calls"))}>
-                {t("aiAdmin.calls")}
-              </a>
-            </>
-          )}
-        </QueryGate>
       </PanelBody>
     </Panel>
   );

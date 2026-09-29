@@ -204,6 +204,12 @@ describe("the rate sheets", () => {
       }),
     );
     const dialog = await screen.findByRole("dialog");
+    // The provider is a choice from the vendors the product knows, and only
+    // once one is chosen is there a model box to offer its models.
+    await user.click(
+      within(dialog).getByRole("combobox", { name: "Provider" }),
+    );
+    await user.click(screen.getByRole("option", { name: "gemini" }));
     for (const label of [
       "Provider",
       "Model",

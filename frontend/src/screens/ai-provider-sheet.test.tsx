@@ -231,6 +231,30 @@ describe("a provider's sheet", () => {
     });
   });
 
+  it("names a model in use that has no price, and prices it in its own lane", async () => {
+    const user = userEvent.setup();
+    const { posts } = mount();
+    const sheet = await open(user, "gemini");
+    expect(
+      await within(sheet).findByText(
+        /gemini-embedding-001 is in use and has no price/,
+      ),
+    ).toBeTruthy();
+    await user.click(within(sheet).getByRole("button", { name: "Set price" }));
+    expect(within(sheet).getByLabelText("Model")).toHaveProperty(
+      "value",
+      "gemini-embedding-001",
+    );
+    await user.type(within(sheet).getByLabelText("Input $/M"), "0.15");
+    await user.type(within(sheet).getByLabelText("Output $/M"), "0");
+    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]?.body).toMatchObject({
+      model_id: "gemini-embedding-001",
+      lane: "embeddings",
+    });
+  });
+
   it("says a refresh left this vendor to be priced by hand", async () => {
     const user = userEvent.setup();
     mount();
