@@ -1057,11 +1057,6 @@
 .btn.btn-link:hover {
   text-decoration: underline;
 }
-/* A destructive verb that must stay out of the primary pair's way: the link
- * affordance in the danger ink. The filled danger button is for a confirm. */
-.btn.btn-link.btn-link-danger {
-  color: var(--dangerText);
-}
 /* A glyph a caller drops in here arrives from lucide at its own default of
    24px, twice the label beside it, and at that size it wrapped ABOVE the label
    instead of leading it. `.btn` and `.iconbtn` each size their own icon for

@@ -192,3 +192,13 @@
   flex: none;
   padding-bottom: var(--space-1);
 }
+
+/* Removing a binding is a quiet verb in the danger ink, off to the footer left
+ * where it cannot be mistaken for the confirm beside Cancel. */
+.binding-remove {
+  color: var(--dangerText);
+}
+
+.binding-remove .btn.btn-link {
+  color: inherit;
+}

@@ -172,10 +172,9 @@ export function BindingEditor({
       )}
       <div className="actions">
         {draft.kind === "decisions" && base.binding !== undefined && (
-          <span className="actions-lead">
+          <span className="actions-lead binding-remove">
             <Button
               variant="link"
-              className="btn-link-danger"
               disabled={busy}
               onClick={() => submit({ kind: "decisions", binding: undefined })}
             >
