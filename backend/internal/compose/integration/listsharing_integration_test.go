@@ -83,7 +83,9 @@ func TestAListOnlyItsStewardOrAListAdminMayChange(t *testing.T) {
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
 	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, listPerms())
-	list, err := store.CreateList(rep1, collections.CreateListInput{Name: "Targets", EntityType: "contact"})
+	// Shared with everyone, so the admin below can find it: list authority
+	// changes a list its holder may find, and finds nothing sharing hides.
+	list, err := store.CreateList(rep1, collections.CreateListInput{Name: "Targets", EntityType: "contact", Sharing: "workspace"})
 	if err != nil {
 		t.Fatal(err)
 	}
