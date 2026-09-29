@@ -22,8 +22,8 @@ import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
 import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
+import { useMemberName } from "./membernames";
 import { MergeAction } from "./merge";
-import { memberName, useRosterNames } from "./roster";
 import { ShareAction } from "./share";
 
 // The account header's editable pieces: lifecycle and owner, the two values a
@@ -223,7 +223,7 @@ export function CompanyOwnerControl({
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
-  const allMembers = useRosterNames("user", true);
+  const ownerName = useMemberName(company.owner_id);
   const rosterPartial = useRosterPartial("user", true);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
@@ -240,7 +240,7 @@ export function CompanyOwnerControl({
     owners.unshift({
       value: company.owner_id,
       label:
-        memberName(allMembers.data, company.owner_id) ??
+        (typeof ownerName.data === "string" ? ownerName.data : null) ??
         unresolvedOwnerLabel(roster, rosterPartial, t),
     });
   }

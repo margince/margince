@@ -66,7 +66,11 @@ describe("useMemberName", () => {
 
   it("splits a window wider than the contract's bound into two requests", async () => {
     const ids = Array.from({ length: 150 }, (_, at) => `u-${at}`);
-    const fetchMock = vi.fn(async (request: Request) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      // openapi-fetch always hands the mock a Request, but `fetch` itself
+      // also takes a bare string or URL, and `mockImplementation` checks the
+      // replacement against that whole signature.
+      const request = input instanceof Request ? input : new Request(input);
       const asked = new URL(request.url).searchParams.getAll("id");
       expect(asked.length).toBeLessThanOrEqual(100);
       return jsonResponse({
@@ -111,7 +115,8 @@ describe("useMemberName", () => {
   });
 
   it("asks nothing for a null id, and still names the real one beside it", async () => {
-    const fetchMock = vi.fn(async (request: Request) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : new Request(input);
       const asked = new URL(request.url).searchParams.getAll("id");
       expect(asked).toEqual(["u-1"]);
       return jsonResponse({
@@ -130,7 +135,8 @@ describe("useMemberName", () => {
   });
 
   it("opens a new window once the previous one has closed", async () => {
-    const fetchMock = vi.fn(async (request: Request) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : new Request(input);
       const asked = new URL(request.url).searchParams.getAll("id");
       return jsonResponse({
         data: asked.map((id) => ({ id, display_name: `Name ${id}` })),

@@ -9,12 +9,8 @@ import { routeHash } from "../app/router";
 import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
-import {
-  type RosterKind,
-  type useRoster,
-  type useRosterNames,
-  useRosterWalk,
-} from "./roster";
+import { useMemberName } from "./membernames";
+import { type RosterKind, type useRoster, useRosterWalk } from "./roster";
 
 // A cross-record reference rendered as the target's display name plus a
 // backlink to its 360, resolved by id. Records point at each other by id
@@ -27,19 +23,15 @@ import {
 // a name that is coming, a name that is never coming, and a name nobody could
 // read at all are three different facts.
 //
-// `user`/`team` are the one exception to the "resolved name is a link"
-// rule: there is no 360 to send them to, so they resolve off the shared
-// roster list (`/users` / `/teams`) and always render as plain text, never
-// touching the ENTITY registry (which has no `user`/`team` entry).
-
-// The record kinds share the app-wide ENTITY registry (routes + vocabulary);
-// user/team are EntityRef-only: they have no 360 to route to, so they resolve
-// off the shared roster list and render as plain text.
+// `user`/`team` are the one exception to the "resolved name is a link" rule:
+// there is no 360 to send them to, so a resolved name always renders as plain
+// text and never touches the ENTITY registry, which has no `user`/`team`
+// entry. A user is named by id (`/users/names`); a team is still named off
+// the roster walk — see `RosterRef`.
 export type { RosterKind } from "./roster";
 export {
   RosterPartialNote,
   useRoster,
-  useRosterNames,
   useRosterPartial,
   useRosterPartialHint,
 } from "./roster";
@@ -327,29 +319,59 @@ export function EntityRef({
 
 // A workspace user or team: no 360 exists to send the reader to, so a resolved
 // name renders as plain text and the reference never becomes a link.
+//
+// A user is named by id and a team is still named off the walk. The asymmetry
+// is deliberate: teams carry no invited seats, so the walk's budget was never a
+// naming question for them. A `/teams/names` read would make both arms one.
 function RosterRef({
   kind,
   id,
   name,
 }: Readonly<{ kind: RosterKind; id: string; name?: string | null }>) {
-  // A caller-supplied name wins here exactly as it does for a record: the
-  // connection graph returns its own labels, and falling straight through to
-  // the roster showed the reader a raw uuid until — and unless — /users
-  // resolved it.
-  const supplied = usableName(name);
-  const roster = useRosterWalk(kind, supplied == null);
-  const match = roster.data?.entries.find((entry) => entry.id === id);
-  const resolved =
-    supplied ?? (match ? usableName(rosterName(kind, match)) : null);
+  if (kind === "user") {
+    return <UserRef id={id} name={name} />;
+  }
+  return <TeamRef id={id} name={name} />;
+}
+
+// A resolved name as plain text, or the reading `UnnamedRef` owes a reader who
+// gets none — shared by both roster arms so neither draws its fallback
+// differently from the other.
+function resolvedOrFallback(
+  id: string,
+  resolved: string | null,
+  reading: NameReading,
+) {
   if (resolved == null) {
-    return (
-      <UnnamedRef
-        id={id}
-        reading={rosterReading(roster, roster.data?.partial === true)}
-      />
-    );
+    return <UnnamedRef id={id} reading={reading} />;
   }
   return <span title={id}>{resolved}</span>;
+}
+
+function UserRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
+  // A caller-supplied name wins here exactly as it does for a record: the
+  // connection graph returns its own labels rather than a raw uuid until the
+  // by-id read resolves.
+  const supplied = usableName(name);
+  const query = useMemberName(supplied == null ? id : null);
+  return resolvedOrFallback(
+    id,
+    supplied ?? usableName(query.data),
+    readingOf(query),
+  );
+}
+
+function TeamRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
+  const supplied = usableName(name);
+  const roster = useRosterWalk("team", supplied == null);
+  const match = roster.data?.entries.find((entry) => entry.id === id);
+  const resolved =
+    supplied ?? (match ? usableName(rosterName("team", match)) : null);
+  return resolvedOrFallback(
+    id,
+    resolved,
+    rosterReading(roster, roster.data?.partial === true),
+  );
 }
 
 /** A record with a 360 behind it: a resolved name is also the backlink. */
@@ -426,7 +448,7 @@ function RecordRef({
  */
 export function rosterOwnerName(
   ownerId: string | null | undefined,
-  roster: ReturnType<typeof useRosterNames>,
+  roster: ReturnType<typeof useRoster>,
   partial: boolean,
   t: ReturnType<typeof useT>,
   unowned: string,
@@ -470,30 +492,25 @@ export function rosterOwnerNaming(
 /**
  * The owner of a record, by name, for a list column.
  *
- * Reads the shared roster cache (the same walked entry EntityRef and the Share
- * picker use), so a list of 50 rows costs no extra request. An owner the roster
- * cannot name still renders rather than going blank, because a blank owner
- * column reads as unowned, and unowned is a different fact with its own filter
- * — but it renders as the same unnamed reference every other cross-record
- * reference gets, not as a truncated id, which is a non-answer that has also
- * lost the ability to be looked up.
+ * Reads `useMemberName`, batching every id asked for within one tick into a
+ * single request, so a list of 50 rows costs one request rather than fifty.
+ * An owner the read cannot name still renders rather than going blank — a
+ * blank column reads as unowned, a different fact with its own filter — but
+ * as the same unnamed reference every other cross-record reference gets, not
+ * a truncated id, which is a non-answer that has also lost the ability to be
+ * looked up.
  */
 export function OwnerName({
   ownerId,
   unowned,
 }: Readonly<{ ownerId?: string | null; unowned: string }>) {
-  const roster = useRosterWalk("user", Boolean(ownerId));
+  const query = useMemberName(ownerId);
   if (!ownerId) {
     return <span>{unowned}</span>;
   }
-  const named = roster.data?.entries.find((entry) => entry.id === ownerId);
-  if (named && "display_name" in named) {
-    return <span>{named.display_name}</span>;
+  const resolved = usableName(query.data);
+  if (resolved != null) {
+    return <span>{resolved}</span>;
   }
-  return (
-    <UnnamedRef
-      id={ownerId}
-      reading={rosterReading(roster, roster.data?.partial === true)}
-    />
-  );
+  return <UnnamedRef id={ownerId} reading={readingOf(query)} />;
 }
