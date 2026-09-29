@@ -50,14 +50,16 @@ const PAGE_PATHS = new Set(
 );
 
 // The stories that are ABOUT a settings SURFACE rather than a card on a page,
-// named exactly. Two segments each, because neither names a catalog page: the
-// tree itself, and the settings home together with the boundary the same address
-// answers when its segment names no page this reader can open (`SETTINGS_HOME_ID`
-// is deliberately not a member of SETTINGS_PAGES). An
+// named exactly. Two segments each, because none names a catalog page: the
+// tree itself, the sidebar's settings level, and the settings home together with
+// the boundary the same address answers when its segment names no page this
+// reader can open (`SETTINGS_HOME_ID` is deliberately not a member of
+// SETTINGS_PAGES). An
 // `if (page === undefined) return` would exempt every two-segment title —
 // `Settings/Nonsense` included — which is a skip-list with no list.
 const SURFACE_STORIES = new Set([
   "Settings/Settings screen",
+  "Settings/Settings navigation",
   "Settings/Settings home",
 ]);
 
@@ -124,7 +126,7 @@ describe("the settings stories are filed where the product files them", () => {
   // the member roster's role picker; 99 → 100 for the role editor's page,
   // `Roles and permissions/Roles`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(100);
+    expect(settingsStories.length).toBe(101);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

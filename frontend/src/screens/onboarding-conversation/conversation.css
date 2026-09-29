@@ -28,8 +28,6 @@
   flex: none;
   display: grid;
   place-items: center;
-  inline-size: var(--mw-avatar);
-  block-size: var(--mw-avatar);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--aiLight);
@@ -81,12 +79,10 @@
   color: var(--textOnAccentControl);
 }
 
-/* The reader's own chip, on the same rung as the speaker's. `.avatar` carries
-   its own 28px, so this only has to hold it against the shared knob when that
-   knob changes. */
+/* Content-sized: this outranks the 28px `.avatar-sm` rung every other chip wears. */
 .ob-conv-user .avatar {
-  inline-size: var(--mw-avatar);
-  block-size: var(--mw-avatar);
+  inline-size: auto;
+  block-size: auto;
 }
 
 .ob-conv-outcome {
