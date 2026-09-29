@@ -245,7 +245,6 @@ export const de = {
   "aiAdmin.impact.fallback": "Ausweichkette geändert",
   "aiAdmin.impact.unconfigured": "Kein Modell konfiguriert",
   "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus weiter",
-  "aiAdmin.impact.same": "Gleiche Modellauswahl",
   "aiAdmin.activity": "Tätigkeit",
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.cloud": "Cloud-Anbieter",
@@ -258,7 +257,6 @@ export const de = {
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
   "aiAdmin.decisionSkip.local_only":
     "Entscheidungsmodell nicht genutzt: diese Aktivität nimmt nur einen lokalen Entscheidungsanbieter.",
-  "aiAdmin.effect": "Auswirkung",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -1825,7 +1823,6 @@ export const de = {
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript anlegen",
   "approval.kind.fx_rate_proposal": "Wechselkurse aktualisieren",
-  "approval.kind.ai_model_rate_proposal": "Modellpreise aktualisieren",
   "approval.kind.disqualify_lead": "Lead disqualifizieren",
   "approval.kind.demote_lead": "Lead-Qualifizierung zurücknehmen",
   "approval.kind.advance_project_phase": "Projektphase voranbringen",
@@ -1876,10 +1873,6 @@ export const de = {
   "approval.field.currency": "Währung",
   "approval.field.rate": "Neuer Kurs",
   "approval.field.prior_rate": "Aktueller Kurs",
-  "approval.field.provider": "Anbieter",
-  "approval.field.model": "Modell",
-  "approval.field.input_per_mtok": "Eingabe, pro Million Tokens",
-  "approval.field.output_per_mtok": "Ausgabe, pro Million Tokens",
   "approval.field.tool": "Tool",
   "approval.field.observed": "Verbraucht",
   "approval.field.limit": "Limit",
@@ -8769,7 +8762,6 @@ export const de = {
   "aiRouting.priceSheet": "Preisliste",
   "aiRouting.provider.label": "Anbieter",
   "aiRouting.noKey": "Kein Schlüssel",
-  "aiRouting.unpriced": "Ohne Preis",
   "aiProviderKeys.title": "Anbieter",
   "aiProviderKeys.keyless": "Kein Schlüssel nötig",
   "aiProviderKeys.field": "API-Schlüssel",
@@ -8883,6 +8875,7 @@ export const de = {
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile beginnt mit dem Modell, auf dem sie gerade läuft.",
+  "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "workingHours.title": "Buchbare Zeiten",
   "workingHours.sub":
     "Persönliche Einstellung. Nur du legst deine Zeiten fest.",
@@ -10976,9 +10969,20 @@ export const de = {
     "Um die Kosten dieser Aufrufe auszuweisen, hinterlege einen Preis in den Einstellungen unter KI.",
   "aiRates.priced": "Ab {date}",
   "aiRates.proposed": "Preis von OpenRouter",
-  "aiRates.proposedDetail": "Anbieterpreis · noch nicht freigegeben",
+  "aiRates.proposedDetail": "Anbieterpreis · noch nicht in der Preisliste",
   "aiRates.proposedBasis":
-    "Beim Zuordnen geht der Preis in Freigaben. Nutzung und Kosten berücksichtigen ihn nach der Bestätigung.",
+    "„Modellpreise aktualisieren“ schreibt ihn in die Preisliste. Nutzung und Kosten berücksichtigen ihn danach.",
+  "aiRates.refresh.button": "Modellpreise aktualisieren",
+  "aiRates.refresh.report": "Aktualisierung der Modellpreise",
+  "aiRates.refresh.outcome.updated": "Aktualisiert",
+  "aiRates.refresh.outcome.unchanged": "Aktuell",
+  "aiRates.refresh.outcome.not_available": "Manuell pflegen",
+  "aiRates.refresh.outcome.unreachable": "Nicht erreichbar",
+  "aiRates.refresh.outcome.not_bound": "Nicht in Verwendung",
+  "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
+  "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
+  "aiRates.refresh.unchangedCount_one": "{count} Preis bereits aktuell",
+  "aiRates.refresh.unchangedCount_other": "{count} Preise bereits aktuell",
   "firstRun.ai.foot":
     "Bis du „Weiter“ wählst, wird nichts an den Anbieter gesendet.",
   "contact.readings.title": "Kontaktstatus",

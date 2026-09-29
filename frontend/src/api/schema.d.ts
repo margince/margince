@@ -16935,6 +16935,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai-model-rates/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-price the models this installation calls from the providers' own catalogues.
+         * @description Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
+         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and
+         *     each `openai_compatible` model already on the sheet that the list still names. A model
+         *     whose price already matches is left alone and leaves no audit row; a future-dated manual
+         *     price is not touched. Runs inline and answers with what happened per provider. A provider
+         *     that publishes no price list reports `not_available`: its prices are set by hand.
+         *     Human session only (x-agent-access: human-only).
+         */
+        post: operations["refreshAiModelRates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai-model-rates/propose-refresh": {
         parameters: {
             query?: never;
@@ -16945,11 +16971,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Enqueue an async model-cost refresh (stages 🟡 proposals).
-         * @description Admin/ops-only. Enqueues a background job that crawls the configured provider
-         *     pricing pages, AI-extracts per-model prices (evidence-gated), and stages a
-         *     confirm-first proposal per changed model into the approvals inbox. Returns
-         *     immediately. Human session only (x-agent-access: human-only).
+         * Retired. Answers 501; use POST /ai-model-rates/refresh.
+         * @deprecated
+         * @description Retired: model prices are no longer extracted from provider pricing pages and staged
+         *     for approval. This operation always answers 501 and is kept for one release so a
+         *     client built against it fails loudly instead of on a missing route. Use
+         *     `POST /ai-model-rates/refresh`. Human session only (x-agent-access: human-only).
          */
         post: operations["proposeAiModelRateRefresh"];
         delete?: never;
@@ -17308,6 +17335,28 @@ export interface components {
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
+        };
+        /** @description The outcome of a catalogue refresh, one entry per provider this build knows. */
+        AiModelRateRefreshReport: {
+            providers: components["schemas"]["AiModelRateProviderRefresh"][];
+        };
+        AiModelRateProviderRefresh: {
+            /** @description The provider as the routing document spells it. */
+            provider: string;
+            /**
+             * @description `updated` wrote at least one price; `unchanged` found every priced model already
+             *     current; `not_available` means the provider (or the catalogue, for these models)
+             *     publishes no price to read; `unreachable` means the catalogue could not be read;
+             *     `not_bound` means nothing this provider serves is bound or on the sheet.
+             * @enum {string}
+             */
+            outcome: "updated" | "unchanged" | "not_available" | "unreachable" | "not_bound";
+            /** @description Prices written today. */
+            updated: number;
+            /** @description Models already at the catalogue price. */
+            unchanged: number;
+            /** @description Model ids written this run. */
+            models: string[];
         };
         SetAiModelRateRequest: {
             provider: string;
@@ -25183,6 +25232,12 @@ export interface components {
          *     quarter, and the deal amount that can be corrected after the close, would
          *     otherwise make the same entry answer a different question each time it is read.
          *     Carries no owner — visibility is inherited from the deal.
+         *
+         *     An entry carries no `masked_fields`, because no column of one can be withheld on
+         *     its own: the rate IS the partner's margin tier and the amount over the basis is
+         *     that rate again. A role whose field mask withholds `partner.margin_tier` therefore
+         *     reads no entry at all — the list omits it, the single read answers 404, and the
+         *     summary leaves it out of the totals.
          */
         CommissionEntry: {
             /** Format: uuid */
@@ -33398,6 +33453,8 @@ export interface components {
              * @description The company this partner record extends (PK = FK).
              */
             company_id: string;
+            /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
+            readonly masked_fields?: string[];
             /**
              * @description Functional role (ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}
@@ -64778,6 +64835,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    refreshAiModelRates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the refresh did, one entry per provider this build knows. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelRateRefreshReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     proposeAiModelRateRefresh: {
         parameters: {
             query?: never;
@@ -64787,7 +64866,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Refresh enqueued. */
+            /** @description Never returned; declared so the response contract stays additive. */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -64798,6 +64877,13 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            /** @description Retired; use POST /ai-model-rates/refresh. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     updateCompanyProfileField: {

@@ -243,7 +243,6 @@ export const vi = {
   "aiAdmin.impact.fallback": "Chuỗi dự phòng đã đổi",
   "aiAdmin.impact.unconfigured": "Chưa cấu hình mô hình",
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
-  "aiAdmin.impact.same": "Giữ nguyên lựa chọn mô hình",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
   "aiAdmin.cloud": "Nhà cung cấp đám mây",
@@ -256,7 +255,6 @@ export const vi = {
     "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
   "aiAdmin.decisionSkip.local_only":
     "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
-  "aiAdmin.effect": "Tác động",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -1818,7 +1816,6 @@ export const vi = {
   "approval.kind.transcript_proposal":
     "Thêm bước tiếp theo từ bản ghi cuộc trò chuyện",
   "approval.kind.fx_rate_proposal": "Làm mới tỷ giá",
-  "approval.kind.ai_model_rate_proposal": "Làm mới giá mô hình",
   "approval.kind.disqualify_lead": "Loại một khách hàng tiềm năng",
   "approval.kind.demote_lead": "Hoàn tác chuyển đổi lead",
   "approval.kind.advance_project_phase": "Chuyển dự án sang giai đoạn kế tiếp",
@@ -1868,10 +1865,6 @@ export const vi = {
   "approval.field.currency": "Tiền tệ",
   "approval.field.rate": "Tỷ giá mới",
   "approval.field.prior_rate": "Tỷ giá hiện tại",
-  "approval.field.provider": "Nhà cung cấp",
-  "approval.field.model": "Mô hình",
-  "approval.field.input_per_mtok": "Đầu vào, mỗi triệu token",
-  "approval.field.output_per_mtok": "Đầu ra, mỗi triệu token",
   "approval.field.tool": "Nó đang làm gì",
   "approval.field.observed": "Đã dùng",
   "approval.field.limit": "Giới hạn",
@@ -8695,7 +8688,6 @@ export const vi = {
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
   "aiRouting.noKey": "Chưa có khoá",
-  "aiRouting.unpriced": "Chưa định giá",
   "aiProviderKeys.title": "Nhà cung cấp",
   "aiProviderKeys.keyless": "Không cần khoá",
   "aiProviderKeys.field": "Khoá API",
@@ -8808,6 +8800,7 @@ export const vi = {
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
     "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",
+  "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
@@ -10867,10 +10860,20 @@ export const vi = {
     "Thêm đơn giá ở Cài đặt → AI thì các lệnh gọi này sẽ bắt đầu báo chi phí.",
   "aiRates.priced": "Giá áp dụng từ {date}",
   "aiRates.proposed": "Giá của OpenRouter",
-  "aiRates.proposedDetail":
-    "Vừa đọc từ nhà cung cấp, không phải từ bảng giá của bạn. Khi bạn gán mô hình này, giá sẽ vào hộp phê duyệt để mức dùng và chi phí tính được sau khi bạn xác nhận.",
+  "aiRates.proposedDetail": "Giá của nhà cung cấp, chưa có trong bảng giá",
   "aiRates.proposedBasis":
-    "Khi gán, giá sẽ vào hộp phê duyệt; sau khi xác nhận, mức dùng và chi phí có thể tính theo giá đó.",
+    "Bấm Làm mới giá mô hình để ghi giá này vào bảng giá; sau đó mức dùng và chi phí sẽ tính theo giá đó.",
+  "aiRates.refresh.button": "Làm mới giá mô hình",
+  "aiRates.refresh.report": "Kết quả làm mới giá mô hình",
+  "aiRates.refresh.outcome.updated": "Đã cập nhật",
+  "aiRates.refresh.outcome.unchanged": "Đã mới nhất",
+  "aiRates.refresh.outcome.not_available": "Đặt thủ công",
+  "aiRates.refresh.outcome.unreachable": "Không truy cập được",
+  "aiRates.refresh.outcome.not_bound": "Không dùng",
+  "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
+  "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
+  "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
+  "aiRates.refresh.unchangedCount_other": "{count} giá đã mới nhất",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "contact.readings.title": "Vị thế của liên hệ này",

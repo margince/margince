@@ -123,9 +123,10 @@ describe("the settings stories are filed where the product files them", () => {
   // checks`; 97 → 98 for `Data/Integrations/Automatic lookup`; 98 → 99 for
   // the member roster's role picker; 99 → 100 for the role editor's page,
   // `Roles and permissions/Roles`; 100 → 101 for `AI/Models and
-  // routing/Binding editor`.
+  // routing/Binding editor`; 101 → 103 for `AI/AI usage/Decision model` and
+  // `AI/Models and routing/Refresh model prices`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(101);
+    expect(settingsStories.length).toBe(103);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

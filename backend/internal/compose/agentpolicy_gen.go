@@ -441,6 +441,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/admin/reset-data":                                             {Op: "resetData", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai-model-rates":                                               {Op: "setAiModelRate", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai-model-rates/propose-refresh":                               {Op: "proposeAiModelRateRefresh", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/ai-model-rates/refresh":                                       {Op: "refreshAiModelRates", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/budget/preview":                                            {Op: "previewAiBudget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/feedback":                                                  {Op: "recordAIFeedback", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/provider-keys/{provider}/test":                             {Op: "testAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

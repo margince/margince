@@ -220,7 +220,7 @@ func writeAgentTable(b *strings.Builder, c contract, taskNames []string) {
 // writeSiteTable emits each task's invocation sites in contract order.
 func writeSiteTable(b *strings.Builder, c contract, taskNames []string) {
 	b.WriteString("// Site is one named model-invocation site of a task. A task is NOT one\n")
-	b.WriteString("// prompt: rate_extract has two, cold_start four. Kind says how the site\n")
+	b.WriteString("// prompt: cold_start and voice_build have four each. Kind says how the site\n")
 	b.WriteString("// invokes the model, because an agent loop is a cumulative tool-fed\n")
 	b.WriteString("// window and must not be described as a request factory. Thinking is the\n")
 	b.WriteString("// level the router asks the site's requests to think at, empty for the\n")

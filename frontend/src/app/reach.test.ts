@@ -10,6 +10,7 @@ import {
   extensionFrontendFiles,
   filesUnder,
   parseSource,
+  resolveRelative,
 } from "../../scripts/lib/source-tree";
 import { NAV } from "./nav";
 import { SCREENS, type Screen } from "./router";
@@ -236,33 +237,6 @@ function readModule(
   return { linked, viaName, aliases, imports };
 }
 
-/**
- * Which file an import specifier names, when it names one in this corpus.
- *
- * A bare specifier is a package and binds nothing about this tree's screens. A
- * relative one is resolved the way the bundler resolves it — the extensions
- * this tree writes, plus a directory's `index` — and only against files the
- * scan actually read, so a hit is a module whose declarations are known.
- */
-function resolveSpecifier(
-  fromPath: string,
-  specifier: string,
-  known: ReadonlySet<string>,
-): string | null {
-  if (!specifier.startsWith(".")) {
-    return null;
-  }
-  const base = join(dirname(fromPath), specifier);
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    join(base, "index.ts"),
-    join(base, "index.tsx"),
-  ];
-  return candidates.find((candidate) => known.has(candidate)) ?? null;
-}
-
 /** Every screen the shipped tree opens a door to. */
 function doorsIn(
   sources: ReadonlyArray<readonly [string, string]>,
@@ -306,7 +280,10 @@ function doorsIn(
     if (imported === undefined) {
       return undefined;
     }
-    const target = resolveSpecifier(path, imported.from, known);
+    // Against the files the scan read, so a hit's declarations are known.
+    const target = resolveRelative(path, imported.from, (file) =>
+      known.has(file),
+    );
     return target === null ? undefined : bound(target, imported.exported, seen);
   };
 

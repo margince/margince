@@ -68,7 +68,6 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 	cfg.allowDataReset = deployCfg.Operations.AllowDataReset
 	cfg.ratesFx = deployCfg.Rates.Fx
 	cfg.ratesCurrencies = deployCfg.Rates.FxCurrencies
-	cfg.ratesModelPricing = deployCfg.Rates.ModelPricing
 	return deployCfg, nil
 }
 

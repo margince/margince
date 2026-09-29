@@ -52,8 +52,6 @@ var approvalSummaryHoles = map[string][]string{
 	"coldStartFromSelfDescription": nil,
 	"fxRateChanged":                {"%s", "%s", "%s", "%s"},
 	"fxNoRateInForce":              nil,
-	"modelRateChanged":             {"%s", "%s", "%s", "%s"},
-	"modelRateNew":                 nil,
 	"createdUnder":                 nil,
 	"nestedFields":                 {"%d"},
 }

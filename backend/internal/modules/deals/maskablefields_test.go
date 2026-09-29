@@ -3,8 +3,8 @@
 
 package deals
 
-// The catalog of what this build can withhold, pinned to the code that does the
-// withholding.
+// The catalog of what this build can withhold ON A DEAL, pinned to the code
+// that does the withholding.
 //
 // fieldmask.Maskable is the whole of it: a mask naming a column with no
 // withhold func in dealWithholders is dropped by applyTo, so an administrator
@@ -14,6 +14,11 @@ package deals
 // removed from the map while the table still offers it is a mask an installation
 // may configure and no reader applies; a pair added here while the table does
 // not offer it is a mask nobody can configure at all.
+//
+// Only the deal's lines are read, because a module may not import a sibling and
+// the fixture holds every object. The partner's half is pinned the same way in
+// contacts, and gates/maskablefieldobjects_test.go is what refuses an object
+// neither of them claims.
 //
 // The fixture is compared against a migrated database by
 // compose/integration/maskablefieldparity_integration_test.go, so the three
@@ -43,6 +48,10 @@ func TestTheMaskableFieldCatalogMatchesWhatTheCodeWithholds(t *testing.T) {
 	}
 
 	want := maskableFixturePairs(t)
+	if len(want) == 0 {
+		t.Fatalf("%s names no %s pair, so the comparison below would pass over a catalog that "+
+			"stopped offering the deal's masks entirely", filepath.Base(maskableFixture), maskObject)
+	}
 	if strings.Join(rendered, "\n") == strings.Join(want, "\n") {
 		return
 	}
@@ -97,6 +106,9 @@ func maskableFixturePairs(t *testing.T) []string {
 	for _, line := range strings.Split(string(body), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if object, _, isPair := strings.Cut(line, " "); !isPair || object != maskObject {
 			continue
 		}
 		pairs = append(pairs, line)

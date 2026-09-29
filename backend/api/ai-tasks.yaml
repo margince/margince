@@ -28,8 +28,8 @@
 #                     certification record. This is what stops an unimplemented
 #                     task presenting as certified.
 #   sites             the named model-invocation sites the build registers for
-#                     this task. A task is NOT one prompt: rate_extract has
-#                     always had two (pricing, fx), cold_start has four. A bare
+#                     this task. A task is NOT one prompt: voice_build and
+#                     cold_start have four each. A bare
 #                     name defaults to kind `one_shot`; a mapping declares a
 #                     different kind.
 #   kind              one_shot | multi_turn | agent_loop — how the site invokes
@@ -431,14 +431,14 @@ tasks:
     doc: "owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Four sites: the derive pass, the two evaluation passes, and the demonstration draft the profile card shows — a built voice nobody can read a sentence of is a voice nobody can judge."
 
   rate_extract:
-    display_name: "Model pricing extraction"
+    display_name: "Exchange rate extraction"
     ladder: [premium, cheap_cloud]
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
-    sites: [pricing, fx]
+    sites: [fx]
     company_context: none
-    doc: "extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written."
+    doc: "extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them."
 
 # embed is a workload, not a task (ADR-0074). It has a real ladder and a real
 # cost rule, but its tier is deliberately NOT one of the chat tiers above, and

@@ -161,9 +161,6 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		FxRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
 			return (&fxRefreshWorker{}).Work(ctx, &river.Job[FxRateRefreshArgs]{})
 		},
-		AiModelRateRefreshArgs{}.Kind(): func(ctx context.Context) error {
-			return (&aiModelRateRefreshWorker{}).Work(ctx, &river.Job[AiModelRateRefreshArgs]{})
-		},
 	}
 }
 

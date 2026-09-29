@@ -335,12 +335,13 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "usage":
       return (
         <>
-          {/* What the month has cost, above the breakdown that explains it. */}
+          {/* What the month cost, then the breakdown, then which activity ran
+              on what. */}
           <AiBudgetCard />
-          <AiFeaturesCard />
           <SpendStat />
           <AiUsageCard />
           <ModelPriceDetails />
+          <AiFeaturesCard />
         </>
       );
     case "model-calls":

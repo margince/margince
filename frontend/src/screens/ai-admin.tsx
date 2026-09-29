@@ -23,8 +23,10 @@ import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
+import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
 import { decisionSkipLabel, processingLabel } from "./ai-decision-labels";
+import { decisionFirstOrder } from "./ai-feature-order";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { settingsHref } from "./settingsrouting";
 
@@ -79,13 +81,14 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
   const t = useT();
   const { locale } = useLocale();
   const number = (value: number) => formatNumber(value, locale);
+  const tokens = (value: number) => formatTokens(value, locale);
   const pct = Math.round((budget.spent_tokens / budget.monthly_tokens) * 100);
   return (
     <>
       <p>
         {t("aiAdmin.consumption", {
-          spent: number(budget.spent_tokens),
-          total: number(budget.monthly_tokens),
+          spent: tokens(budget.spent_tokens),
+          total: tokens(budget.monthly_tokens),
           pct: number(pct),
         })}
       </p>
@@ -95,7 +98,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
         label={t("aiAdmin.allowance")}
       />
       <p>
-        {t("aiAdmin.remaining", { tokens: number(budget.remaining_tokens) })} ·{" "}
+        {t("aiAdmin.remaining", { tokens: tokens(budget.remaining_tokens) })} ·{" "}
         {t("aiAdmin.reset", {
           date: formatDateTime(budget.resets_at, locale, "UTC"),
         })}
@@ -105,7 +108,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
           ? t("aiAdmin.fixed")
           : t("aiAdmin.formula", {
               users: number(budget.eligible_full_users),
-              tokens: number(budget.config.tokens_per_full_user),
+              tokens: tokens(budget.config.tokens_per_full_user),
             })}
         {budget.eligible_full_users === 0 &&
         budget.source !== "company_override"
@@ -386,6 +389,8 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
 // binding a tier names is edited on the Model tiers card.
 export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
   const t = useT();
+  // Only a departure from the default is worth a badge; the unchanged case is
+  // what every quiet row already says.
   const impact = (row: Feature) => {
     switch (row.impact) {
       case "budget_blocked":
@@ -399,9 +404,7 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
       case "unconfigured":
         return t("aiAdmin.impact.unconfigured");
       case "unchanged":
-        return row.budget_exempt
-          ? t("aiAdmin.impact.exempt")
-          : t("aiAdmin.impact.same");
+        return row.budget_exempt ? t("aiAdmin.impact.exempt") : null;
       default:
         // A new impact must be named here rather than read as "unchanged".
         return row.impact satisfies never;
@@ -423,11 +426,14 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
       ladder,
     });
   };
-  const modelCell = (row: Feature) =>
-    row.effective_candidates.length ? (
+  const modelCell = (row: Feature) => {
+    if (!row.effective_candidates.length) return "—";
+    const [, ...fallbacks] = row.effective_candidates;
+    if (!fallbacks.length) return summary(row);
+    return (
       <Disclosure summary={summary(row)}>
         <ol>
-          {row.effective_candidates.map((candidate) => (
+          {fallbacks.map((candidate) => (
             <li key={candidate.tier}>
               {candidate.provider} · {candidate.model} ·{" "}
               {processingLabel(candidate.processing, t)}
@@ -435,26 +441,43 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
           ))}
         </ol>
       </Disclosure>
-    ) : (
-      "—"
     );
+  };
   return (
     <DataTable
       label={t("aiAdmin.features")}
-      rows={rows}
+      rows={decisionFirstOrder(rows)}
       rowKey={(row) => row.task}
       columns={[
         {
           key: "activity",
           header: t("aiAdmin.activity"),
-          render: (row: Feature) => (
-            <CellStack>
-              <span>{row.display_name}</span>
-              <span className="t-caption">
-                {row.task} · {row.execution_mode}
-              </span>
-            </CellStack>
-          ),
+          render: (row: Feature) => {
+            const changed = impact(row);
+            return (
+              <CellStack>
+                <span>{row.display_name}</span>
+                <span className="t-caption">
+                  {row.task} · {row.execution_mode}
+                </span>
+                {row.decision_first ? (
+                  <Badge>{t("aiTasks.decisionFirst")}</Badge>
+                ) : null}
+                {changed ? (
+                  <Badge
+                    tone={
+                      row.impact === "budget_blocked" ||
+                      row.impact === "unconfigured"
+                        ? "warning"
+                        : undefined
+                    }
+                  >
+                    {changed}
+                  </Badge>
+                ) : null}
+              </CellStack>
+            );
+          },
         },
         {
           key: "model",
@@ -468,21 +491,6 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
                 </p>
               ) : null}
             </>
-          ),
-        },
-        {
-          key: "impact",
-          header: t("aiAdmin.effect"),
-          render: (row: Feature) => (
-            <Badge
-              tone={
-                row.impact === "budget_blocked" || row.impact === "unconfigured"
-                  ? "warning"
-                  : undefined
-              }
-            >
-              {impact(row)}
-            </Badge>
           ),
         },
       ]}

@@ -61,7 +61,7 @@ When you are ready to spend, `make e2e-ai TASK=enrich` certifies for real
 a fallback ladder, an execution mode and a budget posture. A **site** is one
 named place in the build that actually calls the model. Today 16 shipped tasks
 carry 23 sites between them — `cold_start` has four, `voice_build` three,
-`summarize` and `rate_extract` two each. (These counts have gone stale across
+`summarize` two. (These counts have gone stale across
 several changes; `make e2e-ai-report` prints the current census — read-only, no
 model spend — and is the number to trust.)
 

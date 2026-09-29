@@ -20656,6 +20656,32 @@ type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
 }
 
+// AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
+type AiModelRateProviderRefresh struct {
+	// Models Model ids written this run.
+	Models []string `json:"models"`
+
+	// Outcome `updated` wrote at least one price; `unchanged` found every priced model already
+	// current; `not_available` means the provider (or the catalogue, for these models)
+	// publishes no price to read; `unreachable` means the catalogue could not be read;
+	// `not_bound` means nothing this provider serves is bound or on the sheet.
+	Outcome string `json:"outcome"`
+
+	// Provider The provider as the routing document spells it.
+	Provider string `json:"provider"`
+
+	// Unchanged Models already at the catalogue price.
+	Unchanged int `json:"unchanged"`
+
+	// Updated Prices written today.
+	Updated int `json:"updated"`
+}
+
+// AiModelRateRefreshReport The outcome of a catalogue refresh, one entry per provider this build knows.
+type AiModelRateRefreshReport struct {
+	Providers []AiModelRateProviderRefresh `json:"providers"`
+}
+
 // AiOpenRouterRouting Upstream-selection preferences for an openai_compatible binding pointed at
 // OpenRouter; refused on any other binding, and on the embeddings lane every
 // preference but only, ignore and allow_fallbacks is refused. Absent means the
@@ -24435,6 +24461,12 @@ type CommissionAttribution string
 // quarter, and the deal amount that can be corrected after the close, would
 // otherwise make the same entry answer a different question each time it is read.
 // Carries no owner — visibility is inherited from the deal.
+//
+// An entry carries no `masked_fields`, because no column of one can be withheld on
+// its own: the rate IS the partner's margin tier and the amount over the basis is
+// that rate again. A role whose field mask withholds `partner.margin_tier` therefore
+// reads no entry at all — the list omits it, the single read answers 404, and the
+// summary leaves it out of the totals.
 type CommissionEntry struct {
 	// AmountMinor What the rate produced.
 	AmountMinor int64 `json:"amount_minor"`
@@ -35710,7 +35742,10 @@ type Partner struct {
 	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
 
 	// MarginTier Scenario-C margin tier (business/14-partner-program.md; data-model §4.3 CHECK).
-	MarginTier    *PartnerMarginTier  `json:"margin_tier,omitempty"`
+	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
+
+	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
+	MaskedFields  *[]string           `json:"masked_fields,omitempty"`
 	NextStep      *string             `json:"next_step,omitempty"`
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 
@@ -60524,9 +60559,12 @@ type ServerInterface interface {
 	// Set an AI model price effective today or later (append-forward).
 	// (POST /ai-model-rates)
 	SetAiModelRate(w http.ResponseWriter, r *http.Request)
-	// Enqueue an async model-cost refresh (stages 🟡 proposals).
+	// Retired. Answers 501; use POST /ai-model-rates/refresh.
 	// (POST /ai-model-rates/propose-refresh)
 	ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request)
+	// Re-price the models this installation calls from the providers' own catalogues.
+	// (POST /ai-model-rates/refresh)
+	RefreshAiModelRates(w http.ResponseWriter, r *http.Request)
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
 	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
@@ -62780,9 +62818,15 @@ func (_ Unimplemented) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Enqueue an async model-cost refresh (stages 🟡 proposals).
+// Retired. Answers 501; use POST /ai-model-rates/refresh.
 // (POST /ai-model-rates/propose-refresh)
 func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-price the models this installation calls from the providers' own catalogues.
+// (POST /ai-model-rates/refresh)
+func (_ Unimplemented) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68510,6 +68554,26 @@ func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeAiModelRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefreshAiModelRates operation middleware
+func (siw *ServerInterfaceWrapper) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefreshAiModelRates(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -97399,6 +97463,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai-model-rates/propose-refresh", wrapper.ProposeAiModelRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai-model-rates/refresh", wrapper.RefreshAiModelRates)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
