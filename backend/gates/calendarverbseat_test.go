@@ -19,7 +19,9 @@ package gates
 // What this gate CANNOT see: whether the seam compose passes answers honestly.
 // A constructor handed a predicate that always says yes passes here. The
 // integration cases in compose/meetingseat_integration_test.go are what cover
-// that, for both verbs and in both directions.
+// that, for both verbs and in both directions. It also does not follow a local
+// variable — `closer := activities.CancelCapturedMeetingFor(...)` then
+// `WithMeetingCloser(closer, ...)` reads as unguarded here, though it is not.
 
 import (
 	"go/ast"
@@ -29,35 +31,19 @@ import (
 	"testing"
 )
 
-// verbGuard names one seam's guarded constructor: the FIRST argument
-// `seam` must be built from, in every call that wires it up. A slice rather
-// than a map from subject to reason — this is the assertion, not a waived
-// exception, and the gate census over the package's own reason maps
-// (TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture) is about the
-// latter.
-type verbGuard struct {
-	seam        string
-	constructor string
-}
-
-// verbGuards names, for each seam, the constructor that carries the standing
-// check — and, for WithMeetingCloser, only its FIRST argument: the by-identity
-// closer beside it resolves through the bindable identity rule instead and
-// takes no seat argument of its own.
-var verbGuards = []verbGuard{
-	{seam: "WithMeetingCloser", constructor: "CancelCapturedMeetingFor"},
-	{seam: "WithMeetingMover", constructor: "MoveCapturedMeetingFor"},
-}
-
-// constructorFor reports the constructor a seam must be wired with, or false
-// if the name is not one of the two calendar verbs this gate holds.
-func constructorFor(seam string) (string, bool) {
-	for _, g := range verbGuards {
-		if g.seam == seam {
-			return g.constructor, true
-		}
-	}
-	return "", false
+// gatekit:fixture the seam-to-constructor pairing this gate asserts, not a
+// waived cost — the map IS the claim, and its entries are what
+// TestComposeWiresNoUnguardedCalendarVerb below checks compose against
+//
+// verbGuardConstructor names, for each seam, the constructor that carries the
+// standing check — and, for WithMeetingCloser, only its FIRST argument: the
+// by-identity closer beside it resolves through the bindable identity rule
+// instead and takes no seat argument of its own. Named apart from
+// callgraph_test.go's own `guardedBy` function, which this would otherwise
+// collide with.
+var verbGuardConstructor = map[string]string{
+	"WithMeetingCloser": "CancelCapturedMeetingFor",
+	"WithMeetingMover":  "MoveCapturedMeetingFor",
 }
 
 func TestComposeWiresNoUnguardedCalendarVerb(t *testing.T) {
@@ -81,7 +67,7 @@ func TestComposeWiresNoUnguardedCalendarVerb(t *testing.T) {
 			if !ok {
 				return true
 			}
-			want, guarded := constructorFor(sel.Sel.Name)
+			want, guarded := verbGuardConstructor[sel.Sel.Name]
 			if !guarded || len(call.Args) == 0 {
 				return true
 			}
@@ -99,10 +85,10 @@ func TestComposeWiresNoUnguardedCalendarVerb(t *testing.T) {
 	}
 	// The census's own proof of life: a scan that stopped finding the wiring
 	// would otherwise report PASS over nothing at all.
-	for _, g := range verbGuards {
-		if seen[g.seam] == 0 {
+	for seam := range verbGuardConstructor {
+		if seen[seam] == 0 {
 			t.Errorf("no call to %s found anywhere — the scan for it has stopped working, "+
-				"or the seam was renamed without updating this gate", g.seam)
+				"or the seam was renamed without updating this gate", seam)
 		}
 	}
 }
