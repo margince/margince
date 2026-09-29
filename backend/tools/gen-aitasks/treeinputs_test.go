@@ -4,6 +4,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -12,7 +13,7 @@ import (
 // Go's test cache never rechecks a file outside this module, so without this a
 // replayed pass would outlive a change to the ones these tests read.
 func TestTheTestCacheKeysOnTheTreeOutsideThisModule(t *testing.T) {
-	if err := gatekit.DeclareInputs("../../../backend"); err != nil {
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../backend"); err != nil {
 		t.Fatal(err)
 	}
 }

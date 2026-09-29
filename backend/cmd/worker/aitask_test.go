@@ -5,6 +5,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -204,7 +205,7 @@ func TestTheWorkDirIsActuallyIgnored(t *testing.T) {
 	for dir := workDirDefault; dir != "."; dir = filepath.Dir(dir) {
 		ignoreFiles = append(ignoreFiles, filepath.Join("../..", dir, ".gitignore"))
 	}
-	if err := gatekit.DeclareInputs(append(ignoreFiles, "../../.gitignore")...); err != nil {
+	if err := gatekit.DeclareInputs(os.Getenv, append(ignoreFiles, "../../.gitignore")...); err != nil {
 		t.Fatal(err)
 	}
 	out, err := exec.Command("git", "-C", "../..", "check-ignore", "-q", workDirDefault+"/probe.txt").CombinedOutput()

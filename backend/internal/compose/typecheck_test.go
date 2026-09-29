@@ -67,7 +67,7 @@ var loadCompose = sync.OnceValues(func() (*composeLoad, error) {
 		return nil, err
 	}
 	// go list read the tree for us, out of the test cache's sight.
-	if err := gatekit.DeclareInputs(root); err != nil {
+	if err := gatekit.DeclareInputs(os.Getenv, root); err != nil {
 		return nil, err
 	}
 	imports := map[string]bool{}
@@ -94,7 +94,7 @@ var loadCompose = sync.OnceValues(func() (*composeLoad, error) {
 		// A package only the subpackages import is outside this test binary's
 		// build ID, so its sources reach the cache only by being declared here.
 		if strings.HasPrefix(fields[0], "github.com/margince/margince/") {
-			if err := gatekit.DeclareListings(fields[2]); err != nil {
+			if err := gatekit.DeclareListings(os.Getenv, fields[2]); err != nil {
 				return nil, err
 			}
 		}

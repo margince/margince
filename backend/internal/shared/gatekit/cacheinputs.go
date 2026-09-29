@@ -23,11 +23,12 @@ import (
 //     stated, a missing one too, since creating it must invalidate as surely as
 //     editing it;
 //   - outside the test's module, anything at all: the cache never rechecks such
-//     a path, so the test reads the environment variable CI sets to a digest of
-//     the path's top-level tree (TreeDigestVar), and the cache keys on its value.
-func DeclareInputs(paths ...string) error {
+//     a path, so lookup — os.Getenv, passed by the test, since configuration is
+//     read at a root — reads the variable CI sets to a digest of the path's
+//     top-level tree (TreeDigestVar), and the cache keys on its value.
+func DeclareInputs(lookup func(string) string, paths ...string) error {
 	for _, path := range paths {
-		declared, err := declareOutsideModule(path)
+		declared, err := declareOutsideModule(lookup, path)
 		if err != nil {
 			return err
 		}
@@ -54,9 +55,9 @@ func DeclareInputs(paths ...string) error {
 // DeclareListings is DeclareInputs for directories whose own entries are the
 // input and whose subdirectories are not — a package directory, whose export
 // data depends on its files and on no package nested beneath it.
-func DeclareListings(dirs ...string) error {
+func DeclareListings(lookup func(string) string, dirs ...string) error {
 	for _, dir := range dirs {
-		declared, err := declareOutsideModule(dir)
+		declared, err := declareOutsideModule(lookup, dir)
 		if err != nil {
 			return err
 		}
@@ -88,7 +89,7 @@ func TreeDigestVar(top string) string {
 
 // declareOutsideModule reads the digest variable for path when it lies in the
 // repository but outside the test's module, and reports whether it did.
-func declareOutsideModule(path string) (bool, error) {
+func declareOutsideModule(lookup func(string) string, path string) (bool, error) {
 	module, _, found := moduleRootAndPath()
 	repo := repositoryRoot()
 	if !found || repo == "" {
@@ -108,7 +109,7 @@ func declareOutsideModule(path string) (bool, error) {
 	}
 	top, _, _ := strings.Cut(filepath.ToSlash(rel), "/")
 	// The read is the declaration: the test log records the variable and its value.
-	os.Getenv(TreeDigestVar(top))
+	lookup(TreeDigestVar(top))
 	return true, nil
 }
 

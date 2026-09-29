@@ -87,7 +87,7 @@ type unitManifest struct {
 // set would silently drop every unit and publish "the shipped units add 0
 // tools", which is the under-reporting direction this page must not fail in.
 func shippedUnits(dir string) (map[string]bool, error) {
-	if err := gatekit.DeclareInputs(dir); err != nil {
+	if err := gatekit.DeclareInputs(os.Getenv, dir); err != nil {
 		return nil, err
 	}
 	out, err := exec.Command("git", "ls-files", "-z", "--", dir).Output()
