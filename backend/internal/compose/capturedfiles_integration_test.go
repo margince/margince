@@ -543,3 +543,76 @@ func TestTheAuditImageOfACapturedFileNamesTheCategoryTheRowHolds(t *testing.T) {
 		t.Errorf("the audit image says %q and the row says %q", audited, files[0].category)
 	}
 }
+
+// A thread the classifier has already judged private stores no files at all.
+//
+// The read boundary kept a colleague out of them; it did not keep them from
+// being written. A payslip forwarded from a private address is the case, and
+// not storing it is strictly better than storing it and being able to delete
+// it later.
+func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+
+	threadKey := "private-thread-" + tag
+	markThreadPrivate(ctx, t, db, threadKey)
+
+	rec := withFiles(mailRecord("msg-private-"+tag), onePDF())
+	rec.ThreadKey = threadKey
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("capture: %v", err)
+	}
+
+	if files := filesFor(ctx, t, db, "msg-private-"+tag); len(files) != 0 {
+		t.Fatalf("a private thread stored %d file(s)", len(files))
+	}
+	// And the message itself is kept. Refusing the correspondence would lose a
+	// real exchange over a file nobody wanted stored.
+	if !activityExists(ctx, t, db, "msg-private-"+tag) {
+		t.Fatal("the message was lost along with its files")
+	}
+}
+
+// The ordinary case still stores, so the strip is bounded to threads that were
+// actually judged private rather than to anything carrying a thread key.
+func TestAThreadWithNoVerdictStillStoresItsFiles(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+
+	rec := withFiles(mailRecord("msg-unjudged-"+tag), onePDF())
+	rec.ThreadKey = "unjudged-thread-" + tag
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("capture: %v", err)
+	}
+
+	if files := filesFor(ctx, t, db, "msg-unjudged-"+tag); len(files) != 1 {
+		t.Fatalf("stored %d files on a thread nobody has judged, want 1", len(files))
+	}
+}
+
+func markThreadPrivate(ctx context.Context, t *testing.T, db *database.DB, threadKey string) {
+	t.Helper()
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, seen_addresses)
+			VALUES ($1, $2, 'held', 'personal', ARRAY['her@example.com'])`,
+			threadKey, captureSeatID)
+		return err
+	}); err != nil {
+		t.Fatalf("marking the thread private: %v", err)
+	}
+}
+
+func activityExists(ctx context.Context, t *testing.T, db *database.DB, sourceID string) bool {
+	t.Helper()
+	var n int
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT count(*) FROM activity WHERE source_id = $1`, sourceID).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting the activity: %v", err)
+	}
+	return n > 0
+}
