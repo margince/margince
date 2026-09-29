@@ -288,12 +288,26 @@
   grid-template-columns: 12rem minmax(0, 1fr) auto;
 }
 
-.ai-tier-who,
-.ai-tier-binding {
+.ai-tier-who {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
+}
+
+/* Two lines, always: the provider's mark and the model id, then the price
+ * under the id. The provider column has one width for every lane, so the ids
+ * start on one edge down the list. */
+.ai-tier-binding {
+  display: grid;
+  grid-template-columns: 11.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+
+.ai-tier-secondary {
+  grid-column: 2;
 }
 
 .ai-tier-name {
@@ -366,7 +380,7 @@
  * one edge, and the arrow under the mark of the step that hands over. */
 .ai-modelchain {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: 11.5rem minmax(0, 1fr);
   align-items: center;
   gap: var(--space-1) var(--space-3);
 }

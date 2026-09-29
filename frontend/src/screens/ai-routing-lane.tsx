@@ -20,7 +20,7 @@ import {
   type ModelLane,
   unreadablePrice,
 } from "./ai-models";
-import { ModelRef, TermChip } from "./ai-terms";
+import { TermChip } from "./ai-terms";
 
 // The Model tiers table: one row per lane the routing document binds — the
 // tiers, the embedder and the optional decision model — joined to the health
@@ -202,7 +202,7 @@ function TierLine({
               {secondary.filter(Boolean).join(" · ")}
             </ErrorLine>
           ) : (
-            <span className="t-caption">
+            <span className="t-caption ai-tier-secondary">
               {secondary.filter(Boolean).join(" · ")}
             </span>
           )}
@@ -224,8 +224,8 @@ function TierLine({
   );
 }
 
-// Which model the lane runs on, with the two marks that qualify the pairing:
-// no credential for the vendor, and where the decision model processes text.
+// Which model the lane runs on: the provider's mark and the model id on one
+// line, with a warning beside the id when the provider holds no credential.
 function BindingLine({
   binding,
   unkeyed,
@@ -238,15 +238,18 @@ function BindingLine({
     return <Badge>{t("aiRouting.notBound")}</Badge>;
   }
   return (
-    <span className="ai-tier-modelline">
-      <ModelRef provider={binding.provider} model={binding.model} />
-      {unkeyed?.has(binding.provider) && (
-        <>
-          {" "}
-          <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
-        </>
-      )}
-    </span>
+    <>
+      <TermChip term="provider">{binding.provider}</TermChip>
+      <span>
+        {binding.model}
+        {unkeyed?.has(binding.provider) && (
+          <>
+            {" "}
+            <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
+          </>
+        )}
+      </span>
+    </>
   );
 }
 
