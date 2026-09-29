@@ -278,7 +278,7 @@ function AddSourceDialog({
           );
         }}
       >
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h3" id={titleId}>
           {t("leadSources.newLabel")}
         </Heading>
         {create.isError && (

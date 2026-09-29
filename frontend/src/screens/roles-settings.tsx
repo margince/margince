@@ -192,7 +192,7 @@ function NewRoleAction({
             );
           }}
         >
-          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3" id={titleId}>
             {t("roles.newTitle")}
           </Heading>
           <Field label={t("roles.newFrom")} hint={t("roles.newFromHint")}>

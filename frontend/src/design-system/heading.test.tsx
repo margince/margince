@@ -38,6 +38,56 @@ function headingTokens(): string[] {
     .filter((name, index, all) => all.indexOf(name) === index);
 }
 
+// Split at top-level commas only, so `:where(.a, .b)` stays one selector.
+function selectorsIn(list: string): string[] {
+  const selectors: string[] = [];
+  let depth = 0;
+  let from = 0;
+  for (let i = 0; i < list.length; i++) {
+    if ("([".includes(list[i])) depth++;
+    else if (")]".includes(list[i])) depth--;
+    else if (list[i] === "," && depth === 0) {
+      selectors.push(list.slice(from, i));
+      from = i + 1;
+    }
+  }
+  selectors.push(list.slice(from));
+  return selectors.map((selector) => selector.trim()).filter(Boolean);
+}
+
+function whollyWhere(selector: string): boolean {
+  if (!selector.startsWith(":where(") || !selector.endsWith(")")) return false;
+  let depth = 0;
+  for (const char of selector.slice(":where(".length, -1)) {
+    if (char === "(") depth++;
+    if (char === ")") depth--;
+    if (depth < 0) return false;
+  }
+  return depth === 0;
+}
+
+type MarginDeclaration = { selector: string; value: string; line: number };
+
+function marginDeclarations(css: string): MarginDeclaration[] {
+  return rulesIn(css).flatMap((rule) =>
+    [
+      ...rule.body.matchAll(/(?:^|[;{])\s*margin[a-z-]*\s*:\s*([^;]+)/g),
+    ].flatMap(([, value]) =>
+      selectorsIn(rule.selector).map((selector) => ({
+        selector,
+        value: value.trim(),
+        line: rule.line,
+      })),
+    ),
+  );
+}
+
+function weightedMargins(css: string): string[] {
+  return marginDeclarations(css)
+    .filter(({ selector }) => !whollyWhere(selector))
+    .map(({ selector, line }) => `${selector} (heading.css:${line})`);
+}
+
 function elementOf(size: HeadingSize): string {
   const { container } = render(<Heading size={size}>Northwind</Heading>);
   const heading = container.querySelector(".heading");
@@ -109,16 +159,30 @@ describe("Heading", () => {
   // gap above it, and the parent already has one. Zero is allowed because zero
   // is how the UA's own heading margin is refused.
   it("declares no margin of its own but the reset", () => {
-    for (const rule of rulesIn(sheet)) {
-      for (const [, value] of rule.body.matchAll(
-        /(?:^|[;{])\s*margin[a-z-]*\s*:\s*([^;]+)/g,
-      )) {
-        expect(
-          value.trim(),
-          `${rule.selector} (heading.css:${rule.line})`,
-        ).toBe("0");
-      }
+    for (const { selector, value, line } of marginDeclarations(sheet)) {
+      expect(value, `${selector} (heading.css:${line})`).toBe("0");
     }
+  });
+
+  it("keeps the reset weightless, so a caller's class sets the margin", () => {
+    expect(
+      rulesIn(sheet).length,
+      "heading.css parsed to no rules",
+    ).toBeGreaterThan(0);
+    const weighted = weightedMargins(sheet);
+    expect(weighted, `not wrapped in :where(): ${weighted.join(", ")}`).toEqual(
+      [],
+    );
+  });
+
+  it("tells a weighted margin from a weightless one", () => {
+    expect(weightedMargins(".heading { margin: 0 }")).toEqual([
+      ".heading (heading.css:1)",
+    ]);
+    expect(
+      weightedMargins(":where(.heading, .lead), .heading-lead { margin: 0 }"),
+    ).toEqual([".heading-lead (heading.css:1)"]);
+    expect(weightedMargins(":where(.heading) { margin: 0 }")).toEqual([]);
   });
 
   it("reads each size's type straight from its token", () => {

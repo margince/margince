@@ -798,7 +798,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             if (dirty && !save.isPending) save.mutate(shown);
           }}
         >
-          <Heading size="large" className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3" id={titleId}>
             {t("settings.signature")}
           </Heading>
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />

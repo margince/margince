@@ -421,7 +421,7 @@ export function BulkChangeDialog({
 
   return (
     <Modal open={request !== null} onClose={close} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {words.title}
       </Heading>
       <div className="form-stack">{body}</div>

@@ -236,7 +236,7 @@ function EmploymentMatchModal({
   );
   return (
     <Modal open onClose={onClose} labelledBy={heading}>
-      <Heading size="large" id={heading} className="t-h2 dialog-heading">
+      <Heading size="large" id={heading} className="t-h2 modal-title">
         {t("employment.resolve")}
       </Heading>
       <div className="form-stack">

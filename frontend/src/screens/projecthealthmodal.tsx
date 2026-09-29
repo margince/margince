@@ -113,7 +113,7 @@ export function ProjectHealthModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <Heading size="large" id={headingId} className="t-h2 dialog-heading">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {correcting
           ? t("projectHealth.correctTitle")
           : t("projectHealth.recordTitle")}
