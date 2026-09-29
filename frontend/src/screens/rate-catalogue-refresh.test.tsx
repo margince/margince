@@ -87,7 +87,9 @@ describe("RefreshModelPrices", () => {
     expect(within(lines[1]).queryByText(/prices? written/)).toBeNull();
     expect(within(lines[2]).getByText("Unreachable")).toBeTruthy();
 
-    const request = fetchMock.mock.calls[0]?.[0];
+    const request = fetchMock.mock.calls
+      .map(([sent]) => sent)
+      .find((sent) => sent.method === "POST");
     expect(request?.method).toBe("POST");
     expect(new URL(request?.url ?? "").pathname).toBe(
       "/v1/ai-model-rates/refresh",

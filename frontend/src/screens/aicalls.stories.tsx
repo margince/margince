@@ -190,7 +190,7 @@ const openAttemptTrail: NonNullable<Story["play"]> = async ({
 }) => {
   const canvas = within(canvasElement);
   const disclosure = await canvas.findByRole("button", {
-    name: /Show the attempt trail for capture_classify/,
+    name: /Show attempts for capture_classify/,
   });
   await userEvent.click(disclosure);
   await canvas.findByText("Attempts");

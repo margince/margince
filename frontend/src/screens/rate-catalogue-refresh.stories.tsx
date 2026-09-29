@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { meFixture } from "../app/mefixture";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import { RefreshModelPrices } from "./rate-catalogue-refresh";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
