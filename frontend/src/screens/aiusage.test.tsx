@@ -406,11 +406,47 @@ it("shows the decision model's pass and fallback rates when a decision model is 
   if (!table) throw new Error("the decision summary is not a table");
   expect(within(table).getByText("25%")).toBeTruthy();
   expect(within(table).getByText("75%")).toBeTruthy();
+  // One reason per line, and the equal counts fall back to the reason key.
+  const reasons = within(table).getByText(
+    "Decision model below its confidence floor: 1",
+  );
   expect(
-    within(table).getByText(
-      /Decision model below its confidence floor: 1 · Decision model failed: 1 · Decision model not certified for this task: 1/,
+    Array.from(reasons.parentElement?.children ?? []).map(
+      (line) => line.textContent,
     ),
-  ).toBeTruthy();
+  ).toEqual([
+    "Decision model below its confidence floor: 1",
+    "Decision model failed: 1",
+    "Decision model not certified for this task: 1",
+  ]);
+  expect(within(table).queryByText(/ · /)).toBeNull();
+});
+
+it("orders fallback reasons largest first and says nothing when there are none", async () => {
+  mount(
+    {
+      ...decisionUsage,
+      decisions: [
+        {
+          task: "site_triage",
+          asked: 5,
+          decided: 0,
+          fallbacks: { decision_below_floor: 1, decision_error: 4 },
+        },
+        { task: "capture_classify", asked: 2, decided: 2, fallbacks: {} },
+      ],
+    },
+    200,
+    DECIDING_OPERATOR,
+    boundRouting,
+  );
+  const failed = await screen.findByText("Decision model failed: 4");
+  expect(failed.nextElementSibling?.textContent).toBe(
+    "Decision model below its confidence floor: 1",
+  );
+  const quiet = screen.getByText("capture_classify").closest("tr");
+  if (!quiet) throw new Error("the quiet task has no row");
+  expect(within(quiet).getAllByRole("cell").at(-1)?.textContent).toBe("—");
 });
 
 // Rows written while a decision model was bound outlive the binding; once it is

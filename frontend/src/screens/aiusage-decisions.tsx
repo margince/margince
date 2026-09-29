@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { EmptyState } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
 import { SettingRow } from "../design-system/settingrow";
 import { formatNumber, formatPercent } from "../format/format";
@@ -11,24 +13,28 @@ import { attemptReasonLabel } from "./ai-decision-labels";
 
 type DecisionSummary = components["schemas"]["AiDecisionSummary"];
 
-// A task's fallbacks as one line, largest first, each under the reason label
-// the call trace uses — so an operator reads the same words on both screens.
-function fallbackLine(
+// A task's fallbacks one reason per line, largest first, each under the reason
+// label the call trace uses — so an operator reads the same words on both
+// screens.
+function fallbackLines(
   fallbacks: DecisionSummary["fallbacks"],
   locale: Locale,
   t: ReturnType<typeof useT>,
-): string {
+): ReactNode {
   // Ties break on the reason KEY, a machine word, so no locale orders them.
   const entries = Object.entries(fallbacks).sort(
     ([a, left], [b, right]) => right - left || (a < b ? -1 : a > b ? 1 : 0),
   );
   if (entries.length === 0) return "—";
-  return entries
-    .map(
-      ([reason, calls]) =>
-        `${attemptReasonLabel(reason, t)}: ${formatNumber(calls, locale)}`,
-    )
-    .join(" · ");
+  return (
+    <CellStack>
+      {entries.map(([reason, calls]) => (
+        <span key={reason}>
+          {attemptReasonLabel(reason, t)}: {formatNumber(calls, locale)}
+        </span>
+      ))}
+    </CellStack>
+  );
 }
 
 function fallbackCount(fallbacks: DecisionSummary["fallbacks"]): number {
@@ -80,7 +86,7 @@ export function DecisionSummaryRow({
     {
       key: "reasons",
       header: t("aiusage.decisions.col.reasons"),
-      render: (r: DecisionSummary) => fallbackLine(r.fallbacks, locale, t),
+      render: (r: DecisionSummary) => fallbackLines(r.fallbacks, locale, t),
     },
   ];
   return (

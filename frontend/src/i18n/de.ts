@@ -245,7 +245,6 @@ export const de = {
   "aiAdmin.impact.fallback": "Ausweichkette geändert",
   "aiAdmin.impact.unconfigured": "Kein Modell konfiguriert",
   "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus weiter",
-  "aiAdmin.impact.same": "Gleiche Modellauswahl",
   "aiAdmin.activity": "Tätigkeit",
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.cloud": "Cloud-Anbieter",
@@ -258,7 +257,6 @@ export const de = {
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
   "aiAdmin.decisionSkip.local_only":
     "Entscheidungsmodell nicht genutzt: diese Aktivität nimmt nur einen lokalen Entscheidungsanbieter.",
-  "aiAdmin.effect": "Auswirkung",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -8876,6 +8874,7 @@ export const de = {
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile beginnt mit dem Modell, auf dem sie gerade läuft.",
+  "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "workingHours.title": "Buchbare Zeiten",
   "workingHours.sub":
     "Persönliche Einstellung. Nur du legst deine Zeiten fest.",

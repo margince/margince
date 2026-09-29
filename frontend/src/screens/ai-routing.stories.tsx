@@ -90,6 +90,7 @@ const VENDOR_LIST: Record<string, unknown> = {
   },
   ollama: { provider: "ollama", models: [{ id: "gemma3:latest" }] },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
+  vllm: { provider: "vllm", models: [], unavailable: "unreachable" },
 };
 
 function story(
@@ -211,6 +212,29 @@ export const EditingATier: Story = {
     await userEvent.click(
       (await canvas.findAllByRole("button", { name: /^edit$/i }))[0],
     );
+  },
+};
+
+// The provider list of an editor on this installation: the keyed vendor with a
+// key and the keyless one that answers are offered; the vendor without a key,
+// the adapter nothing listens for and fake are not.
+export const ProvidersOffered: Story = {
+  render: story(BOUND),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      (await canvas.findAllByRole("button", { name: /^edit$/i }))[0],
+    );
+    const dialog = within(await canvas.findByRole("dialog"));
+    await userEvent.click(
+      await dialog.findByRole("combobox", { name: "Provider" }),
+    );
+    const offered = (await within(document.body).findAllByRole("option")).map(
+      (option) => option.textContent,
+    );
+    if (!offered.includes("ollama") || offered.includes("vllm")) {
+      throw new Error(`unexpected providers: ${offered.join(", ")}`);
+    }
   },
 };
 
