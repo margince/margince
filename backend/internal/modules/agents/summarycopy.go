@@ -32,7 +32,7 @@ type summaryCopy struct {
 	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem, retireCustomField,
 	customFieldOptions, setStakeholder, removeStakeholder, setCompany, removeCompany,
 	confirmFact, updateFact, createFact, deleteFact, confirmProfileField, updateProfileField,
-	mergeTags string
+	mergeTags, changeList string
 
 	// Lifecycle moves. A deal's target and source are stage semantics and pass
 	// through.
@@ -78,6 +78,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		ownDomain:           "its own domain",
 		onDeal:              "%s on deal %s",
 		applyTag:            "Apply tag %s",
+		changeList:          "Change list %s",
 		addLineItem:         "Add a line item to offer %s",
 		updateLineItem:      "Update line item %s on offer %s",
 		removeLineItem:      "Remove line item %s from offer %s",
@@ -153,6 +154,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		ownDomain:           "seiner eigenen Domain",
 		onDeal:              "%s (Deal %s)",
 		applyTag:            "Schlagwort %s anwenden",
+		changeList:          "Liste %s ändern",
 		addLineItem:         "Position zum Angebot %s hinzufügen",
 		updateLineItem:      "Position %s im Angebot %s ändern",
 		removeLineItem:      "Position %s aus dem Angebot %s entfernen",
@@ -228,6 +230,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		ownDomain:           "tên miền của chính công ty",
 		onDeal:              "%s (deal %s)",
 		applyTag:            "Gắn thẻ %s",
+		changeList:          "Thay đổi danh sách %s",
 		addLineItem:         "Thêm một dòng mục vào báo giá %s",
 		updateLineItem:      "Cập nhật dòng mục %s trong báo giá %s",
 		removeLineItem:      "Xóa dòng mục %s khỏi báo giá %s",

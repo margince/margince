@@ -67,7 +67,7 @@ func seedSurroundedContacts(t *testing.T, e *integration.Env, n int) []surrounde
 		if _, err := lists.ApplyTag(ctx, tag.ID, "contact", id); err != nil {
 			t.Fatalf("tagging contact %d: %v", i, err)
 		}
-		if _, err := lists.AddMember(ctx, list.ID, "contact", id); err != nil {
+		if _, err := lists.AddMember(ctx, list.ID, collections.MemberChange{EntityType: "contact", EntityID: id, Reason: collections.ReasonChosen}); err != nil {
 			t.Fatalf("listing contact %d: %v", i, err)
 		}
 		contactID, companyID := ids.From[ids.ContactKind](id), ids.From[ids.CompanyKind](employer)

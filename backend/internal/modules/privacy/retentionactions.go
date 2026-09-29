@@ -317,6 +317,9 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 		err = deleteSubjectHandoffs(ctx, tx, id)
 	}
 	if err == nil {
+		err = deleteSubjectListMemberships(ctx, tx, id)
+	}
+	if err == nil {
 		err = purgeSubjectPurchases(ctx, tx, id)
 	}
 	if err == nil {

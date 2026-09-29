@@ -132,6 +132,15 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"createSavedView":           createCommand,
 	"createWebhookSubscription": createCommand,
 
+	// The six list-changing routes share one decoder: each binds its approval
+	// to the list it changes, and create to none (listseam.go).
+	opCreateList:       listChangeCommand,
+	"updateList":       listChangeCommand,
+	"archiveList":      listChangeCommand,
+	"restoreList":      listChangeCommand,
+	"addListMember":    listChangeCommand,
+	"removeListMember": listChangeCommand,
+
 	opRenameCustomField:         patchCommand,
 	"updateActivity":            patchCommand,
 	"updateOfferTemplate":       patchCommand,

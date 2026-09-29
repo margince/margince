@@ -75,6 +75,12 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		in.Priority = &priority
 	}
 	in.AcquisitionSource = params.AcquisitionSource
+	if params.ListId != nil {
+		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
+	}
 
 	deals, page, err := h.store.ListDeals(r.Context(), in)
 	if err != nil {

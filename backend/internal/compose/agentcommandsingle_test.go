@@ -95,6 +95,10 @@ var contractBodies = map[string]string{
 	"approveApprovalBundle": `{"reason":"all six corrections check out"}`,
 	"rejectApprovalBundle":  `{"reason":"the run misread the thread"}`,
 
+	// A Shortlist membership change names the record it adds or removes.
+	"addListMember":    `{"entity_type":"contact","entity_id":"019ff000-0000-7000-8000-000000000041"}`,
+	"removeListMember": `{"entity_type":"contact","entity_id":"019ff000-0000-7000-8000-000000000041"}`,
+
 	// The operand family's own bodies, on the same rule: every required member
 	// crm.yaml declares, and nothing else.
 	"setProjectStakeholder":     `{"contact_id":"019ff000-0000-7000-8000-000000000031","role":"champion"}`,

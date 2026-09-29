@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 78 |
+| Tools | 80 |
 | Resources | 11 |
-| Tool catalog | 228.4 KB |
+| Tool catalog | 235.0 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 59507 |
+| Approx. wire tokens | 61213 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 104.4 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 58.6 KB | 25% | Yes, every step |
-| Input schemas | 49.0 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.4 KB | 7% | Partly |
-| **Description + input schema** | **107.6 KB** | **47%** | **the recurring cost** |
+| Output schemas | 106.1 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 60.0 KB | 25% | Yes, every step |
+| Input schemas | 52.2 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.7 KB | 7% | Partly |
+| **Description + input schema** | **112.2 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -59,7 +59,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/handoff.html`](#handoff_view) — Delivery handoff
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 
-### Tools (78)
+### Tools (80)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -72,6 +72,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 4.4 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
+| [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
@@ -120,6 +121,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/company-brief.html`](#company_brief_view) | 3.2 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
+| [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.1 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
@@ -2014,6 +2016,274 @@ Answer "what has been going on with this?" for one contact, company, deal, lead,
       "required": [
         "anchor",
         "sections"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### change_lists
+
+**Make and change lists**
+
+Make a Live List from a filter or a Shortlist of chosen records, change its name, purpose, filter, sharing or steward, archive or restore it, and add or remove one Shortlist member with a note on why. Only the steward of a list or a list admin may change it. A change must carry the version you read; a list changed since is refused. An archived list is read-only. A Live List's members follow its filter and cannot be added or removed by hand. Preview a filter with read_lists before saving it. bulk_update_records adds or removes many records at once, with a confirmation. Keep the list id and its new version from the answer. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "definition": {
+      "description": "A Live List's filter tree",
+      "properties": {
+        "and": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "field": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "neq",
+            "gt",
+            "lt",
+            "gte",
+            "lte",
+            "in",
+            "contains",
+            "exists"
+          ],
+          "type": "string"
+        },
+        "or": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+        }
+      },
+      "type": "object"
+    },
+    "entity_type": {
+      "description": "For create, and the record type of record_id",
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "list_id": {
+      "description": "The list, for every mode but create",
+      "format": "uuid",
+      "type": "string"
+    },
+    "list_type": {
+      "description": "For create: static is a Shortlist, dynamic a Live List",
+      "enum": [
+        "static",
+        "dynamic"
+      ],
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "create",
+        "update",
+        "archive",
+        "restore",
+        "add_member",
+        "remove_member"
+      ],
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "note": {
+      "description": "For add_member and remove_member: why",
+      "maxLength": 500,
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "record_id": {
+      "description": "For add_member and remove_member",
+      "format": "uuid",
+      "type": "string"
+    },
+    "sharing": {
+      "enum": [
+        "private",
+        "team",
+        "workspace"
+      ],
+      "type": "string"
+    },
+    "steward_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "team_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "version": {
+      "description": "For update: the version you read",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "mode",
+        "result"
       ],
       "type": "object"
     },
@@ -11302,6 +11572,243 @@ Where one import got to: awaiting approval, running, done, or stopped. A stopped
         "object",
         "run_id",
         "state"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### read_lists
+
+**Find and read lists**
+
+Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it, or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. A preview is logged as a read of those records. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "cursor": {
+      "description": "For members and history: the next_cursor a page answered",
+      "type": "string"
+    },
+    "definition": {
+      "description": "For preview: a filter tree, as a Live List stores it",
+      "properties": {
+        "and": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "field": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "neq",
+            "gt",
+            "lt",
+            "gte",
+            "lte",
+            "in",
+            "contains",
+            "exists"
+          ],
+          "type": "string"
+        },
+        "or": {
+          "items": {
+            "properties": {
+              "and": {
+                "type": "array"
+              },
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string"
+              },
+              "or": {
+                "type": "array"
+              },
+              "value": {}
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+        }
+      },
+      "type": "object"
+    },
+    "entity_type": {
+      "description": "For find (optional) and preview (required)",
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "limit": {
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "list_id": {
+      "description": "The list, for get, members, why and history",
+      "format": "uuid",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "find",
+        "get",
+        "members",
+        "why",
+        "history",
+        "preview"
+      ],
+      "type": "string"
+    },
+    "query": {
+      "description": "For find: matches name or purpose",
+      "type": "string"
+    },
+    "record_id": {
+      "description": "For why: the record to explain",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "mode",
+        "result"
       ],
       "type": "object"
     },

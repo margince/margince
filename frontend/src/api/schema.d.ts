@@ -6697,6 +6697,181 @@ export interface paths {
         patch: operations["updateRelationship"];
         trace?: never;
     };
+    "/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find the lists this caller may see, by name.
+         * @description A list is found by its sharing: every seat finds a workspace list, the members of its team
+         *     (or of its owner's teams) find a team list, and only its owner and steward find a private
+         *     one. `visible_count` is how many members THIS caller may see, never the list's whole size.
+         */
+        get: operations["listLists"];
+        put?: never;
+        /**
+         * Make a Live List (a saved filter) or a Shortlist (chosen records).
+         * @description A Live List stores the filter tree it was previewed with, validated against the record
+         *     type's filter vocabulary; a Shortlist stores none. Sharing defaults to `team` and the
+         *     steward to the caller.
+         */
+        post: operations["createList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read one list, with the count of its members this caller may see. */
+        get: operations["getList"];
+        put?: never;
+        post?: never;
+        /** Archive a list. Its members and history stay, read-only. */
+        delete: operations["archiveList"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a list's name, purpose, filter, sharing, team or steward.
+         * @description Needs list authority: the list's steward, or a seat with the list update grant that reads
+         *     every row. `version` must be the one the caller read; a list changed since answers `409`.
+         *     An archived list is read-only (`409`). Every change is recorded as a revision.
+         */
+        patch: operations["updateList"];
+        trace?: never;
+    };
+    "/lists/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bring an archived list back. */
+        post: operations["restoreList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Page through the members of a list this caller may see.
+         * @description A Shortlist's chosen members, with who added each, when and why; or a Live List's filter
+         *     evaluated now, completely, in pages. Both are row-scoped: a member record this caller
+         *     cannot see is absent, and nothing says it was there. For member rows with their record's
+         *     own columns, read the record list (`listContacts`, `listCompanies`, `listDeals`,
+         *     `listLeads`) with `list_id`.
+         */
+        get: operations["listListMembers"];
+        put?: never;
+        /** Add one record to a Shortlist, with an optional note on why. */
+        post: operations["addListMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/members/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take one record off a Shortlist, with an optional note on why. */
+        post: operations["removeListMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/members/{recordId}/why": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Say why a record is, or is not, on a list.
+         * @description For a Live List: every clause of the filter with its verdict for this record and the
+         *     record's current value, evaluated by the same SQL that decides membership. A value this
+         *     caller may not read (a masked field, a fact on a linked record) is `hidden`. For a
+         *     Shortlist: who added the record, when, and the note they left. A record this caller cannot
+         *     see answers `404`, whether or not it is a member.
+         */
+        get: operations["explainListMember"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lists/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read what changed on a list, newest first.
+         * @description Every change of the list's definition, and every Shortlist membership change of a record
+         *     this caller can see now. A change about a record they cannot see is absent.
+         */
+        get: operations["listListHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/filters/vocabulary": {
         parameters: {
             query?: never;
@@ -22410,7 +22585,7 @@ export interface components {
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts")[];
+            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts")[];
             contacts?: {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
@@ -22427,6 +22602,8 @@ export interface components {
             strength?: components["schemas"]["CompanyStrength"];
             activities?: components["schemas"]["ActivityListResponse"];
             tags?: components["schemas"]["Tag"][];
+            /** @description The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on. */
+            list_memberships?: components["schemas"]["List"][];
             pending_approvals?: {
                 data: components["schemas"]["Approval"][];
                 page: components["schemas"]["PageInfo"];
@@ -29196,11 +29373,13 @@ export interface components {
                 contact_ids: string[];
             };
         };
-        /** @description A static membership set or a dynamic segment. Mirrors the `list` table. */
+        /** @description A Live List (list_type dynamic: its members are its filter's current result) or a Shortlist (static: members chosen by hand). Mirrors the `list` table. */
         List: {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @description What the list is for, in the words of its steward. */
+            purpose?: string | null;
             /** @enum {string} */
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /**
@@ -29208,20 +29387,56 @@ export interface components {
              * @enum {string}
              */
             list_type: "static" | "dynamic";
-            /** @description Dynamic — validated query plan; static — null. */
+            /** @description A Live List's filter tree; null for a Shortlist. */
             definition?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * @description Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
+             * @enum {string}
+             */
+            sharing: "private" | "team" | "workspace";
             /** Format: uuid */
             owner_id?: string | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The team a team list is shared with; null shares it with the teams of its owner.
+             */
             team_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Who looks after the list and may change it.
+             */
+            steward_id?: string | null;
+            steward_name?: string | null;
+            /** Format: int64 */
+            version: number;
+            /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size. */
+            visible_count?: number | null;
+            /**
+             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+             * @enum {string}
+             */
+            health: "ok" | "ownerless" | "invalid";
+            /** @description Whether this caller holds list authority over the list. */
+            can_edit: boolean;
+            /** @description What uses this list. Exports are listed as usage and block nothing. */
+            dependencies?: components["schemas"]["ListDependency"][];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        ListDependency: {
+            /** @enum {string} */
+            kind: "export";
+            /** Format: date-time */
+            occurred_at: string;
+            actor?: string | null;
+            /** @description Whether it refuses a breaking change or archive of the list. */
+            blocking: boolean;
         };
         ListMember: {
             /** Format: uuid */
@@ -29232,9 +29447,132 @@ export interface components {
             entity_type: "contact" | "company" | "deal" | "lead" | "project";
             /** Format: uuid */
             entity_id: string;
+            /** @description The principal that added a Shortlist member; `dynamic` for a Live List member. */
             added_by?: string;
             /** Format: date-time */
             created_at?: string;
+            note?: string | null;
+        };
+        CreateListRequest: {
+            name: string;
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            /**
+             * @default static
+             * @enum {string}
+             */
+            list_type: "static" | "dynamic";
+            definition?: {
+                [key: string]: unknown;
+            } | null;
+            purpose?: string | null;
+            /**
+             * @default team
+             * @enum {string}
+             */
+            sharing: "private" | "team" | "workspace";
+            /** Format: uuid */
+            team_id?: string | null;
+            /** Format: uuid */
+            steward_id?: string | null;
+        };
+        UpdateListRequest: {
+            /**
+             * Format: int64
+             * @description The version the caller read.
+             */
+            version: number;
+            name?: string;
+            /** @description Null removes the purpose. */
+            purpose?: string | null;
+            /** @description A Live List's new filter tree. */
+            definition?: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            sharing?: "private" | "team" | "workspace";
+            /**
+             * Format: uuid
+             * @description Null shares a team list with the teams of its owner.
+             */
+            team_id?: string | null;
+            /** Format: uuid */
+            steward_id?: string;
+        };
+        ListMemberChangeRequest: {
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            /** Format: uuid */
+            entity_id: string;
+            /** @description Why, in the words of whoever made the change. */
+            note?: string | null;
+        };
+        ListListResponse: {
+            data: components["schemas"]["List"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        ListMemberListResponse: {
+            data: components["schemas"]["ListMember"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        /** @description One node of a Live List's filter judged for one record: a group (`join`, `children`) or a clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the filter treats as not selected. */
+        ListClauseVerdict: {
+            /** @enum {string} */
+            join?: "and" | "or";
+            children?: components["schemas"]["ListClauseVerdict"][];
+            field?: string;
+            op?: string;
+            /** @description The clause's value as the filter states it. */
+            operand?: unknown;
+            result: boolean | null;
+            /** @description The record's current value of the field, as text. */
+            value?: string | null;
+            /** @description The value is not shown to this caller. */
+            hidden?: boolean;
+        };
+        ListMemberExplanation: {
+            /** Format: uuid */
+            list_id: string;
+            /** Format: uuid */
+            entity_id: string;
+            /** @enum {string} */
+            list_type: "static" | "dynamic";
+            member: boolean;
+            /** @description For a Live List, whether the record is live and eligible at all, before any clause. */
+            eligible?: boolean;
+            clauses?: components["schemas"]["ListClauseVerdict"];
+            added_by?: string | null;
+            added_by_name?: string | null;
+            /** Format: date-time */
+            added_at?: string | null;
+            note?: string | null;
+        };
+        ListHistoryEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "member_added" | "member_removed" | "revised";
+            /** Format: date-time */
+            occurred_at: string;
+            actor: string;
+            actor_name?: string | null;
+            entity_type?: string | null;
+            /** Format: uuid */
+            entity_id?: string | null;
+            /** @enum {string|null} */
+            reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | null;
+            note?: string | null;
+            /** Format: int64 */
+            version?: number | null;
+            name?: string | null;
+            definition?: {
+                [key: string]: unknown;
+            } | null;
+            sharing?: string | null;
+        };
+        ListHistoryResponse: {
+            data: components["schemas"]["ListHistoryEntry"][];
+            page: components["schemas"]["PageInfo"];
         };
         /** @description A candidate filter to evaluate without saving it. */
         FilterPreviewRequest: {
@@ -29592,10 +29930,10 @@ export interface components {
             data: components["schemas"]["SavedView"][];
             page: components["schemas"]["PageInfo"];
         };
-        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`) or a `view_id` (a saved view whose filter state is exported). The slice is always row-scoped to the caller through the one filter engine. */
+        /** @description A filtered export request. Supply exactly ONE source: an inline `object` (with a required `filter`), a `view_id` (a saved view whose filter state is exported) or a `list_id` (a Live List whose filter is exported). The slice is always row-scoped to the caller through the one filter engine. */
         FilteredExportRequest: {
             /**
-             * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id.
+             * @description The object type to filter-export; requires `filter`. Mutually exclusive with view_id/list_id.
              * @enum {string}
              */
             object?: "contact" | "company" | "deal" | "lead" | "project";
@@ -29605,9 +29943,14 @@ export interface components {
             };
             /**
              * Format: uuid
-             * @description Export the filter state of one of the caller's saved views. Mutually exclusive with object.
+             * @description Export the filter state of one of the caller's saved views. Mutually exclusive with object/list_id.
              */
             view_id?: string;
+            /**
+             * Format: uuid
+             * @description Export the members of a Live List the caller may find, as its filter selects them now. Mutually exclusive with object/view_id.
+             */
+            list_id?: string;
             /** @enum {string} */
             format: "csv" | "json";
         };
@@ -30766,6 +31109,8 @@ export interface components {
         SettingsAvailability: {
             /** @description True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it. */
             company_context: boolean;
+            /** @description True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
+            lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */
             embedding_reindex: boolean;
         };
@@ -39131,6 +39476,14 @@ export interface components {
          *     `422 code: sort_field_not_allowed`.
          */
         Sort: string;
+        /**
+         * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+         *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+         *     in the record list's own columns. The list must be one the caller may find and of this
+         *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+         *     the caller's row scope still applies to every row.
+         */
+        ListMembershipFilter: string;
         /** @description Include soft-deleted (archived) rows. Default false. */
         IncludeArchived: boolean;
         /**
@@ -39913,6 +40266,14 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -41469,6 +41830,14 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -43543,6 +43912,14 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
@@ -48879,6 +49256,14 @@ export interface operations {
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
                 /**
+                 * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
+                 *     filter selects now — narrowed before sorting and paging, so the page is the list's members
+                 *     in the record list's own columns. The list must be one the caller may find and of this
+                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
+                 *     the caller's row scope still applies to every row.
+                 */
+                list_id?: components["parameters"]["ListMembershipFilter"];
+                /**
                  * @description Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
                  *     `created_at`/`id` tie-breaker is always appended so ordering is total and the keyset
                  *     cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
@@ -50432,6 +50817,345 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLists: {
+        parameters: {
+            query?: {
+                entity_type?: "contact" | "company" | "deal" | "lead" | "project";
+                list_type?: "static" | "dynamic";
+                /** @description Matches the name or purpose, case-insensitively. */
+                q?: string;
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lists, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateListRequest"];
+            };
+        };
+        responses: {
+            /** @description Created list. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    archiveList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateListRequest"];
+            };
+        };
+        responses: {
+            /** @description The changed list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["List"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listListMembers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMemberListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    addListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListMemberChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Added member. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMember"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListMemberChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainListMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The explanation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMemberExplanation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listListHistory: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListHistoryResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

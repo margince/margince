@@ -38,7 +38,7 @@ func taggedAndListed(t *testing.T, e *integration.Env, entityType string, id ids
 	if _, err := store.ApplyTag(e.Admin(), created.ID, entityType, id); err != nil {
 		t.Fatalf("tagging %s: %v", id, err)
 	}
-	if _, err := store.AddMember(e.Admin(), listed.ID, entityType, id); err != nil {
+	if _, err := store.AddMember(e.Admin(), listed.ID, collections.MemberChange{EntityType: entityType, EntityID: id, Reason: collections.ReasonChosen}); err != nil {
 		t.Fatalf("listing %s: %v", id, err)
 	}
 	return created.ID.UUID, listed.ID.UUID

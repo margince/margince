@@ -169,7 +169,7 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 // an error, never an injection.
 var ownerScopedTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
-	"list": true, "saved_view": true, "automation": true, "voice_profile": true,
+	tableList: true, "saved_view": true, "automation": true, "voice_profile": true,
 }
 
 // VisiblePredicate is the FULL row-visibility test for one table, in
@@ -201,6 +201,9 @@ const (
 func predicateFor(p principal.Principal, table string, arg func(any) int,
 	capture capturePrivacy, class readClass, share shareLevel,
 ) func(alias string) string {
+	if table == tableList {
+		return listSharingPredicate(p, arg)
+	}
 	// Customer identity is workspace-readable (tableclass.go): the own/team
 	// arm is TRUE for every principal, and only capture privacy and a grant
 	// can still say anything about the row. The owner predicate is not even

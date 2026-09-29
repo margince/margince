@@ -32,6 +32,7 @@ var summaryVerbs = map[string][]string{
 	"ownDomain":           nil,
 	"onDeal":              {"%s", "%s"},
 	"applyTag":            {"%s"},
+	"changeList":          {"%s"},
 	"addLineItem":         {"%s"},
 	"updateLineItem":      {"%s", "%s"},
 	"removeLineItem":      {"%s", "%s"},

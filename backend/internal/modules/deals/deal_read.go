@@ -116,6 +116,8 @@ type ListDealsInput struct {
 	// CustomFilters carries the request's cf_* query parameters —
 	// equality matches against active custom columns (storekit listquery).
 	CustomFilters map[string]string
+	// Membership narrows to one list's members (list_id).
+	Membership storekit.ListMemberFilter
 }
 
 // dealNameColumn is the deal's display-name column and the quick-find
@@ -278,6 +280,13 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	}
 	if clause := storekit.TagFilterClause(ctx, dealTaggableType, "deal.id", in.TagIDs, in.TagMode, arg); clause != "" {
 		where = append(where, clause)
+	}
+	if in.Membership != nil {
+		member, err := in.Membership("deal.id", arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, member)
 	}
 	for _, ref := range []struct {
 		column, table string
