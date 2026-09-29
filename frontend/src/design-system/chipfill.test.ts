@@ -127,6 +127,36 @@ describe("the chip fill's call sites", () => {
     ]);
   });
 
+  it("lets a rule override an ink only where it lands on that element", () => {
+    const chip = {
+      file: "probe.css",
+      selector: ".tok",
+      body: "background: var(--bgChip);",
+    };
+    const drawn = {
+      file: "probe.css",
+      selector: ".tok-x",
+      body: "color: var(--textSecondary);",
+    };
+    const within = new Map([["tok", [new Set(["tok-x"])]]]);
+    const overrides = (selector: string) =>
+      overriddenInside(
+        [
+          chip,
+          drawn,
+          { file: "probe.css", selector, body: "color: var(--textPrimary);" },
+        ],
+        chip,
+        drawn,
+        within,
+      );
+    expect(overrides(".tok :is(.q, .r)")).toBe(false);
+    expect(overrides(".tok :is(.tok-x, .r)")).toBe(true);
+    expect(overrides(".tok .q")).toBe(false);
+    expect(overrides(".tok span")).toBe(false);
+    expect(overrides(".tok *")).toBe(true);
+  });
+
   it("draws on --bgChip only in inks the contrast gate measures", () => {
     const chips = allRules.filter(({ body }) =>
       /background(?:-color)?:[^;]*var\(--bgChip\)/.test(body),

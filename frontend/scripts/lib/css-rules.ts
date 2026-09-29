@@ -227,6 +227,7 @@ export function alternativesOf(selector: string): string[] {
       inner.compounds.at(-1) ?? "",
       split.after,
     );
+    if (subject === undefined) return [];
     return alternativesOf(
       joined({
         compounds: [
@@ -273,13 +274,19 @@ function alternation(compound: string): Alternation | undefined {
 
 const TYPE = /^(?:[a-zA-Z][\w-]*|\*)/;
 
-// A type selector has to lead its compound, whichever side wrote it.
+// A type selector has to lead its compound, whichever side wrote it; two
+// different ones match no element at all.
 function mergedCompound(
   before: string,
   subject: string,
   after: string,
-): string {
-  const type = TYPE.exec(before)?.[0] ?? TYPE.exec(subject)?.[0] ?? "";
+): string | undefined {
+  const types = [TYPE.exec(before)?.[0], TYPE.exec(subject)?.[0]];
+  const named = types.filter(
+    (one): one is string => one !== undefined && one !== "*",
+  );
+  if (new Set(named.map((one) => one.toLowerCase())).size > 1) return undefined;
+  const type = named[0] ?? types.find((one) => one !== undefined) ?? "";
   return type + before.replace(TYPE, "") + subject.replace(TYPE, "") + after;
 }
 

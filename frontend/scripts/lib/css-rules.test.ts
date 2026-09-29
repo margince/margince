@@ -125,6 +125,12 @@ describe("the alternatives of a selector", () => {
     expect(alternativesOf(".x:is(span, .y)")).toEqual(["span.x", ".x.y"]);
   });
 
+  it("drops an alternative whose element type contradicts the compound's", () => {
+    expect(alternativesOf("div:is(a, .b)")).toEqual(["div.b"]);
+    expect(alternativesOf("DIV:is(div, .b)")).toEqual(["DIV", "DIV.b"]);
+    expect(alternativesOf("*:is(a, .b)")).toEqual(["a", "*.b"]);
+  });
+
   it("leaves an alternation that names another element alone", () => {
     expect(alternativesOf(".a:not(:is(.b, .c)) .d")).toEqual([
       ".a:not(:is(.b, .c)) .d",

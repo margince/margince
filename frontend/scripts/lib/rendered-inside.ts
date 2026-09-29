@@ -11,6 +11,7 @@ import {
   inks,
   type Rule,
   subjectClasses,
+  subjectOf,
 } from "./css-rules";
 import { parseSource } from "./source-tree";
 
@@ -188,14 +189,27 @@ export function overriddenInside(
   return all.some((other) => {
     if (other === rule || other === chip) return false;
     if (inks(other.body).length === 0) return false;
-    const parts = compounds(other.selector);
-    const ancestors = parts
-      .slice(0, -1)
-      .flatMap((part) => [...classesOf(part)]);
-    if (![...host].every((name) => ancestors.includes(name))) return false;
-    const subject = subjectClasses(other.selector);
-    return painted.some((element) =>
-      [...subject].every((name) => element.has(name)),
+    return alternativesOf(other.selector).some((selector) =>
+      alternativeOverrides(selector, host, painted),
     );
   });
+}
+
+// A subject naming no class paints every element only when it is `*`.
+function alternativeOverrides(
+  selector: string,
+  host: Set<string>,
+  painted: readonly Set<string>[],
+): boolean {
+  const ancestors = compounds(selector)
+    .slice(0, -1)
+    .flatMap((part) => [...classesOf(part)]);
+  if (![...host].every((name) => ancestors.includes(name))) return false;
+  const subject = subjectClasses(selector);
+  if (subject.size === 0 && !/^\*(?![\w-])/.test(subjectOf(selector))) {
+    return false;
+  }
+  return painted.some((element) =>
+    [...subject].every((name) => element.has(name)),
+  );
 }
