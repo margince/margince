@@ -307,6 +307,65 @@ describe("a human's verdict on a machine's claim", () => {
     );
   });
 
+  it("shows a refused correction as the field's own error, keeping the draft", async () => {
+    const user = userEvent.setup();
+    refuseWith(409, {
+      type: "https://errors.gradion.com/version_skew",
+      title: "Conflict",
+      status: 409,
+      code: "version_skew",
+      detail: "version skew",
+    });
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, field)}
+        canEdit
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Correct" }));
+    const input = screen.getByRole("textbox", { name: "Corrected value" });
+    await user.clear(input);
+    await user.type(input, "Automotive");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const refusal = await screen.findByRole("alert");
+    expect(refusal.tagName).toBe("P");
+    expect(refusal.className).toBe("field-error");
+    expect(refusal.parentElement?.contains(input)).toBe(true);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-describedby")).toBe(refusal.id);
+    expect(screen.getByDisplayValue("Automotive")).toBe(input);
+  });
+
+  it("does not carry an abandoned correction's refusal into the next one", async () => {
+    const user = userEvent.setup();
+    refuseWith(409, {
+      type: "https://errors.gradion.com/version_skew",
+      title: "Conflict",
+      status: 409,
+      code: "version_skew",
+      detail: "version skew",
+    });
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, field)}
+        canEdit
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Correct" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Correct" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("offers no verdict to a reader who cannot update the company", () => {
     wrap(
       <EvidenceVerdict

@@ -1539,8 +1539,9 @@ span.error-line {
   justify-content: space-between;
   gap: var(--space-2);
 }
-/* A refusal is not a caption. It reads in the danger tone at the caption's
-   size, under the control it belongs to and above the rule that still applies. */
+/* A refusal is not a caption. The rule sets the danger ink and nothing else, so
+   the line takes the type of the field around it, under the control it belongs
+   to and above the rule that still applies. */
 .field-error {
   color: var(--dangerText);
 }

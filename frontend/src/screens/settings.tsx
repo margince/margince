@@ -895,12 +895,6 @@ function AppearanceSettingRow() {
 /**
  * The name colleagues see you by.
  *
- * It was written once — by the invite, or by the installation's cold start —
- * and until now nothing could change it. `display_name` had exactly two
- * writers in the backend, both INSERTs, so somebody invited as "j.smith", or
- * married, or simply typed wrong, carried that name beside every record they
- * touched with no way to correct it.
- *
  * The saved answer is read back from `/me` rather than kept here, so the shell's
  * account chip and the roster agree with this row the moment it lands.
  */
@@ -944,22 +938,33 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       label={t("settings.displayName")}
       description={t("settings.displayNameHelp")}
       layout="stack"
-      control={(control) => (
-        // The catalogued pairing for an input that commits: the field and the
-        // verb stacked at the row's own measure, the same shape the pipeline
-        // rows use.
+      control={(row) => (
+        // The catalogued pairing for an input that commits: field and verb
+        // stacked at the row's own measure, as the pipeline rows are.
         <div className="form-stack settingrow-measure">
-          {/* Beside this control, because the server's 422 names it. */}
-          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-          <TextInput
-            {...control}
-            value={shown}
-            // No native `maxLength`: it counts UTF-16 code units, so a name of
-            // emoji or other supplementary characters would be cut at about
-            // half the 255 CHARACTERS the contract and the server admit. The
-            // bound is checked below in runes, the same way the server counts.
-            onChange={(event) => setDraft(event.target.value)}
-          />
+          <Field
+            label={t("settings.displayName")}
+            labelHidden
+            error={save.error ? problemMessageOf(save.error, t) : undefined}
+          >
+            {(field) => (
+              <TextInput
+                {...field}
+                aria-labelledby={row["aria-labelledby"]}
+                aria-describedby={[
+                  field["aria-describedby"],
+                  row["aria-describedby"],
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                value={shown}
+                // No native `maxLength`: it counts UTF-16 units and would cut a
+                // name of emoji at about half the 255 CHARACTERS the contract
+                // admits. The bound is checked below in runes, as the server does.
+                onChange={(event) => setDraft(event.target.value)}
+              />
+            )}
+          </Field>
           <Button
             disabled={!dirty || trimmed === "" || tooLong || save.isPending}
             onClick={() => save.mutate(trimmed)}

@@ -14,7 +14,8 @@
    just failed, not a third control in the row. */
 .evidence-verdict {
   display: inline-flex;
-  align-items: center;
+  /* Baseline, so the verbs stay level with the field when its error opens under it. */
+  align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
