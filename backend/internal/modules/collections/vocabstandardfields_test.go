@@ -45,15 +45,17 @@ func maskedCtx(masks ...principal.FieldMask) context.Context {
 	})
 }
 
-func TestAMaskOnTheDealsMoneyWithholdsTheAmountLeaf(t *testing.T) {
+func TestAMaskOnTheDealsAmountOrCurrencyWithholdsTheAmountLeaf(t *testing.T) {
 	store := (&Store{}).WithDealAmount("t.amount_minor")
 	if sql, _ := compileLeaf(maskedCtx(), t, store, "deal", amountField, storekit.OpGt, 100.0); sql == "FALSE" {
 		t.Fatal("an unmasked reader's amount leaf compiled to FALSE, so the masked case below proves nothing")
 	}
-	masked := maskedCtx(principal.FieldMask{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways})
-	for _, op := range []string{storekit.OpGt, storekit.OpLte, storekit.OpNeq} {
-		if sql, bound := compileLeaf(masked, t, store, "deal", amountField, op, 100.0); sql != "FALSE" || bound != 0 {
-			t.Errorf("amount %s compiled to %q with %d values for a reader masked on amount_minor, want FALSE", op, sql, bound)
+	for _, maskedField := range []string{"amount_minor", "currency"} {
+		masked := maskedCtx(principal.FieldMask{Object: "deal", Field: maskedField, Condition: principal.MaskAlways})
+		for _, op := range []string{storekit.OpGt, storekit.OpLte, storekit.OpNeq} {
+			if sql, bound := compileLeaf(masked, t, store, "deal", amountField, op, 100.0); sql != "FALSE" || bound != 0 {
+				t.Errorf("amount %s compiled to %q with %d values for a reader masked on %s, want FALSE", op, sql, bound, maskedField)
+			}
 		}
 	}
 }

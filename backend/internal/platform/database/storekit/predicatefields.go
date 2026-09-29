@@ -96,10 +96,18 @@ type Field struct {
 	// nothing would widen the answer, and a negated leaf that selected every row
 	// would let a reader learn who carries a value by watching the count move.
 	Withheld bool
-	// FoldCase lowercases a text operand before it binds, for a column its
-	// writer stores lowercased (an email address under a CHECK), so `Anna@X.io`
-	// finds the row holding `anna@x.io`. `contains` needs no fold: it is ILIKE.
+	// FoldCase compares a text field case-insensitively: the column and the
+	// operand are both lowercased, so `de` finds `DE` and `Anna@X.io` finds
+	// `anna@x.io`. `contains` needs no fold: it is ILIKE already.
 	FoldCase bool
+	// Instant marks a date field whose Expr is a timestamp, read as the day it
+	// falls on in the session time zone. A comparison compiles to bounds on
+	// the raw column rather than a cast of it, so the column's index serves.
+	Instant bool
+	// Currency is the ISO code a currency field's operand is counted in, as
+	// minor units of it, for a builder that lets a reader type major units.
+	// Empty where the engine does not know it.
+	Currency string
 	// LinkScope bounds which linked rows a Link leaf may find, rendered per
 	// statement because the bound binds the caller's own values. Nil means the
 	// link row carries no read rule beyond the record it hangs off.

@@ -282,6 +282,10 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 	if field.Link != "" {
 		return compileLinkLeaf(p, field, arg)
 	}
+	if field.Instant && p.Op != OpExists {
+		return compileInstantLeaf(p, field, arg)
+	}
+	compared := comparedExpr(field)
 
 	switch p.Op {
 	case OpExists:
@@ -305,7 +309,7 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		if field.Type == FieldMultiselect {
 			return fmt.Sprintf("%s && $%d::text[]", field.Expr, arg(values)), nil
 		}
-		return fmt.Sprintf("%s = ANY($%d)", field.Expr, arg(values)), nil
+		return fmt.Sprintf("%s = ANY($%d)", compared, arg(values)), nil
 
 	case OpContains:
 		text, ok := p.Value.(string)
@@ -342,9 +346,9 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 			// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
 			// record with no linked row at all; `<>` here would make one operator
 			// mean two things depending on where the field lives.
-			return fmt.Sprintf("%s IS DISTINCT FROM %s", field.Expr, operandSQL(value, arg)), nil
+			return fmt.Sprintf("%s IS DISTINCT FROM %s", compared, operandSQL(value, arg)), nil
 		}
-		return fmt.Sprintf("%s %s %s", field.Expr, comparisonSQL[p.Op], operandSQL(value, arg)), nil
+		return fmt.Sprintf("%s %s %s", compared, comparisonSQL[p.Op], operandSQL(value, arg)), nil
 	}
 }
 

@@ -210,6 +210,11 @@ func (q Query) shownValue(ctx context.Context, name string, field Field) (string
 	if err != nil {
 		return "", false, err
 	}
+	if field.Instant {
+		// The day the verdict compared, not the instant: a why reading
+		// 2026-08-01T23:30Z for a clause about 2 August would look wrong.
+		return "(" + field.Expr + ")::date", masked, nil
+	}
 	return field.Expr, masked, nil
 }
 

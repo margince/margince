@@ -6,6 +6,7 @@ package storekit
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -33,13 +34,39 @@ func TestAFoldedFieldBindsItsOperandLowercasedAndAnUnfoldedOneAsTyped(t *testing
 		{Predicate{Field: "email", Op: OpIn, Value: []any{"A@B.C", "d@e.f"}}, []any{[]string{"a@b.c", "d@e.f"}}},
 		{Predicate{Field: "name", Op: OpEq, Value: "Ann"}, []any{"Ann"}},
 	} {
-		_, args, err := compileCollecting(t, c.p, fields)
+		sql, args, err := compileCollecting(t, c.p, fields)
 		if err != nil {
 			t.Fatalf("%s %s: %v", c.p.Field, c.p.Op, err)
 		}
 		if !reflect.DeepEqual(args, c.want) {
 			t.Errorf("%s %s bound %#v, want %#v", c.p.Field, c.p.Op, args, c.want)
 		}
+		folded := strings.HasPrefix(sql, "lower(t.email)")
+		if folded != fields[c.p.Field].FoldCase {
+			t.Errorf("%s %s compiled to %q: a folded field lowers the column, an unfolded one does not", c.p.Field, c.p.Op, sql)
+		}
+	}
+}
+
+func TestADayOnATimestampCompilesToBoundsOnTheRawColumn(t *testing.T) {
+	fields := map[string]Field{"seen": {Expr: "t.seen_at", Type: FieldDate, Instant: true}}
+	const start, next = "($1::date)::timestamptz", "($1::date + 1)::timestamptz"
+	for op, want := range map[string]string{
+		OpEq:  "(t.seen_at >= " + start + " AND t.seen_at < " + next + ")",
+		OpNeq: "(t.seen_at IS NULL OR t.seen_at < " + start + " OR t.seen_at >= " + next + ")",
+		OpGt:  "t.seen_at >= " + next,
+		OpGte: "t.seen_at >= " + start,
+		OpLt:  "t.seen_at < " + start,
+		OpLte: "t.seen_at < " + next,
+	} {
+		sql, args, err := compileCollecting(t, Predicate{Field: "seen", Op: op, Value: "2026-03-10"}, fields)
+		if err != nil || sql != want || !reflect.DeepEqual(args, []any{"2026-03-10"}) {
+			t.Errorf("%s compiled to %q %v (%v), want %q over one bound day", op, sql, args, err, want)
+		}
+	}
+	sql, _, err := compileCollecting(t, Predicate{Field: "seen", Op: OpLt, Value: map[string]any{"days_ago": 45.0}}, fields)
+	if err != nil || sql != "t.seen_at < ((CURRENT_DATE - $1::integer))::timestamptz" {
+		t.Errorf("a relative day compiled to %q (%v), want the start of that day", sql, err)
 	}
 }
 

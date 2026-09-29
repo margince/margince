@@ -33,19 +33,23 @@ const (
 )
 
 // dayOf types a timestamp column as the calendar day it falls on, so `eq` on a
-// date means that day and {"days_ago": N} compares day to day. The cast reads
-// the session time zone, the same one CURRENT_DATE reads.
+// date means that day and {"days_ago": N} compares day to day.
 func dayOf(column string) storekit.Field {
-	return storekit.Field{Expr: "t." + column + "::date", Type: storekit.FieldDate}
+	return storekit.Field{Expr: "t." + column, Type: storekit.FieldDate, Instant: true}
 }
 
 func textOf(column string) storekit.Field {
 	return storekit.Field{Expr: "t." + column, Type: storekit.FieldText}
 }
 
+// countryOf compares the ISO code case-insensitively: nothing normalises the
+// column, and `de` asks the same question as `DE`.
+func countryOf() storekit.Field {
+	return storekit.Field{Expr: "t.address_country", Type: storekit.FieldText, FoldCase: true}
+}
+
 // contactEmailExpr is the address the contact list's Email column prints: the
-// live address first in ReachableOrder. contact_email stores it lowercased
-// (contact_email_norm), which is what makes FoldCase exact.
+// live address first in ReachableOrder.
 const contactEmailExpr = `(SELECT ce.email FROM contact_email ce
 	WHERE ce.contact_id = t.id AND ce.archived_at IS NULL` + contactaddress.ReachableOrder + ` LIMIT 1)`
 
@@ -71,7 +75,7 @@ var contactStandardFields = map[string]storekit.Field{
 	emailField:        {Expr: contactEmailExpr, Type: storekit.FieldText, FoldCase: true},
 	titleField:        textOf("title"),
 	companyIDField:    contactEmployerField,
-	countryField:      textOf("address_country"),
+	countryField:      countryOf(),
 	cityField:         textOf("address_city"),
 	createdAtField:    dayOf("created_at"),
 	lastActivityField: dayOf("last_activity_at"),
@@ -79,7 +83,7 @@ var contactStandardFields = map[string]storekit.Field{
 
 var companyStandardFields = map[string]storekit.Field{
 	nameFilterField:   textOf("display_name"),
-	countryField:      textOf("address_country"),
+	countryField:      countryOf(),
 	cityField:         textOf("address_city"),
 	createdAtField:    dayOf("created_at"),
 	lastActivityField: dayOf("last_activity_at"),
@@ -99,8 +103,7 @@ var dealStandardFields = map[string]storekit.Field{
 	lastActivityField:     dayOf("last_activity_at"),
 }
 
-// leadStandardFields reads lead.email as stored, lowercased under lead_email_norm.
-// score is the effective one, override included; the cast lets a fractional
+// leadStandardFields' score is the effective one, override included; the cast lets a fractional
 // operand compare rather than fail to bind into a smallint.
 var leadStandardFields = map[string]storekit.Field{
 	nameFilterField: textOf("full_name"),
@@ -146,10 +149,12 @@ func (s *Store) bindDealAmount(resource string, fields map[string]storekit.Field
 	fields[amountField] = storekit.Field{Expr: s.dealAmount, Type: storekit.FieldCurrency}
 }
 
-// maskedAs names the mask a filter field answers to where the two names
-// differ: the base amount is the deal's money, masked under amount_minor.
-var maskedAs = map[string]map[string]string{
-	typeDeal: {amountField: fieldmask.DealAmountMinor},
+// maskedAs names the masks a filter field answers to where they are not the
+// field's own name. The base amount is converted from the deal's own amount
+// AND its currency, so a mask on either withholds it: comparing it against the
+// nominal amount a reader can see would give the masked currency away.
+var maskedAs = map[string]map[string][]string{
+	typeDeal: {amountField: {fieldmask.DealAmountMinor, fieldmask.DealCurrency}},
 }
 
 // withholdFromCaller stamps every field this caller may not filter by. A masked
@@ -164,13 +169,15 @@ func withholdFromCaller(ctx context.Context, resource string, fields map[string]
 		fields[tagFilterField] = tag
 	}
 	for name, field := range fields {
-		maskName := name
-		if alias, ok := maskedAs[resource][name]; ok {
-			maskName = alias
+		maskNames, aliased := maskedAs[resource][name]
+		if !aliased {
+			maskNames = []string{name}
 		}
-		if maskedForCaller(ctx, resource, maskName) {
-			field.Withheld = true
-			fields[name] = field
+		for _, maskName := range maskNames {
+			if maskedForCaller(ctx, resource, maskName) {
+				field.Withheld = true
+				fields[name] = field
+			}
 		}
 	}
 }
