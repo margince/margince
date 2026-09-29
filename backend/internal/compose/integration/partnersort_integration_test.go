@@ -55,7 +55,7 @@ func partnerTiers(ctx context.Context, t *testing.T, store *contacts.Store, in c
 	out := make([]string, 0, len(rows))
 	for _, r := range rows {
 		if r.MarginTier != nil {
-			out = append(out, *r.MarginTier)
+			out = append(out, string(*r.MarginTier))
 		}
 	}
 	return out, page

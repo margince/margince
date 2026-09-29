@@ -200,6 +200,9 @@ func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter
 		if visErr != nil {
 			return visErr
 		}
+		if err := refuseMaskedFieldFilter(f.Field, mask, f.EntityType); err != nil {
+			return err
+		}
 		boundary, err := latestScrubTombstone(ctx, tx, f.EntityType, f.EntityID)
 		if err != nil {
 			return err

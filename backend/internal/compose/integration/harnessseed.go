@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The id wideners assert a harness-seeded untyped id as the entity a contacts-store
@@ -94,20 +93,7 @@ func (e *Env) SeedCompany(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 func (e *Env) SeedPartnerCompany(t *testing.T, name string, tier *string, owner *ids.UUID) ids.UUID {
 	t.Helper()
 	company := e.SeedCompany(t, name, owner)
-	// The harness's AdminPerms deliberately carries no `partner` grant, so the
-	// seeding acts as a seat that has one. Borrowing the caller's context would
-	// make every suite that seeds a partner grow a permission it is not testing.
-	seeder := e.As(e.AdminUser, nil, principal.Permissions{
-		RoleKeys: []string{"admin"},
-		Objects: map[string]principal.ObjectGrant{
-			"partner": {Create: true, Read: true, Update: true},
-			// Becoming a partner also stamps the company's relationship
-			// types, so the seat needs the company as well as the programme.
-			objCompany: {Read: true, Update: true},
-		},
-		RowScope: principal.RowScopeAll,
-	})
-	if _, err := e.Contacts.UpsertPartner(seeder, contacts.UpsertPartnerInput{
+	if _, err := e.Contacts.UpsertPartner(e.PartnerSeat(), contacts.UpsertPartnerInput{
 		CompanyID:   ids.From[ids.CompanyKind](company),
 		PartnerRole: "consulting",
 		MarginTier:  tier,

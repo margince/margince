@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  moduleSpecifiers,
+  resolveRelative,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 
 // The settings catalog is split in two so the shell can ask where a settings
 // entry lives without paying to draw it. `settingsnav.tsx` answers the address
@@ -32,61 +35,6 @@ const srcRoot = resolve(screensDir, "..");
 const settingsScreen = join(screensDir, "settings.tsx");
 const settingsNav = join(screensDir, "settingsnav.tsx");
 
-/** Resolve a relative specifier to a real file, trying the extensions Vite does. */
-function resolveSpecifier(fromFile: string, specifier: string): string | null {
-  if (!specifier.startsWith(".")) {
-    return null; // a package, not our source
-  }
-  const base = resolve(dirname(fromFile), specifier);
-  for (const candidate of [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    join(base, "index.ts"),
-    join(base, "index.tsx"),
-  ]) {
-    // `isFile` rather than mere existence: a bare specifier can name a
-    // DIRECTORY that also has an `index.tsx`, and treating the directory as the
-    // resolved module would end the walk one hop early — a silent under-read,
-    // which is the one way this gate must not fail.
-    if (existsSync(candidate) && statSync(candidate).isFile()) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-/**
- * Every module specifier `file` imports, including `import type` and dynamic
- * `import()`. Type-only edges count: a type import that names a card module
- * still says the two halves are one unit, and a later value import across the
- * same edge would not show up as a new dependency in review.
- */
-function importsOf(file: string): string[] {
-  const source = sourceFileAt(file);
-  const out: string[] = [];
-  const visit = (node: ts.Node) => {
-    if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-      node.moduleSpecifier &&
-      ts.isStringLiteral(node.moduleSpecifier)
-    ) {
-      out.push(node.moduleSpecifier.text);
-    }
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments.length > 0 &&
-      ts.isStringLiteral(node.arguments[0])
-    ) {
-      out.push(node.arguments[0].text);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return out;
-}
-
 /**
  * The source files `file` imports, parsed ONCE per file and kept for the run.
  *
@@ -106,8 +54,10 @@ function edgesOf(file: string): string[] {
   if (known) {
     return known;
   }
-  const edges = importsOf(file)
-    .map((specifier) => resolveSpecifier(file, specifier))
+  // Type-only edges count: a type import naming a card module still couples the
+  // halves, and a later value import across it would not show up in review.
+  const edges = moduleSpecifiers(sourceFileAt(file), "all")
+    .map((specifier) => resolveRelative(file, specifier))
     .filter((next): next is string => next !== null);
   resolvedImports.set(file, edges);
   return edges;
