@@ -23,8 +23,8 @@ import (
 // regenerates the physical column's CHECK constraint from it
 // (CUSTOM-FIELDS-PARAM-5) — the one lifecycle mutation besides Create
 // that runs DDL, so it follows the same one-transaction schema-pool
-// shape: owner ALTER first, then the downgrade to the
-// app role for the catalog UPDATE + one audit row.
+// shape: the owner ALTER, then the catalog UPDATE + one audit row, all
+// as the schema pool's owner role.
 func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.CustomField{}, err
@@ -90,8 +90,8 @@ func lockPicklistField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField
 }
 
 // setOptionsInTx is SetOptions' transaction body: row lock →
-// picklist check → advisory lock → CHECK regeneration (owner) →
-// downgrade → catalog UPDATE + audit.
+// picklist check → advisory lock → CHECK regeneration → catalog UPDATE +
+// audit, all as the schema pool's owner role.
 func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, options []string) (crmcontracts.CustomField, error) {
 	f, err := lockPicklistField(ctx, tx, id)
 	if err != nil {
@@ -122,9 +122,6 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: regenerating options CHECK: %w", err)
 	}
 
-	if err := downgradeToAppRole(ctx, tx); err != nil {
-		return crmcontracts.CustomField{}, err
-	}
 	optionsArg, err := marshalOptions(options)
 	if err != nil {
 		return crmcontracts.CustomField{}, err

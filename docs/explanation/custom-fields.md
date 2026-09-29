@@ -57,10 +57,16 @@ Inside one transaction on that pool:
 
 1. Bound every lock wait (`SET LOCAL lock_timeout = '2s'`), and take a
    transaction-scoped **advisory lock keyed on the target table**.
-2. Pre-check the column namespace, then run **the one privileged statement** — the `ALTER TABLE`.
-3. **`SET LOCAL ROLE margince_app`** — the transaction downgrades itself to exactly the authority
-   every other tenant write runs under, and the catalog `INSERT` + audit row land under the app
-   role's own grants, with no owner privilege in reach.
+2. Pre-check the column namespace, then run **the one statement that needs the owner role** — the
+   `ALTER TABLE`.
+3. Write the catalog `INSERT` (or options `UPDATE`) and the audit row, still as the owner role.
+
+The transaction does **not** `SET ROLE` down to `margince_app` for step 3. It once did, but switching
+role needs the owner to be a *member* of `margince_app`, which nothing provisions. The dev stack
+never noticed, because its owner is a superuser and may switch to any role; on a managed Postgres,
+where no role is a superuser, every create failed with `permission denied to set role` (#6460).
+Step 3 is two parameterized statements the app role could issue too, so what they run under is
+the owner's authority for the length of one short transaction, not a wider surface.
 
 Postgres's transactional DDL makes the column, the catalog row, and the audit entry land or roll back
 **together** — a half-added field is not a state this system can reach.
@@ -74,10 +80,6 @@ shared core table behind it: a platform-wide stall from a single admin call. Tim
 answers a retryable 409 (`ErrTableBusy`). The advisory lock closes the duplicate-column race between
 two concurrent creates; lock order is row-then-advisory in every flow holding both, so the two DDL
 paths cannot deadlock each other.
-
-`privilege_boundary_test.go` pins both downgrade call sites, because deleting one is invisible: the
-schema pool's role is superuser in dev, so a missing downgrade grants the catalog insert more
-authority than production has and every other test still passes.
 
 **Two honest surprises.** The schema pool is **unwired by default** — without `--schema-dsn`, create
 and options-edit answer 501 and declare the gap by omission rather than nil-dereferencing at request
@@ -184,7 +186,6 @@ choice belongs upstream in the spec, not to whoever implements it next.
 | The record-store mechanics | `internal/platform/database/storekit/customcolumns.go` |
 | The sort/filter vocabulary `cf_*` columns join | `internal/platform/database/storekit/listquery.go` |
 | The catalog table + its RBAC backfill | `backend/migrations/core/0063_custom_field_catalog.up.sql`, `0064_custom_field_rbac.up.sql` |
-| The privilege-boundary gate | `internal/modules/customfields/privilege_boundary_test.go` |
 | The admin UI | `frontend/src/screens/customfields.tsx` |
 
 The owner-pool flag and its `/readyz` probe: [reference/configuration.md](../reference/configuration.md).
