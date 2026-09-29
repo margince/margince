@@ -1463,7 +1463,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
   });
 
-  it("stays silent rather than claiming no advice when the section is withheld", async () => {
+  it("names the withheld advice rather than claiming nothing needs attention", async () => {
     const three60 = {
       ...company360,
       suggestions: undefined,
@@ -1472,8 +1472,8 @@ describe("CompanyScreen — next-step suggestions", () => {
     stubFetch(companyBackstop, { company360: three60 });
     renderSuggestionsFor(three60);
 
-    await screen.findByRole("heading", { name: "Needs attention" });
-    expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
+    await screen.findByText(/^Not included: suggestions\./);
+    expect(screen.queryByText("Nothing needs attention right now.")).toBeNull();
   });
 
   it("dismisses by fingerprint and leaves the row for the server to remove", async () => {
