@@ -42,11 +42,8 @@ func lockTimedOut(err error) bool {
 //
 // Deliberately NOT database.WithWorkspaceTx: that helper runs on the app
 // pool, whose margince_app role carries DML-only grants and cannot ALTER
-// a core table. The whole transaction — DDL, catalog insert, audit write —
-// runs as the schema pool's owner role. It does not SET ROLE down to
-// margince_app for the writes after the DDL: that needs the owner to be a
-// member of margince_app, which nothing provisions, and on a
-// non-superuser owner (managed Postgres) it failed every create (#6460).
+// a core table. The whole transaction runs as the owner role and never
+// SET ROLEs: the owner is not a member of margince_app on a real install.
 func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return crmcontracts.CustomField{}, err
