@@ -11,7 +11,7 @@ import { TAG_TONES, TagPill } from "./tagpill";
 // the thing you read.
 
 const meta: Meta<typeof TagPill> = {
-  title: "Design System/TagPill",
+  title: "Components/Labels/Tag pill",
   component: TagPill,
   parameters: { layout: "padded" },
 };

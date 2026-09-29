@@ -10,7 +10,8 @@ import { Heading } from "./heading";
 // screenshots as an empty canvas. The trigger stays so the reader can reopen it
 // after dismissing, which is also the only way to see the surface arrive.
 const meta: Meta = {
-  title: "Design System/Modal",
+  title: "Components/Overlays and layering/Modal",
+  component: Modal,
   parameters: { layout: "padded" },
 };
 export default meta;

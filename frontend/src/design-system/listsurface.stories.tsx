@@ -13,7 +13,8 @@ import { CountLine, ListSurface, type ListView } from "./listsurface";
 // every tab and every verb stays inside the card at any width.
 
 const meta: Meta = {
-  title: "Design System/ListSurface",
+  title: "Components/Text and data display/List surface",
+  component: ListSurface,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

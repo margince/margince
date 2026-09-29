@@ -3,7 +3,7 @@ import { CellStack } from "./cellstack";
 import { DataTable } from "./datatable";
 
 const meta: Meta<typeof CellStack> = {
-  title: "Design System/Cell stack",
+  title: "Components/Text and data display/Cell stack",
   component: CellStack,
 };
 export default meta;

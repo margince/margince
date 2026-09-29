@@ -9,7 +9,8 @@ import { ProblemError } from "../screens/common";
 import { InlineText } from "./inlinetext";
 
 const meta: Meta = {
-  title: "Design System/Inline text editing",
+  title: "Components/Forms and input/Inline text editing",
+  component: InlineText,
   decorators: [
     (Story) => (
       <LocaleProvider>

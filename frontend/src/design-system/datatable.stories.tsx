@@ -10,7 +10,7 @@ import { Meter } from "./readings";
 // A generic component takes no `component` here: Storybook would have to infer
 // `Row` from nothing to derive the args table.
 const meta: Meta = {
-  title: "Design System/DataTable",
+  title: "Components/Text and data display/Data table",
   parameters: { layout: "padded" },
 };
 export default meta;

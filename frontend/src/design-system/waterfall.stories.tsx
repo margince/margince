@@ -7,7 +7,8 @@ import { Waterfall } from "./waterfall";
 
 // A total, what moved it, and the total it became.
 const meta: Meta = {
-  title: "Design System/Waterfall",
+  title: "Components/Text and data display/Waterfall",
+  component: Waterfall,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

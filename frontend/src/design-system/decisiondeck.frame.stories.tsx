@@ -19,7 +19,7 @@ import { Panel, PanelBody } from "./panel";
 // invisible on the dark surface, which is exactly why the band is the right
 // shape inside a pane.
 const meta: Meta = {
-  title: "Design System/DecisionDeck frame",
+  title: "Components/AI and provenance/Decision deck/Frame",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

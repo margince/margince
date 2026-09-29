@@ -89,7 +89,7 @@ function Chronology({
 }
 
 const meta = {
-  title: "Design System/Activity timeline",
+  title: "Components/Text and data display/Activity timeline",
   component: Chronology,
   decorators: [
     (Story) => (

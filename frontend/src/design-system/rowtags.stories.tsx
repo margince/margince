@@ -12,7 +12,7 @@ import type { TagTone } from "./tagpill";
 // below it down.
 
 const meta: Meta<typeof RowTags> = {
-  title: "Design System/RowTags",
+  title: "Components/Labels/Row tags",
   component: RowTags,
   parameters: { layout: "padded" },
 };

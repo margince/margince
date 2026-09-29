@@ -13,7 +13,7 @@ import {
 import type { RecordPickerCandidate } from "./recordpicker";
 
 const meta: Meta<typeof ProjectLinks> = {
-  title: "Design System/Project links",
+  title: "Components/Text and data display/Project links",
   component: ProjectLinks,
   parameters: { layout: "padded" },
   decorators: [

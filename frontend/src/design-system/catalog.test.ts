@@ -18,20 +18,23 @@
 // component a second author rebuilds: the noun is obvious, the grep comes back
 // empty, and the duplicate looks reasonable in review.
 //
-// ## Three arms, one subject
+// ## Arms, one subject
 //
 // 1. Every component in this directory is NAMED in the catalog table.
 // 2. A row claiming a story of its own has a story file to claim.
-// 3. Every story in the tree files under a root the catalog documents.
+// 3. Every story in the tree carries a title this file can read, filed under a
+//    root the catalog documents.
+// 4. Every `Components/` and `Foundations/` story sits on a shelf the catalog
+//    declares, and every declared shelf holds one.
+// 5. Titles under those roots are Sentence case, one per file, and never both a
+//    leaf and a group.
+// 6. `.storybook/preview.tsx` sorts the sidebar in the catalog's order.
 //
 // The third is here rather than beside the stories because the roots are
-// declared in this file's subject: the catalog names eight, and the sidebar had
-// grown to fourteen — a retired `Screens/` root still carrying nineteen files,
-// four roots holding one story each, and a `Design system/` separated from
-// `Design System/` by the case of one letter. A story's title is the only thing
-// that files it, fe-uat keys on importPath and never on the title, and so
-// nothing failed while the shelf a reader looks on stopped being the shelf the
-// story is on.
+// declared in this file's subject. A story's title is the only thing that files
+// it, and fe-uat keys on importPath, never on the title, so without this arm the
+// shelf a reader looks on can stop being the shelf the story is on and nothing
+// fails.
 //
 // ## What this gate deliberately does NOT decide
 //
@@ -65,6 +68,8 @@ const frontendRoot = resolve(__dirname, "..", "..");
 const srcDir = join(frontendRoot, "src");
 const dsDir = join(srcDir, "design-system");
 const catalogPath = join(dsDir, "README.md");
+const previewPath = join(frontendRoot, ".storybook", "preview.tsx");
+const mainPath = join(frontendRoot, ".storybook", "main.ts");
 
 // The catalog's two tables, found by their HEADINGS rather than by line number.
 // A line number would be a second copy of the file's shape, and every edit to
@@ -94,15 +99,32 @@ function catalogSection(heading: string): string {
   return (end < 0 ? rest : rest.slice(0, end)).join("\n");
 }
 
-// tableRows returns the markdown table rows of a section, header and alignment
-// rule dropped, each split into its cells.
-function tableRows(section: string): string[][] {
-  return section
-    .split("\n")
-    .filter((line) => line.startsWith("|"))
-    .map((line) => line.slice(1).replace(/\|$/, "").split("|"))
-    .filter((cells) => !/^[\s|:-]*$/.test(cells.join("|")))
-    .slice(1);
+const ALIGNMENT_RULE = /^\|(\s*:?-+:?\s*\|)+\s*$/;
+const BLANK_ROW = /^[\s|]*$/;
+
+// Body rows of every table in `section` whose header's first cell is `header`.
+// A header is the row an alignment rule follows, so one section may hold many.
+function tableRows(section: string, header: string): string[][] {
+  const lines = section.split("\n");
+  const rows: string[][] = [];
+  let inside = false;
+  for (const [index, line] of lines.entries()) {
+    if (!line.startsWith("|")) {
+      inside = false;
+      continue;
+    }
+    if (ALIGNMENT_RULE.test(line)) continue;
+    if (BLANK_ROW.test(line)) {
+      throw new Error(`a blank table row follows "${lines[index - 1]}"`);
+    }
+    const cells = line.slice(1).replace(/\|$/, "").split("|");
+    if (ALIGNMENT_RULE.test(lines[index + 1] ?? "")) {
+      inside = cells[0].trim() === header;
+    } else if (inside) {
+      rows.push(cells);
+    }
+  }
+  return rows;
 }
 
 // componentsIn returns every PascalCase export in `text` whose declaration
@@ -202,24 +224,242 @@ function rendersMarkup(node: ts.Node): boolean {
   return markup;
 }
 
+// Product-root titles are not Sentence case; `Design System/` is exempt.
+const SHAPED_ROOTS = ["Foundations", "Components"];
+
+// Words that keep their capitals wherever they stand in a segment.
+const PROPER_NOUNS = new Map([["Margince", "the product's name"]]);
+const ACRONYMS = new Map([
+  ["AI", "the agent tier, as the product's copy writes it"],
+]);
+
+type Filed = { path: string; title: string };
+
+function rootOf(title: string): string {
+  return title.split("/")[0];
+}
+
+// `deepest` is one level past `shallowest`: a component's own sub-nodes, as
+// Decision deck/Frame and Color/Interaction colors are.
+function shelfFindings(
+  filed: Filed[],
+  root: string,
+  shelves: string[],
+  [shallowest, deepest]: [number, number],
+): string[] {
+  const under = filed.filter(({ title }) => rootOf(title) === root);
+  const misfiled = under.flatMap(({ path, title }) => {
+    const segments = title.split("/");
+    return segments.length >= shallowest &&
+      segments.length <= deepest &&
+      shelves.includes(segments[1])
+      ? []
+      : [
+          `${path} files "${title}" off the ${root}/ shelves the README declares`,
+        ];
+  });
+  const reached = new Set(under.map(({ title }) => title.split("/")[1]));
+  const empty = shelves
+    .filter((shelf) => !reached.has(shelf))
+    .map((shelf) => `${root}/${shelf} is declared and holds no story`);
+  return [...misfiled, ...empty];
+}
+
+function isSentenceCase(segment: string): boolean {
+  if (!/^\S+( \S+)*$/.test(segment)) return false;
+  return segment.split(" ").every((word, index) => {
+    if (PROPER_NOUNS.has(word) || ACRONYMS.has(word)) return true;
+    if (/^\p{N}+$/u.test(word)) return true;
+    return index === 0
+      ? /^\p{Lu}[^\p{Lu}]*$/u.test(word)
+      : !/\p{Lu}/u.test(word);
+  });
+}
+
+function caseFindings(filed: Filed[]): string[] {
+  return filed.flatMap(({ path, title }) =>
+    title
+      .split("/")
+      .filter((segment) => !isSentenceCase(segment))
+      .map((segment) => `${path}: "${segment}" is not Sentence case`),
+  );
+}
+
+// Storybook folds case and punctuation, `/` included, into a node's id. This
+// folds every non-alphanumeric run, which can only over-report a collision.
+function foldedId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function sharedTitleFindings(filed: Filed[]): string[] {
+  const byId = new Map<string, string[]>();
+  for (const { path, title } of filed) {
+    const id = foldedId(title);
+    byId.set(id, [...(byId.get(id) ?? []), `${path} ("${title}")`]);
+  }
+  return [...byId]
+    .filter(([, claims]) => claims.length > 1)
+    .map(([id, claims]) => `id "${id}" is claimed by ${claims.join(", ")}`);
+}
+
+function leafAndGroupFindings(filed: Filed[]): string[] {
+  const folded = (title: string) => title.split("/").map(foldedId).join("/");
+  const titles = filed.map(({ title }) => title);
+  return filed.flatMap(({ path, title }) => {
+    const child = titles.find((other) =>
+      folded(other).startsWith(`${folded(title)}/`),
+    );
+    return child === undefined
+      ? []
+      : [`${path}: "${title}" is a leaf and also the group of "${child}"`];
+  });
+}
+
+type SidebarOrder = { roots: string[]; children: Map<string, string[]> };
+
+function unwrapped(expression: ts.Expression): ts.Expression {
+  let node = expression;
+  while (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isSatisfiesExpression(node)
+  ) {
+    node = node.expression;
+  }
+  return node;
+}
+
+// Mirrors story-title.ts's meta lookup; the two move together.
+function defaultExportObject(
+  source: ts.SourceFile,
+): ts.ObjectLiteralExpression | undefined {
+  const exported = source.statements.find(ts.isExportAssignment);
+  if (exported === undefined) return undefined;
+  const value = unwrapped(exported.expression);
+  const resolved = ts.isIdentifier(value)
+    ? source.statements
+        .filter(ts.isVariableStatement)
+        .flatMap((statement) => statement.declarationList.declarations)
+        .find(
+          (declaration) =>
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === value.text,
+        )?.initializer
+    : value;
+  const object = resolved && unwrapped(resolved);
+  return object && ts.isObjectLiteralExpression(object) ? object : undefined;
+}
+
+function literalAt(
+  object: ts.ObjectLiteralExpression | undefined,
+  path: string[],
+): ts.Expression | undefined {
+  let value: ts.Expression | undefined = object;
+  for (const key of path) {
+    if (value === undefined || !ts.isObjectLiteralExpression(value)) {
+      return undefined;
+    }
+    const property = value.properties
+      .filter(ts.isPropertyAssignment)
+      .find(
+        ({ name }) =>
+          (ts.isIdentifier(name) || ts.isStringLiteral(name)) &&
+          name.text === key,
+      );
+    value = property && unwrapped(property.initializer);
+  }
+  return value;
+}
+
+// Null for a glob it cannot turn into suffixes, so the census fails closed.
+function storySuffixes(path: string, text: string): string[] | null {
+  const stories = literalAt(defaultExportObject(parseSource(path, text)), [
+    "stories",
+  ]);
+  if (stories === undefined || !ts.isArrayLiteralExpression(stories)) {
+    return null;
+  }
+  const suffixes: string[] = [];
+  for (const element of stories.elements) {
+    if (!ts.isStringLiteralLike(element)) return null;
+    const glob = /^\.\.\/src\/\*\*\/\*(\.[\w.]+)\.@\(([\w|]+)\)$/.exec(
+      element.text,
+    );
+    if (glob === null) return null;
+    suffixes.push(...glob[2].split("|").map((ext) => `${glob[1]}.${ext}`));
+  }
+  return suffixes.length > 0 ? suffixes : null;
+}
+
+// Anything but strings, each followed by at most one string array, is no
+// order: Storybook evaluates the literal, and this reader does not.
+function sidebarOrder(path: string, text: string): SidebarOrder | null {
+  const order = literalAt(defaultExportObject(parseSource(path, text)), [
+    "parameters",
+    "options",
+    "storySort",
+    "order",
+  ]);
+  if (order === undefined || !ts.isArrayLiteralExpression(order)) return null;
+  const roots: string[] = [];
+  const children = new Map<string, string[]>();
+  for (const element of order.elements) {
+    if (ts.isStringLiteralLike(element)) {
+      roots.push(element.text);
+      continue;
+    }
+    const root = roots.at(-1);
+    if (
+      !ts.isArrayLiteralExpression(element) ||
+      root === undefined ||
+      children.has(root)
+    ) {
+      return null;
+    }
+    const names = element.elements.filter(ts.isStringLiteralLike);
+    if (names.length !== element.elements.length) return null;
+    children.set(
+      root,
+      names.map((name) => name.text),
+    );
+  }
+  return roots.length > 0 ? { roots, children } : null;
+}
+
 const catalogTable = catalogSection(CATALOG_HEADING);
 const rootsSection = catalogSection(ROOTS_HEADING);
 
-// The roots the catalog declares, read out of its own table. One row carries
-// three of them, which is why every backticked `Name/` in the first cell counts
-// rather than the cell itself.
-const documentedRoots = new Set(
-  tableRows(rootsSection).flatMap((cells) =>
-    [...cells[0].matchAll(/`([^`/]+)\/`/g)].map((match) => match[1]),
-  ),
+const rootRows = tableRows(rootsSection, "Root");
+
+// One row carries two roots, so every backticked `Name/` in the first cell
+// counts rather than the cell itself.
+const documentedRootOrder = rootRows.flatMap((cells) =>
+  [...cells[0].matchAll(/`([^`/]+)\/`/g)].map((match) => match[1]),
 );
+const documentedRoots = new Set(documentedRootOrder);
+
+const categories = tableRows(rootsSection, "Category").map((cells) =>
+  cells[0].trim(),
+);
+
+// The Foundations row names its topics, and nothing else, in backticks.
+const topics = [
+  ...(
+    rootRows.find((cells) => cells[0].includes("`Foundations/`"))?.[1] ?? ""
+  ).matchAll(/`([^`]+)`/g),
+].map((match) => match[1]);
 
 const primitiveModules = filesUnder(dsDir).filter(
   (path) => path.endsWith(".tsx") && !NOT_SHIPPED.test(basename(path)),
 );
 
+const storySuffixList = storySuffixes(mainPath, readFileSync(mainPath, "utf8"));
+
 const storyFiles = filesUnder(srcDir).filter((path) =>
-  path.endsWith(".stories.tsx"),
+  (storySuffixList ?? []).some((suffix) => path.endsWith(suffix)),
 );
 
 describe("the catalog indexes this directory", () => {
@@ -228,6 +468,7 @@ describe("the catalog indexes this directory", () => {
   // breaks, not to pin a number somebody must maintain.
   it("reads the tree it is pointed at", () => {
     expect(primitiveModules.length).toBeGreaterThan(30);
+    expect(storySuffixList).not.toBeNull();
     expect(storyFiles.length).toBeGreaterThan(100);
     expect(documentedRoots.size).toBeGreaterThan(4);
     expect(catalogTable.length).toBeGreaterThan(10_000);
@@ -251,7 +492,7 @@ describe("the catalog indexes this directory", () => {
   // about. So the arm holds the one claim that is unambiguous, and the
   // qualified rows are the author's word.
   it("claims a story of its own only where one exists", () => {
-    const lying = tableRows(catalogTable).flatMap((cells) => {
+    const lying = tableRows(catalogTable, "Primitive").flatMap((cells) => {
       const [primitive, , file, story] = cells;
       if (story?.trim() !== "✅") return [];
       const module = file.trim().replace(/`/g, "");
@@ -266,6 +507,13 @@ describe("the catalog indexes this directory", () => {
     expect(lying).toEqual([]);
   });
 
+  it("reads a title off every story file", () => {
+    const untitled = storyFiles
+      .filter((path) => storyTitle(path, readFileSync(path, "utf8")) === null)
+      .map((path) => relative(frontendRoot, path));
+    expect(untitled).toEqual([]);
+  });
+
   it("files every story under a documented root", () => {
     const stray = storyFiles.flatMap((path) => {
       const title = storyTitle(path, readFileSync(path, "utf8"));
@@ -276,6 +524,57 @@ describe("the catalog indexes this directory", () => {
         : [`${relative(frontendRoot, path)} files under ${root}/`];
     });
     expect(stray).toEqual([]);
+  });
+});
+
+describe("the sidebar is shelved the way the catalog says", () => {
+  const filed = storyFiles.flatMap((path) => {
+    const title = storyTitle(path, readFileSync(path, "utf8"));
+    return title === null
+      ? []
+      : [{ path: relative(frontendRoot, path), title }];
+  });
+  const shaped = filed.filter(({ title }) =>
+    SHAPED_ROOTS.includes(rootOf(title)),
+  );
+  const order = sidebarOrder(previewPath, readFileSync(previewPath, "utf8"));
+
+  it("reads the shelves and titles it holds", () => {
+    expect(categories.length).toBeGreaterThan(5);
+    expect(topics.length).toBeGreaterThan(1);
+    expect(
+      shaped.filter(({ title }) => rootOf(title) === "Components").length,
+    ).toBeGreaterThan(50);
+    expect(
+      shaped.filter(({ title }) => rootOf(title) === "Foundations").length,
+    ).toBeGreaterThanOrEqual(topics.length);
+    expect(order).not.toBeNull();
+  });
+
+  it("files every component under a declared category", () => {
+    expect(shelfFindings(filed, "Components", categories, [3, 4])).toEqual([]);
+  });
+
+  it("files every foundation under a declared topic", () => {
+    expect(shelfFindings(filed, "Foundations", topics, [2, 3])).toEqual([]);
+  });
+
+  it("writes every segment in Sentence case", () => {
+    expect(caseFindings(shaped)).toEqual([]);
+  });
+
+  it("gives every story file a title of its own", () => {
+    expect(sharedTitleFindings(shaped)).toEqual([]);
+  });
+
+  it("never makes one title both a leaf and a group", () => {
+    expect(leafAndGroupFindings(shaped)).toEqual([]);
+  });
+
+  it("sorts the sidebar in the catalog's order", () => {
+    expect(order?.roots).toEqual(documentedRootOrder);
+    expect(order?.children.get("Components")).toEqual(categories);
+    expect(order?.children.get("Foundations")).toEqual(topics);
   });
 });
 
@@ -409,5 +708,223 @@ describe("the detectors report what they are for", () => {
     expect(storyTitle(probe, 'const meta = { title: "Shell/Top bar" };')).toBe(
       null,
     );
+  });
+
+  it("reports no title for a meta a literal read cannot resolve", () => {
+    for (const meta of [
+      `const meta = { title: \`Shell/\${bar}\` };`,
+      'const meta = { title: "Shell/" + bar };',
+      "const meta = { title: TITLE };",
+      "const meta = { title } as Meta;",
+      "const meta = {};",
+    ]) {
+      expect(storyTitle(probe, `${meta}\nexport default meta;`)).toBe(null);
+    }
+    expect(
+      storyTitle(
+        probe,
+        'const meta = { title: "Shell/Top bar" };\nexport { meta as default };',
+      ),
+    ).toBe(null);
+  });
+
+  it("reads every table under its header, and only those", () => {
+    const section = [
+      "| Root | What |",
+      "|---|---|",
+      "| `A/` | one |",
+      "",
+      "| Category | What |",
+      "|---|---|",
+      "| Labels | pills |",
+      "",
+      "| Root | What |",
+      "|---|---|",
+      "| `B/` | two |",
+    ].join("\n");
+    expect(tableRows(section, "Root").map((cells) => cells[0].trim())).toEqual([
+      "`A/`",
+      "`B/`",
+    ]);
+    expect(tableRows(section, "Category")).toEqual([[" Labels ", " pills "]]);
+  });
+
+  it("refuses a blank row inside a table rather than reading it as a rule", () => {
+    const section = [
+      "| Category | What |",
+      "|---|---|",
+      "| Labels | pills |",
+      "| | |",
+      "| Messaging | notes |",
+    ].join("\n");
+    expect(() => tableRows(section, "Category")).toThrow(
+      'a blank table row follows "| Labels | pills |"',
+    );
+  });
+
+  it("sees a title off the declared shelves", () => {
+    const shelves = ["Labels", "Messaging"];
+    expect(
+      shelfFindings(
+        [
+          { path: "a", title: "Components/Labels/Tag pill" },
+          { path: "b", title: "Components/Messaging/Toast" },
+          { path: "c", title: "Components/Badges/Badge" },
+          { path: "d", title: "Components/Labels" },
+          { path: "e", title: "Patterns/Anything" },
+          { path: "f", title: "Components/Labels/Tag pill/Row" },
+          { path: "g", title: "Components/Labels/Tag pill/Row/Cell" },
+        ],
+        "Components",
+        shelves,
+        [3, 4],
+      ),
+    ).toEqual([
+      'c files "Components/Badges/Badge" off the Components/ shelves the README declares',
+      'd files "Components/Labels" off the Components/ shelves the README declares',
+      'g files "Components/Labels/Tag pill/Row/Cell" off the Components/ shelves the README declares',
+    ]);
+  });
+
+  it("sees a declared shelf with no story on it", () => {
+    expect(
+      shelfFindings(
+        [{ path: "a", title: "Components/Labels/Tag pill" }],
+        "Components",
+        ["Labels", "Loading"],
+        [3, 4],
+      ),
+    ).toEqual(["Components/Loading is declared and holds no story"]);
+  });
+
+  it("sees a segment that is not Sentence case", () => {
+    for (const segment of [
+      "ListTable",
+      "Stat Card",
+      "stat card",
+      "Stat  card",
+      " Stat card",
+      "",
+      "ALERT",
+      "Stat CARD",
+      "1ALERT",
+      "360View",
+      "MCP server",
+      "Stat Äpfel",
+      "ärger",
+    ]) {
+      expect(isSentenceCase(segment)).toBe(false);
+    }
+    for (const segment of [
+      "Stat card",
+      "AI pending",
+      "Company 360",
+      "Open in Margince",
+      "Sign-in page",
+      "Ärger",
+    ]) {
+      expect(isSentenceCase(segment)).toBe(true);
+    }
+    expect(
+      caseFindings([
+        { path: "a", title: "Components/Text and Data/List table" },
+      ]),
+    ).toEqual(['a: "Text and Data" is not Sentence case']);
+  });
+
+  it("sees two files claiming one title", () => {
+    expect(
+      sharedTitleFindings([
+        { path: "a", title: "Components/Labels/Tag pill" },
+        { path: "b", title: "Components/Labels/Row tags" },
+        { path: "c", title: "Components/Labels/Tag pill" },
+      ]),
+    ).toEqual([
+      'id "components-labels-tag-pill" is claimed by a ("Components/Labels/Tag pill"), c ("Components/Labels/Tag pill")',
+    ]);
+  });
+
+  it("sees two titles that differ only where Storybook's id folds", () => {
+    expect(
+      sharedTitleFindings([
+        { path: "a", title: "Components/AI and provenance/AI tag" },
+        { path: "b", title: "Components/AI and provenance/Ai tag" },
+        { path: "c", title: "Components/Labels/Tag pill" },
+        { path: "d", title: "Components/Labels/Tag/Pill" },
+      ]).length,
+    ).toBe(2);
+  });
+
+  it("sees a title that is both a leaf and a group", () => {
+    expect(
+      leafAndGroupFindings([
+        { path: "a", title: "Components/Labels/Tag" },
+        { path: "b", title: "Components/Labels/Tag/Row" },
+        { path: "c", title: "Components/Labels/Tag pill" },
+        { path: "d", title: "Components/Labels/AI mark" },
+        { path: "e", title: "Components/Labels/Ai mark/Row" },
+      ]),
+    ).toEqual([
+      'a: "Components/Labels/Tag" is a leaf and also the group of "Components/Labels/Tag/Row"',
+      'd: "Components/Labels/AI mark" is a leaf and also the group of "Components/Labels/Ai mark/Row"',
+    ]);
+  });
+
+  it("reads the story suffixes off the stories globs", () => {
+    const main = (globs: string) =>
+      `const config = { stories: [${globs}] } satisfies Config;\nexport default config;`;
+    expect(
+      storySuffixes(probe, main('"../src/**/*.stories.@(ts|tsx)"')),
+    ).toEqual([".stories.ts", ".stories.tsx"]);
+    for (const globs of [
+      '"../src/**/*.mdx"',
+      '"../src/**/*.stories.tsx"',
+      "GLOBS",
+      '"../src/**/*.stories.@(ts|tsx)", "../extensions/**/*.stories.tsx"',
+    ]) {
+      expect(storySuffixes(probe, main(globs))).toBe(null);
+    }
+    expect(
+      storySuffixes(
+        probe,
+        'export const stories = ["../src/**/*.stories.@(tsx)"];',
+      ),
+    ).toBe(null);
+  });
+
+  it("reads the sidebar order off the default-exported preview", () => {
+    const preview = [
+      'const fixture = { storySort: { order: ["Wrong"] } };',
+      "const preview: Preview = { parameters: { options: { storySort: {",
+      '  method: "alphabetical",',
+      '  order: ["Foundations", ["Color"], "Components", ["Labels", "Messaging"], "Shell"],',
+      "} } } };",
+      "export default preview;",
+    ].join("\n");
+    const order = sidebarOrder(probe, preview);
+    expect(order?.roots).toEqual(["Foundations", "Components", "Shell"]);
+    expect(order?.children.get("Components")).toEqual(["Labels", "Messaging"]);
+    expect(order?.children.get("Foundations")).toEqual(["Color"]);
+  });
+
+  it("reports no sidebar order rather than guessing one", () => {
+    const preview = (order: string) =>
+      `export default { parameters: { options: { storySort: { order: ${order} } } } };`;
+    for (const order of [
+      "ROOTS",
+      "[...ROOTS]",
+      '[["Color"], "Foundations"]',
+      '["Components", [LABELS]]',
+      '["Components", ["Labels"], ["Messaging"]]',
+    ]) {
+      expect(sidebarOrder(probe, preview(order))).toBe(null);
+    }
+    expect(
+      sidebarOrder(probe, 'const p = { storySort: { order: ["Shell"] } };'),
+    ).toBe(null);
+    expect(sidebarOrder(probe, preview('["Shell"]'))).toEqual({
+      roots: ["Shell"],
+      children: new Map(),
+    });
   });
 });

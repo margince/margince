@@ -30,7 +30,7 @@ import { AutonomyDot } from "./trust";
 // shadow that reads on paper is invisible, which is exactly the case
 // `tokens.css` themes the shadow for.
 const meta: Meta<typeof DecisionDeck> = {
-  title: "Design System/DecisionDeck",
+  title: "Components/AI and provenance/Decision deck/Deck",
   component: DecisionDeck,
   parameters: { layout: "padded" },
   decorators: [

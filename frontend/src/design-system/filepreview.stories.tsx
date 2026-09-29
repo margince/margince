@@ -12,7 +12,7 @@ import { FilePreviewProvider, useFilePreview } from "./filepreview";
 // the record is still what the reader is in the middle of.
 
 const meta: Meta = {
-  title: "Design System/FilePreview",
+  title: "Components/Overlays and layering/File preview",
   parameters: { layout: "fullscreen" },
 };
 export default meta;

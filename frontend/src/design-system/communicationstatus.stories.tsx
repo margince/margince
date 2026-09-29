@@ -12,7 +12,8 @@ import {
 import { FactList } from "./factlist";
 
 const meta: Meta = {
-  title: "Design System/Communication status",
+  title: "Components/Status indicators/Communication status",
+  component: CommunicationStatus,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

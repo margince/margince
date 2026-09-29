@@ -7,7 +7,7 @@ import { AvatarStack } from "./avatarstack";
 // A committee of contacts as overlapping monograms, folding into a "+N" once
 // the group runs past `max`.
 const meta = {
-  title: "Design System/AvatarStack",
+  title: "Components/Images and icons/Avatar stack",
   component: AvatarStack,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof AvatarStack>;

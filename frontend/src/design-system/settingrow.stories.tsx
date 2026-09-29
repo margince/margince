@@ -18,7 +18,7 @@ const REFUSED: RefusedDomain[] = [
 ];
 
 const meta: Meta<typeof SettingRow> = {
-  title: "Design System/SettingRow",
+  title: "Components/Layout and structure/Setting row",
   component: SettingRow,
   parameters: { layout: "padded" },
 };

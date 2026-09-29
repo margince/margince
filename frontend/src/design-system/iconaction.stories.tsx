@@ -16,7 +16,7 @@ import { IconAction } from "./iconaction";
 // pointer reader and a screen reader are told the same thing.
 
 const meta: Meta<typeof IconAction> = {
-  title: "Design System/IconAction",
+  title: "Components/Forms and input/Icon action",
   component: IconAction,
   parameters: { layout: "padded" },
 };

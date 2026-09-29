@@ -36,7 +36,7 @@ function CopyTheLink({ text = LINK }: Readonly<{ text?: string }>) {
 }
 
 const meta: Meta<typeof CopyTheLink> = {
-  title: "Design System/useClipboardCopy",
+  title: "Components/Forms and input/Clipboard copy",
   component: CopyTheLink,
   parameters: { layout: "padded" },
   render: () => (

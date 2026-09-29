@@ -9,7 +9,8 @@ import { ProblemError } from "../screens/common";
 import { InlineChoice } from "./inlinechoice";
 
 const meta: Meta = {
-  title: "Design System/Inline choice",
+  title: "Components/Forms and input/Inline choice",
+  component: InlineChoice,
   decorators: [
     (Story) => (
       <LocaleProvider initial="en">

@@ -16,7 +16,7 @@ import { StatStrip } from "./statstrip";
 // `hero` flag carried a third for the Brief; one reading in three spellings is
 // the defect, and the row's own job is only how many slots and where it folds.
 const meta: Meta<typeof StatStrip> = {
-  title: "Design System/StatStrip",
+  title: "Components/Text and data display/Stat strip",
   component: StatStrip,
   parameters: { layout: "padded" },
 };

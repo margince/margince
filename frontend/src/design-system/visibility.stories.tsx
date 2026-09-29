@@ -14,7 +14,7 @@ import { VisibilityBadge, VisibilityLine } from "./visibility";
 // drawer draws, and the chip that opens, which is the record header's.
 
 const meta: Meta<typeof VisibilityBadge> = {
-  title: "Design System/Visibility",
+  title: "Components/Labels/Visibility",
   component: VisibilityBadge,
   parameters: { layout: "padded" },
 };

@@ -91,7 +91,7 @@ const CHAT_MESSAGE: Rung[] = [
 ];
 
 const meta: Meta<typeof PipelineLadder> = {
-  title: "Design System/PipelineLadder",
+  title: "Components/Status indicators/Pipeline ladder",
   component: PipelineLadder,
 };
 export default meta;

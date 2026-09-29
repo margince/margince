@@ -10,7 +10,8 @@ import { ResolveSheet, type ResolveSheetLabels } from "./resolvesheet";
 
 // Answering a finding from the nightly input check.
 const meta: Meta = {
-  title: "Design System/ResolveSheet",
+  title: "Components/Overlays and layering/Resolve sheet",
+  component: ResolveSheet,
   parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => (

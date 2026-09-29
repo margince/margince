@@ -24,7 +24,7 @@ import { AutonomyDot } from "./trust";
 // `--aiLight` tint — every one of those re-resolves when the theme flips, so a
 // band that reads clearly on paper can vanish on the dark surface.
 const meta: Meta<typeof DecisionCard> = {
-  title: "Design System/DecisionCard",
+  title: "Components/AI and provenance/Decision card/Card",
   component: DecisionCard,
   parameters: { layout: "padded" },
   decorators: [

@@ -8,7 +8,7 @@ import { Field } from "./atoms";
 import { TimezoneSelect } from "./timezoneselect";
 
 const meta: Meta<typeof TimezoneSelect> = {
-  title: "Design System/Timezone select",
+  title: "Components/Forms and input/Timezone select",
   component: TimezoneSelect,
   parameters: { layout: "padded" },
 };

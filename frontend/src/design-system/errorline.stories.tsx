@@ -11,7 +11,8 @@ import { Row, Stack } from "./stack";
 // The one refusal line, in each of the shapes a caller hands it. Flip the
 // Theme control: the ink is `--dangerText`, which is lifted in dark.
 const meta: Meta = {
-  title: "Design System/ErrorLine",
+  title: "Components/Messaging/Error line",
+  component: ErrorLine,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

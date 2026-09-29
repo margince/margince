@@ -29,7 +29,7 @@ const row: CSSProperties = {
 };
 
 const meta: Meta<typeof StatCard> = {
-  title: "Design System/StatCard",
+  title: "Components/Text and data display/Stat card",
   component: StatCard,
 };
 export default meta;

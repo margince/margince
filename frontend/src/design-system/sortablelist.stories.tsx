@@ -55,7 +55,7 @@ function Ordered({
 }
 
 const meta: Meta<typeof SortableList> = {
-  title: "Design System/SortableList",
+  title: "Components/Forms and input/Sortable list",
   component: SortableList,
   parameters: { layout: "padded" },
 };
