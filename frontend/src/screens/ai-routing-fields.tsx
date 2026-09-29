@@ -15,6 +15,7 @@ import {
   offeredModels,
   useAvailableModels,
 } from "./ai-models";
+import "./ai-settings.css";
 
 type Routing = components["schemas"]["AiRouting"];
 // The adapters a tier may name. Written out because the wire carries a free
