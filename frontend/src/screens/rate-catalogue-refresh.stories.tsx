@@ -45,14 +45,22 @@ const REPORT = {
   ],
 };
 
-function Demo() {
+function Panels() {
   const refresh = useRefreshModelPrices();
   return (
-    <StoryProviders>
+    <>
       <RefreshModelPricesButton refresh={refresh} />
       <RefreshSummary refresh={refresh} />
       <ProviderRefreshLine refresh={refresh} provider="openai_compatible" />
       <ProviderRefreshLine refresh={refresh} provider="gemini" />
+    </>
+  );
+}
+
+function Demo() {
+  return (
+    <StoryProviders>
+      <Panels />
     </StoryProviders>
   );
 }
