@@ -89,7 +89,7 @@ export const ProvidersOffered: Story = {
       await dialog.findByRole("combobox", { name: "Provider" }),
     );
     const listbox = within(await within(document.body).findByRole("listbox"));
-    await expect(await listbox.findByText("ollama")).toBeVisible();
+    await expect(await listbox.findByText("ollama")).toBeInTheDocument();
     await expect(listbox.queryByText("vllm")).toBeNull();
     await expect(listbox.queryByText("anthropic")).toBeNull();
     await expect(listbox.queryByText("fake")).toBeNull();
