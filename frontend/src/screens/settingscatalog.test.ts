@@ -254,7 +254,9 @@ describe("what each page lets a reader change", () => {
     import:
       "all(full-seat, any(all(any(import_run:create), any(import_run:update))))",
 
-    models: "all(full-seat, any(any(ai_routing:update)))",
+    // The provider sheets price models on the same page as the bindings.
+    models:
+      "all(full-seat, any(any(ai_routing:update), any(ai_model_rate:update, ai_model_rate:create)))",
     automations:
       "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
     usage:
@@ -754,9 +756,9 @@ describe("a page and its cards ask the same question", () => {
     expect(opens("usage", management)).toBe(true);
     expect(opens("model-calls", management)).toBe(true);
     // Models too, and NOT because the routing editor is theirs — it is not,
-    // and the card refuses them. `AiHealthCard` reads on `ai_diagnostics` and
-    // Models is the only page rendering it, so a page shut on the routing
-    // grant alone would put a card behind a door its own reader cannot open.
+    // and the card refuses them. The Model tiers card answers a diagnostics
+    // read with the lanes' health alone, so a page shut on the routing grant
+    // would put that reading behind a door its own reader cannot open.
     expect(opens("models", management)).toBe(true);
   });
 
