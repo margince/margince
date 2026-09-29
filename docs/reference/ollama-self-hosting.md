@@ -2,7 +2,8 @@
 
 **Tested 2026-09-23 to 2026-09-24** on one machine (below), with Ollama 0.34.3,
 through this tree's own certification lane. Every figure is a measurement from
-those two days, not an estimate. Models, Ollama and this product all move:
+those two days, not an estimate; the verdicts in section 4 were re-taken on
+2026-09-28/29. Models, Ollama and this product all move:
 re-measure before trusting a number here for a purchase.
 
 Related: [certify-an-ai-model.md](../how-to/certify-an-ai-model.md) for how to
@@ -19,7 +20,8 @@ On a 24GB Apple-silicon machine, **use `gemma4:12b` on every tier.**
 
 - It is the only model we tested that passed every `capture_classify` run (15 of
   15), and the only one we ran on the whole corpus: 8 tasks at a 100% pass rate,
-  8 more at 80% or better, out of 28 scored (table in section 4).
+  8 more at 80% or better, out of 28 scored (table in section 4). Under the
+  current grading rule it certifies 8 of 28 and 6 more are usable with care.
 - A call takes **about 14 seconds** (the median of the per-task medians in
   section 4). It generates 12 tokens a second.
 - It is the largest Gemma 4 that runs **entirely on the GPU** here. The 26B
@@ -94,11 +96,11 @@ Two different measurements are on this page, and they are not comparable:
   out on purpose: that rule required every single run to pass, and it has been
   replaced.
 - **Verdict** (section 4, last table): the labels the current rule gives, from the
-  twelve records committed for the sovereign preset.
+  28 records committed for the sovereign preset, re-taken on 2026-09-28/29 and
+  judged by the default cloud judge (Claude Sonnet 4.6).
 
 The two are different runs with different judges, so a task can differ between
-them: `request_settlement` is 0.25 in the first table and 0.75 in the second, and
-`capture_classify` is 15 of 15 in one and 0.93 in the other.
+them: `request_settlement` is 0.25 in the first table and 0.96 in the second.
 
 Statistics warning: three runs per scenario, one machine, one quantization. A
 difference of about 0.15 in pass rate on 15 runs is inside the noise. Read the
@@ -149,19 +151,46 @@ What the latency column means in practice: a short verdict or classification is
 tokens (`summarize`, `deal_health`, `growth_fit`) is 45 to 86 seconds, because
 generation is 12 tokens a second and there is no way around it on this chip.
 
-**The verdicts the current grading rule gives**, for the twelve tasks whose
-records are committed under the `sovereign` profile (judged by `gpt-oss:20b`
-running locally, because the lane then refused a cloud judge under that profile;
-it no longer does):
+**The verdicts the current grading rule gives**, from the committed `sovereign`
+records (2026-09-28/29, cloud judge, a borderline scenario re-run before it is
+decided, so the run counts vary). Latency here includes the judge's turn off the
+GPU but not a second model on it; read it beside the table above.
 
-| verdict | tasks |
-|---|---|
-| certified | brief_ranking, cert_judge, enrich, propose_roles, rate_extract, transcript_propose |
-| supported, degraded | request_settlement (0.75) |
-| not supported | capture_classify (0.93), site_triage (0.80), owed_verdict (0.58), signal_extract (0.50), account_scan (0.50) |
+| task | verdict | pass rate | runs | median s | 95th pct s | output tokens |
+|---|---|---|---|---|---|---|
+| agent_loop | certified | 1.00 | 18 | 5.9 | 36.7 | 19 |
+| capture_classify | certified | 1.00 | 18 | 11.4 | 28.5 | 131 |
+| cert_judge | certified | 1.00 | 12 | 9.3 | 12.2 | 33 |
+| enrich | certified | 1.00 | 12 | 29.8 | 36.4 | 307 |
+| propose_roles | certified | 1.00 | 9 | 14.8 | 40.3 | 154 |
+| rate_extract | certified | 1.00 | 9 | 9.5 | 17.2 | 96 |
+| transcript_propose | certified | 1.00 | 9 | 11.4 | 21.5 | 36 |
+| request_settlement | certified | 0.96 | 24 | 23.8 | 26.9 | 160 |
+| deal_health | supported, degraded | 1.00 | 15 | 44.3 | 64.1 | 479 |
+| weekly_review | supported, degraded | 0.97 | 36 | 7.4 | 16.0 | 48 |
+| site_triage | supported, degraded | 0.95 | 21 | 6.7 | 7.3 | 36 |
+| offer_draft | supported, degraded | 0.88 | 24 | 25.4 | 44.9 | 240 |
+| account_scan | supported, degraded | 0.83 | 18 | 23.3 | 33.1 | 123 |
+| brief_ranking | supported, degraded | 0.83 | 6 | 8.7 | 12.5 | 77 |
+| draft_reply | not supported | 0.91 | 108 | 9.1 | 40.3 | 85 |
+| capture_confidentiality_verdict | not supported | 0.86 | 42 | 10.6 | 11.4 | 77 |
+| cold_start | not supported | 0.85 | 39 | 13.9 | 44.3 | 113 |
+| corpus_ask | not supported | 0.80 | 30 | 19.7 | 48.1 | 142 |
+| capture_counterparty_verdict | not supported | 0.74 | 72 | 10.0 | 12.7 | 73 |
+| stage_evidence_extract | not supported | 0.72 | 36 | 21.5 | 33.6 | 107 |
+| voice_build | not supported | 0.71 | 24 | 14.0 | 111.6 | 397 |
+| site_fact_extract | not supported | 0.67 | 18 | 15.0 | 24.9 | 136 |
+| weekly_learnings | not supported | 0.67 | 27 | 5.1 | 5.4 | 11 |
+| summarize | not supported | 0.62 | 66 | 45.4 | 78.3 | 436 |
+| site_extract | not supported | 0.60 | 45 | 22.0 | 31.1 | 193 |
+| growth_fit | not supported | 0.56 | 18 | 109.5 | 123.5 | 1131 |
+| signal_extract | not supported | 0.56 | 18 | 12.1 | 14.6 | 65 |
+| owed_verdict | not supported | 0.50 | 12 | 16.1 | 26.1 | 156 |
 
-The other sixteen tasks have no record under this binding. That means untested,
-not failed.
+8 certified, 6 usable with care, 14 not supported, of 28 scored. `document_extract`
+has no record, for the reason above. A pass rate of 1.00 beside "usable with
+care" (`deal_health`) is the grading rule at work: every run passed the site's
+own validator, and the judge scored a scenario below its bar.
 
 ## 5. The other models: a screen, not a certification
 
@@ -214,6 +243,14 @@ in front of Ollama) gets nothing, which is what the adapter sent before.
 "answer more briefly" only when the response says it was cut off. Ollama says so,
 and the adapter threw it away. (The certification rework that landed the same
 day fixed this too; both changes are in.)
+
+**A thinking floor turned Gemma 4's thinking on, with no bound.** Two
+onboarding sites (`cold_start`'s `company_message` and `sitereadmessage`) ask
+for `low` thinking. Gemma 4 through Ollama can only switch thinking on or off, so
+the adapter sent `think: true`: one turn then thought for about 4,300 tokens and
+7 minutes, against 110 tokens and 15 seconds with it off, and every `cold_start`
+run timed out before the answer. A floor now leaves an on/off-only model off
+([ai-thinking.md](ai-thinking.md)).
 
 **A cloud judge was refused under `sovereign`.** The profile was checked against
 every binding a run makes, the judge included, so a sovereign run needed a local

@@ -17,8 +17,8 @@ On a 24 GB Apple-silicon machine, **serve `Qwen3-14B` (4-bit MLX) if it must be
 vLLM**: of five models it led or tied on six of seven tasks, at 10 to 13
 seconds for a verdict. It is the preset
 [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml), measured
-on every task (section 5): 6 of 28 certified and 2 usable with care, where the
-Ollama Gemma 4 preset certifies 6 of the 12 it was measured on. **If it need not be vLLM, use Ollama with Gemma 4 12B**
+on every task (section 5): 8 of 28 certified and 1 usable with care, where the
+Ollama Gemma 4 preset certifies 8 of 28 and 6 more with care. **If it need not be vLLM, use Ollama with Gemma 4 12B**
 ([ollama-self-hosting.md](ollama-self-hosting.md)): on this machine vLLM is not
 faster for one user, Gemma 4 12B answers gibberish through it (section 2), and
 Gemma 3 12B's structured output loops (section 4).
