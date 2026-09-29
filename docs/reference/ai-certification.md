@@ -35,11 +35,11 @@ setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 
 | Family | Models we tested | Can I trust it? | In plain words |
 |---|---|---|---|
-| Gemini | `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`, `gemini-3.5-flash` | 🟡 Mostly | Ready for 31 of the 47 features we tested; 15 more work if someone looks over the result; 1 not reliable yet. |
-| Gemma | `gemma4:12b`, `gemma-4-26b-a4b-it`, `gemma-4-31b-it` | 🟡 Mostly | Ready for 23 of the 46 features we tested; 17 more work if someone looks over the result; 6 not reliable yet. |
-| Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-large-2512`, `mistral-medium-3-5`, `mistral-small-2603` | 🔴 Not yet | Ready for 22 of the 46 features we tested; 7 more work if someone looks over the result; 17 not reliable yet. |
+| Gemini | `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`, `gemini-3.5-flash` | 🟡 Mostly | Ready for 29 of the 45 features we tested; 15 more work if someone looks over the result; 1 not reliable yet. |
+| Gemma | `gemma4:12b`, `gemma-4-26b-a4b-it`, `gemma-4-31b-it` | 🟡 Mostly | Ready for 22 of the 44 features we tested; 17 more work if someone looks over the result; 5 not reliable yet. |
 | Qwen | `Qwen3-14B-4bit` | 🔴 Not yet | Ready for 11 of the 46 features we tested; 7 more work if someone looks over the result; 28 not reliable yet. |
-| GPT | `gpt-oss-120b` | 🔴 Not yet | Ready for 11 of the 41 features we tested; 19 more work if someone looks over the result; 11 not reliable yet. |
+| Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-large-2512`, `mistral-medium-3-5`, `mistral-small-2603` | 🔴 Not yet | Ready for 21 of the 44 features we tested; 7 more work if someone looks over the result; 16 not reliable yet. |
+| GPT | `gpt-oss-120b` | 🔴 Not yet | Ready for 11 of the 39 features we tested; 18 more work if someone looks over the result; 10 not reliable yet. |
 | GLM | `glm-5.2` | ⚪ Not enough tested yet | Tested on only 5 of the 47 features. Ask before relying on it. |
 | Claude | `claude-haiku-4.5` | ⚪ Not enough tested yet | Tested on only 1 of the 47 features. Ask before relying on it. |
 
@@ -697,9 +697,9 @@ Everything the grades above are computed from, folded so the page stays short.
 
 ### Gemini
 
-🟡 Mostly — Ready for 31 of the 47 features we tested; 15 more work if someone looks over the result; 1 not reliable yet.
+🟡 Mostly — Ready for 29 of the 45 features we tested; 15 more work if someone looks over the result; 1 not reliable yet.
 
-8 of these results were measured on an older version of the product and are re-check pending.
+6 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -717,8 +717,6 @@ Everything the grades above are computed from, folded so the page stays short.
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.5-flash · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 21 of 21 tries |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 42 of 42 tries |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 57 of 57 tries |
 | [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.5-flash · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`cold_start/acts`](#cold_startacts) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 15 of 15 tries |
 | [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
@@ -764,9 +762,9 @@ Everything the grades above are computed from, folded so the page stays short.
 
 ### Gemma
 
-🟡 Mostly — Ready for 23 of the 46 features we tested; 17 more work if someone looks over the result; 6 not reliable yet.
+🟡 Mostly — Ready for 22 of the 44 features we tested; 17 more work if someone looks over the result; 5 not reliable yet.
 
-6 of these results were measured on an older version of the product and are re-check pending.
+4 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -784,8 +782,6 @@ Everything the grades above are computed from, folded so the page stays short.
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care | 11 of 12 tries |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ⚠️ Usable with care | 21 of 27 tries |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ✅ Ready · re-check pending | 42 of 42 tries |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | ❌ Not reliable yet · re-check pending | 52 of 57 tries |
 | [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 12 of 12 tries |
 | [`cold_start/acts`](#cold_startacts) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 15 of 15 tries |
 | [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
@@ -825,76 +821,6 @@ Everything the grades above are computed from, folded so the page stays short.
 | [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ❌ Not reliable yet | 18 of 27 tries |
 | [`weekly_review/narrative`](#weekly_reviewnarrative) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | ❌ Not reliable yet | 45 of 45 tries |
-
-</details>
-
-### Mistral
-
-🔴 Not yet — Ready for 22 of the 46 features we tested; 7 more work if someone looks over the result; 17 not reliable yet.
-
-18 of these results were measured on an older version of the product and are re-check pending.
-
-| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
-|---|---|---:|---:|---:|---:|---|
-| `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 8 | 0 | 2 | 0.87 |
-| `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 7 | 10 | 17 | 0.78 |
-| `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 1 | 2 | 0 | 0.93 |
-| `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 2 | 1 | 3 | 0.87 |
-| `mistralai/mistral-large-2512` | `cloud_frontier` | 6 | 4 | 1 | 1 | 0.90 |
-| `mistralai/mistral-medium-3-5` | `cloud_frontier` | 6 | 3 | 2 | 1 | 0.92 |
-| `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 3 | 2 | 1 | 0.83 |
-
-<details>
-<summary>Best model for each feature</summary>
-
-| Feature | Best model in the family | Grade | Right in |
-|---|---|---|---|
-| [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 15 of 15 tries |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
-| [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | ✅ Ready | 9 of 9 tries |
-| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ✅ Ready | 15 of 15 tries |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 38 of 42 tries |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
-| [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 12 of 12 tries |
-| [`cold_start/acts`](#cold_startacts) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 15 of 15 tries |
-| [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 24 of 24 tries |
-| [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 1 of 3 tries |
-| [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care · re-check pending | 2 of 3 tries |
-| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 0 of 3 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 0 of 6 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 6 of 9 tries |
-| [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`enrich/signature`](#enrichsignature) | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | ⚠️ Usable with care · re-check pending | 3 of 3 tries |
-| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 16 of 18 tries |
-| [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 36 of 39 tries |
-| [`owed_verdict/owed`](#owed_verdictowed) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ❌ Not reliable yet | 7 of 15 tries |
-| [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
-| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | ✅ Ready · re-check pending | 6 of 6 tries |
-| [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ✅ Ready | 23 of 24 tries |
-| [`signal_extract/thread_events`](#signal_extractthread_events) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 7 of 15 tries |
-| [`site_extract/profile`](#site_extractprofile) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ❌ Not reliable yet | 24 of 30 tries |
-| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 6 of 6 tries |
-| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 15 of 15 tries |
-| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 27 of 45 tries |
-| [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 12 of 12 tries |
-| [`summarize/company_brief`](#summarizecompany_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 6 of 6 tries |
-| [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 3 of 3 tries |
-| [`summarize/contact_brief`](#summarizecontact_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 11 of 18 tries |
-| [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 1 of 9 tries |
-| [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 7 of 9 tries |
-| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
-| [`voice_build/demo_draft`](#voice_builddemo_draft) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 3 of 3 tries |
-| [`voice_build/derive`](#voice_buildderive) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 2 of 9 tries |
-| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
-| [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 9 of 15 tries |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 23 of 24 tries |
 
 </details>
 
@@ -962,11 +888,79 @@ Everything the grades above are computed from, folded so the page stays short.
 
 </details>
 
+### Mistral
+
+🔴 Not yet — Ready for 21 of the 44 features we tested; 7 more work if someone looks over the result; 16 not reliable yet.
+
+16 of these results were measured on an older version of the product and are re-check pending.
+
+| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
+|---|---|---:|---:|---:|---:|---|
+| `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 8 | 0 | 2 | 0.87 |
+| `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 7 | 10 | 17 | 0.78 |
+| `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 1 | 2 | 0 | 0.93 |
+| `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 2 | 1 | 3 | 0.87 |
+| `mistralai/mistral-large-2512` | `cloud_frontier` | 6 | 4 | 1 | 1 | 0.90 |
+| `mistralai/mistral-medium-3-5` | `cloud_frontier` | 6 | 3 | 2 | 1 | 0.92 |
+| `mistralai/mistral-small-2603` | `eu_hosted` | 6 | 3 | 2 | 1 | 0.83 |
+
+<details>
+<summary>Best model for each feature</summary>
+
+| Feature | Best model in the family | Grade | Right in |
+|---|---|---|---|
+| [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 15 of 15 tries |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
+| [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | ✅ Ready | 9 of 9 tries |
+| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ✅ Ready | 15 of 15 tries |
+| [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`cold_start/acts`](#cold_startacts) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ✅ Ready | 15 of 15 tries |
+| [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 24 of 24 tries |
+| [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 1 of 3 tries |
+| [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care · re-check pending | 2 of 3 tries |
+| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 0 of 3 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 0 of 6 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet · re-check pending | 6 of 9 tries |
+| [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`enrich/signature`](#enrichsignature) | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | ⚠️ Usable with care · re-check pending | 3 of 3 tries |
+| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 16 of 18 tries |
+| [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 36 of 39 tries |
+| [`owed_verdict/owed`](#owed_verdictowed) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ❌ Not reliable yet | 7 of 15 tries |
+| [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
+| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | ✅ Ready · re-check pending | 6 of 6 tries |
+| [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ✅ Ready | 23 of 24 tries |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 7 of 15 tries |
+| [`site_extract/profile`](#site_extractprofile) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | ❌ Not reliable yet | 24 of 30 tries |
+| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 6 of 6 tries |
+| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 15 of 15 tries |
+| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 27 of 45 tries |
+| [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 12 of 12 tries |
+| [`summarize/company_brief`](#summarizecompany_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 6 of 6 tries |
+| [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 3 of 3 tries |
+| [`summarize/contact_brief`](#summarizecontact_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 11 of 18 tries |
+| [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 1 of 9 tries |
+| [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 7 of 9 tries |
+| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ✅ Ready | 9 of 9 tries |
+| [`voice_build/demo_draft`](#voice_builddemo_draft) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 3 of 3 tries |
+| [`voice_build/derive`](#voice_buildderive) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 2 of 9 tries |
+| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
+| [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 9 of 15 tries |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 23 of 24 tries |
+
+</details>
+
 ### GPT
 
-🔴 Not yet — Ready for 11 of the 41 features we tested; 19 more work if someone looks over the result; 11 not reliable yet.
+🔴 Not yet — Ready for 11 of the 39 features we tested; 18 more work if someone looks over the result; 10 not reliable yet.
 
-4 of these results were measured on an older version of the product and are re-check pending.
+2 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -981,8 +975,6 @@ Everything the grades above are computed from, folded so the page stays short.
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 11 of 12 tries |
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 15 of 15 tries |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care · re-check pending | 37 of 42 tries |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet · re-check pending | 49 of 57 tries |
 | [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 6 of 6 tries |
 | [`cold_start/acts`](#cold_startacts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 23 of 24 tries |
 | [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |

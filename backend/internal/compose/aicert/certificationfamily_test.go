@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // The answers a family can earn. The first three read the family's best model
@@ -42,7 +43,7 @@ const (
 type aiCertFamily struct {
 	Name   string `json:"name"`
 	Answer string `json:"answer"`
-	// SitesShipped is every feature the product runs, so a reader sees how much
+	// SitesShipped counts the features the product runs, so a reader sees how much
 	// of it this family was measured on.
 	SitesShipped   int `json:"sites_shipped"`
 	SitesMeasured  int `json:"sites_measured"`
@@ -77,7 +78,7 @@ func buildAICertFamilies(doc aiCertDoc) []aiCertFamily {
 	for _, site := range doc.Sites {
 		best := map[string]aiCertRecord{}
 		count := map[string]int{}
-		for _, rec := range site.Records {
+		for _, rec := range eligibleFamilyRecords(site) {
 			name := aicert.ModelFamily(rec.Binding.Model)
 			count[name]++
 			if held, ok := best[name]; !ok || beatsAICertRecord(rec, held) {
@@ -110,6 +111,22 @@ func buildAICertFamilies(doc aiCertDoc) []aiCertFamily {
 	return out
 }
 
+// eligibleFamilyRecords drops what the product never serves: a local-only task
+// skips hosted bindings, as the preset view does, so a hosted record cannot
+// lift a family's answer for a feature a buyer would not get from it.
+func eligibleFamilyRecords(site aiCertSite) []aiCertRecord {
+	if !ai.LocalOnly(ai.Task(site.Task)) {
+		return site.Records
+	}
+	var eligible []aiCertRecord
+	for _, rec := range site.Records {
+		if ai.ProviderIsLocal(rec.Binding.Provider) {
+			eligible = append(eligible, rec)
+		}
+	}
+	return eligible
+}
+
 func countAICertFamily(fam *aiCertFamily) {
 	fam.SitesMeasured = len(fam.Sites)
 	for _, s := range fam.Sites {
@@ -128,7 +145,7 @@ func countAICertFamily(fam *aiCertFamily) {
 	fam.Answer = familyAnswer(fam)
 }
 
-// familyAnswer is the one rule both halves of the page state: not enough tested
+// familyAnswer grades a family, and both halves of the page state its rule: not enough tested
 // when the family covers under half the features, yes when every measured one is
 // ready, mostly when at least familyMostlyPercent are usable, not yet otherwise.
 func familyAnswer(fam *aiCertFamily) string {
@@ -182,8 +199,8 @@ func familyAnswerWords(answer string) string {
 	}
 }
 
-// familyPlainWords is the one sentence a reader without the vocabulary needs.
-// It is built from the counts so it cannot disagree with the answer beside it.
+// familyPlainWords is the sentence for a reader without the vocabulary.
+// It is built from the counts, the same ones the answer beside it reads.
 func familyPlainWords(fam aiCertFamily) string {
 	if fam.Answer == familyNotEnough {
 		return fmt.Sprintf("Tested on only %d of the %d features. Ask before relying on it.",
@@ -300,7 +317,7 @@ func assertAICertFamiliesCoverEveryRecord(t *testing.T, doc aiCertDoc, page stri
 	}
 	for _, site := range doc.Sites {
 		perFamily := map[string]int{}
-		for _, rec := range site.Records {
+		for _, rec := range eligibleFamilyRecords(site) {
 			perFamily[aicert.ModelFamily(rec.Binding.Model)]++
 		}
 		for name, n := range perFamily {
@@ -338,5 +355,18 @@ func TestFamilyAnswerNeedsCoverageBeforeItGrades(t *testing.T) {
 		if got := familyAnswer(&tc.fam); got != tc.want {
 			t.Errorf("%s: answer %q, want %q", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestAHostedRecordDoesNotGradeAFamilyOnALocalOnlyTask(t *testing.T) {
+	hosted := aiCertRecord{Binding: aiCertBindingRef{Provider: "gemini", Model: "gemini-3.5-flash"}, Band: aicert.VerdictCertified}
+	local := aiCertRecord{Binding: aiCertBindingRef{Provider: "ollama", Model: "gemma4:12b"}, Band: aicert.VerdictCertified}
+	localOnly := aiCertSite{Task: "capture_counterparty_verdict", Records: []aiCertRecord{hosted, local}}
+	if got := eligibleFamilyRecords(localOnly); len(got) != 1 || got[0].Binding.Provider != "ollama" {
+		t.Errorf("a local-only task kept %+v, want only the local record", got)
+	}
+	open := aiCertSite{Task: "site_triage", Records: []aiCertRecord{hosted, local}}
+	if got := eligibleFamilyRecords(open); len(got) != 2 {
+		t.Errorf("a task with no locality rule kept %d records, want both", len(got))
 	}
 }
