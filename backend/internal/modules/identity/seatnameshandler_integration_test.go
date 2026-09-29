@@ -12,8 +12,15 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -103,4 +110,123 @@ func TestAnArchivedSeatIsNotNamed(t *testing.T) {
 	if _, present := named[gone.UUID]; present {
 		t.Fatal("an archived seat was named")
 	}
+}
+
+// The ceiling is the handler's, because the contract's maxItems is documentation:
+// nothing generated from it checks the length at runtime.
+func TestNamingMoreThanTheCeilingIsRefused(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-names-ceiling")
+
+	atTheLimit := make([]openapi_types.UUID, maxNamedSeats)
+	for i := range atTheLimit {
+		atTheLimit[i] = openapi_types.UUID(ids.NewV7())
+	}
+	if status := nameSeatsStatus(t, e, e.admin, atTheLimit); status != http.StatusOK {
+		t.Fatalf("naming %d colleagues is allowed; the handler answered %d", maxNamedSeats, status)
+	}
+
+	overTheLimit := append(atTheLimit, openapi_types.UUID(ids.NewV7()))
+	if status := nameSeatsStatus(t, e, e.admin, overTheLimit); status != http.StatusUnprocessableEntity {
+		t.Fatalf("naming %d colleagues is refused; the handler answered %d", len(overTheLimit), status)
+	}
+}
+
+// One request, one order. Ranging the map SeatNames returns would answer the
+// same request differently between runs.
+func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-names-order")
+	first := inviteAndLogin(t, e, "first@acme.test", "Ada First", "rep")
+	second := inviteAndLogin(t, e, "second@acme.test", "Bo Second", "rep")
+
+	// Asked youngest-first, which is the reverse of the creation order the
+	// roster's own reads use — so an answer that followed the table rather than
+	// the request would come back the other way round.
+	asked := []openapi_types.UUID{
+		openapi_types.UUID(second.UserID.UUID),
+		openapi_types.UUID(first.UserID.UUID),
+	}
+	body := nameSeatsBody(t, e, e.admin, asked)
+	if len(body.Data) != 2 {
+		t.Fatalf("two colleagues were asked about; %d came back", len(body.Data))
+	}
+	if body.Data[0].DisplayName != "Bo Second" || body.Data[1].DisplayName != "Ada First" {
+		t.Fatalf("the answer follows the order asked; it came back as %q, %q",
+			body.Data[0].DisplayName, body.Data[1].DisplayName)
+	}
+}
+
+// The shape is the disclosure decision: a naming read hands back a name, and a
+// later "while we are here" addition of the email has to argue with this.
+func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-names-shape")
+	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One", "rep")
+
+	raw := nameSeatsRawJSON(t, e, rep, []openapi_types.UUID{openapi_types.UUID(rep.UserID.UUID)})
+	for _, leaked := range []string{"email", "status", "seat_type", "is_agent", "roles", "team_ids"} {
+		if strings.Contains(raw, `"`+leaked+`"`) {
+			t.Fatalf("a naming read disclosed %q: %s", leaked, raw)
+		}
+	}
+	if !strings.Contains(raw, `"display_name"`) {
+		t.Fatalf("a naming read carried no name at all: %s", raw)
+	}
+}
+
+// A repeated id is one question, and an id nobody holds is an absence rather
+// than an error — the two readings the loader on the client depends on.
+func TestARepeatIsOneRowAndAnUnknownIdIsNoRow(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-names-repeat")
+	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One", "rep")
+	stranger := openapi_types.UUID(ids.NewV7())
+
+	body := nameSeatsBody(t, e, e.admin, []openapi_types.UUID{
+		openapi_types.UUID(rep.UserID.UUID),
+		openapi_types.UUID(rep.UserID.UUID),
+		stranger,
+	})
+	if len(body.Data) != 1 {
+		t.Fatalf("one colleague was named twice and one is unknown; %d rows came back", len(body.Data))
+	}
+	if body.Data[0].DisplayName != "Rep One" {
+		t.Fatalf("the named colleague is Rep One; the read says %q", body.Data[0].DisplayName)
+	}
+}
+
+// nameSeatsRecorder is the one request+recorder builder the three readers
+// below share, so the ceiling, order and shape assertions differ only in
+// what they read back rather than in how they call the handler.
+func nameSeatsRecorder(t *testing.T, e *revocationEnv, caller Identity, wanted []openapi_types.UUID) *httptest.ResponseRecorder {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/users/names", nil).
+		WithContext(withIdentity(e.wsCtx(caller), caller))
+	NewHandlers(e.svc).NameSeats(rec, req, crmcontracts.NameSeatsParams{Id: wanted})
+	return rec
+}
+
+func nameSeatsStatus(t *testing.T, e *revocationEnv, caller Identity, wanted []openapi_types.UUID) int {
+	t.Helper()
+	return nameSeatsRecorder(t, e, caller, wanted).Code
+}
+
+func nameSeatsBody(t *testing.T, e *revocationEnv, caller Identity, wanted []openapi_types.UUID) crmcontracts.SeatNameListResponse {
+	t.Helper()
+	rec := nameSeatsRecorder(t, e, caller, wanted)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("naming status = %d: %s", rec.Code, rec.Body)
+	}
+	var body crmcontracts.SeatNameListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	return body
+}
+
+func nameSeatsRawJSON(t *testing.T, e *revocationEnv, caller Identity, wanted []openapi_types.UUID) string {
+	t.Helper()
+	rec := nameSeatsRecorder(t, e, caller, wanted)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("naming status = %d: %s", rec.Code, rec.Body)
+	}
+	return rec.Body.String()
 }
