@@ -115,6 +115,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 
 ### Reference — look it up
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
+- [entity-model/](reference/entity-model/README.md) — every table, every column, and what each one is: one page per owning area, rendered from the schema the migrations build, the contract's field descriptions and the ownership map. Never hand-edited.
 - [brief-priorities.md](reference/brief-priorities.md) — how morning priorities, scoped risk and weekly coverage are derived.
 - [meeting-brief.md](reference/meeting-brief.md) — the pre-meeting brief and its preparation plan: the three invariants, what a caller is and is not shown, how a year of history becomes five moments, and why the plan and the sections have separate writers.
 - [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, and its egress.
