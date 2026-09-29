@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type listWire struct {
@@ -74,6 +75,12 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members", AnyMap{
 		"entity_type": "contact", "entity_id": a["id"],
 	}, http.StatusConflict, nil)
+	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members", AnyMap{
+		"entity_type": "company", "entity_id": company["id"],
+	}, http.StatusUnprocessableEntity, nil)
+	mustCall(t, e, "POST", "/v1/lists/"+ids.NewV7().String()+"/members/remove", AnyMap{
+		"entity_type": "contact", "entity_id": a["id"],
+	}, http.StatusNotFound, nil)
 
 	// Members page by page, of both kinds.
 	for _, id := range []string{short.ID, live.ID} {
@@ -148,6 +155,8 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": live.ID, "format": "json"}, http.StatusOK, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": short.ID, "format": "json"}, http.StatusUnprocessableEntity, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": "not-a-uuid", "format": "json"}, http.StatusUnprocessableEntity, nil)
+	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": live.ID, "object": "contact", "format": "json"}, http.StatusUnprocessableEntity, nil)
+	mustCall(t, e, "POST", "/v1/exports", AnyMap{"object": "contact", "format": "json"}, http.StatusUnprocessableEntity, nil)
 	var used listWire
 	mustCall(t, e, "GET", "/v1/lists/"+live.ID, nil, http.StatusOK, &used)
 	if len(used.Dependencies) != 1 {
@@ -217,4 +226,22 @@ func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
 		agent.CallOK(t, "read_lists", call)
 	}
 	agent.CallRefused(t, "read_lists", map[string]any{"mode": "preview", "entity_type": "partner", "definition": map[string]any{"field": "x", "op": "eq", "value": "y"}})
+	for tool, calls := range map[string][]map[string]any{
+		"read_lists": {
+			{"mode": "everything"},
+			{"mode": "get"},
+			{"mode": "preview", "entity_type": "contact", "definition": map[string]any{"op": "eq"}},
+		},
+		"change_lists": {
+			{"mode": "archive"},
+			{"mode": "create", "name": "", "entity_type": "contact"},
+			{"mode": "create", "name": "Partners", "entity_type": "partner"},
+			{"mode": "create", "name": "Kinds", "entity_type": "contact", "list_type": "sometimes"},
+			{"mode": "create", "name": "Shared", "entity_type": "contact", "sharing": "everybody"},
+		},
+	} {
+		for _, call := range calls {
+			agent.CallRefused(t, tool, call)
+		}
+	}
 }

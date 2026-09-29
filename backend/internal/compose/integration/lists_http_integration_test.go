@@ -62,6 +62,10 @@ func TestListsAreAbsentWhileTheInstallationHasThemSwitchedOff(t *testing.T) {
 		t.Errorf("/me says lists = %v, want false", me.SettingsAvailability.Lists)
 	}
 	agent.CallRefused(t, "read_lists", map[string]any{"mode": "find"})
+	agent.CallRefused(t, "change_lists", map[string]any{"mode": "create", "name": "x", "entity_type": "contact"})
+	if status := e.Call(t, "POST", "/v1/exports", AnyMap{"list_id": someList, "format": "json"}, nil, nil); status != http.StatusNotFound {
+		t.Errorf("an export of a list = %d, want 404 while lists are off", status)
+	}
 }
 
 type listDTO struct {
