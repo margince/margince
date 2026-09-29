@@ -159,7 +159,7 @@ it("does not request editions or schedules without their read grants", async () 
     ),
   ).toBe(false);
   expect(
-    screen.queryByRole("button", { name: "Save edition" }),
+    screen.queryByRole("button", { name: "Capture edition" }),
   ).not.toBeInTheDocument();
 });
 it("preserves the sales pipeline when returning from SDR outcomes", async () => {
