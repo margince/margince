@@ -3250,8 +3250,9 @@ export interface paths {
         /**
          * Say what one change over a selection of records would do, without doing it.
          * @description The first half of a bulk change. The caller names up to 500 contacts, companies or deals,
-         *     each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`) or
-         *     `archive`. The answer says which records the change would alter (`affected`), which it
+         *     each with the `version` it was shown, and one verb: `reassign_owner` (with `owner_id`),
+         *     `archive`, or `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`, while lists
+         *     are switched on). The answer says which records the change would alter (`affected`), which it
          *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
          *
          *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -6999,7 +7000,8 @@ export interface paths {
          * @description First-class filtered export (features/10 §3): emits exactly the rows that match the active
          *     filter AND that the caller may see (row-scoped through the same one filter engine that drives
          *     lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
-         *     with a `filter` (the canonical §13.5 predicate) or a `view_id`. Bulk record read
+         *     with a `filter` (the canonical §13.5 predicate), a `view_id`, or the `list_id` of a Live List
+         *     (while lists are switched on; the export is then listed on the list as a use). Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
          */
@@ -25859,10 +25861,12 @@ export interface components {
         BulkRecordType: "contact" | "company" | "deal";
         /**
          * @description What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-         *     `archive` retires it exactly as the single-record archive does.
+         *     `archive` retires it exactly as the single-record archive does. `add_to_list` and
+         *     `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+         *     `addListMember` and `removeListMember` do, and change nothing on the record itself.
          * @enum {string}
          */
-        BulkVerb: "reassign_owner" | "archive";
+        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list";
         /** @description One selected record and the version the caller was shown. */
         BulkItem: {
             /** Format: uuid */
@@ -25879,9 +25883,16 @@ export interface components {
             items: components["schemas"]["BulkItem"][];
             /**
              * Format: uuid
-             * @description The new owner. Required for `reassign_owner` and refused for `archive`.
+             * @description The new owner. Required for `reassign_owner` and refused for every other verb.
              */
             owner_id?: string;
+            /**
+             * Format: uuid
+             * @description The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+             */
+            list_id?: string;
+            /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
+            note?: string;
         };
         BulkChangeExecuteRequest: {
             record_type: components["schemas"]["BulkRecordType"];
@@ -25889,16 +25900,24 @@ export interface components {
             items: components["schemas"]["BulkItem"][];
             /**
              * Format: uuid
-             * @description The new owner. Required for `reassign_owner` and refused for `archive`.
+             * @description The new owner. Required for `reassign_owner` and refused for every other verb.
              */
             owner_id?: string;
+            /**
+             * Format: uuid
+             * @description The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+             */
+            list_id?: string;
+            /** @description Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes. */
+            note?: string;
             /** @description The token a preview of exactly this selection returned. Required above 10 records. */
             confirm_token?: string;
         };
         /**
          * @description Why a record is left alone. `not_found`: the caller cannot see it, or it is already
          *     archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-         *     its version moved since the caller read it. `no_change`: it already has this owner.
+         *     its version moved since the caller read it. `no_change`: it already has this owner, or is
+         *     already on (or already off) the Shortlist.
          *     `anchor_company`: it is the installation's own company, which is never archived.
          *     `not_previewed`: the preview whose token this execution presents did not list it.
          *     `refused`: a single-record rule refuses it; `code` says which.
@@ -25926,11 +25945,13 @@ export interface components {
             /** @description The refusal in English, for a code the client does not know. */
             message?: string;
         };
-        /** @description The two facts a bulk change can move on a record. */
+        /** @description The facts a bulk change can move on a record. */
         BulkRecordState: {
             /** Format: uuid */
             owner_id: string | null;
             archived: boolean;
+            /** @description For a list verb, whether the record is on the Shortlist. */
+            listed?: boolean;
         };
         /** @description One record the change would alter, as it is and as it would be. */
         BulkSampleRow: {
@@ -26009,6 +26030,11 @@ export interface components {
              * @description The new owner a reassignment named.
              */
             owner_id?: string;
+            /**
+             * Format: uuid
+             * @description The Shortlist a list verb named.
+             */
+            list_id?: string;
             /** @description The number of records changed. */
             changed: number;
             skipped: components["schemas"]["BulkSkip"][];

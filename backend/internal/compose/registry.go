@@ -121,7 +121,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// The bulk change runs the engine the /v1/bulk routes run, admitted against
 	// this registry's own gate so an agent's changed records meet the write
 	// counter the registry charges them to.
-	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate)})
+	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(listsOn)})
 	// enrich rides the site-read seam rather than the datasource one: it reads
 	// the company's OWN website, which no record provider can answer.
 	agents.RegisterEnrichTool(registry, provider, enricher)
@@ -377,4 +377,14 @@ func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logge
 		svc = svc.WithLogger(log)
 	}
 	return svc
+}
+
+// providerWithTranscripts is the provider over db, starting a transcript read
+// when one lands if the role wired a reader for it.
+func providerWithTranscripts(db *database.DB, onLanding activities.TranscriptReadEnqueue) *Provider {
+	provider := NewProviderFor(db)
+	if onLanding != nil {
+		provider = provider.WithTranscriptEnqueue(onLanding)
+	}
+	return provider
 }

@@ -70,16 +70,6 @@ func NewProviderFor(db *database.DB) *Provider {
 	}
 }
 
-// providerWithTranscripts is the provider over db, starting a transcript read
-// when one lands if the role wired a reader for it.
-func providerWithTranscripts(db *database.DB, onLanding activities.TranscriptReadEnqueue) *Provider {
-	provider := NewProviderFor(db)
-	if onLanding != nil {
-		provider = provider.WithTranscriptEnqueue(onLanding)
-	}
-	return provider
-}
-
 var _ datasource.SystemOfRecordProvider = (*Provider)(nil)
 
 // searchable is the entity set Search sweeps when the query names none.

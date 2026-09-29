@@ -855,6 +855,9 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "listed": {
+                      "type": "boolean"
+                    },
                     "owner_id": {
                       "type": "string",
                       "format": "uuid"
@@ -868,6 +871,9 @@
                   "type": "object",
                   "properties": {
                     "archived": {
+                      "type": "boolean"
+                    },
+                    "listed": {
                       "type": "boolean"
                     },
                     "owner_id": {

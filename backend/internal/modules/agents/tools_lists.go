@@ -4,7 +4,7 @@
 package agents
 
 // read_lists and change_lists: Live Lists and Shortlists, read and changed as
-// the person behind the agent's passport would.
+// the user behind the agent's passport would.
 //
 // Two tools rather than one because one verb spends one scope: finding and
 // reading lists needs read, changing them needs write, and an agent granted

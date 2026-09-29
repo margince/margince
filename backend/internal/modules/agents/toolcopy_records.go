@@ -131,8 +131,8 @@ var relinkActivitiesCopy = toolCopy{
 }
 
 var bulkUpdateRecordsCopy = toolCopy{
-	Purpose: "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one " +
-		"change — or undo such a change.",
+	Purpose: "Hand up to 500 contacts, companies or deals to one owner, archive them, or add them " +
+		"to or take them off a Shortlist, in one change — or undo such a change.",
 	Limits: "Call mode preview first and show the user what it says: how many records change, " +
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
 		"record is changed only if it still has the version you sent and you may change it. To " +

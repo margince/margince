@@ -125,29 +125,47 @@ func admitMemberChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, change
 	if err := httperr.RequireBodyID(entityIDField, change.EntityID); err != nil {
 		return "", err
 	}
-	if err := auth.Require(ctx, listObject, principal.ActionUpdate); err != nil {
-		return "", err
-	}
 	if change.Reason != ReasonChosen && change.Reason != ReasonBulk {
 		return "", fmt.Errorf("membership change reason %q is not one this writer records", change.Reason)
 	}
-	list, _, err := editableList(ctx, tx, listID)
-	if err != nil {
+	if err := admitShortlistChange(ctx, tx, listID, change.EntityType); err != nil {
 		return "", err
-	}
-	if list.ArchivedAt != nil {
-		return "", ErrListArchived
-	}
-	if list.ListType != listTypeStatic {
-		return "", &BadInputError{Field: "list", Reason: "a Live List's members follow its filter; only a Shortlist takes members by hand"}
-	}
-	if change.EntityType != list.EntityType {
-		return "", &BadInputError{Field: entityTypeField, Reason: "must match the list's entity_type " + list.EntityType}
 	}
 	if err := auth.EnsureLinkTarget(ctx, tx, change.EntityType, change.EntityID); err != nil {
 		return "", err
 	}
 	return storekit.CapturedBy(ctx)
+}
+
+// CheckShortlistChange asks, before any record is named, whether the caller
+// may change the membership of this list for records of entityType: a bulk
+// change refuses the whole selection here rather than every row in turn.
+func (s *Store) CheckShortlistChange(ctx context.Context, listID ids.ListID, entityType string) error {
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return admitShortlistChange(ctx, tx, listID, entityType)
+	})
+}
+
+// admitShortlistChange is the list half of a membership change's gates: the
+// list update grant, list authority, a live Shortlist, and its record type.
+func admitShortlistChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, entityType string) error {
+	if err := auth.Require(ctx, listObject, principal.ActionUpdate); err != nil {
+		return err
+	}
+	list, _, err := editableList(ctx, tx, listID)
+	if err != nil {
+		return err
+	}
+	if list.ArchivedAt != nil {
+		return ErrListArchived
+	}
+	if list.ListType != listTypeStatic {
+		return &BadInputError{Field: "list", Reason: "a Live List's members follow its filter; only a Shortlist takes members by hand"}
+	}
+	if entityType != list.EntityType {
+		return &BadInputError{Field: entityTypeField, Reason: "must match the list's entity_type " + list.EntityType}
+	}
+	return nil
 }
 
 // recordMemberChange writes the membership event row, the audit row and the

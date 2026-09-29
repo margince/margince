@@ -5,7 +5,7 @@ package compose
 
 // The tool door onto lists. read_lists and change_lists answer through the
 // same collections store the /v1/lists routes do, in the same contract shapes,
-// so an agent and the person behind it read one list the same way.
+// so an agent and the user behind it read one list the same way.
 
 import (
 	"context"

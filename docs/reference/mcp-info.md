@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 80 |
 | Resources | 11 |
-| Tool catalog | 235.0 KB |
+| Tool catalog | 235.4 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 61213 |
+| Approx. wire tokens | 61299 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 106.1 KB | 45% | **No** — a result's shape, never listed to a model |
+| Output schemas | 106.2 KB | 45% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 60.0 KB | 25% | Yes, every step |
-| Input schemas | 52.2 KB | 22% | Yes, every step |
+| Input schemas | 52.4 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.7 KB | 7% | Partly |
-| **Description + input schema** | **112.2 KB** | **47%** | **the recurring cost** |
+| **Description + input schema** | **112.5 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -70,7 +70,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 4.4 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 4.7 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
@@ -1524,7 +1524,7 @@ Record a meeting against linked CRM records without sending an invitation. Reser
 
 **Change many records at once**
 
-Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope "write".)
+Hand up to 500 contacts, companies or deals to one owner, archive them, or add them to or take them off a Shortlist, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -1583,6 +1583,11 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
       "minItems": 1,
       "type": "array"
     },
+    "list_id": {
+      "description": "The Shortlist, for add_to_list and remove_from_list",
+      "format": "uuid",
+      "type": "string"
+    },
     "mode": {
       "description": "preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names",
       "enum": [
@@ -1591,6 +1596,11 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
         "undo_preview",
         "undo"
       ],
+      "type": "string"
+    },
+    "note": {
+      "description": "Why, for add_to_list and remove_from_list",
+      "maxLength": 500,
       "type": "string"
     },
     "owner_id": {
@@ -1609,7 +1619,9 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
     "verb": {
       "enum": [
         "reassign_owner",
-        "archive"
+        "archive",
+        "add_to_list",
+        "remove_from_list"
       ],
       "type": "string"
     }
@@ -1720,6 +1732,9 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
                   "archived": {
                     "type": "boolean"
                   },
+                  "listed": {
+                    "type": "boolean"
+                  },
                   "owner_id": {
                     "format": "uuid",
                     "type": "string"
@@ -1733,6 +1748,9 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
               "before": {
                 "properties": {
                   "archived": {
+                    "type": "boolean"
+                  },
+                  "listed": {
                     "type": "boolean"
                   },
                   "owner_id": {

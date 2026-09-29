@@ -96,6 +96,9 @@ func TestCompileGoldenSQLPerOperator(t *testing.T) {
 		{"exists false", leaf("owner_id", OpExists, false), "t.owner_id IS NULL", nil},
 		{"eq boolean", leaf("is_hot", OpEq, true), "t.is_hot = $1", []any{true}},
 		{"eq date", leaf("expected_close_date", OpEq, "2026-12-31"), "t.expected_close_date = $1", []any{"2026-12-31"}},
+		// A relative date is read when the filter runs, so the day is SQL's.
+		{"within the last 45 days", leaf("expected_close_date", OpGte, relativeDays(45.0)), "t.expected_close_date >= (CURRENT_DATE - $1::integer)", []any{45}},
+		{"more than 45 days ago", leaf("expected_close_date", OpLt, relativeDays(45)), "t.expected_close_date < (CURRENT_DATE - $1::integer)", []any{45}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -227,6 +230,10 @@ func TestCompileRejectsInvalidShapes(t *testing.T) {
 		{"in mixed types", leaf("status", OpIn, []any{"open", 3.0}), CodeFilterValueInvalid},
 		{"in bad uuid member", leaf("owner_id", OpIn, []any{ownerUUID, "nope"}), CodeFilterValueInvalid},
 		{"contains empty string", leaf("title", OpContains, ""), CodeFilterValueInvalid},
+		{"relative date with a fraction", leaf("expected_close_date", OpLt, map[string]any{"days_ago": 4.5}), CodeFilterValueInvalid},
+		{"relative date in the future", leaf("expected_close_date", OpLt, map[string]any{"days_ago": -3.0}), CodeFilterValueInvalid},
+		{"relative date with another key", leaf("expected_close_date", OpLt, map[string]any{"days_ago": 3.0, "weeks": 1.0}), CodeFilterValueInvalid},
+		{"relative operand on a number", leaf("probability", OpLt, map[string]any{"days_ago": 3.0}), CodeFilterValueInvalid},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -574,3 +581,8 @@ func TestADomainOperandBindsTheHostTheColumnHolds(t *testing.T) {
 			"exactly like a domain nobody has", args)
 	}
 }
+
+// relativeDays is a relative date operand as a caller writes it.
+//
+//craft:ignore naked-any the operand is a decoded JSON number, float64 off the wire or int in a hand-built tree
+func relativeDays(n any) map[string]any { return map[string]any{"days_ago": n} }

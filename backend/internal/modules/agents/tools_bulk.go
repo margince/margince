@@ -45,6 +45,8 @@ type BulkChangeCommand struct {
 	Verb         string
 	Items        []BulkItem
 	OwnerID      *ids.UUID
+	ListID       *ids.UUID
+	Note         *string
 	ConfirmToken string
 }
 
@@ -74,6 +76,7 @@ type BulkSkip struct {
 type BulkRecordState struct {
 	OwnerID  *ids.UUID `json:"owner_id"`
 	Archived bool      `json:"archived"`
+	Listed   *bool     `json:"listed,omitempty"`
 }
 
 // BulkSampleRow is one record the change would alter, before and after.
@@ -122,6 +125,8 @@ type bulkUpdateRecordsArgs struct {
 	Verb         string     `json:"verb"`
 	Items        []BulkItem `json:"items"`
 	OwnerID      *ids.UUID  `json:"owner_id"`
+	ListID       *ids.UUID  `json:"list_id"`
+	Note         *string    `json:"note"`
 	ConfirmToken string     `json:"confirm_token"`
 	BatchID      *ids.UUID  `json:"batch_id"`
 }
@@ -140,10 +145,12 @@ func (t bulkUpdateRecords) Spec() mcp.ToolSpec {
 			"mode":{"type":"string","enum":["preview","execute","undo_preview","undo"],
 				"description":"preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names"},
 			"record_type":{"type":"string","enum":["contact","company","deal"]},
-			"verb":{"type":"string","enum":["reassign_owner","archive"]},
+			"verb":{"type":"string","enum":["reassign_owner","archive","add_to_list","remove_from_list"]},
 			"items":{"type":"array","minItems":1,"maxItems":500,"items":{"type":"object","required":["id","version"],
 				"properties":{"id":{"type":"string","format":"uuid"},"version":{"type":"integer"}},"additionalProperties":false}},
 			"owner_id":{"type":"string","format":"uuid","description":"The new owner, for reassign_owner"},
+			"list_id":{"type":"string","format":"uuid","description":"The Shortlist, for add_to_list and remove_from_list"},
+			"note":{"type":"string","maxLength":500,"description":"Why, for add_to_list and remove_from_list"},
 			"confirm_token":{"type":"string","description":"The token preview or undo_preview answered; needed above 10 records"},
 			"batch_id":{"type":"string","format":"uuid","description":"For undo_preview and undo: the batch_id execute answered"}},
 			"if":{"properties":{"mode":{"enum":["preview","execute"]}}},
@@ -161,7 +168,7 @@ func (t bulkUpdateRecords) Handle(ctx context.Context, in json.RawMessage) (json
 	}
 	cmd := BulkChangeCommand{
 		RecordType: args.RecordType, Verb: args.Verb, Items: args.Items,
-		OwnerID: args.OwnerID, ConfirmToken: args.ConfirmToken,
+		OwnerID: args.OwnerID, ListID: args.ListID, Note: args.Note, ConfirmToken: args.ConfirmToken,
 	}
 	switch args.Mode {
 	case bulkModePreview, bulkModeExecute:
@@ -191,7 +198,7 @@ func (t bulkUpdateRecords) undo(ctx context.Context, args bulkUpdateRecordsArgs)
 	if args.BatchID == nil {
 		return nil, &BadArgsError{Cause: fmt.Errorf("%s needs batch_id, the batch execute answered", args.Mode)}
 	}
-	if args.RecordType != "" || args.Verb != "" || len(args.Items) > 0 || args.OwnerID != nil {
+	if args.RecordType != "" || args.Verb != "" || len(args.Items) > 0 || args.OwnerID != nil || args.ListID != nil {
 		return nil, &BadArgsError{Cause: fmt.Errorf("%s takes only batch_id and confirm_token; the batch names the rest", args.Mode)}
 	}
 	if args.Mode == bulkModeUndo {

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 80,
     "resources": 11,
-    "tool_catalog_bytes": 240675,
+    "tool_catalog_bytes": 241017,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 61213,
+    "approx_wire_tokens_total": 61299,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 61410,
-      "input_schema_bytes": 53455,
-      "output_schema_bytes": 108659,
-      "description_plus_input_schema_bytes": 114865
+      "description_bytes": 61452,
+      "input_schema_bytes": 53699,
+      "output_schema_bytes": 108715,
+      "description_plus_input_schema_bytes": 115151
     }
   },
   "tools": {
@@ -1158,7 +1158,7 @@
           "readOnlyHint": false,
           "title": "Change many records at once"
         },
-        "description": "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Hand up to 500 contacts, companies or deals to one owner, archive them, or add them to or take them off a Shortlist, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "else": {
@@ -1213,6 +1213,11 @@
               "minItems": 1,
               "type": "array"
             },
+            "list_id": {
+              "description": "The Shortlist, for add_to_list and remove_from_list",
+              "format": "uuid",
+              "type": "string"
+            },
             "mode": {
               "description": "preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names",
               "enum": [
@@ -1221,6 +1226,11 @@
                 "undo_preview",
                 "undo"
               ],
+              "type": "string"
+            },
+            "note": {
+              "description": "Why, for add_to_list and remove_from_list",
+              "maxLength": 500,
               "type": "string"
             },
             "owner_id": {
@@ -1239,7 +1249,9 @@
             "verb": {
               "enum": [
                 "reassign_owner",
-                "archive"
+                "archive",
+                "add_to_list",
+                "remove_from_list"
               ],
               "type": "string"
             }
@@ -1344,6 +1356,9 @@
                           "archived": {
                             "type": "boolean"
                           },
+                          "listed": {
+                            "type": "boolean"
+                          },
                           "owner_id": {
                             "format": "uuid",
                             "type": "string"
@@ -1357,6 +1372,9 @@
                       "before": {
                         "properties": {
                           "archived": {
+                            "type": "boolean"
+                          },
+                          "listed": {
                             "type": "boolean"
                           },
                           "owner_id": {

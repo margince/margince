@@ -2883,16 +2883,22 @@ func (e BulkSkipReason) Valid() bool {
 
 // Defines values for BulkVerb.
 const (
-	BulkVerbArchive       BulkVerb = "archive"
-	BulkVerbReassignOwner BulkVerb = "reassign_owner"
+	BulkVerbAddToList      BulkVerb = "add_to_list"
+	BulkVerbArchive        BulkVerb = "archive"
+	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
+	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
 )
 
 // Valid indicates whether the value is a known member of the BulkVerb enum.
 func (e BulkVerb) Valid() bool {
 	switch e {
+	case BulkVerbAddToList:
+		return true
 	case BulkVerbArchive:
 		return true
 	case BulkVerbReassignOwner:
+		return true
+	case BulkVerbRemoveFromList:
 		return true
 	default:
 		return false
@@ -23117,14 +23123,22 @@ type BulkChangeExecuteRequest struct {
 	ConfirmToken *string    `json:"confirm_token,omitempty"`
 	Items        []BulkItem `json:"items"`
 
-	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	// ListId The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Note Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.
+	Note *string `json:"note,omitempty"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -23153,7 +23167,9 @@ type BulkChangePreview struct {
 	Sample               []BulkSampleRow `json:"sample"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -23161,14 +23177,22 @@ type BulkChangePreview struct {
 type BulkChangePreviewRequest struct {
 	Items []BulkItem `json:"items"`
 
-	// OwnerId The new owner. Required for `reassign_owner` and refused for `archive`.
+	// ListId The Shortlist. Required for `add_to_list` and `remove_from_list` and refused for every other verb.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
+	// Note Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.
+	Note *string `json:"note,omitempty"`
+
+	// OwnerId The new owner. Required for `reassign_owner` and refused for every other verb.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
 	RecordType BulkRecordType `json:"record_type"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
@@ -23219,6 +23243,9 @@ type BulkOperation struct {
 	CreatedAt  time.Time        `json:"created_at"`
 	LeftBehind []BulkLeftBehind `json:"left_behind"`
 
+	// ListId The Shortlist a list verb named.
+	ListId *openapi_types.UUID `json:"list_id,omitempty"`
+
 	// OwnerId The new owner a reassignment named.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -23233,14 +23260,19 @@ type BulkOperation struct {
 	UndoneBy *openapi_types.UUID `json:"undone_by,omitempty"`
 
 	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-	// `archive` retires it exactly as the single-record archive does.
+	// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+	// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	Verb BulkVerb `json:"verb"`
 }
 
-// BulkRecordState The two facts a bulk change can move on a record.
+// BulkRecordState The facts a bulk change can move on a record.
 type BulkRecordState struct {
-	Archived bool                `json:"archived"`
-	OwnerId  *openapi_types.UUID `json:"owner_id"`
+	Archived bool `json:"archived"`
+
+	// Listed For a list verb, whether the record is on the Shortlist.
+	Listed  *bool               `json:"listed,omitempty"`
+	OwnerId *openapi_types.UUID `json:"owner_id"`
 }
 
 // BulkRecordType The kind of record a bulk change acts on. One change acts on one kind.
@@ -23248,10 +23280,10 @@ type BulkRecordType string
 
 // BulkSampleRow One record the change would alter, as it is and as it would be.
 type BulkSampleRow struct {
-	// After The two facts a bulk change can move on a record.
+	// After The facts a bulk change can move on a record.
 	After BulkRecordState `json:"after"`
 
-	// Before The two facts a bulk change can move on a record.
+	// Before The facts a bulk change can move on a record.
 	Before BulkRecordState    `json:"before"`
 	Id     openapi_types.UUID `json:"id"`
 
@@ -23274,7 +23306,8 @@ type BulkSkip struct {
 
 	// Reason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
 	// archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-	// its version moved since the caller read it. `no_change`: it already has this owner.
+	// its version moved since the caller read it. `no_change`: it already has this owner, or is
+	// already on (or already off) the Shortlist.
 	// `anchor_company`: it is the installation's own company, which is never archived.
 	// `not_previewed`: the preview whose token this execution presents did not list it.
 	// `refused`: a single-record rule refuses it; `code` says which.
@@ -23288,7 +23321,8 @@ type BulkSkip struct {
 
 // BulkSkipReason Why a record is left alone. `not_found`: the caller cannot see it, or it is already
 // archived. `not_writable`: the caller may read it but not change it. `changed_since_preview`:
-// its version moved since the caller read it. `no_change`: it already has this owner.
+// its version moved since the caller read it. `no_change`: it already has this owner, or is
+// already on (or already off) the Shortlist.
 // `anchor_company`: it is the installation's own company, which is never archived.
 // `not_previewed`: the preview whose token this execution presents did not list it.
 // `refused`: a single-record rule refuses it; `code` says which.
@@ -23306,7 +23340,9 @@ type BulkUndoRequest struct {
 }
 
 // BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
-// `archive` retires it exactly as the single-record archive does.
+// `archive` retires it exactly as the single-record archive does. `add_to_list` and
+// `remove_from_list` add it to or take it off the Shortlist `list_id` names, exactly as
+// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 type BulkVerb string
 
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room

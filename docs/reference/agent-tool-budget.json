@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 80,
     "system_frame_tokens": 516,
-    "tokens": 26554,
+    "tokens": 26626,
     "median_tool_tokens": 277,
-    "mean_tool_tokens": 331
+    "mean_tool_tokens": 332
   },
   "agents": [
     {
@@ -123,6 +123,10 @@
       "tokens": 581
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 548
+    },
+    {
       "name": "read_lists",
       "tokens": 528
     },
@@ -145,10 +149,6 @@
     {
       "name": "create_record",
       "tokens": 481
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 477
     },
     {
       "name": "run_analytics_query",

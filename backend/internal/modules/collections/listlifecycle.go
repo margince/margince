@@ -19,7 +19,7 @@ import (
 )
 
 // UpdateListInput changes what a list is. Every change is guarded by the
-// version the caller read, because a list other people work from must not be
+// version the caller read, because a list colleagues work from must not be
 // rewritten over an edit its author never saw.
 type UpdateListInput struct {
 	Name       *string
@@ -186,12 +186,12 @@ func (s *Store) setArchived(ctx context.Context, id ids.ListID, archive bool) (l
 		if out, err = scanList(tx.QueryRow(ctx, selectList, id)); err != nil {
 			return err
 		}
-		return auditArchiveChange(ctx, tx, id, archive)
+		return auditArchiveChange(ctx, tx, id, archive, p)
 	})
 	return out, err
 }
 
-func auditArchiveChange(ctx context.Context, tx pgx.Tx, id ids.ListID, archive bool) error {
+func auditArchiveChange(ctx context.Context, tx pgx.Tx, id ids.ListID, archive bool, p *storekit.Patch) error {
 	if archive {
 		auditID, err := storekit.Audit(ctx, tx, "archive", listObject, id.UUID, nil, nil)
 		if err != nil {
@@ -199,7 +199,7 @@ func auditArchiveChange(ctx context.Context, tx pgx.Tx, id ids.ListID, archive b
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventListArchived{})
 	}
-	auditID, err := storekit.Audit(ctx, tx, "restore", listObject, id.UUID, nil, nil)
+	auditID, err := storekit.Audit(ctx, tx, "restore", listObject, id.UUID, p.Before(), p.After())
 	if err != nil {
 		return err
 	}

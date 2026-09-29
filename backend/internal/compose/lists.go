@@ -28,6 +28,7 @@ func (s *Server) publishListsAvailability(pool *pgxpool.Pool) {
 	lists := NewCollectionsStore(pool)
 	s.contactsHandlers = s.contactsHandlers.WithListMembers(lists.MemberFilter)
 	s.dealsHandlers = s.dealsHandlers.WithListMembers(lists.MemberFilter)
+	s.bulkHandlers.engine.withLists(lists)
 	if s.company360Svc != nil {
 		s.company360Svc.ShowListMemberships()
 	}

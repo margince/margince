@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 43,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 14953,
+    "tokens_served_but_never_driven": 15024,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 0,
@@ -1253,6 +1253,18 @@
       "measured_by_model": {}
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 548,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "read_lists",
       "tokens": 528,
       "agents": [],
@@ -1290,18 +1302,6 @@
         "case33_two_cards_for_one_company",
         "case42_can_i_answer_on_whatsapp"
       ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 477,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
