@@ -17009,7 +17009,17 @@ export interface paths {
          *     (x-agent-access: human-only). Transparency-only: model prices never gate routing.
          */
         post: operations["setAiModelRate"];
-        delete?: never;
+        /**
+         * Remove a model's entry from the price sheet, every effective date of it.
+         * @description Admin/ops-only. Removes a model's whole entry from the sheet, every effective date of
+         *     it, history included; one date is never removed on its own. `lane` names the lane the
+         *     sheet files the model under (its latest row's), and a key the sheet does not hold is a
+         *     404. Past calls of that model become unpriced in cost estimates rather than priced at 0.
+         *     Gated on the same `ai_model_rate` update grant that corrects a price. The key travels as
+         *     query parameters because a model id carries slashes. Human session only
+         *     (x-agent-access: human-only). Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteAiModelRate"];
         options?: never;
         head?: never;
         patch?: never;
@@ -65148,6 +65158,32 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteAiModelRate: {
+        parameters: {
+            query: {
+                provider: string;
+                model_id: string;
+                lane: "chat" | "embeddings" | "decisions";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entry is removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

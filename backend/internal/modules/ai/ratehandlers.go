@@ -136,6 +136,23 @@ func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusCreated, toContractModelRate(row))
 }
 
+// DeleteAiModelRate removes one model's entry from the sheet, every effective
+// date of it. Human-only, like the write it undoes. 204 with no body: the
+// entry is gone, and there is nothing left to show.
+func (h Handlers) DeleteAiModelRate(w http.ResponseWriter, r *http.Request, params crmcontracts.DeleteAiModelRateParams) {
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := h.rates.DeleteModelRate(r.Context(), ModelRateKey{
+		Provider: params.Provider, ModelID: params.ModelId, Lane: Lane(params.Lane),
+	}); err != nil {
+		writeRateErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // WithCatalogueRefresh wires the two reads RefreshAiModelRates needs. Absent
 // them the route answers 501, like any operation this role does not serve.
 func (h Handlers) WithCatalogueRefresh(routing *RoutingStore, catalogue *ModelCatalogue) Handlers {

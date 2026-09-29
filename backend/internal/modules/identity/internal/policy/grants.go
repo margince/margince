@@ -20,9 +20,10 @@ var (
 	readOnly   = grant{Read: true}
 	readUpdate = grant{Read: true, Update: true}
 	// writeNoDelete is the append-forward config posture: create + read +
-	// same-day-correct (update), never delete. The rate sheets (fx_rate,
-	// ai_model_rate) have no delete surface at all — a past-dated row prices
-	// historical rollups and must never disappear — so no role holds delete.
+	// same-day-correct (update), never delete. A past-dated row on a rate sheet
+	// (fx_rate, ai_model_rate) prices historical rollups and must never
+	// disappear on its own, so no role holds delete; removing a model's WHOLE
+	// entry is a correction of the sheet and takes update.
 	writeNoDelete = grant{Create: true, Read: true, Update: true}
 	// createRead is the posture of a record nobody edits: it is recorded, and a
 	// later one supersedes it rather than replacing it in place, so neither
@@ -127,8 +128,8 @@ func grid(base grant, overrides map[string]grant) map[string]grant {
 const (
 	// The rate sheets. Append-forward on every role that holds them —
 	// create, read, same-day-correct, never delete — because a past-dated row
-	// prices a historical rollup and must not disappear. No delete surface
-	// exists at all, so no role holds one.
+	// prices a historical rollup and must not disappear. The one removal the
+	// product offers, a model's whole entry, is gated on update.
 	objAiModelRate = "ai_model_rate"
 	// Which vendor this installation's text is sent to (ai-operational-spec
 	// §1.4). Deliberately NOT folded into installation_settings: whoever may

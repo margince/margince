@@ -24401,7 +24401,8 @@ paths:
 
   # =========================================================================
   #   /fx-rates, /ai-model-rates   (admin/ops-only effective-dated price
-  #   sheets — strict append-forward: today-or-later, no delete)
+  #   sheets — strict append-forward: today-or-later. One date is never
+  #   removed; a model's WHOLE entry can be)
   # =========================================================================
   /fx-rates:
     get:
@@ -24504,6 +24505,41 @@ paths:
               schema: { $ref: '#/components/schemas/AiModelRate' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Rates]
+      operationId: deleteAiModelRate
+      summary: Remove a model's entry from the price sheet, every effective date of it.
+      description: |
+        Admin/ops-only. Removes a model's whole entry from the sheet, every effective date of
+        it, history included; one date is never removed on its own. `lane` names the lane the
+        sheet files the model under (its latest row's), and a key the sheet does not hold is a
+        404. Past calls of that model become unpriced in cost estimates rather than priced at 0.
+        Gated on the same `ai_model_rate` update grant that corrects a price. The key travels as
+        query parameters because a model id carries slashes. Human session only
+        (x-agent-access: human-only). Audit-only write (no event stream, EVT-NOEVT-3).
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      parameters:
+        - name: provider
+          in: query
+          required: true
+          schema: { type: string }
+        - name: model_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: lane
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [chat, embeddings, decisions]
+      responses:
+        '204': { description: The entry is removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /fx-rates/propose-refresh:
