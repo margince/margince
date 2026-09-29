@@ -334,31 +334,36 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		return fmt.Sprintf("%s ILIKE $%d", field.Expr, arg("%"+EscapeLike(text)+"%")), nil
 
 	default: // eq, neq, gt, gte, lt, lte — scalar comparisons.
-		value, err := scalarOperand(p.Value, field, p.Field, p.Op)
-		if err != nil {
-			return "", err
-		}
-		if field.Type == FieldMultiselect {
-			member := fmt.Sprintf("COALESCE($%d = ANY(%s), false)", arg(value), field.Expr)
-			if p.Op == OpNeq {
-				return "NOT " + member, nil
-			}
-			return member, nil
-		}
-		if p.Op == OpNeq {
-			// IS DISTINCT FROM rather than <>: a column that is UNSET is
-			// distinct from every value, and three-valued logic would otherwise
-			// drop those rows from an answer the caller reads as "everything
-			// that is not X".
-			//
-			// It is also what the rest of this package answers. A `neq` on a
-			// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
-			// record with no linked row at all; `<>` here would make one operator
-			// mean two things depending on where the field lives.
-			return fmt.Sprintf("%s IS DISTINCT FROM %s", compared, operandSQL(value, arg)), nil
-		}
-		return fmt.Sprintf("%s %s %s", compared, comparisonSQL[p.Op], operandSQL(value, arg)), nil
+		return compileScalarLeaf(p, field, compared, arg)
 	}
+}
+
+// compileScalarLeaf compiles eq, neq, gt, gte, lt and lte against a column.
+func compileScalarLeaf(p Predicate, field Field, compared string, arg func(any) int) (string, error) {
+	value, err := scalarOperand(p.Value, field, p.Field, p.Op)
+	if err != nil {
+		return "", err
+	}
+	if field.Type == FieldMultiselect {
+		member := fmt.Sprintf("COALESCE($%d = ANY(%s), false)", arg(value), field.Expr)
+		if p.Op == OpNeq {
+			return "NOT " + member, nil
+		}
+		return member, nil
+	}
+	if p.Op == OpNeq {
+		// IS DISTINCT FROM rather than <>: a column that is UNSET is
+		// distinct from every value, and three-valued logic would otherwise
+		// drop those rows from an answer the caller reads as "everything
+		// that is not X".
+		//
+		// It is also what the rest of this package answers. A `neq` on a
+		// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
+		// record with no linked row at all; `<>` here would make one operator
+		// mean two things depending on where the field lives.
+		return fmt.Sprintf("%s IS DISTINCT FROM %s", compared, operandSQL(value, arg)), nil
+	}
+	return fmt.Sprintf("%s %s %s", compared, comparisonSQL[p.Op], operandSQL(value, arg)), nil
 }
 
 // linkOperatorRefusal is the answer to an operator the link shape cannot
