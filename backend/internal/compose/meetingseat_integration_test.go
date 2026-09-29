@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -186,5 +187,41 @@ func TestTheBackfillWriterStillCancelsWithoutASeat(t *testing.T) {
 
 	if status, _ := readMeetingStatus(t, e, captured); status != "canceled" {
 		t.Errorf("the backfill writer left the meeting %q, want canceled", status)
+	}
+}
+
+// The same forged id, the other verb: a calendar that does not hold the
+// meeting must not reschedule it either.
+func TestAStrangerCalendarDoesNotMoveThisSeatsMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	moved := meetingStart.Add(72 * time.Hour)
+
+	if err := movingCalendarSink(e).MoveMeeting(
+		calendarOwnerCtx(e, ids.NewV7()), meetingKey, moved, nil); err != nil {
+		t.Fatalf("moving: %v", err)
+	}
+
+	if start := readMeetingStart(t, e, captured); !start.Equal(meetingStart) {
+		t.Errorf("a calendar that does not hold the meeting moved it to %s", start)
+	}
+}
+
+func TestAParticipantSeatMovesTheMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	// A real seeded seat, not a fresh UUID: activity_participant.user_id is a
+	// foreign key into app_user.
+	colleague := e.Rep3
+	seatOnMeeting(t, e, captured, colleague)
+	moved := meetingStart.Add(72 * time.Hour)
+
+	if err := movingCalendarSink(e).MoveMeeting(
+		calendarOwnerCtx(e, colleague), meetingKey, moved, nil); err != nil {
+		t.Fatalf("moving: %v", err)
+	}
+
+	if start := readMeetingStart(t, e, captured); !start.Equal(moved) {
+		t.Errorf("a colleague on the meeting left it at %s, want %s", start, moved)
 	}
 }

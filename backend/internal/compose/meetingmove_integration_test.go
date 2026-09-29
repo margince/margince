@@ -28,7 +28,7 @@ import (
 )
 
 func movingCalendarSink(e *integration.Env) *capture.Sink {
-	return calendarSink(e).WithMeetingMover(activities.MoveCapturedMeetingTx)
+	return calendarSink(e).WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx))
 }
 
 func readMeetingStart(t *testing.T, e *integration.Env, id ids.UUID) time.Time {

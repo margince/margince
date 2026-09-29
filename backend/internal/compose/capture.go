@@ -325,7 +325,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx),
 			activities.CancelMeetingByIDTx,
 		).
-		WithMeetingMover(activities.MoveCapturedMeetingTx).
+		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
 		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every
