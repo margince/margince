@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { MessageKey } from "../i18n/en";
 
 /** `offline`: the browser reports no network. `unreachable`: it has one, and
@@ -50,6 +50,9 @@ let probeTimer: ReturnType<typeof setTimeout> | undefined;
 let probing = false;
 let published: Connectivity = connectivityNow();
 const subscribers = new Set<() => void>();
+// Only a surface that states the outage may hold one: a pause nothing explains
+// is, to the reader, a page that never loads.
+let watchers = 0;
 
 function deviceOnline(): boolean {
   return typeof navigator === "undefined" || navigator.onLine !== false;
@@ -88,11 +91,11 @@ function backoff(): number {
   return Math.min(FIRST_PROBE_MS * 2 ** failedProbes, PROBE_CEILING_MS);
 }
 
-// Nobody listening means nobody to tell, and a hidden tab has nobody to show.
+// A hidden tab has nobody to show the answer to.
 function scheduleProbe(delayMs: number): void {
   if (
     connectivityNow() !== "unreachable" ||
-    subscribers.size === 0 ||
+    watchers === 0 ||
     probeTimer !== undefined ||
     probing ||
     documentHidden()
@@ -145,9 +148,12 @@ export function reportReached(): void {
   publish();
 }
 
-/** A request that never reached the api. Only a device that is online can say
- *  anything about the server, so an offline one keeps the server's standing. */
-export function reportUnreached(): Outage {
+/** A request that never reached the api: the outage a banner now states, or
+ *  null where none watches and the failure stays that surface's own to show. */
+export function reportUnreached(): Outage | null {
+  if (watchers === 0) {
+    return null;
+  }
   if (!deviceOnline()) {
     publish();
     return "offline";
@@ -196,29 +202,80 @@ function stopListening(): void {
   document.removeEventListener("visibilitychange", onVisibilityChange);
 }
 
-// With nobody listening the probe stops, so the server's standing is dropped
-// rather than handed stale to the next listener.
+/** Follows the state without holding an outage open: the device's own report
+ *  still reaches it, and a server outage only while something watches. */
 export function subscribeConnectivity(notify: () => void): () => void {
   if (subscribers.size === 0 && typeof window !== "undefined") {
     listen();
   }
   subscribers.add(notify);
   published = connectivityNow();
-  scheduleProbe(backoff());
   return () => {
     subscribers.delete(notify);
-    if (subscribers.size > 0) {
-      return;
-    }
-    if (typeof window !== "undefined") {
+    if (subscribers.size === 0 && typeof window !== "undefined") {
       stopListening();
     }
-    cancelProbe();
-    reached = true;
-    failedProbes = 0;
   };
 }
 
+// The last watcher gone, the server's standing goes with the probe that kept
+// it, so every follower is released rather than left paused behind nothing.
+export function watchConnectivity(notify: () => void): () => void {
+  const unsubscribe = subscribeConnectivity(notify);
+  watchers += 1;
+  return () => {
+    unsubscribe();
+    watchers -= 1;
+    if (watchers === 0) {
+      cancelProbe();
+      reached = true;
+      failedProbes = 0;
+      publish();
+    }
+  };
+}
+
+/** For the surface that states the outage, and only that one: while it
+ *  watches, a server outage is held, probed and paused behind. */
 export function useConnectivity(): Connectivity {
-  return useSyncExternalStore(subscribeConnectivity, connectivityNow);
+  return useSyncExternalStore(watchConnectivity, connectivityNow);
+}
+
+// One session check in flight at a time, whichever screen sent it.
+let checking = false;
+
+/** A screen that states the outage itself holds it open while `active`, and
+ *  checks once so a failure lands while it holds and the probe can end it. */
+export function useOutageRecovery(
+  active: boolean,
+  check: () => Promise<{ response: Response }>,
+  recheck: () => void,
+): void {
+  const sent = useRef(false);
+  useEffect(
+    () => (active ? watchConnectivity(() => undefined) : undefined),
+    [active],
+  );
+  useEffect(() => {
+    if (!active || sent.current || checking) {
+      return;
+    }
+    sent.current = true;
+    checking = true;
+    // Not `recheck`: refetching the session drops the screen for a splash,
+    // and the remount would check again, and again.
+    check()
+      .then(
+        ({ response }) => {
+          if (response.ok) {
+            recheck();
+          }
+        },
+        // Refused: the client has recorded the outage this check was sent for.
+        () => undefined,
+      )
+      .finally(() => {
+        checking = false;
+      });
+  }, [active, check, recheck]);
 }

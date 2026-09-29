@@ -181,11 +181,19 @@ export const SessionExpired: Story = {
  * breathe.
  */
 export const ConnectionProblem: Story = {
-  render: () => (
-    <StoryProviders>
-      <AvailabilityScreen kind="connection" onRetry={() => undefined} />
-    </StoryProviders>
-  ),
+  render: () => {
+    // The screen checks the session once as it opens; Margince is still down.
+    installFetchStub({
+      "GET /me": () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+    return (
+      <StoryProviders>
+        <AvailabilityScreen kind="connection" onRetry={() => undefined} />
+      </StoryProviders>
+    );
+  },
 };
 
 export const InstallationUnavailable: Story = {

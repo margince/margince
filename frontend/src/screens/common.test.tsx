@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
-  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -11,7 +10,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { App } from "../App";
 import {
   ConnectivityError,
   connectivityNow,
@@ -21,8 +21,8 @@ import { meFixture } from "../app/mefixture";
 import { createQueryClient } from "../app/queryclient";
 import { STORAGE_KEYS } from "../app/storage";
 import { LocaleProvider, translate } from "../i18n";
+import { memoryStorage } from "../testing/appharness";
 import {
-  AuthProbeError,
   isConsentNotGranted,
   logUnexpectedError,
   ProblemError,
@@ -35,7 +35,6 @@ import {
   QueryStates,
   resetToSignedOut,
   throwProblem,
-  useMe,
 } from "./common";
 import { CreateAction } from "./create";
 
@@ -725,40 +724,81 @@ describe("signing out", () => {
   });
 });
 
-// A first session read that could not reach Margince draws the connection
-// screen; the reader must not have to reload once Margince answers again.
-describe("the session probe after Margince could not be reached", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+// A reader who opens the app while the api restarts gets the connection screen,
+// and must get in without pressing anything once Margince answers again.
+describe("the connection screen after Margince could not be reached", () => {
+  const CONNECTION_TITLE = "Margince could not be reached";
+  let apiUp = false;
+  let sessionReads = 0;
 
-  it("reads the session again by itself once Margince answers", async () => {
-    let reachable = false;
+  beforeEach(() => {
+    apiUp = false;
+    sessionReads = 0;
+    vi.stubGlobal("localStorage", memoryStorage());
+    globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
-        if (!reachable) throw new TypeError("Failed to fetch");
-        return new Response(JSON.stringify(meFixture({})), {
-          headers: { "Content-Type": "application/json" },
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.endsWith("/v1/me")) sessionReads += 1;
+        if (!apiUp) throw new TypeError("Failed to fetch");
+        if (url === "/healthz") return new Response("ok");
+        if (url.endsWith("/v1/me")) {
+          return new Response(JSON.stringify(meFixture({})), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ code: "unavailable" }), {
+          status: 503,
+          headers: { "Content-Type": "application/problem+json" },
         });
       }),
     );
-    const client = createQueryClient();
-    const { result } = renderHook(() => useMe(), {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={client}>{children}</QueryClientProvider>
-      ),
-    });
-    await waitFor(() =>
-      expect(result.current.error).toBeInstanceOf(AuthProbeError),
-    );
-    expect(result.current.error).toMatchObject({ kind: "connection" });
-    expect(connectivityNow()).toBe("unreachable");
+  });
 
-    // What the health probe does when Margince answers it.
-    reachable = true;
+  afterEach(() => {
+    // Unmounted first: a shell still reading would reach the real network.
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  async function openWhileUnreachable() {
+    rtlRender(
+      <QueryClientProvider client={createQueryClient()}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
+    // One recheck, sent while the screen watches, is what gives it an outage
+    // to hold; the reads it then pauses cannot send another.
+    await waitFor(() => expect(connectivityNow()).toBe("unreachable"));
+    expect(sessionReads).toBe(2);
+  }
+
+  it("lets the reader in by itself once Margince answers", async () => {
+    await openWhileUnreachable();
+
+    apiUp = true;
+    // What the probe does when /healthz answers it.
     act(reportReached);
 
-    await waitFor(() => expect(result.current.data?.user).toBeDefined());
+    await waitFor(() =>
+      expect(screen.queryByText(CONNECTION_TITLE)).toBeNull(),
+    );
+    expect(sessionReads).toBe(3);
+  });
+
+  it("lets the reader in at once when they press Retry", async () => {
+    const user = userEvent.setup();
+    await openWhileUnreachable();
+
+    apiUp = true;
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText(CONNECTION_TITLE)).toBeNull(),
+    );
   });
 });

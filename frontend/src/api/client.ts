@@ -115,7 +115,10 @@ function reportFailure(
     return failure;
   }
   if (!deadline.aborted) {
-    return new ConnectivityError(reportUnreached(), request, failure);
+    const outage = reportUnreached();
+    return outage === null
+      ? failure
+      : new ConnectivityError(outage, request, failure);
   }
   if (modelWaitOf(request) === null) {
     reportUnreached();

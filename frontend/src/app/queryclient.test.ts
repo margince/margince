@@ -4,12 +4,14 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ProblemError } from "../screens/common";
+import { api } from "../api/client";
+import { ProblemError, throwProblem } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
 import {
   ConnectivityError,
   reportReached,
   reportUnreached,
+  watchConnectivity,
 } from "./connectivity";
 import {
   createQueryClient,
@@ -278,17 +280,28 @@ describe("who can see a record", () => {
   });
 });
 
-// Reads wait out an outage and run again when it clears; a write is attempted
-// at once, so its failure is on screen now rather than its success later.
+// Reads wait out an outage and run again when it clears, but only where the
+// shell's banner says why; a write is attempted at once either way.
 describe("while Margince cannot be reached", () => {
+  const banners: (() => void)[] = [];
+  const bannerUp = () => banners.push(watchConnectivity(() => undefined));
+
+  async function readMe(): Promise<unknown> {
+    const { data, error } = await api.GET("/me");
+    if (error) throwProblem(error);
+    return data;
+  }
+
   afterEach(() => {
-    reportReached();
+    for (const bannerDown of banners.splice(0)) bannerDown();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("tells the data layer about the server, not only about the device", () => {
     vi.useFakeTimers();
     createQueryClient();
+    bannerUp();
     reportUnreached();
     expect(onlineManager.isOnline()).toBe(false);
     reportReached();
@@ -299,6 +312,7 @@ describe("while Margince cannot be reached", () => {
     vi.useFakeTimers();
     const client = createQueryClient();
     client.mount();
+    bannerUp();
     const read = vi.fn(async () => "fresh");
     reportUnreached();
 
@@ -320,6 +334,7 @@ describe("while Margince cannot be reached", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const client = createQueryClient();
     expect(client.getDefaultOptions().mutations?.networkMode).toBe("always");
+    bannerUp();
     reportUnreached();
 
     const observer = new MutationObserver(client, {
@@ -328,6 +343,65 @@ describe("while Margince cannot be reached", () => {
     const attempt = observer.mutate();
     expect(observer.getCurrentResult().isPaused).toBe(false);
     await expect(attempt).rejects.toThrow("not reached");
+  });
+
+  // A public page draws no banner: a pause there is a spinner that never ends.
+  it("lets reads run and fail on a proxy's bare 502 while no banner is up", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    client.mount();
+    const gateway = vi.fn(
+      async () => new Response("Bad Gateway", { status: 502 }),
+    );
+    vi.stubGlobal("fetch", gateway);
+
+    for (const read of ["first", "second"]) {
+      await expect(
+        client.fetchQuery({ queryKey: ["gateway", read], queryFn: readMe }),
+      ).rejects.toBeInstanceOf(ProblemError);
+    }
+    expect(gateway).toHaveBeenCalledTimes(2);
+    expect(onlineManager.isOnline()).toBe(true);
+    client.unmount();
+  });
+
+  it("pauses reads behind a proxy's bare 502 while the banner is up, until a probe answers", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    client.mount();
+    bannerUp();
+    let apiUp = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (!apiUp) return new Response("Bad Gateway", { status: 502 });
+        const url = input instanceof Request ? input.url : String(input);
+        return url === "/healthz"
+          ? new Response("ok")
+          : new Response("{}", {
+              headers: { "Content-Type": "application/json" },
+            });
+      }),
+    );
+
+    await expect(
+      client.fetchQuery({ queryKey: ["gateway", "first"], queryFn: readMe }),
+    ).rejects.toBeInstanceOf(ProblemError);
+    const held = client.fetchQuery({
+      queryKey: ["gateway", "second"],
+      queryFn: readMe,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.getQueryState(["gateway", "second"])?.fetchStatus).toBe(
+      "paused",
+    );
+
+    apiUp = true;
+    await vi.advanceTimersByTimeAsync(2_000);
+    await expect(held).resolves.toEqual({});
+    client.unmount();
   });
 });
 

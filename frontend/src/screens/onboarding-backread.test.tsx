@@ -280,8 +280,9 @@ describe("the scope preview", () => {
     await waitFor(() => expect(starts).toEqual([{ window: "6m" }]));
   });
 
-  // A transport failure carries no server body, so its raw message is not
-  // reader-safe; the reader is told Margince could not be reached instead.
+  // A transport failure never reaches `throwProblem` (there is no server
+  // body to wrap), so its raw `Error` message is not reader-safe — only a
+  // `ProblemError`'s message is server-composed and safe to show verbatim.
   it("hides a raw transport failure behind a safe sentence", async () => {
     installFetchStub({
       [PREVIEW_ROUTE]: () => {
@@ -292,10 +293,7 @@ describe("the scope preview", () => {
 
     expect(
       await screen.findByText(
-        en["ob.backread.estimateFailed"].replace(
-          "{detail}",
-          en["connectivity.unsaved.unreachable"],
-        ),
+        "The period could not be estimated: An unexpected error occurred. Start anyway, or select another period.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/ECONNRESET/)).not.toBeInTheDocument();

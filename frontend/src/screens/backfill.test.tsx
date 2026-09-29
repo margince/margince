@@ -12,7 +12,6 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { en } from "../i18n/en";
 import { BackfillPanel } from "./backfill";
 import { installFetchStub } from "./story-utils";
 
@@ -552,7 +551,7 @@ describe("honest capability and staleness", () => {
 // ever sees. Keeping the same failure readable on the console belongs to the
 // client's mutation sink and is pinned once against it (app/queryclient.test).
 describe("a failure nobody wrote for a reader", () => {
-  it("names the outage and never the transport wording", async () => {
+  it("shows the shared line and never the transport wording", async () => {
     installFetchStub({
       "POST /connectors/gmail/backfill/preview": () =>
         jsonResponse(previewOf(400)),
@@ -567,7 +566,7 @@ describe("a failure nobody wrote for a reader", () => {
     );
 
     expect(
-      await screen.findByText(en["connectivity.unsaved.unreachable"]),
+      await screen.findByText("The request failed. No cause reported."),
     ).toBeTruthy();
     // The wording nobody wrote for a user stays off the screen entirely.
     expect(screen.queryByText(/ECONNREFUSED/)).toBeNull();

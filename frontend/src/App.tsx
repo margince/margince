@@ -850,7 +850,10 @@ function AuthedApp({
     if (kind !== "unauthorized") {
       return (
         <RaillessFrame>
-          <UnavailableOrClaimable kind={kind} onRetry={() => me.refetch()} />
+          <UnavailableOrClaimable
+            kind={kind}
+            onRetry={() => me.refetch({ cancelRefetch: false })}
+          />
         </RaillessFrame>
       );
     }

@@ -81,10 +81,11 @@ async function page() {
   return { ...connectivity, ...client };
 }
 
+/** A fresh store with a banner watching it, as the shell has. */
 async function watched() {
   const store = await page();
   const heard = vi.fn();
-  listening.push(store.subscribeConnectivity(heard));
+  listening.push(store.watchConnectivity(heard));
   return { ...store, heard };
 }
 
@@ -306,22 +307,113 @@ describe("the probe while Margince is unreachable", () => {
     expect(connectivityNow()).toBe("online");
   });
 
-  it("probes nothing nobody is listening for, and forgets the outage with its last listener", async () => {
+  it("holds no outage a follower alone is watching, and releases it with the last banner", async () => {
     vi.useFakeTimers({ now: 0 });
     const store = await page();
     const net = network();
+    const follower = vi.fn();
+    listening.push(store.subscribeConnectivity(follower));
 
-    store.reportUnreached();
+    expect(store.reportUnreached()).toBeNull();
+    expect(store.connectivityNow()).toBe("online");
     await vi.advanceTimersByTimeAsync(60_000);
     expect(net.probes).toEqual([]);
 
-    const stop = store.subscribeConnectivity(() => undefined);
+    const stop = store.watchConnectivity(() => undefined);
+    expect(store.reportUnreached()).toBe("unreachable");
+    expect(follower).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(2_000);
     expect(net.probes).toEqual([62_000]);
 
+    // The follower is released, not left paused behind a banner that is gone.
     stop();
     expect(store.connectivityNow()).toBe("online");
+    expect(follower).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(net.probes).toHaveLength(1);
+  });
+});
+
+// A public page (an unsubscribe link, a booking, a buyer room) draws no banner,
+// so an outage there must reach the page's own error state, not a pause.
+describe("a surface no banner watches", () => {
+  it("gets a refused request's own failure, and holds no outage", async () => {
+    const { api, connectivityNow, ConnectivityError } = await page();
+    const net = network();
+    net.state.api = false;
+
+    const failure = await api.GET("/me").catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(TypeError);
+    expect(failure).not.toBeInstanceOf(ConnectivityError);
+    expect(connectivityNow()).toBe("online");
+  });
+
+  it("gets a proxy's bare 502 as a plain refusal, and holds no outage", async () => {
+    const { api, connectivityNow } = await page();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("Bad Gateway", { status: 502 })),
+    );
+
+    const { response } = await api.GET("/me");
+    expect(response.status).toBe(502);
+    expect(connectivityNow()).toBe("online");
+  });
+});
+
+// The session's own connection screen states the outage in its own words, so it
+// may hold one open; what it must never do is check in a loop.
+describe("a screen that states the outage itself", () => {
+  const answered = (status: number) => ({
+    response: new Response(null, { status }),
+  });
+
+  it("checks once per mount, never while a check is in flight", async () => {
+    const { useOutageRecovery } = await page();
+    let settle: () => void = () => undefined;
+    const check = vi.fn(
+      () =>
+        new Promise<{ response: Response }>((resolve) => {
+          settle = () => resolve(answered(500));
+        }),
+    );
+    const recheck = vi.fn();
+
+    const screen = renderHook(() => useOutageRecovery(true, check, recheck));
+    screen.rerender();
+    renderHook(() => useOutageRecovery(true, check, recheck));
+    expect(check).toHaveBeenCalledTimes(1);
+
+    // A 500 is the api answering: there is no outage to recover from.
+    await act(async () => settle());
+    expect(recheck).not.toHaveBeenCalled();
+  });
+
+  it("reads the session again when its check finds Margince answering", async () => {
+    const { useOutageRecovery } = await page();
+    const recheck = vi.fn();
+
+    renderHook(() =>
+      useOutageRecovery(true, async () => answered(200), recheck),
+    );
+    await act(async () => undefined);
+    expect(recheck).toHaveBeenCalledTimes(1);
+  });
+
+  it("holds an outage only while it states one", async () => {
+    const store = await page();
+    const pending = () => new Promise<{ response: Response }>(() => undefined);
+
+    const screen = renderHook(
+      ({ active }) => store.useOutageRecovery(active, pending, () => undefined),
+      { initialProps: { active: false } },
+    );
+    expect(store.reportUnreached()).toBeNull();
+
+    screen.rerender({ active: true });
+    expect(store.reportUnreached()).toBe("unreachable");
+
+    screen.unmount();
+    expect(store.connectivityNow()).toBe("online");
   });
 });
