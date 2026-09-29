@@ -98,15 +98,21 @@ type NameServer = () => Promise<Response>;
 function namesOf(byId: Readonly<Record<string, string>>): NameServer {
   return async () =>
     json({
-      data: Object.entries(byId).map(([id, display_name]) => ({
-        id,
-        display_name,
-      })),
+      data: Object.entries(byId).map(
+        ([id, display_name]): components["schemas"]["SeatName"] => ({
+          id,
+          display_name,
+        }),
+      ),
     });
 }
 
 function unansweredNames(): NameServer {
   return () => new Promise<Response>(() => {});
+}
+
+function refusedNames(): NameServer {
+  return async () => json({ title: "Forbidden", status: 403 }, 403);
 }
 
 function stub(
@@ -183,8 +189,8 @@ afterEach(() => {
 
 describe("an assignee the picker's own list does not offer", () => {
   it("names the holder a finished roster does not carry, rather than reading as unassigned", async () => {
-    // The holder was deactivated: `/users` excludes archived members, so the id
-    // is absent even though the walk reached the end of the workspace.
+    // "u-gone" settles on nothing at `/users/names`: an archived seat, or an
+    // id this installation never held. A deactivated colleague is still named.
     stub(dsrAssignedTo("u-gone"), oneRosterPage([member("u1", "Dana DPO")]));
 
     const { user, picker } = await openAssignee();
@@ -192,7 +198,7 @@ describe("an assignee the picker's own list does not offer", () => {
     expect(picker).toHaveTextContent(en["ref.notInRoster"]);
     // The em dash is the face of a request assigned to NOBODY. This one is
     // assigned, and a DPO who reads it as unassigned reassigns the work off the
-    // contact doing it with the statutory clock running.
+    // colleague doing it with the statutory clock running.
     expect(picker).not.toHaveTextContent("—");
 
     // Legible without being offered, exactly as the unassigned entry is:
@@ -221,6 +227,24 @@ describe("an assignee the picker's own list does not offer", () => {
     // arrived yet.
     expect(picker).toHaveTextContent(en["common.loading"]);
     expect(picker).not.toHaveTextContent("—");
+  });
+
+  it("says the name failed to load, never that the holder departed, when the read is refused", async () => {
+    // A 403 excludes nobody. Reading it as a settled absence reports the
+    // holder as gone on the evidence of a refusal rather than a name that
+    // never arrived — the same confusion the unanswered-read case above
+    // guards against, on the failed-read side of it.
+    stub(
+      dsrAssignedTo("u-gone"),
+      oneRosterPage([member("u1", "Dana DPO")]),
+      refusedNames(),
+    );
+
+    const { picker } = await openAssignee();
+
+    await screen.findByText(en["ref.nameLoadFailed"]);
+    expect(picker).toHaveTextContent(en["ref.nameLoadFailed"]);
+    expect(picker).not.toHaveTextContent(en["ref.notInRoster"]);
   });
 
   it("names an assignee even while the offered list is still a partial one", async () => {

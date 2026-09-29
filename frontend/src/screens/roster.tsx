@@ -131,7 +131,7 @@ export function useRosterWalk(kind: RosterKind, enabled: boolean) {
  *
  * A consumer that OFFERS these entries as a list of who exists owes its reader
  * `useRosterPartial` beside it: this result cannot say whether the walk reached
- * the end, and a picker missing contacts looks exactly like a small workspace.
+ * the end, and a picker missing colleagues looks exactly like a small workspace.
  */
 export function useRoster(kind: RosterKind, enabled: boolean) {
   return useQuery({
