@@ -77,7 +77,7 @@ export function useMemberNames(ids: readonly string[]): MemberNaming {
     if (id === undefined) {
       return;
     }
-    if (typeof read.data === "string") {
+    if (read.data != null) {
       names.set(id, read.data);
     } else if (read.isError) {
       unreadable.add(id);

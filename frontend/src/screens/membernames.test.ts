@@ -5,7 +5,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useMemberName, useMemberNames } from "./membernames";
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -15,14 +15,38 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({
+// Names back whatever the request asked for, so a test that counts requests
+// does not also carry a fixture of who exists.
+function namesWhoeverIsAsked() {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    // openapi-fetch always hands the mock a Request, but `fetch` itself also
+    // takes a bare string or URL, and `mockImplementation` checks the
+    // replacement against that whole signature.
+    const request = input instanceof Request ? input : new Request(input);
+    const asked = new URL(request.url).searchParams.getAll("id");
+    return jsonResponse({
+      data: asked.map((id) => ({ id, display_name: `Name ${id}` })),
+    });
+  });
+}
+
+// One client per test, not per render: a second `renderHook` in the same test
+// has to see what the first one cached, or a test claiming a shared cache
+// entry would be reading an empty one and proving nothing.
+let client: QueryClient;
+
+beforeEach(() => {
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+});
+
+function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client }, children);
 }
 
 afterEach(() => {
+  client.clear();
   vi.restoreAllMocks();
 });
 
@@ -67,9 +91,6 @@ describe("useMemberName", () => {
   it("splits a window wider than the contract's bound into two requests", async () => {
     const ids = Array.from({ length: 150 }, (_, at) => `u-${at}`);
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      // openapi-fetch always hands the mock a Request, but `fetch` itself
-      // also takes a bare string or URL, and `mockImplementation` checks the
-      // replacement against that whole signature.
       const request = input instanceof Request ? input : new Request(input);
       const asked = new URL(request.url).searchParams.getAll("id");
       expect(asked.length).toBeLessThanOrEqual(100);
@@ -135,13 +156,7 @@ describe("useMemberName", () => {
   });
 
   it("opens a new window once the previous one has closed", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const request = input instanceof Request ? input : new Request(input);
-      const asked = new URL(request.url).searchParams.getAll("id");
-      return jsonResponse({
-        data: asked.map((id) => ({ id, display_name: `Name ${id}` })),
-      });
-    });
+    const fetchMock = namesWhoeverIsAsked();
     vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
 
     const first = renderHook(() => useMemberName("u-1"), { wrapper });
@@ -191,7 +206,7 @@ describe("useMemberNames", () => {
     expect(result.current.names.size).toBe(0);
   });
 
-  it("shares one request and one cache entry with useMemberName for an id named in the same tick", async () => {
+  it("joins useMemberName's batch window rather than opening one of its own", async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
         data: [
@@ -214,10 +229,27 @@ describe("useMemberNames", () => {
       expect(result.current.single.data).toBe("Grace Hopper"),
     );
     expect(result.current.bulk.names.get("u-2")).toBe("Grace Hopper");
-    // One request for the whole tick: the bulk read's per-id queries and the
-    // single hook's own query key into the SAME cache entry for u-2, so
-    // react-query coalesces all three into the one batch window
-    // membernames.ts opens rather than asking twice for the same id.
+    // One request for the whole tick, which is the window and not the key:
+    // both hooks reach the same module-level batch, so neither opens a loader
+    // of its own. The cross-tick case below is what the shared key decides.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("costs nothing for an id useMemberName later names on its own", async () => {
+    const fetchMock = namesWhoeverIsAsked();
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+
+    const bulk = renderHook(() => useMemberNames(["u-1", "u-2"]), { wrapper });
+    await waitFor(() =>
+      expect(bulk.result.current.names.get("u-2")).toBe("Name u-2"),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A later tick, past that batch window: only a cache entry under the SAME
+    // per-id key can answer this without a second request. Diverging keys
+    // would read as a miss and ask again.
+    const single = renderHook(() => useMemberName("u-2"), { wrapper });
+    await waitFor(() => expect(single.result.current.data).toBe("Name u-2"));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

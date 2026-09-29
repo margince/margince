@@ -268,10 +268,10 @@ export function CompanyOwnerControl({
         if (!value) {
           return t("co.pulse.unowned");
         }
-        return (
-          owners.find((user) => user.value === value)?.label ??
-          rosterOwnerName(company.owner_id, ownerName, t, t("co.pulse.unowned"))
-        );
+        // Every value this control can hold is one of the options above: the
+        // current owner is unshifted in when the walk misses them, and any
+        // other value is a seat the picker itself offered.
+        return owners.find((user) => user.value === value)?.label;
       }}
       // Taking an unowned account goes through the claim, the door open to
       // every seat; naming a colleague is a patch, offered only to a reader
