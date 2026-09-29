@@ -11,7 +11,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { SERVICE_WORKER_URL } from "../src/app/pwa";
 import { LOCALES } from "../src/i18n";
 import spaConfig from "../vite.config";
-import { pwa } from "./vite-pwa";
+import { pwa, workerCacheName } from "./vite-pwa";
 
 const ORIGIN = "https://margince.test";
 const RELEASE = "2026.9.1";
@@ -146,6 +146,29 @@ function startWorker(emitted: string, network: (url: string) => Response) {
 
 let site: Map<string, string>;
 
+/** The offline page's own name, content-hashed under assets/. */
+function pageFile(): string {
+  const [name, ...others] = [...site.keys()].filter((file) =>
+    /^assets\/offline-[0-9a-f]{8}\.html$/.test(file),
+  );
+  if (name === undefined || others.length > 0) {
+    throw new Error(
+      `the build emitted no one offline page: ${[...site.keys()].join(", ")}`,
+    );
+  }
+  return name;
+}
+
+function settingsOf(
+  worker: string,
+): Readonly<{ cacheName?: unknown; offlinePage?: unknown }> {
+  const line = /^self\.__MARGINCE_SW_SETTINGS__ = (\{[^\n]*\});\n/.exec(
+    worker,
+  )?.[1];
+  const parsed: unknown = JSON.parse(line ?? "null");
+  return typeof parsed === "object" && parsed !== null ? parsed : {};
+}
+
 function emitted(fileName: string): string {
   const source = site.get(fileName);
   if (source === undefined) {
@@ -165,15 +188,46 @@ describe("the build", () => {
     expect(pluginNames(spaConfig.plugins)).toContain("margince-pwa");
   });
 
-  it("emits the worker the app registers, at the site root", () => {
+  it("emits the worker the app registers at the site root, and its page under assets/", () => {
     expect(site.has(SERVICE_WORKER_URL.slice(1))).toBe(true);
-    expect(site.has("offline.html")).toBe(true);
+    expect(settingsOf(emitted("sw.js")).offlinePage).toBe(`/${pageFile()}`);
+    expect(site.has("offline.html")).toBe(false);
   });
 
-  it("keys the worker's cache on the release", () => {
-    expect(emitted("sw.js")).toMatch(
-      new RegExp(`"cacheName":"margince-offline-${RELEASE}-[0-9a-f]{12}"`),
+  it("names the worker's cache for the release and for exactly what it holds", () => {
+    expect(settingsOf(emitted("sw.js")).cacheName).toBe(
+      workerCacheName({
+        release: RELEASE,
+        page: emitted(pageFile()),
+        workerSource: readFileSync(WORKER_SOURCE, "utf8"),
+        passThrough: Object.keys(spaConfig.server?.proxy ?? {}),
+      }),
     );
+  });
+
+  it("builds the same worker twice from the same tree", async () => {
+    const again = await buildSite("index.html");
+    expect(again.get("sw.js")).toBe(emitted("sw.js"));
+  }, 60_000);
+
+  it("renames the cache when the page, the worker, the api's paths or the release change", () => {
+    const parts = {
+      release: RELEASE,
+      page: "<main>page</main>",
+      workerSource: "self.addEventListener();",
+      passThrough: ["/v1", "/oauth"],
+    };
+    const name = workerCacheName(parts);
+    expect(workerCacheName({ ...parts })).toBe(name);
+    for (const changed of [
+      { ...parts, page: "<main>page!</main>" },
+      { ...parts, workerSource: "self.addEventListener(); " },
+      { ...parts, passThrough: ["/v1"] },
+      { ...parts, passThrough: ["/v1/oauth"] },
+      { ...parts, release: "2026.9.2" },
+    ]) {
+      expect(workerCacheName(changed)).not.toBe(name);
+    }
   });
 
   it("emits nothing into a build that is not the SPA's", async () => {
@@ -184,7 +238,7 @@ describe("the build", () => {
 
 describe("the offline page", () => {
   it("speaks every locale the app ships, the first one shown", () => {
-    const page = emitted("offline.html");
+    const page = emitted(pageFile());
     const blocks = [
       ...page.matchAll(/<main class="offline" lang="(\w+)"( hidden)?>/g),
     ];
@@ -197,7 +251,7 @@ describe("the offline page", () => {
   });
 
   it("carries its styles and loads its one script by address, never inline", () => {
-    const page = emitted("offline.html");
+    const page = emitted(pageFile());
     const scripts = [...page.matchAll(/<script\b([^>]*)>/g)].map(
       ([, attributes]) => attributes,
     );
@@ -210,10 +264,10 @@ describe("the offline page", () => {
 });
 
 describe("the service worker", () => {
-  const page = () => emitted("offline.html");
+  const page = () => emitted(pageFile());
   const script = () => /src="(\/assets\/[^"]+)"/.exec(page())?.[1] ?? "";
   const online = (url: string) => {
-    if (url.endsWith("/offline.html")) {
+    if (url === `${ORIGIN}/${pageFile()}`) {
       return new Response(page(), { headers: { "content-type": "text/html" } });
     }
     return url === `${ORIGIN}${script()}`
@@ -231,7 +285,7 @@ describe("the service worker", () => {
     const worker = await installed();
     const [cache] = [...worker.stores.values()];
     expect([...(cache?.keys() ?? [])]).toEqual([
-      `${ORIGIN}/offline.html`,
+      `${ORIGIN}/${pageFile()}`,
       `${ORIGIN}${script()}`,
     ]);
     expect(worker.scope.skipWaiting).toHaveBeenCalled();
@@ -338,7 +392,7 @@ describe("the service worker", () => {
     expect(answer?.type).toBe("error");
   });
 
-  it("deletes every cache but its own when it activates, the old shell cache included", async () => {
+  it("deletes every cache but its own when it activates", async () => {
     const worker = await installed();
     worker.stores.set("margince-shell-v1", new Map());
     worker.stores.set("margince-offline-2026.8.0-000000000000", new Map());

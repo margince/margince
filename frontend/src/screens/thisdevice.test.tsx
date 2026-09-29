@@ -4,7 +4,7 @@
 
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstallOutcome } from "../app/pwa";
 import { en } from "../i18n/en";
 import { InstallPanel } from "./thisdevice";
@@ -79,12 +79,20 @@ function offer() {
   };
 }
 
+const listening: (() => void)[] = [];
+
+afterEach(() => {
+  for (const stop of listening.splice(0)) {
+    stop();
+  }
+});
+
 /** A fresh page, because the install store lives as long as the page does. */
 async function page() {
   vi.resetModules();
   const pwa = await import("../app/pwa");
   const { ThisDevicePanel } = await import("./thisdevice");
-  pwa.listenForInstall();
+  listening.push(pwa.listenForInstall());
   return ThisDevicePanel;
 }
 

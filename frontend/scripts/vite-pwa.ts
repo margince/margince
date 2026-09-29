@@ -10,8 +10,6 @@ import { build, type Plugin, type Rolldown, runnerImport } from "vite";
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WORKER_SOURCE = resolve(FRONTEND, "src/offline/serviceworker.js");
 
-const OFFLINE_PAGE = "/offline.html";
-
 type PwaFile = Readonly<{ fileName: string; source: string }>;
 
 type ServiceWorkerSettings = Readonly<{
@@ -75,8 +73,28 @@ async function buildOfflineScript(): Promise<OfflineScript> {
   };
 }
 
-/** The cache is keyed on the release and a digest of what it holds, so each
- *  change gives the worker new bytes and every browser installs it afresh. */
+function digest(...parts: readonly string[]): string {
+  const hash = createHash("sha256");
+  for (const part of parts) {
+    hash.update(part).update("\0");
+  }
+  return hash.digest("hex").slice(0, 12);
+}
+
+/** Keyed on the release and on what the worker holds, so each change gives the
+ *  worker new bytes and every browser installs it afresh. */
+export function workerCacheName(
+  parts: Readonly<{
+    release: string;
+    page: string;
+    workerSource: string;
+    passThrough: readonly string[];
+  }>,
+): string {
+  const held = digest(parts.page, parts.workerSource, ...parts.passThrough);
+  return `margince-offline-${parts.release || "dev"}-${held}`;
+}
+
 async function buildPwaFiles(
   options: Readonly<{ release: string; passThrough: readonly string[] }>,
 ): Promise<readonly PwaFile[]> {
@@ -91,27 +109,29 @@ async function buildPwaFiles(
     logLevel: "warn",
   });
   const page = offline.renderOfflinePage(script.css, offlineScript);
-  const digest = createHash("sha256")
-    .update(page)
-    .update(readFileSync(WORKER_SOURCE))
-    .update(JSON.stringify(options.passThrough))
-    .digest("hex")
-    .slice(0, 12);
+  // Under /assets/, where a replica of an older deploy answers 404 rather than
+  // the app shell, so the install fails instead of keeping the shell as this page.
+  const pageFile = `assets/offline-${digest(page).slice(0, 8)}.html`;
   const worker = renderServiceWorker({
-    cacheName: `margince-offline-${options.release || "dev"}-${digest}`,
-    offlinePage: OFFLINE_PAGE,
+    cacheName: workerCacheName({
+      release: options.release,
+      page,
+      workerSource: readFileSync(WORKER_SOURCE, "utf8"),
+      passThrough: options.passThrough,
+    }),
+    offlinePage: `/${pageFile}`,
     offlineScript,
     passThrough: options.passThrough,
   });
   return [
     { fileName: script.fileName, source: script.code },
-    { fileName: OFFLINE_PAGE.slice(1), source: page },
+    { fileName: pageFile, source: page },
     { fileName: "sw.js", source: worker },
   ];
 }
 
-/** The paths the worker leaves alone are the dev server's proxy keys: the one
- *  list of what the api owns on this origin (docs/explanation/pwa.md). */
+/** The worker leaves alone every path the dev server proxies to the api;
+ *  frontend/vite-proxy.test.ts holds the desktop launcher's list to the same keys. */
 export function pwa(options: Readonly<{ release: string }>): Plugin {
   let passThrough: readonly string[] = [];
   return {

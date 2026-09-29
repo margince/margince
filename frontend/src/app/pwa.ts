@@ -8,9 +8,8 @@ export const SERVICE_WORKER_URL = "/sw.js";
 
 export type InstallOutcome = "accepted" | "dismissed";
 
-/** `manual-ios` is an iPhone or iPad browser, where Add to Home Screen is by
- *  hand; `available.prompt` asks the browser once; `dismissed` is a turned-down
- *  offer; `installed` includes this visit. */
+/** iOS sends no install offer, so `manual-ios` means Add to Home Screen by hand;
+ *  `installed` and `dismissed` count what the reader decided on this visit. */
 export type InstallState =
   | Readonly<{ kind: "installed" }>
   | Readonly<{ kind: "available"; prompt: () => Promise<InstallOutcome> }>
@@ -40,9 +39,11 @@ let dismissed = false;
 let snapshot: InstallState | null = null;
 const subscribers = new Set<() => void>();
 
+// `matchMedia` is absent in some embedded contexts, as theme.ts also finds.
 function runsInstalled(): boolean {
   return (
-    window.matchMedia("(display-mode: standalone)").matches ||
+    (typeof window.matchMedia === "function" &&
+      window.matchMedia("(display-mode: standalone)").matches) ||
     ("standalone" in navigator && navigator.standalone === true)
   );
 }
@@ -63,8 +64,14 @@ function offer(event: BeforeInstallPromptEvent): InstallState {
       if (offered === event) {
         offered = null;
       }
-      await event.prompt();
-      const { outcome } = await event.userChoice;
+      let outcome: InstallOutcome = "dismissed";
+      try {
+        await event.prompt();
+        outcome = (await event.userChoice).outcome;
+      } catch (reason: unknown) {
+        // A spent or refused offer: nothing was installed, and it cannot be asked again.
+        console.warn("install prompt failed", reason);
+      }
       // Installed from here: `appinstalled` can arrive later, and nothing is offered meanwhile.
       if (outcome === "accepted") {
         installed = true;
@@ -113,17 +120,27 @@ function getSnapshot(): InstallState {
  * Keeps the browser's install offer for the app to present later. Called before
  * the first render, because the browser may make the offer before React mounts.
  */
-export function listenForInstall(): void {
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    offered = event;
-    refresh();
-  });
-  window.addEventListener("appinstalled", () => {
-    installed = true;
-    offered = null;
-    refresh();
-  });
+export function listenForInstall(): () => void {
+  const listening = new AbortController();
+  window.addEventListener(
+    "beforeinstallprompt",
+    (event) => {
+      event.preventDefault();
+      offered = event;
+      refresh();
+    },
+    { signal: listening.signal },
+  );
+  window.addEventListener(
+    "appinstalled",
+    () => {
+      installed = true;
+      offered = null;
+      refresh();
+    },
+    { signal: listening.signal },
+  );
+  return () => listening.abort();
 }
 
 export function useInstallState(): InstallState {

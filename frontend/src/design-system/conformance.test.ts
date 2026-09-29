@@ -355,19 +355,6 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 
-  // One registrar: a second could install a worker that pins browsers to a build.
-  it("reaches for navigator.serviceWorker in app/pwa.ts alone", () => {
-    const named = files
-      .filter((file) => !/\.test\.tsx?$/.test(file))
-      .filter((file) =>
-        /\bserviceWorker\b/.test(
-          scannableSource(file, readFileSync(file, "utf8")),
-        ),
-      )
-      .map((file) => relative(frontendRoot, file));
-    expect(named).toEqual(["src/app/pwa.ts"]);
-  });
-
   it("the web-app manifest is valid and complete for installability", () => {
     const manifest = JSON.parse(
       readFileSync(

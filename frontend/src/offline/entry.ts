@@ -3,11 +3,9 @@
 
 // Imported for the build to compile; the page carries it inline, never as a request.
 import "./offline.css";
-import { readStored, STORAGE_KEYS } from "../app/storage";
+import { startTheme } from "../app/theme";
+import { preferredLocale } from "../i18n/locale";
 import { presentOfflinePage } from "./present";
 
-presentOfflinePage(
-  document,
-  readStored(STORAGE_KEYS.locale),
-  navigator.languages,
-);
+startTheme();
+presentOfflinePage(document, preferredLocale());

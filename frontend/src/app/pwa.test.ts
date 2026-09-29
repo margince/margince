@@ -11,6 +11,7 @@ const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari";
 const IPAD = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15";
 
 const shadowed: string[] = [];
+const listening: (() => void)[] = [];
 
 function device(properties: Readonly<Record<string, unknown>>): void {
   for (const [name, value] of Object.entries(properties)) {
@@ -27,6 +28,9 @@ function displayMode(standalone: boolean): void {
 }
 
 afterEach(() => {
+  for (const stop of listening.splice(0)) {
+    stop();
+  }
   for (const name of shadowed.splice(0)) {
     Reflect.deleteProperty(navigator, name);
   }
@@ -40,13 +44,15 @@ async function page(userAgent = DESKTOP, touchPoints = 0) {
   device({ userAgent, maxTouchPoints: touchPoints });
   vi.resetModules();
   const pwa = await import("./pwa");
-  pwa.listenForInstall();
+  listening.push(pwa.listenForInstall());
   const hook = renderHook(() => pwa.useInstallState());
   return { pwa, state: () => hook.result.current };
 }
 
-function offer(outcome: InstallOutcome) {
-  const prompt = vi.fn(async () => undefined);
+function offer(
+  outcome: InstallOutcome,
+  prompt = vi.fn(async (): Promise<void> => undefined),
+) {
   const event = Object.assign(
     new Event("beforeinstallprompt", { cancelable: true }),
     {
@@ -138,6 +144,41 @@ describe("the install state", () => {
     expect(state().kind).toBe("dismissed");
   });
 
+  it("is dismissed, not stuck on a spent offer, when the browser refuses to ask", async () => {
+    displayMode(false);
+    const { state } = await page();
+    const refusal = new DOMException("already shown", "InvalidStateError");
+    offer(
+      "accepted",
+      vi.fn(async () => {
+        throw refusal;
+      }),
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(await promptFrom(state())).toBe("dismissed");
+    expect(state().kind).toBe("dismissed");
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      "install prompt failed",
+      refusal,
+    );
+  });
+
+  it("reads a browser with no media queries as not installed, without failing", async () => {
+    vi.stubGlobal("matchMedia", undefined);
+    const { state } = await page();
+    expect(state().kind).toBe("unavailable");
+  });
+
+  it("stops hearing the browser once its listeners are removed", async () => {
+    displayMode(false);
+    const { state } = await page();
+    for (const stop of listening.splice(0)) {
+      stop();
+    }
+    offer("accepted");
+    expect(state().kind).toBe("unavailable");
+  });
+
   it("is installed when the app runs standalone", async () => {
     displayMode(true);
     const { state } = await page();
@@ -194,11 +235,24 @@ describe("registering the service worker", () => {
     expect(register).not.toHaveBeenCalled();
   });
 
-  it("does nothing where the browser has no service workers", async () => {
+  it("loads quietly where the browser has no service workers", async () => {
     vi.stubEnv("PROD", true);
-    const listen = vi.spyOn(window, "addEventListener");
-    await registerThenLoad();
-    expect(listen).not.toHaveBeenCalled();
+    expect("serviceWorker" in navigator).toBe(false);
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent) => errors.push(event.error);
+    window.addEventListener("error", onError);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    try {
+      await registerThenLoad();
+    } finally {
+      window.removeEventListener("error", onError);
+    }
+    expect(errors).toEqual([]);
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
   });
 
   it("says once that registration failed, and throws nothing", async () => {

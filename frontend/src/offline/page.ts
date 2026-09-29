@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Locale } from "../i18n";
+import { escapeHtml } from "../format/html";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
+import type { Locale } from "../i18n/locale";
 import { vi } from "../i18n/vi";
 
 type OfflineCopy = Readonly<
@@ -12,20 +13,6 @@ type OfflineCopy = Readonly<
 
 /** English first: it is the block a page without script shows. */
 const OFFLINE_CATALOGS: Readonly<Record<Locale, OfflineCopy>> = { en, de, vi };
-
-const ESCAPES: Readonly<Record<string, string>> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-};
-
-function escapeHtml(text: string): string {
-  return text.replace(
-    /[&<>"]/g,
-    (character) => ESCAPES[character] ?? character,
-  );
-}
 
 function block(locale: string, copy: OfflineCopy, hidden: boolean): string {
   return [
