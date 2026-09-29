@@ -283,6 +283,36 @@ func TestARunWithAnAttemptLostToAnOutageIsNotScored(t *testing.T) {
 			if want := fmt.Sprintf("all %d attempts", runAttempts); !strings.Contains(err.Error(), want) {
 				t.Errorf("error %q is not the exhausted-ladder abort (want %q)", err, want)
 			}
+			if !errors.Is(err, errDroppedConnection) {
+				t.Errorf("error %q does not name the outage that left the run unmeasured", err)
+			}
 		})
+	}
+}
+
+// A break-off is re-driven because it can be transient: an attempt that then
+// answers is the run's result, measured and judged like any other.
+func TestARunThatAnswersAfterABreakOffIsScoredOnItsAnswer(t *testing.T) {
+	waited := recordSleeps(t)
+	candidate := ai.NewFakeClient().
+		ScriptSteps(failedWalk(t, errAbandonedAnswer)...).
+		Script(containsWidget, containsWidget, containsWidget)
+	judge := ai.NewFakeClient().Script(opinionsOf(90, 3)...)
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{testScenario("basic", wideBands)}, testCensus(t),
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		ai.ProfileEUHosted, 3, quietLogger(), &certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judge)},
+			maxRuns:       3,
+		})
+	if err != nil {
+		t.Fatalf("a run that answered on its second attempt aborted the task: %v", err)
+	}
+	if rec.Runs != 3 || rec.Reliability != 1 || rec.Scenarios[0].Abandoned != 0 {
+		t.Errorf("runs=%d reliability=%v abandoned=%d, want 3, 1 and 0 — the answer, not the break-off, is the run",
+			rec.Runs, rec.Reliability, rec.Scenarios[0].Abandoned)
+	}
+	if len(*waited) != 1 {
+		t.Errorf("waited %d times, want one wait before the second attempt", len(*waited))
 	}
 }

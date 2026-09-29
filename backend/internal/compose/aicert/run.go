@@ -146,7 +146,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	// A withheld or abandoned run has no reply to validate: the site's own path
 	// reads it as no usable answer, which runEntry records as invalid.
 	var validated validation
-	if pooled.Withheld == "" && pooled.Abandoned == nil {
+	if pooled.Withheld == "" && !pooled.Abandoned {
 		if validated, err = validateRun(ctx, prepared, caseTrace, sc, task, pooled, log); err != nil {
 			return runOutcome{}, err
 		}
@@ -159,7 +159,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
-			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "abandoned", pooled.Abandoned != nil, "truncated", pooled.Truncated)
+			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "abandoned", pooled.Abandoned, "truncated", pooled.Truncated)
 		outcome.Ungraded = true
 		return outcome, nil
 	}
@@ -246,15 +246,16 @@ type tallyEntry struct {
 //
 // A withheld answer counts as invalid, which is what the site's own path reads
 // it as, and so does an answer the upstream broke off (driveRun re-drives it
-// first, and keeps it only when every attempt broke off). A cut-off answer counts as whatever the validator made of the fragment
-// and is NOT a pass, however it read: a run that counted toward reliability
+// first, and keeps it only when every attempt broke off). A cut-off answer
+// counts as whatever the validator made of the fragment and is NOT a pass,
+// however it read: a run that counted toward reliability
 // while withholding its score would raise a certified median above what the
 // binding earned. Neither is sent to the judge, whose score is an opinion OF AN
 // ANSWER — asked about a fragment, it returned 0 with an entirely positive
 // reason, a number that reads like quality and is not.
 func runEntry(pooled runCalls, validated validation) tallyEntry {
 	switch {
-	case pooled.Withheld != "" || pooled.Abandoned != nil:
+	case pooled.Withheld != "" || pooled.Abandoned:
 		return tallyEntry{outcome: aitasks.OutcomeInvalid}
 	case pooled.Truncated:
 		return tallyEntry{outcome: validated.outcome}
@@ -282,7 +283,7 @@ func candidateSideRun(in candidateSide) runOutcome {
 			CacheWriteTokens: in.pooled.CacheWriteTokens,
 			HardPass:         in.passed,
 			Withheld:         in.pooled.Withheld,
-			Abandoned:        in.pooled.Abandoned != nil,
+			Abandoned:        in.pooled.Abandoned,
 		},
 		Provider:             in.pooled.Provider,
 		ServedModel:          in.pooled.ServedModel,
@@ -334,9 +335,7 @@ func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidat
 	// delivered nothing names the binding it was sent to, not a model that served.
 	if runErr != nil {
 		pooled.Withheld = withheld
-		if abandoned {
-			pooled.Abandoned = fmt.Errorf("candidate call: %w", runErr)
-		}
+		pooled.Abandoned = abandoned
 		return aitasks.Trace{}, pooled, nil
 	}
 	traceCalls(ctx, trace, "candidate", task, sc, run, attempt, calls, log)

@@ -92,9 +92,8 @@ var sleepFunc = func(ctx context.Context, d time.Duration) error {
 func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder,
 	sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, journal taskJournal, run int,
 ) (runOutcome, error) {
-	var lastErr error
+	var lastErr, lastOutage error
 	var brokenOff runOutcome
-	everyBrokenOff := true
 	for attempt := 1; attempt <= runAttempts; attempt++ {
 		if attempt > 1 {
 			log.WarnContext(ctx, "aicert: re-driving a run after the router exhausted every bound tier — the calls the failed attempt made are paid for and discarded",
@@ -112,17 +111,17 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 		case !worthRedriving(err):
 			return runOutcome{}, err
 		default:
-			everyBrokenOff, lastErr = false, err
+			lastErr, lastOutage = err, err
 		}
 	}
-	if everyBrokenOff {
+	if lastOutage == nil {
 		log.WarnContext(ctx, "aicert: the candidate broke off its answer on every attempt — the run is scored invalid",
 			"task", string(task), "scenario", sc.Name, "run", run)
 		return brokenOff, nil
 	}
 	return runOutcome{}, fmt.Errorf(
 		"every bound tier failed on all %d attempts — re-run the same command once the provider is reachable%s: %w",
-		runAttempts, journal.restartHint(), lastErr,
+		runAttempts, journal.restartHint(), lastOutage,
 	)
 }
 
@@ -136,9 +135,7 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 // A throttle keeps the sentinel and stays retryable, because backoff is exactly
 // what it asks for. A withheld answer and a rejected request never carry it:
 // the ladder returns an outcome bare. A preference no host meets may, as the
-// last rung's cause, and is excluded: it fails every attempt alike. An answer
-// the candidate abandoned keeps the sentinel and is retried; driveRun scores it
-// once no attempt does better.
+// last rung's cause, and is excluded: it fails every attempt alike.
 func worthRedriving(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed) && !errors.Is(err, ai.ErrNoUpstreamHost)
 }

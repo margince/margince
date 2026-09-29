@@ -154,7 +154,7 @@ type ruleExtension struct {
 var gradingRuleExtensions = []ruleExtension{{
 	rule: "grading-rule-10",
 	from: "539b61f18ec18e023ba919a2a905bf16287c6fd51f0b893d4516eb80539a398f",
-	to:   "c1c160e32c1bc3cf6c27a8d5660dbe9fab8aca4d3cc954e6326ed042ad524058",
+	to:   "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
 	reason: "runEntry scores an answer the upstream broke off as invalid; before it, such a run " +
 		"stopped its task with no record, so no committed record holds one",
 }}
