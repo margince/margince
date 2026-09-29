@@ -20,9 +20,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// treeReaders are the programs a test runs to read the tree for it. Go's test
-// cache sees what the test opens and nothing a child process opens, so a cached
-// pass over their answer replays after the tree has changed underneath it.
+// A cached test that runs a process to read the tree for it declares what that
+// process read through gatekit.DeclareInputs. Go's test cache sees what the test
+// opens and nothing a child process opens, so a cached pass over the process's
+// answer replays after the tree has changed underneath it. treeReaders are the
+// programs known to read it.
 var treeReaders = map[string]bool{"git": true, "go": true}
 
 // uncachedPackages reads UNCACHED_TEST_PKGS out of the Makefile that runs them,
