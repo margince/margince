@@ -415,6 +415,8 @@ it("shows the decision model's pass rate and a fallback rate that opens its reas
     name: "Fallbacks by reason for 75%",
   });
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  // The figure wears the evidence mark, so it reads as something to press.
+  expect(trigger.classList.contains("evmark-trigger")).toBe(true);
   expect(screen.queryByText(/Decision model failed/)).toBeNull();
   await user.click(trigger);
   expect(trigger.getAttribute("aria-expanded")).toBe("true");

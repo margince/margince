@@ -27,6 +27,7 @@ function FallbackRate({
   if (fallbackCount(row.fallbacks) === 0) return shown;
   return (
     <Popover
+      className="evmark-trigger"
       label={
         <>
           <span aria-hidden>{shown}</span>
