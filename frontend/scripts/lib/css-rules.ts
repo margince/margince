@@ -35,35 +35,108 @@ export function rules(root: string): Rule[] {
     // Innermost brace pairs, so a rule nested in an @media is found as
     // itself and the query around it never matches as a selector.
     for (const [, selector, body] of sheet.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
-      for (const one of selector.split(",")) {
-        const trimmed = one.trim();
-        if (trimmed) all.push({ file, selector: trimmed, body });
+      for (const one of selectorList(selector)) {
+        all.push({ file, selector: one, body });
       }
     }
   }
   return all;
 }
 
+const NESTING = new Map([
+  ["(", 1],
+  ["[", 1],
+  [")", -1],
+  ["]", -1],
+]);
+
+// A separator inside (), [] or quotes does not split: `:is(.a, .b)` is one.
+export function splitTopLevel(text: string, separators: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let quote = "";
+  let from = 0;
+  for (let at = 0; at < text.length; at++) {
+    const char = text[at];
+    if (char === "\\") {
+      at++;
+    } else if (quote !== "") {
+      quote = char === quote ? "" : quote;
+    } else if ("\"'".includes(char)) {
+      quote = char;
+    } else if (depth === 0 && separators.includes(char)) {
+      parts.push(text.slice(from, at));
+      from = at + 1;
+    } else {
+      depth += NESTING.get(char) ?? 0;
+    }
+  }
+  parts.push(text.slice(from));
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+export function selectorList(text: string): string[] {
+  return splitTopLevel(text, ",");
+}
+
+export function resolveNesting(
+  outer: readonly string[],
+  list: string,
+): string[] {
+  return selectorList(list).flatMap((inner) =>
+    outer.length === 0
+      ? [inner]
+      : outer.map((parent) =>
+          inner.includes("&")
+            ? inner.replaceAll("&", parent)
+            : `${parent} ${inner}`,
+        ),
+  );
+}
+
 // A functional pseudo-class names something OTHER than the element it is
 // written on, so its argument is not part of that element's classes:
 // `:not(.btn)` would otherwise make `btn` a class the chip carries, and the
-// subtree search would then find nothing at all.
+// subtree search would then find nothing at all. `:is()` and `:where()` name
+// the element itself, so it carries whatever every alternative carries.
 export function classesOf(compound: string): Set<string> {
-  const bare = compound.replace(/:[\w-]+\([^)]*\)/g, "");
-  return new Set([...bare.matchAll(/\.([\w-]+)/g)].map(([, name]) => name));
+  const names = new Set<string>();
+  for (const part of splitTopLevel(compound, ":")) {
+    const functional = /^[\w-]+\(/.test(part);
+    const open = functional ? part.indexOf("(") : part.length;
+    const close = functional ? part.lastIndexOf(")") : part.length;
+    const written = part.slice(0, open) + part.slice(close + 1);
+    for (const [, name] of written.matchAll(/\.([\w-]+)/g)) names.add(name);
+    if (/^(?:is|where)\(/.test(part)) {
+      for (const name of everyAlternative(part.slice(open + 1, close))) {
+        names.add(name);
+      }
+    }
+  }
+  return names;
+}
+
+function everyAlternative(list: string): string[] {
+  const [first, ...rest] = selectorList(list).map(subjectClasses);
+  return [...(first ?? [])].filter((name) =>
+    rest.every((other) => other.has(name)),
+  );
 }
 
 export function compounds(selector: string): string[] {
-  return selector.split(/[\s>+~]+/).filter(Boolean);
+  return splitTopLevel(selector, " \t\n\r\f>+~");
 }
 
 // The SUBJECT of a selector: the compound the rule actually paints, which is
 // the last one. `.palette-row .type` styles the chip, not the row — reading
 // its first compound instead put every `.palette-row` descendant inside a
 // chip it is only a sibling of.
+export function subjectOf(selector: string): string {
+  return compounds(selector).at(-1) ?? "";
+}
+
 export function subjectClasses(selector: string): Set<string> {
-  const parts = compounds(selector);
-  return classesOf(parts[parts.length - 1] ?? "");
+  return classesOf(subjectOf(selector));
 }
 
 // The custom properties a rule's body sets as its INK.

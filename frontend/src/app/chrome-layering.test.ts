@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import { withoutComments } from "../testing/css";
 
 // Fitness function for the chrome disappearing behind the page.
@@ -67,10 +68,7 @@ function rules(css: string): Rule[] {
   const found: Rule[] = [];
   for (const match of text.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
     found.push({
-      selectors: match[1]
-        .split(",")
-        .map((one) => one.trim().replace(/\s+/g, " "))
-        .filter(Boolean),
+      selectors: selectorList(match[1]).map((one) => one.replace(/\s+/g, " ")),
       body: match[2],
       nested: openBlocks(text.slice(0, match.index)) > 0,
     });

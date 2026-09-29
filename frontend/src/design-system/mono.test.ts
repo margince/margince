@@ -7,6 +7,11 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
+  resolveNesting,
+  splitTopLevel,
+  subjectOf,
+} from "../../scripts/lib/css-rules";
+import {
   extensionLayers,
   filesMatching,
   parseSource,
@@ -60,47 +65,12 @@ function corpus(): string[] {
 const MONO_FAMILY = /var\(\s*--fontFamilyMono\s*\)|Geist Mono|\bmonospace\b/i;
 const T_MONO = /(?<![\w-])t-mono(?![\w-])/;
 
-// Splits on a character at the top level only, so a comma inside `:is(a, b)` or
-// a space inside `[data-x="a b"]` does not cut a selector in two.
-function splitTopLevel(text: string, at: RegExp): string[] {
-  const parts: string[] = [];
-  let depth = 0;
-  let current = "";
-  for (const char of text) {
-    if (char === "(" || char === "[") depth++;
-    if (char === ")" || char === "]") depth--;
-    if (depth === 0 && at.test(char)) {
-      parts.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  parts.push(current);
-  return parts.map((part) => part.trim()).filter((part) => part !== "");
-}
-
-// A nested selector is resolved against its parent the way CSS nesting does:
-// `&` stands for the parent, and a selector without one is its descendant.
-function resolveSelectors(prelude: string, parents: string[]): string[] {
-  const own = splitTopLevel(prelude, /,/);
-  if (parents.length === 0) return own;
-  return parents.flatMap((parent) =>
-    own.map((selector) =>
-      selector.includes("&")
-        ? selector.replaceAll("&", parent)
-        : `${parent} ${selector}`,
-    ),
-  );
-}
-
 /**
  * Whether a selector's SUBJECT — the element the declarations land on — is
  * code. `.foo code` is; `code .foo` is not, because the rule dresses `.foo`.
  */
 function targetsCode(selector: string): boolean {
-  const subject = splitTopLevel(selector, /[\s>+~]/).at(-1) ?? "";
-  const compound = splitTopLevel(subject, /:/)[0] ?? "";
+  const compound = splitTopLevel(subjectOf(selector), ":")[0] ?? "";
   return (
     /^(code|pre|samp)(?![\w-])/i.test(compound) ||
     /\.code-block(?![\w-])/.test(compound)
@@ -145,7 +115,7 @@ function monoDeclarations(css: string): MonoDeclaration[] {
       const prelude = text.slice(start, index).trim();
       const parents = open.at(-1) ?? [];
       open.push(
-        prelude.startsWith("@") ? parents : resolveSelectors(prelude, parents),
+        prelude.startsWith("@") ? parents : resolveNesting(parents, prelude),
       );
       start = index + 1;
     } else if (char === ";" || char === "}") {

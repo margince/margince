@@ -8,6 +8,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
@@ -641,11 +642,9 @@ function reducedMotionRules(
     const body = text.slice(start, index - 1);
     const rule = /([^{}]+)\{([^{}]*)\}/g;
     for (let inner = rule.exec(body); inner; inner = rule.exec(body)) {
-      const selectors = inner[1]
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .split(",")
-        .map((one) => one.trim().replace(/\s+/g, " "))
-        .filter(Boolean);
+      const selectors = selectorList(
+        inner[1].replace(/\/\*[\s\S]*?\*\//g, ""),
+      ).map((one) => one.replace(/\s+/g, " "));
       const properties = inner[2]
         .split(";")
         .map((line) => line.split(":")[0].trim())
@@ -699,11 +698,9 @@ function plainRules(
   const rule = /([^{}]+)\{([^{}]*)\}/g;
   const flat = withoutAtRuleBlocks(text);
   for (let match = rule.exec(flat); match; match = rule.exec(flat)) {
-    const selectors = match[1]
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .split(",")
-      .map((one) => one.trim().replace(/\s+/g, " "))
-      .filter(Boolean);
+    const selectors = selectorList(
+      match[1].replace(/\/\*[\s\S]*?\*\//g, ""),
+    ).map((one) => one.replace(/\s+/g, " "));
     for (const selector of selectors) {
       out.push({ selector, body: match[2], at: match.index });
     }

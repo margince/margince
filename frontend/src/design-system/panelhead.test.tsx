@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
   filesMatching,
@@ -339,8 +340,8 @@ const SUB_IN_HEAD = /\.(?:panel-head|section-header)\b[^,{}]*\s\.sub(?![\w-])/;
 
 function headSubSelectors(css: string): readonly string[] {
   return [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)]
-    .flatMap(([, selectorList]) => selectorList.split(","))
-    .map((selector) => selector.trim().replace(/\s+/g, " "))
+    .flatMap(([, selectors]) => selectorList(selectors))
+    .map((selector) => selector.replace(/\s+/g, " "))
     .filter(
       (selector) => HEAD_SUB_CLASS.test(selector) || SUB_IN_HEAD.test(selector),
     );

@@ -5,6 +5,11 @@ import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  classesOf,
+  selectorList,
+  subjectOf,
+} from "../../scripts/lib/css-rules";
 import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
 import { classNamesOn } from "../testing/classnames";
 import { rulesIn } from "../testing/css";
@@ -57,29 +62,13 @@ function read(where: string): string {
 }
 
 /**
- * The compound a rule SELECTS, one per comma part: the last link in the chain,
- * with `:not()` blanked first. `.worklist-row button:not(.worklist-rank-select)`
- * selects a button and excuses one class — reading the excused class as the
- * subject would file the rule against the very thing it leaves alone.
+ * The compound a rule SELECTS, one per comma part: the last link in the chain.
+ * `.worklist-row button:not(.worklist-rank-select)` selects a button and
+ * excuses one class — reading the excused class as the subject would file the
+ * rule against the very thing it leaves alone.
  */
 function subjectsOf(selector: string): string[] {
-  return selector
-    .split(",")
-    .map((part) => part.replaceAll(/:not\([^)]*\)/g, " ").trim())
-    .map(
-      (part) =>
-        part
-          .split(/[\s>+~]+/)
-          .filter(Boolean)
-          .pop() ?? "",
-    )
-    .filter(Boolean);
-}
-
-function classesIn(compound: string): string[] {
-  return [...compound.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)].map(
-    (found) => found[1],
-  );
+  return selectorList(selector).map(subjectOf);
 }
 
 /** A rule that draws a `<button>` element itself, rather than a class on one. */
@@ -111,7 +100,7 @@ function pressableClasses(): Set<string> {
     for (const rule of rulesIn(read(where))) {
       if (!/(?<![\w-])cursor\s*:\s*pointer/.test(rule.body)) continue;
       for (const subject of subjectsOf(rule.selector)) {
-        for (const name of classesIn(subject)) {
+        for (const name of classesOf(subject)) {
           out.add(name);
         }
       }
@@ -164,7 +153,7 @@ function findingsIn(
   const out: Finding[] = [];
   for (const rule of rulesIn(css)) {
     const subjects = subjectsOf(rule.selector);
-    const names = subjects.flatMap(classesIn);
+    const names = subjects.flatMap((subject) => [...classesOf(subject)]);
     const pressable =
       subjects.some(selectsButton) || names.some((name) => corpus.has(name));
     if (!pressable) continue;
@@ -257,6 +246,11 @@ const ACCEPTED = new Map<string, string>([
     ".worklist-more .btn",
     "the worklist's one load-more verb takes the coarse-pointer 44px floor " +
       "the row verbs beside it get",
+  ],
+  [
+    "button:has(> .visibility-opens)",
+    "a visibility mark's button takes the coarse-pointer 44px floor; the pill " +
+      "inside it keeps its own height, so a row of marks keeps one line",
   ],
   [
     "worklist-rank-select",
