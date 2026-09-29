@@ -46,15 +46,15 @@ func (s listSeam) ReadLists(ctx context.Context, q agents.ListRead) (json.RawMes
 		if q.EntityType != "" {
 			filter.EntityType = &q.EntityType
 		}
-		return encoded(s.store.ListsPage(ctx, filter))
+		return encodedListAnswer(s.store.ListsPage(ctx, filter))
 	case agents.ListModeGet:
-		return encoded(s.store.ListView(ctx, listID(*q.ListID)))
+		return encodedListAnswer(s.store.ListView(ctx, listID(*q.ListID)))
 	case agents.ListModeMembers:
-		return encoded(s.store.MembersPage(ctx, listID(*q.ListID), q.Limit, q.Cursor))
+		return encodedListAnswer(s.store.MembersPage(ctx, listID(*q.ListID), q.Limit, q.Cursor))
 	case agents.ListModeWhy:
-		return encoded(s.store.ExplainView(ctx, listID(*q.ListID), *q.RecordID))
+		return encodedListAnswer(s.store.ExplainView(ctx, listID(*q.ListID), *q.RecordID))
 	case agents.ListModeHistory:
-		return encoded(s.store.HistoryPage(ctx, listID(*q.ListID), q.Limit, q.Cursor))
+		return encodedListAnswer(s.store.HistoryPage(ctx, listID(*q.ListID), q.Limit, q.Cursor))
 	default:
 		return s.previewDefinition(ctx, q)
 	}
@@ -99,16 +99,16 @@ func (s listSeam) ChangeLists(ctx context.Context, c agents.ListChange) (json.Ra
 		if c.Sharing != nil {
 			in.Sharing = *c.Sharing
 		}
-		return encoded(s.store.CreateListView(ctx, in))
+		return encodedListAnswer(s.store.CreateListView(ctx, in))
 	case agents.ListModeUpdate:
-		return encoded(s.store.UpdateListView(ctx, listID(*c.ListID), collections.UpdateListInput{
+		return encodedListAnswer(s.store.UpdateListView(ctx, listID(*c.ListID), collections.UpdateListInput{
 			Name: c.Name, Purpose: c.Purpose, Definition: c.Definition, Sharing: c.Sharing,
 			TeamID: typed[ids.TeamKind](c.TeamID), StewardID: typed[ids.UserKind](c.StewardID), IfVersion: c.Version,
 		}))
 	case agents.ListModeArchive, agents.ListModeRestore:
-		return encoded(s.store.SetArchivedView(ctx, listID(*c.ListID), c.Mode == agents.ListModeArchive))
+		return encodedListAnswer(s.store.SetArchivedView(ctx, listID(*c.ListID), c.Mode == agents.ListModeArchive))
 	case agents.ListModeAdd:
-		return encoded(s.store.AddMemberView(ctx, listID(*c.ListID), memberChangeOf(c)))
+		return encodedListAnswer(s.store.AddMemberView(ctx, listID(*c.ListID), memberChangeOf(c)))
 	default:
 		if err := s.store.RemoveMember(ctx, listID(*c.ListID), memberChangeOf(c)); err != nil {
 			return nil, err
@@ -134,7 +134,7 @@ func typed[K ids.EntityKind](id *ids.UUID) *ids.ID[K] {
 }
 
 // encoded marshals a store answer, or passes its error on.
-func encoded[T any](v T, err error) (json.RawMessage, error) {
+func encodedListAnswer[T any](v T, err error) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
