@@ -16947,8 +16947,9 @@ export interface paths {
         /**
          * Re-price the models this installation calls from the providers' own catalogues.
          * @description Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
-         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and
-         *     each `openai_compatible` model already on the sheet that the list still names. A model
+         *     OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and,
+         *     while something is bound at OpenRouter, each `openai_compatible` model already on the
+         *     sheet that the list still names. A self-hosted model priced by hand is never touched. A model
          *     whose price already matches is left alone and leaves no audit row; a future-dated manual
          *     price is not touched. Runs inline and answers with what happened per provider. A provider
          *     that publishes no price list reports `not_available`: its prices are set by hand.
