@@ -271,37 +271,15 @@ bootstrap_admin:
 #   max_backfill_months: 24
 
 # Rates & costs "Refresh from sources" (worker role): an admin triggers an async
-# refresh that stages confirm-first proposals into the approvals inbox; a human
-# approves every change, nothing is auto-applied. Field reference:
-# docs/reference/configuration.md#rates.
+# FX refresh that stages confirm-first proposals into the approvals inbox; a
+# human approves every change, nothing is auto-applied. Model prices are not
+# configured here: "Refresh model prices" reads the broker's own catalogue.
+# Field reference: docs/reference/configuration.md#rates.
 rates:
   # Base-relative FX JSON API ({base,rates}); defaults to api.frankfurter.dev.
   fx_source: https://api.frankfurter.dev/v1/latest
   # Currencies proposed to bootstrap an empty FX sheet; defaults to USD/GBP/CHF.
   fx_currencies: [USD, GBP, CHF]
-  # provider -> pricing-page URL the model-cost refresh crawls + AI-extracts.
-  # Name the provider exactly as `seeds.ai_routing` binds it; a provider with no
-  # entry here is never refreshed, and its seeded rates go stale in silence.
-  model_pricing:
-    gemini: https://ai.google.dev/gemini-api/docs/pricing
-    # anthropic: https://docs.anthropic.com/en/docs/about-claude/pricing
-    # openai: https://platform.openai.com/docs/pricing
-    # OpenRouter publishes prices as JSON rather than a page — per-token, so a
-    # proposal is the catalog's number x 1e12 to reach micro-USD/MTok. Uncomment
-    # for an OpenAI-wire broker. The key is the generic
-    # adapter's name: it refreshes whichever broker openai_compatible is bound to,
-    # so change the URL if that is not OpenRouter.
-    #
-    # A JSON catalog is read one passage PER MODEL and narrowed to the models
-    # the binding names ON THIS PROVIDER — a broker lists hundreds, and
-    # asking for all of them overruns the extraction's output ceiling. Two
-    # consequences worth knowing: a model you do not bind is never repriced from
-    # here (its seeded rate in ai.SeedModelRates stands), and if NONE of this
-    # provider's bound ids appears in the catalog the refresh fails loudly rather
-    # than reporting a successful no-op — that means an id here disagrees with
-    # the vendor's own spelling. Debug it with `make ai-probe`
-    # (docs/how-to/debug-an-ai-task.md).
-    # openai_compatible: https://openrouter.ai/api/v1/models
 
 # Remote MCP connector (Gate 1). On means /mcp and /oauth/* are served, so any
 # human here can lend one of their passports to an outside client; it is on in

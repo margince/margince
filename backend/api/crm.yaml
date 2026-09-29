@@ -24106,26 +24106,53 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /ai-model-rates/refresh:
+    post:
+      tags: [Rates]
+      operationId: refreshAiModelRates
+      summary: Re-price the models this installation calls from the providers' own catalogues.
+      description: |
+        Admin/ops-only. Reads OpenRouter's public model list and writes today's price for each
+        OpenRouter-hosted model this installation binds (tiers, embeddings, decision model) and
+        each `openai_compatible` model already on the sheet that the list still names. A model
+        whose price already matches is left alone and leaves no audit row; a future-dated manual
+        price is not touched. Runs inline and answers with what happened per provider. A provider
+        that publishes no price list reports `not_available`: its prices are set by hand.
+        Human session only (x-agent-access: human-only).
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: What the refresh did, one entry per provider this build knows.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiModelRateRefreshReport' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /ai-model-rates/propose-refresh:
     post:
       tags: [Rates]
       operationId: proposeAiModelRateRefresh
-      summary: Enqueue an async model-cost refresh (stages 🟡 proposals).
+      deprecated: true
+      summary: Retired. Answers 501; use POST /ai-model-rates/refresh.
       description: |
-        Admin/ops-only. Enqueues a background job that crawls the configured provider
-        pricing pages, AI-extracts per-model prices (evidence-gated), and stages a
-        confirm-first proposal per changed model into the approvals inbox. Returns
-        immediately. Human session only (x-agent-access: human-only).
+        Retired: model prices are no longer extracted from provider pricing pages and staged
+        for approval. This operation always answers 501 and is kept for one release so a
+        client built against it fails loudly instead of on a missing route. Use
+        `POST /ai-model-rates/refresh`. Human session only (x-agent-access: human-only).
       security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
       x-agent-access: human-only
       responses:
         '202':
-          description: Refresh enqueued.
+          description: Never returned; declared so the response contract stays additive.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefreshAccepted' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '501':
+          description: Retired; use POST /ai-model-rates/refresh.
 
 # =============================================================================
   /companies/{id}/profile-fields/{field}:
@@ -25045,6 +25072,34 @@ components:
       required: [data]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/AiModelRate' } }
+    AiModelRateRefreshReport:
+      type: object
+      description: The outcome of a catalogue refresh, one entry per provider this build knows.
+      required: [providers]
+      properties:
+        providers:
+          type: array
+          items: { $ref: '#/components/schemas/AiModelRateProviderRefresh' }
+    AiModelRateProviderRefresh:
+      type: object
+      required: [provider, outcome, updated, unchanged, models]
+      properties:
+        provider: { type: string, description: The provider as the routing document spells it. }
+        outcome:
+          type: string
+          enum: [updated, unchanged, not_available, unreachable, not_bound]
+          x-go-type: string
+          description: |
+            `updated` wrote at least one price; `unchanged` found every priced model already
+            current; `not_available` means the provider (or the catalogue, for these models)
+            publishes no price to read; `unreachable` means the catalogue could not be read;
+            `not_bound` means nothing this provider serves is bound or on the sheet.
+        updated: { type: integer, minimum: 0, description: Prices written today. }
+        unchanged: { type: integer, minimum: 0, description: Models already at the catalogue price. }
+        models:
+          type: array
+          items: { type: string }
+          description: Model ids written this run.
     SetAiModelRateRequest:
       type: object
       required: [provider, model_id, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok]

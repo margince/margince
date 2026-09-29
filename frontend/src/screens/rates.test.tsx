@@ -228,10 +228,14 @@ describe("the rate sheets", () => {
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Set rate" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add model rate" })).toBeTruthy();
-    // Both cards expose the async "Refresh from sources" control to an admin.
+    // Each card exposes its own refresh to an admin: the currency sheet asks
+    // for proposals, the model sheet re-prices from the catalogue.
     expect(
       screen.getAllByRole("button", { name: "Refresh from sources" }),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: "Refresh model prices" }),
+    ).toHaveLength(1);
     // And nothing about reading is withheld or read-only for them.
     expect(screen.queryByText(/your role cannot change rates/i)).toBeNull();
   });
@@ -265,7 +269,7 @@ describe("the rate sheets", () => {
       within(model).queryByRole("button", { name: "Add model rate" }),
     ).toBeNull();
     expect(
-      within(model).queryByRole("button", { name: "Refresh from sources" }),
+      within(model).queryByRole("button", { name: "Refresh model prices" }),
     ).toBeNull();
   });
 
@@ -280,7 +284,7 @@ describe("the rate sheets", () => {
       within(model).getByRole("button", { name: "Add model rate" }),
     ).toBeTruthy();
     expect(
-      within(model).getByRole("button", { name: "Refresh from sources" }),
+      within(model).getByRole("button", { name: "Refresh model prices" }),
     ).toBeTruthy();
 
     const fx = rateCard("Currency rates");
@@ -303,6 +307,9 @@ describe("the rate sheets", () => {
     expect(screen.queryByRole("button", { name: "Add model rate" })).toBeNull();
     expect(
       screen.queryAllByRole("button", { name: "Refresh from sources" }),
+    ).toEqual([]);
+    expect(
+      screen.queryAllByRole("button", { name: "Refresh model prices" }),
     ).toEqual([]);
 
     // The read-only posture is stated once per readable sheet, and the withheld

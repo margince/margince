@@ -75,10 +75,6 @@ type approvalSummaryCopy struct {
 	// rate or fxNoRateInForce.
 	fxRateChanged   string
 	fxNoRateInForce string
-	// modelRateChanged: %s is the provider, the model, the new input price, then
-	// the prior one or modelRateNew.
-	modelRateChanged string
-	modelRateNew     string
 
 	// The REST gate's structural summary: the pseudo-field naming a nested
 	// create's parent, and the count that stands in for a nested object. The
@@ -126,10 +122,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		coldStartFromText:            "Cold-start read-back of pasted text",
 		coldStartFromSelfDescription: "Cold-start read-back of a self-description",
 
-		fxRateChanged:    "%s → %s %s (was %s)",
-		fxNoRateInForce:  "none in force today",
-		modelRateChanged: "%s/%s input %s (was %s)",
-		modelRateNew:     "(new)",
+		fxRateChanged:   "%s → %s %s (was %s)",
+		fxNoRateInForce: "none in force today",
 
 		createdUnder: "under",
 		nestedFields: "{%d fields}",
@@ -167,10 +161,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		coldStartFromText:            "Cold-Start-Auslesung aus eingefügtem Text",
 		coldStartFromSelfDescription: "Cold-Start-Auslesung aus einer Selbstbeschreibung",
 
-		fxRateChanged:    "%s → %s %s (bisher %s)",
-		fxNoRateInForce:  "kein heute gültiger Kurs",
-		modelRateChanged: "%s/%s Input %s (bisher %s)",
-		modelRateNew:     "(neu)",
+		fxRateChanged:   "%s → %s %s (bisher %s)",
+		fxNoRateInForce: "kein heute gültiger Kurs",
 
 		createdUnder: "unter",
 		nestedFields: "{%d Felder}",
@@ -208,10 +200,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		coldStartFromText:            "Đọc dữ liệu khởi tạo từ văn bản đã dán",
 		coldStartFromSelfDescription: "Đọc dữ liệu khởi tạo từ một bản tự mô tả",
 
-		fxRateChanged:    "%s → %s %s (trước đây %s)",
-		fxNoRateInForce:  "không có tỷ giá nào hiệu lực hôm nay",
-		modelRateChanged: "%s/%s đầu vào %s (trước đây %s)",
-		modelRateNew:     "(mới)",
+		fxRateChanged:   "%s → %s %s (trước đây %s)",
+		fxNoRateInForce: "không có tỷ giá nào hiệu lực hôm nay",
 
 		createdUnder: "thuộc",
 		nestedFields: "{%d trường}",

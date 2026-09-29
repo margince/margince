@@ -85,20 +85,16 @@ export function LaneRow({
             {unkeyed?.has(binding.provider) && (
               <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
             )}
-            {isUnpriced(catalogue, binding.provider, binding.model, lane) ? (
-              <Badge tone="warning">{t("aiRouting.unpriced")}</Badge>
-            ) : (
-              <span className="ai-lane-price t-sub">
-                {priceLabel(
-                  catalogue,
-                  binding.provider,
-                  binding.model,
-                  lane,
-                  locale,
-                  t,
-                )}
-              </span>
-            )}
+            <span className="ai-lane-price t-sub">
+              {priceLabel(
+                catalogue,
+                binding.provider,
+                binding.model,
+                lane,
+                locale,
+                t,
+              )}
+            </span>
           </span>
           {/* Never refused, even to a reader who may not save: the dialog
               shows the rest of the binding, and its Save carries the refusal. */}
@@ -196,38 +192,6 @@ function useDecisionProcessing(
   return processingLabel(candidate.processing, t);
 }
 
-// Whether the price sheet can cost a call on this binding.
-//
-// An EMPTY sheet answers no. The reader who cannot read `ai_model_rate` gets an
-// empty list from the catalogue hook by design, and marking every lane unpriced
-// on the strength of that would report a fault in the installation where the
-// truth is only that the sheet is not theirs.
-//
-// A row that EXISTS but carries a price nothing can parse counts as unpriced
-// too. It is the same fact to a reader — this call cannot be costed — and
-// treating it as priced left the row showing neither a figure nor the pill,
-// which says nothing at all.
-function isUnpriced(
-  catalogue: ModelCatalogue,
-  provider: string,
-  model: string,
-  lane: ModelLane,
-): boolean {
-  if (!catalogue || catalogue.length === 0) {
-    return false;
-  }
-  const rate = catalogue.find(
-    (r) => r.provider === provider && r.model_id === model && r.lane === lane,
-  );
-  if (!rate) {
-    return true;
-  }
-  if (unreadablePrice(rate.input_per_mtok)) {
-    return true;
-  }
-  return !inputOnlyLane(lane) && unreadablePrice(rate.output_per_mtok);
-}
-
 // The host part of a base URL, for a row that has room for the address but not
 // for the whole endpoint. Falls back to the string as given: a value an
 // operator typed that does not parse is still what this lane is pointed at, and
@@ -269,9 +233,9 @@ function laneGloss(name: string, t: ReturnType<typeof useT>): string | null {
 }
 
 // This binding's price, short enough to sit on the row: what goes in, what comes
-// out, per million tokens. Empty where the sheet cannot say — the `unpriced`
-// pill is what a reader sees instead, and printing a zero here would be the one
-// thing this product is careful never to say by accident.
+// out, per million tokens. Empty where the sheet cannot say: printing a zero
+// here would be the one thing this product is careful never to say by accident,
+// and the editor's rate plate is where a missing price is spelled out.
 function priceLabel(
   catalogue: ModelCatalogue,
   provider: string,

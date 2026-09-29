@@ -22,6 +22,7 @@ import {
   useMe,
   WriteRefused,
 } from "./common";
+import { RefreshModelPrices } from "./rate-catalogue-refresh";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 import { calendarDay } from "../format/calendarday";
@@ -361,7 +362,7 @@ export function ModelCostsCard() {
       actions={
         canManage ? (
           <>
-            <RefreshFromSources path="/ai-model-rates/propose-refresh" />
+            <RefreshModelPrices />
             <Button variant="primary" onClick={() => setOpen(true)}>
               {t("settings.rates.modelAdd")}
             </Button>

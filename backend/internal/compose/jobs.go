@@ -332,20 +332,9 @@ type JobRunnerConfig struct {
 	// no-op; a human still approves every bootstrapped proposal.
 	FxBootstrapCurrencies []string
 	// FxExtractBrain is the model lane the fx-rate refresh extracts with
-	// (modelPath.RateExtract, shared with the model-cost refresh); nil = the
-	// worker registers but the producer no-ops (same posture as RateExtractBrain).
+	// (modelPath.RateExtract); nil = the worker registers but the producer
+	// no-ops.
 	FxExtractBrain completer
-	// RateExtractBrain is the model lane the model-cost refresh job extracts
-	// pricing with (modelPath.RateExtract); nil = the worker registers but
-	// the producer no-ops (same posture as the deep-read brain).
-	RateExtractBrain completer
-	// ModelPricingSources binds provider names to pricing-page URLs the
-	// model-cost refresh crawls; empty = no-op.
-	ModelPricingSources []pricingSource
-	// BoundModelIDs maps a provider to the model ids this deployment's routing
-	// binds on it, so each pricing source is narrowed to its OWN provider's
-	// bindings. Nil (nothing wired) keeps every model.
-	BoundModelIDs map[string]map[string]bool
 }
 
 // NewJobRunner wires every worker this process role can run, and every

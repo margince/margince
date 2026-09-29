@@ -61,7 +61,7 @@ type ModelPath struct {
 	// AccountScan reads one account for one reader and says what needs a
 	// contact, quoting the exchanges it read (companyscan).
 	AccountScan  completer
-	RateExtract  completer // the model-cost refresh pricing-page extraction lane
+	RateExtract  completer // the FX refresh rates-page extraction lane
 	BriefRanking completer // the Morning-Brief L2 re-order (B-E05.2)
 	// Summarize serves both of the company view's grounded-prose sites: the
 	// standing account brief and the prepared "Ask Margince" questions. Both

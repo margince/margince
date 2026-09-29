@@ -60,7 +60,6 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   transcript_proposal: "approval.kind.transcript_proposal",
   stage_progression: "approval.kind.stage_progression",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
-  ai_model_rate_proposal: "approval.kind.ai_model_rate_proposal",
   disqualify_lead: "approval.kind.disqualify_lead",
   demote_lead: "approval.kind.demote_lead",
   advance_project_phase: "approval.kind.advance_project_phase",

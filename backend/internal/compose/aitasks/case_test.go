@@ -131,7 +131,7 @@ func TestCaseForFindsABoundCase(t *testing.T) {
 	if got.Site() != site {
 		t.Errorf("CaseFor returned a case for %+v, want %+v", got.Site(), site)
 	}
-	if _, ok := r.CaseFor(ai.TaskRateExtract, "pricing"); ok {
+	if _, ok := r.CaseFor(ai.TaskRateExtract, "invented"); ok {
 		t.Error("CaseFor found a case that was never bound")
 	}
 }
