@@ -1,168 +1,329 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { PanelRow } from "../design-system/panel";
-import { formatUsdPerMTok } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { Popover } from "../design-system/popover";
+import {
+  formatDateTime,
+  formatNumber,
+  formatUsdPerMTok,
+} from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useAiStatus } from "./ai-admin";
-import { processingLabel } from "./ai-decision-labels";
+import { processingLabel, tierLabel } from "./ai-decision-labels";
 import {
   inputOnlyLane,
   type ModelCatalogue,
   type ModelLane,
   unreadablePrice,
 } from "./ai-models";
+import { TermChip } from "./ai-terms";
 
-// The Model tiers card's rows: one per tier, the embedder, and the optional
-// decision model. Apart from the card that holds them, because a row is a
-// reading of one binding and knows nothing of the document around it.
+// The Model tiers table: one row per lane the routing document binds — the
+// tiers, the embedder and the optional decision model — joined to the health
+// rung that lane's calls are counted under. Apart from the card that holds it,
+// because a row is a reading of one binding and knows nothing of the document
+// around it.
 
 type DecisionsBinding = components["schemas"]["AiDecisionsBinding"];
+type Rung = components["schemas"]["AiRungHealth"];
+type Health = components["schemas"]["AiHealth"];
+type Feature = components["schemas"]["AiFeatureRoute"];
 
 // The decision lane's name, as the routing document spells its key. Shown raw,
 // like every tier name down the same column.
 const DECISIONS = "decisions";
 
-// One lane, read as a row: which lane, which vendor, which model, and what is
-// wrong with that pairing. Editing opens a dialog rather than fields under the
-// row, so the column of rows stays a reading of the whole ladder.
-//
-// The two pills are the whole reason a reader can be shown a binding without also
-// being shown the key card and the price sheet. Both are joins, and both stay
-// silent rather than guessing: a key list that has not arrived claims nothing, and
-// an empty price sheet means the reader cannot read it rather than that nothing on
-// this installation is priced.
-export function LaneRow({
-  name,
-  lane,
-  binding,
-  catalogue,
-  unkeyed,
-  onEdit,
-  testId,
-  chip,
-  facts,
-}: Readonly<{
+// The rung each off-ladder lane stamps on its calls (embedlane.go, decidetrace.go).
+const RUNG_OF: Readonly<Record<string, string>> = {
+  embeddings: "embed",
+  decisions: "decide",
+};
+
+export type Lane = Readonly<{
   name: string;
   lane: ModelLane;
-  binding: { provider: string; model: string; base_url?: string };
+  binding?: { provider: string; model: string; base_url?: string };
+  // What Edit opens; absent for a lane this reader may see and not bind.
+  onEdit?: () => void;
+  testId?: string;
+}>;
+
+type Row = Readonly<{
+  lane: Lane;
+  rung: Rung | undefined;
+  tasks: number | undefined;
+}>;
+
+/**
+ * The lanes as a list, each one a binding and — where the reader may see how
+ * calls went — a health dot that explains itself on a tap.
+ *
+ * Two jobs on two levels: the line says which model runs the lane (the tier and
+ * the model in full size, price and host under them, small), and the dot says
+ * whether it answers, with the numbers behind it in a popover. A lane that is
+ * not answering says why on its own line, because the sentinel is what an
+ * operator acts on.
+ *
+ * Health and tasks are reads with their own grants; each half stays silent when
+ * its read is not this reader's — an absent dot is not "healthy", and an absent
+ * A row with no binding is a rung that still receives
+ * calls after its lane left the document.
+ */
+export function TiersTable({
+  lanes,
+  health,
+  features,
+  catalogue,
+  unkeyed,
+  decisions,
+  canManage,
+  onAddDecisions,
+}: Readonly<{
+  lanes: readonly Lane[];
+  health: Health | undefined;
+  features: readonly Feature[] | undefined;
   catalogue: ModelCatalogue;
   unkeyed: ReadonlySet<string> | null;
-  onEdit: () => void;
-  testId?: string;
-  // A fact about the binding that only this lane states, beside the vendor.
-  chip?: ReactNode;
-  // The line under the row: how the lane is used and whether it is answering.
-  facts?: ReactNode;
+  decisions: DecisionsBinding | undefined;
+  canManage: boolean;
+  // Only when the document leaves the decision model out.
+  onAddDecisions?: () => void;
 }>) {
   const t = useT();
+  const processing = useDecisionProcessing(decisions);
+  const known = new Set(lanes.map((l) => RUNG_OF[l.name] ?? l.name));
+  const rows: Row[] = [
+    ...lanes.map((lane) => ({
+      lane,
+      rung: health?.rungs.find(
+        (r) => r.tier === (RUNG_OF[lane.name] ?? lane.name),
+      ),
+      tasks: features?.filter((f) => f.leading_tier === lane.name).length,
+    })),
+    ...(health?.rungs ?? [])
+      .filter((r) => !known.has(r.tier))
+      .map((rung) => ({
+        lane: { name: tierLabel(rung.tier, t), lane: "chat" as const },
+        rung,
+        tasks: undefined,
+      })),
+  ];
+  return (
+    <>
+      {rows.map((row) => (
+        <TierLine
+          key={row.lane.name}
+          row={row}
+          health={health}
+          catalogue={catalogue}
+          unkeyed={unkeyed}
+          chip={row.lane.name === DECISIONS ? processing : null}
+        />
+      ))}
+      {onAddDecisions && (
+        <PanelRow>
+          <div
+            data-testid="ai-routing-decisions"
+            className={tierLineClass(health !== undefined)}
+          >
+            {health && <span />}
+            <span className="ai-tier-name">{DECISIONS}</span>
+            <span className="t-sub">{t("aiRouting.decisions.absent")}</span>
+            <Button
+              onClick={onAddDecisions}
+              reason={canManage ? undefined : t("aiRouting.adminOnly")}
+            >
+              {t("aiRouting.decisions.add")}
+            </Button>
+          </div>
+        </PanelRow>
+      )}
+    </>
+  );
+}
+
+function tierLineClass(withDot: boolean): string {
+  return withDot ? "ai-tier-line" : "ai-tier-line ai-tier-line-plain";
+}
+
+function TierLine({
+  row,
+  health,
+  catalogue,
+  unkeyed,
+  chip,
+}: Readonly<{
+  row: Row;
+  health: Health | undefined;
+  catalogue: ModelCatalogue;
+  unkeyed: ReadonlySet<string> | null;
+  chip: string | null;
+}>) {
+  const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const { lane, rung, tasks } = row;
+  const { binding } = lane;
+  const failing = rung !== undefined && !rung.healthy;
+  const price = binding
+    ? priceLabel(
+        catalogue,
+        binding.provider,
+        binding.model,
+        lane.lane,
+        locale,
+        t,
+      )
+    : "";
+  // The small line: what the binding costs and where it points — or, when the
+  // lane is failing, what it said, which matters more than either.
+  const secondary = failing
+    ? [
+        rung.last_sentinel,
+        plural("aiHealth.callCounts", rung.calls, {
+          count: formatNumber(rung.calls, locale),
+          failures: formatNumber(rung.failures, locale),
+        }),
+      ]
+    : [price];
+  const gloss = laneGloss(lane.name, t);
   return (
     <PanelRow>
-      <div data-testid={testId ?? `ai-routing-tier-${name}`}>
-        <div className="ai-lane">
-          {/* The lane's own id, and under it what the lane is FOR. The id is
-              the routing document's vocabulary and what an operator greps for;
-              the gloss says which of `premium` and `frontier` is dearer. */}
-          <span className="ai-lane-name">
-            <span>{name}</span>
-            {laneGloss(name, t) && (
-              <span className="t-sub">{laneGloss(name, t)}</span>
-            )}
-          </span>
-          <span className="ai-lane-binding">
-            <Badge>{binding.provider}</Badge>
-            <span className="ai-lane-model">{binding.model}</span>
-            {/* WHERE the OpenAI-wire adapter is pointed: `openai_compatible`
-                names a protocol, and every broker on it reads identically on
-                this row without the host. */}
-            {binding.base_url ? <span>{hostOf(binding.base_url)}</span> : null}
-            {chip}
-            {unkeyed?.has(binding.provider) && (
-              <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
-            )}
-            <span className="ai-lane-price t-sub">
-              {priceLabel(
-                catalogue,
-                binding.provider,
-                binding.model,
-                lane,
-                locale,
-                t,
-              )}
+      <div
+        data-testid={lane.testId ?? `ai-routing-tier-${lane.name}`}
+        className={tierLineClass(health !== undefined)}
+      >
+        {health && <HealthDot rung={rung} health={health} />}
+        <span className="ai-tier-who">
+          <span className="ai-tier-name">{lane.name}</span>
+          {gloss && <span className="t-caption">{gloss}</span>}
+        </span>
+        <span className="ai-tier-binding">
+          <BindingLine binding={binding} unkeyed={unkeyed} chip={chip} />
+          {failing ? (
+            <ErrorLine inline>
+              {secondary.filter(Boolean).join(" · ")}
+            </ErrorLine>
+          ) : (
+            <span className="t-caption">
+              {secondary.filter(Boolean).join(" · ")}
             </span>
-          </span>
-          {/* Never refused, even to a reader who may not save: the dialog
-              shows the rest of the binding, and its Save carries the refusal. */}
-          <span className="ai-lane-open">
-            <Button onClick={onEdit}>{t("aiRouting.edit")}</Button>
-          </span>
-        </div>
-        {facts}
+          )}
+        </span>
+        <span className="ai-tier-actions">
+          {tasks !== undefined && tasks > 0 && (
+            <TermChip term="task">
+              {plural("aiRouting.taskCount", tasks, {
+                count: formatNumber(tasks, locale),
+              })}
+            </TermChip>
+          )}
+          {lane.onEdit && (
+            <Button onClick={lane.onEdit}>{t("aiRouting.edit")}</Button>
+          )}
+        </span>
       </div>
     </PanelRow>
   );
 }
 
-// The decision lane: the one lane a routing document may leave out. Absent, the
-// row says so and offers to add one; bound, it is the same row as every other
-// lane, with where the model processes text beside the vendor.
-export function DecisionLaneRow({
+// Which model the lane runs on, with the two marks that qualify the pairing:
+// no credential for the vendor, and where the decision model processes text.
+function BindingLine({
   binding,
-  catalogue,
   unkeyed,
-  canManage,
-  onEdit,
-  facts,
+  chip,
 }: Readonly<{
-  binding: DecisionsBinding | undefined;
-  catalogue: ModelCatalogue;
+  binding: Lane["binding"];
   unkeyed: ReadonlySet<string> | null;
-  canManage: boolean;
-  onEdit: () => void;
-  facts?: ReactNode;
+  chip: string | null;
 }>) {
   const t = useT();
-  const processing = useDecisionProcessing(binding);
   if (!binding) {
-    return (
-      <PanelRow>
-        <div data-testid="ai-routing-decisions" className="ai-lane">
-          <span className="ai-lane-name">
-            <span>{DECISIONS}</span>
-            <span className="t-sub">{t("aiRouting.lane.decisions")}</span>
-          </span>
-          <span className="ai-lane-binding t-sub">
-            {t("aiRouting.decisions.absent")}
-          </span>
-          <span className="ai-lane-open">
-            <Button
-              onClick={onEdit}
-              reason={canManage ? undefined : t("aiRouting.adminOnly")}
-            >
-              {t("aiRouting.decisions.add")}
-            </Button>
-          </span>
-        </div>
-      </PanelRow>
-    );
+    return <Badge>{t("aiRouting.notBound")}</Badge>;
   }
   return (
-    <LaneRow
-      lane="decisions"
-      name={DECISIONS}
-      testId="ai-routing-decisions"
-      binding={binding}
-      catalogue={catalogue}
-      unkeyed={unkeyed}
-      onEdit={onEdit}
-      chip={processing ? <Badge>{processing}</Badge> : null}
-      facts={facts}
-    />
+    <span className="ai-tier-modelline">
+      <TermChip term="provider">{binding.provider}</TermChip>
+      <span>{binding.model}</span>
+      {unkeyed?.has(binding.provider) && (
+        <>
+          {" "}
+          <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
+        </>
+      )}
+      {chip && (
+        <>
+          {" "}
+          <Badge>{chip}</Badge>
+        </>
+      )}
+    </span>
+  );
+}
+
+// One dot per lane: green when it answered, red when it did not, grey when it
+// took no calls in the window. It opens a popover with the numbers behind it,
+// the same way the decision table explains its fallback rate.
+function HealthDot({
+  rung,
+  health,
+}: Readonly<{ rung: Rung | undefined; health: Health }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const state = !rung ? "idle" : rung.healthy ? "ok" : "bad";
+  const reading = !rung
+    ? t("aiHealth.noCalls", {
+        hours: formatNumber(health.window_hours, locale),
+      })
+    : rung.healthy
+      ? t("aiHealth.answering")
+      : t("aiHealth.notAnswering");
+  return (
+    <Popover
+      label={
+        <>
+          <span
+            className={`ai-health-dot ai-health-dot-${state}`}
+            aria-hidden
+          />
+          <span className="sr-only">{reading}</span>
+        </>
+      }
+    >
+      <p>{reading}</p>
+      {rung && (
+        <>
+          <p>
+            {plural("aiHealth.callCounts", rung.calls, {
+              count: formatNumber(rung.calls, locale),
+              failures: formatNumber(rung.failures, locale),
+            })}
+          </p>
+          <p>
+            {t("aiRouting.median", {
+              ms: formatNumber(rung.median_latency_ms, locale),
+            })}
+          </p>
+          {rung.last_call_at && (
+            <p>
+              {t("aiRouting.lastResponse", {
+                when: formatDateTime(rung.last_call_at, locale, zone),
+              })}
+            </p>
+          )}
+          {rung.last_sentinel && <p>{rung.last_sentinel}</p>}
+        </>
+      )}
+    </Popover>
   );
 }
 
@@ -190,18 +351,6 @@ function useDecisionProcessing(
     return null;
   }
   return processingLabel(candidate.processing, t);
-}
-
-// The host part of a base URL, for a row that has room for the address but not
-// for the whole endpoint. Falls back to the string as given: a value an
-// operator typed that does not parse is still what this lane is pointed at, and
-// hiding it would leave the row claiming a vendor with no address at all.
-function hostOf(baseUrl: string): string {
-  try {
-    return new URL(baseUrl).host;
-  } catch {
-    return baseUrl;
-  }
 }
 
 // What each lane in the ladder is FOR, in words rather than in its id.

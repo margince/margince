@@ -411,7 +411,8 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
     }
   };
   // Which model answers, and where the decision model stands in front of the
-  // ladder. Only the lead is summarized: the ladder behind it opens below.
+  // ladder. Only the lead is summarized: the rungs behind it are the tiers
+  // above, and repeating them per task is the same list said again.
   const summary = (row: Feature) => {
     const lead = row.effective_candidates[0];
     const ladder = `${lead.provider} · ${lead.model}`;
@@ -426,23 +427,8 @@ export function AiFeatureTable({ rows }: Readonly<{ rows: Feature[] }>) {
       ladder,
     });
   };
-  const modelCell = (row: Feature) => {
-    if (!row.effective_candidates.length) return "—";
-    const [, ...fallbacks] = row.effective_candidates;
-    if (!fallbacks.length) return summary(row);
-    return (
-      <Disclosure summary={summary(row)}>
-        <ol>
-          {fallbacks.map((candidate) => (
-            <li key={candidate.tier}>
-              {candidate.provider} · {candidate.model} ·{" "}
-              {processingLabel(candidate.processing, t)}
-            </li>
-          ))}
-        </ol>
-      </Disclosure>
-    );
-  };
+  const modelCell = (row: Feature) =>
+    row.effective_candidates.length ? summary(row) : "—";
   return (
     <DataTable
       label={t("aiAdmin.features")}

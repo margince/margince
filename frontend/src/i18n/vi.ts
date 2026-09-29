@@ -5856,20 +5856,11 @@ export const vi = {
   "overnightGrant.writeFailedTitle": "Thay đổi chưa được lưu",
   "overnightGrant.renewScope":
     "Margince nay làm được nhiều hơn so với khi bạn đồng ý. Tắt rồi bật lại tùy chọn này để mở rộng — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
-  "aiHealth.title": "Tình trạng gọi theo tầng",
-  "aiHealth.sub":
-    "Mỗi tầng mô hình có đang trả lời hay không. Một tầng đã ngừng và một tầng chỉ đang thận trọng trông giống hệt nhau ở mọi nơi khác — thư đã thu thập vẫn bị giữ lại trong cả hai trường hợp.",
   "aiHealth.noCalls": "không có mô hình nào được gọi trong {hours} giờ qua",
-  "aiHealth.colTier": "Tầng",
-  "aiHealth.colState": "Trạng thái",
-  "aiHealth.colCalls": "{hours} giờ qua",
-  "aiHealth.colLatency": "Trung vị",
-  "aiHealth.colLast": "Trả lời gần nhất",
   "aiHealth.answering": "Đang trả lời",
   "aiHealth.notAnswering": "Không trả lời",
   "aiHealth.callCounts_one": "{count} lượt gọi, {failures} thất bại",
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} thất bại",
-  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Đang giữ lại khỏi nhóm",
   "heldThreads.sub":
     "Những chuỗi thư hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi cho phép mọi đồng nghiệp đọc nó; không ai khác có thể chia sẻ chuỗi của bạn.",
@@ -8394,8 +8385,6 @@ export const vi = {
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
-  "aiHealth.withheld":
-    "Chỉ người vận hành mới xem được các tầng mô hình có đang trả lời hay không. Đó là hệ thống của bản cài đặt, không phải điều gì về công việc của bạn.",
   "aicalls.sub":
     "Mọi lượt gọi mô hình — danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
   "aicalls.col.detail": "Chi tiết",
@@ -8732,6 +8721,16 @@ export const vi = {
     "Chọn nhà cung cấp và mô hình cho từng tầng, cho embeddings và, nếu muốn, cho mô hình quyết định. Ràng buộc đã lưu áp dụng cho mọi tiến trình trong vòng một phút, không cần khởi động lại.",
   "aiRouting.profileLine":
     "Hồ sơ triển khai: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một tầng được dùng và do bộ phận vận hành đặt.",
+  "aiRouting.notBound": "Chưa gắn",
+  "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
+  "aiTerms.provider": "Nhà cung cấp",
+  "aiTerms.providerGloss": "bên chúng tôi gọi",
+  "aiTerms.tier": "Bậc",
+  "aiTerms.tierGloss": "một loại công việc, gắn với một mô hình",
+  "aiTerms.task": "Tác vụ",
+  "aiTerms.taskGloss": "việc sản phẩm làm",
+  "aiRouting.taskCount_one": "{count} tác vụ",
+  "aiRouting.taskCount_other": "{count} tác vụ",
   "aiRouting.edit": "Sửa",
   "aiRouting.editTitle": "Sửa ràng buộc {lane}",
   "aiRouting.saveBinding": "Lưu ràng buộc",
@@ -8743,9 +8742,6 @@ export const vi = {
   "aiRouting.notListed":
     "Không có trong danh sách mô hình công bố của {provider}. Bạn vẫn có thể lưu nếu nhà cung cấp phục vụ ID này.",
   "aiRouting.median": "Trung vị {ms} ms",
-  "aiRouting.untracked": "Tình trạng gọi chỉ được theo dõi cho các tầng.",
-  "aiRouting.taskCount_one": "{count} tác vụ",
-  "aiRouting.taskCount_other": "{count} tác vụ",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
     "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",

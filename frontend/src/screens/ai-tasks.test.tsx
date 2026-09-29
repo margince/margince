@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
 import { feature, status } from "./ai-admin.testkit";
@@ -82,26 +83,28 @@ describe("AiTasksCard", () => {
 
 describe("a Model tiers row's facts", () => {
   it("says how many tasks lead with a tier and whether it answered", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal("fetch", withDiagnostics(EVERYTHING));
     render(<AiRoutingCard />);
 
     const cheap = await screen.findByTestId("ai-routing-tier-cheap_cloud");
     expect(await within(cheap).findByText("1 task")).toBeTruthy();
-    expect(within(cheap).getByText("Responding")).toBeTruthy();
-    expect(within(cheap).getByText("12 calls, 1 failed")).toBeTruthy();
-    expect(within(cheap).getByText("Median 840 ms")).toBeTruthy();
+    // The dot names the state and opens the numbers behind it.
+    await user.click(
+      await within(cheap).findByRole("button", { name: "Responding" }),
+    );
+    expect(await screen.findByText("12 calls, 1 failed")).toBeTruthy();
+    expect(screen.getByText("Median 840 ms")).toBeTruthy();
+    await user.keyboard("{Escape}");
 
-    // A tier nothing called in the window says so rather than reading healthy.
+    // A tier nothing called in the window says so rather than reading healthy,
+    // and a tier no task leads with claims no count.
     const premium = screen.getByTestId("ai-routing-tier-premium");
-    expect(within(premium).getByText("0 tasks")).toBeTruthy();
+    expect(within(premium).queryByText(/task/)).toBeNull();
     expect(
-      within(premium).getByText(/no model calls in the last 1h/i),
-    ).toBeTruthy();
-
-    // The embedder is no rung, so it has no health to report.
-    const embeddings = screen.getByTestId("ai-routing-embeddings");
-    expect(
-      within(embeddings).getByText(/tracked for tiers only/i),
+      within(premium).getByRole("button", {
+        name: /no model calls in the last 1h/i,
+      }),
     ).toBeTruthy();
   });
 

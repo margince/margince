@@ -5915,20 +5915,11 @@ export const de = {
   "overnightGrant.writeFailedTitle": "Änderung nicht gespeichert",
   "overnightGrant.renewScope":
     "Margince kann inzwischen mehr als zum Zeitpunkt deines Einverständnisses. Schalte die Option aus und wieder ein, um sie zu erweitern. Bis dahin wird dein Morgenbericht nicht vorbereitet.",
-  "aiHealth.title": "Zustand der Stufen",
-  "aiHealth.sub":
-    "Ob jede Modellstufe antwortet. Eine ausgefallene und eine vorsichtige Modellstufe sehen an anderer Stelle gleich aus; erfasste E-Mails bleiben in beiden Fällen zurückgehalten.",
   "aiHealth.noCalls": "Keine Modellaufrufe in den letzten {hours} h.",
-  "aiHealth.colTier": "Modellstufe",
-  "aiHealth.colState": "Zustand",
-  "aiHealth.colCalls": "Letzte {hours} h",
-  "aiHealth.colLatency": "Median",
-  "aiHealth.colLast": "Letzte Antwort",
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
-  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Zurückgehaltene Threads",
   "heldThreads.sub":
     "Threads, die dein Postfach zurückhält. Gibst du einen Thread frei, können alle Teammitglieder ihn lesen; nur du kannst deine freigeben.",
@@ -8468,8 +8459,6 @@ export const de = {
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
     "Nur Admins und Operations können das Aufrufprotokoll lesen. Es verzeichnet jeden Modellaufruf der Installation.",
-  "aiHealth.withheld":
-    "Nur Admins und Operations sehen, ob Modellstufen antworten. Das ist Infrastruktur der Installation, keine Daten über deine Arbeit.",
   "aicalls.sub":
     "Jeder Modellaufruf: Routing-Identität, Tokens, Wiederholungen, erfasste Nutzdaten.",
   "aicalls.col.detail": "Details",
@@ -8811,6 +8800,16 @@ export const de = {
     "Wähle Anbieter und Modell für jede Stufe, für Embeddings und optional für das Entscheidungsmodell. Gespeicherte Zuordnungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Es begrenzt, welche Anbieter eine Stufe nutzen kann, und wird vom Betrieb festgelegt.",
+  "aiRouting.notBound": "Nicht gebunden",
+  "aiRouting.lastResponse": "Letzte Antwort {when}",
+  "aiTerms.provider": "Anbieter",
+  "aiTerms.providerGloss": "wer aufgerufen wird",
+  "aiTerms.tier": "Stufe",
+  "aiTerms.tierGloss": "eine Art von Arbeit, an ein Modell gebunden",
+  "aiTerms.task": "Aufgabe",
+  "aiTerms.taskGloss": "was das Produkt tut",
+  "aiRouting.taskCount_one": "{count} Aufgabe",
+  "aiRouting.taskCount_other": "{count} Aufgaben",
   "aiRouting.edit": "Bearbeiten",
   "aiRouting.editTitle": "Zuordnung {lane} bearbeiten",
   "aiRouting.saveBinding": "Zuordnung speichern",
@@ -8822,9 +8821,6 @@ export const de = {
   "aiRouting.notListed":
     "Nicht in der veröffentlichten Modellliste von {provider}. Du kannst die ID trotzdem speichern, wenn der Anbieter sie bedient.",
   "aiRouting.median": "Median {ms} ms",
-  "aiRouting.untracked": "Der Aufrufzustand wird nur für Stufen erfasst.",
-  "aiRouting.taskCount_one": "{count} Aufgabe",
-  "aiRouting.taskCount_other": "{count} Aufgaben",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile beginnt mit dem Modell, auf dem sie gerade läuft.",

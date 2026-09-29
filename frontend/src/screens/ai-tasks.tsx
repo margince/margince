@@ -9,6 +9,7 @@ import {
   AiFeatureTable,
   useAiStatus,
 } from "./ai-admin";
+import { PanelTitle } from "./ai-terms";
 import { QueryGate } from "./common";
 
 // What each AI task runs on right now, under the bindings above it.
@@ -31,7 +32,7 @@ export function AiTasksCard() {
     return <AiFeaturesWithheldPanel />;
   }
   return (
-    <Panel title={t("aiTasks.title")}>
+    <Panel title={<PanelTitle term="task">{t("aiTasks.title")}</PanelTitle>}>
       <PanelBody>
         <PanelIntro>{t("aiTasks.intro")}</PanelIntro>
         <QueryGate query={status} pendingLabel={t("aiTasks.title")}>

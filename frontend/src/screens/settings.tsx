@@ -68,7 +68,6 @@ import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
-import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
@@ -333,10 +332,6 @@ export function tabContent(id: SettingsPageId): ReactNode {
           <AiProviderKeysCard />
           <AiRoutingCard />
           <AiTasksCard />
-          {/* The rows above carry each tier's health in one line; this is the
-              full reading, with the last failure's sentinel, and the only card
-              here a diagnostics-only role (management) can open. */}
-          <AiHealthCard />
         </>
       );
     case "automations":

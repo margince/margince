@@ -8,8 +8,9 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
+import { useAiStatus } from "./ai-admin";
 import { BindingEditor, reachableProviders } from "./ai-binding-editor";
-import { TierFacts, UntrackedFacts, useLaneFactsSource } from "./ai-lane-facts";
+import { useAiHealth } from "./ai-health";
 import {
   type ModelCatalogue,
   unkeyedProviders,
@@ -17,10 +18,11 @@ import {
 } from "./ai-models";
 import { useProviderKeys } from "./ai-provider-keys";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
-import { DecisionLaneRow, LaneRow } from "./ai-routing-lane";
+import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { PanelTitle, TermLegend } from "./ai-terms";
+import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
@@ -52,13 +54,7 @@ export function AiRoutingCard() {
   const query = useRouting(canSee);
 
   if (!canSee) {
-    return (
-      <Panel title={t("aiRouting.title")}>
-        <PanelBody>
-          <EmptyState>{t("aiRouting.withheld")}</EmptyState>
-        </PanelBody>
-      </Panel>
-    );
+    return <HealthOnly />;
   }
 
   return (
@@ -93,6 +89,44 @@ function orderedTiers(tiers: Routing["tiers"] | undefined): string[] {
 // An open editor: the document it opened on, and where its fields start.
 type Editing = { opened: RoutingRead; initial: SliceValue; label: string };
 
+// A reader who may see how the lanes are doing and not how they are bound gets
+// the health rows alone, so the page that opens for them still answers the
+// question it opens for. With neither grant the card keeps its place and says
+// so: an absent card would read as lanes that are fine.
+function HealthOnly() {
+  const t = useT();
+  const canDiagnose = useCan("ai_diagnostics", "read");
+  const health = useAiHealth(canDiagnose).data;
+  const me = useMe();
+  return (
+    <Panel title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}>
+      <PanelBody>
+        {canDiagnose ? (
+          <QueryGate query={me} pendingLabel={t("aiRouting.title")}>
+            {() =>
+              health ? (
+                <TiersTable
+                  lanes={[]}
+                  health={health}
+                  features={undefined}
+                  catalogue={undefined}
+                  unkeyed={null}
+                  decisions={undefined}
+                  canManage={false}
+                />
+              ) : null
+            }
+          </QueryGate>
+        ) : (
+          <QueryGate query={me} pendingLabel={t("aiRouting.title")}>
+            {() => <EmptyState>{t("aiRouting.withheld")}</EmptyState>}
+          </QueryGate>
+        )}
+      </PanelBody>
+    </Panel>
+  );
+}
+
 function ModelTiers({
   read,
   canManage,
@@ -108,7 +142,10 @@ function ModelTiers({
   // Which vendors hold a credential, joined into the rows and the editor. Same
   // grant as this card, so no second denial to answer.
   const keys = useProviderKeys(true);
-  const facts = useLaneFactsSource();
+  const canDiagnose = useCan("ai_diagnostics", "read");
+  const canBudget = useCan("ai_budget", "read");
+  const health = useAiHealth(canDiagnose).data;
+  const features = useAiStatus(canDiagnose && canBudget).data?.features;
   const [editing, setEditing] = useState<Editing | null>(null);
   const unkeyed = unkeyedProviders(keys.data?.providers);
   const open = (initial: SliceValue, label: string) =>
@@ -119,7 +156,9 @@ function ModelTiers({
   const tiers = orderedTiers(routing.tiers);
   if (tiers.length === 0) {
     return (
-      <Panel title={t("aiRouting.title")}>
+      <Panel
+        title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}
+      >
         <PanelBody>
           <FirstBinding
             read={read}
@@ -131,63 +170,69 @@ function ModelTiers({
     );
   }
 
+  // One row per bound lane. The embedder binds SEPARATELY on purpose: retrieval
+  // has to survive a chat-budget exhaustion, and its model is a different one
+  // even on the same vendor. Names are the document's own words, raw.
+  const editDecisions = () =>
+    open(
+      {
+        kind: "decisions",
+        binding: routing.decisions ?? {
+          provider: firstDecisionProvider(keys.data?.providers),
+          model: "",
+        },
+      },
+      "decisions",
+    );
+  const lanes: Lane[] = [
+    ...tiers.map((tier) => ({
+      name: tier,
+      lane: "chat" as const,
+      binding: routing.tiers[tier],
+      onEdit: () => open(sliceOf(routing, { kind: "tier", tier }), tier),
+    })),
+    {
+      name: "embeddings",
+      lane: "embeddings" as const,
+      binding: routing.embeddings,
+      testId: "ai-routing-embeddings",
+      onEdit: () =>
+        open(sliceOf(routing, { kind: "embeddings" }), "embeddings"),
+    },
+    ...(routing.decisions
+      ? [
+          {
+            name: "decisions",
+            lane: "decisions" as const,
+            binding: routing.decisions,
+            testId: "ai-routing-decisions",
+            onEdit: editDecisions,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <Panel
-      title={t("aiRouting.title")}
+      title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}
       footer={<SheetFooter catalogue={catalogue.data} />}
     >
       <PanelBody>
         <PanelIntro>{t("aiRouting.intro")}</PanelIntro>
+        <TermLegend />
         <p className="t-sub" data-testid="ai-routing-profile">
           {t("aiRouting.profileLine", { profile: routing.profile })}
         </p>
       </PanelBody>
-      {tiers.map((tier) => (
-        <LaneRow
-          key={tier}
-          lane="chat"
-          name={tier}
-          binding={routing.tiers[tier]}
-          catalogue={catalogue.data}
-          unkeyed={unkeyed}
-          onEdit={() => open(sliceOf(routing, { kind: "tier", tier }), tier)}
-          facts={<TierFacts tier={tier} source={facts} />}
-        />
-      ))}
-      {/* The embed lane binds SEPARATELY on purpose: retrieval has to survive a
-          chat-budget exhaustion, and the model is a different one even on the
-          same vendor. Its name is the document's own word, raw, like the tier
-          names above it. */}
-      <LaneRow
-        lane="embeddings"
-        name="embeddings"
-        testId="ai-routing-embeddings"
-        binding={routing.embeddings}
+      <TiersTable
+        lanes={lanes}
+        health={health}
+        features={features}
         catalogue={catalogue.data}
         unkeyed={unkeyed}
-        onEdit={() =>
-          open(sliceOf(routing, { kind: "embeddings" }), "embeddings")
-        }
-        facts={<UntrackedFacts />}
-      />
-      <DecisionLaneRow
-        binding={routing.decisions}
-        catalogue={catalogue.data}
-        unkeyed={unkeyed}
+        decisions={routing.decisions}
         canManage={canManage}
-        onEdit={() =>
-          open(
-            {
-              kind: "decisions",
-              binding: routing.decisions ?? {
-                provider: firstDecisionProvider(keys.data?.providers),
-                model: "",
-              },
-            },
-            "decisions",
-          )
-        }
-        facts={<UntrackedFacts />}
+        onAddDecisions={routing.decisions ? undefined : editDecisions}
       />
       {editing && (
         <BindingEditor

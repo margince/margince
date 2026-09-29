@@ -6077,20 +6077,11 @@ export const en = {
   "overnightGrant.writeFailedTitle": "Change was not saved",
   "overnightGrant.renewScope":
     "Margince has gained capabilities since you agreed. Turn this off and on again to extend it. Until then, your Morning brief is not prepared.",
-  "aiHealth.title": "Tier call health",
-  "aiHealth.sub":
-    "Whether each model tier responds. A stopped tier and a cautious tier look the same elsewhere; captured mail stays held in both cases.",
   "aiHealth.noCalls": "No model calls in the last {hours}h.",
-  "aiHealth.colTier": "Tier",
-  "aiHealth.colState": "State",
-  "aiHealth.colCalls": "Last {hours}h",
-  "aiHealth.colLatency": "Median",
-  "aiHealth.colLast": "Last response",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
-  "aiHealth.ms": "{ms} ms",
   "heldThreads.title": "Held threads",
   "heldThreads.sub":
     "Threads your mailbox is withholding. Releasing a thread lets every colleague read it; only you can release yours.",
@@ -8620,8 +8611,6 @@ export const en = {
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
     "Only an administrator or operations user can read the call trace. It records every model call the installation made.",
-  "aiHealth.withheld":
-    "Only an administrator or operations user can see whether model tiers respond. This is installation infrastructure, not data about your work.",
   "aicalls.sub":
     "Every model call: routing identity, tokens, retries, captured payload.",
   "aicalls.col.detail": "Detail",
@@ -8954,6 +8943,16 @@ export const en = {
     "Pick a provider and model for each tier, for embeddings and, optionally, for the decision model. Saved bindings reach every process within a minute, without a restart.",
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
+  "aiRouting.notBound": "Not bound",
+  "aiRouting.lastResponse": "Last response {when}",
+  "aiTerms.provider": "Provider",
+  "aiTerms.providerGloss": "who is called",
+  "aiTerms.tier": "Tier",
+  "aiTerms.tierGloss": "a class of work, bound to a model",
+  "aiTerms.task": "Task",
+  "aiTerms.taskGloss": "what the product does",
+  "aiRouting.taskCount_one": "{count} task",
+  "aiRouting.taskCount_other": "{count} tasks",
   "aiRouting.edit": "Edit",
   "aiRouting.editTitle": "Edit {lane} binding",
   "aiRouting.saveBinding": "Save binding",
@@ -8965,9 +8964,6 @@ export const en = {
   "aiRouting.notListed":
     "Not in {provider}’s published model list. You can still save it if the provider serves this ID.",
   "aiRouting.median": "Median {ms} ms",
-  "aiRouting.untracked": "Call health is tracked for tiers only.",
-  "aiRouting.taskCount_one": "{count} task",
-  "aiRouting.taskCount_other": "{count} tasks",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
     "Read-only: each task’s tier is fixed by contract. Each row leads with the model it runs on now.",

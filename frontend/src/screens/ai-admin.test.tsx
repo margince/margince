@@ -346,8 +346,7 @@ it("shows a badge only for a departure, and no disclosure for a single candidate
   expect(screen.queryAllByRole("group")).toHaveLength(0);
 });
 
-it("opens a multi-candidate row to the fallbacks after the lead", async () => {
-  const user = userEvent.setup({ delay: null });
+it("names only the lead of a multi-candidate row, not the rungs behind it", () => {
   const [lead] = feature.effective_candidates;
   render(
     <LocaleProvider initial="en">
@@ -364,10 +363,8 @@ it("opens a multi-candidate row to the fallbacks after the lead", async () => {
       />
     </LocaleProvider>,
   );
-  await user.click(screen.getByText("gemini · example-model"));
-  const items = screen.getAllByRole("listitem");
-  expect(items).toHaveLength(1);
-  expect(items[0].textContent).toContain("fallback-model");
+  expect(screen.getByText("gemini · example-model")).toBeTruthy();
+  expect(screen.queryByText(/fallback-model/)).toBeNull();
 });
 
 it("features card says decision model first, and why another feature skips it", async () => {

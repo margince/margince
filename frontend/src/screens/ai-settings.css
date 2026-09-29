@@ -272,3 +272,92 @@
   flex: none;
   padding-bottom: var(--space-1);
 }
+
+/* One lane in the Model tiers list: health dot, the lane, the binding, the way
+ * to change it. The lane and the model are the reading; the line under the
+ * model (price, host, tasks — or the failure) is small and muted, so the eye
+ * lands on WHICH model runs WHAT and reads the rest only if it wants to. */
+.ai-tier-line {
+  display: grid;
+  grid-template-columns: 1.25rem 11rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ai-tier-line-plain {
+  grid-template-columns: 12rem minmax(0, 1fr) auto;
+}
+
+.ai-tier-who,
+.ai-tier-binding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ai-tier-name {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-health-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  corner-shape: round;
+}
+
+.ai-health-dot-ok {
+  background: var(--success);
+}
+
+.ai-health-dot-bad {
+  background: var(--danger);
+}
+
+.ai-health-dot-idle {
+  background: color-mix(in srgb, var(--textSecondary) 40%, transparent);
+}
+
+@media (max-width: 720px) {
+  .ai-tier-line {
+    grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  }
+
+  .ai-tier-line-plain {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ai-tier-binding {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The Provider -> Tier -> Task strip: three marked words, each with its gloss,
+ * on one wrapping line. */
+.ai-term-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-tier-modelline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-tier-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ai-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}

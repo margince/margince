@@ -27,6 +27,7 @@ import {
   STATE_TONE,
 } from "./ai-provider-sheet";
 import { providerUsage, useRouting } from "./ai-routing-query";
+import { PanelTitle } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import {
   RefreshModelPricesButton,
@@ -143,7 +144,11 @@ export function AiProviderKeysCard() {
     // no credentials — a claim about the DATA — where the truth is only that
     // which vendors are keyed is not this reader's to know.
     return (
-      <Panel title={t("aiProviderKeys.title")}>
+      <Panel
+        title={
+          <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
+        }
+      >
         <PanelBody>
           <EmptyState>{t("aiProviderKeys.withheld")}</EmptyState>
         </PanelBody>
@@ -157,7 +162,9 @@ export function AiProviderKeysCard() {
   // paste fields to find the one vendor that is not set up.
   return (
     <Panel
-      title={t("aiProviderKeys.title")}
+      title={
+        <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
+      }
       titleAction={
         canPrice ? <RefreshModelPricesButton refresh={refresh} /> : undefined
       }
