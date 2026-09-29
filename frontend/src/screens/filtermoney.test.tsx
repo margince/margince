@@ -64,6 +64,15 @@ describe("a money clause", () => {
     expect(typeAmount("JPY", "10000").at(-1)).toBe(10_000);
   });
 
+  it("takes the amount back when the box is emptied, and stays empty", () => {
+    const seen = typeAmount("EUR", "100");
+    const box = screen.getByLabelText("Amount (EUR)");
+    fireEvent.change(box, { target: { value: "" } });
+    expect(seen.at(-1)).toBe("");
+    fireEvent.blur(box);
+    expect(box).toHaveValue(null);
+  });
+
   it("shows the currency it is typed in", () => {
     typeAmount("EUR", "1");
     expect(screen.getByText("EUR")).toBeInTheDocument();

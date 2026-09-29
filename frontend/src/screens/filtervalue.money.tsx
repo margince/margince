@@ -74,6 +74,7 @@ function MoneyValue({
         valueMinor={typed ? value : 0}
         currency={currency}
         onChangeMinor={(minor) => onChange(Number.isNaN(minor) ? "" : minor)}
+        onClear={() => onChange("")}
         blankWhenZero={!typed}
         aria-label={`${label} (${currency})`}
         inputMode="decimal"
