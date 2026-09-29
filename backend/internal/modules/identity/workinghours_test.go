@@ -29,7 +29,7 @@ var clockTimesAccepted = map[string]int{
 
 // "9:00" is here on purpose: a single-digit hour is the shape a hand-written
 // client sends, and admitting it would make the wire format two formats. "09"
-// is here because the contract's pattern once accepted it.
+// carries no colon, so no digit count makes it a time.
 var clockTimesRefused = []string{"", "9:00", "0900", "24:01", "25:00", "09:60", "aa:bb", "09"}
 
 func TestATimeOnTheWireIsReadAsTheMinuteItNames(t *testing.T) {
