@@ -95,6 +95,19 @@ export const SHEET = [
 export const PROVIDER_KEYS = [
   { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
   { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
+  { provider: "openai", configured: false, env_var: "OPENAI_API_KEY" },
+  {
+    provider: "openai_compatible",
+    configured: true,
+    env_var: "OPENAI_COMPATIBLE_API_KEY",
+  },
+  { provider: "jev", configured: true, env_var: "TYPESAFE_API_KEY" },
+  {
+    provider: "jev_compatible",
+    configured: false,
+    env_var: "JEV_COMPATIBLE_API_KEY",
+    optional: true,
+  },
 ];
 
 export const BOUND = {
@@ -147,18 +160,24 @@ export function backendFor(
       provider: string;
       configured: boolean;
       env_var: string;
+      optional?: boolean;
     }[];
   } = {},
 ) {
   let stored = routing;
-  let revision = "routing-v1";
+  let revision = 1;
+  // Set by `raceNextPut`: a colleague's write that lands after the editor's
+  // own re-read and just before its PUT, so the server's If-Match catches it.
+  let racing: unknown;
   // Typed as the document this endpoint takes, so an assertion can read a field
   // off it without an unchecked cast at every call site. The stub still stores
   // whatever arrives — the type is a claim about the ENDPOINT, not a check on
   // the body, and a test asserting the wrong shape fails on the assertion.
   let capturedPut: CapturedRouting | null = null;
+  let putCount = 0;
+  const etag = () => `"routing-v${revision}"`;
   const fetchMock = vi.fn(
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one stubbed server answering every endpoint the card calls, route by route; it moved here unchanged from the suite, where test files carry no complexity cap
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: one stubbed server answering every endpoint the card calls, route by route; test files carry no complexity cap
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
         input instanceof Request ? input : new Request(String(input), init);
@@ -176,26 +195,37 @@ export function backendFor(
         );
       }
       if (req.url.includes("/ai/provider-keys")) {
-        return jsonResponse({ providers: providerKeys });
+        return jsonResponse({
+          providers: providerKeys.map((k) => ({ optional: false, ...k })),
+        });
       }
       if (req.url.includes("/ai-model-rates")) {
         return sheetStatus === 200
           ? jsonResponse({ data: SHEET })
           : jsonResponse({ title: "forbidden" }, sheetStatus);
       }
-      if (req.url.includes("/ai/routing/preview"))
-        return jsonResponse({
-          current_version: revision,
-          features: [],
-          unused_tiers: [],
-        });
       if (req.url.includes("/ai/routing")) {
         if (req.method === "PUT") {
+          // The real server's rule: a stale If-Match is a 409, and the stub
+          // holds it so the editor's conflict path is exercised end to end.
+          if (racing !== undefined) {
+            stored = racing;
+            racing = undefined;
+            revision++;
+          }
+          if (req.headers.get("If-Match") !== etag()) {
+            return jsonResponse(
+              { title: "Conflict", status: 409, code: "version_skew" },
+              409,
+            );
+          }
+          putCount++;
           capturedPut = (await req.json()) as CapturedRouting;
           stored = capturedPut;
+          revision++;
         }
         const response = jsonResponse(stored);
-        response.headers.set("ETag", `"${revision}"`);
+        response.headers.set("ETag", etag());
         return response;
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
@@ -203,22 +233,52 @@ export function backendFor(
   );
   return {
     fetchMock,
-    externalChange: () => {
-      stored = { ...BOUND, profile: "best_effort" };
-      revision = "routing-v2";
+    /** Another admin saves `next`, moving the document on. */
+    externalChange: (next: unknown = CHANGED_ELSEWHERE) => {
+      stored = next;
+      revision++;
+    },
+    /** A colleague saves `next` between the editor's re-read and its PUT. */
+    raceNextPut: (next: unknown = CHANGED_ELSEWHERE) => {
+      racing = next;
     },
     getCapturedPut: (): CapturedRouting | null => capturedPut,
+    getPutCount: () => putCount,
   };
 }
 
-/** Opens one lane's fields, the way a reader does. */
-export async function openLane(
+// A colleague's save that re-points `premium`, a lane the tests also edit.
+export const CHANGED_ELSEWHERE = {
+  ...BOUND,
+  tiers: {
+    ...BOUND.tiers,
+    premium: { provider: "gemini", model: "gemini-3.1-pro-preview" },
+  },
+};
+
+/** Opens one lane's editor, the way a reader does, and hands back the dialog. */
+export async function openEditor(
   user: ReturnType<typeof userEvent.setup>,
   testId: string,
+  verb: RegExp = /^edit$/i,
 ) {
-  const lane = screen.getByTestId(testId);
-  await user.click(within(lane).getByRole("button", { name: /change/i }));
-  return lane;
+  const lane = await screen.findByTestId(testId);
+  await user.click(within(lane).getByRole("button", { name: verb }));
+  return screen.findByRole("dialog");
+}
+
+/** Saves the open editor and waits for the PUT it sends. */
+export async function saveEditor(
+  user: ReturnType<typeof userEvent.setup>,
+  backend: ReturnType<typeof backendFor>,
+) {
+  const before = backend.getPutCount();
+  const dialog = screen.getByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: /save binding/i }),
+  );
+  await waitFor(() => expect(backend.getPutCount()).toBe(before + 1));
+  return backend.getCapturedPut();
 }
 
 export const render = (
@@ -235,16 +295,3 @@ export const render = (
   );
   return { ...result, client };
 };
-
-/** Previews, then saves, and hands back what the PUT carried. */
-export async function previewAndSave(
-  user: ReturnType<typeof userEvent.setup>,
-  backend: ReturnType<typeof backendFor>,
-) {
-  await user.click(screen.getByRole("button", { name: /preview effects/i }));
-  const save = screen.getByRole("button", { name: /save routing/i });
-  await waitFor(() => expect(save).not.toBeDisabled());
-  await user.click(save);
-  await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
-  return backend.getCapturedPut();
-}

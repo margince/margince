@@ -436,6 +436,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/ai-model-rates/propose-refresh":                               {Op: "proposeAiModelRateRefresh", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/budget/preview":                                            {Op: "previewAiBudget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/feedback":                                                  {Op: "recordAIFeedback", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/ai/provider-keys/{provider}/test":                             {Op: "testAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/routing/preview":                                           {Op: "previewAiRouting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/explain":                                            {Op: "explainAnalyticsCell", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/query":                                              {Op: "runAnalyticsQuery", Access: "tool", Tool: "run_analytics_query", RecordType: "", Tier: "auto_execute", Scope: "read"},

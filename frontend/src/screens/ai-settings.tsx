@@ -6,7 +6,7 @@ import { formatElapsed, useNow } from "../format/now";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useProviderKeys } from "./ai-provider-keys";
-import { useRouting } from "./ai-routing";
+import { useRouting } from "./ai-routing-query";
 import { type LastCall, useLastCallAt } from "./aicalls";
 import { bandTone, currentMonth, useAiUsage } from "./aiusage";
 import "./ai-settings.css";

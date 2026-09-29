@@ -130,6 +130,9 @@ func (s *RoutingStore) ListAvailableModels(
 	if out.Unavailable = listRefusal(cfg.Profile, provider); out.Unavailable != AvailabilityOK {
 		return out, nil
 	}
+	if isDecisionProvider(provider) {
+		return s.listDecisionModels(ctx, cfg, provider), nil
+	}
 	// OpenRouter publishes its list unauthenticated and unbound: there is no
 	// stored binding to resolve a host from, and SelectBrain knows no adapter
 	// by this name, so it is asked directly rather than through the bound
@@ -178,18 +181,51 @@ func (s *RoutingStore) ListAvailableModels(
 // like any other broker, so it is refused too rather than falling through to
 // the unauthenticated read. The registry's own local flag decides, so a local
 // decision adapter is not mistaken for a cloud one.
-//
-// A decision adapter publishes no list, so it is never dialled for one: the
-// price sheet's rows are its suggestions.
 func listRefusal(profile Profile, provider string) ModelAvailability {
 	d, _ := providerByName(provider)
 	if profile == ProfileSovereign && !d.local && !d.localByEndpoint {
 		return AvailabilityProfileForbids
 	}
-	if d.caps.has(capDecision) {
-		return AvailabilityNotPublished
-	}
 	return AvailabilityOK
+}
+
+// isDecisionProvider is whether provider answers the decision wire rather than
+// a chat one, which decides how it is listed and tested.
+func isDecisionProvider(provider string) bool {
+	d, _ := providerByName(provider)
+	return d.caps.has(capDecision)
+}
+
+// listDecisionModels asks a decision endpoint what it serves, at the lane it
+// would serve. A host that publishes no list answers not_published, and the
+// price sheet's rows stay its suggestions.
+func (s *RoutingStore) listDecisionModels(ctx context.Context, cfg RoutingConfig, provider string) AvailableModels {
+	out := AvailableModels{Provider: provider}
+	lane := boundDecisionLane(cfg, provider)
+	if decisionLaneForbidden(cfg.Profile, lane) {
+		out.Unavailable = AvailabilityProfileForbids
+		return out
+	}
+	client, err := selectDecider(lane, s.resolvedKeys(ctx))
+	if err != nil {
+		out.Unavailable = unavailableFor(err)
+		return out
+	}
+	asked, cancel := context.WithTimeout(ctx, listTimeout)
+	defer cancel()
+	models, listed, err := client.decisionModels(asked, provider)
+	switch {
+	case !listed:
+		out.Unavailable = AvailabilityNotPublished
+	case err != nil:
+		out.Unavailable = AvailabilityUnreachable
+	default:
+		out.Models = make([]AvailableModel, len(models))
+		for i, m := range models {
+			out.Models[i] = AvailableModel{Info: m}
+		}
+	}
+	return out
 }
 
 // unavailableFor reads why a binding could not be turned into a client.

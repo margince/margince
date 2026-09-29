@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "node-html-parser";
 import { describe, expect, it } from "vitest";
 import { normalize, themes } from "../design-system/tokens-testing";
 
-// What a browser reads before it offers to install the app, read off the files
-// it is served. The PNGs are baked by scripts/gen-pwa-icons.mjs from the SVGs.
+// What a browser reads before it offers to install the app. That every icon
+// exists at the size it declares is sharepreview.test.ts's.
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const publicDir = join(frontendRoot, "public");
@@ -32,67 +32,20 @@ const manifest: Manifest = JSON.parse(
 );
 const indexPage = parse(readFileSync(join(frontendRoot, "index.html"), "utf8"));
 
-const PNG_SIGNATURE = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-]);
-// PNG colour types 0 and 2: greyscale and truecolour, neither with alpha.
-const OPAQUE_COLOUR_TYPES = [0, 2];
-
-interface PngHeader {
-  size: string;
-  colourType: number;
-}
-
-function pngHeader(src: string): PngHeader {
-  const bytes = readFileSync(join(publicDir, src));
-  if (!bytes.subarray(0, 8).equals(PNG_SIGNATURE)) {
-    throw new Error(`${src} is not a PNG`);
-  }
-  if (bytes.toString("latin1", 12, 16) !== "IHDR") {
-    throw new Error(`${src} does not open with its IHDR chunk`);
-  }
-  return {
-    size: `${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`,
-    colourType: bytes[25],
-  };
-}
-
-function linkHref(selector: string): string {
-  const href = indexPage.querySelector(selector)?.getAttribute("href");
-  if (!href) throw new Error(`index.html has no ${selector}`);
-  return href;
-}
-
 function purposeOf(icon: ManifestIcon): string {
   return icon.purpose ?? "any";
 }
 
 describe("the install manifest", () => {
-  it("lists only icons public/ serves", () => {
-    const missing = manifest.icons
-      .map((icon) => icon.src)
-      .filter((src) => !existsSync(join(publicDir, src)));
-    expect(manifest.icons.length).toBeGreaterThan(0);
-    expect(missing).toEqual([]);
-  });
-
-  it("declares every PNG icon at the size its pixels are", () => {
-    const pngs = manifest.icons.filter((icon) => icon.type === "image/png");
-    expect(pngs.length).toBeGreaterThan(0);
-    for (const icon of pngs) {
-      expect(pngHeader(icon.src).size, icon.src).toBe(icon.sizes);
-    }
-  });
-
-  it("offers the PNGs Chrome installs from and Android masks", () => {
-    const offered = manifest.icons
-      .filter((icon) => icon.type === "image/png")
-      .map((icon) => `${icon.sizes} ${purposeOf(icon)}`);
+  it("offers an unmasked icon and the PNGs Android masks", () => {
+    const offered = manifest.icons.map(
+      (icon) => `${icon.type} ${icon.sizes} ${purposeOf(icon)}`,
+    );
     expect(offered).toEqual(
       expect.arrayContaining([
-        "192x192 any",
-        "512x512 any",
-        "512x512 maskable",
+        "image/svg+xml any any",
+        "image/png 192x192 maskable",
+        "image/png 512x512 maskable",
       ]),
     );
   });
@@ -104,33 +57,6 @@ describe("the install manifest", () => {
       .filter((icon) => purposeOf(icon).trim().split(/\s+/).length !== 1)
       .map((icon) => `${icon.src}: "${purposeOf(icon)}"`);
     expect(shared).toEqual([]);
-  });
-});
-
-describe("the icons index.html links", () => {
-  it("links only files public/ serves", () => {
-    const links = indexPage.querySelectorAll('link[href^="/"]');
-    const rels = new Set(links.map((link) => link.getAttribute("rel")));
-    expect([...rels]).toEqual(
-      expect.arrayContaining(["icon", "apple-touch-icon", "manifest"]),
-    );
-    const missing = links
-      .map((link) => link.getAttribute("href") ?? "")
-      .filter((href) => !existsSync(join(publicDir, href)));
-    expect(missing).toEqual([]);
-  });
-
-  // iOS paints every transparent pixel of a touch icon black.
-  it("gives iOS an opaque 180px touch icon", () => {
-    const header = pngHeader(linkHref('link[rel="apple-touch-icon"]'));
-    expect(header.size).toBe("180x180");
-    expect(OPAQUE_COLOUR_TYPES).toContain(header.colourType);
-  });
-
-  it("falls back to a PNG favicon at the size it declares", () => {
-    const selector = 'link[rel="icon"][type="image/png"]';
-    const declared = indexPage.querySelector(selector)?.getAttribute("sizes");
-    expect(pngHeader(linkHref(selector)).size).toBe(declared);
   });
 });
 
@@ -150,11 +76,6 @@ function installColours(installed: Manifest): InstallColour[] {
     ["index.html theme-color", metaTheme ?? "none", "--accentBrand"],
     ["manifest background_color", installed.background_color, "--bgPage"],
     ["icon.svg ground", svgGround("icon.svg"), "--accentBrand"],
-    [
-      "icon-maskable.svg ground",
-      svgGround("icon-maskable.svg"),
-      "--accentBrand",
-    ],
   ];
 }
 

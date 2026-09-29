@@ -23,20 +23,10 @@ import { QueryGate, throwProblem, useMe } from "./common";
 
 type RungHealth = components["schemas"]["AiRungHealth"];
 
-export function AiHealthCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  // `GET /ai/health` is gated on `automation:update` server-side, which the
-  // seeded manager, rep and read_only roles do not hold — and this page opens
-  // on `automation:read`, which they do. Asking here is what keeps a reader who
-  // may not have this from being told their installation is broken when their
-  // ROLE is what stopped them: without it the refusal arrives as a red failure
-  // with a Retry that cannot succeed, and `refetchInterval` re-issues the
-  // doomed call every minute for as long as the tab is open. The keys and calls
-  // cards beside it answer the same question the same way.
-  const canSee = useCan("ai_diagnostics", "read");
-  const me = useMe();
-  const query = useQuery({
+// The one health read, shared by this card and the Model tiers rows so a page
+// showing both polls once: the query key is the same, and so is the interval.
+export function useAiHealth(canSee: boolean) {
+  return useQuery({
     queryKey: ["ai-health"],
     enabled: canSee,
     queryFn: async () => {
@@ -54,6 +44,22 @@ export function AiHealthCard() {
     // the flag flipped mid-session.
     refetchInterval: canSee ? 60_000 : false,
   });
+}
+
+export function AiHealthCard() {
+  const t = useT();
+  const { locale } = useLocale();
+  // `GET /ai/health` is gated on `automation:update` server-side, which the
+  // seeded manager, rep and read_only roles do not hold — and this page opens
+  // on `automation:read`, which they do. Asking here is what keeps a reader who
+  // may not have this from being told their installation is broken when their
+  // ROLE is what stopped them: without it the refusal arrives as a red failure
+  // with a Retry that cannot succeed, and `refetchInterval` re-issues the
+  // doomed call every minute for as long as the tab is open. The keys and calls
+  // cards beside it answer the same question the same way.
+  const canSee = useCan("ai_diagnostics", "read");
+  const me = useMe();
+  const query = useAiHealth(canSee);
 
   if (!canSee) {
     // Withheld rather than absent, and the card keeps its place: a missing

@@ -934,6 +934,39 @@ func (e AiProfileState) Valid() bool {
 	}
 }
 
+// Defines values for AiProviderKeyTestResultReason.
+const (
+	AiProviderKeyTestResultReasonAuthFailed     AiProviderKeyTestResultReason = "auth_failed"
+	AiProviderKeyTestResultReasonNoEndpoint     AiProviderKeyTestResultReason = "no_endpoint"
+	AiProviderKeyTestResultReasonNoKey          AiProviderKeyTestResultReason = "no_key"
+	AiProviderKeyTestResultReasonNotPublished   AiProviderKeyTestResultReason = "not_published"
+	AiProviderKeyTestResultReasonProfileForbids AiProviderKeyTestResultReason = "profile_forbids"
+	AiProviderKeyTestResultReasonRateLimited    AiProviderKeyTestResultReason = "rate_limited"
+	AiProviderKeyTestResultReasonUnreachable    AiProviderKeyTestResultReason = "unreachable"
+)
+
+// Valid indicates whether the value is a known member of the AiProviderKeyTestResultReason enum.
+func (e AiProviderKeyTestResultReason) Valid() bool {
+	switch e {
+	case AiProviderKeyTestResultReasonAuthFailed:
+		return true
+	case AiProviderKeyTestResultReasonNoEndpoint:
+		return true
+	case AiProviderKeyTestResultReasonNoKey:
+		return true
+	case AiProviderKeyTestResultReasonNotPublished:
+		return true
+	case AiProviderKeyTestResultReasonProfileForbids:
+		return true
+	case AiProviderKeyTestResultReasonRateLimited:
+		return true
+	case AiProviderKeyTestResultReasonUnreachable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiRoutingProfile.
 const (
 	AiRoutingProfileCloudFrontier AiRoutingProfile = "cloud_frontier"
@@ -20331,6 +20364,27 @@ type AiProviderKeyStatus struct {
 	Provider string `json:"provider"`
 }
 
+// AiProviderKeyTestResult One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words.
+type AiProviderKeyTestResult struct {
+	// KeyConfirmed Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server.
+	KeyConfirmed *bool `json:"key_confirmed,omitempty"`
+
+	// ModelCount How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one.
+	ModelCount *int `json:"model_count,omitempty"`
+
+	// Ok Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential.
+	Ok bool `json:"ok"`
+
+	// Provider The routing name of the vendor that was asked.
+	Provider string `json:"provider"`
+
+	// Reason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+	Reason *AiProviderKeyTestResultReason `json:"reason,omitempty"`
+}
+
+// AiProviderKeyTestResultReason Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+type AiProviderKeyTestResultReason string
+
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
 	Model      string `json:"model"`
@@ -22424,11 +22478,11 @@ type AvailableModelList struct {
 	// RankedBy The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten.
 	RankedBy *string `json:"ranked_by,omitempty"`
 
-	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+	// Unavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 	Unavailable *AvailableModelListUnavailable `json:"unavailable,omitempty"`
 }
 
-// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+// AvailableModelListUnavailable Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
 type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
@@ -59781,6 +59835,9 @@ type ServerInterface interface {
 	// Store or rotate one vendor's BYOK key (admin/ops).
 	// (PUT /ai/provider-keys/{provider})
 	SetAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
+	// Ask one vendor whether the stored credential works (admin/ops).
+	// (POST /ai/provider-keys/{provider}/test)
+	TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string)
 	// The tier-to-model binding this installation runs on (admin/ops).
 	// (GET /ai/routing)
 	GetAiRouting(w http.ResponseWriter, r *http.Request)
@@ -62037,6 +62094,12 @@ func (_ Unimplemented) DeleteAiProviderKey(w http.ResponseWriter, r *http.Reques
 // Store or rotate one vendor's BYOK key (admin/ops).
 // (PUT /ai/provider-keys/{provider})
 func (_ Unimplemented) SetAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask one vendor whether the stored credential works (admin/ops).
+// (POST /ai/provider-keys/{provider}/test)
+func (_ Unimplemented) TestAiProviderKey(w http.ResponseWriter, r *http.Request, provider string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67982,6 +68045,38 @@ func (siw *ServerInterfaceWrapper) SetAiProviderKey(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetAiProviderKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TestAiProviderKey operation middleware
+func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TestAiProviderKey(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -95986,6 +96081,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/ai/provider-keys/{provider}", wrapper.SetAiProviderKey)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/provider-keys/{provider}/test", wrapper.TestAiProviderKey)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/routing", wrapper.GetAiRouting)

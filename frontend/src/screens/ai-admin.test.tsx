@@ -155,17 +155,22 @@ it.each([
   expect(screen.queryByRole("table")).toBeNull();
 });
 
-it("edits the normal leading tier while the effective tier is demoted", async () => {
-  const onEdit = vi.fn();
+// A task's tier is fixed by the task contract, and what the tier is bound to
+// is edited on the Model tiers card — so the task table offers no edit of its
+// own, only the resolved chain and where the task sits in the contract.
+it("reads a task's resolved chain with no edit control", async () => {
   render(
     <LocaleProvider initial="en">
-      <AiFeatureTable rows={[feature]} onEdit={onEdit} />
+      <AiFeatureTable rows={[feature]} />
     </LocaleProvider>,
   );
   const user = userEvent.setup({ delay: null });
+  expect(
+    screen.getByText(`${feature.task} · ${feature.execution_mode}`),
+  ).toBeTruthy();
   await user.click(screen.getByText("gemini · example-model"));
-  await user.click(screen.getByRole("button", { name: "Edit shared binding" }));
-  expect(onEdit).toHaveBeenCalledWith("cheap_cloud");
+  expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.queryByText(/edit shared binding/i)).toBeNull();
 });
 it("explains each routing impact in operational language", () => {
   render(

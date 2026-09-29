@@ -215,6 +215,10 @@ func (stubs) SetAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, prov
 	httperr.NotImplemented(w, r, "SetAiProviderKey")
 }
 
+func (stubs) TestAiProviderKey(w nethttp.ResponseWriter, r *nethttp.Request, provider string) {
+	httperr.NotImplemented(w, r, "TestAiProviderKey")
+}
+
 func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiRouting")
 }

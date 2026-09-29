@@ -236,6 +236,11 @@ var prebuiltReports = map[string]reportSpec{
 		table:     tableLead,
 		baseWhere: "",
 		basePlain: "every lead, including the promoted and disqualified ones a work queue hides",
+		// The Leads board's column counts, over the same leads the board
+		// lists when a terminal column is opened: every lead the reader may
+		// see. Its owner dial goes through the owner gate
+		// (reportownergate.go).
+		population: measureEveryReadableRow,
 		dimensions: map[string]string{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,

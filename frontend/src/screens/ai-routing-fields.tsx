@@ -21,7 +21,7 @@ type Routing = components["schemas"]["AiRouting"];
 // should not have to discover that by being refused. A declared mirror of the
 // server's provider registry, held in both directions by
 // backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
-const PROVIDERS = [
+export const PROVIDERS = [
   "gemini",
   "anthropic",
   "openai",

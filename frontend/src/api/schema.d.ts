@@ -10336,6 +10336,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/provider-keys/{provider}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask one vendor whether the stored credential works (admin/ops).
+         * @description Asks the vendor, with the credential this installation holds, the cheapest authenticated
+         *     question it answers, and says whether it answered. The answer to "is this key any good"
+         *     is the vendor's, and asking before a lane is bound to it is cheaper than finding out at
+         *     the first call. No call is billed:
+         *
+         *     - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
+         *       model list, and `model_count` is its length.
+         *     - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+         *     - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
+         *       public, so listing it would pass any key. It passes with no `model_count`.
+         *     - Any other decision endpoint is sent the decision request with an empty body. 401 or
+         *       403 is a refused key. A 400 or 422 is a pass with `key_confirmed: false`: the server
+         *       answered and did not refuse the key, but may have refused the body before reading it.
+         *       A 200 is not a pass, since no decision server answers an empty request. It passes with
+         *       no `model_count`.
+         *     - A decision lane the profile refuses to bind (under `eu_hosted`: `jev`, or `jev_compatible`
+         *       on OpenRouter) answers `profile_forbids` without being dialled.
+         *
+         *     No request body. The key is the STORED one, never a candidate sent here: a credential
+         *     that travels only to be tested is still a credential in a request log. The host is the
+         *     adapter's default, or for `openai_compatible` the one a stored binding names — never a
+         *     request parameter, for the reason `/ai/available-models/{provider}` gives.
+         *
+         *     A vendor that could not be asked, or asked and refused, is NOT an error — the response is
+         *     200 with `ok: false` and `reason` naming which. `reason` is a closed vocabulary rather
+         *     than the vendor's own words: those are as often a proxy's HTML as they are a sentence,
+         *     and sometimes carry the very credential being tested.
+         *
+         *     Writes nothing. Governed by `ai_routing` read, the grant `/ai/available-models` already
+         *     makes the same vendor call under.
+         */
+        post: operations["testAiProviderKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/calls": {
         parameters: {
             query?: never;
@@ -17769,7 +17821,7 @@ export interface components {
             /** @description The measure the order came from, in words a screen can print, and absent when the list is in the vendor's own order. "Top ten" is meaningless without it, and a vendor's raw list arrives in no useful order at all: a first-time admin choosing among four hundred ids needs to be told what made ten of them the ten. */
             ranked_by?: string;
             /**
-             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter has no list endpoint. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
+             * @description Why the list is empty, when it is. Absent means the vendor answered. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the deployment profile does not permit reaching this vendor, so asking would be the egress the profile exists to prevent. `not_published` — this adapter, or the decision endpoint's host, publishes no list. `unreachable` — the vendor was asked and did not answer. `no_endpoint` — an OpenAI-wire binding names no host, so there is no address to ask.
              * @enum {string}
              */
             unavailable?: "no_key" | "profile_forbids" | "not_published" | "unreachable" | "no_endpoint";
@@ -17808,6 +17860,22 @@ export interface components {
             env_var: string;
             /** @description Whether the adapter calls without a key when none is held. `jev_compatible` is: a decision server on the operator's own host needs none, so the key is sent when held and an absent one is not a gap to fix. */
             optional: boolean;
+        };
+        /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
+        AiProviderKeyTestResult: {
+            /** @description The routing name of the vendor that was asked. */
+            provider: string;
+            /** @description Whether the test passed: the vendor answered the probe the operation describes for it (a model list, a key endpoint, or the empty decision request) without refusing this credential. */
+            ok: boolean;
+            /** @description Present only when `ok`. False when the pass proves the vendor answered but not that it checked the key — the empty decision request to a self-hosted or other Jev-wire server. */
+            key_confirmed?: boolean;
+            /** @description How many models the vendor reported. Present only when `ok` AND the test listed models; a vendor tested at a key endpoint or with the decision probe passes without one. */
+            model_count?: number;
+            /**
+             * @description Why the test did not pass, present only when `ok` is false. `no_key` — the vendor takes a credential and holds none. `profile_forbids` — the installation profile forbids reaching this vendor at all. `not_published` — this build cannot ask the vendor anything (an unknown adapter). `no_endpoint` — an OpenAI-wire vendor that no binding gives a host yet. `auth_failed` — the vendor refused the credential. `rate_limited` — the vendor is throttling this credential; it may still be valid. `unreachable` — the vendor did not answer, or answered with something else.
+             * @enum {string}
+             */
+            reason?: "no_key" | "profile_forbids" | "not_published" | "no_endpoint" | "auth_failed" | "rate_limited" | "unreachable";
         };
         AiProviderKeyInput: {
             /** @description The vendor credential. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -54813,6 +54881,31 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    testAiProviderKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The routing name of the vendor — the same string a binding uses. */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the vendor accepted the stored credential, or why it could not be asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProviderKeyTestResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     listAiCalls: {
