@@ -1,5 +1,5 @@
-# Preview bots may fetch: every path serves the same static app shell, with no
-# tenant data. Others may not, and nginx.conf's noindex header de-indexes all.
+# A shared app link is / plus a #/ fragment no fetcher sends, so a preview reads
+# only the static shell; api paths answer them as any anonymous client.
 User-agent: Twitterbot
 User-agent: LinkedInBot
 User-agent: Slackbot-LinkExpanding
@@ -8,6 +8,7 @@ User-agent: Discordbot
 User-agent: TelegramBot
 User-agent: WhatsApp
 User-agent: SkypeUriPreview
+User-agent: MicrosoftPreview
 Allow: /
 
 User-agent: *

@@ -19,6 +19,7 @@ const PREVIEW_FETCHERS: readonly string[] = [
   "TelegramBot",
   "WhatsApp",
   "SkypeUriPreview",
+  "MicrosoftPreview",
 ];
 
 type Attribute = "property" | "name";
@@ -30,23 +31,28 @@ type Icon = { declaredBy: string; url: URL; sizes?: string };
 const ATTRIBUTES: readonly Attribute[] = ["property", "name"];
 const ICON_RELS = new Set(["icon", "apple-touch-icon", "manifest"]);
 const ORIGIN = "https://installation.invalid";
-// A relative href resolves under a shared deep link, not under public/.
-const SHARED_PAGE = `${ORIGIN}/contacts/42`;
+// nginx serves the shell at any unknown path; relative hrefs resolve from there.
+const SHELL_AT_UNKNOWN_PATH = `${ORIGIN}/no/such/path`;
+const ATTRIBUTE_VALUE =
+  /(?:^|\s)([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
 const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);
 
 function headTags(element: "meta" | "link"): Map<string, string>[] {
   const html = read("index.html").replace(/<!--[\s\S]*?-->/g, "");
-  const head = /<head>([\s\S]*?)<\/head>/.exec(html);
+  const head = /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html);
   if (!head) throw new Error("index.html has no <head>");
   return Array.from(
-    head[1].matchAll(new RegExp(`<${element}\\b([^>]*)>`, "g")),
+    head[1].matchAll(new RegExp(`<${element}\\b([^>]*)>`, "gi")),
     ([, attributes]) =>
       new Map(
         Array.from(
-          attributes.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g),
-          (pair): [string, string] => [pair[1], pair[2]],
+          attributes.matchAll(ATTRIBUTE_VALUE),
+          (pair): [string, string] => [
+            pair[1].toLowerCase(),
+            pair[2] ?? pair[3] ?? pair[4],
+          ],
         ),
       ),
   );
@@ -58,7 +64,11 @@ function headMetas(): Meta[] {
     for (const attribute of ATTRIBUTES) {
       const key = values.get(attribute);
       if (key !== undefined) {
-        metas.push({ attribute, key, content: values.get("content") ?? "" });
+        metas.push({
+          attribute,
+          key: key.toLowerCase(),
+          content: values.get("content") ?? "",
+        });
       }
     }
   }
@@ -68,16 +78,20 @@ function headMetas(): Meta[] {
   return metas;
 }
 
+function tags(attribute: Attribute, key: string): string[] {
+  return headMetas()
+    .filter((meta) => meta.attribute === attribute && meta.key === key)
+    .map((meta) => meta.content);
+}
+
 function tag(attribute: Attribute, key: string): string {
-  const found = headMetas().filter(
-    (meta) => meta.attribute === attribute && meta.key === key,
-  );
+  const found = tags(attribute, key);
   if (found.length !== 1) {
     throw new Error(
       `index.html declares <meta ${attribute}="${key}"> ${found.length} times, not once`,
     );
   }
-  return found[0].content;
+  return found[0];
 }
 
 function fields(value: unknown, what: string): Map<string, unknown> {
@@ -102,7 +116,7 @@ function headIconLinks(): Icon[] {
   }
   return links.map((values) => ({
     declaredBy: `index.html <link rel="${values.get("rel")}">`,
-    url: new URL(values.get("href") ?? "", SHARED_PAGE),
+    url: new URL(values.get("href") ?? "", SHELL_AT_UNKNOWN_PATH),
     sizes: values.get("sizes"),
   }));
 }
@@ -168,29 +182,53 @@ function robotsGroups(): RobotsGroup[] {
   return groups;
 }
 
-function rulesFor(agent: string): Rule[] {
-  const named = robotsGroups().filter((group) =>
+function matches(pattern: string, path: string): boolean {
+  const anchored = pattern.endsWith("$");
+  const body = (anchored ? pattern.slice(0, -1) : pattern)
+    .split("*")
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+    .join(".*");
+  return new RegExp(`^${body}${anchored ? "$" : ""}`).test(path);
+}
+
+// RFC 9309's verdict, not rule presence: a longer Disallow beats an Allow.
+function allowed(agent: string, path: string): boolean {
+  const groups = robotsGroups();
+  const named = groups.filter((group) =>
     group.agents.includes(agent.toLowerCase()),
   );
-  if (named.length === 0) {
-    throw new Error(`robots.txt names ${agent} in no group`);
+  const governing =
+    named.length > 0
+      ? named
+      : groups.filter((group) => group.agents.includes("*"));
+  let verdict: Rule | undefined;
+  for (const rule of governing.flatMap((group) => group.rules)) {
+    if (rule.path === "" || !matches(rule.path, path)) continue;
+    const longer = !verdict || rule.path.length > verdict.path.length;
+    const tieToAllow = verdict?.path.length === rule.path.length && rule.allow;
+    if (longer || tieToAllow) verdict = rule;
   }
-  return named.flatMap((group) => group.rules);
+  return verdict?.allow ?? true;
 }
 
 describe("a shared Margince link unfurls without running the app", () => {
   it("carries every tag a preview card is drawn from", () => {
-    for (const key of ["og:title", "og:description", "og:image", "og:type"]) {
+    for (const key of ["og:title", "og:description", "og:type"]) {
       expect(tag("property", key), key).not.toBe("");
     }
+    expect(tags("property", "og:image").length).toBeGreaterThan(0);
     expect(tag("name", "twitter:card")).not.toBe("");
   });
 
   it("names its image by an absolute https URL, since an installation's host is unknown", () => {
-    expect(new URL(tag("property", "og:image")).protocol).toBe("https:");
+    const images = tags("property", "og:image");
+    expect(images.length).toBeGreaterThan(0);
+    for (const image of images) {
+      expect(new URL(image).protocol, image).toBe("https:");
+    }
   });
 
-  it("declares no og:url, so every deep link keeps its own preview", () => {
+  it("declares no og:url, since no build knows an installation's address", () => {
     expect(headMetas().filter((meta) => meta.key === "og:url")).toEqual([]);
   });
 
@@ -223,13 +261,21 @@ describe("every icon the shell and the manifest name ships at the size it claims
 });
 
 describe("robots.txt lets link previews through and nothing else", () => {
-  it.each(PREVIEW_FETCHERS)("lets %s fetch every path", (agent) => {
-    const rules = rulesFor(agent);
-    expect(rules).toContainEqual({ allow: true, path: "/" });
-    expect(rules).not.toContainEqual({ allow: false, path: "/" });
+  it.each(PREVIEW_FETCHERS)("lets %s fetch the shared page", (agent) => {
+    expect(allowed(agent, "/")).toBe(true);
+  });
+
+  it("names no crawler outside the preview fetchers", () => {
+    const fetchers = new Set(
+      PREVIEW_FETCHERS.map((agent) => agent.toLowerCase()),
+    );
+    const others = robotsGroups()
+      .flatMap((group) => group.agents)
+      .filter((agent) => agent !== "*" && !fetchers.has(agent));
+    expect(others).toEqual([]);
   });
 
   it("asks every other crawler not to fetch at all", () => {
-    expect(rulesFor("*")).toContainEqual({ allow: false, path: "/" });
+    expect(allowed("Googlebot", "/")).toBe(false);
   });
 });
