@@ -21,6 +21,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // piiHandling declares how erasure and SAR must reach a PII table.
@@ -462,6 +464,79 @@ var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sarcommunication.go",
 	"internal/modules/privacy/sarconsentlinks.go",
 	"internal/modules/privacy/sarmessages.go",
+	// The workspace's own cf_ columns, which hold subject data exactly like
+	// core ones. Its file says it serves both engines and sar.go calls into it
+	// from appendSubjectCustomValues, so it has been on the export path the
+	// whole time and off this list — found by the reach census below, which is
+	// what that census exists to find.
+	"internal/modules/privacy/subjectcolumns.go",
+}
+
+// sarReachedButNotAssembly are files AssembleSAR's call graph reaches which do
+// NOT assemble the package, each with the reason it does not.
+//
+// Same shape as reachedButNotCascade next door and for the same reason: the
+// list above cannot notice its own omissions, and a derivation alone
+// over-reaches. Here the over-reach is narrower and worth naming precisely —
+// every entry is a file the export touches for a STRING HELPER that happens to
+// live in it, never for its SQL. Admitting those statements would report
+// erasure's writes as disclosures, which is the confusion the list was made to
+// avoid in the first place.
+var sarReachedButNotAssembly = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/scheduledsends.go":    "reached because sarmessages.go calls loweredAddresses, a string helper living here. Its own SQL is the queued-send scrub's, on the erasure path",
+	"internal/modules/privacy/erasure_approvals.go": "reached because sarmessages.go calls addressPatterns, likewise. Its SQL erases staged proposals and discloses nothing",
+	"internal/modules/privacy/erasure_consent.go":   "reached because sarcommunication.go calls lowerAll, likewise. Its SQL revokes consent capabilities, which are other contacts' secrets rather than this subject's data",
+})
+
+// Every file the Art. 15 export reads SQL from is one the PII census reads.
+//
+// sarAssemblyFiles is hand-kept for a stated reason — a glob over the package
+// would read erasure's DELETE statements as disclosures — and that reason is
+// sound. What it cannot do is notice its own omissions, which is the failure
+// mode a census must not have: a chapter moved into a new file leaves the
+// census reporting coverage over a smaller export and saying the same word for
+// it. It had one already, subjectcolumns.go, on the export path since
+// appendSubjectCustomValues was written and in no census.
+//
+// So the reach is DERIVED and the list is judged against it, exactly as the
+// cascade's is. Every file AssembleSAR can reach that executes SQL is either in
+// the assembly or in the register that says why it is not.
+func TestEveryFileTheSARExportReadsSQLFromIsCensused(t *testing.T) {
+	t.Parallel()
+	reached := filesReachableFrom(t, "internal/modules/privacy", "AssembleSAR")
+
+	assembly := map[string]bool{}
+	for _, path := range sarAssemblyFiles {
+		assembly[path] = true
+	}
+	var unaccounted []string
+	for _, path := range sortedStrings(reached) {
+		if assembly[path] || sarReachedButNotAssembly.Waived(t, path) {
+			continue
+		}
+		if !executesSQL(t, path) {
+			continue
+		}
+		unaccounted = append(unaccounted, path)
+	}
+	if len(unaccounted) > 0 {
+		t.Errorf("AssembleSAR reaches %d file(s) that execute SQL and no census reads:\n\t%s\n\n"+
+			"Add each to sarAssemblyFiles, or to sarReachedButNotAssembly with the reason it does "+
+			"not assemble the package. A file left off is a PII table the census reports as "+
+			"unexported while the export carries it.", len(unaccounted), strings.Join(unaccounted, "\n\t"))
+	}
+
+	// AND THE LIST IS NOT STALE THE OTHER WAY: a named file the export can no
+	// longer reach is a chapter that was removed or renamed, and leaving it
+	// listed keeps its tables counted as exported by nothing.
+	for _, path := range sarAssemblyFiles {
+		if !reached[path] {
+			t.Errorf("sarAssemblyFiles names %s, which AssembleSAR cannot reach — the chapter moved "+
+				"or went, and its tables are counted as exported by a file that no longer exports "+
+				"them", path)
+		}
+	}
+	sarReachedButNotAssembly.AssertAllMatched(t)
 }
 
 // fromJoinRe extracts the table named by a FROM/JOIN clause — SAR reads are

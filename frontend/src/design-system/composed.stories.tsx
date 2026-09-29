@@ -44,19 +44,23 @@ const noteEntry: TimelineEntry = {
 };
 const baseTimeline: TimelineEntry[] = [emailEntry, meetingEntry, noteEntry];
 
-const meta: Meta<typeof RecordView> = {
+// `satisfies` and `StoryObj<typeof meta>`, not `Meta<…>` and a bare StoryObj:
+// that pair makes every arg optional, which let stories render RecordView with
+// no `identity` although the prop is required.
+const meta = {
   title: "Design System/RecordView",
   component: RecordView,
-};
+} satisfies Meta<typeof RecordView>;
 export default meta;
 
-type Story = StoryObj<typeof RecordView>;
+type Story = StoryObj<typeof meta>;
 
 // The unchanged shape: no row carries an action, so every entry renders as it
 // did before the slot existed.
 export const Default: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: baseTimeline,
@@ -71,6 +75,7 @@ export const Default: Story = {
 export const MailWithSignatureAndQuote: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: [
@@ -107,6 +112,7 @@ export const MailWithSignatureAndQuote: Story = {
 export const NoteThatReadsLikeASignOff: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     zone: "Europe/Berlin",
     timeline: [
       {
@@ -127,6 +133,7 @@ export const NoteThatReadsLikeASignOff: Story = {
 export const WithRowActions: Story = {
   args: {
     name: "Acme GmbH",
+    identity: "o-acme",
     subtitle: "Enterprise · Munich",
     zone: "Europe/Berlin",
     timeline: [
@@ -169,7 +176,7 @@ export const InlineVerbsWiderThanTheHeader: Story = {
     name: "Brandt Automotive GmbH",
     subtitle: "Automotive · München",
     zone: "Europe/Berlin",
-    markShape: "company",
+    identity: "o-1",
     actionsInline: true,
     actions: (
       <>
@@ -208,6 +215,7 @@ function boardDeal(
     id,
     name,
     company: "Acme GmbH",
+    companyId: "o-1",
     valueMinor,
     currency: "EUR",
     ageMs: ageDays * 24 * 60 * 60 * 1000,
@@ -228,7 +236,7 @@ const boardColumns: BoardMoneyColumn[] = [
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
         singleThreaded: true,
         closeDate: "2026-10-14",
-        owner: "Ada Lindqvist",
+        owner: { id: "u-1", name: "Ada Lindqvist" },
         lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
       }),
       // A close date the nightly run set and nobody confirmed: marked, not
@@ -250,7 +258,9 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 8_400,
     currency: "EUR",
     deals: [
-      boardDeal("d3", "Globex onboarding", 28_000, 14, { owner: "Tim Rasche" }),
+      boardDeal("d3", "Globex onboarding", 28_000, 14, {
+        owner: { id: "u-2", name: "Tim Rasche" },
+      }),
     ],
   },
   {

@@ -429,7 +429,7 @@ third-party logo API and no new egress beyond the asset itself. Candidates are
 tried in a fixed order (at most 8), sized between 32px and 300px on the long
 edge, and rejected past an aspect ratio that says "banner" rather than "mark".
 The chain prefers the square icons a site declares, because this mark is drawn
-as a square avatar on every record card.
+inside a round avatar on every record card.
 
 Everything stored is **re-encoded once, at store time**: the endpoint always
 answers `image/png`, whatever the source format was, so no third-party markup is
@@ -499,7 +499,7 @@ be bytes stored for nothing. Both marks wait on the dossier
 confirmation binds each to its slot on the record, slot by slot under the
 human-precedence rule. Enrichment reads of every other company keep
 resolving the one square-preferring mark: a wordmark letterboxed into a record
-card's square avatar would be the illegible row of strokes the badge exists to
+card's round avatar would be the illegible row of strokes the badge exists to
 avoid. `worker siteread` reports both slots and every candidate each one tried.
 
 The two slots are chosen and cleared separately in settings, and the collapsed

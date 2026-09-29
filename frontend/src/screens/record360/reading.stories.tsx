@@ -65,7 +65,7 @@ export const WithAMove: Story = {
               defer={{ onDefer: () => {} }}
             />
             <TodoRow
-              who="Lena Fischer"
+              who={{ name: "Lena Fischer", identity: "contact-lena" }}
               title="Send the promised line-item 3 breakdown"
               meta="Lena Fischer · promised 05/08"
               due={{ label: "19 days late", tone: "danger" }}

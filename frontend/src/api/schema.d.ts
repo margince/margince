@@ -3232,6 +3232,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bulk/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read what one bulk change did, and whether it was undone.
+         * @description The record of one executed bulk change or undo: its record type and verb, how many records
+         *     it changed, each record it left alone with the reason, what an undo could not bring back,
+         *     and the batches it undid or was undone by.
+         *
+         *     Only the colleague who asked for the change (on the website or through any of their agents),
+         *     or an administrator, may read it. Anyone else is answered `404`, the same as for a batch that
+         *     does not exist. A record the reader can no longer see is left out of `skipped` and
+         *     `left_behind`, whatever the change said about it when it ran.
+         */
+        get: operations["getBulkChange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bulk/{id}/undo/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say what undoing one bulk change would do, without doing it.
+         * @description The first half of an undo, and the same shape as `previewBulkChange`: the records the undo
+         *     would put back (`affected`), the ones it would leave alone and why (`excluded`), up to three
+         *     before/after rows, and a `confirm_token`. Undoing more than 10 records needs that token.
+         *
+         *     Only the colleague who asked for the change, or an administrator, may undo it (`404`
+         *     otherwise). A change is undone once, and an undo is not itself undone (`409`).
+         */
+        post: operations["previewBulkUndo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bulk/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back what one bulk change did, record by record.
+         * @description A compensating bulk change with its own `batch_id`. A reassignment hands each record back to
+         *     the owner it had before; an archive brings each record back with the child rows, list
+         *     memberships and tags its archive took down. Each record gets its own audit row, carrying
+         *     the undo's `batch_id`, and its own event (`contact.restored`, `company.restored`,
+         *     `deal.restored` for an archive).
+         *
+         *     A record is skipped, not overwritten, when it changed after the batch
+         *     (`changed_since_batch`), when it was merged into another record (`merged`) or erased
+         *     (`erased`), when another live record has since taken its email or domain (`value_taken`),
+         *     and when it had no owner before (`no_previous_owner`). A child row, membership or tag that
+         *     cannot come back — a list or tag archived since, a link whose other end is archived — is
+         *     listed in `left_behind` while its record is restored. A link between two records of the same
+         *     change comes back once both are live. A record the caller can no longer see is left out of
+         *     the answer rather than named.
+         *
+         *     Only the colleague who asked for the change, or an administrator, may undo it (`404`
+         *     otherwise). A change is undone once; a second undo, or an undo of an undo, answers `409`.
+         *     More than 10 records need the `confirm_token` from `previewBulkUndo`, exactly as
+         *     `executeBulkChange` does.
+         */
+        post: operations["undoBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/transfer-ownership": {
         parameters: {
             query?: never;
@@ -3527,7 +3623,10 @@ export interface paths {
         put?: never;
         /**
          * Create a pipeline.
-         * @description At most one default pipeline per workspace (409 if a second default).
+         * @description At most one default pipeline per workspace (409 if a second default). The opening
+         *     `stages` keep the ladder's shape: a won or lost stage above an open one is refused
+         *     `422` with the code `closing_stage_before_open`, and two stages naming one position
+         *     with `duplicate`.
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -3610,6 +3709,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pipelines/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put the live pipelines in a new order.
+         * @description Names the whole order at once: `pipeline_ids` lists every live pipeline exactly once,
+         *     first to last, and each takes the position of its place in the list. `listPipelines`
+         *     and every pipeline picker answer in this order.
+         *
+         *     `409` with the code `order_stale` when the list does not name exactly the live
+         *     pipelines — one was created, retired or restored since the caller read them — so read
+         *     again and resend. `422` when the list names a pipeline twice.
+         *
+         *     Publishes one `pipeline.updated` per pipeline whose position changed; an order that
+         *     moves nothing writes nothing.
+         */
+        put: operations["reorderPipelines"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipelines/{id}/stage-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a pipeline's stages in a new order.
+         * @description Names the whole ladder at once: `stage_ids` lists every live stage of the pipeline
+         *     exactly once, first to last, and the stages take positions 1..n in that order. One
+         *     write rather than a `position` per stage, because `position` is unique within the
+         *     pipeline and a run of single moves passes through states that uniqueness refuses.
+         *
+         *     Won and lost stages close a deal, so they come after every open stage. An order that
+         *     puts one earlier is refused `422` with the code `closing_stage_before_open`.
+         *
+         *     The pipeline's `version` is its ladder's version: this operation moves it, and so
+         *     does every write that adds, removes or repositions one of its stages. Send it as
+         *     `If-Match` so an order drawn from a ladder somebody has since changed answers
+         *     `409 version_skew` instead of landing on top of their change.
+         *
+         *     `409` with the code `order_stale` when the list does not name exactly the live
+         *     stages; `422` when it names one twice. Publishes ONE `pipeline.updated` carrying the
+         *     `stage_positions` delta; an order that moves nothing writes nothing.
+         */
+        put: operations["reorderStages"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stages": {
         parameters: {
             query?: never;
@@ -3622,8 +3788,12 @@ export interface paths {
         put?: never;
         /**
          * Create a stage in a pipeline.
-         * @description `position` is unique within the pipeline. Terminal stages enforce probability:
-         *     won=100, lost=0 (features/01 §4.1).
+         * @description `position` is unique within the pipeline, from 0 to 1048576. A won stage is always at
+         *     100 and a lost stage at 0, whatever `win_probability` says.
+         *
+         *     Won and lost stages come after every open stage. An open stage created past them is
+         *     placed in front of them, and that shift rides one `pipeline.updated` with the
+         *     `stage_positions` delta. Creating a stage moves the pipeline's `version`.
          */
         post: operations["createStage"];
         delete?: never;
@@ -3667,7 +3837,14 @@ export interface paths {
         delete: operations["archiveStage"];
         options?: never;
         head?: never;
-        /** Update a stage (rename / reorder / probability). */
+        /**
+         * Update a stage (rename / reorder / probability).
+         * @description A `position` change that would leave a won or lost stage above an open one is refused
+         *     `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
+         *     instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
+         *     behind the open ones, published as the same `pipeline.updated` position delta. A change
+         *     to either moves the pipeline's `version`.
+         */
         patch: operations["updateStage"];
         trace?: never;
     };
@@ -18517,10 +18694,11 @@ export interface components {
             kept: components["schemas"]["CaptureKeptBreakdown"];
         };
         /**
-         * @description Why the skipped messages were skipped. The three counts are disjoint and sum to `skipped`.
+         * @description Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
          *     Reported because the count alone tells an owner that something survived their deletion and
          *     not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
-         *     window expires on a date, an open request closes when it is finished.
+         *     window expires on a date, an open request closes when it is finished, and an undetermined
+         *     floor lifts when the installation can say what the law requires.
          */
         CaptureKeptBreakdown: {
             /** @description Messages an erasure or a controller pinned by hand. */
@@ -18529,6 +18707,14 @@ export interface components {
             under_statute: number;
             /** @description Messages a data-subject request is still about, and which it needs in order to be answered. */
             under_request: number;
+            /**
+             * @description Messages kept because this installation could not determine what the law requires of
+             *     them. Distinct from `under_statute`, which is a claim that a retention window applies:
+             *     these were shielded because a purge that cannot ask what the law requires must not
+             *     guess that the answer is "nothing", and reporting them as a statute would tell an owner
+             *     their mail is commercial correspondence when nothing established that.
+             */
+            under_undetermined_floor: number;
             /**
              * @description The retention class that shielded them, named only when it kept something — a reader
              *     shown a rule beside a zero would reasonably think it applied to their deletion.
@@ -25510,9 +25696,14 @@ export interface components {
          *     `anchor_company`: it is the installation's own company, which is never archived.
          *     `not_previewed`: the preview whose token this execution presents did not list it.
          *     `refused`: a single-record rule refuses it; `code` says which.
+         *
+         *     An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+         *     `merged`: it was merged into another record. `erased`: its personal data was erased or
+         *     purged. `value_taken`: another live record now holds its email or domain.
+         *     `no_previous_owner`: it had no owner before the reassignment.
          * @enum {string}
          */
-        BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused";
+        BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused" | "changed_since_batch" | "merged" | "erased" | "value_taken" | "no_previous_owner";
         BulkSkip: {
             /** Format: uuid */
             id: string;
@@ -25574,6 +25765,60 @@ export interface components {
             changed: number;
             /** @description The records left alone, each with its reason. */
             skipped: components["schemas"]["BulkSkip"][];
+            /** @description What an undo restored a record without, because it could not come back. */
+            left_behind?: components["schemas"]["BulkLeftBehind"][];
+            /**
+             * Format: uuid
+             * @description For an undo, the change it put back.
+             */
+            undo_of?: string;
+        };
+        /**
+         * @description One thing an undo could not bring back with its record. `kind` names the child table, or
+         *     `list` and `tag` for a membership or tag; `ref_id` is that row, list or tag.
+         */
+        BulkLeftBehind: {
+            /**
+             * Format: uuid
+             * @description The record that was restored.
+             */
+            id: string;
+            /** @enum {string} */
+            kind: "contact_email" | "contact_phone" | "contact_channel_identity" | "relationship" | "company_domain" | "company_relationship_type" | "partner" | "list" | "tag";
+            /** Format: uuid */
+            ref_id: string;
+        };
+        BulkUndoRequest: {
+            /** @description The token `previewBulkUndo` returned. Required above 10 records. */
+            confirm_token?: string;
+        };
+        /** @description One executed bulk change or undo, as `getBulkChange` reads it. */
+        BulkOperation: {
+            /** Format: uuid */
+            batch_id: string;
+            record_type: components["schemas"]["BulkRecordType"];
+            verb: components["schemas"]["BulkVerb"];
+            /**
+             * Format: uuid
+             * @description The new owner a reassignment named.
+             */
+            owner_id?: string;
+            /** @description The number of records changed. */
+            changed: number;
+            skipped: components["schemas"]["BulkSkip"][];
+            left_behind: components["schemas"]["BulkLeftBehind"][];
+            /**
+             * Format: uuid
+             * @description Set on an undo: the change it put back.
+             */
+            undo_of?: string;
+            /**
+             * Format: uuid
+             * @description Set once the change was undone: the undo that put it back.
+             */
+            undone_by?: string;
+            /** Format: date-time */
+            created_at: string;
         };
         TransferProjectOwnershipResult: {
             /** @description Live projects the caller could write that moved; archived and unwritable ones are not counted. */
@@ -26018,12 +26263,45 @@ export interface components {
             /** @default 0 */
             position: number;
             /** @description Optional initial stages. */
-            stages?: components["schemas"]["CreateStageRequest"][];
+            stages?: components["schemas"]["CreatePipelineStage"][];
+        };
+        /**
+         * @description One initial stage of a pipeline being created. It joins the pipeline this same request
+         *     creates, so unlike `CreateStageRequest` it needs no `pipeline_id`. A won stage without a
+         *     `win_probability` takes 100, as `createStage` fills it.
+         */
+        CreatePipelineStage: {
+            /**
+             * Format: uuid
+             * @deprecated
+             * @description Accepted and ignored. The stage joins the pipeline this request creates; the field
+             *     stays so a client written when nested stages reused `CreateStageRequest` is not refused.
+             */
+            pipeline_id?: string;
+            name: string;
+            /** @description Omitted or 0, the stage takes its place in the list (1-based). */
+            position?: number;
+            /**
+             * @default open
+             * @enum {string}
+             */
+            semantic: "open" | "won" | "lost";
+            win_probability?: number;
         };
         UpdatePipelineRequest: {
             name?: string;
             is_default?: boolean;
             position?: number;
+        };
+        /** @description The live pipelines, first to last. */
+        PipelineOrderRequest: {
+            /** @description Every live pipeline, each exactly once, in the new order. */
+            pipeline_ids: string[];
+        };
+        /** @description One pipeline's stage ladder, first to last. */
+        StageOrderRequest: {
+            /** @description Every live stage of the pipeline, each exactly once, in the new order. */
+            stage_ids: string[];
         };
         PipelineListResponse: {
             data: components["schemas"]["Pipeline"][];
@@ -29338,6 +29616,8 @@ export interface components {
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
             team_ids?: string[];
+            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
+            allowed_actions?: ("change_role" | "issue_password_link" | "deactivate" | "reactivate")[];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -29526,6 +29806,7 @@ export interface components {
             teams: string[];
             authorization?: components["schemas"]["Authorization"];
             settings_availability?: components["schemas"]["SettingsAvailability"];
+            installation_brand?: components["schemas"]["InstallationBrand"];
             /**
              * @deprecated
              * @description Always null. This endpoint is reachable only by a human session: a passport bearer is admitted as an agent principal and never binds the session identity this operation reads, so an agent receives 401 here rather than a passport claim. The field is retained because removing a response property breaks published clients; a client MUST NOT branch on it. An agent's own scopes are what the MCP surface advertises in tools/list, which is the honest place to ask.
@@ -30437,6 +30718,15 @@ export interface components {
              * @enum {string}
              */
             row_scope: "own" | "team" | "all";
+        };
+        /** @description The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it. */
+        InstallationBrand: {
+            /** @description What the company is called day to day. */
+            display_name: string;
+            /** @description The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries. Absent when the company wears none, or when this caller holds no read on companies and so could not load it; a client draws the company's monogram instead. */
+            logo_url?: string;
+            /** @description The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent on the same terms as `logo_url`. A client without one draws the wide mark. */
+            logo_icon_url?: string;
         };
         /**
          * @description Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
@@ -36622,6 +36912,8 @@ export interface components {
              * @description The deal's current stage.
              */
             stage_id?: string | null;
+            /** @description The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`. */
+            win_probability?: number | null;
             /** Format: int64 */
             amount_minor?: number | null;
             currency?: string | null;
@@ -38451,9 +38743,9 @@ export interface components {
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
          *     `amount_minor` converted to the installation's base currency — the only figure by
          *     which two deals in different currencies may be compared. It is not weighted by
-         *     `win_probability`: the pipeline this row comes from does not read a deal's stage,
-         *     so the two fields are independent facts rather than one computed from the other,
-         *     and a reader must not multiply them together expecting the product to equal a
+         *     `win_probability`: the two are independent facts, one the deal's own money and the
+         *     other a property of the stage it sits in, rather than one computed from the other.
+         *     A reader must not multiply them together expecting the product to equal a
          *     risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
@@ -43662,6 +43954,115 @@ export interface operations {
             };
         };
     };
+    getBulkChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bulk change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkOperation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewBulkUndo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the undo would do. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkChangePreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    undoBulkChange: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkUndoRequest"];
+            };
+        };
+        responses: {
+            /** @description What was put back and what was skipped. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkChangeResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The undo would take this agent past its write budget for the window. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     transferProjectOwnership: {
         parameters: {
             query?: never;
@@ -44467,6 +44868,110 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    reorderPipelines: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PipelineOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description The live pipelines, in their new order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reorderStages: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description The pipeline, its stages in their new order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pipeline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listStages: {

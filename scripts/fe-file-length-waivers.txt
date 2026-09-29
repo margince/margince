@@ -42,14 +42,14 @@
 1638 frontend/src/design-system/listtable.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1903 frontend/src/screens/contactpage.stories.tsx
-1664 frontend/src/screens/analytics.tsx
-1631 frontend/src/design-system/atoms.tsx
+1270 frontend/src/screens/analytics.tsx
+1610 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
 1583 frontend/src/screens/leads.tsx
 2264 frontend/src/screens/company360.test.tsx
 2243 frontend/src/screens/companies.test.tsx
-2347 frontend/src/screens/companies.tsx
+2338 frontend/src/screens/companies.tsx
 2437 frontend/src/screens/deals.test.tsx
 2740 frontend/src/screens/compose.tsx
 2273 frontend/src/screens/settings.tsx
@@ -113,5 +113,5 @@
 712 frontend/src/screens/ai-routing.tsx
 855 frontend/src/screens/create.tsx
 815 frontend/src/design-system/decisioncard.tsx
-541 frontend/src/screens/companyheader.tsx
+535 frontend/src/screens/companyheader.tsx
 958 frontend/src/screens/onboarding-read.tsx

@@ -838,7 +838,8 @@ storybook:
 
 ## fe-uat — change-scoped Storybook render+capture UAT for frontend-only diffs:
 ## renders THIS branch's changed component's stories in headless Chromium and
-## screenshots them — no live stack, no DB. Fails on an unclean render, on a
+## screenshots them on parallel pages (FE_UAT_WORKERS, default half the cores,
+## max 4) — no live stack, no DB. Fails on an unclean render, on a
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.

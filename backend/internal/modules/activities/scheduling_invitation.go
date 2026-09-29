@@ -192,14 +192,15 @@ func auditInvitation(ctx context.Context, tx pgx.Tx, before *invitationRow, afte
 	return storekit.EmitEvent(ctx, tx, audit, after.ID, crmcontracts.InternalEventMeetingInvitationUpdated{Status: after.Status, Version: after.Version})
 }
 
-// Invitation returns status only after checking the linked activity’s visibility.
+// Invitation hands back the meeting's subject, location and calendar link,
+// so it asks the CONTENT gate rather than the discover gate.
 func (s *Store) Invitation(ctx context.Context, id ids.UUID) (crmcontracts.MeetingInvitation, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
 	var row invitationRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly); err != nil {
+		if _, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly); err != nil {
 			return err
 		}
 		var err error

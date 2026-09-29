@@ -168,3 +168,20 @@ export const NoTransport: Story = {
     );
   },
 };
+
+// A role that may not log activity: the two log verbs are refused and the one
+// sentence saying why hangs under the row as a caption, at the verbs' width,
+// rather than setting the row's width and pushing the header's name aside.
+export const LogRefused: Story = {
+  render: () => {
+    installFetchStub({
+      ...ROUTES,
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+    });
+    return (
+      <StoryProviders>
+        <Header />
+      </StoryProviders>
+    );
+  },
+};

@@ -64,6 +64,22 @@ bootstrap_admin:
   # environment alongside files, so ${env:} is a deliberate transitional form.
   password_file: config/margince-admin-password
 
+# The SMTP relay for mail the installation writes by itself (optional): the
+# privacy notice, the confirm-your-details and double opt-in links, password
+# reset, member and Deal Room invitations, and the emailed weekly review and
+# morning brief. These never go through a rep's connected Gmail or Outlook.
+# Without this block every one of them is not sent, and a privacy-notice duty
+# cannot be discharged from inside the product. Needs --public-base-url, and the
+# worker must read this file too. docs/how-to/set-up-outbound-mail.md explains.
+# email:
+#   enabled: true
+#   from_address: privacy@example.com
+#   smtp:
+#     host: smtp.example.com
+#     port: 587
+#     username: privacy@example.com
+#     password: ${env:MARGINCE_SMTP_PASSWORD}
+
 # Retention posture at first boot (optional). Consumed ONCE, when the api
 # bootstraps the company against an empty database — it is not re-read, and
 # an admin can change the posture afterwards on the privacy settings screen.

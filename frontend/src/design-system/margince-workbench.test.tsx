@@ -224,7 +224,7 @@ describe("the rail's contact row", () => {
   // produce nothing.
   function renderContactRow(
     variant: "split" | "rail",
-    contact?: Readonly<{ name: string; detail: string }>,
+    contact?: Readonly<{ name: string; detail: string; identity: string }>,
   ) {
     return render(
       <MarginceWorkbench
@@ -247,6 +247,7 @@ describe("the rail's contact row", () => {
 
   it("puts the caller's control after the identity it belongs beside", () => {
     const { container } = renderContactRow("rail", {
+      identity: "u-ada",
       name: "Ada Lovelace",
       detail: "ada@example.com",
     });
@@ -269,6 +270,7 @@ describe("the rail's contact row", () => {
 
   it("renders no contact row at all in the split variant", () => {
     const { container } = renderContactRow("split", {
+      identity: "u-ada",
       name: "Ada Lovelace",
       detail: "ada@example.com",
     });

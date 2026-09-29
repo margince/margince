@@ -108,14 +108,6 @@
   gap: var(--space-3);
 }
 
-/* `.panel-body > .empty` pays a body's interval for an empty state that is the
-   body's WHOLE content; here the outlook's absence arm is one paragraph of two
-   and the stack above already owns the gap, so its own would be a second one. */
-.panel-body.brief-weekly-week > .empty {
-  /* ds:ignore the empty state shares this body, so the stack sets its interval */
-  padding-block: 0;
-}
-
 /* The outcome strip and the workings list under it. */
 .brief-weekly-outcomes {
   display: flex;

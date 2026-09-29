@@ -43,6 +43,7 @@ const ROSTER = {
       display_name: "Ada Active",
       status: "active",
       is_agent: false,
+      allowed_actions: ["issue_password_link", "deactivate"],
     },
     {
       id: "u-off",
@@ -50,6 +51,7 @@ const ROSTER = {
       display_name: "Otto Off",
       status: "deactivated",
       is_agent: false,
+      allowed_actions: ["reactivate"],
     },
   ],
   page: { next_cursor: null, has_more: false },
@@ -104,8 +106,19 @@ function backend(opts: {
     if (req.url.includes("/users/assignable-roles")) {
       return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
     }
+    // The roster drops the link where the installation cannot build one, on
+    // the same posture `admin_password_link` reports.
     if (req.url.includes("/users") && req.method === "GET") {
-      return jsonResponse(ROSTER);
+      return jsonResponse({
+        ...ROSTER,
+        data: ROSTER.data.map((u) => ({
+          ...u,
+          allowed_actions: u.allowed_actions.filter(
+            (action) =>
+              opts.adminPasswordLink || action !== "issue_password_link",
+          ),
+        })),
+      });
     }
     return jsonResponse({ ...ROSTER.data[0], id: "u-new" }, 201);
   });

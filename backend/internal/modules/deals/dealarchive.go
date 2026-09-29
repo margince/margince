@@ -92,21 +92,24 @@ func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *i
 	if err := applyDealPatchGuarded(ctx, tx, id, p, ifVersion); err != nil {
 		return fmt.Errorf("archive deal: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL`,
+	// What the cascade retires and deletes is recorded on the archive's audit
+	// row, which is what an un-archive reads to put it back.
+	var cascade storekit.ArchiveCascade
+	if err := cascade.Retire(ctx, tx, "relationship",
+		`UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL RETURNING id`,
 		id, now); err != nil {
 		return fmt.Errorf("archive the deal's relationships: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = $1`, id); err != nil {
+	if err := cascade.DropMemberships(ctx, tx,
+		`DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = $1 RETURNING list_id, added_by, created_at`, id.UUID); err != nil {
 		return fmt.Errorf("detach list memberships: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1`, id); err != nil {
+	if err := cascade.DropTags(ctx, tx,
+		`DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
 		return fmt.Errorf("detach tags: %w", err)
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "archive", "deal", id.UUID, nil, nil)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "deal", id.UUID, nil, nil, cascade.Evidence())
 	if err != nil {
 		return fmt.Errorf("audit deal archive: %w", err)
 	}

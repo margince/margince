@@ -18,7 +18,7 @@ export function DataTable<Row>({
   onRowClick,
   label,
 }: Readonly<{
-  columns: { key: string; header: string; render: (row: Row) => ReactNode }[];
+  columns: DataTableColumn<Row>[];
   rows: Row[];
   rowKey: (row: Row) => string;
   onRowClick?: (row: Row) => void;
@@ -31,7 +31,9 @@ export function DataTable<Row>({
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column.key}>{column.header}</th>
+              <th key={column.key} className={columnClass(column)}>
+                {column.header}
+              </th>
             ))}
           </tr>
         </thead>
@@ -43,7 +45,9 @@ export function DataTable<Row>({
               onClick={onRowClick ? () => onRowClick(row) : undefined}
             >
               {columns.map((column) => (
-                <td key={column.key}>{column.render(row)}</td>
+                <td key={column.key} className={columnClass(column)}>
+                  {column.render(row)}
+                </td>
               ))}
             </tr>
           ))}
@@ -51,4 +55,28 @@ export function DataTable<Row>({
       </table>
     </TableScroll>
   );
+}
+
+export type DataTableColumn<Row> = Readonly<{
+  key: string;
+  header: string;
+  render: (row: Row) => ReactNode;
+  // A column of FIGURES sits against the end of its cell, heading included, so
+  // the digits of every row stack into a column the eye runs down; a figure
+  // set against the start is a ragged edge of different widths.
+  align?: "end";
+  // The column that takes the table's spare width — a bar drawn beside the
+  // figures it shows. Every other column sizes to its content, so the one that
+  // grows is named rather than left to the browser's guess.
+  grow?: boolean;
+}>;
+
+// Both choices are a cell's own, so the heading and every row wear the same
+// class and cannot come apart.
+function columnClass<Row>(column: DataTableColumn<Row>): string | undefined {
+  const classes = [
+    column.align === "end" ? "datatable-end" : "",
+    column.grow ? "datatable-grow" : "",
+  ].filter(Boolean);
+  return classes.length > 0 ? classes.join(" ") : undefined;
 }

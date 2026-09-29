@@ -215,7 +215,9 @@ type SaveCompanyInput struct {
 // administrator, and nobody else".
 //
 // THE READ TAKES IT TOO. Leaving the read on the object would have one surface
-// answering two different questions about who the profile belongs to.
+// answering two different questions about who the profile belongs to. The one
+// deliberate exception is InstallationBrand: the name and the marks, which
+// every seat already sees in the rail, and no other field.
 func requireAnchorAdministrator(ctx context.Context) error {
 	return auth.RequireAdmin(ctx)
 }

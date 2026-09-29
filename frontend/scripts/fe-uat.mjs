@@ -7,6 +7,7 @@
 //
 // Usage: node frontend/scripts/fe-uat.mjs [--allow-missing]
 //   --allow-missing  do not fail when a changed component has no story yet
+//   FE_UAT_WORKERS   pages capturing at once (default: half the cores, max 4)
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -16,8 +17,14 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { availableParallelism } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  FAILURE_EVENTS,
+  outcomeErrors,
+  SETTLED_EVENTS,
+} from "./lib/story-outcome.mjs";
 import {
   buildStaticStorybook,
   loadPlaywright,
@@ -25,11 +32,28 @@ import {
   serveStaticStorybook,
 } from "./lib/storybook-harness.mjs";
 import { needsStory } from "./lib/uat-scope.mjs";
+import {
+  drainInOrder,
+  renewingBroken,
+  requestedWorkers,
+  workersFor,
+} from "./lib/uat-workers.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const staticDir = join(repoRoot, "frontend/storybook-static");
 const outDir = join(repoRoot, ".tmp/fe-uat");
 const allowMissing = process.argv.includes("--allow-missing");
+
+let requested;
+try {
+  requested = requestedWorkers(
+    process.env.FE_UAT_WORKERS,
+    availableParallelism(),
+  );
+} catch (error) {
+  console.error(`fe-uat: ${error.message}`);
+  process.exit(2);
+}
 
 // The document's OWN entry module is not a component: it exports nothing and
 // renders the application into the DOM, so there is no story that could cover
@@ -199,6 +223,7 @@ for (const abs of sourceFilesUnder(srcRoot)) {
 //    changed component. A changed component no story covers is a gap.
 const storyFiles = new Set();
 const missing = [];
+const fanOut = new Map();
 for (const f of changed) {
   if (!f.startsWith("frontend/src/")) continue;
   // .d.ts declaration files are never renderable components — the generated
@@ -208,16 +233,26 @@ for (const f of changed) {
   if (f === documentEntry) continue;
   if (/\.stories\.[tj]sx?$/.test(f)) {
     storyFiles.add(f);
+    fanOut.set(f, [f]);
   } else if (needsStory(f)) {
     const covering = new Set(coveringStories.get(f) ?? []);
     // The co-located story counts on its path alone: it may reach the component
     // through a barrel re-export rather than importing the file directly.
     const coLocated = f.replace(/\.[tj]sx?$/, ".stories.tsx");
     if (existsSync(join(repoRoot, coLocated))) covering.add(coLocated);
-    if (covering.size === 0) missing.push({ component: f });
-    else for (const story of covering) storyFiles.add(story);
+    if (covering.size === 0) {
+      missing.push({ component: f });
+    } else {
+      for (const story of covering) storyFiles.add(story);
+      fanOut.set(f, [...covering].sort());
+    }
   }
 }
+
+// Largest first: the module a reader asks "why so many stories?" about.
+const fanOutByReach = [...fanOut].sort(
+  ([a, x], [b, y]) => y.length - x.length || a.localeCompare(b),
+);
 
 // Map story files (frontend/src/…) to Storybook importPaths (./src/…).
 // The tags fe-uat honours.
@@ -268,29 +303,156 @@ async function paintCensus(page) {
   }, DUMP_CHARS);
 }
 
+async function storyOutcome(page) {
+  return await page.evaluate(
+    (events) =>
+      Object.fromEntries(
+        events.map((event) => [
+          event,
+          globalThis.__STORYBOOK_ADDONS_CHANNEL__?.last(event) ?? null,
+        ]),
+      ),
+    FAILURE_EVENTS,
+  );
+}
+
+async function renderPhase(page) {
+  return await page.evaluate(
+    () => globalThis.__STORYBOOK_PREVIEW__?.currentRender?.phase ?? "unknown",
+  );
+}
+
 const wantImportPaths = new Set(
   [...storyFiles].map((p) => `./${p.replace(/^frontend\//, "")}`),
 );
 
+async function captureStory(page, port, story) {
+  const errors = [];
+  page.removeAllListeners("pageerror");
+  page.removeAllListeners("console");
+  page.on("pageerror", (e) => errors.push(String(e)));
+  // A story whose SUBJECT is a failure has to be able to say so. React reports
+  // an error a boundary caught through console.error, so a story that renders
+  // a caught throw — the only way to show what an error boundary draws — can
+  // never pass a blanket console-error rule, and the alternative is having no
+  // story for the boundary at all. The opt-out is a tag on that one story
+  // rather than a flag on the run, so it names the story it excuses and shows
+  // up in the index beside it.
+  const tags = story.tags ?? [];
+  const expectsConsoleError = tags.includes(EXPECTED_ERROR_TAG);
+  // Set before navigating: a resize after first paint measures a reflow rather
+  // than the layout the story is about.
+  await page.setViewportSize(tags.includes(PHONE_TAG) ? PHONE : DESKTOP);
+  page.on("console", (m) => {
+    if (m.type() === "error" && !expectsConsoleError) errors.push(m.text());
+  });
+
+  await page.goto(
+    `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story`,
+    {
+      waitUntil: "networkidle",
+    },
+  );
+  // A play() whose query rejects reports after the root has painted, so the
+  // verdict waits for Storybook's own end of render, not for paint or a delay.
+  let settled = true;
+  try {
+    await page.waitForFunction(
+      (events) => {
+        const channel = globalThis.__STORYBOOK_ADDONS_CHANNEL__;
+        return events.some((event) => channel?.last(event) !== undefined);
+      },
+      SETTLED_EVENTS,
+      { timeout: 30_000 },
+    );
+  } catch {
+    settled = false;
+    errors.push(
+      `Storybook never reported the story rendered within the render deadline (phase: ${await renderPhase(page)})`,
+    );
+  }
+  if (settled) errors.push(...outcomeErrors(await storyOutcome(page)));
+  let rendered = true;
+  try {
+    // Large histories can still be rendering after the network is idle.
+    // Keep a finite visibility deadline separate from network settling.
+    await page.waitForSelector(PAINTED, { timeout: 30_000 });
+  } catch {
+    rendered = false;
+    errors.push(
+      `the story painted neither a visible #storybook-root child nor an open dialog within the render deadline — ${await paintCensus(page)}`,
+    );
+  }
+  // Effects a story starts on mount, a mocked query resolving say, can still
+  // paint after Storybook reports the render done.
+  await page.waitForTimeout(250);
+  const png = join(outDir, `${story.id}.png`);
+  await page.screenshot({ path: png });
+  const pass = rendered && errors.length === 0;
+  console.log(pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`);
+  return { id: story.id, pass, png: relative(repoRoot, png), errors };
+}
+
+async function openPage(browser, lane) {
+  lane.page = await browser.newPage({
+    viewport: DESKTOP,
+    deviceScaleFactor: 2,
+  });
+  lane.crashed = false;
+  lane.page.once("crash", () => {
+    lane.crashed = true;
+  });
+  return lane;
+}
+
+function messageOf(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function captureOnLane(lane, port, story) {
+  try {
+    return await captureStory(lane.page, port, story);
+  } catch (error) {
+    if (!lane.crashed) throw error;
+    throw new Error(`the page crashed: ${messageOf(error)}`, { cause: error });
+  }
+}
+
+function captureThrew(story, error) {
+  const message = `capture threw: ${messageOf(error)}`;
+  console.log(`✗ ${story.id} — ${message}`);
+  return { id: story.id, pass: false, png: null, errors: [message] };
+}
+
 function writeManifest(fields) {
   mkdirSync(outDir, { recursive: true });
+  const fanOutMap = Object.fromEntries(fanOutByReach);
+  const manifest = { base, head, fanOut: fanOutMap, ...fields };
   writeFileSync(
     join(outDir, "manifest.json"),
-    `${JSON.stringify({ base, head, ...fields }, null, 2)}\n`,
+    `${JSON.stringify(manifest, null, 2)}\n`,
   );
 }
 
 // Empty scope (no component/story touched) → nothing to render; pass.
 if (storyFiles.size === 0 && missing.length === 0) {
-  writeManifest({ stories: [], missing: [], unresolved: [], pass: true });
+  writeManifest({
+    workers: 0,
+    stories: [],
+    missing: [],
+    unresolved: [],
+    pass: true,
+  });
   console.log("fe-uat OK — diff touches no component/story (empty scope)");
   process.exit(0);
 }
 
 // Render only when there are stories to capture. If the diff is purely a
 // component with no story (missing), skip straight to the verdict below.
-const results = [];
+let results = [];
 let unresolved = [];
+let workers = 0;
+let captureSeconds = 0;
 if (storyFiles.size > 0) {
   // Force a FRESH build so we render the current diff — a cached build would
   // show the previous source and green-light a broken change.
@@ -304,83 +466,53 @@ if (storyFiles.size > 0) {
   const resolvedPaths = new Set(inScope.map((e) => e.importPath));
   unresolved = [...wantImportPaths].filter((p) => !resolvedPaths.has(p));
 
-  mkdirSync(outDir, { recursive: true });
-  const { port, close } = await serveStaticStorybook(staticDir);
-  const { chromium } = await loadPlaywright();
-  const browser = await chromium.launch();
-  const page = await browser.newPage({
-    viewport: DESKTOP,
-    deviceScaleFactor: 2,
-  });
-
-  for (const story of inScope) {
-    const errors = [];
-    page.removeAllListeners("pageerror");
-    page.removeAllListeners("console");
-    page.on("pageerror", (e) => errors.push(String(e)));
-    // A story whose SUBJECT is a failure has to be able to say so. React reports
-    // an error a boundary caught through console.error, so a story that renders
-    // a caught throw — the only way to show what an error boundary draws — can
-    // never pass a blanket console-error rule, and the alternative is having no
-    // story for the boundary at all. The opt-out is a tag on that one story
-    // rather than a flag on the run, so it names the story it excuses and shows
-    // up in the index beside it.
-    const tags = story.tags ?? [];
-    const expectsConsoleError = tags.includes(EXPECTED_ERROR_TAG);
-    // Set before navigating: a resize after first paint measures a reflow rather
-    // than the layout the story is about.
-    await page.setViewportSize(tags.includes(PHONE_TAG) ? PHONE : DESKTOP);
-    page.on("console", (m) => {
-      if (m.type() === "error" && !expectsConsoleError) errors.push(m.text());
-    });
-
-    await page.goto(
-      `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story`,
-      {
-        waitUntil: "networkidle",
-      },
-    );
-    let rendered = true;
-    try {
-      // Large histories can still be rendering after the network is idle.
-      // Keep a finite visibility deadline separate from network settling.
-      await page.waitForSelector(PAINTED, { timeout: 30_000 });
-    } catch {
-      rendered = false;
-      errors.push(
-        `the story painted neither a visible #storybook-root child nor an open dialog within the render deadline — ${await paintCensus(page)}`,
-      );
-    }
-    // Let any play() interaction settle before the frame.
-    //
-    // Longer for a story that HAS one, and the reason is a defect this gate used
-    // to wave through: a play() whose query rejects — a canvas-scoped lookup for
-    // a node that portalled to document.body, say — reports about a second after
-    // the root fills, so at 250ms the screenshot and the verdict both landed
-    // first and a broken interaction passed. Two stories sat in that state, and
-    // one of them was capturing an un-armed confirm dialog under the name of an
-    // armed one. `play-fn` is Storybook's own automatic tag, so only the stories
-    // that can hit this pay for the wait.
-    await page.waitForTimeout(tags.includes("play-fn") ? 1_500 : 250);
-    const png = join(outDir, `${story.id}.png`);
-    await page.screenshot({ path: png });
-    const pass = rendered && errors.length === 0;
-    results.push({ id: story.id, pass, png: relative(repoRoot, png), errors });
+  workers = workersFor(requested, inScope.length);
+  console.log(
+    `fe-uat scope: ${fanOut.size} changed module(s) → ${storyFiles.size} story file(s), ${inScope.length} stories, ${workers} worker(s). Fan-out: every story file that directly imports a changed module, or sits beside it, is rendered.`,
+  );
+  for (const [module, stories] of fanOutByReach) {
     console.log(
-      pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`,
+      `  ${module.replace(/^frontend\//, "")} → ${stories.length} story file(s)`,
     );
   }
 
-  await browser.close();
-  close();
+  mkdirSync(outDir, { recursive: true });
+  const { port, close } = await serveStaticStorybook(staticDir);
+  try {
+    const { chromium } = await loadPlaywright();
+    const started = performance.now();
+    const browser = await chromium.launch();
+    try {
+      const lanes = [];
+      for (let count = 0; count < workers; count++) {
+        lanes.push(await openPage(browser, {}));
+      }
+      results = await drainInOrder(
+        inScope,
+        lanes,
+        renewingBroken((story, lane) => captureOnLane(lane, port, story), {
+          isBroken: (lane) => lane.crashed || lane.page.isClosed(),
+          // The crashed page is left to browser.close(): its renderer is gone.
+          renew: (lane) => openPage(browser, lane),
+        }),
+        captureThrew,
+      );
+    } finally {
+      await browser.close();
+    }
+    captureSeconds = (performance.now() - started) / 1000;
+  } finally {
+    close();
+  }
 }
 
 const pass =
   results.every((r) => r.pass) &&
   unresolved.length === 0 &&
   (allowMissing || missing.length === 0);
-writeManifest({ stories: results, missing, unresolved, pass });
+writeManifest({ workers, stories: results, missing, unresolved, pass });
 
+const took = `${results.length} story(ies) in ${captureSeconds.toFixed(1)}s on ${workers} worker(s)`;
 if (!pass) {
   const failed = results.filter((r) => !r.pass).map((r) => r.id);
   if (failed.length)
@@ -400,9 +532,10 @@ if (!pass) {
       "  (author a story that imports it — co-located <component>.stories.tsx is the default — then re-run)",
     );
   }
+  if (results.length) console.error(`fe-uat FAIL — captured ${took}`);
   process.exit(1);
 }
 const note = missing.length ? ` (allow-missing: ${missing.length})` : "";
 console.log(
-  `fe-uat OK — ${results.length} story(ies) captured → ${relative(repoRoot, outDir)}/${note}`,
+  `fe-uat OK — captured ${took} → ${relative(repoRoot, outDir)}/${note}`,
 );

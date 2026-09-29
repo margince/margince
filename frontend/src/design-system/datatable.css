@@ -5,3 +5,23 @@
 .table tbody tr.rowlink {
   cursor: pointer;
 }
+
+/* A column of figures, heading and cells alike: set against the end so the
+   digits of every row stack, and tabular so each digit takes one width. */
+.table .datatable-end {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+/* The column that takes the spare width. A table sizes every other column to
+   its content, so a bar in a column nobody grew collapses to nothing; the floor
+   keeps a bar readable when the table is narrow and scrolls. */
+.table .datatable-grow {
+  width: 100%;
+  min-width: 96px;
+}
+/* Beside a growing column every other cell keeps its line: the growth is taken
+   from the bar, never from a name folded onto two lines to make room for it. A
+   table too wide for its box scrolls inside it instead. */
+.table:has(.datatable-grow) :is(th, td):not(.datatable-grow) {
+  white-space: nowrap;
+}

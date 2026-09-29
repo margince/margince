@@ -48,6 +48,10 @@ type ListUsersInput struct {
 	// roster showed as a raw id. The pickers leave it off, so the default stays
 	// the list of members who can open what they are given.
 	IncludeInvited bool
+	// Actor is the human asking, when one is. The management view carries each
+	// member's allowed actions for a human caller only, because every member
+	// verb is a human-session endpoint.
+	Actor *Identity
 }
 
 type userRow struct {
@@ -56,6 +60,7 @@ type userRow struct {
 	DisplayName string
 	Status      string
 	IsAgent     bool
+	SeatType    principal.SeatType
 	// Roles are the member's assigned system role keys. NIL means the read did
 	// not ask for them; EMPTY means it did and the member holds none. Keeping
 	// those apart is what stops a caller that forgot the flag from reporting
@@ -95,7 +100,7 @@ const teamIDs = `CASE WHEN $1::boolean THEN
 	     WHERE tm.user_id = app_user.id AND t.archived_at IS NULL)
 	  ELSE NULL::uuid[] END`
 
-const userColumns = `id, email, display_name, status, is_agent, ` + roleKeys + `, ` + teamIDs + `, created_at`
+const userColumns = `id, email, display_name, status, is_agent, seat_type, ` + roleKeys + `, ` + teamIDs + `, created_at`
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -160,7 +165,7 @@ const listUsersAllFilteredQuery = `
 
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
-	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.Roles, &u.TeamIDs, &u.CreatedAt)
+	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType, &u.Roles, &u.TeamIDs, &u.CreatedAt)
 	return u, err
 }
 
@@ -236,7 +241,15 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		scan:      scanUser,
 		cursorKey: func(u userRow) (time.Time, ids.UUID) { return u.CreatedAt, u.ID },
 	})
-	return RosterPage{Users: rows, Page: page, Management: mayManage}, err
+	if err != nil || !mayManage || in.Actor == nil {
+		return RosterPage{Users: rows, Page: page, Management: mayManage}, err
+	}
+	var actions map[ids.UUID][]memberAction
+	err = s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
+		actions, err = s.allowedMemberActions(ctx, tx, *in.Actor, rows)
+		return err
+	})
+	return RosterPage{Users: rows, Page: page, Management: true, Actions: actions}, err
 }
 
 // RosterPage is one roster read: the rows, the keyset position, and WHICH VIEW
@@ -254,6 +267,9 @@ type RosterPage struct {
 	// Management is true when this page is the administration view: it carries
 	// role keys, team memberships, and seats that are no longer active.
 	Management bool
+	// Actions are the verbs the caller would be admitted to on each member, nil
+	// when the page is not the management view or nobody human asked.
+	Actions map[ids.UUID][]memberAction
 }
 
 // ListTeamsInput narrows and pages the team list; Q is a case-insensitive

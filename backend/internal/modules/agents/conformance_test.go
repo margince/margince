@@ -287,6 +287,14 @@ func (inertLifecycle) ExecuteBulkChange(context.Context, BulkChangeCommand) (jso
 	return nil, nil
 }
 
+func (inertLifecycle) PreviewBulkUndo(context.Context, ids.UUID) (json.RawMessage, error) {
+	return nil, nil
+}
+
+func (inertLifecycle) UndoBulkChange(context.Context, ids.UUID, string) (json.RawMessage, error) {
+	return nil, nil
+}
+
 // The MUST: a declared outputSchema obliges structured results. The text block
 // stays beside it, so a client that predates structured content is not served
 // an empty answer.

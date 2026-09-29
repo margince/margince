@@ -196,7 +196,31 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if err := s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
+	if err := s.promoteLeadsByMailTx(ctx, tx, in, res.ContactID); err != nil {
+		return EnsureCounterpartyResult{}, err
+	}
 	return res, nil
+}
+
+// promoteLeadsByMailTx folds a lead holding this counterparty's address into
+// the contact the mail resolved to — the one it just minted, or one that
+// already stood beside the lead — once they have written to us.
+//
+// Only their own mail counts. Promotion needs engagement — a reply, a meeting,
+// or a seat's own judgement — and mail we sent that nobody answered is the cold outbound the trigger vocabulary
+// refuses, so it leaves the lead where it is. Their first reply reaches this
+// same call for the same contact and promotes it then, as an inbound_reply
+// with that message as the evidence.
+func (s *Store) promoteLeadsByMailTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, contactID ids.ContactID) error {
+	acquired, err := acquiredFromCaptureTx(ctx, tx, in.Replied, in.Email)
+	if err != nil {
+		return err
+	}
+	if acquired != AcquiredSubjectInitiated {
+		return nil
+	}
+	evidence := in.ActivityID
+	return s.promoteHeldLeadsTx(ctx, tx, contactID, TriggerInboundReply, &evidence, in.CapturedBy)
 }
 
 // ensureContact runs PO-F-1 and creates when it does not exactly match; a

@@ -8,13 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -87,8 +90,11 @@ func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.Ru
 		settled = *mapping
 	}
 	return &csvWriters{
-		pool:        db.Pool(),
-		contacts:    contacts.NewStore(db),
+		pool: db.Pool(),
+		// An imported contact can take a lead over, which carries the lead's
+		// stops and consent links (see newCounterpartyStore).
+		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
+			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)),
 		tags:        collections.NewStore(db),
 		identities:  migration.NewRunStore(db),
 		runID:       runID,

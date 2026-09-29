@@ -69,17 +69,10 @@ function identityOf(user: SessionUser | undefined) {
   const email = user?.email ?? "";
   const label = name || email;
   return {
+    id: user?.id ?? "",
     name,
     email,
     label,
-    // Initials, or a single letter from the address — never a fabricated name.
-    initials:
-      label
-        .split(/[\s@._-]+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase() ?? "")
-        .join("") || undefined,
     // Both lines in one sentence, for the state that has no room to print them.
     spoken: name && email ? `${name} — ${email}` : label,
   };
@@ -545,13 +538,9 @@ export function AccountMenu() {
         onClick={() => setOpen((current) => !current)}
       >
         {identity.label ? (
-          // The one chip, from the design system. The tint is keyed on the
-          // address rather than the display name, so it survives a rename and
-          // matches every other chip drawn for the same contact.
-          <Avatar
-            identity={identity.email || undefined}
-            name={identity.label}
-          />
+          // The one chip, from the design system, keyed on the seat's user id
+          // like every other chip drawn for this colleague.
+          <Avatar identity={identity.id} name={identity.label} />
         ) : (
           // The session has not resolved yet. The chip keeps its box so the row
           // does not jump when the name arrives, and shows a contact glyph rather

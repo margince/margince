@@ -2,80 +2,76 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
-import "./settings.css";
-import { StageRow } from "./settings.stages";
+import { StageLadderEditor } from "./settings.stages";
+import "./settings.pipelines.css";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
-// The stage ladder inside one pipeline, as the pipelines card draws it: a name,
-// the semantic badge, the win probability and the row verbs. The probability is
-// a figure in a column of figures, so it wears `.t-num` — tabular digits in the
-// body face — and "5%" under "50%" under "100%" keeps its right edge.
+// The ladder inside one pipeline, as the pipelines page draws it: the strip of
+// its shape, the open stages a reader drags into order, and the closing pair
+// locked at the end. Probabilities are figures in a column of figures, so they
+// wear `.t-num` and "5%" under "50%" keeps its right edge.
 
+type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
 
 const PIPELINE_ID = "33333333-3333-4333-8333-333333333333";
 
-const ladder: Stage[] = [
-  {
-    id: "44444444-4444-4444-8444-444444444441",
+function stage(
+  n: number,
+  name: string,
+  semantic: Stage["semantic"],
+  winProbability: number,
+): Stage {
+  return {
+    id: `44444444-4444-4444-8444-44444444444${n}`,
     pipeline_id: PIPELINE_ID,
-    name: "Qualify",
-    position: 1,
-    semantic: "open",
-    win_probability: 5,
-  },
-  {
-    id: "44444444-4444-4444-8444-444444444442",
-    pipeline_id: PIPELINE_ID,
-    name: "Proposal",
-    position: 2,
-    semantic: "open",
-    win_probability: 50,
-  },
-  {
-    id: "44444444-4444-4444-8444-444444444443",
-    pipeline_id: PIPELINE_ID,
-    name: "Closed won",
-    position: 3,
-    semantic: "won",
-    win_probability: 100,
-  },
-  {
-    id: "44444444-4444-4444-8444-444444444444",
-    pipeline_id: PIPELINE_ID,
-    name: "Closed lost",
-    position: 4,
-    semantic: "lost",
-    win_probability: 0,
-  },
-];
-
-// `StageRow` takes the caller's translator, so the ladder is its own component
-// mounted inside the providers rather than rows rendered at the story's root.
-function Ladder({ canEdit }: Readonly<{ canEdit: boolean }>) {
-  const t = useT();
-  return (
-    <ul className="stage-rows" aria-label="Stages">
-      {ladder.map((stage) => (
-        <StageRow
-          key={stage.id}
-          stage={stage}
-          canEdit={canEdit}
-          t={t}
-          returnFocusTo={() => null}
-        />
-      ))}
-    </ul>
-  );
+    name,
+    position: n,
+    semantic,
+    win_probability: winProbability,
+  };
 }
 
-// useMe() fails fast without a workspace slug, which would collapse the admin
-// ladder into the reader's — seed it so /me resolves and the verbs render. The
-// criteria under each row stay folded, and answer from the stub's empty page.
-function served(canEdit: boolean) {
+const sales: Pipeline = {
+  id: PIPELINE_ID,
+  name: "Sales",
+  is_default: true,
+  position: 1,
+  version: 3,
+  stages: [
+    stage(1, "Qualified", "open", 10),
+    stage(2, "Discovery", "open", 25),
+    stage(3, "Proposal", "open", 50),
+    stage(4, "Negotiation", "open", 75),
+    stage(5, "Won", "won", 100),
+    stage(6, "Lost", "lost", 0),
+  ],
+};
+
+// Proposal dragged above Discovery without its odds changing: the ladder dips,
+// and the row that dips says so without refusing the order.
+const dipping: Pipeline = {
+  ...sales,
+  stages: [
+    stage(1, "Qualified", "open", 10),
+    stage(2, "Proposal", "open", 50),
+    stage(3, "Discovery", "open", 25),
+    stage(4, "Negotiation", "open", 75),
+    stage(5, "Won", "won", 100),
+    stage(6, "Lost", "lost", 0),
+  ],
+};
+
+const fresh: Pipeline = {
+  ...sales,
+  name: "Partner deals",
+  is_default: false,
+  stages: [stage(1, "Won", "won", 100), stage(2, "Lost", "lost", 0)],
+};
+
+function served(pipeline: Pipeline, canEdit: boolean) {
   return () => {
     globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
     installFetchStub({
@@ -85,39 +81,58 @@ function served(canEdit: boolean) {
     });
     return (
       <StoryProviders>
-        <Ladder canEdit={canEdit} />
+        <div className="pipeline-detail">
+          <StageLadderEditor pipeline={pipeline} canEdit={canEdit} />
+        </div>
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof StageRow> = {
+const meta: Meta<typeof StageLadderEditor> = {
   title: "Settings/Sales/Pipelines/Stage ladder",
-  component: StageRow,
+  component: StageLadderEditor,
   parameters: { layout: "padded" },
 };
 export default meta;
-type Story = StoryObj<typeof StageRow>;
+type Story = StoryObj<typeof StageLadderEditor>;
 
-/** An admin's ladder: every row carries its verbs. */
+/** An admin's ladder: a handle on every open stage, verbs on every row. */
 export const Editable: Story = {
-  render: served(true),
+  render: served(sales, true),
   play: async ({ canvasElement }) => {
-    const list = await within(canvasElement).findByRole("list", {
-      name: "Stages",
+    const canvas = within(canvasElement);
+    const open = await canvas.findByRole("list", { name: "Open stages" });
+    await expect(within(open).getByText("50%")).toHaveClass("t-num");
+    // The keyboard path: the handle takes the arrow keys, and the move is said.
+    const handle = within(open).getByRole("button", {
+      name: "Move Proposal, step 3 of 4",
     });
-    const probability = within(list).getByText("50%");
-    await expect(probability).toHaveClass("t-num");
+    handle.focus();
+    await userEvent.keyboard("{ArrowUp}");
+    await expect(
+      await canvas.findByText("Proposal is now step 2 of 4"),
+    ).toBeInTheDocument();
   },
 };
 
-/** A reader's ladder: the same figures, no verbs to act on them. */
+/** A reader's ladder: the same shape and figures, no handle and no verb. */
 export const ReadOnly: Story = {
-  render: served(false),
+  render: served(sales, false),
 };
 
-/** The ladder in dark, where the semantic badges sit on the card's own ground. */
+/** A stage whose odds sit below the stage above it is pointed out, not refused. */
+export const OddsDip: Story = {
+  render: served(dipping, true),
+};
+
+/** A pipeline just created: the closing pair is in place, no open stage yet. */
+export const NoOpenStages: Story = {
+  render: served(fresh, true),
+};
+
+/** The ladder in dark, where the strip's shading and the outcome plates move. */
 export const EditableDark: Story = {
   globals: { theme: "dark" },
-  render: served(true),
+  render: served(sales, true),
 };

@@ -46,6 +46,14 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "416edd1aa2a69937fc7be3c3faf77eb64367f22707d1df038a0df7f9205fe1a2",
 			source:  "8d574fbe51796a818cb7ff938c766ceb152142ea4265090e2eaf445cb6c5d776",
 		}},
+		// The review's touch trigger wrote a version column the table lacks, so
+		// on a database holding reviews the sweep's UPDATE aborted. The current
+		// file holds that trigger off around the one UPDATE and re-enables it;
+		// the down half is unchanged and no catalog object differs.
+		"1790568769": {{
+			applied: "3322c618c5e63b3adc0cbafd9d00a7ddb8d921fd046941747dea2e4c42a2b4a4",
+			source:  "57662d25857ee38a6207b33cac92b93453f02fcf3163abf892df35a824758751",
+		}},
 	},
 }
 

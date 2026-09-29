@@ -69,6 +69,16 @@ Either way the lead's history and activities come with it — nothing is orphane
 and the lead is marked qualified and archived. You can preview which of the two
 will happen before you confirm.
 
+A lead also qualifies on its own when a contact appears for its email address:
+
+- **You add a contact** (typed in, or imported) for somebody who is already a
+  lead. The lead merges into the new contact straight away, qualified by you.
+- **The lead writes to a connected mailbox.** The contact their mail creates,
+  or the one it finds, takes the lead with it, as an inbound reply. Mail you
+  sent that nobody answered does not qualify the lead; their first reply does.
+  A contact that is still visible only to its owner, or held for review as a
+  possible impostor, takes no lead until it is cleared.
+
 One caution on that preview: if the matching contact is one you are not allowed
 to see, the preview says "Qualifying merges into an existing contact you cannot
 see." and does not show you the contact. **An absent contact never means "no

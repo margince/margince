@@ -109,12 +109,7 @@ export function EmploymentLogo({
         name={name}
         src={company?.logo_url}
         fallback={
-          <Avatar
-            identity={employment.company_id}
-            name={name}
-            shape="company"
-            size="sm"
-          />
+          <Avatar identity={employment.company_id} name={name} size="sm" />
         }
       />
     </span>

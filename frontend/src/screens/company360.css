@@ -537,6 +537,9 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin: 8px 0 0;
+  /* The step to whatever answers the press: the wait, the failure, the reply
+     (whose own top margin collapses into this one). */
+  margin-bottom: var(--space-3);
 }
 /* The reply itself: a white plate on the panel's indigo ground, so the answer
    reads as the thing that came back rather than as more of the panel. */
@@ -555,9 +558,6 @@
 .co-ask-asked {
   margin: 0;
   color: var(--aiText);
-}
-.co-ask-answer > .surfacestate-empty {
-  margin: 0;
 }
 /* Who wrote it and when, under a hairline: the plate's own footer band, told
    apart from the answer the way every card on this page tells its foot apart
@@ -663,9 +663,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgCard);
-}
-.co-strip-withheld .surfacestate-withheld {
-  margin-top: 0;
 }
 
 /* The brief under the questions it answers. Label and prose sit side by side
@@ -1156,10 +1153,6 @@
   margin-bottom: 0;
 }
 .co-rail .co-sect > summary {
-  /* The slice's own name, on the pane's gutter and clear of the hairline over
-     it: at the row's tighter interval the label sat against the rule and the
-     five slices read as one crowded list rather than five sections. */
-  padding: var(--space-4) var(--space-5) var(--space-3);
   transition: background 0.15s;
 }
 .co-rail .co-sect > summary:hover {
@@ -1175,6 +1168,12 @@
 .co-rail .co-sect > .disclosure-body {
   margin-top: 0;
   padding: 0 var(--padPanel) var(--padPanel);
+}
+/* That body already stands on the pane's gutter, so a PanelBody inside it adds
+   none: a second inset set its rows a card's padding right of the card lists
+   and verbs the other slices draw straight into their body. */
+.co-rail .co-sect > .disclosure-body > .panel-body {
+  padding: 0;
 }
 
 /* The summary's own row: the section name, then whatever it carries (a count,

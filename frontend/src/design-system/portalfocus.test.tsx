@@ -220,3 +220,23 @@ it("leaves focus where a closing control put it", async () => {
   );
   expect(document.activeElement?.textContent).toBe("the drawer this opened");
 });
+
+// A refused control cannot take focus, so a panel that opens on one must land
+// on the first control that can, or the reader stays outside a panel of controls.
+it("takes focus past a refused control to the first one that answers", async () => {
+  const user = userEvent.setup();
+  render(
+    page(
+      <Popover label="Who can see this">
+        <button type="button" disabled>
+          Only the owner
+        </button>
+        <button type="button">Everyone</button>
+      </Popover>,
+    ),
+  );
+  await user.click(screen.getByRole("button", { name: "Who can see this" }));
+  await waitFor(() =>
+    expect(document.activeElement?.textContent).toBe("Everyone"),
+  );
+});

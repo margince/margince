@@ -8,6 +8,7 @@ import {
 import type userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 
@@ -24,8 +25,16 @@ export function jsonResponse(body: unknown, status = 200) {
 
 // `roles` rides the roster only for an admin caller, which this card always is.
 // Nora holds none — an unassigned seat is reachable and has no current role to
-// show.
-export const ROSTER = {
+// show. `allowed_actions` is what the server offers an admin on each member;
+// Ada is not the caller's only fellow admin, so she can be demoted and switched
+// off, and the agent seat takes no role and signs in with no password.
+//
+// Typed as the contract's members, so `allowed_actions` stays the enum.
+type Member = components["schemas"]["User"];
+export const ROSTER: {
+  data: Omit<Member, "timezone">[];
+  page: { next_cursor: null; has_more: boolean };
+} = {
   data: [
     {
       id: "u-active",
@@ -34,6 +43,7 @@ export const ROSTER = {
       status: "active",
       is_agent: false,
       roles: ["admin"],
+      allowed_actions: ["change_role", "issue_password_link", "deactivate"],
     },
     {
       id: "u-off",
@@ -42,6 +52,7 @@ export const ROSTER = {
       status: "deactivated",
       is_agent: false,
       roles: ["read_only"],
+      allowed_actions: ["change_role", "reactivate"],
     },
     // An invitation nobody has redeemed: it holds a licensed seat and appears
     // in the roster, but signs in nowhere until the link is used.
@@ -52,6 +63,7 @@ export const ROSTER = {
       status: "invited",
       is_agent: false,
       roles: ["rep"],
+      allowed_actions: ["change_role", "issue_password_link", "deactivate"],
     },
     {
       id: "u-none",
@@ -60,6 +72,7 @@ export const ROSTER = {
       status: "active",
       is_agent: false,
       roles: [],
+      allowed_actions: ["change_role", "issue_password_link", "deactivate"],
     },
     // An agent identity. Bootstrap no longer seeds one, so a fresh installation
     // shows a contacts-only roster — but the roster still LISTS such a row where
@@ -73,6 +86,7 @@ export const ROSTER = {
       status: "active",
       is_agent: true,
       roles: [],
+      allowed_actions: ["deactivate"],
     },
   ],
   page: { next_cursor: null, has_more: false },
@@ -246,14 +260,32 @@ function readRoute(
     // roster to everyone describes a response the API cannot produce — and
     // a case asserting a rep sees "Read-only" would then be leaning on data
     // the rep would never have received.
-    if (allow.user_admin?.includes("read")) {
-      return jsonResponse(ROSTER);
+    //
+    // The allowed actions follow the caller's verbs: a role change and a link
+    // take `update`, switching a seat off or on takes `delete`.
+    const verbs = allow.user_admin ?? [];
+    if (verbs.includes("read")) {
+      return jsonResponse({
+        ...ROSTER,
+        data: ROSTER.data.map((u) => ({
+          ...u,
+          allowed_actions: (u.allowed_actions ?? []).filter((action) =>
+            verbs.includes(
+              action === "deactivate" || action === "reactivate"
+                ? "delete"
+                : "update",
+            ),
+          ),
+        })),
+      });
     }
     return jsonResponse({
       ...ROSTER,
       data: ROSTER.data
         .filter((u) => u.status !== "deactivated")
-        .map(({ roles: _withheld, ...rest }) => rest),
+        .map(
+          ({ roles: _withheld, allowed_actions: _computed, ...rest }) => rest,
+        ),
     });
   }
   return undefined;

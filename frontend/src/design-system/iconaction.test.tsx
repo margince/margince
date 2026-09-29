@@ -73,3 +73,33 @@ describe("a glyph verb inside a line of text", () => {
     expect(host("Pin")?.classList.contains("icon-action-inline")).toBe(false);
   });
 });
+
+// A glyph that opens a region says so as a disclosure: that something appeared
+// and which region it was. `pressed` would claim a setting that stays on.
+describe("a glyph verb that opens a region", () => {
+  it("draws its state as expanded and names the region it controls", () => {
+    render(
+      <>
+        <IconAction
+          label="Explain this number"
+          icon={<span aria-hidden="true">i</span>}
+          disclosure={{ expanded: true, controls: "derivation" }}
+        />
+        <div id="derivation" />
+      </>,
+    );
+    const control = screen.getByRole("button", { name: "Explain this number" });
+    expect(control.getAttribute("aria-expanded")).toBe("true");
+    expect(control.getAttribute("aria-controls")).toBe("derivation");
+    expect(control.hasAttribute("aria-pressed")).toBe(false);
+  });
+
+  it("claims no disclosure where the caller named none", () => {
+    render(
+      <IconAction label="Call" icon={<span aria-hidden="true">c</span>} />,
+    );
+    const control = screen.getByRole("button", { name: "Call" });
+    expect(control.hasAttribute("aria-expanded")).toBe(false);
+    expect(control.hasAttribute("aria-controls")).toBe(false);
+  });
+});

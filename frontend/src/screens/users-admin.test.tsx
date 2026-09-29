@@ -153,6 +153,42 @@ describe("UsersAdminCard", () => {
     ).toBeTruthy();
   });
 
+  it("offers on a member only the verbs the server lists for them", async () => {
+    // The reader holds every user_admin verb, and Ada is an admin they may not
+    // touch: the server lists nothing on her, so her row draws no menu and
+    // reads her role back instead of offering a picker.
+    const routed = backend([]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "GET" && /\/v1\/users\?/.test(req.url)) {
+          return jsonResponse({
+            ...ROSTER,
+            data: ROSTER.data.map((member) =>
+              member.id === "u-active"
+                ? { ...member, allowed_actions: [] }
+                : member,
+            ),
+          });
+        }
+        return routed(input, init);
+      }),
+    );
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
+
+    const ada = rowFor("Ada Active");
+    expect(
+      within(ada).queryByRole("button", { name: /actions for/i }),
+    ).toBeNull();
+    expect(within(ada).queryByRole("combobox")).toBeNull();
+    expect(within(ada).getByText("Admin")).toBeTruthy();
+    // The same reader keeps every verb on a member the server lists them on.
+    expect(roleSelect(rowFor("Nora None"), "Nora None")).toBeTruthy();
+  });
+
   // A row is ONE line: the member's name over their address on the left, and on
   // the right the role, the status and the menu holding the verbs. Nine members
   // used to be nine 140px blocks — a full-width Select on its own line and two
@@ -396,7 +432,11 @@ describe("UsersAdminCard", () => {
             ...ROSTER,
             data: ROSTER.data.map((member) =>
               member.id === "u-active" && deactivated
-                ? { ...member, status: "deactivated" }
+                ? {
+                    ...member,
+                    status: "deactivated",
+                    allowed_actions: ["change_role", "reactivate"],
+                  }
                 : member,
             ),
           });

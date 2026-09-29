@@ -40,12 +40,15 @@ type Translate = ReturnType<typeof useT>;
 export function LeadPanel({
   route,
   targetName,
+  targetId,
   blocked,
   onAsk,
   onOpenEmail,
 }: Readonly<{
   route: RouteCandidate;
   targetName: string;
+  // The contact this page is about, which keys their chip.
+  targetId: string;
   // Opens one of the cited messages in the contact page's email drawer.
   onOpenEmail?: (activityId: string) => void;
   // Why the ask cannot be made, when it cannot. A panel that offered a button
@@ -90,7 +93,7 @@ export function LeadPanel({
             <span className="pn-hero-arrow" aria-hidden="true">
               →
             </span>
-            <Avatar name={targetName} size="md" />
+            <Avatar name={targetName} identity={targetId} size="md" />
             <div className="pn-hero-who">
               <strong>{targetName}</strong>
             </div>

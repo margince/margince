@@ -136,39 +136,11 @@ func archiveCompanyTx(
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, ifVersion); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("archive the account: %w", err)
 	}
-	// Everything that answers a list on the account's behalf retires with
-	// it. Every statement here covers a row somebody would otherwise still
-	// find: a live child under an archived parent keeps feeding the list
-	// its own table serves, which is how an archived account goes on
-	// appearing as a partner. They stay plain statements because each is a
-	// cascade off the row above rather than a second decision, and that
-	// row's guard serializes all of them.
-	for _, stmt := range []string{
-		`UPDATE company_domain SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL`,
-		// ADR-0079's partner invariant runs over LIVE type rows, so the
-		// types retire with their parent.
-		`UPDATE company_relationship_type SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL`,
-		// The partner PROGRAM row goes with the type that admits it. Left
-		// live, the extension and its type row disagree: the account is no
-		// longer a partner by relationship type while partner.go's own
-		// live-row reads still answer for it.
-		`UPDATE partner SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL`,
-		`UPDATE relationship SET archived_at = $2 WHERE (company_id = $1 OR counterparty_company_id = $1) AND archived_at IS NULL`,
-	} {
-		if _, err := tx.Exec(ctx, stmt, id, now); err != nil {
-			return crmcontracts.Company{}, fmt.Errorf("retire what hangs off the account: %w", err)
-		}
+	cascade, err := retireCompanyCascade(ctx, tx, id, now)
+	if err != nil {
+		return crmcontracts.Company{}, err
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM list_member WHERE entity_type = 'company' AND entity_id = $1`, id); err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("drop the account's list memberships: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM taggable WHERE entity_type = 'company' AND entity_id = $1`, id); err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("drop the account's tags: %w", err)
-	}
-
-	auditID, err := storekit.Audit(ctx, tx, "archive", "company", id.UUID, nil, nil)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "company", id.UUID, nil, nil, cascade.Evidence())
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -176,6 +148,45 @@ func archiveCompanyTx(
 		return crmcontracts.Company{}, err
 	}
 	return readCompany(ctx, tx, id, storekit.IncludeArchived, active)
+}
+
+// retireCompanyCascade retires and deletes everything that answers a list on
+// the account's behalf, and answers what it took down.
+func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now time.Time) (storekit.ArchiveCascade, error) {
+	// Everything that answers a list on the account's behalf retires with
+	// it. Every statement here covers a row somebody would otherwise still
+	// find: a live child under an archived parent keeps feeding the list
+	// its own table serves, which is how an archived account goes on
+	// appearing as a partner. They stay plain statements because each is a
+	// cascade off the row above rather than a second decision, and that
+	// row's guard serializes all of them. What they retire and delete is
+	// recorded on the archive's audit row, for an un-archive to put back.
+	var cascade storekit.ArchiveCascade
+	for _, retire := range []struct{ table, statement string }{
+		{tableCompanyDomain, `UPDATE company_domain SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
+		// ADR-0079's partner invariant runs over LIVE type rows, so the
+		// types retire with their parent.
+		{"company_relationship_type", `UPDATE company_relationship_type SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
+		// The partner PROGRAM row goes with the type that admits it. Left
+		// live, the extension and its type row disagree: the account is no
+		// longer a partner by relationship type while partner.go's own
+		// live-row reads still answer for it.
+		{tablePartner, `UPDATE partner SET archived_at = $2 WHERE company_id = $1 AND archived_at IS NULL RETURNING id`},
+		{tableRelationship, `UPDATE relationship SET archived_at = $2 WHERE (company_id = $1 OR counterparty_company_id = $1) AND archived_at IS NULL RETURNING id`},
+	} {
+		if err := cascade.Retire(ctx, tx, retire.table, retire.statement, id, now); err != nil {
+			return storekit.ArchiveCascade{}, fmt.Errorf("retire what hangs off the account: %w", err)
+		}
+	}
+	if err := cascade.DropMemberships(ctx, tx,
+		`DELETE FROM list_member WHERE entity_type = 'company' AND entity_id = $1 RETURNING list_id, added_by, created_at`, id.UUID); err != nil {
+		return storekit.ArchiveCascade{}, fmt.Errorf("drop the account's list memberships: %w", err)
+	}
+	if err := cascade.DropTags(ctx, tx,
+		`DELETE FROM taggable WHERE entity_type = 'company' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
+		return storekit.ArchiveCascade{}, fmt.Errorf("drop the account's tags: %w", err)
+	}
+	return cascade, nil
 }
 
 // A var rather than a const, for the reason contactColumns is one.

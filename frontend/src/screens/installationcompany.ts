@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useHoldsAdminRole } from "../app/capability";
@@ -14,7 +14,8 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 // onboarding signal — there is no separate "onboarded" flag that could drift
 // from the records it claims to describe. The app shell's gate, the journey
 // and the settings card share it, so one cache entry answers all of them.
-// Only an admin asks: the read is admin-only (contacts'
+// The rail's brand block does not: it reads /me's installation_brand, which
+// every seat receives. Only an admin asks: the read is admin-only (contacts'
 // requireAnchorAdministrator), so any other seat's request can only be refused.
 export function useCompany(enabled: boolean) {
   const isAdmin = useHoldsAdminRole();
@@ -32,6 +33,16 @@ export function useCompany(enabled: boolean) {
       return data;
     },
   });
+}
+
+// storeCompany writes a saved profile into the company entry and refreshes /me,
+// whose installation_brand is the rail's copy of the same name and marks.
+export function storeCompany(
+  client: QueryClient,
+  profile: CompanyProfile | null,
+): void {
+  client.setQueryData(["company"], profile);
+  void client.invalidateQueries({ queryKey: ["me"] });
 }
 
 // Whether the installation has described itself, or undefined until that is

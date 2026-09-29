@@ -53,6 +53,11 @@
 .choicelist-label {
   color: var(--textPrimary);
 }
+/* A refused answer dims with its row (`.checkfield` in atoms.css): the label's
+   own colour would otherwise keep it at full strength beside its reason. */
+.choicelist-choice:has(input:disabled) .choicelist-label {
+  color: inherit;
+}
 
 /*
  * `cards`: every answer a plate, the chosen one a selected card.

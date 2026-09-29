@@ -54,15 +54,16 @@ A deal that went cold is still open unless someone closed it. Margince marks an 
 If the deal was closed as lost, reopen it instead. Also called: revive, re-engage, stale deal.
 
 ### How do I change the pipeline stages?
-To add, rename, reorder or remove stages, open the account menu → **Settings** → **Pipelines** (in the **Sales** group).
-1. On the pipeline, choose **New stage**, or **Edit stage** on an existing one.
-2. Fill **Name**, **Stage type** (Open, Won or Lost), **Win probability** (0 to 100) and **Position**, its place in the ladder.
-3. To delete a stage, choose **Remove** → **Remove stage**. Move its deals off it first.
-A role that cannot edit pipelines sees "Read-only. Your role cannot change pipelines or stages." An agent is always refused. Also called: deal stages, sales process, customise the pipeline.
+To add, rename, reorder or remove stages, open the account menu → **Settings** → **Pipelines** (in the **Sales** group) and choose the pipeline in the list.
+1. To add a stage, choose **New stage** and fill **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100). A new open stage goes after the other open stages.
+2. To change a stage, choose **Edit stage** on its row.
+3. To reorder, drag an open stage by its handle, or focus the handle and press the up or down arrow. The order is saved when you let go, and **Undo** in the confirmation puts it back. Won and Lost always stay after the open stages.
+4. To delete a stage, choose **Remove** → **Remove stage**. Move its deals off it first.
+A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only. Your role cannot change pipelines or stages." An agent is always refused. Also called: deal stages, sales process, customise the pipeline, reorder stages.
 
 ### How do I create another pipeline?
 To add a pipeline, open **Settings** → **Pipelines** and choose **New pipeline**.
-Give it a **Name**, choose **Default** or **Not default**, then add stages with **New stage**. New deals need a default pipeline. To stop using a pipeline, choose **Retire**: it leaves pickers and new-deal forms, its deals keep their stage and history, and **Restore** brings it back. The default pipeline cannot be retired until another one is the default. Margince does not delete pipelines. Also called: second sales process, separate pipeline.
+Give it a **Name** and choose **Default** or **Not default**. It starts with a Won and a Lost stage, so add its open stages with **New stage**. The list at the top shows every pipeline with the shape of its stages; drag one by its handle to change the order pipelines are offered in, and choose **Make default** on a pipeline to make new deals go there. New deals need a default pipeline. To stop using a pipeline, choose **Retire**: it leaves pickers and new-deal forms, its deals keep their stage and history, and **Restore** brings it back. The default pipeline cannot be retired until another one is the default. Margince does not delete pipelines. Also called: second sales process, separate pipeline.
 
 ### How is the weighted pipeline value calculated?
 The weighted value of a deal in Margince is its value multiplied by its stage's **Win probability**, rounded per deal. A column's or report's weighted total is the sum of those rounded figures.

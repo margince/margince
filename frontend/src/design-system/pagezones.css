@@ -115,6 +115,19 @@
 .page-zones > * {
   min-width: 0;
 }
+/* A card's verbs in a rail each take the column's width, stacked at the row's
+   own gap: side by side, two verbs wrapped wherever their labels happened to
+   break, so a rail's cards disagreed about whether its verbs share a line. */
+.page-zones-rail-column .card-actions,
+.page-zones-aside-column .card-actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+/* A refused verb keeps its reason under it; the button still fills the row. */
+.page-zones-rail-column .card-actions > .btn-with-reason,
+.page-zones-aside-column .card-actions > .btn-with-reason {
+  align-items: stretch;
+}
 /* Beside the work rather than under it, the pane is a fixed track, so its cards
    keep the OPEN width while that track travels and the column clips them: a
    card that re-wraps a dozen times on its way out reads as a smear rather than

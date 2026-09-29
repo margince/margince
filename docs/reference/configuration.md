@@ -408,6 +408,13 @@ same relay and the same sealed `email.smtp.password` for itself. A worker booted
 without `email.enabled` measures every rep's week and mails none; the review is
 on Home either way, and the boot line says which posture this process is in.
 
+**The privacy notice and the confirm links leave through the same relay.** The
+worker hands them to `email.smtp`, never to a rep's connected mailbox, because
+each carries a single-use link to the contact's own record. Without the relay
+both answer "cannot send mail" and a privacy-notice duty stays open. Which mail
+takes which path, and the `email:` block itself:
+[how-to/set-up-outbound-mail.md](../how-to/set-up-outbound-mail.md).
+
 **One attempt per rep per week, and the column says so.** `weekly_review.mail_attempted_at`
 is written *before* the relay is dialled, so every later tick of the six-hourly
 pass finds the attempt spent and sends nothing. That bounds duplicates at the

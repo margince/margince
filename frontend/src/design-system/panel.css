@@ -161,13 +161,13 @@
  * panel body it drew a 92px centred plate inside a 720px card to say one line
  * ("Outbound webhooks are not enabled on this deployment"), which reads as the
  * loudest thing on a page whose other cards are lists of one-line rows. The
- * words are the whole content, so the plate pays for a body's interval and no
- * more, and it reads from the left like the prose it is.
+ * body around it already pays the card's interval, so the sentence adds none
+ * and reads from the left like the prose it is.
  *
  * `settingrow.css` holds the same cap for an empty state inside a row. Two
  * parents, one reading. */
 .panel-body > .empty {
-  padding: var(--space-4) 0;
+  padding: 0;
   text-align: left;
   /* The body is already a card: a second ground under one grey sentence, with
      the text flush to its edge, read as a plate that had lost its padding. */

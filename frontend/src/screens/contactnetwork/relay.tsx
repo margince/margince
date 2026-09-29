@@ -69,7 +69,7 @@ export function RelayPanel({
           answer window and belongs only to the step that has one. */}
         {ask && owner ? (
           <p className="pn-relay-owner">
-            <Avatar name={owner} size="sm" />
+            <Avatar name={owner} identity={ownerIdOf(ask) ?? owner} size="sm" />
             <span>{t("contact.intro.handoffOwner", { name: owner })}</span>
             {ask.status === "requested" ? (
               <span className="pn-relay-due t-caption">
@@ -103,6 +103,22 @@ export function RelayPanel({
  * replace them with another — a handoff that changed hands on screen while
  * nothing had happened.
  */
+/**
+ * The seat behind `ownerOf`'s name, by the same statuses, so the chip keys on
+ * the colleague rather than on the words. Undefined where the name is a noun.
+ */
+function ownerIdOf(ask: IntroRequest): string | undefined {
+  switch (ask.status) {
+    case "requested":
+      return ask.introducer_user_id;
+    case "accepted":
+    case "name_drop_approved":
+      return ask.requester_user_id;
+    default:
+      return undefined;
+  }
+}
+
 export function ownerOf(
   ask: IntroRequest,
   t: ReturnType<typeof useT>,

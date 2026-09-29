@@ -98,7 +98,10 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		return nil
 	}
 	facts := &crmcontracts.WorklistDealFacts{
-		StageId:              item.Deal.StageId,
+		StageId: item.Deal.StageId,
+		// Carried, never multiplied: the contract states expected_minor_base is
+		// the deal's own money and this is a property of the stage it sits in.
+		WinProbability:       item.Deal.WinProbability,
 		CloseDateProvisional: item.Deal.CloseDateProvisional,
 		ForecastCategory:     item.Deal.ForecastCategory,
 		OwnerId:              item.Deal.OwnerId,

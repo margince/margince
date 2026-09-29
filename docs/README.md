@@ -96,6 +96,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md) — point the AI lanes at a local Ollama and enrich a company with no cloud key.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md) — the technical lookup: what DNS, certificate logs and a homepage fingerprint write onto a company, what triggers it, and the one setting that turns it on.
 - [check-a-vat-number.md](how-to/check-a-vat-number.md) — ask the EU register whether a company's stated VAT ID is real, read the receipt a tax authority accepts, and the one setting that turns it on.
+- [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md) — which mail goes out through a rep's connected mailbox and which through the installation's SMTP relay, the `email:` block that configures the relay, and what the privacy notice, confirm links and password reset do without it.
 - [connect-telegram.md](how-to/connect-telegram.md) — bind a workspace-level Telegram bot for pull ingress and governed replies.
 - [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md) — import your own `Connections.csv` as graph substrate, and read the reach it buys.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.

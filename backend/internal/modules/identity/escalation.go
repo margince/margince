@@ -143,6 +143,15 @@ func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, actor Iden
 	if err != nil {
 		return err
 	}
+	return callerOutranks(actor, target, reach)
+}
+
+// callerOutranks decides the ceiling over grants already read. The roster's
+// allowed actions ask it too, so the offer and the write share one answer.
+func callerOutranks(actor Identity, target seatGrants, reach targetReach) error {
+	if actor.hasRole(roleAdmin) {
+		return nil
+	}
 	if slices.Contains(target.roles, roleAdmin) {
 		return apperrors.ErrPermissionDenied
 	}
@@ -291,16 +300,33 @@ func refuseUnlessCallerMayAssign(ctx context.Context, tx pgx.Tx, actor Identity,
 // would hand that account its grants again without any assignment check, so
 // the member is given a live role first.
 func refuseWhileHoldingArchivedRole(ctx context.Context, tx pgx.Tx, userID ids.UserID) error {
-	var held bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id
-		  WHERE ra.user_id = $1 AND r.archived_at IS NOT NULL)`, userID).Scan(&held); err != nil {
+	holders, err := archivedRoleHolders(ctx, tx, []ids.UUID{userID.UUID})
+	if err != nil {
 		return err
 	}
-	if held {
+	if holders[userID.UUID] {
 		return errArchivedRoleHeld
 	}
 	return nil
+}
+
+// archivedRoleHolders reports which of these members hold an archived role.
+func archivedRoleHolders(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]bool, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT DISTINCT ra.user_id FROM role_assignment ra JOIN role r ON r.id = ra.role_id
+		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NOT NULL`, users)
+	if err != nil {
+		return nil, err
+	}
+	holders, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]bool, len(holders))
+	for _, holder := range holders {
+		out[holder] = true
+	}
+	return out, nil
 }
 
 // lockAuthorization serializes every write that decides, or changes, who may

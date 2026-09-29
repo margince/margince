@@ -313,6 +313,7 @@ function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
                   <AvatarStack
                     contacts={colleagues.map((route) => ({
                       name: route.display_name,
+                      identity: route.user_id,
                     }))}
                   />
                 </>

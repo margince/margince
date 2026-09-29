@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { Badge, EmptyState, SectionHeader } from "./atoms";
 import { DataTable } from "./datatable";
+import { Meter } from "./readings";
 
 // A generic component takes no `component` here: Storybook would have to infer
 // `Row` from nothing to derive the args table.
@@ -103,4 +104,104 @@ export const Tables: Story = {
       <EmptyState>No deals in this pipeline yet.</EmptyState>
     </div>
   ),
+};
+
+type DemoStage = {
+  id: string;
+  stage: string;
+  deals: number;
+  // Whole euros for the bar, and the same figures already spelled for the
+  // cells — a story shows the table, not a formatter.
+  open: number;
+  weighted: number;
+  openText: string;
+  weightedText: string;
+};
+
+const DEMO_STAGES: DemoStage[] = [
+  {
+    id: "st_1",
+    stage: "Qualify",
+    deals: 14,
+    open: 96_400,
+    weighted: 19_280,
+    openText: "€96,400.00",
+    weightedText: "€19,280.00",
+  },
+  {
+    id: "st_2",
+    stage: "Proposal sent",
+    deals: 7,
+    open: 88_500,
+    weighted: 53_100,
+    openText: "€88,500.00",
+    weightedText: "€53,100.00",
+  },
+  {
+    id: "st_3",
+    stage: "Contract sent",
+    deals: 2,
+    open: 27_800,
+    weighted: 25_020,
+    openText: "€27,800.00",
+    weightedText: "€25,020.00",
+  },
+];
+
+// Figures set against the end of their column, heading included, and one
+// column that grows to hold a bar drawn against the largest row, the weighted
+// part solid inside the open value. The bar is aria-hidden because the two
+// cells beside it already say both of its figures; its heading still names it.
+export const FiguresAndABar: Story = {
+  render: () => {
+    const scale = Math.max(...DEMO_STAGES.map((row) => row.open));
+    return (
+      <DataTable
+        label="Open deals by stage"
+        columns={[
+          {
+            key: "stage",
+            header: "Stage",
+            render: (row: DemoStage) => row.stage,
+          },
+          {
+            key: "deals",
+            header: "Deals",
+            align: "end",
+            render: (row: DemoStage) => row.deals,
+          },
+          {
+            key: "bar",
+            header: "Weighted share",
+            grow: true,
+            render: (row: DemoStage) => (
+              <div aria-hidden="true">
+                <Meter
+                  value={row.open}
+                  part={row.weighted}
+                  max={scale}
+                  label={row.stage}
+                  dense
+                />
+              </div>
+            ),
+          },
+          {
+            key: "open",
+            header: "Open value",
+            align: "end",
+            render: (row: DemoStage) => row.openText,
+          },
+          {
+            key: "weighted",
+            header: "Weighted",
+            align: "end",
+            render: (row: DemoStage) => row.weightedText,
+          },
+        ]}
+        rows={DEMO_STAGES}
+        rowKey={(row) => row.id}
+      />
+    );
+  },
 };

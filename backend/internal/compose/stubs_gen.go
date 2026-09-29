@@ -467,6 +467,18 @@ func (stubs) PreviewBulkChange(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewBulkChange")
 }
 
+func (stubs) GetBulkChange(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetBulkChange")
+}
+
+func (stubs) UndoBulkChange(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.UndoBulkChangeParams) {
+	httperr.NotImplemented(w, r, "UndoBulkChange")
+}
+
+func (stubs) PreviewBulkUndo(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "PreviewBulkUndo")
+}
+
 func (stubs) ListMyCaptureActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMyCaptureActivityParams) {
 	httperr.NotImplemented(w, r, "ListMyCaptureActivity")
 }
@@ -1971,6 +1983,10 @@ func (stubs) CreatePipeline(w nethttp.ResponseWriter, r *nethttp.Request, params
 	httperr.NotImplemented(w, r, "CreatePipeline")
 }
 
+func (stubs) ReorderPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ReorderPipelinesParams) {
+	httperr.NotImplemented(w, r, "ReorderPipelines")
+}
+
 func (stubs) ArchivePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchivePipelineParams) {
 	httperr.NotImplemented(w, r, "ArchivePipeline")
 }
@@ -1985,6 +2001,10 @@ func (stubs) UpdatePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) RestorePipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RestorePipeline")
+}
+
+func (stubs) ReorderStages(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ReorderStagesParams) {
+	httperr.NotImplemented(w, r, "ReorderStages")
 }
 
 func (stubs) GetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Request) {

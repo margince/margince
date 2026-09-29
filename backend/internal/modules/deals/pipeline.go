@@ -53,6 +53,9 @@ func (s *Store) CreatePipeline(ctx context.Context, in CreatePipelineInput) (crm
 // atomic bootstrap seeds defaults in the same transaction that mints the
 // workspace (C5), so a seed failure rolls the whole tenant back.
 func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (crmcontracts.Pipeline, error) {
+	if err := checkNewLadder(in.Stages); err != nil {
+		return crmcontracts.Pipeline{}, err
+	}
 	id := ids.New[ids.PipelineKind]()
 	_, err := tx.Exec(ctx,
 		`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, $2, $3, $4)`,
@@ -130,44 +133,48 @@ func (s *Store) ListPipelines(ctx context.Context, archived storekit.ArchivedFil
 	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
 		return nil, err
 	}
+	var out []crmcontracts.Pipeline
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		out, err = listPipelinesTx(ctx, tx, archived)
+		return err
+	})
+	return out, err
+}
+
+// listPipelinesTx is the catalog read inside a caller's transaction, so a write
+// that reorders the catalog answers with what it committed.
+func listPipelinesTx(ctx context.Context, tx pgx.Tx, archived storekit.ArchivedFilter) ([]crmcontracts.Pipeline, error) {
 	archivedFilter := ""
 	if archived == storekit.LiveOnly {
 		archivedFilter = liveRowsClause
 	}
-	var out []crmcontracts.Pipeline
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			`SELECT id FROM pipeline WHERE `+whereSeed+archivedFilter+` ORDER BY position, created_at`)
-		if err != nil {
-			return err
-		}
-		var pipelineIDs []ids.PipelineID
-		for rows.Next() {
-			var id ids.PipelineID
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
-				return err
-			}
-			pipelineIDs = append(pipelineIDs, id)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
-
-		for _, id := range pipelineIDs {
-			p, err := readPipelineWith(ctx, tx, id, archived)
-			if err != nil {
-				return err
-			}
-			out = append(out, p)
-		}
-		return nil
-	})
-	if out == nil {
-		out = []crmcontracts.Pipeline{}
+	rows, err := tx.Query(ctx,
+		`SELECT id FROM pipeline WHERE `+whereSeed+archivedFilter+` ORDER BY position, created_at`)
+	if err != nil {
+		return nil, err
 	}
-	return out, err
+	var pipelineIDs []ids.PipelineID
+	for rows.Next() {
+		var id ids.PipelineID
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		pipelineIDs = append(pipelineIDs, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	out := []crmcontracts.Pipeline{}
+	for _, id := range pipelineIDs {
+		p, err := readPipelineWith(ctx, tx, id, archived)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
 }
 
 // DefaultPipeline returns the workspace's seeded default.

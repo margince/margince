@@ -75,8 +75,8 @@ func (e *forecastEnv) freezeWorkspace(t *testing.T) ids.UUID {
 	return id
 }
 
-// seedDealClosingWithin plants a priced open deal expected two days from now,
-// so it falls in the current quarter whatever day the suite runs on.
+// seedDealClosingWithin plants a priced open deal expected today, the one day
+// always inside the quarter freezeWorkspace resolves.
 func (e *forecastEnv) seedDealClosingWithin(t *testing.T, name string, owner *ids.UUID, amountMinor int64) {
 	t.Helper()
 	e.seedDealPricedIn(t, name, owner, amountMinor, "EUR")
@@ -91,8 +91,25 @@ func (e *forecastEnv) seedDealPricedIn(t *testing.T, name string, owner *ids.UUI
 	t.Helper()
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency,
 			expected_close_date, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, (now() + interval '2 days')::date, 'manual', 'human:x')`,
-		name, e.pipeline, e.stages[20], owner, amountMinor, currency)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'manual', 'human:x')`,
+		name, e.pipeline, e.stages[20], owner, amountMinor, currency, e.forecastToday(t))
+}
+
+// forecastToday is today as the quarter's own period reads it, in the
+// installation's timezone rather than the database session's.
+func (e *forecastEnv) forecastToday(t *testing.T) time.Time {
+	t.Helper()
+	var today time.Time
+	store := forecasting.NewStore(InstallationDB(e.Pool))
+	if err := store.InTx(snapshotWriterCtx(e.WS), func(ctx context.Context, tx pgx.Tx) error {
+		now := time.Now()
+		period, _, err := ForecastPeriodAt(ctx, tx, forecasting.PeriodQuarter, now)
+		today = period.LocalDay(now)
+		return err
+	}); err != nil {
+		t.Fatalf("resolving the forecast quarter's today: %v", err)
+	}
+	return today
 }
 
 // writerUser is the seat snapshotWriterCtx acts as.

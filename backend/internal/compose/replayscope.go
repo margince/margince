@@ -104,6 +104,11 @@ const (
 	// contract.
 	probeDealRoom = "deal_room"
 
+	// probeBulkBatch keys the bulk engine's own probe. A batch's answer names
+	// the records it left alone, and only the batch's stored result says
+	// which, so the probe reads it back (bulkwithhold.go).
+	probeBulkBatch = "bulk_batch"
+
 	// The fields a body names another record by, spelled where the table that
 	// uses them is.
 	offerDealField        = "deal_id"
@@ -207,8 +212,12 @@ var replayableOperations = map[string]replayTarget{
 	"PATCH /v1/projects/{id}":        {object: tableProject, table: tableProject, idPath: "id"},
 	"POST /v1/projects/{id}/advance": {object: tableProject, table: tableProject, idPath: "id"},
 	"POST /v1/bulk/execute": {
-		objectNote: "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
-		rowNote:    "the response is a batch id, a count and the ids the caller itself named with why each was left alone; it carries no record",
+		objectNote:  "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
+		moduleProbe: probeBulkBatch, idPath: "batch_id",
+	},
+	"POST /v1/bulk/{id}/undo": {
+		objectNote:  "one route over three record types: the undo was gated per record on the caller's grant and write authority when it ran",
+		moduleProbe: probeBulkBatch, idPath: "batch_id",
 	},
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
@@ -302,7 +311,13 @@ var replayableOperations = map[string]replayTarget{
 	},
 	"POST /v1/pipelines":       {object: objectPipeline, rowNote: "pipeline has no owner and is governed by object grants only (auth.EnsureVisible's own note)"},
 	"PATCH /v1/pipelines/{id}": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
-	"POST /v1/stages":          {object: objectPipeline, rowNote: noOwnerStage},
+	// A catalog reorder retried after a lost answer replays rather than laying
+	// the same order over one somebody set since.
+	"PUT /v1/pipelines/order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
+	// A stage reorder moves the version its If-Match is judged against, so a
+	// retry must replay rather than re-execute into its own version_skew.
+	"PUT /v1/pipelines/{id}/stage-order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
+	"POST /v1/stages":                    {object: objectPipeline, rowNote: noOwnerStage},
 	// A transition's automation rule is pipeline config, governed by the
 	// pipeline's object grant and owned by nobody. A retried save must replay:
 	// re-executing would bump the row's version, so an admin's own retry would

@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -27,7 +27,18 @@ export function PurgeDialog({
   const t = useT();
   const headingId = useId();
   const purge = usePurgeExclusion();
-  const outcome = purge.data;
+  // Held here rather than read off purge.data, which React Query clears the
+  // moment the next mutation starts. Read from there, pressing "Delete
+  // permanently" dropped the preview the reader had just been shown and
+  // re-rendered the intro and the Check-first button underneath the
+  // confirmation they were in the middle of — and after an error the preview
+  // stayed gone, so the dialog forgot what it had told them.
+  const [outcome, setOutcome] = useState<PurgeOutcome | null>(null);
+  useEffect(() => {
+    if (purge.data) {
+      setOutcome(purge.data);
+    }
+  }, [purge.data]);
   // A preview has been seen when one came back saying so; the button below
   // then asks for the real thing.
   const previewed = outcome?.preview === true;
@@ -153,6 +164,18 @@ function PurgeReceipt({ outcome }: Readonly<{ outcome: PurgeOutcome }>) {
           {plural("capturePurge.keptRequest", kept.under_request, {
             count: n(kept.under_request),
           })}
+        </p>
+      )}
+      {/* Its own sentence and never folded into the statutory one. The shield
+          is the same act; the basis is not, and a reader told "commercial
+          correspondence" has been given a reason nobody established. */}
+      {kept.under_undetermined_floor > 0 && (
+        <p>
+          {plural(
+            "capturePurge.keptUndetermined",
+            kept.under_undetermined_floor,
+            { count: n(kept.under_undetermined_floor) },
+          )}
         </p>
       )}
     </div>

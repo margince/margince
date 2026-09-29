@@ -23,6 +23,7 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
     id: "d2",
     name: "Fabrikam expansion",
     company: "Acme GmbH",
+    companyId: "o-1",
     valueMinor: 33_000,
     currency: "EUR",
     ageMs: 9 * DAY_MS,

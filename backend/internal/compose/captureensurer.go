@@ -13,13 +13,16 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -48,7 +51,13 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 	return contacts.NewStore(InstallationDB(pool)).
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
-		WithVatCheckEnqueue(boundVatCheckEnqueue())
+		WithVatCheckEnqueue(boundVatCheckEnqueue()).
+		// A captured contact can take a lead over (promoteheld.go), and a
+		// promotion carries the lead's stops and consent links or refuses —
+		// wired as the server's store wires them (serverassembly.go).
+		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
+		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
+			introductions.NewStore(InstallationDB(pool), time.Now))
 }
 
 // contactsEnsurer adapts the contacts module's auto-create engine onto

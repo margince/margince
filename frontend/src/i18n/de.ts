@@ -2049,7 +2049,7 @@ export const de = {
   "visibility.workspace": "Geteilt",
   "visibility.participants": "Beteiligte",
   "visibility.selected": "Ausgewählte",
-  "visibility.private": "Nur du",
+  "visibility.private": "Privat",
   "visibility.withheld": "Zurückgehalten",
   "email.access.unnamedMember": "Ehemaliges Nutzerkonto",
   "email.move.needsReply": "Antwort nötig",
@@ -3015,6 +3015,8 @@ export const de = {
   "bulk.assign": "Zuständigkeit zuweisen",
   "bulk.archive": "Archivieren",
   "bulk.titleReassign": "Zuständigkeit für ausgewählte {unit} ändern?",
+  "bulk.titleUndo": "Änderung an diesen {unit} rückgängig machen?",
+  "bulk.confirmUndo": "Änderung rückgängig machen",
   "bulk.titleArchive": "Ausgewählte {unit} archivieren?",
   "bulk.checking": "Auswahl wird geprüft…",
   "bulk.affects_one":
@@ -3041,6 +3043,12 @@ export const de = {
   "bulk.reason.anchor_company": "Das eigene Unternehmen wird nie archiviert",
   "bulk.reason.refused": "Für diesen Datensatz nicht erlaubt",
   "bulk.reason.not_previewed": "Nicht in der bestätigten Vorschau",
+  "bulk.reason.changed_since_batch": "Seit der Änderung erneut bearbeitet",
+  "bulk.reason.merged": "In einen anderen Datensatz zusammengeführt",
+  "bulk.reason.erased": "Personenbezogene Daten wurden gelöscht",
+  "bulk.reason.value_taken":
+    "E-Mail oder Domain gehört jetzt einem anderen Datensatz",
+  "bulk.reason.no_previous_owner": "Hatte vorher keine Zuständigkeit",
   "bulk.refusal.sole_project_company":
     "Einziges Unternehmen eines laufenden Projekts",
   "bulk.refusal.locked": "Legal Hold oder Aufbewahrung aktiv",
@@ -3056,6 +3064,16 @@ export const de = {
   "bulk.doneDeals_other": "{count} Deals geändert.",
   "bulk.doneSkipped_one": "{count} blieb unverändert.",
   "bulk.doneSkipped_other": "{count} blieben unverändert.",
+  "bulk.undoneContacts_one": "{count} Kontakt zurückgesetzt.",
+  "bulk.undoneContacts_other": "{count} Kontakte zurückgesetzt.",
+  "bulk.undoneCompanies_one": "{count} Unternehmen zurückgesetzt.",
+  "bulk.undoneCompanies_other": "{count} Unternehmen zurückgesetzt.",
+  "bulk.undoneDeals_one": "{count} Deal zurückgesetzt.",
+  "bulk.undoneDeals_other": "{count} Deals zurückgesetzt.",
+  "bulk.undoLeftBehind_one":
+    "{count} Verknüpfung, Tag oder Listenzuordnung kam nicht zurück.",
+  "bulk.undoLeftBehind_other":
+    "{count} Verknüpfungen, Tags oder Listenzuordnungen kamen nicht zurück.",
 
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
@@ -3860,32 +3878,44 @@ export const de = {
   "log.saving": "Wird erfasst…",
 
   "recordAccess.contact.title": "Wer diesen Kontakt sehen kann",
-  "recordAccess.contact.privateToYou":
-    "Privat für das zuständige Teammitglied. Sonst kann niemand im Unternehmen diesen Kontakt sehen, auch keine Teammitglieder und keine Admins.",
   "recordAccess.contact.shared":
     "Alle Nutzenden im Unternehmen können diesen Kontakt sehen.",
-  "recordAccess.contact.privateTip":
-    "Nur du kannst diesen Kontakt sehen. Teile ihn, damit alle Nutzenden ihn sehen.",
-  "recordAccess.contact.share": "Mit allen Nutzenden teilen",
+  "recordAccess.contact.privateYours":
+    "Nur du und die Nutzenden oder Teams, mit denen er geteilt wurde, können diesen Kontakt sehen.",
+  "recordAccess.contact.privateOf":
+    "Privat für {owner}. Du kannst diesen Kontakt sehen, weil er mit dir oder deinem Team geteilt wurde.",
+  "recordAccess.contact.privateOfOwner":
+    "Privat für das zuständige Teammitglied. Du kannst diesen Kontakt sehen, weil er mit dir oder deinem Team geteilt wurde.",
   "recordAccess.contact.published":
     "Dieser Kontakt ist jetzt für alle Nutzenden sichtbar.",
-  "recordAccess.contact.makePrivate": "Privat machen",
   "recordAccess.contact.madePrivate":
-    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Nutzende, mit denen er direkt geteilt wurde, behalten den Zugriff.",
+    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Nutzende und Teams, mit denen er geteilt wurde, behalten den Zugriff.",
+  "recordAccess.contact.leftYourAccess":
+    "Dieser Kontakt ist jetzt privat für das zuständige Teammitglied. Du hast keinen Zugriff mehr darauf.",
   "recordAccess.company.title": "Wer dieses Unternehmen sehen kann",
-  "recordAccess.company.privateToYou":
-    "Privat für das zuständige Teammitglied. Sonst kann niemand im Unternehmen diesen Datensatz sehen, auch keine Teammitglieder und keine Admins.",
   "recordAccess.company.shared":
     "Alle Nutzenden im Unternehmen können diesen Datensatz sehen.",
-  "recordAccess.company.privateTip":
-    "Nur du kannst dieses Unternehmen sehen. Teile es, damit alle Nutzenden es sehen.",
-  "recordAccess.company.share": "Mit allen Nutzenden teilen",
+  "recordAccess.company.privateYours":
+    "Nur du und die Nutzenden oder Teams, mit denen es geteilt wurde, können dieses Unternehmen sehen.",
+  "recordAccess.company.privateOf":
+    "Privat für {owner}. Du kannst dieses Unternehmen sehen, weil es mit dir oder deinem Team geteilt wurde.",
+  "recordAccess.company.privateOfOwner":
+    "Privat für das zuständige Teammitglied. Du kannst dieses Unternehmen sehen, weil es mit dir oder deinem Team geteilt wurde.",
   "recordAccess.company.published":
     "Dieses Unternehmen ist jetzt für alle Nutzenden sichtbar.",
-  "recordAccess.company.makePrivate": "Privat machen",
   "recordAccess.company.madePrivate":
     "Dieses Unternehmen ist jetzt privat für das zuständige Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
-  "recordAccess.whoHasAccess": "Wer Zugriff hat",
+  "recordAccess.company.leftYourAccess":
+    "Dieses Unternehmen ist jetzt privat für das zuständige Teammitglied. Du hast keinen Zugriff mehr darauf.",
+  "recordAccess.option.owner": "Nur das zuständige Teammitglied",
+  "recordAccess.option.ownerHint":
+    "Nutzende und Teams, mit denen geteilt wurde, behalten den Zugriff.",
+  "recordAccess.option.ownerHintNotYours":
+    "Du verlierst den Zugriff, es sei denn, der Datensatz ist mit dir oder deinem Team geteilt.",
+  "recordAccess.option.ownerNeeded":
+    "Lege zuerst ein zuständiges Teammitglied fest.",
+  "recordAccess.option.workspace": "Alle Nutzenden im Unternehmen",
+  "recordAccess.manage": "Zugriff verwalten",
   "whoCanSee.title": "Wer diesen Datensatz sehen kann",
   "whoCanSee.group.owner": "Zuständig",
   "whoCanSee.group.shared": "Direkt geteilt",
@@ -4214,6 +4244,7 @@ export const de = {
     "Nur offene Deals, in {currency} umgerechnet, ungewichtet und gewichtet",
   "analytics.currency": "Währung",
   "analytics.count": "Offene Deals",
+  "analytics.closedDeals": "Abgeschlossene Deals",
   "analytics.unweighted": "Ungewichtet",
   "analytics.weighted": "Gewichtet",
   "analytics.priced": "{priced} von {total} bepreist",
@@ -4373,8 +4404,8 @@ export const de = {
   "analytics.reportProjectsGoneQuiet": "Verstummte Projekte",
   "analytics.projects": "Projekte",
   "analytics.project": "Projekt",
-  "analytics.openDealValue": "Offener Deal-Wert ({currency})",
-  "analytics.wonDealValue": "Gewonnener Deal-Wert ({currency})",
+  "analytics.openDealValue": "Offener Deal-Wert · {currency}",
+  "analytics.wonDealValue": "Gewonnener Deal-Wert · {currency}",
   "analytics.openCommitments": "Offen",
   "analytics.overdueCommitments": "Überfällig",
   "analytics.quietSince": "Ruhig seit",
@@ -4562,6 +4593,8 @@ export const de = {
     "Einschätzung vom {date} · entspricht den Belegen",
   "forecast.evidence": "Belege",
   "forecast.evidenceDetail": "Bestätigte Abschlussdaten",
+  "forecast.bestCaseAdds": "Zusatz im Best Case",
+  "forecast.makeup": "So setzt sich der Zeitraum zusammen",
   "forecast.alreadyWon": "Bereits gewonnen",
   "forecast.alreadyWonDetail": "In diesem Zeitraum abgeschlossen",
   "forecast.updateCall": "Einschätzung aktualisieren",
@@ -4584,7 +4617,6 @@ export const de = {
   "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Forecast-Kategorien",
   "analytics.reportOpenByCompany": "Offene Deals pro Unternehmen",
-  "analytics.forecastBannerTitle": "So liest du diese Kacheln",
   "analytics.forecastBanner":
     "Jede Kachel zeigt die Rohsumme und darunter die nach Wahrscheinlichkeit gewichtete Summe. Gerundet wird pro Deal, daher stimmt sie immer mit „Diese Zahl erklären“ überein.",
   "analytics.company": "Unternehmen",
@@ -5410,11 +5442,9 @@ export const de = {
   "settings.pipelinesSub":
     "Phasen, die ein Deal durchläuft, eine Abfolge pro Pipeline.",
   "pipeline.new": "Neue Pipeline",
-  "pipeline.edit": "Pipeline bearbeiten",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
   "pipeline.notDefault": "Kein Standard",
-  "pipeline.position": "Position",
   "pipeline.retired": "Stillgelegt",
   "pipeline.retire": "Stilllegen",
   "pipeline.retireConfirm":
@@ -5424,6 +5454,29 @@ export const de = {
   "pipeline.retired.done": "{name} stillgelegt",
   "pipeline.restore": "Wiederherstellen",
   "pipeline.restored": "{name} wiederhergestellt",
+  "pipeline.rename": "Umbenennen",
+  "pipeline.makeDefault": "Zum Standard machen",
+  "pipeline.defaultSet": "{name} ist jetzt Standard",
+  "pipeline.inUse": "Pipelines in Verwendung",
+  "pipeline.orderHint":
+    "Ziehe eine Pipeline am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "pipeline.handle": "{name} verschieben, {position} von {total}",
+  "pipeline.moved": "{name} auf {position} von {total} verschoben",
+  "pipeline.openStageCount_one": "{count} offene Phase",
+  "pipeline.openStageCount_other": "{count} offene Phasen",
+  "pipeline.retiredGroup_one": "{count} stillgelegte Pipeline",
+  "pipeline.retiredGroup_other": "{count} stillgelegte Pipelines",
+  "pipeline.retiredNote":
+    "Stillgelegt. In dieser Pipeline beginnen keine neuen Deals, und ihre Phasen lassen sich erst nach dem Wiederherstellen ändern.",
+  "pipeline.retireNote":
+    "Die Pipeline verschwindet aus Auswahllisten und Formularen für neue Deals. Deals darauf behalten ihre Phase.",
+  "pipeline.flow": "So bewegt sich ein Deal",
+  "pipeline.orderSaved": "Reihenfolge gespeichert",
+  "pipeline.orderRestored": "Vorherige Reihenfolge wiederhergestellt",
+  "pipeline.orderStale":
+    "Reihenfolge nicht gespeichert. Jemand anderes hat sie zuerst geändert, daher siehst du jetzt die aktuelle Reihenfolge.",
+  "pipeline.orderNotSaved":
+    "Reihenfolge nicht gespeichert. Versuche es erneut oder lade die Seite neu.",
   "stage.new": "Neue Phase",
   "stage.edit": "Phase bearbeiten",
   "stage.name": "Name",
@@ -5437,6 +5490,22 @@ export const de = {
   "stage.removeTitle": "Diese Phase entfernen?",
   "stage.removeBody":
     "„{name}“ wird aus der Pipeline entfernt, spätere Phasen rücken auf. Frühere Phasenwechsel bleiben lesbar. Verschiebe die Deals dieser Phase, bevor du sie entfernst.",
+  "stage.openGroup": "Offene Phasen",
+  "stage.closingGroup": "Abschlussphasen",
+  "stage.closingNote":
+    "Jeder Deal endet in einer davon, deshalb bleiben sie nach den offenen Phasen.",
+  "stage.closingMissing":
+    "Noch keine Phase für gewonnene oder verlorene Deals. Lege eine neue Phase dieses Typs an.",
+  "stage.orderHint":
+    "Ziehe eine Phase am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "stage.handle": "{name} verschieben, Phase {position} von {total}",
+  "stage.moved": "{name} ist jetzt Phase {position} von {total}",
+  "stage.lowerThanAbove": "Niedriger als {name} ({reading}) darüber",
+  "stage.oddsOf": "Gewinnwahrscheinlichkeit von {name}",
+  "stage.noneOpen": "Noch keine offenen Phasen",
+  "stage.noneOpenNote":
+    "Lege die erste Phase eines Deals an, vor den Abschlussphasen.",
+  "stage.added": "Phase hinzugefügt",
   "stage.criteria.title": "Austrittskriterien",
   "stage.criteria.sub":
     "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",
@@ -7441,6 +7510,8 @@ export const de = {
     "Alle, die einen Platz haben, und worauf sie jeweils zugreifen können.",
   "settings.page.teams.sub":
     "Teammitgliedschaft, die den teambezogenen Zugriff auf Datensätze bestimmt.",
+  "settings.page.roles.sub":
+    "Was jede Rolle darf und auf welche Datensätze sie zugreifen kann.",
   "settings.page.seats.sub":
     "Belegte Plätze im Verhältnis zum Lizenzumfang dieser Installation.",
   "settings.page.stageautomation.sub":
@@ -7501,6 +7572,7 @@ export const de = {
   "settings.tab.authentication": "Anmeldung und Apps",
   "settings.tab.members": "Mitglieder",
   "settings.tab.teams": "Teams",
+  "settings.tab.roles": "Rollen und Berechtigungen",
   "settings.tab.seats": "Plätze und Lizenz",
   "settings.tab.stageautomation": "Phasenautomatisierung",
   "settings.tab.pipelines": "Pipelines",
@@ -8065,6 +8137,74 @@ export const de = {
     "Eingereiht. Diese Seite aktualisiert sich, wenn der Aufbau abgeschlossen ist.",
   "settings.voice.buildStatus.pending":
     "Aufbau läuft noch. Diese Seite aktualisiert sich, wenn der Aufbau abgeschlossen ist.",
+  "roles.title": "Rollen",
+  "roles.sub":
+    "Eine Rolle legt fest, was ihre Mitglieder mit jeder Art von Datensatz und Einstellung tun dürfen und wessen Datensätze sie ändern dürfen. Vorgegebene Rollen bringt Margince mit; eine neue Rolle beginnt als Kopie einer bestehenden.",
+  "roles.readOnly": "Deine Rolle darf Rollen lesen, aber nicht ändern.",
+  "roles.showArchived": "Archivierte Rollen anzeigen",
+  "roles.showArchivedSub":
+    "Eine archivierte Rolle gewährt nichts und kann niemandem zugewiesen werden.",
+  "roles.system": "Vorgegeben",
+  "roles.archived": "Archiviert",
+  "roles.open": "Öffnen",
+  "roles.openNamed": "{name} öffnen",
+  "roles.empty": "Keine Rollen vorhanden.",
+  "roles.new": "Neue Rolle",
+  "roles.newTitle": "Neue Rolle",
+  "roles.newFrom": "Rechte kopieren von",
+  "roles.newFromHint":
+    "Die neue Rolle beginnt mit genau den Rechten dieser Rolle.",
+  "roles.newName": "Name",
+  "roles.newSubmit": "Rolle anlegen",
+  "roles.notCreated": "Rolle nicht angelegt",
+  "roles.created": "{name} angelegt",
+  "roles.detailSub":
+    "Eine Änderung gilt für alle Mitglieder mit dieser Rolle ab ihrer nächsten Anfrage.",
+  "roles.rename": "Umbenennen",
+  "roles.renameTitle": "Rolle umbenennen",
+  "roles.nameLabel": "Name",
+  "roles.renameSubmit": "Name speichern",
+  "roles.scopeTitle": "Wessen Datensätze Mitglieder ändern",
+  "roles.scopeSub":
+    "Kontakte, Unternehmen, Leads und Deals bleiben für jede Rolle lesbar, die sie lesen darf. Diese Einstellung legt fest, was Mitglieder ändern dürfen und welche Projekte sie sehen.",
+  "roles.scope.own": "Eigene",
+  "roles.scope.ownSub": "Datensätze, die dem Mitglied gehören.",
+  "roles.scope.team": "Die der Teammitglieder",
+  "roles.scope.teamSub":
+    "Datensätze, die jemandem aus den Teams des Mitglieds gehören.",
+  "roles.scope.all": "Alle",
+  "roles.scope.allSub": "Jeder Datensatz im Unternehmen.",
+  "roles.grantsSub": "Jeder Schalter speichert sofort.",
+  "roles.grantsCore": "Datensätze und Einstellungen",
+  "roles.grantsExtensions": "Erweiterungen",
+  "roles.grantsNarrowOnly":
+    "Jeder Schalter speichert sofort. Nur ein Admin kann ein Recht einschalten; du kannst Rechte ausschalten.",
+  "roles.turnOnAdminOnly": "Nur ein Admin kann ein Recht einschalten.",
+  "roles.widenAdminOnly":
+    "Nur ein Admin kann den Zugriff einer Rolle auf weitere Datensätze erweitern; du kannst ihn einschränken.",
+  "roles.objectColumn": "Objekt",
+  "roles.preview": "Vorschau, was diese Rolle sieht",
+  "roles.archive": "Rolle archivieren",
+  "roles.restore": "Rolle wiederherstellen",
+  "roles.archivedNote":
+    "Diese Rolle ist archiviert. Die Rolle gewährt nichts, und niemand kann sie erhalten, bis sie wiederhergestellt ist.",
+  "roles.archivedToast": "{name} archiviert",
+  "roles.restoredToast": "{name} wiederhergestellt",
+  "roles.notSaved": "Änderung nicht gespeichert",
+  "roles.refusal.widening":
+    "Nur ein Admin kann eine Rolle anlegen oder wiederherstellen, ein Recht einschalten oder den Zugriff auf weitere Datensätze erweitern. Du kannst eine Rolle umbenennen, ihren Zugriff einschränken oder archivieren.",
+  "roles.refusal.versionSkew":
+    "Jemand anderes hat diese Rolle geändert, während sie geöffnet war. Die Rolle zeigt jetzt diese Änderung; nimm deine erneut vor, falls sie noch zutrifft.",
+  "roles.refusal.inUse":
+    "Mitglieder, die sich anmelden können, haben diese Rolle noch. Gib ihnen zuerst eine andere Rolle und archiviere sie dann.",
+  "roles.refusal.archivedHeld":
+    "Ein Mitglied hat noch eine archivierte Rolle. Gib diesem Mitglied zuerst eine aktive Rolle.",
+  "roles.refusal.system":
+    "Eine vorgegebene Rolle kann nicht archiviert werden.",
+  "roles.refusal.adminFloor":
+    "Die Admin-Rolle behält ihre Rechte, Nutzende, Rollen und Teams zu verwalten, damit das Unternehmen immer verwaltet werden kann.",
+  "roles.refusal.nameTaken":
+    "Eine andere Rolle hat bereits diesen Namen. Wähle einen anderen.",
   "extAccess.title": "Erweiterungen und Zugriff",
   "extAccess.sub":
     "Was jede Erweiterungseinheit dieser Installation hinzufügt und welche Rollen sie nutzen dürfen. Nur für Admins.",
@@ -8831,7 +8971,8 @@ export const de = {
   "capturePurge.preview": "Erst prüfen",
   "capturePurge.confirm": "Endgültig löschen",
   "capturePurge.done": "Schließen",
-  "capturePurge.failed": "Die Löschung lief nicht",
+  "capturePurge.failed":
+    "Die Löschung wurde nicht abgeschlossen. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
   "capturePurge.wouldDestroy_one": "{count} Nachricht würde vernichtet.",
   "capturePurge.wouldDestroy_other": "{count} Nachrichten würden vernichtet.",
   "capturePurge.destroyed_one": "{count} Nachricht vernichtet.",
@@ -8853,13 +8994,17 @@ export const de = {
   "capturePurge.keptStatute_other":
     "{count} Nachrichten bleiben als Handelsbriefe erhalten, die du nicht löschen darfst.",
   "capturePurge.keptFor_one":
-    "Das Gesetz verlangt, ihn {years} Jahr aufzubewahren.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahr aufzubewahren.",
   "capturePurge.keptFor_other":
-    "Das Gesetz verlangt, ihn {years} Jahre aufzubewahren.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahre aufzubewahren.",
   "capturePurge.keptForFromYearEnd_one":
-    "Das Gesetz verlangt, ihn {years} Jahr nach Ablauf des Kalenderjahres aufzubewahren, in dem er eingegangen ist.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahr nach Ablauf des Kalenderjahres aufzubewahren, in dem sie eingegangen sind.",
   "capturePurge.keptForFromYearEnd_other":
-    "Das Gesetz verlangt, ihn {years} Jahre nach Ablauf des Kalenderjahres aufzubewahren, in dem er eingegangen ist.",
+    "Das Gesetz verlangt, solche Handelsbriefe {years} Jahre nach Ablauf des Kalenderjahres aufzubewahren, in dem sie eingegangen sind.",
+  "capturePurge.keptUndetermined_one":
+    "{count} Nachricht bleibt erhalten, weil diese Installation nicht feststellen konnte, was das Gesetz dafür verlangt. Nichts wurde aufgrund einer Regel vernichtet, die niemand lesen konnte.",
+  "capturePurge.keptUndetermined_other":
+    "{count} Nachrichten bleiben erhalten, weil diese Installation nicht feststellen konnte, was das Gesetz dafür verlangt. Nichts wurde aufgrund einer Regel vernichtet, die niemand lesen konnte.",
   "capturePurge.keptRequest_one":
     "{count} Nachricht bleibt erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
   "capturePurge.keptRequest_other":

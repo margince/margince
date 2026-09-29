@@ -12,6 +12,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -73,6 +74,31 @@ func (s *Service) refuseWhenNoSeatIsLeft(ctx context.Context, tx pgx.Tx) error {
 	if err := storekit.LockWriteIdentity(ctx, tx, seatCeilingLockEntity, seatCeilingLockIdentity); err != nil {
 		return err
 	}
+	return refuseAtSeatCeiling(ctx, tx, limit)
+}
+
+// fullSeatLeft reports whether one more full seat fits under the ceiling, for
+// the roster's offer. It takes no lock: an offer promises nothing, and the
+// write re-asks under refuseWhenNoSeatIsLeft's lock.
+func (s *Service) fullSeatLeft(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if s.seatCeiling == nil {
+		return true, nil
+	}
+	limit, capped := s.seatCeiling()
+	if !capped {
+		return true, nil
+	}
+	switch err := refuseAtSeatCeiling(ctx, tx, limit); {
+	case errors.Is(err, apperrors.ErrSeatLimitReached):
+		return false, nil
+	case err != nil:
+		return false, err
+	}
+	return true, nil
+}
+
+// refuseAtSeatCeiling counts the full seats in use against limit.
+func refuseAtSeatCeiling(ctx context.Context, tx pgx.Tx, limit int) error {
 	var used int
 	if err := tx.QueryRow(ctx, fullSeatsInUseQuery).Scan(&used); err != nil {
 		return fmt.Errorf("identity: counting full seats against the licensed ceiling: %w", err)
