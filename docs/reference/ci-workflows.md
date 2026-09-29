@@ -202,6 +202,18 @@ Every other workflow sits beside the gate, deliberately outside it:
   green over them for a month. No static rule finds the next one: "an absolute
   date in a file that never pins the clock" matches 129 files, nearly all
   harmless, so the gate is a second run rather than a pattern.
+  The **backend clock-drift** lane is the same instrument on the harder half:
+  302 backend test files date a fixture from wall time and 905 more compare
+  against Postgres' `now()`, so the shift has to reach both clocks or the
+  failures are the lane's own. It moves the RUNNER's clock, which is the only
+  shift that reaches them together — Go reads the wall clock through the vDSO,
+  so no `LD_PRELOAD` shim touches `time.Now()`, and Linux has no
+  `CLOCK_REALTIME` namespace, so the compose Postgres cannot hold a clock of its
+  own. Everything needing the network finishes before the jump, because 200 days
+  expires the TLS certificates those steps verify, and the clock is restored
+  even on failure so the runner is not handed back to the pool 200 days ahead.
+  `make backend-clock-drift` reproduces it locally under the weaker database
+  applier; `backend/internal/shared/clockskew` says what each applier reaches.
   Two jobs run **weekly** rather than daily, on their own Monday cron. The
   **PERF-3/PERF-7 budgets** seed a quarter of a million contacts twice, and
   weekly is the honest cadence for a budget nobody merges against. The
