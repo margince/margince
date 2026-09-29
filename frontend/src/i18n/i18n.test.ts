@@ -250,10 +250,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "consent.actorAgent",
   "consent.actorConnector",
   "users.agentSeat",
-  // Same reason, one level up: vi carries "AI" as the loanword throughout this
-  // catalog, so spelling out "trí tuệ nhân tạo" on the settings entry alone
-  // would make one subject read as two.
-  "settings.tab.ai",
   // "Lead" is the loanword in both de and vi — every other lead key in this
   // catalog leaves it untranslated, and the marker on the record page names
   // the same object those keys do.

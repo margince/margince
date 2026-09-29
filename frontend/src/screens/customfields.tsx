@@ -54,7 +54,7 @@ import { stable } from "../format/collate";
 // immutable cf_-prefixed API key and the pending DDL are shown before Confirm so
 // the schema change is legible, a structural-sounding label is refused up front,
 // and the 🟡 gate states that Confirm writes a live column + an audit row. This
-// is NOT the ApprovalGate (Accept/Edit/Dismiss triad) — it is a `warning` Callout,
+// is NOT the Accept/Edit/Dismiss triad — it is a `warning` Callout,
 // which is what the surface saying something about itself already looks like
 // everywhere else.
 

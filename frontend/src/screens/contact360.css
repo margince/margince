@@ -781,13 +781,6 @@
   margin-bottom: var(--space-5);
 }
 
-/* The one move the thin-record surface offers, spaced off the sentence that
-   explains why it is the move. It carried an inline `marginTop` before, which
-   is a spacing decision hidden where no stylesheet can see it. */
-.thin-log-first {
-  margin-top: var(--space-3);
-}
-
 /* The bought-data panel's heading: the vendor's mark beside its name. Aligned
    on the text baseline rather than centred, so the logo sits with the word
    instead of floating above a heading that wraps on a narrow column. */
@@ -935,12 +928,4 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-/* A line of prose in a panel body: the panel's plate already spaces it. */
-.pe-panel-text {
-  margin: 0;
-}
-.pe-thin-remediation {
-  margin: var(--space-2) 0 0;
 }

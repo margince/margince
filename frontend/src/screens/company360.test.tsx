@@ -16,12 +16,8 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import { CompanyScreen } from "./companies";
-import {
-  CommercialPanel,
-  NextSteps,
-  type SuggestionAction,
-  SuggestionsSection,
-} from "./company360";
+import { NextSteps, type SuggestionAction } from "./company360";
+import { TodayOnThisAccount } from "./companytoday";
 import { sinceLastVisitFooter } from "./companywork";
 import { SentenceList } from "./record360";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
@@ -309,17 +305,17 @@ function renderWork(three60: Company360) {
   render(sinceLastVisitFooter(three60) ?? null);
 }
 
-// The lead panel, rendered on its own: it moved out of CompanyBrief so the
-// stack could tint and box it separately, and the advice it carries is
-// exercised through it directly now.
+// The advice rows, through the brief the record page mounts them in.
 function renderSuggestions(
   three60: Company360,
   onPerform: (action: SuggestionAction) => void = () => {},
 ) {
   render(
-    <SuggestionsSection
+    <TodayOnThisAccount
       companyId="o-1"
       view={three60}
+      loading={false}
+      failed={false}
       onOpenRecord={() => {}}
       onPerform={onPerform}
     />,
@@ -1088,51 +1084,6 @@ describe("company view — an open task can be acted on", () => {
       expect(screen.getByText("Send the retrofit proposal")).toBeTruthy(),
     );
     expect(screen.queryByRole("checkbox")).toBeNull();
-  });
-});
-
-describe("CommercialPanel — a capped deals page says so", () => {
-  const openDeal = {
-    deal_id: "d-1",
-    name: "Pilot rollout",
-    status: "open" as const,
-    stalled: false,
-  };
-
-  it("names the truncation rather than reading as the whole pipeline", async () => {
-    const three60 = view({
-      deals: {
-        data: [openDeal],
-        page: { has_more: true, next_cursor: "c2" },
-        won_lifetime: { amount_minor: 0, currency: "EUR" },
-        lost_count: 0,
-      },
-    });
-    render(<CommercialPanel view={three60} />);
-    await waitFor(() => expect(screen.getByText("Pilot rollout")).toBeTruthy());
-    expect(
-      screen.getByText(
-        "More open deals than fit here. Open All deals to see the rest.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("draws no truncation notice on a page that holds every open deal", async () => {
-    const three60 = view({
-      deals: {
-        data: [openDeal],
-        page: emptyPage,
-        won_lifetime: { amount_minor: 0, currency: "EUR" },
-        lost_count: 0,
-      },
-    });
-    render(<CommercialPanel view={three60} />);
-    await waitFor(() => expect(screen.getByText("Pilot rollout")).toBeTruthy());
-    expect(
-      screen.queryByText(
-        "More open deals than fit here. Open All deals to see the rest.",
-      ),
-    ).toBeNull();
   });
 });
 

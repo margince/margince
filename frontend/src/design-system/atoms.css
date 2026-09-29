@@ -1715,57 +1715,6 @@ span.error-line {
   box-shadow: var(--focus-glow);
 }
 
-.explain {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-/* Deliberately below the .iconbtn floor: this toggle sits INSIDE a line of
-   running figures, and a 32px control there would set the line's height. The
-   min-* pair is what holds that, since a bare width/height loses to the floor
-   the shared class declares. */
-.explain-toggle {
-  width: 22px;
-  height: 22px;
-  min-inline-size: 22px;
-  min-block-size: 22px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-}
-.explain-toggle svg {
-  width: 14px;
-  height: 14px;
-}
-.explain-toggle:hover {
-  color: var(--textPrimary);
-  background: var(--bgHover);
-}
-.explain-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  min-width: 260px;
-}
-.explain-rows {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-.explain-rows li {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  justify-content: space-between;
-}
-
 .table-scroll {
   overflow-x: auto;
 }

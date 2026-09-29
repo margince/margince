@@ -101,6 +101,10 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, start 
 // provider stated: a zero start is one the calendar could not read, and the
 // stored one is better than capture time. Read from the record as delivered,
 // because captureActivity's own copy has a missing start filled with now.
+//
+// moveMeeting is the same seam WithMeetingMover carries, so the standing check
+// travels with it here too: a replay reaches the row only when the acting seat
+// already holds it.
 func (s *Sink) moveOnReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {

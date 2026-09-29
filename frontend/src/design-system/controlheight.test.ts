@@ -213,11 +213,6 @@ const ACCEPTED = new Map<string, string>([
       "and height floors come straight back off",
   ],
   ["btn-link", "the same affordance, worn by Button's link variant"],
-  [
-    "explain-toggle",
-    "sits INSIDE a line of running figures; the min-* pair is what holds it " +
-      "under the .iconbtn floor it is drawn beside",
-  ],
   ["stat-card-open", "the card's own 'open' link, not a control on it"],
   // Touch FLOORS, not second heights. Each of these stands at --controlHeight
   // for a mouse and is lifted only under `@media (pointer: coarse)`, where WCAG

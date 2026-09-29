@@ -101,8 +101,8 @@ default.
   when. One mark is open across the page at a time, for pointer and keyboard
   alike. It replaces the stack of three chips that used to sit under every value;
   the older primitives (EvidenceChip, ConfidenceMeter, ProvenanceTag) now live
-  INSIDE the mark and on the staging surfaces (StagingCard, ApprovalGate,
-  StagedProposal) — never stacked under a field again. The migration is real but
+  INSIDE the mark and on the staging surface (StagingCard) — never stacked
+  under a field again. The migration is real but
   partial: the company record page consumes the mark today while the other record
   screens still render the older primitives directly. Then the **Margince Core**
   (`margince-core*`, WDS-CORE-1..4 — one primitive, a closed five-state
