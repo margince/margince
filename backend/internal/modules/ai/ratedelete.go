@@ -27,9 +27,7 @@ type ModelRateKey struct {
 
 // DeleteModelRate removes a model's whole entry from the sheet, history
 // included; its past calls read as unpriced afterwards, never as priced at 0.
-// The key names the lane the sheet files the model under, and ErrNotFound
-// answers a key the sheet does not hold. Update is the grant, because a
-// removal corrects the sheet and no role holds delete on it.
+// Update is the grant: a removal corrects the sheet, and no role holds delete.
 func (s *RateStore) DeleteModelRate(ctx context.Context, key ModelRateKey) error {
 	key, err := prepareModelRateKey(ctx, key)
 	if err != nil {
@@ -97,10 +95,8 @@ func deleteModelRate(ctx context.Context, tx pgx.Tx, key ModelRateKey) error {
 	if len(removed) == 0 {
 		return apperrors.ErrNotFound
 	}
-	// One ledger row per price the entry held. The verb is the closed
-	// vocabulary's word for content destruction, attributed to the update grant
-	// that admitted the call; the image is the writer's own, so the history
-	// shows a removed price in the fields it was entered under.
+	// One ledger row per price the entry held, in the writer's own image, so the
+	// history shows a removed price in the fields it was entered under.
 	for _, r := range removed {
 		if _, err := storekit.Audit(ctx, tx, "erase", "ai_model_rate", r.id, r.image, nil); err != nil {
 			return fmt.Errorf("audit ai_model_rate erase: %w", err)
