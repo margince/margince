@@ -83,8 +83,8 @@ export const EditingDark: Story = {
 // for and fake are not.
 export const ProvidersOffered: Story = {
   render: story(),
-  play: async ({ canvasElement }) => {
-    const dialog = within(within(canvasElement).getByRole("dialog"));
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
     await userEvent.click(
       await dialog.findByRole("combobox", { name: "Provider" }),
     );
