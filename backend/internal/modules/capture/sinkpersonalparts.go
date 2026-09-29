@@ -31,6 +31,10 @@ import (
 // same vocabulary a bounded one uses.
 const withheldPersonalParts = "capture_personal_parts_withheld"
 
+// fieldVerdict names WHICH act made the thread private: the classifier's
+// reading, or the seat's own hand.
+const fieldVerdict = "verdict"
+
 // stripPersonalParts takes a private thread's files out of the record before
 // anything stores them, and reports how many it withheld.
 //
@@ -54,13 +58,19 @@ func stripPersonalParts(rec connector.NormalizedRecord) (connector.NormalizedRec
 //
 // A sender controls all three, and system_log is operational: the count is
 // ours, the names are theirs.
+//
+// The VERDICT rides along because the two ways a thread becomes private are
+// different acts. `held` is the classifier's reading, which somebody may
+// disagree with; `held_by_owner` is the seat saying so by hand, which nobody
+// overrules. A breadcrumb that credited the classifier for both would misstate
+// half of them, and the half it misstates is the one where a human decided.
 func (s *Sink) personalPartsWithheld(
-	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, count int,
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, count int, verdict string,
 ) error {
 	if count == 0 {
 		return nil
 	}
 	return s.logBreadcrumbTx(ctx, tx, withheldPersonalParts, rec,
-		"the classifier judged this thread private",
-		map[string]any{fieldDroppedParts: count})
+		"this thread is private",
+		map[string]any{fieldDroppedParts: count, fieldVerdict: verdict})
 }

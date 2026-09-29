@@ -226,14 +226,14 @@ func (s *Sink) finishNewActivity(
 	// the bodies are still only in memory: once stageParts has run they are in
 	// the object store, and the raw original points at them rather than
 	// carrying them.
-	private, err := threadIsPrivateTx(ctx, tx, rec)
+	private, verdict, err := threadIsPrivateTx(ctx, tx, rec)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
 	if private {
 		var withheld int
 		rec, withheld = stripPersonalParts(rec)
-		if err := s.personalPartsWithheld(ctx, tx, rec, withheld); err != nil {
+		if err := s.personalPartsWithheld(ctx, tx, rec, withheld, verdict); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}

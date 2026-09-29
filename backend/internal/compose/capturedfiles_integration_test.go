@@ -616,3 +616,57 @@ func activityExists(ctx context.Context, t *testing.T, db *database.DB, sourceID
 	}
 	return n > 0
 }
+
+// A thread the OWNER held is private by their own hand, not by the
+// classifier's reading. The files go either way; what must not happen is the
+// trail crediting a machine for a decision a human made.
+func TestAThreadHeldByItsOwnerWithholdsItsFilesToo(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+
+	threadKey := "owner-held-thread-" + tag
+	markThreadHeldByOwner(ctx, t, db, threadKey)
+
+	rec := withFiles(mailRecord("msg-owner-held-"+tag), onePDF())
+	rec.ThreadKey = threadKey
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("capture: %v", err)
+	}
+
+	if files := filesFor(ctx, t, db, "msg-owner-held-"+tag); len(files) != 0 {
+		t.Fatalf("an owner-held thread stored %d file(s)", len(files))
+	}
+	if verdict := withheldVerdict(ctx, t, db, "msg-owner-held-"+tag); verdict != "held_by_owner" {
+		t.Fatalf("the trail records %q, want the seat's own hand rather than the classifier", verdict)
+	}
+}
+
+func markThreadHeldByOwner(ctx context.Context, t *testing.T, db *database.DB, threadKey string) {
+	t.Helper()
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind, seen_addresses)
+			VALUES ($1, $2, 'held_by_owner', 'personal', ARRAY['her@example.com'])`,
+			threadKey, captureSeatID)
+		return err
+	}); err != nil {
+		t.Fatalf("marking the thread held by its owner: %v", err)
+	}
+}
+
+// withheldVerdict reads which act the breadcrumb credited.
+func withheldVerdict(ctx context.Context, t *testing.T, db *database.DB, sourceID string) string {
+	t.Helper()
+	var verdict string
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT COALESCE(detail->>'verdict', '') FROM system_log
+			 WHERE action = 'capture_personal_parts_withheld'
+			   AND detail->>'source_id' = $1
+			 ORDER BY occurred_at DESC LIMIT 1`, sourceID).Scan(&verdict)
+	}); err != nil {
+		t.Fatalf("reading the withheld breadcrumb: %v", err)
+	}
+	return verdict
+}
