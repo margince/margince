@@ -19,7 +19,7 @@ Margince is source-available, not open source. The code is public and free to re
 
 Before we can merge your pull request, we need you to accept our [Contributor License Agreement](CLA.md). A bot will prompt you on your first pull request; accepting takes one click and covers everything you contribute afterwards.
 
-We ask for this because of how Margince is licensed. We sell commercial subscriptions, we license hosting partners, and we convert each release to Apache 2.0 on schedule. Every one of those requires us to hold licensing rights over the whole codebase, including the parts other people wrote. A Developer Certificate of Origin would confirm that you wrote your code, but it would not give us those rights, and a single contribution without them would leave part of the product that we cannot sell, cannot relicense and cannot convert.
+We ask for this because of how Margince is licensed. We sell commercial subscriptions, we license hosting partners, and we convert each release to Apache 2.0 on schedule. Every one of those requires us to hold licensing rights over the whole codebase, including the parts written by outside contributors. A Developer Certificate of Origin would confirm that you wrote your code, but it would not give us those rights, and a single contribution without them would leave part of the product that we cannot sell, cannot relicense and cannot convert.
 
 ### Effect of the agreement
 

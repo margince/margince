@@ -203,6 +203,8 @@ var retired = gatekit.Waive(map[string]string{
 		"and names the columns back for the length of the replay so the real file runs rather " +
 		"than a retyped copy of it",
 	"CHANGELOG.md": "entries say what they said when they were written",
+	"CLA.md": "counsel's agreement text, where a person is a party to a contract; rewording it " +
+		"changes what a contributor accepted",
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
