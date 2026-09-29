@@ -32,11 +32,14 @@ const seatNamePassword = "a colleague password!"
 // inviteAndLogin provisions a member through the real invite → redeem →
 // login path, the sequence rosterteams_integration_test.go spells out: a
 // hand-built Identity would prove only that this file spelled a role key
-// right, not that the seat can actually sign in.
-func inviteAndLogin(t *testing.T, e *revocationEnv, email, name, role string) Identity {
+// right, not that the seat can actually sign in. Every colleague this suite
+// names is a rep — TestTheAnswerCarriesNothingButTheName is the proof that the
+// naming read does not even disclose a role, so there is nothing here for a
+// second role to exercise.
+func inviteAndLogin(t *testing.T, e *revocationEnv, email, name string) Identity {
 	t.Helper()
 	_, rawToken, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
-		Email: email, DisplayName: name, Role: role,
+		Email: email, DisplayName: name, Role: "rep",
 	})
 	if err != nil {
 		t.Fatalf("inviting %s: %v", email, err)
@@ -69,7 +72,7 @@ func archiveSeat(t *testing.T, e *revocationEnv, id ids.UserID) {
 // walk could not produce: it stops at the seats that may still become active.
 func TestANonAdminNamesADeactivatedColleague(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-deactivated")
-	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One", "rep")
+	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 
 	departed, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
 		Email: "departed@acme.test", DisplayName: "Dana Kessler", Role: "rep",
@@ -125,7 +128,9 @@ func TestNamingMoreThanTheCeilingIsRefused(t *testing.T) {
 		t.Fatalf("naming %d colleagues is allowed; the handler answered %d", maxNamedSeats, status)
 	}
 
-	overTheLimit := append(atTheLimit, openapi_types.UUID(ids.NewV7()))
+	overTheLimit := make([]openapi_types.UUID, len(atTheLimit), len(atTheLimit)+1)
+	copy(overTheLimit, atTheLimit)
+	overTheLimit = append(overTheLimit, openapi_types.UUID(ids.NewV7()))
 	if status := nameSeatsStatus(t, e, e.admin, overTheLimit); status != http.StatusUnprocessableEntity {
 		t.Fatalf("naming %d colleagues is refused; the handler answered %d", len(overTheLimit), status)
 	}
@@ -135,10 +140,10 @@ func TestNamingMoreThanTheCeilingIsRefused(t *testing.T) {
 // same request differently between runs.
 func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-order")
-	first := inviteAndLogin(t, e, "first@acme.test", "Ada First", "rep")
-	second := inviteAndLogin(t, e, "second@acme.test", "Bo Second", "rep")
-	third := inviteAndLogin(t, e, "third@acme.test", "Cy Third", "rep")
-	fourth := inviteAndLogin(t, e, "fourth@acme.test", "Dee Fourth", "rep")
+	first := inviteAndLogin(t, e, "first@acme.test", "Ada First")
+	second := inviteAndLogin(t, e, "second@acme.test", "Bo Second")
+	third := inviteAndLogin(t, e, "third@acme.test", "Cy Third")
+	fourth := inviteAndLogin(t, e, "fourth@acme.test", "Dee Fourth")
 
 	// Asked as an interleaving — neither the creation order above nor its
 	// exact reverse — and across four seats rather than two: with only two,
@@ -167,7 +172,7 @@ func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
 // later "while we are here" addition of the email has to argue with this.
 func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-shape")
-	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One", "rep")
+	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 
 	raw := nameSeatsRawJSON(t, e, rep, []openapi_types.UUID{openapi_types.UUID(rep.UserID.UUID)})
 	for _, leaked := range []string{"email", "status", "seat_type", "is_agent", "roles", "team_ids"} {
@@ -184,7 +189,7 @@ func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
 // than an error — the two readings the loader on the client depends on.
 func TestARepeatIsOneRowAndAnUnknownIdIsNoRow(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-repeat")
-	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One", "rep")
+	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 	stranger := openapi_types.UUID(ids.NewV7())
 
 	body := nameSeatsBody(t, e, e.admin, []openapi_types.UUID{

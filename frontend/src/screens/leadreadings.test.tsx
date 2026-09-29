@@ -67,17 +67,12 @@ function withReadings(node: ReactNode) {
   stubWithSession(
     {
       "GET /leads/l-1/score": () => jsonResponse(explained),
-      // EntityRef resolves a user against the workspace roster, so the author
-      // has to BE somebody: an id with no name behind it renders as a raw
-      // uuid, which would pass an assertion about attribution while showing a
+      // EntityRef names a user by id (GET /users/names), so the author has to
+      // BE somebody: an id with no name behind it renders as a raw uuid,
+      // which would pass an assertion about attribution while showing a
       // reader nothing they can act on.
-      "GET /users": () =>
-        jsonResponse({
-          data: [
-            { id: "u-7", display_name: "Anna Weber", email: "anna@acme.test" },
-          ],
-          page: { has_more: false, next_cursor: null },
-        }),
+      "GET /users/names": () =>
+        jsonResponse({ data: [{ id: "u-7", display_name: "Anna Weber" }] }),
     },
     { lead: ["read", "update"] },
   );

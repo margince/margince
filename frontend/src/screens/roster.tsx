@@ -126,7 +126,8 @@ export function useRosterWalk(kind: RosterKind, enabled: boolean) {
  * name resolution all build off the exact same cache entry — one walk, one
  * cache key, every consumer. Invited and deactivated seats never reach this
  * list: the server leaves them out because nothing here asks for them, which
- * is what keeps the walk's budget spent on people who can actually be chosen.
+ * is what keeps the walk's budget spent on colleagues who can actually be
+ * chosen.
  *
  * A consumer that OFFERS these entries as a list of who exists owes its reader
  * `useRosterPartial` beside it: this result cannot say whether the walk reached
