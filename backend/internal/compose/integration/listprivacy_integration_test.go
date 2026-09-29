@@ -5,7 +5,7 @@
 
 package integration
 
-// A Shortlist membership says somebody chose a person for a purpose, and its
+// A Shortlist membership says somebody chose a contact for a purpose, and its
 // note says why: the subject's access export carries both, and their erasure
 // takes both away.
 
