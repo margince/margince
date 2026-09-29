@@ -11,6 +11,7 @@ import { Heading } from "./heading";
 import {
   MarginceWorkbench,
   type WorkbenchRuntimeLabels,
+  type WorkbenchStep,
 } from "./margince-workbench";
 import { Modal } from "./modal";
 
@@ -218,5 +219,55 @@ describe("the rail's contact row", () => {
     expect(container.querySelector(".mw-contact")).toBeNull();
     expect(container.textContent).not.toContain("Ada Lovelace");
     expect(screen.queryByRole("button", { name: "Theme" })).toBeNull();
+  });
+});
+
+describe("the rail's step progress line", () => {
+  const STEP_LABEL = "Step 2 of 3 · Confirm";
+
+  function renderRailSteps(steps?: readonly WorkbenchStep[]) {
+    return render(
+      <MarginceWorkbench
+        state="working"
+        eyebrow="Margince"
+        title="Company research AI"
+        status="Reading"
+        configured="ollama/gemma3"
+        locale="en"
+        runtimeLabels={LABELS}
+        variant="rail"
+        steps={steps}
+        stepLabel={STEP_LABEL}
+      >
+        <p>Thread</p>
+      </MarginceWorkbench>,
+    );
+  }
+
+  it("shows where the journey stands when there are steps", () => {
+    const { container } = renderRailSteps([
+      { label: "Connect", state: "done" },
+      { label: "Confirm", state: "now" },
+      { label: "Invite", state: "todo" },
+    ]);
+
+    expect(screen.getByText(STEP_LABEL)).toBeInTheDocument();
+    expect(container.querySelectorAll(".mw-progress-track > i")).toHaveLength(
+      3,
+    );
+  });
+
+  it("renders no progress line when no steps are given", () => {
+    const { container } = renderRailSteps(undefined);
+
+    expect(screen.queryByText(STEP_LABEL)).toBeNull();
+    expect(container.querySelector(".mw-progress")).toBeNull();
+  });
+
+  it("renders no progress line when the step list is empty", () => {
+    const { container } = renderRailSteps([]);
+
+    expect(screen.queryByText(STEP_LABEL)).toBeNull();
+    expect(container.querySelector(".mw-progress")).toBeNull();
   });
 });
