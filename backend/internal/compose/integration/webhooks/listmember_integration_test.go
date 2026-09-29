@@ -31,8 +31,10 @@ func TestAShortlistMembershipDeliveryNamesNoList(t *testing.T) {
 	}
 	e := apptest.SetupAppWithOptions(t, compose.WithWebhookSigningKey(cipher), compose.WithListsEnabled(true))
 	e.BootstrapWorkspace(t)
-	we := &webhookEnv{AppEnv: e, pool: e.Pool, cipher: cipher,
-		wsID: apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)}
+	we := &webhookEnv{
+		AppEnv: e, pool: e.Pool, cipher: cipher,
+		wsID: apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner),
+	}
 	rcv := newReceiver(t, http.StatusOK)
 	now := time.Now().UTC()
 	deliverer := newTestDeliverer(we, &now, rcv.server.Client())

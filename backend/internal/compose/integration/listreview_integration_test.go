@@ -151,7 +151,7 @@ func TestErasureTakesEveryAnonymizedLeadOffItsShortlists(t *testing.T) {
 	// The contact first, so the lead is a separate row matched to them by
 	// address alone: creating the contact after would take the lead with it.
 	subject, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-		FullName: "The Same Person", Source: "manual",
+		FullName: "Twin Subject", Source: "manual",
 		Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {

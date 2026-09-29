@@ -117,10 +117,6 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err != nil {
 			return err
 		}
-		// The Shortlists they and those leads were chosen for, with the notes.
-		if err := deleteSubjectListMemberships(ctx, tx, subject, leadsWiped); err != nil {
-			return err
-		}
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
@@ -366,6 +362,10 @@ func anonymizeSubjectRows(
 	}
 	wiped, err := anonymizeLeadTwins(ctx, tx, contactID, emails)
 	if err != nil {
+		return nil, err
+	}
+	// The Shortlists they and those leads were chosen for, with the notes.
+	if err := deleteSubjectListMemberships(ctx, tx, contactID, wiped); err != nil {
 		return nil, err
 	}
 	if err := purgeContactDerivedRows(ctx, tx, contactID, subjects); err != nil {
