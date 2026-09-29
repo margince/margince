@@ -2654,13 +2654,14 @@ test.describe("filters and views", () => {
     // The field picker is the SERVER's vocabulary, not a list this screen keeps:
     // `industry` and `lifecycle` are company fields and `tag` is the leaf that
     // is an EXISTS over a join rather than a column. The screen only names each
-    // field the server sends, in the reader's language.
+    // field the server sends, in the reader's language, and orders the words
+    // as the reader reads them rather than by wire name.
     await page.getByRole("combobox", { name: "Feld" }).click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
-      "Zuständig",
       "Branche",
       "Lebenszyklus",
       "Tag",
+      "Zuständig",
       // The custom field, and it sorts after the core ones — a reader scanning
       // for a column they added finds it in one place rather than interleaved.
       "fleet size",
