@@ -142,7 +142,9 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 		return true
 	}
 	for _, table := range tables {
-		if ownerPrivateTables[table] || !readsEveryRow(p, table) {
+		// A list is found by its sharing, which is not a row scope: reading
+		// every row of every table still finds no colleague's private list.
+		if table == tableList || ownerPrivateTables[table] || !readsEveryRow(p, table) {
 			return false
 		}
 	}

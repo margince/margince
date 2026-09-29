@@ -197,3 +197,27 @@ func TestALiveListExportHoldsOnlyTheRowsItsReaderMaySee(t *testing.T) {
 		t.Fatalf("the list names %+v (%v) as its uses, want the two exports", deps, err)
 	}
 }
+
+// Sharing is not row scope: a seat that reads every row of every table still
+// finds no colleague's private list, nor its members or history.
+func TestAnAllRowsSeatDoesNotFindAColleaguesPrivateList(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
+	allRows := listPerms()
+	allRows.RowScope = principal.RowScopeAll
+	manager := e.As(e.Rep3, []ids.UUID{e.Team2}, allRows)
+	private, err := store.CreateList(rep1, collections.CreateListInput{Name: "Mine alone", EntityType: "contact", Sharing: "private"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := listNames(manager, t, store); got["Mine alone"] {
+		t.Fatalf("an all-rows seat found a colleague's private list: %v", got)
+	}
+	if _, err := store.GetList(manager, private.ID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("an all-rows seat read a colleague's private list: %v", err)
+	}
+	if _, _, err := store.History(manager, private.ID, 10, ""); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("an all-rows seat read a colleague's private list history: %v", err)
+	}
+}
