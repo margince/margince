@@ -34,3 +34,10 @@
 .aicalls-table td {
   overflow-wrap: anywhere;
 }
+
+/* Four columns in a card a phone leaves ~250px for: the cell padding gives up
+ * a third so the ids have room to wrap rather than to overflow. */
+.aicalls-table th,
+.aicalls-table td {
+  padding-inline: var(--space-2);
+}
