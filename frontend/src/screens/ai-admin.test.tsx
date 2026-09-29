@@ -93,7 +93,7 @@ it("explains pooled tokens, UTC reset and unchanged model selection", async () =
   expect(
     screen.getByText(/Not an individual quota or a dollar spending cap/),
   ).toBeTruthy();
-  expect(await screen.findByText("gemini · example-model")).toBeTruthy();
+  expect(await screen.findByText("example-model")).toBeTruthy();
   expect(screen.queryByText("Same model selection")).toBeNull();
   expect(screen.queryByRole("columnheader", { name: "Effect" })).toBeNull();
   expect(screen.getByText(/UTC/)).toBeTruthy();
@@ -180,7 +180,7 @@ it("reads a task's resolved chain with no edit control", async () => {
   expect(
     screen.getByText(`${feature.task} · ${feature.execution_mode}`),
   ).toBeTruthy();
-  await user.click(screen.getByText("gemini · example-model"));
+  await user.click(screen.getByText("example-model"));
   expect(screen.queryByRole("button")).toBeNull();
   expect(screen.queryByText(/edit shared binding/i)).toBeNull();
 });
@@ -233,7 +233,7 @@ it("explains each routing impact in operational language", () => {
 it("withholds model identities from an allowance reader without routing access", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
   await screen.findByText(/22\.5M of 24M tokens used/);
-  expect(screen.queryByText("gemini · example-model")).toBeNull();
+  expect(screen.queryByText("example-model")).toBeNull();
 });
 it("reports a failed carrier reading as unavailable", async () => {
   mount();
@@ -363,7 +363,7 @@ it("names only the lead of a multi-candidate row, not the rungs behind it", () =
       />
     </LocaleProvider>,
   );
-  expect(screen.getByText("gemini · example-model")).toBeTruthy();
+  expect(screen.getByText("example-model")).toBeTruthy();
   expect(screen.queryByText(/fallback-model/)).toBeNull();
 });
 
@@ -393,13 +393,12 @@ it("features card says decision model first, and why another feature skips it", 
   });
 
   // The lane leads, where it processes, and the ladder that answers after it.
-  expect(
-    await screen.findByText(
-      "Decision model first (jev_compatible · jev-classify) → then gemini · example-model",
-    ),
-  ).toBeInTheDocument();
+  const decisionRow = (await screen.findByText("jev-classify")).closest("td");
+  expect(decisionRow?.textContent).toBe(
+    "jev_compatiblejev-classify→ thengeminiexample-model",
+  );
   // A feature the lane does not serve keeps its ladder, with the reason beside it.
-  expect(screen.getByText("gemini · example-model")).toBeInTheDocument();
+  expect(screen.getAllByText("example-model")).toHaveLength(2);
   expect(
     screen.getByText(
       "Decision model not used: this activity takes only a local decision provider.",

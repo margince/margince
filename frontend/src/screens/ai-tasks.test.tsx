@@ -57,7 +57,7 @@ describe("AiTasksCard", () => {
     render(<AiTasksCard />);
 
     expect(await screen.findByText(feature.display_name)).toBeTruthy();
-    expect(screen.getByText("gemini · example-model")).toBeTruthy();
+    expect(screen.getByText("example-model")).toBeTruthy();
     // The hedge that said this was only the policy's pick is gone: the row is
     // the resolved chain.
     expect(screen.queryByText(/does not show provider status/i)).toBeNull();

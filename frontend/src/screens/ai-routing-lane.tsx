@@ -20,7 +20,7 @@ import {
   type ModelLane,
   unreadablePrice,
 } from "./ai-models";
-import { TermChip } from "./ai-terms";
+import { ModelRef, TermChip } from "./ai-terms";
 
 // The Model tiers table: one row per lane the routing document binds — the
 // tiers, the embedder and the optional decision model — joined to the health
@@ -239,8 +239,7 @@ function BindingLine({
   }
   return (
     <span className="ai-tier-modelline">
-      <TermChip term="provider">{binding.provider}</TermChip>
-      <span>{binding.model}</span>
+      <ModelRef provider={binding.provider} model={binding.model} />
       {unkeyed?.has(binding.provider) && (
         <>
           {" "}

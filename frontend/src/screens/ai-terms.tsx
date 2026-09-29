@@ -25,6 +25,19 @@ export function TermChip({
   return <Badge icon={ICON[term]}>{children}</Badge>;
 }
 
+/** A model as every list on this page writes it: its provider's mark, then its id. */
+export function ModelRef({
+  provider,
+  model,
+}: Readonly<{ provider: string; model: string }>) {
+  return (
+    <span className="ai-tier-modelline">
+      <TermChip term="provider">{provider}</TermChip>
+      <span>{model}</span>
+    </span>
+  );
+}
+
 /** A card title led by its term's icon, so the card names what it holds. */
 export function PanelTitle({
   term,

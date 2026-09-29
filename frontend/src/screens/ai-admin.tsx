@@ -28,6 +28,7 @@ import { useLocale, useT } from "../i18n";
 import { decisionSkipLabel } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
 import { TaskState } from "./ai-lane-state";
+import { ModelRef } from "./ai-terms";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { settingsHref } from "./settingsrouting";
 
@@ -423,16 +424,18 @@ export function AiFeatureTable({
   // above, and repeating them per task is the same list said again.
   const summary = (row: Feature) => {
     const lead = row.effective_candidates[0];
-    const ladder = `${lead.provider} · ${lead.model}`;
+    const ladder = <ModelRef provider={lead.provider} model={lead.model} />;
     const decision = row.decision_candidate;
     if (!row.decision_first || !decision) {
       return ladder;
     }
-    return t("aiAdmin.decisionFirst", {
-      provider: decision.provider,
-      model: decision.model,
-      ladder,
-    });
+    return (
+      <span className="ai-tier-modelline">
+        <ModelRef provider={decision.provider} model={decision.model} />
+        <span>{t("aiAdmin.thenLadder")}</span>
+        {ladder}
+      </span>
+    );
   };
   const modelCell = (row: Feature) =>
     row.effective_candidates.length ? summary(row) : "—";
