@@ -7,7 +7,7 @@
 # the drift lane move it.
 #
 # The length of this list is the measure of the debt, not an argument for
-# tolerating it: 302 files and 926 reads on the day the ratchet was armed.
+# tolerating it: 302 files and 922 reads on the day the ratchet was armed.
 
 internal/compose/agenttaskhandle_integration_test.go 1
 internal/compose/aggregateaudience_integration_test.go 4
@@ -129,6 +129,7 @@ internal/compose/integration/no_activity_reminder_workqueue_integration_test.go 
 internal/compose/integration/noticecase_integration_test.go 2
 internal/compose/integration/perfbench_integration_test.go 1
 internal/compose/integration/project360_integration_test.go 7
+internal/compose/integration/project360dealmask_integration_test.go 1
 internal/compose/integration/project_legal_hold_integration_test.go 3
 internal/compose/integration/providerclaims_integration_test.go 1
 internal/compose/integration/providerprofile_integration_test.go 1
@@ -179,12 +180,11 @@ internal/compose/meetingrsvpbackfill_integration_test.go 4
 internal/compose/mergecarriesintros_integration_test.go 1
 internal/compose/mergecarrieslinks_integration_test.go 1
 internal/compose/mergecarryraces_integration_test.go 1
-internal/compose/modelraterefresh_integration_test.go 2
 internal/compose/network/coveragewithheld_test.go 1
 internal/compose/openpromisesection_integration_test.go 1
 internal/compose/owedanswer_integration_test.go 10
 internal/compose/publicoriginprobe_test.go 6
-internal/compose/rateproposals_integration_test.go 6
+internal/compose/rateproposals_integration_test.go 3
 internal/compose/reconcile_integration_test.go 3
 internal/compose/report_dealsbystage_integration_test.go 1
 internal/compose/restoredrill_integration_test.go 6
