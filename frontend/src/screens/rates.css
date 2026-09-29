@@ -46,3 +46,11 @@
   padding-block: var(--space-3) 0;
   border-top: 1px solid var(--borderSubtle);
 }
+
+/* On a phone the table keeps what identifies and prices a model and the verb to
+ * change it; the cache buckets load into the form when a row is edited. */
+@media (max-width: 640px) {
+  .rates-manual-table :is(th, td):is(:nth-child(4), :nth-child(5)) {
+    display: none;
+  }
+}
