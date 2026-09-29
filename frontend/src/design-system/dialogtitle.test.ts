@@ -7,9 +7,10 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
+  classesOf,
   selectorList,
   splitTopLevel,
-  subjectClasses,
+  subjectsOf,
 } from "../../scripts/lib/css-rules";
 import {
   extensionLayers,
@@ -66,9 +67,9 @@ function ownersIn(sheets: readonly string[]): Owners {
       ...["margin-block", "padding-block"].map((p) => box(p).at(-1)),
       ...["margin", "padding"].map((p) => box(p)[box(p).length > 2 ? 2 : 0]),
     ].some((v) => v !== undefined && !isZero(v));
-    const names = selectorList(selector).flatMap((one) => [
-      ...subjectClasses(one),
-    ]);
+    const names = selectorList(selector)
+      .flatMap(subjectsOf)
+      .flatMap((subject) => [...classesOf(subject)]);
     for (const name of names) {
       if (gap) owners.gap.add(name);
       if (bottom) owners.band.add(name);

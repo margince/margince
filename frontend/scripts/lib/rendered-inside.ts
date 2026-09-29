@@ -5,6 +5,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  alternativesOf,
   classesOf,
   compounds,
   inks,
@@ -150,8 +151,18 @@ export function landsOn(
   element: Set<string>,
   siblings: readonly Set<string>[],
 ): boolean {
-  const parts = compounds(rule.selector);
-  const subject = subjectClasses(rule.selector);
+  return alternativesOf(rule.selector).some((selector) =>
+    alternativeLandsOn(selector, element, siblings),
+  );
+}
+
+function alternativeLandsOn(
+  selector: string,
+  element: Set<string>,
+  siblings: readonly Set<string>[],
+): boolean {
+  const parts = compounds(selector);
+  const subject = subjectClasses(selector);
   if (subject.size === 0) return false;
   if (![...subject].every((name) => element.has(name))) return false;
   return parts.slice(0, -1).every((part) => {

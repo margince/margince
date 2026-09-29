@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { selectorList, subjectOf } from "../../scripts/lib/css-rules";
+import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
 import { PANEL_TONES, Panel, PanelBody, PanelIntro, PanelRow } from "./panel";
 
 afterEach(cleanup);
@@ -334,7 +334,9 @@ function cssRules(css: string): readonly CssRule[] {
 // whose name merely BEGINS with the band's — `.panel-head-count`, say — is
 // content inside it, not the band.
 function stylesTheBand(selector: string): boolean {
-  return /^\.panel-head(?![\w-])/.test(subjectOf(selector));
+  return subjectsOf(selector).some((subject) =>
+    /^\.panel-head(?![\w-])/.test(subject),
+  );
 }
 
 function bandRules(css: string): readonly CssRule[] {
@@ -346,7 +348,9 @@ function bandRules(css: string): readonly CssRule[] {
 // a `.panel-title:hover` are all the same node. The dot is load-bearing —
 // `.rmap-panel-title` is the map's own aside and not this title at all.
 function stylesTheTitle(selector: string): boolean {
-  return /(?:^|[^\w-])\.panel-title(?![\w-])/.test(subjectOf(selector));
+  return subjectsOf(selector).some((subject) =>
+    /(?:^|[^\w-])\.panel-title(?![\w-])/.test(subject),
+  );
 }
 
 function titleRules(css: string): readonly CssRule[] {
@@ -616,7 +620,9 @@ describe("panel.css is the only sheet that shapes the head band", () => {
 // A state arm is the whole thing `PendingBody` or `EmptyState` draws.
 // `.pending-line` and `.empty-plate` are parts of one, not one.
 function isStateArm(selector: string): boolean {
-  return /^\.(?:pending|empty)$/.test(subjectOf(selector));
+  return subjectsOf(selector).some((subject) =>
+    /^\.(?:pending|empty)$/.test(subject),
+  );
 }
 
 const INSET = /^padding(?:-inline(?:-start|-end)?|-left|-right)?$/;

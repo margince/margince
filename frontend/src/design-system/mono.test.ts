@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
+  isBalanced,
   resolveNesting,
   splitTopLevel,
   subjectOf,
@@ -65,6 +66,12 @@ function corpus(): string[] {
 const MONO_FAMILY = /var\(\s*--fontFamilyMono\s*\)|Geist Mono|\bmonospace\b/i;
 const T_MONO = /(?<![\w-])t-mono(?![\w-])/;
 
+// A string that only looks like CSS, `for (…; i++) {`, opens no selector.
+function selectorsInside(parents: string[], prelude: string): string[] {
+  if (prelude.startsWith("@")) return parents;
+  return isBalanced(prelude) ? resolveNesting(parents, prelude) : [];
+}
+
 /**
  * Whether a selector's SUBJECT — the element the declarations land on — is
  * code. `.foo code` is; `code .foo` is not, because the rule dresses `.foo`.
@@ -114,9 +121,7 @@ function monoDeclarations(css: string): MonoDeclaration[] {
     if (char === "{") {
       const prelude = text.slice(start, index).trim();
       const parents = open.at(-1) ?? [];
-      open.push(
-        prelude.startsWith("@") ? parents : resolveNesting(parents, prelude),
-      );
+      open.push(selectorsInside(parents, prelude));
       start = index + 1;
     } else if (char === ";" || char === "}") {
       judge(index);

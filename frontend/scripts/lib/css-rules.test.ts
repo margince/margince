@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  alternativesOf,
   classesOf,
   compounds,
   resolveNesting,
@@ -14,6 +15,7 @@ import {
   splitTopLevel,
   subjectClasses,
   subjectOf,
+  subjectsOf,
 } from "./css-rules";
 
 describe("a selector list", () => {
@@ -81,10 +83,69 @@ describe("the classes of a compound", () => {
     expect([...classesOf(".e:not(:has(.x)).f")]).toEqual(["e", "f"]);
   });
 
-  it("carries what every alternative of an :is() or :where() carries", () => {
+  it("counts from an :is() only what the element must carry either way", () => {
     expect([...classesOf(":is(.btn, .menu > .btn).x")]).toEqual(["x", "btn"]);
-    expect([...classesOf(":where(h1, .title)")]).toEqual([]);
-    expect([...classesOf(".y:is(.a.b, .b)")]).toEqual(["y", "b"]);
+    expect([...classesOf(".y:matches(.a.b, .b)")]).toEqual(["y", "b"]);
+    expect([...classesOf(":-webkit-any(.a)")]).toEqual(["a"]);
+  });
+
+  it("reads no class out of an attribute value, and all of an escaped one", () => {
+    expect([...classesOf('.a[href$=".pdf"]')]).toEqual(["a"]);
+    expect([...classesOf(".sm\\:flex.w-1\\/2")]).toEqual(["sm:flex", "w-1/2"]);
+  });
+});
+
+describe("the alternatives of a selector", () => {
+  it("reads each :is() or :where() alternative as a selector of its own", () => {
+    expect(alternativesOf(":is(.token, .pill) .x")).toEqual([
+      ".token .x",
+      ".pill .x",
+    ]);
+    expect(alternativesOf(".bar > :where(.btn, .chip):hover")).toEqual([
+      ".bar > .btn:hover",
+      ".bar > .chip:hover",
+    ]);
+  });
+
+  it("distributes every alternation, nested ones included", () => {
+    expect(alternativesOf(":is(.a, :is(.b, .c)) + :where(.x, .y)")).toEqual([
+      ".a + .x",
+      ".a + .y",
+      ".b + .x",
+      ".b + .y",
+      ".c + .x",
+      ".c + .y",
+    ]);
+  });
+
+  it("hangs a complex alternative's ancestors in front of the compound", () => {
+    expect(alternativesOf("button:is(.menu > .b).c")).toEqual([
+      ".menu > button.b.c",
+    ]);
+    expect(alternativesOf(".x:is(span, .y)")).toEqual(["span.x", ".x.y"]);
+  });
+
+  it("leaves an alternation that names another element alone", () => {
+    expect(alternativesOf(".a:not(:is(.b, .c)) .d")).toEqual([
+      ".a:not(:is(.b, .c)) .d",
+    ]);
+  });
+
+  it("gives every alternative a subject", () => {
+    expect(subjectsOf(":is(.btn, .iconbtn)")).toEqual([".btn", ".iconbtn"]);
+  });
+});
+
+describe("text the tokenizer cannot balance", () => {
+  it("throws rather than reading the rest as one part", () => {
+    for (const text of [
+      ".a), .b, .c",
+      ".a(, .b",
+      '.a[x="open, .b',
+      ".a[x, .b",
+    ]) {
+      expect(() => selectorList(text), text).toThrow(/unbalanced/);
+    }
   });
 });
 
@@ -124,10 +185,18 @@ describe("the rules under a tree", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  it("refuses a sheet that nests one rule inside another", () => {
+    writeFileSync(
+      join(root, "sheet.css"),
+      ".a { color: red; .b { color: blue; } }",
+    );
+    expect(() => rules(root)).toThrow(/sheet\.css nests a rule/);
+  });
+
   it("reads one rule per selector, not per comma", () => {
     writeFileSync(
       join(root, "sheet.css"),
-      ":is(.a, .b) .c,\n.d { color: var(--ink); }",
+      ":is(.a, .b) .c,\n.d { color: var(--textPrimary); }",
     );
     expect(rules(root).map(({ selector }) => selector)).toEqual([
       ":is(.a, .b) .c",

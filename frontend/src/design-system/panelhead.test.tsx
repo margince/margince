@@ -15,6 +15,7 @@ import {
   parseSource,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
+import { withoutComments } from "../testing/css";
 import { Card, SectionHeader } from "./atoms";
 import { Panel, PanelBody } from "./panel";
 
@@ -339,7 +340,7 @@ const HEAD_SUB_CLASS =
 const SUB_IN_HEAD = /\.(?:panel-head|section-header)\b[^,{}]*\s\.sub(?![\w-])/;
 
 function headSubSelectors(css: string): readonly string[] {
-  return [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)]
+  return [...withoutComments(css).matchAll(/([^{}]+)\{[^{}]*\}/g)]
     .flatMap(([, selectors]) => selectorList(selectors))
     .map((selector) => selector.replace(/\s+/g, " "))
     .filter(
