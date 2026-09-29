@@ -13,7 +13,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -183,12 +182,12 @@ func recordMemberChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, chang
 		return err
 	}
 	// The record is the event's subject, so the fan-out delivers it only to a
-	// subscriber who may see that record.
-	list := openapi_types.UUID(listID.UUID)
+	// subscriber who may see that record; that says nothing about the list, so
+	// the event names none. The list is on the audit row it links to.
 	if action == memberAdded {
 		return storekit.EmitEventForEntity(ctx, tx, auditID, change.EntityType, change.EntityID,
-			crmcontracts.PublicEventListMemberAdded{ListId: list, Reason: change.Reason})
+			crmcontracts.PublicEventListMemberAdded{Reason: change.Reason})
 	}
 	return storekit.EmitEventForEntity(ctx, tx, auditID, change.EntityType, change.EntityID,
-		crmcontracts.PublicEventListMemberRemoved{ListId: list, Reason: change.Reason})
+		crmcontracts.PublicEventListMemberRemoved{Reason: change.Reason})
 }

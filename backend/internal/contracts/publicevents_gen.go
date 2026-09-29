@@ -1771,18 +1771,14 @@ type PublicEventListCreated struct {
 	Sharing string `json:"sharing"`
 }
 
-// PublicEventListMemberAdded Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk change. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record; the list rides the payload. The note stays on the list's history, where erasure reaches it.
+// PublicEventListMemberAdded Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk change. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
 type PublicEventListMemberAdded struct {
-	ListId openapi_types.UUID `json:"list_id"`
-
 	// Reason chosen or bulk.
 	Reason string `json:"reason"`
 }
 
 // PublicEventListMemberRemoved Payload for list.member_removed — a record was taken off a Shortlist by hand or in a bulk change. The subject is the record, as for list.member_added.
 type PublicEventListMemberRemoved struct {
-	ListId openapi_types.UUID `json:"list_id"`
-
 	// Reason chosen or bulk.
 	Reason string `json:"reason"`
 }
