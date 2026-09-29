@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { calendarDay } from "../format/calendarday";
 import { formatUsdPerMTok } from "../format/format";
@@ -229,9 +230,7 @@ export function ModelPriceDialog({
           )}
         </Field>
         {malformed ? (
-          <p className="t-caption t-danger" role="alert">
-            {t("aiRates.manual.malformed")}
-          </p>
+          <ErrorLine>{t("aiRates.manual.malformed")}</ErrorLine>
         ) : null}
         {saved ? (
           <p className="t-caption" role="status">
