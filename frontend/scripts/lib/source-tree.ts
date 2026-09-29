@@ -5,19 +5,9 @@
 // how an import between them resolves, and where an extension's frontend
 // layer is.
 //
-// It exists because there are two of them now — the native-control gate in
-// src/design-system/native-controls.test.ts and the extension-import gate in
-// scripts/ext-imports.test.ts — and both had, independently, to answer the same
-// three questions: skip node_modules, find every directory named `frontend` at
-// any depth, and collect every extension a bundler resolves. A second answer to
-// one question is two answers that drift until they disagree, and a walk is the
-// worst place for that: the gate whose walk is narrower reads a smaller tree and
+// Every gate that walks the tree asks these questions, and a second answer to
+// one of them drifts: the gate whose walk is narrower reads a smaller tree and
 // reports the same word, PASS.
-//
-// They had already drifted before this file existed. One collected four
-// extensions and the other eight, so a unit shipping a `.cjs` was gated by one
-// of the two and invisible to the other — for no reason either author chose.
-// There is ONE set here, and it is the wide one.
 
 import type { Dirent } from "node:fs";
 import {
@@ -233,7 +223,7 @@ export function resolveRelative(
 }
 
 // moduleSpecifiers lists what `source` imports, statically or by `import()`.
-// "values" drops a types-only edge: the bundler erases it and never loads it.
+// "values" drops only `import type` and `export type … from`, the forms erased.
 export function moduleSpecifiers(
   source: ts.SourceFile,
   edges: "all" | "values",
@@ -265,33 +255,10 @@ function declaredSpecifier(
   }
   const specifier = node.moduleSpecifier;
   if (specifier === undefined || !ts.isStringLiteral(specifier)) return null;
+  // Not the inline `{ type X }`: under verbatimModuleSyntax it emits
+  // `import {} from "m"`, and the module still loads.
   const typeOnly = ts.isImportDeclaration(node)
-    ? typeOnlyImport(node)
-    : typeOnlyExport(node);
+    ? node.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword
+    : node.isTypeOnly;
   return edges === "values" && typeOnly ? null : specifier.text;
-}
-
-function typeOnlyImport(node: ts.ImportDeclaration): boolean {
-  const clause = node.importClause;
-  if (clause === undefined) return false;
-  if (clause.phaseModifier === ts.SyntaxKind.TypeKeyword) return true;
-  const bindings = clause.namedBindings;
-  return (
-    clause.name === undefined &&
-    bindings !== undefined &&
-    ts.isNamedImports(bindings) &&
-    bindings.elements.length > 0 &&
-    bindings.elements.every((element) => element.isTypeOnly)
-  );
-}
-
-function typeOnlyExport(node: ts.ExportDeclaration): boolean {
-  const clause = node.exportClause;
-  return (
-    node.isTypeOnly ||
-    (clause !== undefined &&
-      ts.isNamedExports(clause) &&
-      clause.elements.length > 0 &&
-      clause.elements.every((element) => element.isTypeOnly))
-  );
 }

@@ -267,14 +267,14 @@ describe("the one resolver the import-graph gates share", () => {
     expect(resolveRelative(from, "react")).toBeNull();
   });
 
-  it("drops a types-only edge only when asked for values", () => {
+  it("drops only the erased type forms when asked for values", () => {
     const source = parseSource(
       "a.ts",
       [
         `import type { A } from "./a";`,
         `import { type B } from "./b";`,
         `export type { C } from "./c";`,
-        `import { type D, e } from "./d";`,
+        `export { type D } from "./d";`,
         `export * from "./f";`,
         `const g = () => import("./g");`,
       ].join("\n"),
@@ -287,7 +287,13 @@ describe("the one resolver the import-graph gates share", () => {
       "./f",
       "./g",
     ]);
-    expect(moduleSpecifiers(source, "values")).toEqual(["./d", "./f", "./g"]);
+    // `{ type B }` still loads its module under verbatimModuleSyntax.
+    expect(moduleSpecifiers(source, "values")).toEqual([
+      "./b",
+      "./d",
+      "./f",
+      "./g",
+    ]);
   });
 });
 

@@ -43,17 +43,20 @@ const SILENT: Module = { specifiers: [], globs: [], literals: [], stems: [] };
 // URL, and taking it as a stem would vouch for the whole catalog.
 const KEY_STEM = /^[A-Za-z0-9_]+\.[A-Za-z0-9_.]*$/;
 
+// Vite's queries that hand over text or a URL; any other query still runs it.
+const TEXT_QUERY = /\?(?:raw|url|inline)$/;
+
 function resolveModule(
   program: Program,
   from: string,
   specifier: string,
 ): string | null {
-  // Not followed: a `?raw` or `?url` import hands over text, never runs it.
-  if (specifier.includes("?")) return null;
-  const inTree = (path: string): boolean => program.tree.has(path);
-  const aliased = program.aliases.get(specifier);
+  if (TEXT_QUERY.test(specifier)) return null;
+  const path = specifier.replace(/\?.*$/, "");
+  const inTree = (candidate: string): boolean => program.tree.has(candidate);
+  const aliased = program.aliases.get(path);
   return aliased === undefined
-    ? resolveRelative(from, specifier, inTree)
+    ? resolveRelative(from, path, inTree)
     : moduleAt(aliased, inTree);
 }
 
@@ -88,7 +91,20 @@ function isMetaGlob(callee: ts.Expression): boolean {
   );
 }
 
-// Comments are trivia to the parser, so a key named only in one is never seen.
+// A property name is a lookup key, not copy handed to `t()`.
+function isPropertyName(node: ts.Node): boolean {
+  const parent = node.parent;
+  return (
+    (ts.isPropertyAssignment(parent) ||
+      ts.isPropertySignature(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isMethodDeclaration(parent) ||
+      ts.isEnumMember(parent)) &&
+    parent.name === node
+  );
+}
+
+// Comments are trivia and types are erased, so a key named only there is unseen.
 function readModule(path: string, text: string): Module {
   const source = parseSource(path, text);
   const found: { [field in keyof Module]: string[] } = {
@@ -98,10 +114,13 @@ function readModule(path: string, text: string): Module {
     stems: [],
   };
   const walk = (node: ts.Node): void => {
+    if (ts.isTypeNode(node)) return;
     if (ts.isCallExpression(node) && isMetaGlob(node.expression)) {
       found.globs.push(...stringsOf(node.arguments[0]));
     }
-    if (ts.isStringLiteralLike(node)) found.literals.push(node.text);
+    if (ts.isStringLiteralLike(node) && !isPropertyName(node)) {
+      found.literals.push(node.text);
+    }
     if (ts.isTemplateExpression(node) && KEY_STEM.test(node.head.text)) {
       found.stems.push(node.head.text);
     }
@@ -111,25 +130,29 @@ function readModule(path: string, text: string): Module {
   return found;
 }
 
-/** Every module the given roots load, each parsed once however often reached. */
-function moduleGraph(
-  program: Program,
-): (roots: readonly string[]) => ReadonlyMap<string, Module> {
+type ModuleGraph = {
+  /** Every module the roots load, each parsed once however often reached. */
+  readonly reach: (roots: readonly string[]) => ReadonlyMap<string, Module>;
+  readonly moduleOf: (path: string) => Module | undefined;
+};
+
+function moduleGraph(program: Program): ModuleGraph {
   const parsed = new Map<string, Module>();
-  const moduleOf = (path: string, text: string): Module => {
+  const moduleOf = (path: string): Module | undefined => {
+    const text = program.tree.get(path);
+    if (text === undefined) return undefined;
     const known = parsed.get(path);
     if (known !== undefined) return known;
     const module = program.catalogs.has(path) ? SILENT : readModule(path, text);
     parsed.set(path, module);
     return module;
   };
-  return (roots) => {
+  const reach = (roots: readonly string[]): ReadonlyMap<string, Module> => {
     const reached = new Map<string, Module>();
     const queue = [...roots];
     for (let path = queue.pop(); path !== undefined; path = queue.pop()) {
-      const text = program.tree.get(path);
-      if (reached.has(path) || text === undefined) continue;
-      const module = moduleOf(path, text);
+      const module = reached.has(path) ? undefined : moduleOf(path);
+      if (module === undefined) continue;
       reached.set(path, module);
       for (const specifier of module.specifiers) {
         const target = resolveModule(program, path, specifier);
@@ -141,6 +164,19 @@ function moduleGraph(
     }
     return reached;
   };
+  return { reach, moduleOf };
+}
+
+// A kept module vouches for the keys it names itself, never for its imports'.
+function renderingModules(
+  graph: ModuleGraph,
+  entries: readonly string[],
+  kept: readonly string[],
+): Module[] {
+  return [
+    ...graph.reach(entries).values(),
+    ...kept.flatMap((path) => graph.moduleOf(path) ?? []),
+  ];
 }
 
 /**
@@ -180,13 +216,14 @@ describe("the orphan finder, over a planted tree", () => {
   const verdict = (
     files: Record<string, string>,
     keys: readonly string[],
+    kept: readonly string[] = [],
   ): string[] => {
-    const program: Program = {
+    const graph = moduleGraph({
       tree: new Map(Object.entries(files)),
       aliases: new Map([["@alias/copy", "/app/src/aliased"]]),
       catalogs: new Set(),
-    };
-    return orphanKeys(keys, moduleGraph(program)([MAIN]).values());
+    });
+    return orphanKeys(keys, renderingModules(graph, [MAIN], kept));
   };
 
   it("counts a key the entry renders", () => {
@@ -202,19 +239,30 @@ describe("the orphan finder, over a planted tree", () => {
     expect(verdict(files, ["a.story"])).toEqual(["a.story"]);
   });
 
-  it("refuses a key only a type-only import reaches", () => {
+  it("refuses a key only an erased type import reaches", () => {
     const files = {
       [MAIN]: [
         `import type { A } from "./a";`,
-        `import { type B } from "./b";`,
         `export type { C } from "./c";`,
+        `import { type B } from "./b";`,
       ].join("\n"),
       "/app/src/a.ts": `export type A = 1; t("a.typeImport");`,
-      "/app/src/b.ts": `export type B = 1; t("b.typeSpecifier");`,
       "/app/src/c.ts": `export type C = 1; t("c.typeExport");`,
+      "/app/src/b.ts": `export type B = 1; t("b.inlineType");`,
     };
-    const keys = ["a.typeImport", "b.typeSpecifier", "c.typeExport"];
-    expect(verdict(files, keys)).toEqual(keys);
+    const keys = ["a.typeImport", "c.typeExport", "b.inlineType"];
+    expect(verdict(files, keys)).toEqual(["a.typeImport", "c.typeExport"]);
+  });
+
+  it("refuses a key named only as a type or a property name", () => {
+    const files = {
+      [MAIN]: [
+        `type K = "a.asType";`,
+        `const table = { "a.asName": 1, b: "a.asValue" };`,
+      ].join("\n"),
+    };
+    const keys = ["a.asType", "a.asName", "a.asValue"];
+    expect(verdict(files, keys)).toEqual(["a.asType", "a.asName"]);
   });
 
   it("refuses a key only a module nothing imports renders", () => {
@@ -257,12 +305,29 @@ describe("the orphan finder, over a planted tree", () => {
     expect(verdict(files, keys)).toEqual([]);
   });
 
-  it("does not run a module imported as text", () => {
+  it("does not run a module imported as text or a URL, but runs a worker", () => {
     const files = {
-      [MAIN]: `import source from "./raw.ts?raw";`,
+      [MAIN]: [
+        `import raw from "./raw.ts?raw";`,
+        `import url from "./url.ts?url";`,
+        `import Worker from "./work.ts?worker";`,
+      ].join("\n"),
       "/app/src/raw.ts": `t("a.raw");`,
+      "/app/src/url.ts": `t("a.url");`,
+      "/app/src/work.ts": `t("a.worker");`,
     };
-    expect(verdict(files, ["a.raw"])).toEqual(["a.raw"]);
+    const keys = ["a.raw", "a.url", "a.worker"];
+    expect(verdict(files, keys)).toEqual(["a.raw", "a.url"]);
+  });
+
+  it("lets a kept module vouch for its own keys and not its imports'", () => {
+    const files = {
+      [MAIN]: ``,
+      "/app/src/kept.tsx": `import { Row } from "./row"; t("k.own");`,
+      "/app/src/row.tsx": `t("k.imported");`,
+    };
+    const keys = ["k.own", "k.imported"];
+    expect(verdict(files, keys, ["/app/src/kept.tsx"])).toEqual(["k.imported"]);
   });
 
   it("counts a plural pair by its base only where a loaded module names it", () => {
@@ -292,9 +357,29 @@ describe("the orphan finder, over a planted tree", () => {
 const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FRONTEND_ROOT = resolve(SRC_ROOT, "..");
 
-// Kept while unmounted; the value names the issue that mounts it.
-const KEPT_UNMOUNTED: ReadonlyMap<string, string> = new Map([
-  [join(SRC_ROOT, "screens", "strength.tsx"), "#4880"],
+// Kept while unmounted: the issue that mounts it, and the keys it may vouch for.
+const KEPT_UNMOUNTED: ReadonlyMap<
+  string,
+  { readonly issue: string; readonly keys: readonly string[] }
+> = new Map([
+  [
+    join(SRC_ROOT, "screens", "strength.tsx"),
+    {
+      issue: "#4880",
+      keys: [
+        "strength.computedFrom",
+        "strength.factor.direction",
+        "strength.factor.frequency",
+        "strength.factor.recency",
+        "strength.factor.reciprocity",
+        "strength.inout",
+        "strength.lastInteraction",
+        "strength.none",
+        "strength.score",
+        "strength.title",
+      ],
+    },
+  ],
 ]);
 
 // vite.config.ts names no build input, so Vite builds its default: the root
@@ -363,33 +448,42 @@ describe("catalog keys against the bundle that renders them", () => {
   const catalogs = new Set(
     LOCALES.map((locale) => join(SRC_ROOT, "i18n", `${locale}.ts`)),
   );
-  const reach = moduleGraph({ tree, aliases: aliases(), catalogs });
-  const documents = documentEntries();
-  const surface = surfaceEntries();
-  const mounted = reach([...documents, ...surface]);
+  const graph = moduleGraph({ tree, aliases: aliases(), catalogs });
+  const entries = [...documentEntries(), ...surfaceEntries()];
+  const mounted = graph.reach(entries);
+  const kept = [...KEPT_UNMOUNTED.keys()];
+  const keys = Object.keys(en);
 
   it("derives an entry point from every owner that declares one", () => {
-    expect(documents.length).toBeGreaterThan(1);
-    expect(surface.length).toBeGreaterThan(0);
-    const missing = [...documents, ...surface, ...catalogs].filter(
-      (path) => !tree.has(path),
-    );
+    expect(documentEntries().length).toBeGreaterThan(1);
+    expect(surfaceEntries().length).toBeGreaterThan(0);
+    const missing = [...entries, ...catalogs].filter((path) => !tree.has(path));
     expect(missing, "declared, but not a file in src").toEqual([]);
   });
 
   it("keeps an unmounted module only while it exists and nothing mounts it", () => {
-    const stale = [...KEPT_UNMOUNTED.keys()].filter(
-      (path) => !tree.has(path) || mounted.has(path),
-    );
+    const stale = kept.filter((path) => !tree.has(path) || mounted.has(path));
     expect(
       stale,
       "mounted or deleted now: drop its KEPT_UNMOUNTED entry",
     ).toEqual([]);
   });
 
+  it("lets a kept module vouch for exactly the keys it is kept for", () => {
+    const withKept = new Set(
+      orphanKeys(keys, renderingModules(graph, entries, kept)),
+    );
+    const vouched = orphanKeys(keys, mounted.values()).filter(
+      (key) => !withKept.has(key),
+    );
+    const declared = [...KEPT_UNMOUNTED.values()].flatMap(
+      (entry) => entry.keys,
+    );
+    expect(vouched.sort()).toEqual([...declared].sort());
+  });
+
   it("every key is rendered by a module the bundle loads", () => {
-    const loaded = reach([...documents, ...surface, ...KEPT_UNMOUNTED.keys()]);
-    const orphans = orphanKeys(Object.keys(en), loaded.values());
+    const orphans = orphanKeys(keys, renderingModules(graph, entries, kept));
     expect(
       orphans,
       `keys translated three times and rendered nowhere: ${orphans.join(", ")}`,

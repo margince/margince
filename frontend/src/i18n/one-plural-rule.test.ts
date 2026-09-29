@@ -409,14 +409,19 @@ describe("one plural rule", () => {
 // So the corpus is derived from the catalogue and cleared by the register in
 // plural-debt.ts, which is closed and only shrinks.
 describe("one count, one key", () => {
-  const pluralSibling = (key: string): boolean =>
+  const pluralSibling = (
+    catalog: Readonly<Record<string, string>>,
+    key: string,
+  ): boolean =>
     [`${key}_one`, `${key}_other`, `${key}.one`, `${key}.many`].some(
-      (sibling) => Object.hasOwn(en, sibling),
+      (sibling) => Object.hasOwn(catalog, sibling),
     );
 
   /** Every catalogue key that puts a count into a single message. */
-  const singleKeyCounts = (): string[] =>
-    Object.entries(en)
+  const singleKeyCounts = (
+    catalog: Readonly<Record<string, string>> = en,
+  ): string[] =>
+    Object.entries(catalog)
       .filter(
         ([key, value]) =>
           typeof value === "string" &&
@@ -425,7 +430,7 @@ describe("one count, one key", () => {
           !key.endsWith("_other") &&
           !key.endsWith(".one") &&
           !key.endsWith(".many") &&
-          !pluralSibling(key),
+          !pluralSibling(catalog, key),
       )
       .map(([key]) => key)
       .sort();
@@ -463,10 +468,13 @@ describe("one count, one key", () => {
     ).toEqual([]);
   });
 
-  // The census's own census: it reads the catalogue it claims to read.
-  it("sees a count interpolated into one key", () => {
-    const registered = [...PLURAL_SINGLE_KEY_DEBT.keys()];
-    expect(registered.length).toBeGreaterThan(50);
+  it("flags a count in one key and passes a count split into two arms", () => {
+    const planted = {
+      "x.steps": "{count} steps",
+      "x.tasks_one": "{count} task",
+      "x.tasks_other": "{count} tasks",
+    };
+    expect(singleKeyCounts(planted)).toEqual(["x.steps"]);
   });
 
   // Every plural base carries both arms and no bare key: a missing arm leaves one
