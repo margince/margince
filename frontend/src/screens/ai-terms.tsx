@@ -33,7 +33,7 @@ export function ModelRef({
   return (
     <span className="ai-tier-modelline">
       <TermChip term="provider">{provider}</TermChip>
-      <span>{model}</span>
+      <span className="ai-tier-model">{model}</span>
     </span>
   );
 }

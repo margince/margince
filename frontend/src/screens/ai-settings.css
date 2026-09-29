@@ -295,19 +295,23 @@
   min-width: 0;
 }
 
-/* Two lines, always: the provider's mark and the model id, then the price
- * under the id. The provider column has one width for every lane, so the ids
- * start on one edge down the list. */
+/* Two lines, always: the provider's mark and the model id on the first, the
+ * price under them on the second. Neither wraps — a long id gives way with an
+ * ellipsis (its full text is the tooltip), so every lane is the same height and
+ * the list reads as a column rather than as rows of different sizes. */
 .ai-tier-binding {
-  display: grid;
-  grid-template-columns: 11.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   min-width: 0;
 }
 
-.ai-tier-secondary {
-  grid-column: 2;
+.ai-tier-secondary,
+.ai-tier-model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ai-tier-name {
@@ -359,7 +363,8 @@
 
 .ai-tier-modelline {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
   align-items: center;
   gap: var(--space-2);
 }

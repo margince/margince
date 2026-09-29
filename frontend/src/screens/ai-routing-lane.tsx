@@ -202,7 +202,10 @@ function TierLine({
               {secondary.filter(Boolean).join(" · ")}
             </ErrorLine>
           ) : (
-            <span className="t-caption ai-tier-secondary">
+            <span
+              className="t-caption ai-tier-secondary"
+              title={secondary.filter(Boolean).join(" · ")}
+            >
               {secondary.filter(Boolean).join(" · ")}
             </span>
           )}
@@ -238,18 +241,15 @@ function BindingLine({
     return <Badge>{t("aiRouting.notBound")}</Badge>;
   }
   return (
-    <>
+    <span className="ai-tier-modelline">
       <TermChip term="provider">{binding.provider}</TermChip>
-      <span>
+      <span className="ai-tier-model" title={binding.model}>
         {binding.model}
-        {unkeyed?.has(binding.provider) && (
-          <>
-            {" "}
-            <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
-          </>
-        )}
       </span>
-    </>
+      {unkeyed?.has(binding.provider) && (
+        <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
+      )}
+    </span>
   );
 }
 
