@@ -27,12 +27,19 @@ import (
 // one scout pass, and answers the suggestion's id.
 func seedScoutedCompany(t *testing.T, e *apptest.AppEnv) (companyID, suggestionID string) {
 	t.Helper()
+	return seedScoutedNamed(t, e, "Acme GmbH", "Dana Buyer")
+}
+
+// seedScoutedNamed is seedScoutedCompany for a company and contact of the
+// caller's naming, so one test can raise several suggestions.
+func seedScoutedNamed(t *testing.T, e *apptest.AppEnv, companyName, contactName string) (companyID, suggestionID string) {
+	t.Helper()
 	var company, contact, meeting AnyMap
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Acme GmbH"}, nil, &company); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": companyName}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company = %d %v", status, company)
 	}
 	companyID, _ = company["id"].(string)
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Dana Buyer", "source": "manual"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": contactName, "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
 	contactID, _ := contact["id"].(string)

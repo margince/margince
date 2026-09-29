@@ -5,6 +5,7 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -115,5 +116,13 @@ func TestAReaderWhoMayNotReadSuggestionsKeepsTheRestOfTheLane(t *testing.T) {
 	}
 	if _, asked := boundedSources(day)[sourceDealSuggestion]; asked {
 		t.Fatal("a source the reader may not read reported a truncation verdict")
+	}
+}
+
+func TestABrokenSuggestionReadFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
+	svc := decisionsService(stubApprovals{}, stubDuplicates{}).
+		WithDealSuggestions(&stubSuggestions{err: errors.New("the database is unreachable")})
+	if _, err := svc.Assemble(pageReader()); err == nil {
+		t.Fatal("a suggestion read that FAILED was reported as an empty lane")
 	}
 }

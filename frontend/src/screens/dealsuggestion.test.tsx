@@ -13,10 +13,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
+import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { DealsScreen } from "./deals";
-import { acceptBody, DealSuggestionCard } from "./dealsuggestion";
+import {
+  acceptBody,
+  CompanySuggestions,
+  DealSuggestionCard,
+} from "./dealsuggestion";
 import type { DealSuggestion } from "./dealsuggestions.queries";
 
 // A Deal Scout suggestion on the three surfaces that draw one, and the two
@@ -104,6 +109,8 @@ function stubBackend(opts: {
   suggestions: DealSuggestion[];
   mayDecide?: boolean;
   sent?: Sent[];
+  // Answers every decision with this status and problem code instead.
+  refuse?: { status: number; code: string };
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -121,6 +128,16 @@ function stubBackend(opts: {
         body: text ? JSON.parse(text) : undefined,
         key: request?.headers.get("Idempotency-Key") ?? null,
       });
+      if (opts.refuse) {
+        return jsonResponse(
+          {
+            code: opts.refuse.code,
+            title: opts.refuse.code,
+            status: opts.refuse.status,
+          },
+          opts.refuse.status,
+        );
+      }
       return path.endsWith("/accept")
         ? jsonResponse({
             suggestion: { ...suggestion, state: "accepted" },
@@ -134,6 +151,21 @@ function stubBackend(opts: {
       return jsonResponse({
         data: opts.suggestions,
         page: { has_more: false },
+      });
+    }
+    if (path === "/users") {
+      return jsonResponse({
+        data: [
+          {
+            id: "u-2",
+            email: "kim@acme.test",
+            display_name: "Kim Seller",
+            timezone: "UTC",
+            status: "active",
+            is_agent: false,
+          },
+        ],
+        page: { next_cursor: null },
       });
     }
     if (path === "/pipelines") {
@@ -377,5 +409,102 @@ describe("a suggestion on the pipeline board", () => {
     const without = await columnFigures([]);
     expect(shown).toEqual(without.figures);
     expect(shown[0]).toContain("1");
+  });
+});
+
+describe("the accept dialog's pickers and the refusals", () => {
+  it("carries the stage, owner and currency the reader picked", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    vi.stubGlobal("fetch", stubBackend({ suggestions: [], sent }));
+    draw(<DealSuggestionCard suggestion={suggestion} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open this deal" }),
+    );
+    await pickOption(user, screen.getByLabelText("Currency"), "USD");
+    await pickOption(user, await screen.findByLabelText("Stage"), "Proposal");
+    await pickOption(user, screen.getByLabelText("Owner"), "Kim Seller");
+    await user.click(screen.getByRole("button", { name: "Open deal" }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].body).toMatchObject({
+      amount_minor: 1_250_000,
+      currency: "USD",
+      stage_id: "s2",
+      owner_id: "u-2",
+    });
+  });
+
+  it("says a suggestion somebody decided first was already decided", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      stubBackend({
+        suggestions: [],
+        refuse: { status: 409, code: "conflict" },
+      }),
+    );
+    draw(<DealSuggestionCard suggestion={suggestion} />);
+
+    await user.click(await screen.findByRole("button", { name: "Not a deal" }));
+    expect(
+      await screen.findByText(
+        "Someone already decided this suggestion. Reload to see where it stands.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("asks for another try when a dismissal simply failed", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      stubBackend({
+        suggestions: [],
+        refuse: { status: 500, code: "internal" },
+      }),
+    );
+    draw(<DealSuggestionCard suggestion={suggestion} />);
+
+    await user.click(await screen.findByRole("button", { name: "Not a deal" }));
+    expect(
+      await screen.findByText("That did not go through. Try again."),
+    ).toBeTruthy();
+  });
+});
+
+describe("a suggestion on its company's page", () => {
+  it("draws the account's suggestion with its evidence, worded by kind", async () => {
+    const signalled: DealSuggestion = {
+      ...suggestion,
+      name_hint: "opportunity_signalled",
+      confidence: 0.5,
+      amount_minor: null,
+      currency: null,
+      evidence: [
+        {
+          kind: "signal",
+          signal_id: "sg-e",
+          occurred_at: "2026-09-25T10:00:00Z",
+          title: "They asked for a second phase",
+        },
+      ],
+    };
+    vi.stubGlobal("fetch", stubBackend({ suggestions: [signalled] }));
+    draw(<CompanySuggestions companyId="co-1" />);
+
+    expect(await screen.findByText("Suggested deal")).toBeTruthy();
+    expect(screen.getByText("Acme GmbH: buying signals")).toBeTruthy();
+    expect(
+      screen.getByText("Signal: They asked for a second phase"),
+    ).toBeTruthy();
+  });
+
+  it("draws nothing for an account with no suggestion", async () => {
+    const fetched = stubBackend({ suggestions: [] });
+    vi.stubGlobal("fetch", fetched);
+    const { container } = draw(<CompanySuggestions companyId="co-1" />);
+    await waitFor(() => expect(fetched).toHaveBeenCalled());
+    expect(container.querySelector("[data-testid=deal-suggestion]")).toBeNull();
   });
 });

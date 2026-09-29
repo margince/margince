@@ -46,10 +46,12 @@ func (h Handlers) WithSuggestionEffects(effects SuggestionEffects) Handlers {
 	return h
 }
 
-// WithSuggestionEffects wires the acceptance's cross-module writes into the store.
+// WithSuggestionEffects answers a copy of the store with the acceptance's
+// cross-module writes wired, leaving the receiver as it was.
 func (s *Store) WithSuggestionEffects(effects SuggestionEffects) *Store {
-	s.suggestionEffects = effects
-	return s
+	wired := *s
+	wired.suggestionEffects = effects
+	return &wired
 }
 
 // SuggestionDecidedError is a decision on a suggestion somebody already
