@@ -102,6 +102,12 @@ GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 # two cannot drift apart.
 UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
+# TEST_EXEC=<wrapper> runs every cached test binary through a `go test -exec`
+# wrapper, uncached. cache-warm sets it to scripts/testlog-exec.sh, which logs
+# what each package read, and backend/tools/check-test-inputs judges the logs:
+# the census over the same packages the cached pass replays.
+TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
+
 .DEFAULT_GOAL := help
 
 .PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
@@ -171,7 +177,7 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test -coverprofile="$$tmp" -coverpkg=./... ./...); \
 			if [ -s "$$out" ]; then tail -n +2 "$$tmp" >> "$$out"; else cp "$$tmp" "$$out"; fi; \
 		else \
-			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test ./...); \
+			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./...); \
 		fi; \
 	done; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
@@ -236,11 +242,11 @@ test-cached: composition
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want uncached"; \
-	  $(GOWORK_COMPOSED) $(GO) test $$cached
+	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $$cached
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
-	$(GOWORK_COMPOSED) $(GO) test ./tools/...
+	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./tools/...
 
 test-uncached: composition
 	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects

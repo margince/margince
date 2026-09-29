@@ -156,8 +156,8 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 	if human.Action != "update" || human.ActorType != "human" {
 		t.Fatalf("human entry = %+v, want the seeded update diff", human)
 	}
-	// No phantom keys: the seeded map is the whole of before/after, since
-	// defaultFieldMasks is empty for contact in this repo.
+	// No phantom keys: the seeded map is the whole of before/after, this
+	// reader's role carrying no mask over a contact.
 	if len(human.Before) != 1 || human.Before["phone"] != "555-0100" {
 		t.Errorf("human before = %v, want exactly {phone: 555-0100}", human.Before)
 	}

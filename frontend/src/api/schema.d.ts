@@ -11768,7 +11768,7 @@ export interface paths {
          * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
          *     otherwise). Replaces the catalog's `options` array and regenerates the physical
          *     column's CHECK constraint from the new set via the governed engine (the same
-         *     owner-ALTER-then-downgrade transaction shape as `createCustomField` — this is the
+         *     one-transaction owner-ALTER shape as `createCustomField` — this is the
          *     one DDL path rename/retire never touch). Removing every option is refused (422,
          *     detail "A picklist needs at least one option") — a picklist always keeps at least
          *     one allowed value. 🟡 like `retireCustomField`: this mutates a schema-adjacent CHECK
@@ -25232,6 +25232,12 @@ export interface components {
          *     quarter, and the deal amount that can be corrected after the close, would
          *     otherwise make the same entry answer a different question each time it is read.
          *     Carries no owner — visibility is inherited from the deal.
+         *
+         *     An entry carries no `masked_fields`, because no column of one can be withheld on
+         *     its own: the rate IS the partner's margin tier and the amount over the basis is
+         *     that rate again. A role whose field mask withholds `partner.margin_tier` therefore
+         *     reads no entry at all — the list omits it, the single read answers 404, and the
+         *     summary leaves it out of the totals.
          */
         CommissionEntry: {
             /** Format: uuid */
@@ -33447,6 +33453,8 @@ export interface components {
              * @description The company this partner record extends (PK = FK).
              */
             company_id: string;
+            /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
+            readonly masked_fields?: string[];
             /**
              * @description Functional role (ADR-0034); implementation + dev are Margince's turf.
              * @enum {string}

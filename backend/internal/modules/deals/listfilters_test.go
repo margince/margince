@@ -13,20 +13,41 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// filterOperandID is the record every reference filter here narrows by. One
+// value, because which record it is decides nothing any case below asserts.
+var filterOperandID = ids.NewV7().String()
+
+// dealFilterOperands is one operand per filter this list declares, so a case
+// narrows by something real rather than by a zero value. The case below holds
+// it complete, which is what lets fieldmask_test.go render every filter's SQL
+// instead of the few it thought to name.
+//
+// gatekit:fixture the value each filter narrows by — test input, not a cost.
+var dealFilterOperands = map[string]string{
+	filterAcquisitionSource:  "referral",
+	filterCommercialMotion:   "new_business",
+	filterCompanyID:          filterOperandID,
+	filterForecastCategory:   "commit",
+	filterOwnerID:            filterOperandID,
+	filterPartnerAttribution: "sourced",
+	filterPartnerCompanyID:   filterOperandID,
+	filterPartnerSourced:     "true",
+	filterPipelineID:         filterOperandID,
+	filterPriority:           "high",
+	filterProjectID:          filterOperandID,
+	filterStageID:            filterOperandID,
+	filterStalled:            "false",
+	filterStatus:             "open",
+	filterTag:                filterOperandID,
+	filterTagMode:            "all",
+}
+
 // Every filter this module declares narrows something — the deal half of the
 // check contacts/listfilters_test.go states: a binding that parses
 // its operand and writes nowhere runs the list WIDER than the caller asked,
 // and does it while looking exactly like a narrowed answer.
 func TestEveryDeclaredDealsFilterNarrowsSomething(t *testing.T) {
-	id := ids.NewV7().String()
-	assertEveryFilterNarrows(t, "deal", dealListFilters, map[string]string{
-		"company_id": id, "owner_id": id, "partner_company_id": id, "partner_sourced": "true",
-		"partner_attribution": "sourced",
-		"forecast_category":   "commit",
-		"pipeline_id":         id, "project_id": id, "stage_id": id, "stalled": "false", "status": "open",
-		"tag_id": id, "tag_mode": "all",
-		"commercial_motion": "new_business", "priority": "high", "acquisition_source": "referral",
-	})
+	assertEveryFilterNarrows(t, "deal", dealListFilters, dealFilterOperands)
 }
 
 // Each entity type is offered ITS OWN vocabulary — the deal half of the check

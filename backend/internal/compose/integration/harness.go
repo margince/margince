@@ -244,6 +244,22 @@ func (e *Env) As(user ids.UUID, teams []ids.UUID, perms principal.Permissions) c
 // column is a foreign key into app_user.
 func (e *Env) Admin() context.Context { return e.As(e.AdminUser, nil, AdminPerms) }
 
+// PartnerSeat is the seat the partner seeds write as. The harness's AdminPerms
+// deliberately carries no `partner` grant, so a suite borrowing its own context
+// to seed one would grow a permission it is not testing.
+func (e *Env) PartnerSeat() context.Context {
+	return e.As(e.AdminUser, nil, principal.Permissions{
+		RoleKeys: []string{"admin"},
+		Objects: map[string]principal.ObjectGrant{
+			"partner": {Create: true, Read: true, Update: true},
+			// Becoming a partner also stamps the company's relationship
+			// types, so the seat needs the company as well as the programme.
+			objCompany: {Read: true, Update: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+}
+
 // AutomationCtx binds the principal a workflow firing stages under: the system
 // actor, acting on behalf of the automation's owner.
 //

@@ -27,7 +27,9 @@ import {
   extensionFrontendFiles,
   extensionLayers,
   filesUnder,
+  moduleSpecifiers,
   parseSource,
+  resolveRelative,
   scriptKindFor,
   sourceFileAt,
 } from "./source-tree";
@@ -239,6 +241,59 @@ describe("the walk the source-wide gates share", () => {
       recursive: true,
     });
     expect(extensionLayers(dir)).toEqual([]);
+  });
+});
+
+describe("the one resolver the import-graph gates share", () => {
+  let dir = "";
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "source-resolve-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("resolves a specifier to the module file a bundler loads", () => {
+    const from = join(dir, "main.ts");
+    mkdirSync(join(dir, "panel"));
+    for (const file of ["panel/index.tsx", "card.tsx", "card.css", "view.ts"]) {
+      writeFileSync(join(dir, file), "");
+    }
+    expect(resolveRelative(from, "./panel")).toBe(join(dir, "panel/index.tsx"));
+    expect(resolveRelative(from, "./card")).toBe(join(dir, "card.tsx"));
+    expect(resolveRelative(from, "./view.ts")).toBe(join(dir, "view.ts"));
+    expect(resolveRelative(from, "./card.css")).toBeNull();
+    expect(resolveRelative(from, "react")).toBeNull();
+  });
+
+  it("drops only the erased type forms when asked for values", () => {
+    const source = parseSource(
+      "a.ts",
+      [
+        `import type { A } from "./a";`,
+        `import { type B } from "./b";`,
+        `export type { C } from "./c";`,
+        `export { type D } from "./d";`,
+        `export * from "./f";`,
+        `const g = () => import("./g");`,
+      ].join("\n"),
+    );
+    expect(moduleSpecifiers(source, "all")).toEqual([
+      "./a",
+      "./b",
+      "./c",
+      "./d",
+      "./f",
+      "./g",
+    ]);
+    // `{ type B }` still loads its module under verbatimModuleSyntax.
+    expect(moduleSpecifiers(source, "values")).toEqual([
+      "./b",
+      "./d",
+      "./f",
+      "./g",
+    ]);
   });
 });
 
