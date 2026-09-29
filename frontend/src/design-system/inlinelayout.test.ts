@@ -325,7 +325,7 @@ describe("layout is a class, not a style attribute", () => {
     // a unit's own layer.
     const paths = files.map(pathOf);
     expect(files.length).toBeGreaterThan(900);
-    expect(paths).toContain("frontend/src/screens/contact360.tsx");
+    expect(paths).toContain("frontend/src/screens/company360.tsx");
     expect(paths).toContain("frontend/src/screens/deal360/dealactions.tsx");
     expect(paths).toContain("frontend/src/design-system/trust.tsx");
     expect(paths).toContain("frontend/src/design-system/anchoredpopup.ts");

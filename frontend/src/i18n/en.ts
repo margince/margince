@@ -66,7 +66,6 @@ export const en = {
   "scheduling.resume": "Enable bookings",
   "scheduling.settings": "Meeting settings",
   "scheduling.save": "Save settings",
-  "scheduling.saved": "Settings saved",
   "settings.tab.meetings": "Meetings",
   "settings.page.meetings.sub":
     "Working hours, calendars and booking preferences.",
@@ -126,9 +125,6 @@ export const en = {
   "scheduling.finishSetup":
     "Complete calendar setup in meeting settings to choose available times.",
   "scheduling.readOnlyBadge": "Read-only calendar",
-  "scheduling.connect": "Connect or reconnect calendar",
-  "scheduling.connectionHelp":
-    "Calendar write access is required to send invitations. Reconnect an existing read-only calendar to grant access.",
   "scheduling.accountName":
     "The name on your booking page comes from Account settings.",
   "scheduling.linkNotCreated":
@@ -158,11 +154,9 @@ export const en = {
   "scheduling.guestAgenda": "What would you like to discuss?",
   "scheduling.agenda": "Message for your guest",
   "scheduling.chooseTime": "Choose a time",
-  "scheduling.zone": "Time zone",
   "scheduling.date": "Starting date",
   "scheduling.next": "More times",
   "scheduling.noTimes": "No available times in this window. Try another date.",
-  "scheduling.review": "Review invitation",
   "scheduling.pending": "Creating your invitation…",
   "scheduling.confirmed": "Calendar invitation created",
   "scheduling.needs_attention": "Invitation needs attention",
@@ -176,7 +170,6 @@ export const en = {
   "scheduling.cancelConfirm": "Cancel this meeting and notify the attendee?",
   "scheduling.retry": "Retry invitation",
   "scheduling.book": "Confirm meeting",
-  "scheduling.chooseFirst": "Select a time to continue",
   "scheduling.unavailable":
     "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
@@ -460,10 +453,7 @@ export const en = {
   "trust.systemTag": "System task {job}",
   "trust.systemUnnamed": "System task",
   "trust.connectorTag": "Via {connector}",
-  "trust.dismissed": "Suggestion dismissed",
   "trust.stagedProposal": "Proposed value",
-  "trust.resolvedValue": "Resolved value",
-  "trust.editValue": "Edit {description}",
   "trust.evidenceFrom": "Evidence from {source}",
   "trust.evidenceLine_one": "line {lines}",
   "trust.evidenceLine_other": "lines {lines}",
@@ -747,16 +737,6 @@ export const en = {
   "search.partner.open": "Open partner record",
   "search.partner.openNamed": "Open partner record for {name}",
 
-  "context.recentTouches": "Recent activity",
-  "context.openTasks": "Open tasks",
-  "context.relatedContacts": "Related contacts",
-  "context.relatedCompanies": "Related companies",
-  "context.relatedProjects": "Related projects",
-  "context.whoKnows": "Colleague connections",
-  "context.relatedDeals": "Related deals",
-  "context.title": "Related records",
-  "context.empty": "No related records.",
-
   "palette.aria": "Command palette",
   "palette.placeholder": "Search or ask Margince",
   "palette.empty": "No matches.",
@@ -781,7 +761,6 @@ export const en = {
   "explain.mayHaveMoved":
     "This link does not record when the number was calculated, so these figures were recalculated now. If an exchange rate changed since, they may not match the number you clicked.",
   "explain.title": "How this number is built",
-  "explain.rate": "rate {rate} on {date}",
   "explain.cell": "Explain {figure}",
   "explain.excluded_one":
     "1 record is left out of this number and the rows below. A field on it is hidden for your role.",
@@ -1671,7 +1650,6 @@ export const en = {
   "finance.status.disputed": "Disputed",
   "finance.status.credited": "Credited",
   "finance.status.void": "Void",
-  "commercial.closes": "closes {when}",
   "contracts.title": "Contracts",
   "contracts.empty": "No contracts yet",
   "contracts.noneActive": "No contract active today",
@@ -1791,7 +1769,6 @@ export const en = {
   "co.next.overdue": "Overdue",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
-  "co.work.noDeals": "No open deals.",
   "co.work.closes": "closes {date}",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",
@@ -1963,7 +1940,6 @@ export const en = {
   "co.ask.q.whats_changed": "What changed recently?",
   "co.ask.nothing": "No records you can access answer that question.",
   "co.ask.failed": "The question could not be answered. Retry.",
-  "co.suggest.title": "Margince suggests",
   "co.suggest.kind.no_reply": "No reply",
   "co.suggest.kind.stalled_deal": "Stalled deal",
   "co.suggest.kind.no_next_step": "No next step",
@@ -2008,10 +1984,6 @@ export const en = {
   "co.rail.projects.empty": "No projects yet.",
 
   "co.commercial.title": "Commercial",
-  "co.commercial.lostFigure": "Lost deals",
-  "co.commercial.allDeals": "All deals",
-  "co.commercial.truncated":
-    "More open deals than fit here. Open All deals to see the rest.",
   "linkedinImport.title": "LinkedIn connections",
   "linkedinImport.sub":
     "Import your LinkedIn export to see who your team already knows.",
@@ -7775,13 +7747,9 @@ export const en = {
   "settings.tab.voice": "Writing voice",
   "settings.tab.agents": "Agents",
   "settings.tab.connections": "Connections",
-  "settings.tab.general": "General",
-  "settings.tab.users": "Users and teams",
   "settings.tab.extensions": "Extensions",
   "settings.tab.integrations": "Integrations",
   "settings.tab.capture": "Capture rules",
-  "settings.tab.data-model": "Data model",
-  "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Knowledge",
   "corpusAsk.title": "Ask your documents",
   "corpusAsk.sub":
@@ -7949,7 +7917,6 @@ export const en = {
   "pipeline.reason.record_not_available":
     "this step’s record is no longer kept or is not visible to you; once a record is deleted the two cannot be distinguished",
   "pipeline.status.not_reported": "Not reported here",
-  "pipeline.subject.message": "about this message",
   "pipeline.subject.sender": "about the sender, not this message alone",
   "pipeline.subject.domain": "about the sender’s domain",
   "pipeline.subject.thread": "about the whole thread",
@@ -8054,8 +8021,6 @@ export const en = {
   "pipeline.reason.would_restore_erased":
     "reporting this would restore data an erasure removed",
   "pipeline.reason.no_writer_yet": "this step does not exist yet",
-  "settings.tab.maintenance": "Maintenance",
-  "settings.tab.license": "License",
   "license.card.title": "License and seats",
   "license.state.licensed": "Licensed",
   "license.state.uncapped": "Licensed, no seat limit",
@@ -9329,14 +9294,6 @@ export const en = {
   "consent.invalidTitle": "This connection request could not be completed",
   "consent.invalidBody":
     "This installation will not authorize the request as it stands; the app may no longer be registered here. Return to the app you were connecting and start again.",
-  "contact.thin.title": "Known details",
-  "contact.thin.known":
-    "On file for {name}: {what}. No one in the company has a recorded exchange with them yet.",
-  "contact.thin.remediation.capture":
-    "Connect a mailbox that writes to this contact to fill in this page, with the source of each field.",
-  "contact.thin.remediation.employer":
-    "Add their employer, and Margince can read that company’s website for their role.",
-  "contact.thin.logFirst": "Log first interaction",
   "contact.enriched.title": "Enriched details",
   "contact.confirm.title_one": "{count} detail to confirm",
   "contact.confirm.title_other": "{count} details to confirm",
@@ -9837,7 +9794,6 @@ export const en = {
   "contact.meeting.objective": "Target outcome",
   "contact.meeting.openWith": "Open with",
   "contact.meeting.arc": "Relationship history",
-  "contact.meeting.arcSub": "Only the events relevant to this meeting.",
   "contact.meeting.close": "Close the meeting",
   "contact.meeting.advance.minimum": "Minimum advance",
   "contact.meeting.advance.best": "Best advance",
@@ -10339,17 +10295,9 @@ export const en = {
   "projectCompanies.detachTitle": "Remove company from project?",
   "projectCompanies.detachConfirm": "Remove company",
   "projectCompanies.searchLabel": "Search companies by name",
-  "contactProjects.title": "Projects",
-  "contactProjects.empty":
-    "No projects yet. This contact appears here once added to a project in any role.",
   "projectRole.customer": "Customer",
   "projectRole.partner": "Partner",
   "projectRole.subcontractor": "Subcontractor",
-  "contactRole.sponsor": "Sponsor",
-  "contactRole.projectLead": "Project lead",
-  "contactRole.deliveryLead": "Delivery lead",
-  "contactRole.expert": "Subject-matter expert",
-  "contactRole.user": "User",
   "projectLinks.attach": "Attach project",
   "projectLinks.move": "Move to another project",
   "projectLinks.detach": "Detach",
@@ -10572,7 +10520,6 @@ export const en = {
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.not_mine": "Not mine",
   "worklist.disposition.verb.not_sales": "Not a customer",
-  "worklist.disposition.done.snooze": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
   "worklist.disposition.doneSnoozeUntil.reply":

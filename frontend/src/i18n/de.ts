@@ -69,7 +69,6 @@ export const de = {
   "scheduling.resume": "Buchungen aktivieren",
   "scheduling.settings": "Termineinstellungen",
   "scheduling.save": "Einstellungen speichern",
-  "scheduling.saved": "Einstellungen gespeichert",
   "settings.tab.meetings": "Termine",
   "settings.page.meetings.sub":
     "Buchbare Zeiten, Kalender und Buchungseinstellungen.",
@@ -129,9 +128,6 @@ export const de = {
   "scheduling.finishSetup":
     "Kalender in den Termineinstellungen einrichten, um freie Zeiten auszuwählen.",
   "scheduling.readOnlyBadge": "Kalender nur lesbar",
-  "scheduling.connect": "Kalender verbinden oder erneut verbinden",
-  "scheduling.connectionHelp":
-    "Zum Senden von Einladungen ist Schreibzugriff nötig. Verbinde einen nur lesbaren Kalender erneut.",
   "scheduling.accountName":
     "Der Name auf deiner Buchungsseite stammt aus den Kontoeinstellungen.",
   "scheduling.linkNotCreated":
@@ -162,12 +158,10 @@ export const de = {
   "scheduling.guestAgenda": "Was möchtest du besprechen?",
   "scheduling.agenda": "Nachricht an deinen Gast",
   "scheduling.chooseTime": "Zeit auswählen",
-  "scheduling.zone": "Zeitzone",
   "scheduling.date": "Startdatum",
   "scheduling.next": "Weitere Zeiten",
   "scheduling.noTimes":
     "In diesem Zeitraum sind keine Termine frei. Wähle ein anderes Datum.",
-  "scheduling.review": "Einladung prüfen",
   "scheduling.pending": "Deine Einladung wird erstellt…",
   "scheduling.confirmed": "Kalendereinladung erstellt",
   "scheduling.needs_attention": "Einladung braucht Aufmerksamkeit",
@@ -182,7 +176,6 @@ export const de = {
     "Diesen Termin absagen und den Gast benachrichtigen?",
   "scheduling.retry": "Einladung erneut versuchen",
   "scheduling.book": "Termin bestätigen",
-  "scheduling.chooseFirst": "Wähle eine Zeit, um fortzufahren",
   "scheduling.unavailable":
     "Diese Buchungsseite ist nicht verfügbar. Kontaktiere deinen Gastgeber.",
   "scheduling.publicUrlMissing":
@@ -471,10 +464,7 @@ export const de = {
   "trust.systemTag": "Systemaufgabe {job}",
   "trust.systemUnnamed": "Systemaufgabe",
   "trust.connectorTag": "Über {connector}",
-  "trust.dismissed": "Vorschlag ausgeblendet",
   "trust.stagedProposal": "Vorgeschlagener Wert",
-  "trust.resolvedValue": "Übernommener Wert",
-  "trust.editValue": "{description} bearbeiten",
   "trust.evidenceFrom": "Beleg aus {source}",
   "trust.evidenceLine_one": "Zeile {lines}",
   "trust.evidenceLine_other": "Zeilen {lines}",
@@ -744,16 +734,6 @@ export const de = {
   "search.partner.open": "Partnerdatensatz öffnen",
   "search.partner.openNamed": "Partnerdatensatz öffnen für {name}",
 
-  "context.recentTouches": "Letzte Aktivitäten",
-  "context.openTasks": "Offene Aufgaben",
-  "context.relatedContacts": "Zugehörige Kontakte",
-  "context.relatedCompanies": "Zugehörige Unternehmen",
-  "context.relatedProjects": "Zugehörige Projekte",
-  "context.whoKnows": "Verbindungen im Team",
-  "context.relatedDeals": "Zugehörige Deals",
-  "context.title": "Zugehörige Datensätze",
-  "context.empty": "Keine zugehörigen Datensätze.",
-
   "palette.aria": "Befehlspalette",
   "palette.placeholder": "Suchen oder Margince fragen",
   "palette.empty": "Keine Treffer.",
@@ -775,7 +755,6 @@ export const de = {
   "explain.mayHaveMoved":
     "Dieser Link hält nicht fest, wann die Zahl berechnet wurde, daher wurden diese Werte jetzt neu berechnet. Hat sich seitdem ein Wechselkurs geändert, weichen sie möglicherweise von der angeklickten Zahl ab.",
   "explain.title": "So setzt sich diese Zahl zusammen",
-  "explain.rate": "Kurs {rate} am {date}",
   "explain.cell": "{figure} erklären",
   "explain.excluded_one":
     "Bei 1 Datensatz ist ein Feld für deine Rolle ausgeblendet, deshalb fehlt er in dieser Zahl und in den Zeilen darunter.",
@@ -1610,7 +1589,6 @@ export const de = {
   "finance.status.disputed": "Strittig",
   "finance.status.credited": "Gutgeschrieben",
   "finance.status.void": "Storniert",
-  "commercial.closes": "Abschluss {when}",
   "contracts.title": "Vertr\u00e4ge",
   "contracts.empty": "Noch keine Verträge",
   "contracts.noneActive": "Heute ist kein Vertrag aktiv",
@@ -1727,7 +1705,6 @@ export const de = {
   "co.next.overdue": "\u00dcberfällig",
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
-  "co.work.noDeals": "Keine offenen Deals.",
   "co.work.closes": "Abschluss {date}",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -1897,7 +1874,6 @@ export const de = {
   "co.ask.nothing":
     "Keiner der Datensätze, auf die du Zugriff hast, beantwortet diese Frage.",
   "co.ask.failed": "Die Frage wurde nicht beantwortet. Versuche es erneut.",
-  "co.suggest.title": "Margince schlägt vor",
   "co.suggest.kind.no_reply": "Keine Antwort",
   "co.suggest.kind.stalled_deal": "Stockender Deal",
   "co.suggest.kind.no_next_step": "Kein nächster Schritt",
@@ -1942,10 +1918,6 @@ export const de = {
   "co.rail.projects.empty": "Noch keine Projekte.",
 
   "co.commercial.title": "Geschäftliches",
-  "co.commercial.lostFigure": "Verlorene Deals",
-  "co.commercial.allDeals": "Alle Deals",
-  "co.commercial.truncated":
-    "Mehr offene Deals, als hier Platz haben. Öffne „Alle Deals“, um den Rest zu sehen.",
   "linkedinImport.title": "LinkedIn-Verbindungen",
   "linkedinImport.sub":
     "Importiere deinen LinkedIn-Export, um zu sehen, wen dein Team bereits kennt.",
@@ -7590,13 +7562,9 @@ export const de = {
   "settings.tab.voice": "Schreibstil",
   "settings.tab.agents": "Agenten",
   "settings.tab.connections": "Verbindungen",
-  "settings.tab.general": "Allgemein",
-  "settings.tab.users": "Nutzende und Teams",
   "settings.tab.extensions": "Erweiterungen",
   "settings.tab.integrations": "Anbindungen",
   "settings.tab.capture": "Erfassungsregeln",
-  "settings.tab.data-model": "Datenmodell",
-  "settings.tab.ai": "KI",
   "settings.tab.knowledge": "Wissen",
   "corpusAsk.title": "Deine Dokumente befragen",
   "corpusAsk.sub":
@@ -7775,7 +7743,6 @@ export const de = {
   "pipeline.reason.record_not_available":
     "der Datensatz dieses Schritts wird nicht mehr aufbewahrt oder ist für dich nicht sichtbar; nach dem Löschen eines Datensatzes lässt sich beides nicht unterscheiden",
   "pipeline.status.not_reported": "Hier nicht ausgewiesen",
-  "pipeline.subject.message": "zu dieser Nachricht",
   "pipeline.subject.sender": "zum Absender, nicht nur zu dieser Nachricht",
   "pipeline.subject.domain": "zur Domain des Absenders",
   "pipeline.subject.thread": "zum gesamten Thread",
@@ -7885,8 +7852,6 @@ export const de = {
   "pipeline.reason.would_restore_erased":
     "dies auszuweisen würde Daten wiederherstellen, die eine Löschung entfernt hat",
   "pipeline.reason.no_writer_yet": "diesen Schritt gibt es noch nicht",
-  "settings.tab.maintenance": "Wartung",
-  "settings.tab.license": "Lizenz",
   "license.card.title": "Lizenz und Plätze",
   "license.state.licensed": "Lizenziert",
   "license.state.uncapped": "Lizenziert, ohne Platzbegrenzung",
@@ -9193,14 +9158,6 @@ export const de = {
     "Diese Verbindungsanfrage konnte nicht abgeschlossen werden",
   "consent.invalidBody":
     "Diese Installation autorisiert die Anfrage in dieser Form nicht; die App ist hier möglicherweise nicht mehr registriert. Gehe zurück zur App, die du verbinden wolltest, und starte neu.",
-  "contact.thin.title": "Bekannte Angaben",
-  "contact.thin.known":
-    "Zu {name} erfasst: {what}. Im Unternehmen hat noch niemand einen erfassten Austausch mit diesem Kontakt.",
-  "contact.thin.remediation.capture":
-    "Verbinde ein Postfach, das mit diesem Kontakt schreibt, um diese Seite zu füllen, mit der Quelle jedes Felds.",
-  "contact.thin.remediation.employer":
-    "Ergänze den Arbeitgeber, dann kann Margince auf der Website dieses Unternehmens die Rolle des Kontakts nachlesen.",
-  "contact.thin.logFirst": "Erste Interaktion erfassen",
   "contact.enriched.title": "Angereicherte Angaben",
   "contact.confirm.title_one": "{count} Angabe zu bestätigen",
   "contact.confirm.title_other": "{count} Angaben zu bestätigen",
@@ -9692,8 +9649,6 @@ export const de = {
   "contact.meeting.objective": "Angestrebtes Ergebnis",
   "contact.meeting.openWith": "Einstieg",
   "contact.meeting.arc": "Verlauf der Beziehung",
-  "contact.meeting.arcSub":
-    "Nur die Ereignisse, die für diesen Termin relevant sind.",
   "contact.meeting.close": "Termin abschließen",
   "contact.meeting.advance.minimum": "Mindestziel",
   "contact.meeting.advance.best": "Bestes Ziel",
@@ -10171,17 +10126,9 @@ export const de = {
   "projectCompanies.detachTitle": "Unternehmen aus dem Projekt entfernen?",
   "projectCompanies.detachConfirm": "Unternehmen entfernen",
   "projectCompanies.searchLabel": "Unternehmen nach Name suchen",
-  "contactProjects.title": "Projekte",
-  "contactProjects.empty":
-    "Noch keine Projekte. Dieser Kontakt erscheint hier, sobald er einem Projekt in einer beliebigen Rolle hinzugefügt wurde.",
   "projectRole.customer": "Kunde",
   "projectRole.partner": "Partner",
   "projectRole.subcontractor": "Subunternehmen",
-  "contactRole.sponsor": "Sponsor",
-  "contactRole.projectLead": "Projektleitung",
-  "contactRole.deliveryLead": "Umsetzungsleitung",
-  "contactRole.expert": "Fachexpertise",
-  "contactRole.user": "Nutzende",
   "projectLinks.attach": "Projekt verknüpfen",
   "projectLinks.move": "Zu anderem Projekt verschieben",
   "projectLinks.detach": "Verknüpfung lösen",
@@ -10405,7 +10352,6 @@ export const de = {
   "worklist.disposition.snoozeUntil.reply": "Bis zur Antwort",
   "worklist.disposition.verb.not_mine": "Nicht zuständig",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
-  "worklist.disposition.done.snooze": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",

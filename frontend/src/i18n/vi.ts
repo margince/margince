@@ -74,7 +74,6 @@ export const vi = {
   "scheduling.resume": "Bật đặt lịch",
   "scheduling.settings": "Cài đặt cuộc họp",
   "scheduling.save": "Lưu cài đặt",
-  "scheduling.saved": "Đã lưu cài đặt",
   "settings.tab.meetings": "Cuộc họp",
   "settings.page.meetings.sub": "Giờ làm việc, lịch và tùy chọn đặt lịch.",
   "scheduling.missingSavedCalendar":
@@ -133,9 +132,6 @@ export const vi = {
   "scheduling.finishSetup":
     "Hoàn tất thiết lập lịch trong cài đặt cuộc hẹn để chọn giờ trống.",
   "scheduling.readOnlyBadge": "Lịch chỉ đọc",
-  "scheduling.connect": "Kết nối hoặc kết nối lại lịch",
-  "scheduling.connectionHelp":
-    "Cần quyền ghi lịch để gửi lời mời. Kết nối lại lịch chỉ đọc để cấp quyền.",
   "scheduling.accountName":
     "Tên trên trang đặt lịch được lấy từ cài đặt Tài khoản.",
   "scheduling.linkNotCreated": "Lưu cài đặt cuộc họp để tạo liên kết đặt lịch.",
@@ -164,12 +160,10 @@ export const vi = {
   "scheduling.guestAgenda": "Bạn muốn trao đổi về điều gì?",
   "scheduling.agenda": "Lời nhắn cho khách",
   "scheduling.chooseTime": "Chọn giờ",
-  "scheduling.zone": "Múi giờ",
   "scheduling.date": "Ngày bắt đầu",
   "scheduling.next": "Thêm giờ",
   "scheduling.noTimes":
     "Không còn giờ trống trong khoảng này. Hãy chọn ngày khác.",
-  "scheduling.review": "Xem lại lời mời",
   "scheduling.pending": "Đang tạo lời mời…",
   "scheduling.confirmed": "Đã tạo lời mời trong lịch",
   "scheduling.needs_attention": "Lời mời cần được kiểm tra",
@@ -183,7 +177,6 @@ export const vi = {
   "scheduling.cancelConfirm": "Hủy cuộc họp này và thông báo cho khách mời?",
   "scheduling.retry": "Thử lại lời mời",
   "scheduling.book": "Xác nhận cuộc họp",
-  "scheduling.chooseFirst": "Chọn giờ để tiếp tục",
   "scheduling.unavailable":
     "Trang đặt lịch này không khả dụng. Hãy liên hệ chủ lịch.",
   "scheduling.publicUrlMissing":
@@ -468,10 +461,7 @@ export const vi = {
   "trust.systemTag": "Tiến trình hệ thống {job}",
   "trust.systemUnnamed": "Tiến trình hệ thống",
   "trust.connectorTag": "Qua {connector}",
-  "trust.dismissed": "Đã bỏ qua đề xuất.",
   "trust.stagedProposal": "đề xuất chờ duyệt",
-  "trust.resolvedValue": "giá trị đã chốt",
-  "trust.editValue": "Sửa {description}",
   "trust.evidenceFrom": "Bằng chứng từ {source}",
   "trust.evidenceLine_one": "dòng {lines}",
   "trust.evidenceLine_other": "dòng {lines}",
@@ -738,16 +728,6 @@ export const vi = {
   "search.partner.open": "Mở hồ sơ đối tác",
   "search.partner.openNamed": "Mở hồ sơ đối tác của {name}",
 
-  "context.recentTouches": "Trao đổi gần đây",
-  "context.openTasks": "Công việc đang mở",
-  "context.relatedContacts": "Liên hệ liên quan",
-  "context.relatedCompanies": "Công ty liên quan",
-  "context.relatedProjects": "Dự án liên quan",
-  "context.whoKnows": "Ai biết họ",
-  "context.relatedDeals": "Cơ hội liên quan",
-  "context.title": "Bằng chứng liên quan",
-  "context.empty": "Chưa có gì liên quan.",
-
   "palette.aria": "Bảng lệnh",
   "palette.placeholder": "Tìm mọi thứ hoặc nhận câu trả lời từ Margince",
   "palette.empty": "Không có kết quả.",
@@ -770,7 +750,6 @@ export const vi = {
   "explain.mayHaveMoved":
     "Liên kết này không ghi con số được tính vào lúc nào, nên các số dưới đây vừa được tính lại. Nếu tỷ giá đã thay đổi trong khoảng đó, chúng có thể không khớp với con số bạn đã bấm.",
   "explain.title": "Con số này được dựng thế nào",
-  "explain.rate": "tỷ giá {rate} ngày {date}",
   "explain.cell": "Giải thích {figure}",
   "explain.excluded_one":
     "1 bản ghi không có trong con số này và các dòng bên dưới. Một trường của bản ghi đó bị ẩn với vai trò của bạn.",
@@ -1589,7 +1568,6 @@ export const vi = {
   "finance.status.disputed": "Đang tranh chấp",
   "finance.status.credited": "Đã ghi có",
   "finance.status.void": "Đã hủy",
-  "commercial.closes": "chốt {when}",
   "contracts.title": "H\u1ee3p \u0111\u1ed3ng",
   "contracts.empty": "Ch\u01b0a c\u00f3 h\u1ee3p \u0111\u1ed3ng n\u00e0o",
   "contracts.noneActive":
@@ -1717,7 +1695,6 @@ export const vi = {
   "co.next.overdue": "Quá hạn",
   "co.next.due": "Hạn {when}",
   "co.next.undated": "Chưa có hạn",
-  "co.work.noDeals": "Kh\u00f4ng c\u00f3 deal n\u00e0o \u0111ang m\u1edf.",
   "co.work.closes": "ch\u1ed1t {date}",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ dữ liệu của bạn",
@@ -1888,7 +1865,6 @@ export const vi = {
   "co.ask.q.whats_changed": "Gần đây có gì thay đổi?",
   "co.ask.nothing": "Không có gì bạn xem được ở đây trả lời được câu đó.",
   "co.ask.failed": "Không trả lời được câu hỏi đó — hãy thử lại.",
-  "co.suggest.title": "Margince đề xuất",
   "co.suggest.kind.no_reply": "Chưa có hồi đáp",
   "co.suggest.kind.stalled_deal": "Deal đình trệ",
   "co.suggest.kind.no_next_step": "Chưa có gì lên lịch",
@@ -1933,10 +1909,6 @@ export const vi = {
   "co.rail.projects.empty": "Chưa có dự án.",
 
   "co.commercial.title": "Thương mại",
-  "co.commercial.lostFigure": "Deal đã thua",
-  "co.commercial.allDeals": "Tất cả deal",
-  "co.commercial.truncated":
-    "Tài khoản này có nhiều deal đang mở hơn số hiển thị ở đây. Mở Tất cả deal để xem phần còn lại.",
   "linkedinImport.title": "Kết nối LinkedIn",
   "linkedinImport.sub":
     "Nhập bản xuất của chính bạn để biết đội của bạn đã quen những ai",
@@ -7538,13 +7510,9 @@ export const vi = {
   "settings.tab.voice": "Giọng viết",
   "settings.tab.agents": "Tác nhân",
   "settings.tab.connections": "Kết nối",
-  "settings.tab.general": "Chung",
-  "settings.tab.users": "Người dùng & nhóm",
   "settings.tab.extensions": "Tiện ích mở rộng",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Quy tắc thu thập",
-  "settings.tab.data-model": "Mô hình dữ liệu",
-  "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Tri thức",
   "corpusAsk.title": "Hỏi tài liệu của bạn",
   "corpusAsk.sub":
@@ -7713,7 +7681,6 @@ export const vi = {
   "pipeline.reason.record_not_available":
     "bản ghi của bước này không còn được lưu, hoặc bạn không được đọc — khi bản ghi đã mất thì không thể phân biệt hai điều đó",
   "pipeline.status.not_reported": "Không báo cáo ở đây",
-  "pipeline.subject.message": "về tin nhắn này",
   "pipeline.subject.sender": "về người gửi, không riêng tin nhắn này",
   "pipeline.subject.domain": "về tên miền của người gửi",
   "pipeline.subject.thread": "về toàn bộ cuộc trò chuyện",
@@ -7822,8 +7789,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "settings.tab.maintenance": "Bảo trì",
-  "settings.tab.license": "Giấy phép",
   "license.card.title": "Giấy phép và chỗ ngồi",
   "license.state.licensed": "Đã có giấy phép",
   "license.state.uncapped": "Đã có giấy phép, không giới hạn chỗ",
@@ -9115,14 +9080,6 @@ export const vi = {
   "consent.invalidTitle": "Không hoàn tất được yêu cầu kết nối này",
   "consent.invalidBody":
     "Bản cài đặt này sẽ không cho phép yêu cầu ở dạng hiện tại — có thể ứng dụng không còn được đăng ký ở đây. Hãy quay lại ứng dụng bạn đang kết nối và bắt đầu lại.",
-  "contact.thin.title": "Những gì đã biết đến giờ",
-  "contact.thin.known":
-    "Đã có {what} của {name}, nhưng chưa ai bên mình ghi nhận trao đổi với họ.",
-  "contact.thin.remediation.capture":
-    "Hãy kết nối hộp thư vẫn viết cho họ, trang này sẽ tự đầy lên — mỗi trường kèm nguồn gốc của nó.",
-  "contact.thin.remediation.employer":
-    "Hãy thêm nơi họ làm việc, Margince sẽ đọc website công ty đó để tìm vai trò của họ.",
-  "contact.thin.logFirst": "Ghi nhận tương tác đầu tiên",
   "contact.enriched.title": "Những gì Margince đọc được",
   "contact.confirm.title_one": "{count} thông tin cần xác nhận",
   "contact.confirm.title_other": "{count} thông tin cần xác nhận",
@@ -9589,8 +9546,6 @@ export const vi = {
   "contact.meeting.objective": "Kết quả cần đạt được",
   "contact.meeting.openWith": "Mở đầu bằng",
   "contact.meeting.arc": "Diễn biến quan hệ",
-  "contact.meeting.arcSub":
-    "Chỉ những thời điểm làm thay đổi cuộc trò chuyện hôm nay.",
   "contact.meeting.close": "Kết thúc cuộc họp",
   "contact.meeting.advance.minimum": "Tối thiểu",
   "contact.meeting.advance.best": "Tốt nhất",
@@ -10093,17 +10048,9 @@ export const vi = {
   "projectCompanies.detachTitle": "Bỏ công ty này khỏi dự án?",
   "projectCompanies.detachConfirm": "Bỏ công ty",
   "projectCompanies.searchLabel": "Tìm công ty theo tên",
-  "contactProjects.title": "Dự án",
-  "contactProjects.empty":
-    "Liên hệ này xuất hiện ở đây khi tham gia một dự án: với vai trò người bảo trợ, đầu mối, hoặc bất kỳ ai đang thực hiện.",
   "projectRole.customer": "Khách hàng",
   "projectRole.partner": "Đối tác",
   "projectRole.subcontractor": "Nhà thầu phụ",
-  "contactRole.sponsor": "Người bảo trợ",
-  "contactRole.projectLead": "Trưởng dự án",
-  "contactRole.deliveryLead": "Phụ trách bàn giao",
-  "contactRole.expert": "Chuyên gia",
-  "contactRole.user": "Người dùng",
   "projectLinks.attach": "Liên kết dự án",
   "projectLinks.move": "Chuyển sang dự án khác",
   "projectLinks.detach": "Bỏ liên kết",
@@ -10325,7 +10272,6 @@ export const vi = {
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.not_mine": "Không phải của tôi",
   "worklist.disposition.verb.not_sales": "Không phải khách hàng",
-  "worklist.disposition.done.snooze": "Ngày mai sẽ trở lại danh sách của bạn.",
   "worklist.disposition.doneSnooze_one":
     "Ngày mai sẽ trở lại danh sách của bạn.",
   "worklist.disposition.doneSnooze_other":

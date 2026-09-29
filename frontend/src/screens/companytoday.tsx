@@ -104,6 +104,8 @@ export type TodayReading =
       restsOn: readonly Grounding[];
       dimensions: readonly TodayDimension[];
       rows: ReactNode[];
+      // False when a source the rows are read from was withheld.
+      complete: boolean;
       footer?: ReactNode;
       notice?: ReactNode;
     };
@@ -288,6 +290,9 @@ export function useTodayReading({
     suggestions.rows,
     ...manual,
   ];
+  const withheld = TODAY_SOURCES.filter((source) =>
+    omitted(view, source.section),
+  );
   return {
     state: "ready",
     standing,
@@ -295,15 +300,15 @@ export function useTodayReading({
     restsOn: verdict.restsOn,
     dimensions,
     rows,
+    complete: withheld.length === 0,
     footer: briefFooter(
       commitment,
       suggestions.footer,
       scanFoot({ scan, t, plural, locale, recordZone }),
     ),
-    notice:
-      (view.sections_omitted?.length ?? 0) > 0 ? (
-        <TodayWithheld view={view} />
-      ) : undefined,
+    notice: (
+      <WithheldNotice sections={withheld.map((source) => t(source.label))} />
+    ),
   };
 }
 
@@ -462,6 +467,7 @@ export function NeedsList({
       onOpenTasks={onOpenTasks}
       footer={reading.footer}
       notice={reading.notice}
+      complete={reading.complete}
     >
       {reading.rows}
     </TodayPanel>
@@ -686,14 +692,6 @@ const TODAY_SOURCES: ReadonlyArray<{ section: string; label: MessageKey }> = [
   { section: "activities", label: "today.source.activities" },
   { section: "suggestions", label: "today.source.suggestions" },
 ];
-
-function TodayWithheld({ view }: Readonly<{ view: Company360 }>) {
-  const t = useT();
-  const hidden = TODAY_SOURCES.filter((source) =>
-    omitted(view, source.section),
-  );
-  return <WithheldNotice sections={hidden.map((source) => t(source.label))} />;
-}
 
 function whoseMove({
   view,

@@ -50,14 +50,16 @@ const PAGE_PATHS = new Set(
 );
 
 // The stories that are ABOUT a settings SURFACE rather than a card on a page,
-// named exactly. Two segments each, because neither names a catalog page: the
-// tree itself, and the settings home together with the boundary the same address
-// answers when its segment names no page this reader can open (`SETTINGS_HOME_ID`
-// is deliberately not a member of SETTINGS_PAGES). An
+// named exactly. Two segments each, because none names a catalog page: the
+// tree itself, the sidebar's settings level, and the settings home together with
+// the boundary the same address answers when its segment names no page this
+// reader can open (`SETTINGS_HOME_ID` is deliberately not a member of
+// SETTINGS_PAGES). An
 // `if (page === undefined) return` would exempt every two-segment title —
 // `Settings/Nonsense` included — which is a skip-list with no list.
 const SURFACE_STORIES = new Set([
   "Settings/Settings screen",
+  "Settings/Settings navigation",
   "Settings/Settings home",
 ]);
 
@@ -103,29 +105,10 @@ const everyStory = storyFilesUnder(SCREENS).map((path) => ({
 }));
 
 describe("the settings stories are filed where the product files them", () => {
-  // A floor is not a census. `>40` over 66 stories permits 25 to vanish — a
-  // story whose title stops resolving, or whose root is edited away from
-  // `Settings/`, drops out of the filtered corpus and is never checked again.
-  // So the count is EXACT and derived from the tree: adding or removing a
-  // settings story is a deliberate edit to this number. 80 → 83 for
-  // `You/Connections/Backfill run`, `Data/Capture rules/Refused domain
-  // decision` and `You/Capture activity/Pipeline drawer`; 83 → 86 for
-  // `Across pages/Refresh from sources`, `Governance/Privacy &
-  // retention/Corrections` and `Governance/Privacy & retention/Retention policy
-  // form`; 86 → 87 for `AI/Automations/Automation form`; 87 → 88 for
-  // `Governance/Privacy & retention/Notice duties`; 88 → 89 for
-  // `Governance/Privacy & retention/Linked case notice`; 89 → 90 for
-  // `AI/Automations/Date field picker`; 90 → 91 for `Governance/System
-  // health/Connector records refused`; 91 → 93 for `Across pages/Units offered
-  // in settings` and `Governance/System health/Health card shell`; 93 → 94 for
-  // `Sales/Pipelines/Retired pipeline`; 94 → 95 for `Governance/System
-  // health/Dead work`; 95 → 96 for `Governance/System health/Mail capture
-  // checks`; 97 → 98 for `Data/Integrations/Automatic lookup`; 98 → 99 for
-  // the member roster's role picker; 99 → 100 for the role editor's page,
-  // `Roles and permissions/Roles`; 100 → 101 for `AI/Models and
-  // routing/Binding editor`.
+  // The number of settings story files in the tree, exact: a story whose title
+  // stops resolving drops out of the corpus, and a floor would not notice.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(101);
+    expect(settingsStories.length).toBe(102);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

@@ -19,10 +19,9 @@ import "../src/design-system/composed.css";
 // atoms.css for the same reason, and it bites hardest: `.card`, `.btn` and the
 // rest are reached BY CLASS from components that import nothing from atoms.tsx
 // — the module whose side-effect import loads this sheet. In the app it is
-// always present; in a story whose module graph stops short of atoms.tsx it was
-// not, and design-system/explain.tsx's popover rendered as unstyled text over
-// the figure it was explaining. Loading it here closes that for the catalog
-// rather than one story at a time.
+// always present; in a story whose module graph stops short of atoms.tsx it is
+// not. Loading it here closes that for the catalog rather than one story at a
+// time.
 import "../src/design-system/atoms.css";
 // settings.css for the third time in this list and the same reason: the
 // settings row language reaches `.settings-panel-commit` BY CLASS from the card
