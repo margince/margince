@@ -29,3 +29,20 @@
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+
+/* The models the sheet already prices for a provider, each with the verb that
+ * loads it into the form below. */
+.rates-manual-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.rates-manual-list > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}

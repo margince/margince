@@ -2,13 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanUpsert } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { throwProblem } from "./common";
+import { ModelPriceDialog } from "./rate-manual";
 import "./rates.css";
 
 type ProviderRefresh = components["schemas"]["AiModelRateProviderRefresh"];
@@ -35,6 +38,9 @@ const OUTCOME_TONE = {
  */
 export function RefreshModelPrices() {
   const t = useT();
+  const canSet = useCanUpsert("ai_model_rate");
+  // The provider whose prices are being set by hand, when a dialog is open.
+  const [setting, setSetting] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const refresh = useMutation({
     mutationFn: async () => {
@@ -71,11 +77,20 @@ export function RefreshModelPrices() {
               </Badge>
               <span>{p.provider}</span>
               <ProviderCounts provider={p} />
+              {p.outcome === "not_available" && canSet ? (
+                <Button variant="ghost" onClick={() => setSetting(p.provider)}>
+                  {t("aiRates.manual.button")}
+                  <span className="sr-only"> {p.provider}</span>
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
       ) : null}
       <ErrorLine error={refresh.error} inline />
+      {setting !== null ? (
+        <ModelPriceDialog provider={setting} onClose={() => setSetting(null)} />
+      ) : null}
     </span>
   );
 }

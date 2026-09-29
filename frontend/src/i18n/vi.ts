@@ -8429,7 +8429,7 @@ export const vi = {
   "aiusage.decisions.col.asked": "Đã hỏi",
   "aiusage.decisions.col.passRate": "Tỷ lệ đạt",
   "aiusage.decisions.col.fallbackRate": "Tỷ lệ chuyển tiếp",
-  "aiusage.decisions.col.reasons": "Chuyển tiếp theo lý do",
+  "aiusage.decisions.reasonsFor": "Chuyển tiếp theo lý do cho {rate}",
 
   "aibanner.degraded": "Đã đạt ngưỡng 80% hạn mức AI — xem tác động",
   "aibanner.queued": "Đã hết hạn mức AI — xem công việc bị hoãn",
@@ -10874,6 +10874,14 @@ export const vi = {
   "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
   "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
   "aiRates.refresh.unchangedCount_other": "{count} giá đã mới nhất",
+  "aiRates.manual.button": "Sửa giá",
+  "aiRates.manual.title": "Đặt giá cho {provider}",
+  "aiRates.manual.priced": "Các mô hình đã có giá",
+  "aiRates.manual.edit": "Sửa",
+  "aiRates.manual.done": "Xong",
+  "aiRates.manual.malformed":
+    "Giá là số thường như 5 hoặc 0.25, tối đa sáu chữ số thập phân.",
+  "aiRates.manual.saved": "Đã lưu {model}: {price}",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "contact.readings.title": "Vị thế của liên hệ này",

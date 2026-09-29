@@ -8498,7 +8498,7 @@ export const de = {
   "aiusage.decisions.col.asked": "Gefragt",
   "aiusage.decisions.col.passRate": "Bestanden",
   "aiusage.decisions.col.fallbackRate": "Rückfälle",
-  "aiusage.decisions.col.reasons": "Rückfälle nach Grund",
+  "aiusage.decisions.reasonsFor": "Rückfälle nach Grund für {rate}",
 
   "aibanner.degraded":
     "80 % des KI-Kontingents erreicht. Prüfe die betroffenen Funktionen.",
@@ -10983,6 +10983,14 @@ export const de = {
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
   "aiRates.refresh.unchangedCount_one": "{count} Preis bereits aktuell",
   "aiRates.refresh.unchangedCount_other": "{count} Preise bereits aktuell",
+  "aiRates.manual.button": "Preise bearbeiten",
+  "aiRates.manual.title": "Preise für {provider} festlegen",
+  "aiRates.manual.priced": "Bereits bepreiste Modelle",
+  "aiRates.manual.edit": "Bearbeiten",
+  "aiRates.manual.done": "Fertig",
+  "aiRates.manual.malformed":
+    "Preise sind einfache Zahlen wie 5 oder 0.25, mit höchstens sechs Nachkommastellen.",
+  "aiRates.manual.saved": "{model} gespeichert: {price}",
   "firstRun.ai.foot":
     "Bis du „Weiter“ wählst, wird nichts an den Anbieter gesendet.",
   "contact.readings.title": "Kontaktstatus",

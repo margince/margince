@@ -23,6 +23,7 @@ import {
   WriteRefused,
 } from "./common";
 import { RefreshModelPrices } from "./rate-catalogue-refresh";
+import { ModelPriceDialog } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 import { calendarDay } from "../format/calendarday";
@@ -449,128 +450,8 @@ export function ModelCostsCard() {
             }
           />
         </SettingList>
-        {open ? <ModelCostModal onClose={() => setOpen(false)} /> : null}
+        {open ? <ModelPriceDialog onClose={() => setOpen(false)} /> : null}
       </PanelBody>
     </Panel>
-  );
-}
-
-function ModelCostModal({ onClose }: Readonly<{ onClose: () => void }>) {
-  const t = useT();
-  const qc = useQueryClient();
-  const labelId = useId();
-  const [provider, setProvider] = useState("");
-  const [modelId, setModelId] = useState("");
-  const [input, setInput] = useState("");
-  const [output, setOutput] = useState("");
-  const [cacheRead, setCacheRead] = useState("0");
-  const [cacheWrite, setCacheWrite] = useState("0");
-  const [effectiveDate, setEffectiveDate] = useState(today());
-  const [error, setError] = useState<string | null>(null);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const { error: err } = await api.POST("/ai-model-rates", {
-        body: {
-          provider: provider.trim(),
-          model_id: modelId.trim(),
-          input_per_mtok: input.trim(),
-          output_per_mtok: output.trim(),
-          cache_read_per_mtok: cacheRead.trim() || "0",
-          cache_write_per_mtok: cacheWrite.trim() || "0",
-          effective_date: effectiveDate,
-        },
-      });
-      if (err) {
-        throwProblem(err);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ai-model-rates"] });
-      onClose();
-    },
-    onError: (err: Error) => setError(problemMessageOf(err, t)),
-  });
-
-  // One box of this dialog. `Field` owns the id and hands it to the input, so
-  // what a call site passes is only what differs between the seven: the label,
-  // the value, where it goes, and whether it takes words or a number.
-  const field = (
-    label: string,
-    value: string,
-    set: (v: string) => void,
-    opts: Readonly<{
-      inputMode?: "text" | "decimal";
-      placeholder?: string;
-    }> = {},
-  ) => (
-    <Field label={label}>
-      {(control) => (
-        <TextInput
-          {...control}
-          value={value}
-          inputMode={opts.inputMode ?? "decimal"}
-          placeholder={opts.placeholder ?? ""}
-          onChange={(e) => set(e.target.value)}
-        />
-      )}
-    </Field>
-  );
-
-  return (
-    <Modal open onClose={onClose} labelledBy={labelId}>
-      <Heading size="large" id={labelId} className="t-h2 modal-title">
-        {t("settings.rates.modelModalTitle")}
-      </Heading>
-      <div className="form-stack">
-        {field(t("settings.rates.colProvider"), provider, setProvider, {
-          inputMode: "text",
-        })}
-        {field(t("settings.rates.colModel"), modelId, setModelId, {
-          inputMode: "text",
-        })}
-        {field(t("settings.rates.colInput"), input, setInput, {
-          placeholder: "5.00",
-        })}
-        {field(t("settings.rates.colOutput"), output, setOutput, {
-          placeholder: "25.00",
-        })}
-        {field(t("settings.rates.colCacheRead"), cacheRead, setCacheRead)}
-        {field(t("settings.rates.colCacheWrite"), cacheWrite, setCacheWrite)}
-        <Field label={t("settings.rates.colEffective")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="date"
-              min={today()}
-              value={effectiveDate}
-              onChange={(e) => setEffectiveDate(e.target.value)}
-            />
-          )}
-        </Field>
-        <WriteRefused titleKey="settings.rates.notSaved" message={error} />
-        <div className="form-actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setError(null);
-              save.mutate();
-            }}
-            disabled={
-              save.isPending ||
-              provider.trim() === "" ||
-              modelId.trim() === "" ||
-              input.trim() === "" ||
-              output.trim() === ""
-            }
-          >
-            {t("settings.rates.setRate")}
-          </Button>
-        </div>
-      </div>
-    </Modal>
   );
 }

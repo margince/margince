@@ -8649,7 +8649,7 @@ export const en = {
   "aiusage.decisions.col.asked": "Asked",
   "aiusage.decisions.col.passRate": "Pass rate",
   "aiusage.decisions.col.fallbackRate": "Fallback rate",
-  "aiusage.decisions.col.reasons": "Fallbacks by reason",
+  "aiusage.decisions.reasonsFor": "Fallbacks by reason for {rate}",
 
   "aibanner.degraded": "80% of AI allowance reached. Review affected features.",
   "aibanner.queued": "AI allowance reached. Review deferred work.",
@@ -11143,6 +11143,14 @@ export const en = {
   "aiRates.refresh.updatedCount_other": "{count} prices written",
   "aiRates.refresh.unchangedCount_one": "{count} price already current",
   "aiRates.refresh.unchangedCount_other": "{count} prices already current",
+  "aiRates.manual.button": "Edit prices",
+  "aiRates.manual.title": "Set prices for {provider}",
+  "aiRates.manual.priced": "Models already priced",
+  "aiRates.manual.edit": "Edit",
+  "aiRates.manual.done": "Done",
+  "aiRates.manual.malformed":
+    "Prices are plain numbers such as 5 or 0.25, with at most six decimals.",
+  "aiRates.manual.saved": "Saved {model}: {price}",
   "firstRun.ignite.title": "Model connected",
   "firstRun.ignite.sub":
     "The key is stored and the model responded. This is what changes.",
