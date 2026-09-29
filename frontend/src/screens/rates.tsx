@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -22,7 +23,10 @@ import {
   useMe,
   WriteRefused,
 } from "./common";
-import { RefreshModelPrices } from "./rate-catalogue-refresh";
+import {
+  RefreshModelPricesButton,
+  useRefreshModelPrices,
+} from "./rate-catalogue-refresh";
 import { ModelPriceDialog, today } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
@@ -321,6 +325,7 @@ export function ModelCostsCard() {
   // insert or replace, the specific verb resolved inside the transaction.
   const canManage = useCanUpsert("ai_model_rate");
   const [open, setOpen] = useState(false);
+  const refresh = useRefreshModelPrices();
   const query = useQuery({
     queryKey: ["ai-model-rates"],
     enabled: canRead,
@@ -353,7 +358,7 @@ export function ModelCostsCard() {
       actions={
         canManage ? (
           <>
-            <RefreshModelPrices />
+            <RefreshModelPricesButton refresh={refresh} />
             <Button variant="primary" onClick={() => setOpen(true)}>
               {t("settings.rates.modelAdd")}
             </Button>
@@ -376,6 +381,7 @@ export function ModelCostsCard() {
             On the withheld body these two lines would explain one denial twice,
             in two different ways. */}
         {!canManage && <p>{t("settings.rates.readOnly")}</p>}
+        <ErrorLine error={refresh.error} inline />
         <SettingList>
           {/* Stacked for the reason spelled out on FxRatesCard: the price sheet
               is the subject, and this row names which prices they are. */}

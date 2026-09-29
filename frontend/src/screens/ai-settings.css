@@ -111,6 +111,76 @@
   flex-wrap: wrap;
 }
 
+/* One vendor in the Providers list, as columns so every row's pill and verb land
+ * where the row above put them: who, what routing uses it for, its state, the
+ * way into its sheet. The caption gives way first (an ellipsis) because a
+ * long list of tiers is the one cell that varies; below the phone breakpoint the
+ * columns stack and the verb takes the row's end. */
+.ai-provider-line {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr) 7rem auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ai-provider-line .ai-provider-who {
+  flex: none;
+}
+
+.ai-provider-line .ai-provider-used {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .ai-provider-line {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ai-provider-line .ai-provider-used {
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+}
+
+/* A provider's sheet is a stack of sections, each under a rule, so Connection
+ * and Prices read as two things rather than one run of controls. */
+.ai-sheet-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+}
+
+.ai-sheet-section + .ai-sheet-section {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* The status line under a sheet's title: the pill and the sentence about it on
+ * one centre line, with air between them and the title above. */
+.ai-sheet-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+/* The price table's cells carry their own inline padding, so its text starts
+ * that far inside the section's edge. Pulled out by exactly that much, the
+ * first column lines up with the headings above it and the Edit column's edge
+ * with Add price. */
+.ai-sheet-table {
+  margin-inline: calc(var(--space-3) * -1);
+}
+
+.ai-sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 /* The vendor over the variable its key may also arrive in: two facts about one
  * subject, so they stack into one column rather than competing for the row. */
 .ai-provider-who {

@@ -45,17 +45,36 @@ export function useRouting(enabled: boolean) {
 export function boundProviders(
   routing: RoutingRead["routing"],
 ): Set<string> | null {
+  const usage = providerUsage(routing);
+  return usage === null ? null : new Set(usage.keys());
+}
+
+// What each bound vendor is bound FOR, in reading order: the tiers by their
+// own names, then the embedder and the decision model. One walk of the
+// document, so "which vendors" and "for what" cannot disagree.
+export function providerUsage(
+  routing: RoutingRead["routing"],
+): Map<string, { for: string[]; baseUrls: string[] }> | null {
   if (routing.tiers === undefined || routing.embeddings === undefined) {
     return null;
   }
-  const named = new Set<string>();
-  for (const binding of Object.values(routing.tiers)) {
-    named.add(binding.provider);
+  const usage = new Map<string, { for: string[]; baseUrls: string[] }>();
+  const add = (
+    role: string,
+    binding: { provider: string; base_url?: string },
+  ) => {
+    const held = usage.get(binding.provider) ?? { for: [], baseUrls: [] };
+    held.for.push(role);
+    if (binding.base_url) held.baseUrls.push(binding.base_url);
+    usage.set(binding.provider, held);
+  };
+  for (const [tier, binding] of Object.entries(routing.tiers)) {
+    add(tier, binding);
   }
-  named.add(routing.embeddings.provider);
+  add("embeddings", routing.embeddings);
   // Bound apart from the tiers, and its key is demanded like theirs.
   if (routing.decisions) {
-    named.add(routing.decisions.provider);
+    add("decisions", routing.decisions);
   }
-  return named;
+  return usage;
 }

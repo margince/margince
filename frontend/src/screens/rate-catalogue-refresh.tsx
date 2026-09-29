@@ -2,17 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanUpsert } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
-import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { throwProblem } from "./common";
-import { ModelPriceDialog } from "./rate-manual";
 import "./rates.css";
 
 type ProviderRefresh = components["schemas"]["AiModelRateProviderRefresh"];
@@ -34,20 +30,16 @@ const OUTCOME_TONE = {
 >;
 
 /**
- * RefreshModelPrices re-prices the models this installation calls from the
- * provider's own catalogue and lists what happened per provider.
+ * The refresh mutation, held by the Providers card so its button sits in the
+ * header and each vendor's answer reaches that vendor's sheet.
  *
  * It runs inline, so unlike the currency sheet's refresh the answer is here
  * rather than in the approvals inbox: a price the catalogue states is written
  * to the sheet, and the report says which providers had nothing to say.
  */
-export function RefreshModelPrices() {
-  const t = useT();
-  const canSet = useCanUpsert("ai_model_rate");
-  // The provider whose prices are being set by hand, when a dialog is open.
-  const [setting, setSetting] = useState<string | null>(null);
+export function useRefreshModelPrices() {
   const queryClient = useQueryClient();
-  const refresh = useMutation({
+  return useMutation({
     mutationFn: async () => {
       const { data, error } = await api.POST("/ai-model-rates/refresh");
       if (error) {
@@ -59,71 +51,47 @@ export function RefreshModelPrices() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["ai-model-rates"] }),
   });
+}
+
+export type ModelPriceRefresh = ReturnType<typeof useRefreshModelPrices>;
+
+export function RefreshModelPricesButton({
+  refresh,
+}: Readonly<{ refresh: ModelPriceRefresh }>) {
+  const t = useT();
   return (
-    <span className="rates-refresh">
-      <Button
-        variant="ghost"
-        onClick={() => refresh.mutate()}
-        // `pending`, not `disabled`: the reader who just pressed it keeps their
-        // focus, and the repeat press is still blocked.
-        pending={refresh.isPending}
-      >
-        {t("aiRates.refresh.button")}
-      </Button>
-      {refresh.data ? (
-        <div className="rates-refresh-report">
-          <DataTable
-            label={t("aiRates.refresh.report")}
-            rows={refresh.data.providers}
-            rowKey={(p) => p.provider}
-            columns={[
-              {
-                key: "provider",
-                header: t("settings.rates.colProvider"),
-                render: (p) => p.provider,
-              },
-              {
-                key: "status",
-                header: t("aiRates.refresh.colStatus"),
-                render: (p) => (
-                  <Badge tone={OUTCOME_TONE[p.outcome]}>
-                    {t(`aiRates.refresh.outcome.${p.outcome}` as const)}
-                  </Badge>
-                ),
-              },
-              {
-                key: "detail",
-                header: t("aiRates.refresh.colDetail"),
-                grow: true,
-                render: (p) => (
-                  <span className="rates-refresh-detail">
-                    <ProviderCounts provider={p} />
-                    {p.unlisted.length > 0 ? (
-                      <span className="t-caption">
-                        {t("aiRates.refresh.unlisted", {
-                          ids: p.unlisted.join(", "),
-                        })}
-                      </span>
-                    ) : null}
-                    {p.outcome === "not_available" && canSet ? (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setSetting(p.provider)}
-                      >
-                        {t("aiRates.manual.button")}
-                        <span className="sr-only"> {p.provider}</span>
-                      </Button>
-                    ) : null}
-                  </span>
-                ),
-              },
-            ]}
-          />
-        </div>
-      ) : null}
-      <ErrorLine error={refresh.error} inline />
-      {setting !== null ? (
-        <ModelPriceDialog provider={setting} onClose={() => setSetting(null)} />
+    <Button
+      variant="ghost"
+      onClick={() => refresh.mutate()}
+      // `pending`, not `disabled`: the reader who just pressed it keeps their
+      // focus, and the repeat press is still blocked.
+      pending={refresh.isPending}
+    >
+      {t("aiRates.refresh.button")}
+    </Button>
+  );
+}
+
+/** What the last refresh did for ONE vendor, or nothing before there was one. */
+export function ProviderRefreshLine({
+  refresh,
+  provider,
+}: Readonly<{ refresh: ModelPriceRefresh; provider: string }>) {
+  const t = useT();
+  const line = refresh.data?.providers.find((p) => p.provider === provider);
+  if (!line) {
+    return <ErrorLine error={refresh.error} inline />;
+  }
+  return (
+    <span className="rates-refresh-detail" role="status">
+      <Badge tone={OUTCOME_TONE[line.outcome]}>
+        {t(`aiRates.refresh.outcome.${line.outcome}` as const)}
+      </Badge>
+      <ProviderCounts provider={line} />
+      {line.unlisted.length > 0 ? (
+        <span className="t-caption">
+          {t("aiRates.refresh.unlisted", { ids: line.unlisted.join(", ") })}
+        </span>
       ) : null}
     </span>
   );

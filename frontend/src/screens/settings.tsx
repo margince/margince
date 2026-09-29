@@ -20,7 +20,7 @@ import { dotTier } from "../app/autonomy";
 import { useCan, useCanWrite } from "../app/capability";
 import { isEntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
-import { navigate, navigateReplacing, type Route } from "../app/router";
+import { navigateReplacing, type Route } from "../app/router";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
@@ -331,11 +331,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
               the thing an operator came here to fix. */}
           <ProvidersStat />
           <AiProviderKeysCard />
-          {/* The price sheet lives on Usage, so the routing card links there
-              rather than restating it. Dropping the callback silently removes
-              that link — the lane rows then name a model with no way to see
-              what it costs. */}
-          <AiRoutingCard onPriceSheet={() => navigate(settingsHref("usage"))} />
+          <AiRoutingCard />
           <AiTasksCard />
           {/* The rows above carry each tier's health in one line; this is the
               full reading, with the last failure's sentinel, and the only card

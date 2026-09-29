@@ -110,7 +110,7 @@ describe("the settings stories are filed where the product files them", () => {
   // never checked again. So the count is EXACT and derived from the tree, and
   // adding or removing a settings story file is a deliberate edit to this number.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(107);
+    expect(settingsStories.length).toBe(106);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

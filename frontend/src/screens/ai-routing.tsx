@@ -21,7 +21,6 @@ import { DecisionLaneRow, LaneRow } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { RefreshModelPrices } from "./rate-catalogue-refresh";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
@@ -42,13 +41,7 @@ import "./ai-settings.css";
 
 type Routing = components["schemas"]["AiRouting"];
 
-export function AiRoutingCard({
-  onPriceSheet,
-}: Readonly<{
-  // Where the prices behind these bindings are read. A link rather than a
-  // second copy of the sheet: it is one table.
-  onPriceSheet?: () => void;
-}>) {
+export function AiRoutingCard() {
   const t = useT();
   // The read grant gates the QUERY, not only the rows: asking without it draws
   // a 403 error box, which reads as a broken installation.
@@ -70,13 +63,7 @@ export function AiRoutingCard({
 
   return (
     <QueryGate query={query} pendingLabel={t("aiRouting.title")}>
-      {(read) => (
-        <ModelTiers
-          read={read}
-          canManage={canManage}
-          onPriceSheet={onPriceSheet}
-        />
-      )}
+      {(read) => <ModelTiers read={read} canManage={canManage} />}
     </QueryGate>
   );
 }
@@ -109,11 +96,9 @@ type Editing = { opened: RoutingRead; initial: SliceValue; label: string };
 function ModelTiers({
   read,
   canManage,
-  onPriceSheet,
 }: Readonly<{
   read: RoutingRead;
   canManage: boolean;
-  onPriceSheet?: () => void;
 }>) {
   const t = useT();
   const { routing } = read;
@@ -149,14 +134,7 @@ function ModelTiers({
   return (
     <Panel
       title={t("aiRouting.title")}
-      titleAction={
-        onPriceSheet ? (
-          <button type="button" className="link-button" onClick={onPriceSheet}>
-            {t("aiRouting.priceSheet")}
-          </button>
-        ) : undefined
-      }
-      footer={<SheetFooter catalogue={catalogue.data} canManage={canManage} />}
+      footer={<SheetFooter catalogue={catalogue.data} />}
     >
       <PanelBody>
         <PanelIntro>{t("aiRouting.intro")}</PanelIntro>
@@ -229,10 +207,7 @@ function ModelTiers({
 // What the model lists in the editor are, and how to move them on. The sheet is
 // a SNAPSHOT somebody took on a day; undated it reads as "these are the models",
 // and the refresh is the way past it.
-function SheetFooter({
-  catalogue,
-  canManage,
-}: Readonly<{ catalogue: ModelCatalogue; canManage: boolean }>) {
+function SheetFooter({ catalogue }: Readonly<{ catalogue: ModelCatalogue }>) {
   const t = useT();
   const asOf = sheetAsOf(catalogue);
   return (
@@ -242,7 +217,6 @@ function SheetFooter({
           ? t("aiRouting.sheetAsOf", { date: asOf })
           : t("aiRouting.sheetUnknown")}
       </span>
-      {canManage && <RefreshModelPrices />}
     </div>
   );
 }
