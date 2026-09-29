@@ -174,7 +174,7 @@ function LinkedInProfileRow() {
           {t("linkedinImport.editProfileTitle")}
         </Heading>
         <form
-          className="form-stack li-import-profile-form"
+          className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             if (dirty) {

@@ -82,7 +82,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
-  margin-block: var(--space-4);
+  margin-block-end: var(--space-4);
 }
 @media (min-width: 40rem) {
   .schedule-pick {
