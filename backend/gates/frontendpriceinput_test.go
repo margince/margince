@@ -5,10 +5,10 @@
 
 package gates
 
-// A price typed into the sheet's form is judged twice: by the browser, before it
-// is sent, and by the server, before it is stored. If the two disagree the form
-// either sends a request that can only be refused or refuses a price the sheet
-// would have kept.
+// The frontend's price pattern accepts exactly what the server's price parser
+// and the contract pattern accept, so a value the form lets through is not
+// refused for its shape. If the two disagree the form either sends a request
+// that can only be refused or refuses a price the sheet would have kept.
 //
 // The browser's pattern is a declared mirror of the server's domain, and this is
 // what makes "mirror" true. It compares both directions over a corpus derived
