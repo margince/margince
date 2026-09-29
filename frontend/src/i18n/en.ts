@@ -230,8 +230,6 @@ export const en = {
   "aiAdmin.impact.exempt": "Continues beyond allowance",
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
-  "aiAdmin.cloud": "Cloud provider",
-  "aiAdmin.endpoint": "Configured endpoint; location not verified",
   "aiAdmin.decisionFirst":
     "Decision model first ({provider} · {model}) → then {ladder}",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",

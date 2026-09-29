@@ -238,8 +238,6 @@ export const vi = {
   "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
   "aiAdmin.activity": "Hoạt động",
   "aiAdmin.model": "Mô hình được chính sách chọn",
-  "aiAdmin.cloud": "Nhà cung cấp đám mây",
-  "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
   "aiAdmin.decisionFirst":
     "Mô hình quyết định trước ({provider} · {model}) → sau đó {ladder}",
   "aiAdmin.decisionSkip.unbound":

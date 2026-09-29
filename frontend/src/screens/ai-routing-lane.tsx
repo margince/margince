@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { PanelRow } from "../design-system/panel";
@@ -14,8 +13,7 @@ import {
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { useAiStatus } from "./ai-admin";
-import { processingLabel, tierLabel } from "./ai-decision-labels";
+import { tierLabel } from "./ai-decision-labels";
 import {
   inputOnlyLane,
   type ModelCatalogue,
@@ -30,7 +28,6 @@ import { TermChip } from "./ai-terms";
 // because a row is a reading of one binding and knows nothing of the document
 // around it.
 
-type DecisionsBinding = components["schemas"]["AiDecisionsBinding"];
 type Rung = components["schemas"]["AiRungHealth"];
 type Health = components["schemas"]["AiHealth"];
 type Feature = components["schemas"]["AiFeatureRoute"];
@@ -81,7 +78,6 @@ export function TiersTable({
   features,
   catalogue,
   unkeyed,
-  decisions,
   canManage,
   onAddDecisions,
 }: Readonly<{
@@ -90,13 +86,11 @@ export function TiersTable({
   features: readonly Feature[] | undefined;
   catalogue: ModelCatalogue;
   unkeyed: ReadonlySet<string> | null;
-  decisions: DecisionsBinding | undefined;
   canManage: boolean;
   // Only when the document leaves the decision model out.
   onAddDecisions?: () => void;
 }>) {
   const t = useT();
-  const processing = useDecisionProcessing(decisions);
   const known = new Set(lanes.map((l) => RUNG_OF[l.name] ?? l.name));
   const rows: Row[] = [
     ...lanes.map((lane) => ({
@@ -123,7 +117,6 @@ export function TiersTable({
           health={health}
           catalogue={catalogue}
           unkeyed={unkeyed}
-          chip={row.lane.name === DECISIONS ? processing : null}
         />
       ))}
       {onAddDecisions && (
@@ -157,13 +150,11 @@ function TierLine({
   health,
   catalogue,
   unkeyed,
-  chip,
 }: Readonly<{
   row: Row;
   health: Health | undefined;
   catalogue: ModelCatalogue;
   unkeyed: ReadonlySet<string> | null;
-  chip: string | null;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -205,7 +196,7 @@ function TierLine({
           {gloss && <span className="t-caption">{gloss}</span>}
         </span>
         <span className="ai-tier-binding">
-          <BindingLine binding={binding} unkeyed={unkeyed} chip={chip} />
+          <BindingLine binding={binding} unkeyed={unkeyed} />
           {failing ? (
             <ErrorLine inline>
               {secondary.filter(Boolean).join(" · ")}
@@ -238,11 +229,9 @@ function TierLine({
 function BindingLine({
   binding,
   unkeyed,
-  chip,
 }: Readonly<{
   binding: Lane["binding"];
   unkeyed: ReadonlySet<string> | null;
-  chip: string | null;
 }>) {
   const t = useT();
   if (!binding) {
@@ -256,12 +245,6 @@ function BindingLine({
         <>
           {" "}
           <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
-        </>
-      )}
-      {chip && (
-        <>
-          {" "}
-          <Badge>{chip}</Badge>
         </>
       )}
     </span>
@@ -325,32 +308,6 @@ function HealthDot({
       )}
     </Popover>
   );
-}
-
-// Where the bound decision model processes text, as the server classified it.
-//
-// Read off the live status rather than derived here: which adapters are local is
-// the server's registry, and a second copy on this side would be free to drift
-// from it.
-function useDecisionProcessing(
-  binding: DecisionsBinding | undefined,
-): string | null {
-  const t = useT();
-  const canDiagnose = useCan("ai_diagnostics", "read");
-  const canBudget = useCan("ai_budget", "read");
-  const status = useAiStatus(canDiagnose && canBudget);
-  const candidate = status.data?.features.find(
-    (f) => f.decision_candidate,
-  )?.decision_candidate;
-  if (
-    !binding ||
-    !candidate ||
-    candidate.provider !== binding.provider ||
-    candidate.model !== binding.model
-  ) {
-    return null;
-  }
-  return processingLabel(candidate.processing, t);
 }
 
 // What each lane in the ladder is FOR, in words rather than in its id.

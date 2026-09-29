@@ -240,8 +240,6 @@ export const de = {
   "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus weiter",
   "aiAdmin.activity": "Tätigkeit",
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
-  "aiAdmin.cloud": "Cloud-Anbieter",
-  "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
   "aiAdmin.decisionFirst":
     "Zuerst Entscheidungsmodell ({provider} · {model}) → dann {ladder}",
   "aiAdmin.decisionSkip.unbound":

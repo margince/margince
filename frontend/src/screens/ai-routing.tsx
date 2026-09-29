@@ -111,7 +111,6 @@ function HealthOnly() {
                   features={undefined}
                   catalogue={undefined}
                   unkeyed={null}
-                  decisions={undefined}
                   canManage={false}
                 />
               ) : null
@@ -230,7 +229,6 @@ function ModelTiers({
         features={features}
         catalogue={catalogue.data}
         unkeyed={unkeyed}
-        decisions={routing.decisions}
         canManage={canManage}
         onAddDecisions={routing.decisions ? undefined : editDecisions}
       />
