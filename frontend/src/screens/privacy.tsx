@@ -48,10 +48,11 @@ import {
 import {
   EntityRef,
   RosterPartialNote,
-  rosterMissLabel,
+  rosterOwnerName,
   useRoster,
   useRosterPartial,
 } from "./entityref";
+import { useMemberName } from "./membernames";
 import { useLinkedCase } from "./privacy.caselink";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
@@ -502,21 +503,19 @@ function transitionLabelKey(status: DsrStatus): MessageKey {
   return "privacy.reject";
 }
 
-// Who a request can be assigned to, led by the unassigned entry. That entry is
-// DISABLED, and it is still an option rather than the select's placeholder: the
-// server's update coalesces an omitted assignee onto the stored one, so nothing
-// an empty selection sent could unassign anybody — and an entry a reader can
-// aim at has to be able to change something. Kept in the list because it is the
-// face an unassigned request shows, and the state has to stay legible even
-// where it is not actionable. The em dash carries no words to translate.
+// Who a request can be assigned to, led by the unassigned entry. That entry
+// is DISABLED but still an option rather than the placeholder: the server's
+// update coalesces an omitted assignee onto the stored one, so an empty
+// selection could not unassign anybody, and an entry a reader can aim at has
+// to be able to change something. It stays in the list because it is the
+// face an unassigned request shows. The em dash carries no words to translate.
 //
-// `current` is the request's own assignee when they are nobody this list offers
-// — deactivated out of the roster, sitting past the walk's bound, or an agent
-// seat this picker deliberately withholds. Without it the select's value matches
-// no option and paints as the unassigned em dash: a DPO would read an erasure
-// request that IS assigned as one that is not, and reassign it off the holder
-// with a statutory clock running. It leads the list because it is the state the
-// field is in, exactly as the unassigned entry does.
+// `current` is the request's own assignee when nobody this list offers holds
+// their id — deactivated, gone, or an agent seat this picker withholds.
+// Without it the select's value matches no option and paints as unassigned: a
+// DPO would read an assigned erasure request as free and reassign it off the
+// holder with a statutory clock running. It leads the list for the same
+// reason the unassigned entry does.
 function assigneeOptions(
   users: readonly User[],
   current: SelectOption | null,
@@ -527,38 +526,36 @@ function assigneeOptions(
   ];
 }
 
-/**
- * The request's own assignee as an option, when they are nobody the picker
- * offers — and null when they are, or when nobody holds it.
- *
- * `members` is the whole roster read and `offered` the filtered list: an agent
- * seat is in the first and never the second, so it can be named by its own name
- * while still not being offered. An id in neither is one the roster could not
- * name at all, and `rosterMissLabel` decides what that is honest to say.
- */
-function unofferedAssignee({
-  assigneeId,
-  offered,
-  members,
-  roster,
-  partial,
-  t,
-}: Readonly<{
-  assigneeId: string | null | undefined;
-  offered: readonly User[];
-  members: readonly User[];
-  roster: Readonly<{ isPending: boolean; isError: boolean }>;
-  partial: boolean;
-  t: ReturnType<typeof useT>;
-}>): SelectOption | null {
-  if (!assigneeId || offered.some((member) => member.id === assigneeId)) {
+// Whether the assignee is nobody the picker offers, asked only while the row
+// is open — the option built from this same fact is only rendered then too.
+function isUnoffered(
+  expanded: boolean,
+  assigneeId: string | null | undefined,
+  offered: readonly User[],
+): boolean {
+  return (
+    expanded &&
+    Boolean(assigneeId) &&
+    !offered.some((member) => member.id === assigneeId)
+  );
+}
+
+// The request's own assignee as an option, when `unoffered` says they are
+// nobody the picker offers — null otherwise. Named by id: an agent seat is
+// never offered (the is_agent filter above) but still has a name, and so
+// does a departed or deactivated holder.
+function unofferedAssignee(
+  assigneeId: string | null | undefined,
+  unoffered: boolean,
+  name: ReturnType<typeof useMemberName>,
+  t: ReturnType<typeof useT>,
+): SelectOption | null {
+  if (!assigneeId || !unoffered) {
     return null;
   }
   return {
     value: assigneeId,
-    label:
-      members.find((member) => member.id === assigneeId)?.display_name ??
-      rosterMissLabel(roster, partial, t, t("ref.notInRoster")),
+    label: rosterOwnerName(assigneeId, name, t, t("ref.notInRoster")),
     // Disabled for the same reason the unassigned entry is: re-choosing the
     // holder this request already has changes nothing, and an entry a reader can
     // aim at has to be able to change something.
@@ -666,14 +663,14 @@ function DsrRow({
   // human admission can), so the picker never offers one — same is_agent
   // filter as the share subject picker.
   const assignableUsers = members.filter((member) => !member.is_agent);
-  const currentAssignee = unofferedAssignee({
-    assigneeId: dsr.assignee_id,
-    offered: assignableUsers,
-    members,
-    roster,
-    partial: rosterPartial,
+  const unoffered = isUnoffered(expanded, dsr.assignee_id, assignableUsers);
+  const assigneeName = useMemberName(unoffered ? dsr.assignee_id : null);
+  const currentAssignee = unofferedAssignee(
+    dsr.assignee_id,
+    unoffered,
+    assigneeName,
     t,
-  });
+  );
 
   const patch = useMutation({
     mutationFn: async (body: UpdateDataSubjectRequest) => {
