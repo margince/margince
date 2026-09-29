@@ -438,7 +438,7 @@ Your data goes to: EU-hosted cloud. 12 of 27 features ready, 2 not served (local
 | Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care | Right in 68 of 75 tries; one test case wrong too often; answer quality below the bar in 3 test cases |
 | Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready | Right every time (15 of 15) |
 | Record summary <sub>`summarize`</sub> | ❌ Not reliable yet | Right in 40 of 57 tries; one test case wrong too often; answer quality below the bar in 5 test cases |
-| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right in 59 of 84 tries; 4 test cases wrong too often; answer quality below the bar in 9 test cases |
+| Reply drafting <sub>`draft_reply`</sub> | ❌ Not reliable yet | Right in 51 of 69 tries; 4 test cases wrong too often; answer quality below the bar in 10 test cases |
 | Signal extraction <sub>`signal_extract`</sub> | ❌ Not reliable yet | Right in 7 of 15 tries; 2 test cases wrong too often; answer quality below the bar in one test case |
 | Signature enrichment <sub>`enrich`</sub> | ✅ Ready | Right every time (12 of 12) |
 | Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❌ Not reliable yet | Right in 27 of 45 tries; 3 test cases wrong too often; answer quality below the bar in one test case |
@@ -880,7 +880,7 @@ Everything the grades above are computed from, folded so the page stays short.
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
 | `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 8 | 0 | 2 | 0.87 |
-| `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 7 | 10 | 17 | 0.80 |
+| `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 7 | 9 | 18 | 0.81 |
 | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 1 | 2 | 0 | 0.93 |
 | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 4 | 0 | 2 | 0.86 |
 | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 3 | 1 | 1 | 0.90 |
@@ -907,9 +907,9 @@ Everything the grades above are computed from, folded so the page stays short.
 | [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 24 of 24 tries |
 | [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 6 of 6 tries |
 | [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 9 of 9 tries |
-| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 3 of 9 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 7 of 15 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 18 of 21 tries |
+| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 0 of 3 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 10 of 18 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ❌ Not reliable yet | 12 of 15 tries |
 | [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | ✅ Ready · re-check pending | 3 of 3 tries |
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | ✅ Ready | 12 of 12 tries |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | ⚠️ Usable with care | 16 of 18 tries |
@@ -1157,7 +1157,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 6 | 0 | 0 | 192 | 165 | 0.86 | 93955ms | 2 | 3 | 1 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 39 | 39 | 0 | 0 | 498 | 470 | 0.94 | 139188ms | 19 | 15 | 5 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `cloud_frontier` | 10 | 0 | 0 | 10 | 45 | 39 | 0.87 | 20620ms | 8 | 0 | 2 |
-| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 34 | 0 | 0 | 501 | 400 | 0.80 | 83052ms | 7 | 10 | 17 |
+| `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 34 | 34 | 0 | 0 | 486 | 392 | 0.81 | 83052ms | 7 | 9 | 18 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 177 | 153 | 0.86 | 6454ms | 4 | 0 | 2 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 39 | 35 | 0.90 | 4313ms | 3 | 1 | 1 |
@@ -1747,7 +1747,7 @@ Records (8):
 | `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 4387ms | 9290ms | 3 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 9069ms | 40255ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 5063ms | 11893ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 6 | 6 | 1.00 | 3322ms | 18446ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 6 | 6 | 1.00 | 6174ms | 47915ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1275ms | 2847ms | 6 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 46299ms | 189882ms | 3 | 0 | 0 | 0 |
 
@@ -1775,7 +1775,7 @@ Records (8):
 | `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 4387ms | 9290ms | 3 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 9069ms | 40255ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 5063ms | 11893ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 3322ms | 18446ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 6174ms | 47915ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1275ms | 2847ms | 6 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 46299ms | 189882ms | 9 | 0 | 0 | 0 |
 
@@ -1803,7 +1803,7 @@ Records (8):
 | `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 4387ms | 9290ms | 6 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 9069ms | 40255ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 5063ms | 11893ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 3 | 0.33 | 3322ms | 18446ms | 3 | 0 | 6 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 6174ms | 47915ms | 0 | 0 | 3 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 1275ms | 2847ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 46299ms | 189882ms | 3 | 0 | 0 | 0 |
 
@@ -1832,7 +1832,7 @@ Records (8):
 | `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 | 4387ms | 9290ms | 9 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `current` | 2/2 | `supported_degraded` | 18 | 17 | 0.94 | 9069ms | 40255ms | 17 | 1 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 9 | 9 | 1.00 | 5063ms | 11893ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 15 | 7 | 0.47 | 3322ms | 18446ms | 7 | 0 | 8 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 18 | 10 | 0.56 | 6174ms | 47915ms | 10 | 0 | 8 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1275ms | 2847ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `supported_degraded` | 15 | 15 | 1.00 | 46299ms | 189882ms | 15 | 0 | 0 | 0 |
 
@@ -1862,7 +1862,7 @@ Records (8):
 | `gemini · gemini-3.5-flash · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 4387ms | 9290ms | 9 | 0 | 0 | 0 |
 | `ollama · gemma4:12b · sovereign` | `current` | 3/3 | `not_supported` | 27 | 18 | 0.67 | 9069ms | 40255ms | 18 | 9 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 5063ms | 11893ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 21 | 18 | 0.86 | 3322ms | 18446ms | 18 | 3 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 15 | 12 | 0.80 | 6174ms | 47915ms | 12 | 3 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 16 | 0.76 | 1275ms | 2847ms | 16 | 0 | 5 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 15 | 12 | 0.80 | 46299ms | 189882ms | 12 | 3 | 0 | 0 |
 
@@ -1894,7 +1894,7 @@ Records (9):
 | `ollama · gemma4:12b · sovereign` | `current` | 4/4 | `supported_degraded` | 36 | 36 | 1.00 | 9069ms | 40255ms | 36 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 24 | 24 | 1.00 | 5063ms | 11893ms | 24 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2508ms | 2685ms | 3 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 4/4 | `supported_degraded` | 24 | 16 | 0.67 | 3322ms | 18446ms | 16 | 0 | 8 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 4/4 | `not_supported` | 18 | 14 | 0.78 | 6174ms | 47915ms | 14 | 0 | 4 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 30 | 30 | 1.00 | 1275ms | 2847ms | 30 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 4/4 | `not_supported` | 18 | 18 | 1.00 | 46299ms | 189882ms | 18 | 0 | 0 | 0 |
 
