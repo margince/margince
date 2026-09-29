@@ -112,11 +112,8 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		if status == userStatusActive {
 			return nil
 		}
-		// Reactivation is the inverse of deactivation only — a 'suspended' member
-		// is held for a different reason (e.g. lockout) and must not be silently
-		// cleared by this path.
-		if status != userStatusDeactivated {
-			return errNotDeactivated
+		if err := refuseUnlessDeactivated(status); err != nil {
+			return err
 		}
 		// A deactivated member counts against nothing, so returning one to active
 		// takes a seat exactly as an invite does. Only a FULL one: read seats are
@@ -244,7 +241,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		if err != nil {
 			return err
 		}
-		if status == userStatusDeactivated {
+		if alreadyDeactivated(status) {
 			return nil
 		}
 		// Never deactivate the last active admin — it would lock the whole

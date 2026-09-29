@@ -243,13 +243,6 @@
   font: var(--fontHeadingXXSmall);
 }
 
-/* A company's mark is a rounded square, not a circle. A logo is drawn on
-   a square and a face is not, and on a page carrying a company and its contacts
-   the shape is what tells the two apart before a reader has read either. */
-.avatar-company {
-  border-radius: var(--r-sm);
-}
-
 /* The smallest rung, and the default: every list row, every name a chip sits
    beside, the account block in the rail. A dense list table draws its chips
    smaller still, and does it from its own sheet — see `.lt-table.dense .avatar`
@@ -275,19 +268,11 @@
 /* The mark of a record PAGE: the one picture in the head, beside a name set
    at the record rung. Sized to the reference's 72, which reads as the page's
    own mark rather than as a large list avatar — at 56 beside a 44px name it
-   was the smaller of the two things naming the record. Squared to the pane's
-   radius, because at this size a chip's radius reads as a rounded photo. */
+   was the smaller of the two things naming the record. Round like every other
+   rung: a company and a contact are one kind of chip. */
 .avatar-xl {
   width: 72px;
   height: 72px;
-  border-radius: var(--r-lg);
-}
-/* A round mark keeps its circle at every rung: a contact is a portrait, an
-   company is a tile. `.avatar-company` squares the small rungs and this one
-   is square already, so the rule that has to be stated is the round one. */
-.avatar-xl:not(.avatar-company) {
-  border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
@@ -303,47 +288,35 @@
   min-width: 0;
 }
 
-/* The per-name tints come AFTER the base rule: same specificity, so the
-   later declaration is the one that wins. Defined before it, they were
-   silently overridden and every monogram rendered in the accent colour. */
-.avatar-t0 {
-  background: var(--mono0Fill);
-  color: var(--mono0Text);
-}
-.avatar-t1 {
-  background: var(--mono1Fill);
-  color: var(--mono1Text);
-}
-.avatar-t2 {
-  background: var(--mono2Fill);
-  color: var(--mono2Text);
-}
-.avatar-t3 {
-  background: var(--mono3Fill);
-  color: var(--mono3Text);
-}
-.avatar-t4 {
-  background: var(--mono4Fill);
-  color: var(--mono4Text);
-}
-.avatar-t5 {
-  background: var(--mono5Fill);
-  color: var(--mono5Text);
+/* The record's own ground: blob B over blob A over a base tint, each blob
+   fading to nothing, placed and sized by the numbers Avatar passes inline. It
+   comes AFTER the base rule, which it overrides at the same specificity. */
+.avatar-mesh {
+  background:
+    radial-gradient(
+      calc(var(--avatar-b-size) * 1%) calc(var(--avatar-b-size) * 1%) at
+        calc(var(--avatar-bx) * 1%) calc(var(--avatar-by) * 1%),
+      var(--avatarBlobB),
+      transparent
+    ),
+    radial-gradient(
+      calc(var(--avatar-a-size) * 1%) calc(var(--avatar-a-size) * 1%) at
+        calc(var(--avatar-ax) * 1%) calc(var(--avatar-ay) * 1%),
+      var(--avatarBlobA),
+      transparent
+    ),
+    var(--avatarGround);
+  color: var(--avatarInk);
 }
 
-/* A resolved logo sits ON the chip rather than replacing it: the chip is the
-   neutral, theme-aware backdrop a mark with its own opaque background needs to
-   look deliberate, and it is the monogram the viewer sees until the image
-   paints. `contain` plus the inset keeps the mark padded and never stretched —
-   a wide wordmark letterboxes instead of distorting. */
+/* A resolved logo sits ON the chip, on a neutral ground and never on a mesh:
+   the initials wait there until the logo paints, and a wide wordmark then
+   letterboxes inside the same circle — `contain` plus the inset keeps the mark
+   padded and never stretched. */
 .avatar-has-logo {
-  background: var(--bgCard);
   position: relative;
-}
-/* Once the mark is on screen it is the whole chip: no tint behind it to tint a
- * transparent logo, and no monogram left to read through it. */
-.avatar-painted {
-  background: none;
+  background: var(--bgCard);
+  color: var(--textSecondary);
 }
 
 .avatar-img {
@@ -354,15 +327,6 @@
   object-fit: contain;
   border-radius: var(--r-full);
   corner-shape: round;
-}
-
-/* A company's mark clips to the chip's OWN corner, not to a circle. The
-   rounding lives on the image as well as on the chip because the image is
-   positioned over it — a company whose logo actually resolved came out
-   round while the one still showing its monogram was square, so the shape
-   said "company" only for the companies with no logo. */
-.avatar-company .avatar-img {
-  border-radius: calc(var(--r-sm) - 2px);
 }
 
 .skeleton {
@@ -1636,6 +1600,7 @@ span.error-line {
    is not pointing never receives. */
 .checkfield:has(input:disabled) {
   cursor: not-allowed;
+  color: var(--textSecondary);
 }
 /* The box is native, so it was taking the PLATFORM's focus ring — the one blue
    this product otherwise refuses (see the caret and accent-color declarations in

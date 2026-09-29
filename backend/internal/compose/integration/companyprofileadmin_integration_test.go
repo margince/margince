@@ -98,3 +98,37 @@ func TestARepStillReadsAGrowthFitAfterTheProfileBecameAdministered(t *testing.T)
 		t.Fatal("a rep was refused a growth fit — the profile gate reached a surface that is not administered")
 	}
 }
+
+// The brand block's read is the one part of the profile every seat gets: /me
+// carries the name to a rep while the profile itself stays refused.
+func TestARepsMeCarriesTheInstallationsNameButNotItsProfile(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var me struct {
+		InstallationBrand *struct {
+			DisplayName string `json:"display_name"`
+		} `json:"installation_brand"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/me", nil, nil, &me); status != http.StatusOK {
+		t.Fatalf("GET /v1/me before the company is saved = %d, want 200", status)
+	}
+	if me.InstallationBrand != nil {
+		t.Fatalf("/me carries a brand %+v before the installation described itself", me.InstallationBrand)
+	}
+	if status := e.Call(t, http.MethodPut, "/v1/company", wellFormedCompany(), nil, nil); status != http.StatusOK {
+		t.Fatalf("PUT /v1/company as an admin = %d, want 200", status)
+	}
+
+	demoteToRep(t, e)
+
+	if status := e.Call(t, http.MethodGet, "/v1/me", nil, nil, &me); status != http.StatusOK {
+		t.Fatalf("GET /v1/me as a rep = %d, want 200", status)
+	}
+	if me.InstallationBrand == nil || me.InstallationBrand.DisplayName != "Acme GmbH" {
+		t.Errorf("a rep's /me brand = %+v, want Acme GmbH", me.InstallationBrand)
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/company", nil, nil, nil); status != http.StatusForbidden {
+		t.Errorf("GET /v1/company as a rep = %d, want 403", status)
+	}
+}

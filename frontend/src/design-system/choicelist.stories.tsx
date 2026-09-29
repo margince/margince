@@ -75,6 +75,20 @@ export const Disabled: Story = {
   },
 };
 
+// One answer refused while the other stays open, with the reason as its help
+// line, so the reader sees what the refused answer would do and why not yet.
+export const OneAnswerRefused: Story = {
+  args: {
+    legend: "Which conversations go into the CRM?",
+    value: "only_chosen",
+    choices: [
+      { ...REACH[0], disabled: true, description: "Connect a mailbox first." },
+      REACH[1],
+    ],
+    onChange: () => {},
+  },
+};
+
 // The legend off screen, for a card whose own heading already asks the question.
 // It still names the group for a screen reader.
 export const HiddenLegend: Story = {

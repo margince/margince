@@ -24,6 +24,7 @@ import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
+import { meshOf, meshStyle } from "./avatarmesh";
 import { coveredByDialog, useDialogFocus } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
@@ -421,11 +422,6 @@ export function Badge({
   );
 }
 
-// AVATAR_TONES are the monogram backgrounds, all token-driven. The colour
-// is picked from the record, not stored, so the same record looks the same on
-// every screen and in every session without a round trip.
-const AVATAR_TONES = 6;
-
 /**
  * The initials a chip falls back to.
  *
@@ -450,17 +446,15 @@ export function Avatar({
   identity,
   src,
   size = "sm",
-  shape = "contact",
 }: Readonly<{
   name: string;
   /**
-   * What the tint is derived FROM, when that is not the displayed name — a
-   * record id, an address, anything stable for the life of the record. The
-   * name is the fallback and it is a poor key: renaming a contact or a company
-   * silently moves them to a different colour on every screen at once, which
-   * reads as a different record rather than as a rename.
+   * The record's own id — a company's, a contact's, a seat's user id: two
+   * surfaces keying one record on different strings draw it in two colours. A
+   * site with no id passes the name and says why; an empty key (a payload
+   * missing its id) falls back to the name, not to one colour for all.
    */
-  identity?: string;
+  identity: string;
   // A resolved logo to render instead of the monogram. The monogram is the
   // floor, not the fallback of last resort: it is what shows while the image
   // loads, if it fails to load, and whenever no logo resolved — so a company
@@ -473,15 +467,6 @@ export function Avatar({
    * brings its chips down from its own sheet, density being its decision.
    */
   size?: "sm" | "md" | "lg" | "xl";
-  /**
-   * What KIND of thing this chip stands for, which decides its shape.
-   *
-   * A contact is round, the way a face is drawn everywhere; a company is
-   * a rounded square, the way a logo is. The distinction is not decoration —
-   * on a page carrying both, the shape is what tells a reader whether a chip
-   * is a company or somebody at it before they have read a word of it.
-   */
-  shape?: "contact" | "company";
 }>) {
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
@@ -500,31 +485,25 @@ export function Avatar({
   // simply empty.
   const painted = Boolean(src) && paintedSrc === src && !broken;
   const initials = monogramOf(name);
-  // A small sum over the code points: stable across sessions and locales, and
-  // the spread only has to be even enough that neighbouring records in a list
-  // rarely collide.
-  //
-  // The tint is UNCONDITIONAL. It used to be opt-in, and the result was that a
-  // company was tinted in the list it was found in and a neutral accent chip on
-  // the record page that list opened — the same company, two colours, one
-  // click apart. A chip that identifies a record on one screen and not on the
-  // next identifies nothing.
-  let tone = 0;
-  for (const char of identity ?? name) {
-    tone = (tone + (char.codePointAt(0) ?? 0)) % AVATAR_TONES;
-  }
-  const classes = ["avatar", `avatar-t${tone}`, `avatar-${size}`];
-  if (shape === "company") classes.push("avatar-company");
-  if (src && !broken) classes.push("avatar-has-logo");
-  if (painted) classes.push("avatar-painted");
+  // A chip with a live logo draws no mesh at any moment: the initials wait on
+  // a neutral ground, and only a logo that FAILED falls back to the mesh.
+  const logo = Boolean(src) && !broken;
+  const classes = [
+    "avatar",
+    logo ? "avatar-has-logo" : "avatar-mesh",
+    `avatar-${size}`,
+  ];
   return (
-    <span className={classes.join(" ")}>
-      {src && !broken ? (
+    <span
+      className={classes.join(" ")}
+      style={logo ? undefined : meshStyle(meshOf(identity || name))}
+    >
+      {logo ? (
         // The monogram stays underneath: it is what the chip shows until the
         // image paints, and what is left if the image never does.
         <img
           className="avatar-img"
-          src={src}
+          src={src ?? undefined}
           alt=""
           loading="lazy"
           onError={setBroken}

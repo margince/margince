@@ -10,27 +10,29 @@ import { Avatar } from "./atoms";
 
 afterEach(cleanup);
 
+const ID = "company_7f3";
+const LOGO = "/v1/companies/abc/logo";
+
 function chipOf(container: HTMLElement): string {
   return container.querySelector("span")?.className ?? "";
 }
 
-function toneOf(container: HTMLElement): string | undefined {
-  return chipOf(container)
-    .split(" ")
-    .find((cls) => cls.startsWith("avatar-t"));
+// The mesh as the chip carries it: the inline numbers `.avatar-mesh` reads.
+function meshOf(container: HTMLElement): string | null | undefined {
+  return container.querySelector(".avatar-mesh")?.getAttribute("style");
 }
 
 describe("Avatar", () => {
   it("renders the monogram when no logo resolved", () => {
-    render(<Avatar name="Voltaq Systems" />);
+    render(<Avatar name="Voltaq Systems" identity={ID} />);
     expect(screen.getByText("VS")).toBeTruthy();
     expect(document.querySelector("img")).toBeNull();
   });
 
   it("draws the logo over the monogram, never instead of it", () => {
-    render(<Avatar name="Voltaq Systems" src="/v1/companies/abc/logo" />);
+    render(<Avatar name="Voltaq Systems" identity={ID} src={LOGO} />);
     const img = document.querySelector("img");
-    expect(img?.getAttribute("src")).toBe("/v1/companies/abc/logo");
+    expect(img?.getAttribute("src")).toBe(LOGO);
     // The image is decorative: the record's name is already beside it, so a
     // screen reader announcing the mark again would only repeat the row.
     expect(img?.getAttribute("alt")).toBe("");
@@ -40,7 +42,7 @@ describe("Avatar", () => {
   });
 
   it("falls back to the monogram when the logo fails to load", () => {
-    render(<Avatar name="Voltaq Systems" src="/v1/companies/abc/logo" />);
+    render(<Avatar name="Voltaq Systems" identity={ID} src={LOGO} />);
     const img = document.querySelector("img");
     expect(img).toBeTruthy();
     if (img) fireEvent.error(img);
@@ -61,54 +63,78 @@ describe("Avatar", () => {
       ["Müller", "M"],
       ["李", "李"],
     ])("reads %s as %s", (name, expected) => {
-      const { container } = render(<Avatar name={name} />);
+      const { container } = render(<Avatar name={name} identity={ID} />);
       expect(container.textContent).toBe(expected);
       cleanup();
     });
   });
 
-  describe("the tone", () => {
+  describe("the mesh", () => {
     it("is the same for the same record every time", () => {
-      const { container: first } = render(<Avatar name="Nordwind Energie" />);
-      const firstTone = toneOf(first);
-      expect(firstTone).toBeTruthy();
+      const { container: first } = render(
+        <Avatar name="Nordwind Energie" identity={ID} />,
+      );
+      const firstMesh = meshOf(first);
+      expect(firstMesh).toContain("--avatar-hue-a");
       cleanup();
-      const { container: second } = render(<Avatar name="Nordwind Energie" />);
-      expect(toneOf(second)).toBe(firstTone);
+      const { container: second } = render(
+        <Avatar name="Nordwind Energie" identity={ID} />,
+      );
+      expect(meshOf(second)).toBe(firstMesh);
     });
 
-    // The tint used to be opt-in, so the same company was a coloured chip in
-    // the list it was found in and a neutral accent chip on the record page
-    // that list opened. A chip that identifies a record on one screen and not
-    // on the next identifies nothing.
-    it("is drawn without being asked for", () => {
-      const { container } = render(<Avatar name="Nordwind Energie" />);
-      expect(toneOf(container)).toBeTruthy();
+    it("differs between two records that share their initials", () => {
+      const { container: first } = render(
+        <Avatar name="Anna Schulz" identity="contact_1" />,
+      );
+      const firstMesh = meshOf(first);
+      cleanup();
+      const { container: second } = render(
+        <Avatar name="Andreas Sommer" identity="contact_2" />,
+      );
+      expect(meshOf(second)).not.toBe(firstMesh);
     });
 
-    // A key is what makes the colour a property of the RECORD rather than of
-    // the string currently displayed for it. Without one, renaming a company
-    // moves it to a different colour on every screen at once.
+    // The key is what makes the mesh a property of the RECORD rather than of
+    // the string displayed for it: a rename keeps the record's ground.
     it("follows the identity key across a rename", () => {
       const { container: before } = render(
-        <Avatar identity="company_7f3" name="Voltaq Systems" />,
+        <Avatar identity={ID} name="Voltaq Systems" />,
       );
-      const toneBefore = toneOf(before);
+      const meshBefore = meshOf(before);
       cleanup();
       const { container: after } = render(
-        <Avatar identity="company_7f3" name="Voltaq Systems GmbH" />,
+        <Avatar identity={ID} name="Voltaq Systems GmbH" />,
       );
-      expect(toneOf(after)).toBe(toneBefore);
+      expect(meshOf(after)).toBe(meshBefore);
     });
 
-    it("falls back to the name when no key is given", () => {
+    // A payload that lost its id must not hash every such chip to one colour.
+    it("keys on the name when the key arrives empty", () => {
       const { container: keyed } = render(
-        <Avatar identity="Voltaq Systems" name="Other" />,
+        <Avatar identity="Voltaq Systems" name="Voltaq Systems" />,
       );
-      const keyedTone = toneOf(keyed);
+      const byName = meshOf(keyed);
       cleanup();
-      const { container: unkeyed } = render(<Avatar name="Voltaq Systems" />);
-      expect(toneOf(unkeyed)).toBe(keyedTone);
+      const { container: empty } = render(
+        <Avatar identity="" name="Voltaq Systems" />,
+      );
+      expect(meshOf(empty)).toBe(byName);
+    });
+
+    // A logo's chip draws no mesh at any moment — the initials wait on a
+    // neutral ground — and only a logo that fails falls back to the mesh.
+    it("is never drawn under a logo, and returns when the logo fails", () => {
+      const { container } = render(
+        <Avatar name="Voltaq Systems" identity={ID} src={LOGO} />,
+      );
+      const chip = container.querySelector(".avatar");
+      expect(chip?.classList.contains("avatar-has-logo")).toBe(true);
+      expect(meshOf(container)).toBeUndefined();
+      expect(chip?.getAttribute("style")).toBeNull();
+      const img = container.querySelector("img");
+      if (img) fireEvent.error(img);
+      expect(meshOf(container)).toContain("--avatar-hue-a");
     });
   });
 
@@ -117,13 +143,15 @@ describe("Avatar", () => {
   // chip names its own rung rather than inheriting one from an ancestor's class.
   describe("the size", () => {
     it("is the list rung unless a caller asks otherwise", () => {
-      const { container } = render(<Avatar name="Voltaq Systems" />);
+      const { container } = render(
+        <Avatar name="Voltaq Systems" identity={ID} />,
+      );
       expect(chipOf(container).split(" ")).toContain("avatar-sm");
     });
 
     it.each(["sm", "md", "lg", "xl"] as const)("names the %s rung", (size) => {
       const { container } = render(
-        <Avatar name="Voltaq Systems" size={size} />,
+        <Avatar name="Voltaq Systems" identity={ID} size={size} />,
       );
       expect(chipOf(container).split(" ")).toContain(`avatar-${size}`);
       cleanup();

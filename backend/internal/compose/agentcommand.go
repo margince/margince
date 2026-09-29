@@ -101,6 +101,8 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"approveImportRun":     commitImportCommand,
 	"previewBulkChange":    bulkChangeCommand,
 	"executeBulkChange":    bulkChangeCommand,
+	"previewBulkUndo":      bulkChangeCommand,
+	"undoBulkChange":       bulkChangeCommand,
 	"archiveActivity":      archiveCommand,
 	"archiveDeal":          archiveCommand,
 	"archiveTag":           archiveCommand,

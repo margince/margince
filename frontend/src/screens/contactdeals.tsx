@@ -133,7 +133,11 @@ function DealCard({
           <span className="t-caption">{t("contact.commercial.committee")}</span>
           {committee.map((member) => (
             <div className="pe-deal-card-committee-row" key={member.contact_id}>
-              <Avatar name={member.full_name} src={member.photo_url} />
+              <Avatar
+                name={member.full_name}
+                identity={member.contact_id}
+                src={member.photo_url}
+              />
               <span>{member.full_name}</span>
               <span className="t-caption">{readableRole(member.role)}</span>
             </div>

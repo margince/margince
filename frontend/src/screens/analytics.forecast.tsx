@@ -12,7 +12,8 @@ import {
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { MoneyInput } from "../design-system/moneyinput";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { SegmentBar } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import {
   formatDateAbbrev,
@@ -31,6 +32,10 @@ import {
   type ForecastPeriod,
   useForecastReadings,
 } from "./forecast.queries";
+// The section's layout classes (toolbar, the checks-and-receipt pair) live in
+// the screen's sheet; imported here too so the view draws the same when it is
+// rendered on its own.
+import "./analytics.css";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
@@ -48,71 +53,91 @@ export function ForecastView({
   const t = useT();
   const { locale } = useLocale();
   const [period, setPeriod] = useState<ForecastPeriod>("quarter");
+  // Whether the call editor is open. Held here rather than in the editor,
+  // because the verb that opens it stands in the toolbar beside the period it
+  // files against, outside the read the editor needs.
+  const [editing, setEditing] = useState(false);
+  // Only a reader who may call, calling for ONE population: a blended view of
+  // several teams has no single call to record.
+  const canCall = canSubmit && writableScope(selection.scope) != null;
 
   // The same read the morning's pipeline counter makes, through the same key:
   // two surfaces asking what the pipeline is worth must not get two answers.
   const readings = useForecastReadings(selection.scope, period);
 
   return (
-    <>
-      {/* Which window the figures below are over. Above the readings rather
-          than beside them, because every number on this page changes when it
-          moves — a control nested among them would read as filtering one. */}
-      <SegmentedControl
-        label={t("forecast.period")}
-        options={FORECAST_PERIODS}
-        value={period}
-        onChange={setPeriod}
-        labels={{
-          quarter: t("forecast.period.quarter"),
-          month: t("forecast.period.month"),
-          week: t("forecast.period.week"),
-        }}
-      />
+    <div className="analytics-stack">
+      {/* Which window the figures below are over, and the verb that records a
+          call about it. Above the readings rather than beside them, because
+          every number on this page changes when the window moves — a control
+          nested among them would read as filtering one. */}
+      <div className="analytics-toolbar">
+        <SegmentedControl
+          label={t("forecast.period")}
+          options={FORECAST_PERIODS}
+          value={period}
+          onChange={setPeriod}
+          labels={{
+            quarter: t("forecast.period.quarter"),
+            month: t("forecast.period.month"),
+            week: t("forecast.period.week"),
+          }}
+        />
+        {canCall && !editing ? (
+          <Button onClick={() => setEditing(true)}>
+            {t("forecast.updateCall")}
+          </Button>
+        ) : null}
+      </div>
       <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
         {(data) => (
           <>
             <ForecastAnswer readings={data} locale={locale} />
-            {canSubmit && writableScope(selection.scope) ? (
+            {canCall && editing ? (
               <ForecastCallEditor
                 readings={data}
                 selection={selection}
                 period={period}
+                onClose={() => setEditing(false)}
               />
             ) : null}
             {/* What to check comes BEFORE the receipt: a manager with ten
               minutes reads what needs doing first, and the receipt is what
-              they consult when a number looks wrong. */}
-            <ForecastReview />
-            <EvidenceReceipt
-              title={t("forecast.receipt")}
-              counts={[
-                {
-                  key: "eligible",
-                  term: t("forecast.eligible"),
-                  value: formatNumber(data.eligible_count, locale),
-                },
-                {
-                  key: "priced",
-                  term: t("forecast.priced"),
-                  value: formatNumber(data.priced_count, locale),
-                },
-                {
-                  key: "confirmed",
-                  term: t("forecast.confirmed"),
-                  value: formatNumber(data.confirmed_date_count, locale),
-                },
-                {
-                  key: "fx",
-                  term: t("forecast.fxMissing"),
-                  value: formatNumber(data.fx_missing_count, locale),
-                },
-              ]}
-            />
+              they consult when a number looks wrong. Side by side where the
+              page is wide, so the receipt stops being a full-width table of
+              four numbers. */}
+            <div className="analytics-pair">
+              <ForecastReview />
+              <EvidenceReceipt
+                title={t("forecast.receipt")}
+                counts={[
+                  {
+                    key: "eligible",
+                    term: t("forecast.eligible"),
+                    value: formatNumber(data.eligible_count, locale),
+                  },
+                  {
+                    key: "priced",
+                    term: t("forecast.priced"),
+                    value: formatNumber(data.priced_count, locale),
+                  },
+                  {
+                    key: "confirmed",
+                    term: t("forecast.confirmed"),
+                    value: formatNumber(data.confirmed_date_count, locale),
+                  },
+                  {
+                    key: "fx",
+                    term: t("forecast.fxMissing"),
+                    value: formatNumber(data.fx_missing_count, locale),
+                  },
+                ]}
+              />
+            </div>
           </>
         )}
       </QueryGate>
-    </>
+    </div>
   );
 }
 
@@ -180,6 +205,13 @@ function ForecastAnswer({
       formatMoneyCompact,
     );
   const call = readings.current_call;
+  // What best case adds on top of the evidence it already contains. Never
+  // below zero: a superset that read smaller than its subset is a server fault
+  // to show as nothing added, not as a part drawn backwards.
+  const bestCaseAdds = Math.max(
+    0,
+    readings.best_case_minor - readings.evidence_minor,
+  );
 
   return (
     <>
@@ -201,6 +233,44 @@ function ForecastAnswer({
                   evidence: money(readings.evidence_minor),
                 })}
           </p>
+          {/* The same answer as one shape: what is banked, what is committed
+              with a date, what best case adds, and the call across them. The
+              three are DISJOINT on the server — evidence and best case count
+              open deals only, and best case contains evidence — so they are
+              laid end to end, and best case contributes only what it adds. */}
+          <SegmentBar
+            label={t("forecast.makeup")}
+            parts={[
+              {
+                key: "won",
+                label: t("forecast.alreadyWon"),
+                value: readings.won_minor,
+                amount: slot(readings.won_minor),
+              },
+              {
+                key: "evidence",
+                label: t("forecast.evidence"),
+                value: readings.evidence_minor,
+                amount: slot(readings.evidence_minor),
+              },
+              {
+                key: "bestCase",
+                label: t("forecast.bestCaseAdds"),
+                value: bestCaseAdds,
+                amount: slot(bestCaseAdds),
+              },
+            ]}
+            marker={
+              call
+                ? {
+                    key: "call",
+                    label: t("forecast.currentCall"),
+                    value: call.amount_minor,
+                    amount: slot(call.amount_minor),
+                  }
+                : undefined
+            }
+          />
         </PanelBody>
       </Panel>
 
@@ -277,14 +347,17 @@ function ForecastCallEditor({
   readings,
   selection,
   period,
+  onClose,
 }: Readonly<{
   readings: Readings;
   selection: AnalyticsSelection;
   period: ForecastPeriod;
+  // Leaving the editor, whether by cancelling or by a recorded call: the view
+  // that opened it owns whether it is open.
+  onClose: () => void;
 }>) {
   const t = useT();
   const client = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [amountMinor, setAmountMinor] = useState<number>(
     readings.current_call?.amount_minor ?? 0,
   );
@@ -330,20 +403,9 @@ function ForecastCallEditor({
       // population alone: a workspace call changes what a team reading shows
       // beneath it, and a stale sibling is the bug this replaces.
       await client.invalidateQueries({ queryKey: ["forecast"] });
-      setOpen(false);
-      setNote("");
+      onClose();
     },
   });
-
-  if (!open) {
-    return (
-      <div className="card-actions">
-        <Button onClick={() => setOpen(true)}>
-          {t("forecast.updateCall")}
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <Panel
@@ -352,7 +414,7 @@ function ForecastCallEditor({
       // act on rather than in the band that names it.
       actions={
         <>
-          <Button onClick={() => setOpen(false)}>{t("forecast.cancel")}</Button>
+          <Button onClick={onClose}>{t("forecast.cancel")}</Button>
           <Button
             variant="primary"
             disabled={save.isPending}
@@ -367,7 +429,7 @@ function ForecastCallEditor({
         {/* Two sentences: what a call is, and what recording one does not do.
             The head band holds one line, and the half it would cut is the
             half that says no deal moves. */}
-        <p className="t-sub">{t("forecast.callExplains")}</p>
+        <PanelIntro>{t("forecast.callExplains")}</PanelIntro>
         <Field label={t("forecast.expectedTotal")}>
           {(control) => (
             <MoneyInput

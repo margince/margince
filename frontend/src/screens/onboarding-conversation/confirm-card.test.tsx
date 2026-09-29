@@ -121,11 +121,11 @@ function renderCard(site: CompanySiteRead | null) {
         authorizing={false}
         error={null}
       />
-      {/* The same mark the companies list and the connections graph draw
-          for this company, rendered beside the board so the claim under test
-          is "the two agree" rather than a hash recomputed in the test. */}
+      {/* The same mark the profile digest draws for this company before its
+          record exists, rendered beside the board so the claim under test is
+          "the two agree" rather than a hash recomputed in the test. */}
       <span data-testid="reference-mark">
-        <Avatar name={COMPANY} />
+        <Avatar name={COMPANY} identity={COMPANY} />
       </span>
     </>,
   );
@@ -151,15 +151,15 @@ function only(selector: string): Element {
   return node;
 }
 
-// The tone class Avatar derives from the name. Read off the element rather
-// than recomputed here: a test that re-implements the hash passes even when
-// the two surfaces disagree, which is the only thing worth asserting.
-function toneOf(node: Element): string {
-  const tone = [...node.classList].find((name) => /^avatar-t\d+$/.test(name));
-  if (tone === undefined) {
-    throw new Error(`no deterministic tone on ${node.className}`);
+// The mesh Avatar derives from the name, read off the element rather than
+// recomputed here: a test that re-implements the hash passes even when the two
+// surfaces disagree, which is the only thing worth asserting.
+function meshOf(node: Element): string {
+  const mesh = node.getAttribute("style");
+  if (!mesh?.includes("--avatar-hue-a")) {
+    throw new Error(`no deterministic mesh on ${node.className}`);
   }
-  return tone;
+  return mesh;
 }
 
 afterEach(cleanup);
@@ -291,7 +291,7 @@ describe("the identity card's mark", () => {
     const card = only(".ob-company-card .avatar");
     const reference = only('[data-testid="reference-mark"] .avatar');
 
-    expect(toneOf(card)).toBe(toneOf(reference));
+    expect(meshOf(card)).toBe(meshOf(reference));
     expect(card).toHaveTextContent("GG");
   });
 });

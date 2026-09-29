@@ -4909,6 +4909,110 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /bulk/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Bulk]
+      operationId: getBulkChange
+      summary: Read what one bulk change did, and whether it was undone.
+      description: |
+        The record of one executed bulk change or undo: its record type and verb, how many records
+        it changed, each record it left alone with the reason, what an undo could not bring back,
+        and the batches it undid or was undone by.
+
+        Only the colleague who asked for the change (on the website or through any of their agents),
+        or an administrator, may read it. Anyone else is answered `404`, the same as for a batch that
+        does not exist. A record the reader can no longer see is left out of `skipped` and
+        `left_behind`, whatever the change said about it when it ran.
+      responses:
+        '200':
+          description: The bulk change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BulkOperation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /bulk/{id}/undo/preview:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Bulk]
+      operationId: previewBulkUndo
+      summary: Say what undoing one bulk change would do, without doing it.
+      description: |
+        The first half of an undo, and the same shape as `previewBulkChange`: the records the undo
+        would put back (`affected`), the ones it would leave alone and why (`excluded`), up to three
+        before/after rows, and a `confirm_token`. Undoing more than 10 records needs that token.
+
+        Only the colleague who asked for the change, or an administrator, may undo it (`404`
+        otherwise). A change is undone once, and an undo is not itself undone (`409`).
+      x-mcp-tool: { verb: bulk_update_records, tier: auto_execute, scope: write }
+      responses:
+        '200':
+          description: What the undo would do.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BulkChangePreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /bulk/{id}/undo:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Bulk]
+      operationId: undoBulkChange
+      summary: Put back what one bulk change did, record by record.
+      description: |
+        A compensating bulk change with its own `batch_id`. A reassignment hands each record back to
+        the owner it had before; an archive brings each record back with the child rows, list
+        memberships and tags its archive took down. Each record gets its own audit row, carrying
+        the undo's `batch_id`, and its own event (`contact.restored`, `company.restored`,
+        `deal.restored` for an archive).
+
+        A record is skipped, not overwritten, when it changed after the batch
+        (`changed_since_batch`), when it was merged into another record (`merged`) or erased
+        (`erased`), when another live record has since taken its email or domain (`value_taken`),
+        and when it had no owner before (`no_previous_owner`). A child row, membership or tag that
+        cannot come back — a list or tag archived since, a link whose other end is archived — is
+        listed in `left_behind` while its record is restored. A link between two records of the same
+        change comes back once both are live. A record the caller can no longer see is left out of
+        the answer rather than named.
+
+        Only the colleague who asked for the change, or an administrator, may undo it (`404`
+        otherwise). A change is undone once; a second undo, or an undo of an undo, answers `409`.
+        More than 10 records need the `confirm_token` from `previewBulkUndo`, exactly as
+        `executeBulkChange` does.
+      x-mcp-tool: { verb: bulk_update_records, tier: auto_execute, scope: write }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BulkUndoRequest' }
+      responses:
+        '200':
+          description: What was put back and what was skipped.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BulkChangeResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: The undo would take this agent past its write budget for the window.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /projects/transfer-ownership:
     post:
       tags: [Projects]
@@ -5302,7 +5406,11 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Create a pipeline.
-      description: At most one default pipeline per workspace (409 if a second default).
+      description: |
+        At most one default pipeline per workspace (409 if a second default). The opening
+        `stages` keep the ladder's shape: a won or lost stage above an open one is refused
+        `422` with the code `closing_stage_before_open`, and two stages naming one position
+        with `duplicate`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -5421,6 +5529,88 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /pipelines/order:
+    put:
+      tags: [Pipelines]
+      operationId: reorderPipelines
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Put the live pipelines in a new order.
+      description: |
+        Names the whole order at once: `pipeline_ids` lists every live pipeline exactly once,
+        first to last, and each takes the position of its place in the list. `listPipelines`
+        and every pipeline picker answer in this order.
+
+        `409` with the code `order_stale` when the list does not name exactly the live
+        pipelines — one was created, retired or restored since the caller read them — so read
+        again and resend. `422` when the list names a pipeline twice.
+
+        Publishes one `pipeline.updated` per pipeline whose position changed; an order that
+        moves nothing writes nothing.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PipelineOrderRequest' }
+      responses:
+        '200':
+          description: The live pipelines, in their new order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /pipelines/{id}/stage-order:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Pipelines]
+      operationId: reorderStages
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Put a pipeline's stages in a new order.
+      description: |
+        Names the whole ladder at once: `stage_ids` lists every live stage of the pipeline
+        exactly once, first to last, and the stages take positions 1..n in that order. One
+        write rather than a `position` per stage, because `position` is unique within the
+        pipeline and a run of single moves passes through states that uniqueness refuses.
+
+        Won and lost stages close a deal, so they come after every open stage. An order that
+        puts one earlier is refused `422` with the code `closing_stage_before_open`.
+
+        The pipeline's `version` is its ladder's version: this operation moves it, and so
+        does every write that adds, removes or repositions one of its stages. Send it as
+        `If-Match` so an order drawn from a ladder somebody has since changed answers
+        `409 version_skew` instead of landing on top of their change.
+
+        `409` with the code `order_stale` when the list does not name exactly the live
+        stages; `422` when it names one twice. Publishes ONE `pipeline.updated` carrying the
+        `stage_positions` delta; an order that moves nothing writes nothing.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StageOrderRequest' }
+      responses:
+        '200':
+          description: The pipeline, its stages in their new order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pipeline' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ------------------------------ /stages -----------------------------------
   /stages:
     get:
@@ -5446,8 +5636,12 @@ paths:
       x-agent-access: human-only
       summary: Create a stage in a pipeline.
       description: |
-        `position` is unique within the pipeline. Terminal stages enforce probability:
-        won=100, lost=0 (features/01 §4.1).
+        `position` is unique within the pipeline, from 0 to 1048576. A won stage is always at
+        100 and a lost stage at 0, whatever `win_probability` says.
+
+        Won and lost stages come after every open stage. An open stage created past them is
+        placed in front of them, and that shift rides one `pipeline.updated` with the
+        `stage_positions` delta. Creating a stage moves the pipeline's `version`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -5485,6 +5679,12 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       summary: Update a stage (rename / reorder / probability).
+      description: |
+        A `position` change that would leave a won or lost stage above an open one is refused
+        `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
+        instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
+        behind the open ones, published as the same `pipeline.updated` position delta. A change
+        to either moves the pipeline's `version`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -26753,11 +26953,12 @@ components:
     CaptureKeptBreakdown:
       type: object
       description: |
-        Why the skipped messages were skipped. The three counts are disjoint and sum to `skipped`.
+        Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
         Reported because the count alone tells an owner that something survived their deletion and
         not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
-        window expires on a date, an open request closes when it is finished.
-      required: [held, under_statute, under_request]
+        window expires on a date, an open request closes when it is finished, and an undetermined
+        floor lifts when the installation can say what the law requires.
+      required: [held, under_statute, under_request, under_undetermined_floor]
       properties:
         held:
           type: integer
@@ -26768,6 +26969,14 @@ components:
         under_request:
           type: integer
           description: Messages a data-subject request is still about, and which it needs in order to be answered.
+        under_undetermined_floor:
+          type: integer
+          description: |
+            Messages kept because this installation could not determine what the law requires of
+            them. Distinct from `under_statute`, which is a claim that a retention window applies:
+            these were shielded because a purge that cannot ask what the law requires must not
+            guess that the answer is "nothing", and reporting them as a statute would tell an owner
+            their mail is commercial correspondence when nothing established that.
         statutory_class:
           type: string
           description: |
@@ -35190,7 +35399,13 @@ components:
         `anchor_company`: it is the installation's own company, which is never archived.
         `not_previewed`: the preview whose token this execution presents did not list it.
         `refused`: a single-record rule refuses it; `code` says which.
-      enum: [not_found, not_writable, changed_since_preview, no_change, anchor_company, not_previewed, refused]
+
+        An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+        `merged`: it was merged into another record. `erased`: its personal data was erased or
+        purged. `value_taken`: another live record now holds its email or domain.
+        `no_previous_owner`: it had no owner before the reassignment.
+      enum: [not_found, not_writable, changed_since_preview, no_change, anchor_company, not_previewed, refused,
+             changed_since_batch, merged, erased, value_taken, no_previous_owner]
 
     BulkSkip:
       type: object
@@ -35260,6 +35475,50 @@ components:
           type: array
           description: The records left alone, each with its reason.
           items: { $ref: '#/components/schemas/BulkSkip' }
+        left_behind:
+          type: array
+          description: What an undo restored a record without, because it could not come back.
+          items: { $ref: '#/components/schemas/BulkLeftBehind' }
+        undo_of: { type: string, format: uuid, description: 'For an undo, the change it put back.' }
+
+    BulkLeftBehind:
+      type: object
+      description: |
+        One thing an undo could not bring back with its record. `kind` names the child table, or
+        `list` and `tag` for a membership or tag; `ref_id` is that row, list or tag.
+      required: [id, kind, ref_id]
+      properties:
+        id: { type: string, format: uuid, description: The record that was restored. }
+        kind:
+          type: string
+          enum: [contact_email, contact_phone, contact_channel_identity, relationship, company_domain,
+                 company_relationship_type, partner, list, tag]
+        ref_id: { type: string, format: uuid }
+
+    BulkUndoRequest:
+      type: object
+      properties:
+        confirm_token: { type: string, description: 'The token `previewBulkUndo` returned. Required above 10 records.' }
+
+    BulkOperation:
+      type: object
+      description: One executed bulk change or undo, as `getBulkChange` reads it.
+      required: [batch_id, record_type, verb, changed, skipped, left_behind, created_at]
+      properties:
+        batch_id: { type: string, format: uuid }
+        record_type: { $ref: '#/components/schemas/BulkRecordType' }
+        verb: { $ref: '#/components/schemas/BulkVerb' }
+        owner_id: { type: string, format: uuid, description: 'The new owner a reassignment named.' }
+        changed: { type: integer, description: The number of records changed. }
+        skipped:
+          type: array
+          items: { $ref: '#/components/schemas/BulkSkip' }
+        left_behind:
+          type: array
+          items: { $ref: '#/components/schemas/BulkLeftBehind' }
+        undo_of: { type: string, format: uuid, description: 'Set on an undo: the change it put back.' }
+        undone_by: { type: string, format: uuid, description: 'Set once the change was undone: the undo that put it back.' }
+        created_at: { type: string, format: date-time }
 
     TransferProjectOwnershipResult:
       type: object
@@ -35749,7 +36008,29 @@ components:
         stages:
           type: array
           description: Optional initial stages.
-          items: { $ref: '#/components/schemas/CreateStageRequest' }
+          items: { $ref: '#/components/schemas/CreatePipelineStage' }
+
+    CreatePipelineStage:
+      type: object
+      description: |
+        One initial stage of a pipeline being created. It joins the pipeline this same request
+        creates, so unlike `CreateStageRequest` it needs no `pipeline_id`. A won stage without a
+        `win_probability` takes 100, as `createStage` fills it.
+      required: [name]
+      properties:
+        pipeline_id:
+          type: string
+          format: uuid
+          deprecated: true
+          description: |
+            Accepted and ignored. The stage joins the pipeline this request creates; the field
+            stays so a client written when nested stages reused `CreateStageRequest` is not refused.
+        name: { type: string }
+        position:
+          type: integer
+          description: Omitted or 0, the stage takes its place in the list (1-based).
+        semantic: { type: string, enum: [open, won, lost], default: open }
+        win_probability: { type: integer, minimum: 0, maximum: 100 }
 
     UpdatePipelineRequest:
       type: object
@@ -35757,6 +36038,26 @@ components:
         name: { type: string }
         is_default: { type: boolean }
         position: { type: integer }
+
+    PipelineOrderRequest:
+      type: object
+      description: The live pipelines, first to last.
+      required: [pipeline_ids]
+      properties:
+        pipeline_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Every live pipeline, each exactly once, in the new order.
+
+    StageOrderRequest:
+      type: object
+      description: One pipeline's stage ladder, first to last.
+      required: [stage_ids]
+      properties:
+        stage_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: Every live stage of the pipeline, each exactly once, in the new order.
 
     PipelineListResponse:
       type: object
@@ -39433,6 +39734,22 @@ components:
             user because the share and assignee pickers read it, and who is in which team is
             not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no
             scope and no share, so listing one would describe access the user does not have.
+        allowed_actions:
+          type: array
+          items:
+            type: string
+            enum: [change_role, issue_password_link, deactivate, reactivate]
+          description: >
+            The member verbs the CALLER would be admitted to on this user right now, computed by
+            the same checks those endpoints run: the `user_admin` verb each takes, a seat that may
+            write, the ceiling over the target (a non-admin never acts on an admin, and otherwise
+            holds everything the verb reaches), the member's status and kind, the last-admin
+            guard, an archived role still held, the licensed seat ceiling on reactivation, and
+            whether this installation can build a set-password link. Present on `listUsers`'s
+            management view for a human caller only; absent means not computed, and a client
+            offers nothing then. It is an offer, not a promise: every write re-checks under its
+            lock, and `change_role` says a role change is possible at all — which roles, is
+            `listAssignableRoles`'s answer.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
@@ -39755,6 +40072,8 @@ components:
           $ref: '#/components/schemas/Authorization'
         settings_availability:
           $ref: '#/components/schemas/SettingsAvailability'
+        installation_brand:
+          $ref: '#/components/schemas/InstallationBrand'
         passport:
           type: [object, 'null']
           deprecated: true
@@ -41177,6 +41496,31 @@ components:
             This does not let a client decide which rows it gets — the server's scope clauses
             do that on every query. It is what a client needs to EXPLAIN the answer it got, and
             to label a setting as reaching only the reader, their team, or the company.
+
+    InstallationBrand:
+      type: object
+      additionalProperties: false
+      required: [display_name]
+      description: >
+        The installation's own company as every seat already sees it on screen: its name and
+        its marks, for the app's brand block. Absent until the installation has described
+        itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`)
+        is an administrator's read, and this projection is not a way around it.
+      properties:
+        display_name:
+          type: string
+          description: What the company is called day to day.
+        logo_url:
+          type: string
+          description: >
+            The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries.
+            Absent when the company wears none, or when this caller holds no read on companies
+            and so could not load it; a client draws the company's monogram instead.
+        logo_icon_url:
+          type: string
+          description: >
+            The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent
+            on the same terms as `logo_url`. A client without one draws the wide mark.
 
     SettingsAvailability:
       type: object
@@ -48262,6 +48606,7 @@ components:
         close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a colleague.' }
         forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
         stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage." }
+        win_probability: { type: [integer, 'null'], minimum: 0, maximum: 100, description: "The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`." }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
@@ -50280,9 +50625,9 @@ components:
         The deal behind an item, with the facts its card states. `expected_minor_base` is
         `amount_minor` converted to the installation's base currency — the only figure by
         which two deals in different currencies may be compared. It is not weighted by
-        `win_probability`: the pipeline this row comes from does not read a deal's stage,
-        so the two fields are independent facts rather than one computed from the other,
-        and a reader must not multiply them together expecting the product to equal a
+        `win_probability`: the two are independent facts, one the deal's own money and the
+        other a property of the stage it sits in, rather than one computed from the other.
+        A reader must not multiply them together expecting the product to equal a
         risk-adjusted figure the API does not compute.
       properties:
         close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a colleague.' }

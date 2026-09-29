@@ -21,6 +21,12 @@ const (
 	withheldByHold    = "hold"
 	withheldByStatute = "statute"
 	withheldByRequest = "request"
+	// withheldByUndeterminedFloor is what shields a row when the installation
+	// could not say what the law requires of it. The row is kept — that is the
+	// safe answer — but `statute` is a CLAIM about why, and this one was never
+	// established. Reported apart so the owner is told the rule could not be
+	// determined rather than told their mail is commercial correspondence.
+	withheldByUndeterminedFloor = "floor_undetermined"
 )
 
 // noteWithheld files one kept activity under the reason the selector gave.
@@ -36,6 +42,8 @@ func (s *PurgeSubject) noteWithheld(reason string, id ids.UUID) {
 		s.UnderStatute = append(s.UnderStatute, id)
 	case withheldByRequest:
 		s.UnderRequest = append(s.UnderRequest, id)
+	case withheldByUndeterminedFloor:
+		s.UnderUndeterminedFloor = append(s.UnderUndeterminedFloor, id)
 	}
 }
 
@@ -47,10 +55,12 @@ func (s *PurgeSubject) noteWithheld(reason string, id ids.UUID) {
 // so the order decides. A hand-placed hold outranks the statutory window
 // because somebody decided it about this record; the window outranks an open
 // request because it outlives the request's resolution.
-func withheldReason(shielded string, underRequest bool) string {
+// shieldedAs is the reason the shield's own arm reports — the floor names it,
+// because only the floor knows whether it measured anything.
+func withheldReason(shielded, shieldedAs string, underRequest bool) string {
 	clause := `CASE
 		WHEN a.restricted_at IS NOT NULL THEN '` + withheldByHold + `'
-		WHEN (` + shielded + `) THEN '` + withheldByStatute + `'`
+		WHEN (` + shielded + `) THEN '` + shieldedAs + `'`
 	if underRequest {
 		clause += `
 		WHEN (` + underAnOpenRequest + `) THEN '` + withheldByRequest + `'`

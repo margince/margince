@@ -447,7 +447,7 @@ export function ContactPageV2({
             aside={narrow ? undefined : contactDetails}
             asideOpen={details.open}
             name={contact.full_name}
-            avatarSrc={null}
+            identity={contact.id}
             // One rung under the record scale: the name is still the largest
             // thing on the page, but beside a work column that opens on the
             // agent's ask it no longer needs to be the size of a masthead.
@@ -769,8 +769,8 @@ function useBriefedMeeting(): [
 
 // The marks under the name: the relationship's standing (verdict and trend as
 // ONE badge, nothing when the touch dates are withheld from this reader) and
-// who may read the record, with its Share verb. Both are the values a rep
-// glances for before anything else, and both are pills, so they share a line.
+// who may read the record. Both are the values a rep glances for before
+// anything else, and both are pills, so they share a line.
 function ContactMarks({
   view,
   tab,

@@ -107,7 +107,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createContactInTx(ctx, tx, in, by, active)
+		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
 	})
 	return out, err
@@ -132,7 +132,7 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 		return crmcontracts.Contact{}, err
 	}
 	in.OwnerID = storekit.OwnerOrActor(ctx, in.OwnerID)
-	return createContactInTx(ctx, tx, in, by, nil)
+	return s.createContactInTx(ctx, tx, in, by, nil)
 }
 
 // readyContactCreate runs what a create settles BEFORE any transaction opens —
@@ -148,7 +148,7 @@ func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (
 
 // createContactInTx is CreateContact's transactional body, shared by the
 // store-opened and caller-opened entry points.
-func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
+func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by string,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
 	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
@@ -204,6 +204,10 @@ func createContactInTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, by
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.created: %w", err)
 	}
 	if err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	// Somebody typing in a contact who is already a lead has qualified them.
+	if err := s.promoteHeldLeadsTx(ctx, tx, id, TriggerHumanQualify, nil, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 

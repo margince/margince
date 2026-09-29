@@ -2112,8 +2112,9 @@ export const en = {
     "Only the people named below can read this.",
   // The one mark for who may read a thing, drawn on mail rows, in the drawer,
   // on a contact and on a limited note. "Team" never means the whole
-  // workspace (see above); "Only you" is a captured contact's owner-only
-  // state, which a message never has.
+  // workspace (see above); "Private" is a record's owner-only state, which a
+  // message never has, and names the state because a colleague it was shared
+  // with sees the same mark as its owner.
   "visibility.team": "Team",
   // A shared company or contact, where the audience IS the whole workspace —
   // no linked record narrows it the way one narrows a message. "Shared" pairs
@@ -2122,7 +2123,7 @@ export const en = {
   "visibility.workspace": "Shared",
   "visibility.participants": "Participants",
   "visibility.selected": "Selected",
-  "visibility.private": "Only you",
+  "visibility.private": "Private",
   "visibility.withheld": "Withheld",
   "email.access.unnamedMember": "Former user",
   "email.move.needsReply": "Needs reply",
@@ -3076,6 +3077,8 @@ export const en = {
   "bulk.assign": "Assign owner",
   "bulk.archive": "Archive",
   "bulk.titleReassign": "Change owner of selected {unit}?",
+  "bulk.titleUndo": "Undo the change to these {unit}?",
+  "bulk.confirmUndo": "Undo change",
   "bulk.titleArchive": "Archive selected {unit}?",
   "bulk.checking": "Checking the selection…",
   "bulk.affects_one": "This changes {count} of the {total} selected records.",
@@ -3099,6 +3102,12 @@ export const en = {
   "bulk.reason.anchor_company": "Your own company is never archived",
   "bulk.reason.refused": "Not allowed for this record",
   "bulk.reason.not_previewed": "Not in the confirmed preview",
+  "bulk.reason.changed_since_batch": "Changed since the change you are undoing",
+  "bulk.reason.merged": "Merged into another record",
+  "bulk.reason.erased": "Its personal data was erased",
+  "bulk.reason.value_taken":
+    "Its email or domain now belongs to another record",
+  "bulk.reason.no_previous_owner": "Had no owner before",
   "bulk.refusal.sole_project_company": "Only company on a live project",
   "bulk.refusal.locked": "Under a legal or retention hold",
   "bulk.refusal.anchor_protected": "Your own company is protected",
@@ -3113,6 +3122,16 @@ export const en = {
   "bulk.doneDeals_other": "{count} deals changed.",
   "bulk.doneSkipped_one": "{count} was left unchanged.",
   "bulk.doneSkipped_other": "{count} were left unchanged.",
+  "bulk.undoneContacts_one": "{count} contact put back.",
+  "bulk.undoneContacts_other": "{count} contacts put back.",
+  "bulk.undoneCompanies_one": "{count} company put back.",
+  "bulk.undoneCompanies_other": "{count} companies put back.",
+  "bulk.undoneDeals_one": "{count} deal put back.",
+  "bulk.undoneDeals_other": "{count} deals put back.",
+  "bulk.undoLeftBehind_one":
+    "{count} link, tag or list membership could not come back.",
+  "bulk.undoLeftBehind_other":
+    "{count} links, tags or list memberships could not come back.",
 
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
@@ -3973,30 +3992,44 @@ export const en = {
   // where the contact half says "contact", because that is the word the rest
   // of the company page uses for itself.
   "recordAccess.contact.title": "Who can see this contact",
-  "recordAccess.contact.privateToYou":
-    "Private to its owner. No one else in the company can see this contact, including team members and administrators.",
   "recordAccess.contact.shared":
     "All users in the company can see this contact.",
-  "recordAccess.contact.privateTip":
-    "Only you can see this contact. Share it to make it visible to all users.",
-  "recordAccess.contact.share": "Share with all users",
+  "recordAccess.contact.privateYours":
+    "Only you and the users or teams it was shared with can see this contact.",
+  "recordAccess.contact.privateOf":
+    "Private to {owner}. You can see this contact because it was shared with you or your team.",
+  "recordAccess.contact.privateOfOwner":
+    "Private to its owner. You can see this contact because it was shared with you or your team.",
   "recordAccess.contact.published": "This contact is now visible to all users.",
-  "recordAccess.contact.makePrivate": "Make private",
   "recordAccess.contact.madePrivate":
-    "This contact is now private to its owner. Users it was shared with directly keep access.",
+    "This contact is now private to its owner. Users and teams it was shared with keep access.",
+  "recordAccess.contact.leftYourAccess":
+    "This contact is now private to its owner. You no longer have access to it.",
   "recordAccess.company.title": "Who can see this company",
-  "recordAccess.company.privateToYou":
-    "Private to its owner. No one else in the company can see this record, including team members and administrators.",
   "recordAccess.company.shared":
     "All users in the company can see this record.",
-  "recordAccess.company.privateTip":
-    "Only you can see this company. Share it to make it visible to all users.",
-  "recordAccess.company.share": "Share with all users",
+  "recordAccess.company.privateYours":
+    "Only you and the users or teams it was shared with can see this company.",
+  "recordAccess.company.privateOf":
+    "Private to {owner}. You can see this company because it was shared with you or your team.",
+  "recordAccess.company.privateOfOwner":
+    "Private to its owner. You can see this company because it was shared with you or your team.",
   "recordAccess.company.published": "This company is now visible to all users.",
-  "recordAccess.company.makePrivate": "Make private",
   "recordAccess.company.madePrivate":
     "This company is now private to its owner. Deals, contacts and mail filed against it keep their own visibility.",
-  "recordAccess.whoHasAccess": "Who has access",
+  "recordAccess.company.leftYourAccess":
+    "This company is now private to its owner. You no longer have access to it.",
+  // The switch behind the header's access chip. The owner's answer carries
+  // what it does not take away, because a share outlives it; to anyone but the
+  // owner it says what it takes from them, and without an owner it is refused.
+  "recordAccess.option.owner": "Only the owner",
+  "recordAccess.option.ownerHint":
+    "Users and teams it is shared with keep access.",
+  "recordAccess.option.ownerHintNotYours":
+    "You lose access unless it is shared with you or your team.",
+  "recordAccess.option.ownerNeeded": "Assign an owner first.",
+  "recordAccess.option.workspace": "All users in the company",
+  "recordAccess.manage": "Manage access",
   // The full answer on the share screen: every colleague who can open the
   // record, grouped by why, and the reader's own access on one line.
   "whoCanSee.title": "Who can see this record",
@@ -4320,6 +4353,7 @@ export const en = {
     "Open deals only, converted to {currency}, unweighted and weighted",
   "analytics.currency": "Currency",
   "analytics.count": "Open deals",
+  "analytics.closedDeals": "Closed deals",
   "analytics.unweighted": "Unweighted",
   "analytics.weighted": "Weighted",
   "analytics.priced": "{priced} of {total} priced",
@@ -4476,8 +4510,8 @@ export const en = {
   "analytics.reportProjectsGoneQuiet": "Projects gone quiet",
   "analytics.projects": "Projects",
   "analytics.project": "Project",
-  "analytics.openDealValue": "Open deal value ({currency})",
-  "analytics.wonDealValue": "Won deal value ({currency})",
+  "analytics.openDealValue": "Open deal value · {currency}",
+  "analytics.wonDealValue": "Won deal value · {currency}",
   "analytics.openCommitments": "Open",
   "analytics.overdueCommitments": "Overdue",
   "analytics.quietSince": "Quiet since",
@@ -4662,6 +4696,8 @@ export const en = {
   "forecast.currentCallDetailEven": "Called {date} · matches evidence",
   "forecast.evidence": "Evidence",
   "forecast.evidenceDetail": "Confirmed close dates",
+  "forecast.bestCaseAdds": "Best-case addition",
+  "forecast.makeup": "How the period adds up",
   "forecast.alreadyWon": "Already won",
   "forecast.alreadyWonDetail": "Closed this period",
   "forecast.updateCall": "Update call",
@@ -4684,7 +4720,6 @@ export const en = {
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
-  "analytics.forecastBannerTitle": "How to read these tiles",
   "analytics.forecastBanner":
     "Each tile shows the raw total and, below it, the probability-weighted total. Rounding is per deal, so it always matches Explain this number.",
   "analytics.company": "Company",
@@ -5528,11 +5563,9 @@ export const en = {
   "settings.pipelinesSub":
     "Stages a deal moves through, one sequence per pipeline.",
   "pipeline.new": "New pipeline",
-  "pipeline.edit": "Edit pipeline",
   "pipeline.name": "Name",
   "pipeline.default": "Default",
   "pipeline.notDefault": "Not default",
-  "pipeline.position": "Position",
   "pipeline.retired": "Retired",
   "pipeline.retire": "Retire",
   "pipeline.retireConfirm":
@@ -5542,6 +5575,28 @@ export const en = {
   "pipeline.retired.done": "{name} retired",
   "pipeline.restore": "Restore",
   "pipeline.restored": "{name} restored",
+  "pipeline.rename": "Rename",
+  "pipeline.makeDefault": "Make default",
+  "pipeline.defaultSet": "{name} set as default",
+  "pipeline.inUse": "Pipelines in use",
+  "pipeline.orderHint":
+    "Drag a pipeline by its handle, or focus the handle and press the up or down arrow.",
+  "pipeline.handle": "Move {name}, {position} of {total}",
+  "pipeline.moved": "{name} moved to {position} of {total}",
+  "pipeline.openStageCount_one": "{count} open stage",
+  "pipeline.openStageCount_other": "{count} open stages",
+  "pipeline.retiredGroup_one": "{count} retired pipeline",
+  "pipeline.retiredGroup_other": "{count} retired pipelines",
+  "pipeline.retiredNote":
+    "Retired. New deals cannot start in this pipeline, and its stages cannot change until it is restored.",
+  "pipeline.retireNote":
+    "It leaves pickers and new-deal forms. Deals on it keep their stage.",
+  "pipeline.flow": "How a deal moves",
+  "pipeline.orderSaved": "Order saved",
+  "pipeline.orderRestored": "Previous order restored",
+  "pipeline.orderStale":
+    "Order not saved. Someone else changed it first, so the latest order is shown.",
+  "pipeline.orderNotSaved": "Order not saved. Retry, or reload the page.",
   "stage.new": "New stage",
   "stage.edit": "Edit stage",
   "stage.name": "Name",
@@ -5555,6 +5610,22 @@ export const en = {
   "stage.removeTitle": "Remove this stage?",
   "stage.removeBody":
     "“{name}” leaves the pipeline and later stages move up. Past stage changes stay readable. Move its deals before removing it.",
+  "stage.openGroup": "Open stages",
+  "stage.closingGroup": "Closing stages",
+  "stage.closingNote":
+    "Every deal ends in one of these, so they stay after the open stages.",
+  "stage.closingMissing":
+    "No won or lost stage yet. Add one as a new stage of that type.",
+  "stage.orderHint":
+    "Drag a stage by its handle, or focus the handle and press the up or down arrow.",
+  "stage.handle": "Move {name}, step {position} of {total}",
+  "stage.moved": "{name} is now step {position} of {total}",
+  "stage.lowerThanAbove": "Lower than {name} ({reading}) above it",
+  "stage.oddsOf": "{name} win probability",
+  "stage.noneOpen": "No open stages yet",
+  "stage.noneOpenNote":
+    "Add the first step a deal takes. It goes before the closing stages.",
+  "stage.added": "Stage added",
   "stage.criteria.title": "Exit criteria",
   "stage.criteria.sub": "What must be true before a deal leaves this stage.",
   "stage.criteria.buyerCalloutTitle": "Evidence must come from the buyer",
@@ -7582,6 +7653,8 @@ export const en = {
     "Everyone with a seat, and what each can access.",
   "settings.page.teams.sub":
     "Team membership, which decides team-scoped record access.",
+  "settings.page.roles.sub":
+    "What each role may do, and whose records it reaches.",
   "settings.page.seats.sub":
     "Seats in use against this installation’s entitlement.",
   "settings.page.stageautomation.sub":
@@ -7638,6 +7711,7 @@ export const en = {
   "settings.tab.authentication": "Sign-in and apps",
   "settings.tab.members": "Members",
   "settings.tab.teams": "Teams",
+  "settings.tab.roles": "Roles and permissions",
   "settings.tab.seats": "Seats and license",
   "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
@@ -8176,6 +8250,72 @@ export const en = {
     "Queued. This page updates when the build finishes.",
   "settings.voice.buildStatus.pending":
     "Still building. This page updates when the build finishes.",
+  "roles.title": "Roles",
+  "roles.sub":
+    "A role decides what its members may do with each kind of record and setting, and whose records they may change. Built-in roles come with Margince; a new role starts as a copy of one.",
+  "roles.readOnly": "Your role can read roles but not change them.",
+  "roles.showArchived": "Show archived roles",
+  "roles.showArchivedSub":
+    "An archived role grants nothing and cannot be given to anyone.",
+  "roles.system": "Built-in",
+  "roles.archived": "Archived",
+  "roles.open": "Open",
+  "roles.openNamed": "Open {name}",
+  "roles.empty": "No roles to show.",
+  "roles.new": "New role",
+  "roles.newTitle": "New role",
+  "roles.newFrom": "Copy rights from",
+  "roles.newFromHint":
+    "The new role starts with exactly the rights of this role.",
+  "roles.newName": "Name",
+  "roles.newSubmit": "Create role",
+  "roles.notCreated": "Role not created",
+  "roles.created": "{name} created",
+  "roles.detailSub":
+    "A change applies to every member holding this role from their next request.",
+  "roles.rename": "Rename",
+  "roles.renameTitle": "Rename role",
+  "roles.nameLabel": "Name",
+  "roles.renameSubmit": "Save name",
+  "roles.scopeTitle": "Whose records members change",
+  "roles.scopeSub":
+    "Contacts, companies, leads and deals stay readable to every role allowed to read them. This decides what members may change, and which projects they see.",
+  "roles.scope.own": "Their own",
+  "roles.scope.ownSub": "Records the member owns.",
+  "roles.scope.team": "Their teams’",
+  "roles.scope.teamSub": "Records owned by anyone on the member’s teams.",
+  "roles.scope.all": "Everyone’s",
+  "roles.scope.allSub": "Every record in the company.",
+  "roles.grantsSub": "Each switch saves at once.",
+  "roles.grantsCore": "Records and settings",
+  "roles.grantsExtensions": "Extensions",
+  "roles.grantsNarrowOnly":
+    "Each switch saves at once. Only an admin can turn a right on; you can turn rights off.",
+  "roles.turnOnAdminOnly": "Only an admin can turn a right on.",
+  "roles.widenAdminOnly":
+    "Only an admin can widen whose records a role reaches; you can narrow it.",
+  "roles.objectColumn": "Object",
+  "roles.preview": "Preview what this role sees",
+  "roles.archive": "Archive role",
+  "roles.restore": "Restore role",
+  "roles.archivedNote":
+    "This role is archived. It grants nothing, and nobody can be given it until it is restored.",
+  "roles.archivedToast": "{name} archived",
+  "roles.restoredToast": "{name} restored",
+  "roles.notSaved": "Change not saved",
+  "roles.refusal.widening":
+    "Only an admin can create or restore a role, turn a right on, or widen whose records it reaches. You can rename a role, narrow it or archive it.",
+  "roles.refusal.versionSkew":
+    "Someone else changed this role while it was open. It now shows their change; make yours again if it still applies.",
+  "roles.refusal.inUse":
+    "Members who can sign in still hold this role. Give them another role first, then archive it.",
+  "roles.refusal.archivedHeld":
+    "A member still holds an archived role. Give them a live role first.",
+  "roles.refusal.system": "A built-in role cannot be archived.",
+  "roles.refusal.adminFloor":
+    "The admin role keeps its rights to manage users, roles and teams, so the company can always be administered.",
+  "roles.refusal.nameTaken":
+    "Another role already has this name. Choose a different one.",
   "extAccess.title": "Extensions and access",
   "extAccess.sub":
     "What each extension unit adds to this installation, and which roles may use it. Administrators only.",
@@ -8928,7 +9068,8 @@ export const en = {
   "capturePurge.preview": "Check first",
   "capturePurge.confirm": "Delete permanently",
   "capturePurge.done": "Close",
-  "capturePurge.failed": "The deletion did not run",
+  "capturePurge.failed":
+    "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
   "capturePurge.wouldDestroy_one": "{count} message would be destroyed.",
   "capturePurge.wouldDestroy_other": "{count} messages would be destroyed.",
   "capturePurge.destroyed_one": "{count} message destroyed.",
@@ -8949,13 +9090,18 @@ export const en = {
     "{count} message was kept as commercial correspondence, which is not yours to delete.",
   "capturePurge.keptStatute_other":
     "{count} messages were kept as commercial correspondence, which is not yours to delete.",
-  "capturePurge.keptFor_one": "The law requires keeping it for {years} year.",
+  "capturePurge.keptFor_one":
+    "The law requires keeping such correspondence for {years} year.",
   "capturePurge.keptFor_other":
-    "The law requires keeping it for {years} years.",
+    "The law requires keeping such correspondence for {years} years.",
   "capturePurge.keptForFromYearEnd_one":
-    "The law requires keeping it for {years} year after the end of the calendar year it arrived in.",
+    "The law requires keeping such correspondence for {years} year after the end of the calendar year it arrived in.",
   "capturePurge.keptForFromYearEnd_other":
-    "The law requires keeping it for {years} years after the end of the calendar year it arrived in.",
+    "The law requires keeping such correspondence for {years} years after the end of the calendar year it arrived in.",
+  "capturePurge.keptUndetermined_one":
+    "{count} message was kept because this installation could not establish what the law requires of it. Nothing was destroyed on a rule nobody could read.",
+  "capturePurge.keptUndetermined_other":
+    "{count} messages were kept because this installation could not establish what the law requires of them. Nothing was destroyed on a rule nobody could read.",
   "capturePurge.keptRequest_one":
     "{count} message was kept: a data-protection request is still being answered and needs it.",
   "capturePurge.keptRequest_other":

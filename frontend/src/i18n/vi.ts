@@ -2038,7 +2038,7 @@ export const vi = {
   "visibility.workspace": "Được chia sẻ",
   "visibility.participants": "Người tham gia",
   "visibility.selected": "Được chọn",
-  "visibility.private": "Chỉ bạn",
+  "visibility.private": "Riêng tư",
   "visibility.withheld": "Bị giữ lại",
   "email.access.unnamedMember": "Một người không còn ở đây",
   "email.move.needsReply": "Cần trả lời",
@@ -2994,6 +2994,8 @@ export const vi = {
   "bulk.assign": "Giao người phụ trách",
   "bulk.archive": "Lưu trữ",
   "bulk.titleReassign": "Đổi người phụ trách cho {unit} đã chọn?",
+  "bulk.titleUndo": "Hoàn tác thay đổi với các {unit} này?",
+  "bulk.confirmUndo": "Hoàn tác thay đổi",
   "bulk.titleArchive": "Lưu trữ {unit} đã chọn?",
   "bulk.checking": "Đang kiểm tra lựa chọn…",
   "bulk.affects_one": "Thay đổi {count} trên {total} mục đã chọn.",
@@ -3017,6 +3019,12 @@ export const vi = {
   "bulk.reason.anchor_company": "Công ty của bạn không bao giờ bị lưu trữ",
   "bulk.reason.refused": "Không được phép với bản ghi này",
   "bulk.reason.not_previewed": "Không có trong bản xem trước đã xác nhận",
+  "bulk.reason.changed_since_batch":
+    "Đã thay đổi sau lần thay đổi đang hoàn tác",
+  "bulk.reason.merged": "Đã gộp vào bản ghi khác",
+  "bulk.reason.erased": "Dữ liệu cá nhân đã bị xóa",
+  "bulk.reason.value_taken": "Email hoặc tên miền giờ thuộc về bản ghi khác",
+  "bulk.reason.no_previous_owner": "Trước đó không có người phụ trách",
   "bulk.refusal.sole_project_company":
     "Công ty duy nhất của một dự án đang chạy",
   "bulk.refusal.locked": "Đang bị giữ theo yêu cầu pháp lý hoặc lưu giữ",
@@ -3032,6 +3040,16 @@ export const vi = {
   "bulk.doneDeals_other": "Đã thay đổi {count} deal.",
   "bulk.doneSkipped_one": "{count} bản ghi được giữ nguyên.",
   "bulk.doneSkipped_other": "{count} bản ghi được giữ nguyên.",
+  "bulk.undoneContacts_one": "Đã hoàn tác {count} liên hệ.",
+  "bulk.undoneContacts_other": "Đã hoàn tác {count} liên hệ.",
+  "bulk.undoneCompanies_one": "Đã hoàn tác {count} công ty.",
+  "bulk.undoneCompanies_other": "Đã hoàn tác {count} công ty.",
+  "bulk.undoneDeals_one": "Đã hoàn tác {count} deal.",
+  "bulk.undoneDeals_other": "Đã hoàn tác {count} deal.",
+  "bulk.undoLeftBehind_one":
+    "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
+  "bulk.undoLeftBehind_other":
+    "{count} liên kết, thẻ hoặc mục trong danh sách không khôi phục được.",
 
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
@@ -3825,30 +3843,41 @@ export const vi = {
   "log.saving": "Đang ghi nhận…",
 
   "recordAccess.contact.title": "Ai xem được liên hệ này",
-  "recordAccess.contact.privateToYou":
-    "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
   "recordAccess.contact.shared":
     "Mọi người trong tổ chức đều xem được liên hệ này.",
-  "recordAccess.contact.privateTip":
-    "Chỉ bạn thấy được liên hệ này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
-  "recordAccess.contact.share": "Chia sẻ với tổ chức",
+  "recordAccess.contact.privateYours":
+    "Chỉ bạn và những người hoặc nhóm được chia sẻ mới xem được liên hệ này.",
+  "recordAccess.contact.privateOf":
+    "Riêng của {owner}. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.contact.privateOfOwner":
+    "Riêng của chủ sở hữu. Bạn xem được liên hệ này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.contact.published": "Tổ chức đã xem được liên hệ này.",
-  "recordAccess.contact.makePrivate": "Đặt ở chế độ riêng tư",
   "recordAccess.contact.madePrivate":
-    "Liên hệ này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Những người hoặc nhóm đã được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.contact.leftYourAccess":
+    "Liên hệ này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
   "recordAccess.company.title": "Ai xem được công ty này",
-  "recordAccess.company.privateToYou":
-    "Riêng của bạn. Hộp thư của bạn đã tạo công ty này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
   "recordAccess.company.shared":
     "Mọi người trong tổ chức đều xem được công ty này.",
-  "recordAccess.company.privateTip":
-    "Chỉ bạn thấy được công ty này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
-  "recordAccess.company.share": "Chia sẻ với tổ chức",
+  "recordAccess.company.privateYours":
+    "Chỉ bạn và những người hoặc nhóm được chia sẻ mới xem được công ty này.",
+  "recordAccess.company.privateOf":
+    "Riêng của {owner}. Bạn xem được công ty này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.company.privateOfOwner":
+    "Riêng của chủ sở hữu. Bạn xem được công ty này vì nó đã được chia sẻ với bạn hoặc nhóm của bạn.",
   "recordAccess.company.published": "Tổ chức đã xem được công ty này.",
-  "recordAccess.company.makePrivate": "Đặt ở chế độ riêng tư",
   "recordAccess.company.madePrivate":
     "Công ty này thuộc về chủ sở hữu trở lại. Các deal, liên hệ và email đã lưu vào công ty vẫn giữ phạm vi hiển thị riêng của chúng.",
-  "recordAccess.whoHasAccess": "Ai có quyền truy cập",
+  "recordAccess.company.leftYourAccess":
+    "Công ty này thuộc về chủ sở hữu trở lại. Bạn không còn quyền truy cập.",
+  "recordAccess.option.owner": "Chỉ chủ sở hữu",
+  "recordAccess.option.ownerHint":
+    "Những người hoặc nhóm được chia sẻ vẫn giữ quyền truy cập.",
+  "recordAccess.option.ownerHintNotYours":
+    "Bạn sẽ mất quyền truy cập, trừ khi nó được chia sẻ với bạn hoặc nhóm của bạn.",
+  "recordAccess.option.ownerNeeded": "Hãy chỉ định chủ sở hữu trước.",
+  "recordAccess.option.workspace": "Cả tổ chức",
+  "recordAccess.manage": "Quản lý quyền truy cập",
   "whoCanSee.title": "Ai xem được bản ghi này",
   "whoCanSee.group.owner": "Chủ sở hữu",
   "whoCanSee.group.shared": "Chia sẻ trực tiếp",
@@ -4162,6 +4191,7 @@ export const vi = {
     "chỉ deal đang mở, mỗi deal quy đổi riêng sang {currency} — chưa trọng số cạnh có trọng số",
   "analytics.currency": "Tiền tệ",
   "analytics.count": "Deal",
+  "analytics.closedDeals": "Deal đã đóng",
   "analytics.unweighted": "Chưa trọng số",
   "analytics.weighted": "Có trọng số",
   "analytics.priced": "{priced}/{total} đã định giá",
@@ -4503,6 +4533,8 @@ export const vi = {
   "forecast.currentCallDetailEven": "Chốt ngày {date} · khớp với bằng chứng",
   "forecast.evidence": "Có bằng chứng hỗ trợ",
   "forecast.evidenceDetail": "Ngày chốt đã xác nhận",
+  "forecast.bestCaseAdds": "Phần thêm khả quan nhất",
+  "forecast.makeup": "Kỳ này gồm những gì",
   "forecast.alreadyWon": "Đã thắng",
   "forecast.alreadyWonDetail": "Đã chốt trong kỳ này",
   "forecast.updateCall": "Cập nhật cam kết hiện tại",
@@ -4525,7 +4557,6 @@ export const vi = {
   "forecast.fxMissing": "Thiếu tỷ giá",
   "analytics.reportForecast": "Nhóm dự báo",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
-  "analytics.forecastBannerTitle": "Cách đọc các ô này",
   "analytics.forecastBanner":
     'Mỗi ô hiển thị tổng chưa trọng số, và bên dưới là tổng có trọng số — được làm tròn theo từng deal, nên luôn khớp với "Giải thích con số này".',
   "analytics.company": "Công ty",
@@ -5311,11 +5342,9 @@ export const vi = {
   "settings.pipelinesSub":
     "Các giai đoạn một deal đi qua — mỗi pipeline một thang.",
   "pipeline.new": "Pipeline mới",
-  "pipeline.edit": "Sửa pipeline",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
   "pipeline.notDefault": "Không mặc định",
-  "pipeline.position": "Vị trí",
   "pipeline.retired": "Đã ngừng dùng",
   "pipeline.retire": "Ngừng dùng",
   "pipeline.retireConfirm":
@@ -5325,6 +5354,29 @@ export const vi = {
   "pipeline.retired.done": "Đã ngừng dùng {name}",
   "pipeline.restore": "Dùng lại",
   "pipeline.restored": "{name} đã được dùng lại",
+  "pipeline.rename": "Đổi tên",
+  "pipeline.makeDefault": "Đặt làm mặc định",
+  "pipeline.defaultSet": "Đã đặt {name} làm mặc định",
+  "pipeline.inUse": "Pipeline đang dùng",
+  "pipeline.orderHint":
+    "Kéo pipeline bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "pipeline.handle": "Di chuyển {name}, vị trí {position} trên {total}",
+  "pipeline.moved": "Đã chuyển {name} đến vị trí {position} trên {total}",
+  "pipeline.openStageCount_one": "{count} giai đoạn đang mở",
+  "pipeline.openStageCount_other": "{count} giai đoạn đang mở",
+  "pipeline.retiredGroup_one": "{count} pipeline đã ngừng dùng",
+  "pipeline.retiredGroup_other": "{count} pipeline đã ngừng dùng",
+  "pipeline.retiredNote":
+    "Đã ngừng dùng. Deal mới không thể bắt đầu trong pipeline này, và các giai đoạn của nó không thể thay đổi cho đến khi được dùng lại.",
+  "pipeline.retireNote":
+    "Pipeline sẽ rời khỏi các danh sách chọn và biểu mẫu deal mới. Deal trên đó vẫn giữ giai đoạn.",
+  "pipeline.flow": "Deal đi qua các giai đoạn",
+  "pipeline.orderSaved": "Đã lưu thứ tự",
+  "pipeline.orderRestored": "Đã khôi phục thứ tự trước",
+  "pipeline.orderStale":
+    "Thứ tự chưa được lưu. Thứ tự đã được thay đổi ở nơi khác trước, nên thứ tự mới nhất đang được hiển thị.",
+  "pipeline.orderNotSaved":
+    "Thứ tự chưa được lưu. Hãy thử lại hoặc tải lại trang.",
   "stage.new": "Giai đoạn mới",
   "stage.edit": "Sửa giai đoạn",
   "stage.name": "Tên",
@@ -5338,6 +5390,22 @@ export const vi = {
   "stage.removeTitle": "Gỡ giai đoạn này?",
   "stage.removeBody":
     "“{name}” sẽ rời khỏi pipeline và các giai đoạn sau dồn lên. Lịch sử chuyển giai đoạn vẫn đọc được. Các deal còn nằm ở đây phải chuyển đi trước.",
+  "stage.openGroup": "Giai đoạn đang mở",
+  "stage.closingGroup": "Giai đoạn kết thúc",
+  "stage.closingNote":
+    "Mọi deal kết thúc ở một trong các giai đoạn này, nên chúng luôn đứng sau các giai đoạn đang mở.",
+  "stage.closingMissing":
+    "Chưa có giai đoạn thắng hoặc thua. Hãy thêm một giai đoạn mới thuộc loại đó.",
+  "stage.orderHint":
+    "Kéo giai đoạn bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "stage.handle": "Di chuyển {name}, bước {position} trên {total}",
+  "stage.moved": "{name} giờ là bước {position} trên {total}",
+  "stage.lowerThanAbove": "Thấp hơn {name} ({reading}) ở trên",
+  "stage.oddsOf": "Xác suất thắng của {name}",
+  "stage.noneOpen": "Chưa có giai đoạn đang mở",
+  "stage.noneOpenNote":
+    "Thêm bước đầu tiên của một deal. Bước này đứng trước các giai đoạn kết thúc.",
+  "stage.added": "Đã thêm giai đoạn",
   "stage.criteria.title": "Tiêu chí rời giai đoạn",
   "stage.criteria.sub":
     "Điều gì phải đúng trước khi một deal rời giai đoạn này.",
@@ -7339,6 +7407,7 @@ export const vi = {
     "M\u1ecdi ng\u01b0\u1eddi c\u00f3 gh\u1ebf, v\u00e0 m\u1ed7i ng\u01b0\u1eddi t\u1edbi \u0111\u01b0\u1ee3c \u0111\u00e2u.",
   "settings.page.teams.sub":
     "Ai l\u00e0m vi\u1ec7c c\u00f9ng nhau \u2014 \u0111\u00f3 l\u00e0 c\u0103n c\u1ee9 c\u1ee7a ph\u1ea1m vi h\u00e0ng.",
+  "settings.page.roles.sub": "Mỗi vai trò được làm gì và với bản ghi của ai.",
   "settings.page.seats.sub":
     "Bao nhi\u00eau gh\u1ebf \u0111ang d\u00f9ng so v\u1edbi quy\u1ec1n c\u1ee7a b\u1ea3n tri\u1ec3n khai n\u00e0y.",
   "settings.page.stageautomation.sub":
@@ -7404,6 +7473,7 @@ export const vi = {
   "settings.tab.authentication": "Đăng nhập & ứng dụng",
   "settings.tab.members": "Thành viên",
   "settings.tab.teams": "Nhóm",
+  "settings.tab.roles": "Vai trò và quyền",
   "settings.tab.seats": "Giấy phép & chỗ ngồi",
   "settings.tab.stageautomation": "T\u1ef1 \u0111\u1ed9ng giai \u0111o\u1ea1n",
   "settings.tab.pipelines": "Quy trình",
@@ -7953,6 +8023,74 @@ export const vi = {
     "Đã xếp hàng — sẽ xong trong chốc lát và tự cập nhật.",
   "settings.voice.buildStatus.pending":
     "Vẫn đang dựng — việc này có thể mất một lát; xong sẽ tự cập nhật ở đây.",
+  "roles.title": "Vai trò",
+  "roles.sub":
+    "Vai trò quyết định thành viên được làm gì với từng loại bản ghi và cài đặt, và được thay đổi bản ghi của ai. Margince có sẵn các vai trò mặc định; vai trò mới bắt đầu là bản sao của một vai trò có sẵn.",
+  "roles.readOnly":
+    "Vai trò của bạn được xem vai trò nhưng không được thay đổi.",
+  "roles.showArchived": "Hiện vai trò đã lưu trữ",
+  "roles.showArchivedSub":
+    "Vai trò đã lưu trữ không cấp quyền nào và không thể gán cho ai.",
+  "roles.system": "Mặc định",
+  "roles.archived": "Đã lưu trữ",
+  "roles.open": "Mở",
+  "roles.openNamed": "Mở {name}",
+  "roles.empty": "Không có vai trò nào.",
+  "roles.new": "Vai trò mới",
+  "roles.newTitle": "Vai trò mới",
+  "roles.newFrom": "Sao chép quyền từ",
+  "roles.newFromHint":
+    "Vai trò mới bắt đầu với đúng các quyền của vai trò này.",
+  "roles.newName": "Tên",
+  "roles.newSubmit": "Tạo vai trò",
+  "roles.notCreated": "Chưa tạo được vai trò",
+  "roles.created": "Đã tạo {name}",
+  "roles.detailSub":
+    "Thay đổi áp dụng cho mọi thành viên giữ vai trò này từ yêu cầu tiếp theo của họ.",
+  "roles.rename": "Đổi tên",
+  "roles.renameTitle": "Đổi tên vai trò",
+  "roles.nameLabel": "Tên",
+  "roles.renameSubmit": "Lưu tên",
+  "roles.scopeTitle": "Thành viên được thay đổi bản ghi của ai",
+  "roles.scopeSub":
+    "Liên hệ, công ty, lead và deal vẫn đọc được với mọi vai trò có quyền đọc chúng. Mục này quyết định thành viên được thay đổi gì và thấy những dự án nào.",
+  "roles.scope.own": "Của chính họ",
+  "roles.scope.ownSub": "Bản ghi do thành viên sở hữu.",
+  "roles.scope.team": "Của nhóm họ",
+  "roles.scope.teamSub":
+    "Bản ghi do bất kỳ ai trong các nhóm của thành viên sở hữu.",
+  "roles.scope.all": "Của tất cả",
+  "roles.scope.allSub": "Mọi bản ghi trong công ty.",
+  "roles.grantsSub": "Mỗi công tắc lưu ngay lập tức.",
+  "roles.grantsCore": "Bản ghi và cài đặt",
+  "roles.grantsExtensions": "Tiện ích mở rộng",
+  "roles.grantsNarrowOnly":
+    "Mỗi công tắc lưu ngay lập tức. Chỉ quản trị viên mới bật được một quyền; bạn có thể tắt quyền.",
+  "roles.turnOnAdminOnly": "Chỉ quản trị viên mới bật được một quyền.",
+  "roles.widenAdminOnly":
+    "Chỉ quản trị viên mới mở rộng được phạm vi bản ghi của vai trò; bạn có thể thu hẹp nó.",
+  "roles.objectColumn": "Đối tượng",
+  "roles.preview": "Xem trước những gì vai trò này thấy",
+  "roles.archive": "Lưu trữ vai trò",
+  "roles.restore": "Khôi phục vai trò",
+  "roles.archivedNote":
+    "Vai trò này đã được lưu trữ. Nó không cấp quyền nào và không ai được gán nó cho đến khi được khôi phục.",
+  "roles.archivedToast": "Đã lưu trữ {name}",
+  "roles.restoredToast": "Đã khôi phục {name}",
+  "roles.notSaved": "Chưa lưu thay đổi",
+  "roles.refusal.widening":
+    "Chỉ quản trị viên mới được tạo hoặc khôi phục vai trò, bật một quyền, hoặc mở rộng phạm vi bản ghi của nó. Bạn có thể đổi tên, thu hẹp hoặc lưu trữ vai trò.",
+  "roles.refusal.versionSkew":
+    "Vai trò này đã được thay đổi ở nơi khác khi nó đang mở. Trang hiện hiển thị thay đổi đó; hãy thực hiện lại thay đổi của bạn nếu vẫn cần.",
+  "roles.refusal.inUse":
+    "Vẫn còn thành viên có thể đăng nhập đang giữ vai trò này. Hãy gán cho họ vai trò khác trước, rồi lưu trữ nó.",
+  "roles.refusal.archivedHeld":
+    "Một thành viên vẫn giữ vai trò đã lưu trữ. Hãy gán cho họ một vai trò đang dùng trước.",
+  "roles.refusal.system": "Không thể lưu trữ vai trò mặc định.",
+  "roles.refusal.adminFloor":
+    "Vai trò quản trị giữ quyền quản lý thành viên, vai trò và nhóm, để công ty luôn được quản trị.",
+  "roles.refusal.nameTaken":
+    "Đã có vai trò khác mang tên này. Hãy chọn tên khác.",
   "extAccess.title": "Tiện ích mở rộng & quyền truy cập",
   "extAccess.sub":
     "Mỗi đơn vị tiện ích đã ghép vào bản cài đặt này mang theo những gì, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
@@ -8709,15 +8847,16 @@ export const vi = {
   "capturePurge.open": "Xóa thư đã thu thập từ {value}",
   "capturePurge.title": "Xóa thư đã thu thập từ {value}?",
   "capturePurge.intro":
-    "Thao tác này hủy các thư mà quy tắc này đã khớp: nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
+    "Thao tác này xóa vĩnh viễn các thư mà quy tắc này đã khớp: nội dung, bản gốc, tệp đính kèm và mọi dữ liệu dẫn xuất. Không thể hoàn tác. Hãy xem trước những gì sẽ bị xóa.",
   "capturePurge.preview": "Xem trước",
   "capturePurge.confirm": "Xóa vĩnh viễn",
   "capturePurge.done": "Đóng",
-  "capturePurge.failed": "Việc xóa không chạy",
-  "capturePurge.wouldDestroy_one": "{count} thư sẽ bị hủy.",
-  "capturePurge.wouldDestroy_other": "{count} thư sẽ bị hủy.",
-  "capturePurge.destroyed_one": "Đã hủy {count} thư.",
-  "capturePurge.destroyed_other": "Đã hủy {count} thư.",
+  "capturePurge.failed":
+    "Việc xóa chưa hoàn tất. Một số thư có thể đã bị xóa vĩnh viễn. Hãy kiểm tra lại xem còn lại những gì.",
+  "capturePurge.wouldDestroy_one": "{count} thư sẽ bị xóa vĩnh viễn.",
+  "capturePurge.wouldDestroy_other": "{count} thư sẽ bị xóa vĩnh viễn.",
+  "capturePurge.destroyed_one": "Đã xóa vĩnh viễn {count} thư.",
+  "capturePurge.destroyed_other": "Đã xóa vĩnh viễn {count} thư.",
   "capturePurge.released_one":
     "{count} thư cũng được đồng nghiệp thu thập. Quyền truy cập của bạn kết thúc; bản của họ vẫn còn.",
   "capturePurge.released_other":
@@ -8740,6 +8879,10 @@ export const vi = {
     "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
   "capturePurge.keptForFromYearEnd_other":
     "Luật yêu cầu lưu giữ trong {years} năm kể từ khi kết thúc năm dương lịch thư được nhận.",
+  "capturePurge.keptUndetermined_one":
+    "{count} thư được giữ lại vì bản cài đặt này không xác định được luật yêu cầu gì đối với thư đó. Không có gì bị xóa dựa trên một quy tắc không ai đọc được.",
+  "capturePurge.keptUndetermined_other":
+    "{count} thư được giữ lại vì bản cài đặt này không xác định được luật yêu cầu gì đối với chúng. Không có gì bị xóa dựa trên một quy tắc không ai đọc được.",
   "capturePurge.keptRequest_one":
     "{count} thư được giữ lại: một yêu cầu bảo vệ dữ liệu vẫn đang được xử lý và cần thư đó.",
   "capturePurge.keptRequest_other":

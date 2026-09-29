@@ -10,16 +10,16 @@
   "totals": {
     "tools": 78,
     "resources": 11,
-    "tool_catalog_bytes": 233038,
+    "tool_catalog_bytes": 233850,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 59304,
+    "approx_wire_tokens_total": 59507,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 59751,
-      "input_schema_bytes": 49869,
-      "output_schema_bytes": 106654,
-      "description_plus_input_schema_bytes": 109620
+      "description_bytes": 59957,
+      "input_schema_bytes": 50218,
+      "output_schema_bytes": 106911,
+      "description_plus_input_schema_bytes": 110175
     }
   },
   "tools": {
@@ -1158,12 +1158,32 @@
           "readOnlyHint": false,
           "title": "Change many records at once"
         },
-        "description": "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. update_record and archive_record change one record. Above 10 records, execute needs the confirm_token preview answered, for exactly the same selection; it is good once. Keep batch_id from the answer. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
+          "else": {
+            "required": [
+              "batch_id"
+            ]
+          },
+          "if": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "preview",
+                  "execute"
+                ]
+              }
+            }
+          },
           "properties": {
+            "batch_id": {
+              "description": "For undo_preview and undo: the batch_id execute answered",
+              "format": "uuid",
+              "type": "string"
+            },
             "confirm_token": {
-              "description": "The token preview answered; needed above 10 records",
+              "description": "The token preview or undo_preview answered; needed above 10 records",
               "type": "string"
             },
             "idempotency_key": {
@@ -1194,10 +1214,12 @@
               "type": "array"
             },
             "mode": {
-              "description": "preview says what would change; execute changes it",
+              "description": "preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names",
               "enum": [
                 "preview",
-                "execute"
+                "execute",
+                "undo_preview",
+                "undo"
               ],
               "type": "string"
             },
@@ -1223,11 +1245,15 @@
             }
           },
           "required": [
-            "mode",
-            "record_type",
-            "verb",
-            "items"
+            "mode"
           ],
+          "then": {
+            "required": [
+              "record_type",
+              "verb",
+              "items"
+            ]
+          },
           "type": "object"
         },
         "name": "bulk_update_records",
@@ -1279,6 +1305,30 @@
                 },
                 "expires_at": {
                   "type": "string"
+                },
+                "left_behind": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "ref_id": {
+                        "format": "uuid",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "ref_id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "record_type": {
                   "type": "string"
@@ -1358,6 +1408,10 @@
                     "type": "object"
                   },
                   "type": "array"
+                },
+                "undo_of": {
+                  "format": "uuid",
+                  "type": "string"
                 },
                 "verb": {
                   "type": "string"

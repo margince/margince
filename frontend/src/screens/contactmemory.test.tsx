@@ -121,6 +121,18 @@ function notes(count: number): Activity[] {
 
 const onePage = { has_more: false, next_cursor: null };
 
+// The link every activity on this contact's card carries.
+const filedHere: Activity["links"] = [
+  { entity_type: "contact", entity_id: contact.id },
+];
+
+// The mesh each row's face is drawn in, top to bottom.
+function facesIn(container: HTMLElement): (string | null)[] {
+  return [...container.querySelectorAll(".avatar-mesh")].map((face) =>
+    face.getAttribute("style"),
+  );
+}
+
 // The activity rows above are typed, so a fixture that drifts from the wire
 // shape fails to compile. The view around them is asserted rather than built:
 // Contact360 carries twenty-odd sections this card never reads, and spelling
@@ -244,6 +256,52 @@ describe("the contact page's memory card", () => {
 
     expect(screen.getByText("DB")).toBeTruthy();
     expect(screen.getByText("Dana Buyer")).toBeTruthy();
+  });
+
+  // One contact is one colour down the card: a mail that names this contact
+  // keys its face on the record, as a note does.
+  it("draws one contact in one colour on a mail and on a note", () => {
+    const { container } = renderCard(
+      viewWith([emailRow({ links: filedHere }), noteRow]),
+    );
+
+    const [mail, note] = facesIn(container);
+    expect(mail).toBe(note);
+  });
+
+  // The phrase names whoever came first on the far side. A mail filed against
+  // this contact but sent by somebody else is that somebody's face, never a
+  // stranger's name drawn in this contact's colour.
+  it("keys a mail from somebody else on their name, not on the filed contact", () => {
+    const { container } = renderCard(
+      viewWith([
+        emailRow({
+          links: filedHere,
+          email_summary: emailSummary({ counterparty: "Bob Stranger" }),
+        }),
+        noteRow,
+      ]),
+    );
+
+    const [mail, note] = facesIn(container);
+    expect(mail).not.toBe(note);
+    expect(screen.getByText("BS")).toBeTruthy();
+  });
+
+  // The server's count of the rest does not stop the phrase naming the contact.
+  it("reads the contact through the phrase's count of the others", () => {
+    const { container } = renderCard(
+      viewWith([
+        emailRow({
+          links: filedHere,
+          email_summary: emailSummary({ counterparty: "Dana Buyer +2" }),
+        }),
+        noteRow,
+      ]),
+    );
+
+    const [mail, note] = facesIn(container);
+    expect(mail).toBe(note);
   });
 
   // Five cuts do not fit beside the title on the one band a panel head is, so

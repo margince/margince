@@ -283,8 +283,9 @@ export function TodoRow({
   action,
 }: Readonly<{
   // Whose list it sits on. Absent when the record cannot say — an unassigned
-  // task draws no mark rather than a monogram of nobody.
-  who?: string;
+  // task draws no mark rather than a monogram of nobody. `identity` is their
+  // record or seat id, which keys the mark.
+  who?: Readonly<{ name: string; identity: string }>;
   title: ReactNode;
   meta?: ReactNode;
   // When it is owed, coloured only where it is bad news: a late promise is the
@@ -299,7 +300,7 @@ export function TodoRow({
 }>) {
   return (
     <PanelRow className="co-todo">
-      {who && <Avatar name={who} />}
+      {who && <Avatar name={who.name} identity={who.identity} />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
         {meta && <span className="t-caption">{meta}</span>}

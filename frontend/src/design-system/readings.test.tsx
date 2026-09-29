@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { Globe, MapPin } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
-import { BarList, Chip, Meter, Sparkline } from "./readings";
+import { BarList, Chip, Meter, SegmentBar, Sparkline } from "./readings";
 
 afterEach(cleanup);
 
@@ -103,6 +103,111 @@ describe("Meter draws a proportion a reader can also hear", () => {
     expect(meterBar(container).classList.contains("meterbar-dense")).toBe(
       false,
     );
+  });
+});
+
+// The part is a share of the FILL, not of the track: it sits inside the value
+// it belongs to, so the two figures are read as one inside the other.
+describe("Meter draws a stricter measure inside its fill", () => {
+  function partWidth(container: HTMLElement): string {
+    const part =
+      meterBar(container).querySelector<HTMLElement>(".meterbar-part");
+    if (!part) {
+      throw new Error("the Meter drew no part inside its fill");
+    }
+    return part.style.width;
+  }
+
+  it("sizes the part against the value it sits inside", () => {
+    const { container } = render(
+      <Meter value={50} part={10} max={100} label="Qualify" />,
+    );
+    expect(fillWidth(container)).toBe("50%");
+    expect(partWidth(container)).toBe("20%");
+    expect(meterBar(container).classList.contains("meterbar-has-part")).toBe(
+      true,
+    );
+  });
+
+  // A part larger than its whole is a data fault, not a bar that runs past
+  // the fill it is supposed to be a share of.
+  it("clamps a part that overruns its whole", () => {
+    const { container } = render(
+      <Meter value={40} part={90} max={100} label="Lost" />,
+    );
+    expect(partWidth(container)).toBe("100%");
+  });
+
+  it("draws no part when none is asked for", () => {
+    const { container } = render(
+      <Meter value={40} max={100} label="Growth fit" flat />,
+    );
+    expect(meterBar(container).querySelector(".meterbar-part")).toBeNull();
+    expect(meterBar(container).classList.contains("meterbar-has-part")).toBe(
+      false,
+    );
+  });
+});
+
+describe("SegmentBar lays disjoint parts end to end", () => {
+  const PARTS = [
+    { key: "won", label: "Already won", value: 25, amount: "€25" },
+    { key: "evidence", label: "Evidence", value: 50, amount: "€50" },
+  ] as const;
+
+  function widths(container: HTMLElement): string[] {
+    return [...container.querySelectorAll<HTMLElement>(".segbar-part")].map(
+      (part) => part.style.width,
+    );
+  }
+
+  it("scales the parts to their own total when no mark reaches past it", () => {
+    const { container } = render(<SegmentBar label="Period" parts={PARTS} />);
+    expect(widths(container)).toEqual([
+      "33.33333333333333%",
+      "66.66666666666666%",
+    ]);
+  });
+
+  // A target past the parts leaves recessed track between them and the mark,
+  // which is the gap a reader is looking for.
+  it("stretches the scale to a mark beyond the parts", () => {
+    const { container } = render(
+      <SegmentBar
+        label="Period"
+        parts={PARTS}
+        marker={{ key: "call", label: "Call", value: 100, amount: "€100" }}
+      />,
+    );
+    expect(widths(container)).toEqual(["25%", "50%"]);
+    const mark = container.querySelector<HTMLElement>(".segbar-marker");
+    expect(mark?.style.left).toBe("100%");
+  });
+
+  // The track is hidden from assistive tech, so the legend is the only place a
+  // screen-reader user meets the figures: every part and the mark must be in it.
+  it("names every part and the mark with its figure in the legend", () => {
+    render(
+      <SegmentBar
+        label="Period"
+        parts={PARTS}
+        marker={{ key: "call", label: "Call", value: 100, amount: "€100" }}
+      />,
+    );
+    const legend = screen.getByRole("list", { name: "Period" });
+    expect(
+      [...legend.querySelectorAll("li")].map((item) => item.textContent),
+    ).toEqual(["Already won€25", "Evidence€50", "Call€100"]);
+  });
+
+  it("draws an empty track when nothing has been measured", () => {
+    const { container } = render(
+      <SegmentBar
+        label="Period"
+        parts={[{ key: "won", label: "Won", value: 0, amount: "€0" }]}
+      />,
+    );
+    expect(widths(container)).toEqual(["0%"]);
   });
 });
 

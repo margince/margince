@@ -2737,6 +2737,45 @@ func (e BriefDeliveryWeeklyDelivery) Valid() bool {
 	}
 }
 
+// Defines values for BulkLeftBehindKind.
+const (
+	BulkLeftBehindKindCompanyDomain           BulkLeftBehindKind = "company_domain"
+	BulkLeftBehindKindCompanyRelationshipType BulkLeftBehindKind = "company_relationship_type"
+	BulkLeftBehindKindContactChannelIdentity  BulkLeftBehindKind = "contact_channel_identity"
+	BulkLeftBehindKindContactEmail            BulkLeftBehindKind = "contact_email"
+	BulkLeftBehindKindContactPhone            BulkLeftBehindKind = "contact_phone"
+	BulkLeftBehindKindList                    BulkLeftBehindKind = "list"
+	BulkLeftBehindKindPartner                 BulkLeftBehindKind = "partner"
+	BulkLeftBehindKindRelationship            BulkLeftBehindKind = "relationship"
+	BulkLeftBehindKindTag                     BulkLeftBehindKind = "tag"
+)
+
+// Valid indicates whether the value is a known member of the BulkLeftBehindKind enum.
+func (e BulkLeftBehindKind) Valid() bool {
+	switch e {
+	case BulkLeftBehindKindCompanyDomain:
+		return true
+	case BulkLeftBehindKindCompanyRelationshipType:
+		return true
+	case BulkLeftBehindKindContactChannelIdentity:
+		return true
+	case BulkLeftBehindKindContactEmail:
+		return true
+	case BulkLeftBehindKindContactPhone:
+		return true
+	case BulkLeftBehindKindList:
+		return true
+	case BulkLeftBehindKindPartner:
+		return true
+	case BulkLeftBehindKindRelationship:
+		return true
+	case BulkLeftBehindKindTag:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BulkRecordType.
 const (
 	BulkRecordTypeCompany BulkRecordType = "company"
@@ -2761,12 +2800,17 @@ func (e BulkRecordType) Valid() bool {
 // Defines values for BulkSkipReason.
 const (
 	BulkSkipReasonAnchorCompany       BulkSkipReason = "anchor_company"
+	BulkSkipReasonChangedSinceBatch   BulkSkipReason = "changed_since_batch"
 	BulkSkipReasonChangedSincePreview BulkSkipReason = "changed_since_preview"
+	BulkSkipReasonErased              BulkSkipReason = "erased"
+	BulkSkipReasonMerged              BulkSkipReason = "merged"
 	BulkSkipReasonNoChange            BulkSkipReason = "no_change"
+	BulkSkipReasonNoPreviousOwner     BulkSkipReason = "no_previous_owner"
 	BulkSkipReasonNotFound            BulkSkipReason = "not_found"
 	BulkSkipReasonNotPreviewed        BulkSkipReason = "not_previewed"
 	BulkSkipReasonNotWritable         BulkSkipReason = "not_writable"
 	BulkSkipReasonRefused             BulkSkipReason = "refused"
+	BulkSkipReasonValueTaken          BulkSkipReason = "value_taken"
 )
 
 // Valid indicates whether the value is a known member of the BulkSkipReason enum.
@@ -2774,9 +2818,17 @@ func (e BulkSkipReason) Valid() bool {
 	switch e {
 	case BulkSkipReasonAnchorCompany:
 		return true
+	case BulkSkipReasonChangedSinceBatch:
+		return true
 	case BulkSkipReasonChangedSincePreview:
 		return true
+	case BulkSkipReasonErased:
+		return true
+	case BulkSkipReasonMerged:
+		return true
 	case BulkSkipReasonNoChange:
+		return true
+	case BulkSkipReasonNoPreviousOwner:
 		return true
 	case BulkSkipReasonNotFound:
 		return true
@@ -2785,6 +2837,8 @@ func (e BulkSkipReason) Valid() bool {
 	case BulkSkipReasonNotWritable:
 		return true
 	case BulkSkipReasonRefused:
+		return true
+	case BulkSkipReasonValueTaken:
 		return true
 	default:
 		return false
@@ -7123,6 +7177,27 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	case CreateLeadRequestStatusNew:
 		return true
 	case CreateLeadRequestStatusPromoted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreatePipelineStageSemantic.
+const (
+	CreatePipelineStageSemanticLost CreatePipelineStageSemantic = "lost"
+	CreatePipelineStageSemanticOpen CreatePipelineStageSemantic = "open"
+	CreatePipelineStageSemanticWon  CreatePipelineStageSemantic = "won"
+)
+
+// Valid indicates whether the value is a known member of the CreatePipelineStageSemantic enum.
+func (e CreatePipelineStageSemantic) Valid() bool {
+	switch e {
+	case CreatePipelineStageSemanticLost:
+		return true
+	case CreatePipelineStageSemanticOpen:
+		return true
+	case CreatePipelineStageSemanticWon:
 		return true
 	default:
 		return false
@@ -15154,6 +15229,30 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 	}
 }
 
+// Defines values for UserAllowedActions.
+const (
+	UserAllowedActionsChangeRole        UserAllowedActions = "change_role"
+	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
+	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
+	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
+)
+
+// Valid indicates whether the value is a known member of the UserAllowedActions enum.
+func (e UserAllowedActions) Valid() bool {
+	switch e {
+	case UserAllowedActionsChangeRole:
+		return true
+	case UserAllowedActionsDeactivate:
+		return true
+	case UserAllowedActionsIssuePasswordLink:
+		return true
+	case UserAllowedActionsReactivate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UserLocale.
 const (
 	UserLocaleDe UserLocale = "de"
@@ -21460,6 +21559,9 @@ type AttentionDealFacts struct {
 
 	// StageId The deal's current stage.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+
+	// WinProbability The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`.
+	WinProbability *int `json:"win_probability,omitempty"`
 }
 
 // AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22534,8 +22636,14 @@ type BulkChangeResult struct {
 	// Changed The number of records changed.
 	Changed int `json:"changed"`
 
+	// LeftBehind What an undo restored a record without, because it could not come back.
+	LeftBehind *[]BulkLeftBehind `json:"left_behind,omitempty"`
+
 	// Skipped The records left alone, each with its reason.
 	Skipped []BulkSkip `json:"skipped"`
+
+	// UndoOf For an undo, the change it put back.
+	UndoOf *openapi_types.UUID `json:"undo_of,omitempty"`
 }
 
 // BulkItem One selected record and the version the caller was shown.
@@ -22544,6 +22652,45 @@ type BulkItem struct {
 
 	// Version The version the caller read. A record whose version has moved since is skipped as `changed_since_preview`.
 	Version int64 `json:"version"`
+}
+
+// BulkLeftBehind One thing an undo could not bring back with its record. `kind` names the child table, or
+// `list` and `tag` for a membership or tag; `ref_id` is that row, list or tag.
+type BulkLeftBehind struct {
+	// Id The record that was restored.
+	Id    openapi_types.UUID `json:"id"`
+	Kind  BulkLeftBehindKind `json:"kind"`
+	RefId openapi_types.UUID `json:"ref_id"`
+}
+
+// BulkLeftBehindKind defines model for BulkLeftBehind.Kind.
+type BulkLeftBehindKind string
+
+// BulkOperation One executed bulk change or undo, as `getBulkChange` reads it.
+type BulkOperation struct {
+	BatchId openapi_types.UUID `json:"batch_id"`
+
+	// Changed The number of records changed.
+	Changed    int              `json:"changed"`
+	CreatedAt  time.Time        `json:"created_at"`
+	LeftBehind []BulkLeftBehind `json:"left_behind"`
+
+	// OwnerId The new owner a reassignment named.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// RecordType The kind of record a bulk change acts on. One change acts on one kind.
+	RecordType BulkRecordType `json:"record_type"`
+	Skipped    []BulkSkip     `json:"skipped"`
+
+	// UndoOf Set on an undo: the change it put back.
+	UndoOf *openapi_types.UUID `json:"undo_of,omitempty"`
+
+	// UndoneBy Set once the change was undone: the undo that put it back.
+	UndoneBy *openapi_types.UUID `json:"undone_by,omitempty"`
+
+	// Verb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
+	// `archive` retires it exactly as the single-record archive does.
+	Verb BulkVerb `json:"verb"`
 }
 
 // BulkRecordState The two facts a bulk change can move on a record.
@@ -22587,6 +22734,11 @@ type BulkSkip struct {
 	// `anchor_company`: it is the installation's own company, which is never archived.
 	// `not_previewed`: the preview whose token this execution presents did not list it.
 	// `refused`: a single-record rule refuses it; `code` says which.
+	//
+	// An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+	// `merged`: it was merged into another record. `erased`: its personal data was erased or
+	// purged. `value_taken`: another live record now holds its email or domain.
+	// `no_previous_owner`: it had no owner before the reassignment.
 	Reason BulkSkipReason `json:"reason"`
 }
 
@@ -22596,7 +22748,18 @@ type BulkSkip struct {
 // `anchor_company`: it is the installation's own company, which is never archived.
 // `not_previewed`: the preview whose token this execution presents did not list it.
 // `refused`: a single-record rule refuses it; `code` says which.
+//
+// An undo adds five. `changed_since_batch`: the record changed after the change being undone.
+// `merged`: it was merged into another record. `erased`: its personal data was erased or
+// purged. `value_taken`: another live record now holds its email or domain.
+// `no_previous_owner`: it had no owner before the reassignment.
 type BulkSkipReason string
+
+// BulkUndoRequest defines model for BulkUndoRequest.
+type BulkUndoRequest struct {
+	// ConfirmToken The token `previewBulkUndo` returned. Required above 10 records.
+	ConfirmToken *string `json:"confirm_token,omitempty"`
+}
 
 // BulkVerb What a bulk change does to each record. `reassign_owner` hands the record to `owner_id`;
 // `archive` retires it exactly as the single-record archive does.
@@ -23025,10 +23188,11 @@ type CaptureHeldMeetings struct {
 	OldestAgeSeconds *int `json:"oldest_age_seconds,omitempty"`
 }
 
-// CaptureKeptBreakdown Why the skipped messages were skipped. The three counts are disjoint and sum to `skipped`.
+// CaptureKeptBreakdown Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
 // Reported because the count alone tells an owner that something survived their deletion and
 // not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
-// window expires on a date, an open request closes when it is finished.
+// window expires on a date, an open request closes when it is finished, and an undetermined
+// floor lifts when the installation can say what the law requires.
 type CaptureKeptBreakdown struct {
 	// Held Messages an erasure or a controller pinned by hand.
 	Held int `json:"held"`
@@ -23051,6 +23215,13 @@ type CaptureKeptBreakdown struct {
 
 	// UnderStatute Messages inside their commercial-retention window — correspondence the law still requires keeping.
 	UnderStatute int `json:"under_statute"`
+
+	// UnderUndeterminedFloor Messages kept because this installation could not determine what the law requires of
+	// them. Distinct from `under_statute`, which is a claim that a retention window applies:
+	// these were shielded because a purge that cannot ask what the law requires must not
+	// guess that the answer is "nothing", and reporting them as a statute would tell an owner
+	// their mail is commercial correspondence when nothing established that.
+	UnderUndeterminedFloor int `json:"under_undetermined_floor"`
 }
 
 // CaptureMailboxHealth defines model for CaptureMailboxHealth.
@@ -23158,10 +23329,11 @@ type CapturePurgeOutcome struct {
 	// Destroyed Messages gone entirely — text, original, attachments, vectors, delivery copies.
 	Destroyed int `json:"destroyed"`
 
-	// Kept Why the skipped messages were skipped. The three counts are disjoint and sum to `skipped`.
+	// Kept Why the skipped messages were skipped. The four counts are disjoint and sum to `skipped`.
 	// Reported because the count alone tells an owner that something survived their deletion and
 	// not what would have to change for it to go: a hold lifts when somebody lifts it, a statutory
-	// window expires on a date, an open request closes when it is finished.
+	// window expires on a date, an open request closes when it is finished, and an undetermined
+	// floor lifts when the installation can say what the law requires.
 	Kept CaptureKeptBreakdown `json:"kept"`
 
 	// Preview True when nothing was actually done.
@@ -28609,8 +28781,28 @@ type CreatePipelineRequest struct {
 	Position  *int   `json:"position,omitempty"`
 
 	// Stages Optional initial stages.
-	Stages *[]CreateStageRequest `json:"stages,omitempty"`
+	Stages *[]CreatePipelineStage `json:"stages,omitempty"`
 }
+
+// CreatePipelineStage One initial stage of a pipeline being created. It joins the pipeline this same request
+// creates, so unlike `CreateStageRequest` it needs no `pipeline_id`. A won stage without a
+// `win_probability` takes 100, as `createStage` fills it.
+type CreatePipelineStage struct {
+	Name string `json:"name"`
+
+	// PipelineId Accepted and ignored. The stage joins the pipeline this request creates; the field
+	// stays so a client written when nested stages reused `CreateStageRequest` is not refused.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
+
+	// Position Omitted or 0, the stage takes its place in the list (1-based).
+	Position       *int                         `json:"position,omitempty"`
+	Semantic       *CreatePipelineStageSemantic `json:"semantic,omitempty"`
+	WinProbability *int                         `json:"win_probability,omitempty"`
+}
+
+// CreatePipelineStageSemantic defines model for CreatePipelineStage.Semantic.
+type CreatePipelineStageSemantic string
 
 // CreateProductRequest defines model for CreateProductRequest.
 type CreateProductRequest struct {
@@ -31809,6 +32001,18 @@ type InputCheckStatus string
 // InputCheckSubjectKind defines model for InputCheck.SubjectKind.
 type InputCheckSubjectKind string
 
+// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
+type InstallationBrand struct {
+	// DisplayName What the company is called day to day.
+	DisplayName string `json:"display_name"`
+
+	// LogoIconUrl The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent on the same terms as `logo_url`. A client without one draws the wide mark.
+	LogoIconUrl *string `json:"logo_icon_url,omitempty"`
+
+	// LogoUrl The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries. Absent when the company wears none, or when this caller holds no read on companies and so could not load it; a client draws the company's monogram instead.
+	LogoUrl *string `json:"logo_url,omitempty"`
+}
+
 // InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
@@ -33245,6 +33449,9 @@ type MeResponse struct {
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
+
+	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
+	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
 
 	// NonProduction True when the installation runs a non-production posture (MARGINCE_ENV=dev|test). DEPRECATED as the gate for the "Reset data" action — read `data_reset_available` instead. A deployment being non-production is not consent to purge its tenant data, and inferring one from the other is why a `staging` installation full of real internal users could be wiped through the API.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -34770,6 +34977,12 @@ type Pipeline struct {
 type PipelineListResponse struct {
 	Data []Pipeline `json:"data"`
 	Page PageInfo   `json:"page"`
+}
+
+// PipelineOrderRequest The live pipelines, first to last.
+type PipelineOrderRequest struct {
+	// PipelineIds Every live pipeline, each exactly once, in the new order.
+	PipelineIds []openapi_types.UUID `json:"pipeline_ids"`
 }
 
 // PipelineStageRung defines model for PipelineStageRung.
@@ -38733,6 +38946,12 @@ type StageListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
+// StageOrderRequest One pipeline's stage ladder, first to last.
+type StageOrderRequest struct {
+	// StageIds Every live stage of the pipeline, each exactly once, in the new order.
+	StageIds []openapi_types.UUID `json:"stage_ids"`
+}
+
 // StageTransitionEvidenceRecord defines model for StageTransitionEvidenceRecord.
 type StageTransitionEvidenceRecord struct {
 	AcceptedClean int    `json:"accepted_clean"`
@@ -40290,11 +40509,13 @@ type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	ArchivedAt  *time.Time          `json:"archived_at,omitempty"`
-	CreatedAt   *time.Time          `json:"created_at,omitempty"`
-	DisplayName string              `json:"display_name"`
-	Email       openapi_types.Email `json:"email"`
-	Id          openapi_types.UUID  `json:"id"`
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
+	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
+	CreatedAt      *time.Time            `json:"created_at,omitempty"`
+	DisplayName    string                `json:"display_name"`
+	Email          openapi_types.Email   `json:"email"`
+	Id             openapi_types.UUID    `json:"id"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -40317,6 +40538,9 @@ type User struct {
 	Timezone  *string    `json:"timezone,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
+
+// UserAllowedActions defines model for User.AllowedActions.
+type UserAllowedActions string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 // Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -41687,9 +41911,9 @@ type WorklistCountCategory string
 // WorklistDealFacts The deal behind an item, with the facts its card states. `expected_minor_base` is
 // `amount_minor` converted to the installation's base currency — the only figure by
 // which two deals in different currencies may be compared. It is not weighted by
-// `win_probability`: the pipeline this row comes from does not read a deal's stage,
-// so the two fields are independent facts rather than one computed from the other,
-// and a reader must not multiply them together expecting the product to equal a
+// `win_probability`: the two are independent facts, one the deal's own money and the
+// other a property of the stage it sits in, rather than one computed from the other.
+// A reader must not multiply them together expecting the product to equal a
 // risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -41947,9 +42171,9 @@ type WorklistItem struct {
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by
 	// which two deals in different currencies may be compared. It is not weighted by
-	// `win_probability`: the pipeline this row comes from does not read a deal's stage,
-	// so the two fields are independent facts rather than one computed from the other,
-	// and a reader must not multiply them together expecting the product to equal a
+	// `win_probability`: the two are independent facts, one the deal's own money and the
+	// other a property of the stage it sits in, rather than one computed from the other.
+	// A reader must not multiply them together expecting the product to equal a
 	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
 
@@ -43477,6 +43701,25 @@ type BookMeetingJSONBodyLinksEntityType string
 
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
 type ExecuteBulkChangeParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// UndoBulkChangeParams defines parameters for UndoBulkChange.
+type UndoBulkChangeParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -46282,6 +46525,25 @@ type CreatePipelineParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ReorderPipelinesParams defines parameters for ReorderPipelines.
+type ReorderPipelinesParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ArchivePipelineParams defines parameters for ArchivePipeline.
 type ArchivePipelineParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -46294,6 +46556,32 @@ type ArchivePipelineParams struct {
 
 // UpdatePipelineParams defines parameters for UpdatePipeline.
 type UpdatePipelineParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ReorderStagesParams defines parameters for ReorderStages.
+type ReorderStagesParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -48335,6 +48623,9 @@ type ExecuteBulkChangeJSONRequestBody = BulkChangeExecuteRequest
 // PreviewBulkChangeJSONRequestBody defines body for PreviewBulkChange for application/json ContentType.
 type PreviewBulkChangeJSONRequestBody = BulkChangePreviewRequest
 
+// UndoBulkChangeJSONRequestBody defines body for UndoBulkChange for application/json ContentType.
+type UndoBulkChangeJSONRequestBody = BulkUndoRequest
+
 // SetBlockedDomainJSONRequestBody defines body for SetBlockedDomain for application/json ContentType.
 type SetBlockedDomainJSONRequestBody = SetBlockedDomainRequest
 
@@ -48770,8 +49061,14 @@ type IssuePassportJSONRequestBody = IssuePassportRequest
 // CreatePipelineJSONRequestBody defines body for CreatePipeline for application/json ContentType.
 type CreatePipelineJSONRequestBody = CreatePipelineRequest
 
+// ReorderPipelinesJSONRequestBody defines body for ReorderPipelines for application/json ContentType.
+type ReorderPipelinesJSONRequestBody = PipelineOrderRequest
+
 // UpdatePipelineJSONRequestBody defines body for UpdatePipeline for application/json ContentType.
 type UpdatePipelineJSONRequestBody = UpdatePipelineRequest
+
+// ReorderStagesJSONRequestBody defines body for ReorderStages for application/json ContentType.
+type ReorderStagesJSONRequestBody = StageOrderRequest
 
 // SetControllerParticularsJSONRequestBody defines body for SetControllerParticulars for application/json ContentType.
 type SetControllerParticularsJSONRequestBody = ControllerParticulars
@@ -59440,6 +59737,15 @@ type ServerInterface interface {
 	// Say what one change over a selection of records would do, without doing it.
 	// (POST /bulk/preview)
 	PreviewBulkChange(w http.ResponseWriter, r *http.Request)
+	// Read what one bulk change did, and whether it was undone.
+	// (GET /bulk/{id})
+	GetBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Put back what one bulk change did, record by record.
+	// (POST /bulk/{id}/undo)
+	UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UndoBulkChangeParams)
+	// Say what undoing one bulk change would do, without doing it.
+	// (POST /bulk/{id}/undo/preview)
+	PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
@@ -60556,6 +60862,9 @@ type ServerInterface interface {
 	// Create a pipeline.
 	// (POST /pipelines)
 	CreatePipeline(w http.ResponseWriter, r *http.Request, params CreatePipelineParams)
+	// Put the live pipelines in a new order.
+	// (PUT /pipelines/order)
+	ReorderPipelines(w http.ResponseWriter, r *http.Request, params ReorderPipelinesParams)
 	// Retire a pipeline (soft delete; archive is the delete).
 	// (DELETE /pipelines/{id})
 	ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams)
@@ -60568,6 +60877,9 @@ type ServerInterface interface {
 	// Put a retired pipeline back in use.
 	// (POST /pipelines/{id}/restore)
 	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// Put a pipeline's stages in a new order.
+	// (PUT /pipelines/{id}/stage-order)
+	ReorderStages(w http.ResponseWriter, r *http.Request, id Id, params ReorderStagesParams)
 	// What this installation says about itself in the messages it sends.
 	// (GET /privacy/controller-particulars)
 	GetControllerParticulars(w http.ResponseWriter, r *http.Request)
@@ -61861,6 +62173,24 @@ func (_ Unimplemented) ExecuteBulkChange(w http.ResponseWriter, r *http.Request,
 // Say what one change over a selection of records would do, without doing it.
 // (POST /bulk/preview)
 func (_ Unimplemented) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read what one bulk change did, and whether it was undone.
+// (GET /bulk/{id})
+func (_ Unimplemented) GetBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back what one bulk change did, record by record.
+// (POST /bulk/{id}/undo)
+func (_ Unimplemented) UndoBulkChange(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UndoBulkChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say what undoing one bulk change would do, without doing it.
+// (POST /bulk/{id}/undo/preview)
+func (_ Unimplemented) PreviewBulkUndo(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -64096,6 +64426,12 @@ func (_ Unimplemented) CreatePipeline(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Put the live pipelines in a new order.
+// (PUT /pipelines/order)
+func (_ Unimplemented) ReorderPipelines(w http.ResponseWriter, r *http.Request, params ReorderPipelinesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Retire a pipeline (soft delete; archive is the delete).
 // (DELETE /pipelines/{id})
 func (_ Unimplemented) ArchivePipeline(w http.ResponseWriter, r *http.Request, id Id, params ArchivePipelineParams) {
@@ -64117,6 +64453,12 @@ func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id
 // Put a retired pipeline back in use.
 // (POST /pipelines/{id}/restore)
 func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a pipeline's stages in a new order.
+// (PUT /pipelines/{id}/stage-order)
+func (_ Unimplemented) ReorderStages(w http.ResponseWriter, r *http.Request, id Id, params ReorderStagesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -69612,6 +69954,132 @@ func (siw *ServerInterfaceWrapper) PreviewBulkChange(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewBulkChange(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) GetBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBulkChange(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoBulkChange operation middleware
+func (siw *ServerInterfaceWrapper) UndoBulkChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoBulkChangeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoBulkChange(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewBulkUndo operation middleware
+func (siw *ServerInterfaceWrapper) PreviewBulkUndo(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewBulkUndo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -85197,6 +85665,53 @@ func (siw *ServerInterfaceWrapper) CreatePipeline(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ReorderPipelines operation middleware
+func (siw *ServerInterfaceWrapper) ReorderPipelines(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReorderPipelinesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderPipelines(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchivePipeline operation middleware
 func (siw *ServerInterfaceWrapper) ArchivePipeline(w http.ResponseWriter, r *http.Request) {
 
@@ -85366,6 +85881,81 @@ func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RestorePipeline(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReorderStages operation middleware
+func (siw *ServerInterfaceWrapper) ReorderStages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReorderStagesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReorderStages(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -95124,6 +95714,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/bulk/preview", wrapper.PreviewBulkChange)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/bulk/{id}", wrapper.GetBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/{id}/undo", wrapper.UndoBulkChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/bulk/{id}/undo/preview", wrapper.PreviewBulkUndo)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/activity", wrapper.ListMyCaptureActivity)
 	})
 	r.Group(func(r chi.Router) {
@@ -96240,6 +96839,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/pipelines", wrapper.CreatePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/pipelines/order", wrapper.ReorderPipelines)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/pipelines/{id}", wrapper.ArchivePipeline)
 	})
 	r.Group(func(r chi.Router) {
@@ -96250,6 +96852,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/pipelines/{id}/stage-order", wrapper.ReorderStages)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/controller-particulars", wrapper.GetControllerParticulars)

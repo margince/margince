@@ -324,6 +324,24 @@ To ask a contact to confirm their details in Margince, open the contact and pres
 Margince mails a private link to the contact's own recorded address; you cannot send it anywhere else. The link lasts 14 days and works once.
 Also called: double opt-in, consent request, GDPR confirmation.
 
+### How do I send a privacy notice to a contact?
+To send a privacy notice in Margince, open the **Privacy notice owed** item on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
+1. Open the **Privacy notice owed** item.
+2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
+3. If they already know, or an exemption applies, press **End the duty…** and record why.
+The notice goes to the contact's own recorded address. If it bounces, the duty is owed again.
+Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
+
+### Why does Margince say "this installation cannot send mail"?
+"Not sent: this installation cannot send mail" means your installation has no SMTP relay set up, so the privacy notice or confirmation link was not sent and the duty stays open.
+This mail never goes through your connected Gmail or Outlook: it carries a private link to the contact's own record, which must not sit in your Sent folder. Ask your administrator to set up the installation's outgoing mail. Until then, tell the contact another way and press **End the duty…**.
+Also called: privacy notice not sent, cannot send notice.
+
+### Which mailbox does Margince send from?
+Mail you write in Margince goes out from your own connected mailbox, so the contact sees your address.
+Mail Margince writes by itself goes out from the installation's own address, never from yours: the privacy notice, the confirmation link, password reset, invitations, and the emailed weekly review and morning brief. Your administrator sets that address up.
+Also called: sender address, from address, send as me.
+
 ## Asking somebody to confirm their own details
 
 The confirmation link, sent with **Ask them to confirm their details**, lets the

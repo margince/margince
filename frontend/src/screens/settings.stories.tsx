@@ -386,38 +386,79 @@ export const MaintenanceDangerZone: Story = {
 // PipelinesCard (D-8, on the Data model entry) reads GET /me (roles →
 // pipeline grant) and GET /pipelines. Rendered directly here so
 // the admin write affordances vs the rep read-only state each get a story.
+// Several pipelines, because telling them apart is what the catalog is for: a
+// default, two more in use of different lengths, and one retired.
+function fixtureStage(
+  pipelineId: string,
+  n: number,
+  name: string,
+  semantic: "open" | "won" | "lost",
+  winProbability: number,
+) {
+  return {
+    id: `${pipelineId}-s${n}`,
+    pipeline_id: pipelineId,
+    name,
+    position: n,
+    semantic,
+    win_probability: winProbability,
+  };
+}
 const pipelinesFixture = {
   data: [
     {
       id: "pl",
       name: "Sales",
       is_default: true,
-      position: 0,
+      position: 1,
+      version: 3,
       stages: [
-        {
-          id: "s1",
-          pipeline_id: "pl",
-          name: "Qualify",
-          position: 1,
-          semantic: "open",
-          win_probability: 20,
-        },
-        {
-          id: "s2",
-          pipeline_id: "pl",
-          name: "Proposal",
-          position: 2,
-          semantic: "open",
-          win_probability: 50,
-        },
-        {
-          id: "s3",
-          pipeline_id: "pl",
-          name: "Won",
-          position: 3,
-          semantic: "won",
-          win_probability: 100,
-        },
+        fixtureStage("pl", 1, "Qualify", "open", 20),
+        fixtureStage("pl", 2, "Proposal", "open", 50),
+        fixtureStage("pl", 3, "Won", "won", 100),
+        fixtureStage("pl", 4, "Lost", "lost", 0),
+      ],
+    },
+    {
+      id: "pl-ent",
+      name: "Enterprise",
+      is_default: false,
+      position: 2,
+      version: 5,
+      stages: [
+        fixtureStage("pl-ent", 1, "Qualified", "open", 5),
+        fixtureStage("pl-ent", 2, "Technical validation", "open", 30),
+        fixtureStage("pl-ent", 3, "Business case", "open", 45),
+        fixtureStage("pl-ent", 4, "Procurement", "open", 75),
+        fixtureStage("pl-ent", 5, "Legal review", "open", 90),
+        fixtureStage("pl-ent", 6, "Won", "won", 100),
+        fixtureStage("pl-ent", 7, "Lost", "lost", 0),
+      ],
+    },
+    {
+      id: "pl-renew",
+      name: "Renewals",
+      is_default: false,
+      position: 3,
+      version: 2,
+      stages: [
+        fixtureStage("pl-renew", 1, "Upcoming", "open", 40),
+        fixtureStage("pl-renew", 2, "Terms sent", "open", 80),
+        fixtureStage("pl-renew", 3, "Renewed", "won", 100),
+        fixtureStage("pl-renew", 4, "Churned", "lost", 0),
+      ],
+    },
+    {
+      id: "pl-old",
+      name: "Events 2025",
+      is_default: false,
+      position: 4,
+      version: 7,
+      archived_at: "2026-03-01T00:00:00Z",
+      stages: [
+        fixtureStage("pl-old", 1, "Meeting booked", "open", 40),
+        fixtureStage("pl-old", 2, "Won", "won", 100),
+        fixtureStage("pl-old", 3, "Lost", "lost", 0),
       ],
     },
   ],
@@ -455,26 +496,23 @@ export const PipelinesReadOnly: Story = {
   render: pipelinesCard({ pipeline: ["read"] }),
 };
 
-// The narrow render of the one rule in settings.css that has its own breakpoint.
-// A `.stage-row` is four tracks of which three are fixed — an 88px semantic
-// badge, a 56px win probability, and the Edit verb — so on a phone the fixed
-// tracks ARE the width and the stage name has nothing left; under 560px the row
-// becomes two lines instead. Nothing has ever drawn it below 1024px. The ladder
-// is what makes this the right story on this page: the four other data-model
-// cards answer their list routes from the stub's empty-page fallback, so a
-// page-level narrow story here would picture three empty states and a heading.
+// The narrow render of the ladder's own breakpoint. A `.stage-row` carries a
+// fixed step and odds track beside the verbs, so on a phone those ARE the width
+// and the stage name has nothing left; under 560px the verbs take a line of
+// their own instead. The ladder is what makes this the right story on this
+// page: the other cards answer their list routes from the stub's empty-page
+// fallback, so a page-level narrow story would picture empty states and a head.
 export const PipelinesAdminPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
 };
 
-// And the dark render of the same ladder, which is the densest real content the
-// data model page has: three stage names, the Open/Won semantic badges beside the
-// pipeline's own Default badge, three `.t-num` win probabilities, the row verbs,
-// and no hairline between rows at all. What it watches is whether Open and Won
-// stay distinguishable from each other and from the row behind them once the
-// ground goes dark — a badge is tinted text on a tinted surface, and both move.
+// And the dark render of the same page, the densest real content it has: the
+// catalog's compact strips, the open ladder's shading, the Won and Lost plates
+// beside the Default badge, and the `.t-num` odds. What it watches is whether the
+// outcome plates stay distinguishable from each other and from the rows behind
+// them once the ground goes dark: each is tinted text on a tinted surface.
 export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),

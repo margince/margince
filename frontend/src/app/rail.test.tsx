@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  act,
   cleanup,
   fireEvent,
   screen,
@@ -18,11 +17,14 @@ import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
   ignoreSearch,
+  MARKER,
   navGroupNames,
   newClient,
   render,
   renderWith,
+  repSeeing,
   stubPhoneViewport,
+  TWO_MARKS,
 } from "./testing/shellharness";
 
 // A composed installation, because the vanilla registry is empty by
@@ -134,13 +136,6 @@ function mountShellStyles(): HTMLStyleElement {
   document.head.append(style);
   return style;
 }
-
-// The head's stage marker: the house Badge on the attribution row, carrying no
-// class of its own. Named once here so the shape of that row is stated in one
-// place, and the word is READ from the catalog rather than typed out — a
-// literal here would go on passing after the marker started saying something
-// else. Temporary, with app/betabadge.tsx.
-const MARKER = ".ws-company .badge";
 
 // A row that is not in the rail at all is not the same thing as a hidden one,
 // and must not read as one: the head keeps its elements and the level takes
@@ -642,7 +637,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   it("draws an installation's own head the same on a level as off one", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
-    client.setQueryData(["company"], TWO_MARKS);
+    client.setQueryData(["me"], repSeeing(TWO_MARKS));
     const parts = [".company-logo", ".ws-company-text", MARKER];
     const plain = renderWith(
       client,
@@ -661,177 +656,6 @@ describe("Rail levels (a section's entries as the second level)", () => {
         railDisplay(plain.container, part),
       );
     }
-  });
-
-  // Whose product this is, above whose product it runs on. Every reader of a
-  // live installation is in this case — the cases above are the pre-onboarding
-  // one — so the heading is the company they work for and the product is the
-  // line beneath it.
-  it("heads the rail with the full company logo and puts the product under it", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      company_id: "11111111-1111-4111-8111-111111111111",
-      display_name: "Demo GmbH",
-      logo_url: "/v1/companies/11111111-1111-4111-8111-111111111111/logo",
-    });
-    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
-    const brand = screen.getByRole("link", {
-      name: "Demo GmbH home, powered by Margince",
-    });
-    const logo = within(brand).getByRole("img", { name: "Demo GmbH" });
-    const image = logo.querySelector("img");
-    if (!image) throw new Error("the company logo image was not rendered");
-    fireEvent.load(image);
-    expect(logo.classList.contains("company-logo")).toBe(true);
-    // Beside the link rather than inside it: the attribution and the build badge
-    // are one row of the head, and neither is somewhere a press should lead.
-    const attribution = document.querySelector(".ws-company");
-    expect(attribution?.textContent).toContain("Powered by");
-    expect(attribution?.textContent).toContain("Margince");
-    expect(within(brand).queryByText("Powered by")).toBeNull();
-    expect(brand.getAttribute("href")).toBe("#/home");
-  });
-
-  // The settings card writes a chosen mark straight into this cache entry. The
-  // rail has to be OBSERVING the entry rather than peeking at it once: a peek
-  // left the old face in the rail until something unrelated re-rendered the
-  // shell, so a contact who had just uploaded a mark saw the monogram stay.
-  it("re-draws the head when a new mark is written into the company entry", async () => {
-    const client = newClient();
-    const profile = {
-      company_id: "44444444-4444-4444-8444-444444444444",
-      display_name: "Demo GmbH",
-    };
-    client.setQueryData(["company"], profile);
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelector(".company-logo img")).toBeNull();
-
-    act(() => {
-      client.setQueryData(["company"], {
-        ...profile,
-        logo_url: "/v1/companies/44444444-4444-4444-8444-444444444444/logo",
-      });
-    });
-    await waitFor(() =>
-      expect(
-        container.querySelector(".company-logo img")?.getAttribute("src"),
-      ).toBe("/v1/companies/44444444-4444-4444-8444-444444444444/logo"),
-    );
-  });
-
-  // The mark is the company's own, drawn from the site the onboarding read
-  // resolved it from — not the product's, and not a monogram standing in for a
-  // logo the installation actually has.
-  it("draws the company's resolved logo as the rail's mark", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      company_id: "22222222-2222-4222-8222-222222222222",
-      display_name: "Demo GmbH",
-      logo_url: "/v1/companies/22222222-2222-4222-8222-222222222222/logo",
-    });
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe("/v1/companies/22222222-2222-4222-8222-222222222222/logo");
-  });
-
-  // A company whose site declared no icon has a face rather than a gap: the
-  // monogram is the floor under the mark, so an absent logo_url is a rendering
-  // decision and never an empty slot.
-  it("draws the company's monogram when no logo resolved", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      company_id: "33333333-3333-4333-8333-333333333333",
-      display_name: "Demo GmbH",
-    });
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelector(".ws-chip img")).toBeNull();
-    expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
-  });
-
-  // A company has two marks because the panel has two widths, and the whole
-  // point of the square one is that it is the one drawn at 56px. The wide mark
-  // is still what stands there when no icon was uploaded — a real logo squeezed
-  // small reads as that company, where initials would not — so both directions
-  // are asserted rather than only the interesting one.
-  const TWO_MARKS = {
-    company_id: "55555555-5555-4555-8555-555555555555",
-    display_name: "Demo GmbH",
-    logo_url: "/v1/companies/55555555-5555-4555-8555-555555555555/logo",
-    logo_icon_url:
-      "/v1/companies/55555555-5555-4555-8555-555555555555/logo/icon",
-  };
-
-  // Every brand branch carries it — the product's own mark, an installation's
-  // logo, an installation with only a monogram. The marker is a fact about the
-  // BUILD, so it does not depend on whether there is a company name above it,
-  // and the branch with nothing to attribute is the one a first-run reader sees.
-  it.each([
-    ["the product's own mark", undefined],
-    ["an installation's logo", TWO_MARKS],
-    [
-      "an installation's monogram",
-      { ...TWO_MARKS, logo_url: undefined, logo_icon_url: undefined },
-    ],
-  ])("stamps the stage on the head with %s", (_name, company) => {
-    const client = newClient();
-    if (company) {
-      client.setQueryData(["company"], company);
-    }
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelectorAll(MARKER)).toHaveLength(1);
-    expect(container.querySelector(MARKER)?.textContent).toBe(en["shell.beta"]);
-  });
-
-  it("draws the square icon when the panel is collapsed", () => {
-    const client = newClient();
-    client.setQueryData(["company"], TWO_MARKS);
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_icon_url);
-  });
-
-  it("draws the wide mark when the panel is expanded", () => {
-    const client = newClient();
-    client.setQueryData(["company"], TWO_MARKS);
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_url);
-  });
-
-  it("keeps the wide mark in the collapsed panel when no icon was uploaded", () => {
-    const client = newClient();
-    client.setQueryData(["company"], {
-      ...TWO_MARKS,
-      logo_icon_url: undefined,
-    });
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_url);
   });
 
   // An entry that HAS children opens them: standing on it, the panel shows the

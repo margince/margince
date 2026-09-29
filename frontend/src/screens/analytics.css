@@ -1,17 +1,24 @@
-/* The analytics header: the section tabs, and the share action beside them.
-   The page gutter is `.wrap` (app/shell.css) one level up; this row only
-   spaces its own two children.
-
-   `gap` rather than a margin on the button, so the row keeps its spacing when
-   the button is absent — which it is on every section but the forecast. */
+/* The analytics header: the section tabs, and the scope and share controls
+   beside them. The page gutter is `.wrap` (app/shell.css) one level up; this row
+   only spaces its own two children. */
 .analytics-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  /* The tabs can outgrow the row on a narrow screen. Wrapping puts the button
-     on its own line rather than letting the strip scroll away from it. */
+  /* The tabs can outgrow the row on a narrow screen. Wrapping puts the controls
+     on their own line rather than letting the strip scroll away from them. */
   flex-wrap: wrap;
+}
+
+/* What the numbers cover and what can be done with them, held together at the
+   row's end. Two children of the header's space-between would put the scope
+   in the middle of the row, where it read as a caption to nothing. */
+.analytics-header-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
 }
 
 /* Share view and Shared links, held together as one group of verbs so the
@@ -23,6 +30,22 @@
   gap: var(--gapActions);
 }
 
+/* A section's body as ONE stack. The shell spaces the panels that stand
+   directly in `.wrap`, but a section also stacks a period control, a readings
+   row and a toolbar between its panels, and those met the panels with nothing
+   between them. One interval for every block in the section, at the page's own
+   rhythm. A section that composes its own blocks (the forecast) stacks them the
+   same way, so it is spaced alike wherever it is drawn. */
+.analytics-body,
+.analytics-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+.analytics-body {
+  margin-top: var(--space-4);
+}
+
 /* A money cell that also carries the priced-of-total footnote: stacked rather
    than inline, or the two texts run together with no space between them
    (`.t-caption`/`.t-num` are typography-only, and a table cell does not
@@ -32,7 +55,38 @@
   flex-direction: column;
 }
 
-/* The forecast strip stands a step below the banner that qualifies it. */
-.analytics-forecast {
-  margin-top: var(--space-4);
+/* The forecast's own controls on one row: which period the figures cover, and
+   the verb that records a call about it. */
+.analytics-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* What to check beside what was checked. Side by side where the page is wide
+   enough for both to keep their lines, one under the other below that. */
+.analytics-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: start;
+  gap: var(--gapCards);
+}
+@media (max-width: 1100px) {
+  .analytics-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A figure and the bar that draws it, sharing one cell: the bar takes the free
+   width, the figure keeps its own at the cell's end. */
+.analytics-barfigure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.analytics-barfigure-bar {
+  flex: 1;
+  min-width: var(--space-16);
 }

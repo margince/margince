@@ -92,7 +92,12 @@ const dynamicObjectCeiling = 107
 // this scan the verb. The four verbs are pinned instead by
 // compose/integration/tagvocabscope_integration_test.go, which drives each of
 // the four writes through the gate.
-const dynamicActionCeiling = 7
+//
+// 8 since the roster's allowed actions: callerMay asks the verb of whichever
+// member action it is offering, so the verb comes off the action. Each verb is
+// pinned by TestTheRosterOffersOnlyTheVerbsTheCallerHolds, which holds the
+// offer to what the real handlers accept for a caller holding one verb.
+const dynamicActionCeiling = 8
 
 // requireSitesFloor is the fail-short guard. The scan walking a smaller tree
 // than it thinks — a moved directory, a parser error swallowed — would report

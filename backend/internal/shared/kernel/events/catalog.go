@@ -89,6 +89,7 @@ var catalog = map[string]struct {
 	"company.updated":  {companyStreamEntity, 1},
 	"company.archived": {companyStreamEntity, 1},
 	"company.merged":   {companyStreamEntity, 1},
+	"company.restored": {companyStreamEntity, 1},
 
 	"deal.created":       {dealStreamEntity, 1},
 	"pipeline.created":   {dealStreamEntity, 1},

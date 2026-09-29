@@ -62,17 +62,23 @@ var (
 )
 
 // bulkBinding hashes what a confirmation covers: who asked, the record type,
-// the verb, the new owner and every item with its version, in id order.
+// the verb, the new owner, every item with its version in id order, and the
+// change an undo reverses.
 func bulkBinding(requestedBy string, change bulkChange) ([]byte, error) {
 	items := slices.Clone(change.items)
 	slices.SortFunc(items, func(a, b crmcontracts.BulkItem) int { return strings.Compare(a.Id.String(), b.Id.String()) })
+	var undoOf *ids.UUID
+	if change.undo != nil {
+		undoOf = &change.undo.batchID
+	}
 	encoded, err := json.Marshal(struct {
 		RequestedBy string                      `json:"requested_by"`
 		RecordType  crmcontracts.BulkRecordType `json:"record_type"`
 		Verb        crmcontracts.BulkVerb       `json:"verb"`
 		OwnerID     *ids.UUID                   `json:"owner_id"`
 		Items       []crmcontracts.BulkItem     `json:"items"`
-	}{requestedBy, change.recordType, change.verb, change.ownerID, items})
+		UndoOf      *ids.UUID                   `json:"undo_of,omitempty"`
+	}{requestedBy, change.recordType, change.verb, change.ownerID, items, undoOf})
 	if err != nil {
 		return nil, fmt.Errorf("hash the previewed change: %w", err)
 	}

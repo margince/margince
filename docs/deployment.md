@@ -353,8 +353,10 @@ it rather than relying on the bake file staying correct.
 
 ## Operational notes
 
-- **Outbound mail needs the worker** — the api only stages sends; `cmd/worker`
-  transmits them.
+- **Outbound mail needs the worker and an SMTP relay.** `cmd/worker` transmits
+  what the api stages. Mail the installation writes itself (privacy notice,
+  confirm links, password reset, invitations) needs the `email:` relay and never
+  uses a rep's mailbox: [how-to/set-up-outbound-mail.md](how-to/set-up-outbound-mail.md).
 - **Failed-login lock:** five wrong passwords in 15 minutes lock an account
   for 15 minutes. A browser that has signed in to that account within the last
   90 days (under its current password) is still let in with the right password,
@@ -364,13 +366,11 @@ it rather than relying on the bake file staying correct.
   --email <admin-email>` (reads the new password from stdin). It will also set
   a password on a member who has none, so it *can* onboard — but it needs the
   owner DSN and a shell, so prefer the set-password link below for that.
-- **Onboarding without outbound mail:** an invited member is created active with
-  no password, so on an installation with no mail channel the invite alone
-  leaves an account nobody can sign in as. Settings → Users & roles then offers a
-  per-member **"Get set-password link"** — a single-use link the admin delivers
-  out of band, redeemed through the normal set-password screen (ADR-0061
-  Amendment 1). It needs `--public-base-url` set, since a credential-bearing
-  link is never derived from a request `Host`.
+- **Onboarding without outbound mail:** an invited member has no password, so
+  Settings → Users & roles offers a per-member **"Get set-password link"** — a
+  single-use link the admin delivers out of band (ADR-0061 Amendment 1). It
+  needs `--public-base-url`, since a credential-bearing link is never derived
+  from a request `Host`.
 - **AI keys fail closed:** a missing/invalid provider key disables the bound AI
   lanes but leaves core CRUD + auth working.
 - **An MCP App view that misses the api's boot stays missing until the api

@@ -59,6 +59,7 @@ function Record() {
   const details = usePageAside();
   return (
     <RecordView
+      identity="r-1"
       name="Brandt Automotive GmbH"
       zone="UTC"
       tabs={
@@ -85,6 +86,7 @@ function Record() {
 function PlainRecord() {
   return (
     <RecordView
+      identity="r-1"
       name="Brandt Automotive GmbH"
       zone="UTC"
       tabs={

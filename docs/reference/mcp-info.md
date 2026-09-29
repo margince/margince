@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 78 |
 | Resources | 11 |
-| Tool catalog | 227.6 KB |
+| Tool catalog | 228.4 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 59304 |
+| Approx. wire tokens | 59507 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 104.2 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 58.4 KB | 25% | Yes, every step |
-| Input schemas | 48.7 KB | 21% | Yes, every step |
+| Output schemas | 104.4 KB | 45% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 58.6 KB | 25% | Yes, every step |
+| Input schemas | 49.0 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.4 KB | 7% | Partly |
-| **Description + input schema** | **107.1 KB** | **47%** | **the recurring cost** |
+| **Description + input schema** | **107.6 KB** | **47%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -70,7 +70,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.3 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 3.6 KB |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 4.4 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
@@ -1522,16 +1522,36 @@ Record a meeting against linked CRM records without sending an invitation. Reser
 
 **Change many records at once**
 
-Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. update_record and archive_record change one record. Above 10 records, execute needs the confirm_token preview answered, for exactly the same selection; it is good once. Keep batch_id from the answer. (Governance: runs immediately; requires passport scope "write".)
+Hand up to 500 contacts, companies or deals to one owner, or archive them, in one change — or undo such a change. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
 ```json
 {
   "additionalProperties": false,
+  "else": {
+    "required": [
+      "batch_id"
+    ]
+  },
+  "if": {
+    "properties": {
+      "mode": {
+        "enum": [
+          "preview",
+          "execute"
+        ]
+      }
+    }
+  },
   "properties": {
+    "batch_id": {
+      "description": "For undo_preview and undo: the batch_id execute answered",
+      "format": "uuid",
+      "type": "string"
+    },
     "confirm_token": {
-      "description": "The token preview answered; needed above 10 records",
+      "description": "The token preview or undo_preview answered; needed above 10 records",
       "type": "string"
     },
     "idempotency_key": {
@@ -1562,10 +1582,12 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
       "type": "array"
     },
     "mode": {
-      "description": "preview says what would change; execute changes it",
+      "description": "preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names",
       "enum": [
         "preview",
-        "execute"
+        "execute",
+        "undo_preview",
+        "undo"
       ],
       "type": "string"
     },
@@ -1591,11 +1613,15 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
     }
   },
   "required": [
-    "mode",
-    "record_type",
-    "verb",
-    "items"
+    "mode"
   ],
+  "then": {
+    "required": [
+      "record_type",
+      "verb",
+      "items"
+    ]
+  },
   "type": "object"
 }
 ```
@@ -1653,6 +1679,30 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
         },
         "expires_at": {
           "type": "string"
+        },
+        "left_behind": {
+          "items": {
+            "properties": {
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "ref_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "ref_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "record_type": {
           "type": "string"
@@ -1732,6 +1782,10 @@ Hand up to 500 contacts, companies or deals to one owner, or archive them, in on
             "type": "object"
           },
           "type": "array"
+        },
+        "undo_of": {
+          "format": "uuid",
+          "type": "string"
         },
         "verb": {
           "type": "string"

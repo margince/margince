@@ -173,23 +173,19 @@
    * carries a mark on a dark card. */
   --teal: #0e7490;
   --tealText: #0d6882;
-  /* Monogram tones: the six backgrounds a company/contact avatar picks from by
-   * name, so the same record reads the same colour everywhere without storing
-   * one. Low-alpha fills over the card surface, paired with a readable text
-   * tone — they identify a record at a glance, they never encode status, and
-   * nothing is ever distinguished by colour alone. */
-  --mono0Fill: rgba(11, 122, 83, 0.14);
-  --mono0Text: #0b6647;
-  --mono1Fill: rgba(14, 116, 144, 0.14);
-  --mono1Text: #0e6478;
-  --mono2Fill: rgba(120, 53, 168, 0.13);
-  --mono2Text: #6b2f97;
-  --mono3Fill: rgba(180, 83, 9, 0.14);
-  --mono3Text: #8a4008;
-  --mono4Fill: rgba(15, 98, 173, 0.13);
-  --mono4Text: #0d5596;
-  --mono5Fill: rgba(159, 18, 57, 0.12);
-  --mono5Text: #8d1034;
+  /* The monogram mesh, as OKLCh lightness and chroma: Avatar passes only hues
+   * and positions, so one record keeps its composition in both themes and only
+   * these move. Chroma sits under the sRGB edge at every allowed hue, and the
+   * ink clears 4.5:1 on the darkest point of the ground — avatarmesh.test.ts
+   * measures both from these declarations (worst case 5.3:1). */
+  --avatarGroundL: 0.94;
+  --avatarGroundC: 0.028;
+  --avatarBlobAL: 0.865;
+  --avatarBlobAC: 0.065;
+  --avatarBlobBL: 0.9;
+  --avatarBlobBC: 0.05;
+  --avatarInkL: 0.43;
+  --avatarInkC: 0.07;
   --bgRail: #13231d;
   /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
    * (white-alpha icons on the dark green field in BOTH themes), and the
@@ -809,9 +805,8 @@
      state tones are NOT in that set: --textOnStatusControl is their ink, and
      it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
-  /* Lifted off --accent, which cannot move. #4ade80 is the tone --mono0Text
-     already uses for emerald text on an emerald tint here, so the accent
-     reads as the same colour those chips do rather than as a second green. */
+  /* Lifted off --accent, which cannot move: #4ade80 is emerald text that
+     reads on an emerald tint on this ground. */
   --accentText: #4ade80;
   --accentLight: rgba(22, 163, 74, 0.14);
   --accentMed: rgba(22, 163, 74, 0.26);
@@ -834,20 +829,15 @@
      9.37:1 on --warningText, 5.63:1 on --dangerText and 5.78:1 on
      --discoveryText; white would give 3.08:1 on the red. */
   --textOnStatusControl: #04240f;
-  /* Dark: the fills lift and the text tones brighten, so a monogram keeps the
-   * same identity and the same contrast floor on the dark surface. */
-  --mono0Fill: rgba(22, 163, 74, 0.22);
-  --mono0Text: #4ade80;
-  --mono1Fill: rgba(34, 211, 238, 0.18);
-  --mono1Text: #67e8f9;
-  --mono2Fill: rgba(192, 132, 252, 0.18);
-  --mono2Text: #d8b4fe;
-  --mono3Fill: rgba(251, 146, 60, 0.18);
-  --mono3Text: #fdba74;
-  --mono4Fill: rgba(96, 165, 250, 0.18);
-  --mono4Text: #93c5fd;
-  --mono5Fill: rgba(251, 113, 133, 0.18);
-  --mono5Text: #fda4af;
+  /* Dark: a deeper, muted ground and a pale ink of the same hue. */
+  --avatarGroundL: 0.32;
+  --avatarGroundC: 0.045;
+  --avatarBlobAL: 0.4;
+  --avatarBlobAC: 0.065;
+  --avatarBlobBL: 0.36;
+  --avatarBlobBC: 0.055;
+  --avatarInkL: 0.9;
+  --avatarInkC: 0.045;
 
   --textPrimary: #fff;
   --textSecondary: lch(63.304% 1.425 272);
@@ -978,18 +968,14 @@
     --textOnAccentControl: #04240f;
     --textOnStatusControl: #04240f;
 
-    --mono0Fill: rgba(22, 163, 74, 0.22);
-    --mono0Text: #4ade80;
-    --mono1Fill: rgba(34, 211, 238, 0.18);
-    --mono1Text: #67e8f9;
-    --mono2Fill: rgba(192, 132, 252, 0.18);
-    --mono2Text: #d8b4fe;
-    --mono3Fill: rgba(251, 146, 60, 0.18);
-    --mono3Text: #fdba74;
-    --mono4Fill: rgba(96, 165, 250, 0.18);
-    --mono4Text: #93c5fd;
-    --mono5Fill: rgba(251, 113, 133, 0.18);
-    --mono5Text: #fda4af;
+    --avatarGroundL: 0.32;
+    --avatarGroundC: 0.045;
+    --avatarBlobAL: 0.4;
+    --avatarBlobAC: 0.065;
+    --avatarBlobBL: 0.36;
+    --avatarBlobBC: 0.055;
+    --avatarInkL: 0.9;
+    --avatarInkC: 0.045;
 
     --textPrimary: #fff;
     --textSecondary: lch(63.304% 1.425 272);
@@ -1079,4 +1065,20 @@
   :where(*)::backdrop {
     corner-shape: squircle;
   }
+}
+
+/* The monogram mesh's colours, assembled on the chip because the hues are its
+ * own inline numbers: a custom property resolves where it is declared, so a
+ * :root token could never see them. Only the numbers above change per theme. */
+:where(.avatar-mesh) {
+  --avatarGround: oklch(
+    var(--avatarGroundL) var(--avatarGroundC) var(--avatar-hue-base)
+  );
+  --avatarBlobA: oklch(
+    var(--avatarBlobAL) var(--avatarBlobAC) var(--avatar-hue-a)
+  );
+  --avatarBlobB: oklch(
+    var(--avatarBlobBL) var(--avatarBlobBC) var(--avatar-hue-b)
+  );
+  --avatarInk: oklch(var(--avatarInkL) var(--avatarInkC) var(--avatar-hue-a));
 }

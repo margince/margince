@@ -1,0 +1,78 @@
+/* SortableList: rows a reader puts in order by hand. */
+
+.sortable-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* While a row is carried the whole list is the gesture's: no text selection
+   under the pointer, and the grabbing hand wherever it goes. */
+.sortable-list.is-sorting {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Each row is a plate of its own rather than a ruled line, because it MOVES:
+   a hairline between rows would travel with whichever row it belongs to and
+   leave the list briefly ruled in the wrong places. */
+.sortable-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-1);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-rest);
+  transition:
+    box-shadow var(--dur-state) var(--ease-out),
+    border-color var(--dur-state) var(--ease-out);
+}
+
+/* The row the surface is showing. A tint and an accent edge, the same pair a
+   selected choice wears elsewhere, so "this one" reads without a word. */
+.sortable-item.is-selected {
+  border-color: var(--accentMed);
+  background: var(--accentLight);
+}
+
+/* The carried row lifts off the page: the pop shadow every raised surface
+   wears, and the accent edge saying it is the one in hand. */
+.sortable-item.is-lifted {
+  position: relative;
+  z-index: 1;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-pop);
+}
+
+/* The grip. `touch-action: none` is what lets a finger carry the row instead
+   of scrolling the page; without it a phone claims the gesture first. */
+.sortable-handle {
+  flex: none;
+  color: var(--textSecondary);
+  cursor: grab;
+  touch-action: none;
+}
+.sortable-list.is-sorting .sortable-handle {
+  cursor: grabbing;
+}
+.sortable-handle[aria-disabled="true"] {
+  cursor: progress;
+  opacity: 0.5;
+}
+
+.sortable-body {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sortable-item {
+    transition: none;
+  }
+}

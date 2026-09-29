@@ -7,10 +7,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
-import { api } from "../api/client";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useId,
+  useState,
+} from "react";
 import type { components } from "../api/schema";
-import { requireVersion } from "../api/version";
 import { Badge, Button, Modal, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
@@ -21,7 +25,7 @@ import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
-import { throwProblem } from "./common";
+import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
 import { OwnerName } from "./entityref";
 
 type BulkRecordType = components["schemas"]["BulkRecordType"];
@@ -47,15 +51,18 @@ export type BulkChangeRequest = Readonly<{
   rows: readonly BulkRow[];
   ownerId?: string;
   openId: string;
+  /** Set when this press undoes the change with that batch id. */
+  undoOf?: string;
 }>;
 
-type Translate = ReturnType<typeof useT>;
+export type Translate = ReturnType<typeof useT>;
 
 type RecordKind = Readonly<{
   list: string;
   record: string;
   unit: MessageKey;
   done: PluralBase;
+  undone: PluralBase;
 }>;
 
 const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
@@ -64,18 +71,21 @@ const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
     record: "contact",
     unit: "unit.contacts",
     done: "bulk.doneContacts",
+    undone: "bulk.undoneContacts",
   },
   company: {
     list: "companies",
     record: "company",
     unit: "unit.companies",
     done: "bulk.doneCompanies",
+    undone: "bulk.undoneCompanies",
   },
   deal: {
     list: "deals",
     record: "deal",
     unit: "unit.deals",
     done: "bulk.doneDeals",
+    undone: "bulk.undoneDeals",
   },
 };
 
@@ -87,6 +97,11 @@ const SKIP_REASONS: Readonly<Record<BulkSkipReason, MessageKey>> = {
   anchor_company: "bulk.reason.anchor_company",
   not_previewed: "bulk.reason.not_previewed",
   refused: "bulk.reason.refused",
+  changed_since_batch: "bulk.reason.changed_since_batch",
+  merged: "bulk.reason.merged",
+  erased: "bulk.reason.erased",
+  value_taken: "bulk.reason.value_taken",
+  no_previous_owner: "bulk.reason.no_previous_owner",
 };
 
 // The single-record rules a `refused` skip names by code. A code missing here
@@ -98,51 +113,45 @@ const REFUSAL_CODES: Readonly<Record<string, MessageKey>> = {
   required: "bulk.refusal.required",
 };
 
-// The one request body both halves send. The preview and the execute must name
-// the same selection, verb and owner, or the server refuses the confirm token.
-function bulkBody(request: BulkChangeRequest) {
-  return {
-    record_type: request.recordType,
-    verb: request.verb,
-    items: request.rows.map((row) => ({
-      id: row.id,
-      version: requireVersion(row.version),
-    })),
-    owner_id: request.verb === "reassign_owner" ? request.ownerId : undefined,
-  };
+/**
+ * Opens the undo of a change that just ran. The undo is its own press of the
+ * same dialog — previewed, shown, confirmed — so it needs a host that outlives
+ * the list's selection, whose bulk bar leaves the page once the change clears
+ * it. `BulkUndoProvider` is that host.
+ */
+const BulkUndoContext = createContext<
+  ((request: BulkChangeRequest) => void) | null
+>(null);
+
+/** The one place an undo's dialog is drawn, mounted beside the app. */
+export function BulkUndoProvider({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  const [request, setRequest] = useState<BulkChangeRequest | null>(null);
+  return (
+    <BulkUndoContext.Provider value={setRequest}>
+      {children}
+      <BulkChangeDialog
+        request={request}
+        onClose={() => setRequest(null)}
+        onDone={() => setRequest(null)}
+      />
+    </BulkUndoContext.Provider>
+  );
 }
 
-async function previewBulkChange(
+// The rows an undo can touch: the ones the change altered.
+function undoOf(
   request: BulkChangeRequest,
-  t: Translate,
-): Promise<BulkChangePreview> {
-  const { data, error } = await api.POST("/bulk/preview", {
-    body: bulkBody(request),
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
-  return data;
-}
-
-type BulkRun = Readonly<{
-  request: BulkChangeRequest;
-  confirmToken?: string;
-  idempotencyKey: string;
-}>;
-
-async function executeBulkChange(
-  run: BulkRun,
-  t: Translate,
-): Promise<BulkChangeResult> {
-  const { data, error } = await api.POST("/bulk/execute", {
-    params: { header: { "Idempotency-Key": run.idempotencyKey } },
-    body: { ...bulkBody(run.request), confirm_token: run.confirmToken },
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
-  return data;
+  result: BulkChangeResult,
+): BulkChangeRequest {
+  const skipped = new Set(result.skipped.map((skip) => skip.id));
+  return {
+    ...request,
+    rows: request.rows.filter((row) => !skipped.has(row.id)),
+    openId: crypto.randomUUID(),
+    undoOf: result.batch_id,
+  };
 }
 
 function recordKeysOf(kind: RecordKind, id: string) {
@@ -269,6 +278,30 @@ function PreviewBody({
   );
 }
 
+// The dialog's heading and confirm verb: an undo, an archive or a handover.
+function dialogWords(request: BulkChangeRequest, t: Translate) {
+  const unit = t(RECORD_KINDS[request.recordType].unit);
+  if (request.undoOf !== undefined) {
+    return {
+      title: t("bulk.titleUndo", { unit }),
+      confirm: t("bulk.confirmUndo"),
+      danger: false,
+    };
+  }
+  if (request.verb === "archive") {
+    return {
+      title: t("bulk.titleArchive", { unit }),
+      confirm: t("bulk.confirmArchive", { unit }),
+      danger: true,
+    };
+  }
+  return {
+    title: t("bulk.titleReassign", { unit }),
+    confirm: t("bulk.confirmReassign"),
+    danger: false,
+  };
+}
+
 /**
  * What a bulk verb would do, asked of the server before anything is written,
  * and the one button that does it.
@@ -293,6 +326,7 @@ export function BulkChangeDialog({
   const toast = useToast();
   const queryClient = useQueryClient();
   const headingId = useId();
+  const openUndo = useContext(BulkUndoContext);
   // Kept after close so the dialog still has its words while it animates out.
   const [shown, setShown] = useState(request);
   if (request !== null && request !== shown) {
@@ -310,28 +344,56 @@ export function BulkChangeDialog({
     refetchOnWindowFocus: false,
   });
 
-  const execute = useMutation({
-    mutationFn: (run: BulkRun) => executeBulkChange(run, t),
-    onSuccess: async (result, run) => {
-      const kind = RECORD_KINDS[run.request.recordType];
-      for (const row of run.request.rows) {
-        for (const queryKey of recordKeysOf(kind, row.id)) {
-          queryClient.invalidateQueries({ queryKey });
-        }
+  const refresh = async (request: BulkChangeRequest) => {
+    const kind = RECORD_KINDS[request.recordType];
+    for (const row of request.rows) {
+      for (const queryKey of recordKeysOf(kind, row.id)) {
+        queryClient.invalidateQueries({ queryKey });
       }
-      await queryClient.invalidateQueries({ queryKey: [kind.list] });
-      const changed = plural(kind.done, result.changed, {
-        count: formatNumber(result.changed, locale),
-      });
-      const skipped =
-        result.skipped.length > 0
-          ? plural("bulk.doneSkipped", result.skipped.length, {
-              count: formatNumber(result.skipped.length, locale),
-            })
-          : null;
-      toast.show(skipped ? `${changed} ${skipped}` : changed, {
-        tone: result.changed > 0 ? "success" : "warning",
-      });
+    }
+    await queryClient.invalidateQueries({ queryKey: [kind.list] });
+  };
+
+  // What a change or its undo did, in one sentence per fact.
+  const outcome = (done: PluralBase, result: BulkChangeResult) => {
+    const count = (n: number) => ({ count: formatNumber(n, locale) });
+    const left = result.left_behind?.length ?? 0;
+    return [
+      plural(done, result.changed, count(result.changed)),
+      result.skipped.length > 0
+        ? plural(
+            "bulk.doneSkipped",
+            result.skipped.length,
+            count(result.skipped.length),
+          )
+        : null,
+      left > 0 ? plural("bulk.undoLeftBehind", left, count(left)) : null,
+    ]
+      .filter((part) => part !== null)
+      .join(" ");
+  };
+
+  const execute = useMutation({
+    mutationFn: executeBulkChange,
+    onSuccess: async (result, run) => {
+      await refresh(run.request);
+      const kind = RECORD_KINDS[run.request.recordType];
+      const undoable =
+        openUndo !== null &&
+        run.request.undoOf === undefined &&
+        result.changed > 0;
+      toast.show(
+        outcome(run.request.undoOf ? kind.undone : kind.done, result),
+        {
+          tone: result.changed > 0 ? "success" : "warning",
+          action: undoable
+            ? {
+                label: t("common.undo"),
+                onAct: () => openUndo(undoOf(run.request, result)),
+              }
+            : undefined,
+        },
+      );
       onDone(result);
     },
   });
@@ -344,11 +406,9 @@ export function BulkChangeDialog({
   if (!shown) {
     return null;
   }
-  const kind = RECORD_KINDS[shown.recordType];
-  const unit = t(kind.unit);
   const answer = preview.data;
   const runnable = answer !== undefined && answer.count > 0;
-  const archive = shown.verb === "archive";
+  const words = dialogWords(shown, t);
 
   let body: ReactNode;
   if (preview.isError) {
@@ -362,9 +422,7 @@ export function BulkChangeDialog({
   return (
     <Modal open={request !== null} onClose={close} labelledBy={headingId}>
       <Heading size="large" id={headingId} className="t-h2 dialog-heading">
-        {archive
-          ? t("bulk.titleArchive", { unit })
-          : t("bulk.titleReassign", { unit })}
+        {words.title}
       </Heading>
       <div className="form-stack">{body}</div>
       <ErrorLine error={execute.error} />
@@ -375,19 +433,18 @@ export function BulkChangeDialog({
               {t("create.cancel")}
             </Button>
             <Button
-              variant={archive ? "danger" : "primary"}
+              variant={words.danger ? "danger" : "primary"}
               pending={execute.isPending}
               onClick={() =>
                 execute.mutate({
                   request: shown,
                   confirmToken: answer.confirm_token,
                   idempotencyKey: shown.openId,
+                  t,
                 })
               }
             >
-              {archive
-                ? t("bulk.confirmArchive", { unit })
-                : t("bulk.confirmReassign")}
+              {words.confirm}
             </Button>
           </>
         ) : (

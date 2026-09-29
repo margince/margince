@@ -227,6 +227,14 @@ func (seamProbeLifecycle) ExecuteBulkChange(context.Context, BulkChangeCommand) 
 	return nil, errSeamReached
 }
 
+func (seamProbeLifecycle) PreviewBulkUndo(context.Context, ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) UndoBulkChange(context.Context, ids.UUID, string) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
 // seamProbeInbox answers every queue door by reaching its seam, so a walk that
 // runs handlers proves the arguments got there rather than stopping short.
 type seamProbeInbox struct{}

@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -79,7 +80,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		BaseURL: httpserver.BaseURL,
 		Middlewares: []crmcontracts.MiddlewareFunc{
 			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
-			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool))), schedulingReplayRestore(sendStore(pool, srv.send))),
+			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 			// Outermost, so the measurement covers the admission gate and the
 			// idempotency replay rather than only the handler underneath them. A 403 from the gate IS this route's
 			// latency as a client experiences it, and a refusal that cost a
@@ -119,7 +120,9 @@ func chiRoutePattern(r *http.Request) string {
 // (API-CC-8). Named rather than inline so a test can assert it covers every
 // moduleProbe replayableOperations names: an unwired key fails closed, which
 // retires the replay promise for that route silently instead of loudly.
-func replayProbes(approvalsSvc *approvals.Service, contractsStore *contracts.Store, dealRoomsStore *dealrooms.Store) map[string]replayProbe {
+func replayProbes(
+	approvalsSvc *approvals.Service, contractsStore *contracts.Store, dealRoomsStore *dealrooms.Store, db *database.DB,
+) map[string]replayProbe {
 	return map[string]replayProbe{
 		// A Deal Room's visibility is its parent deal's, which only its own
 		// store evaluates — the generic row-scope helper refuses a table with
@@ -140,6 +143,11 @@ func replayProbes(approvalsSvc *approvals.Service, contractsStore *contracts.Sto
 		probeApproval: func(ctx context.Context, id ids.UUID) error {
 			_, err := approvalsSvc.Get(ctx, ids.From[ids.ApprovalKind](id))
 			return err
+		},
+		// A bulk answer names the records it left alone; replaying it is a read
+		// of every one of them.
+		probeBulkBatch: func(ctx context.Context, id ids.UUID) error {
+			return bulkBatchStillSeen(ctx, db, id)
 		},
 	}
 }

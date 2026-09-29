@@ -129,6 +129,7 @@ import { ProductsAdmin } from "./products";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
+import { RolesSettings } from "./roles-settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
@@ -237,6 +238,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
       // (RowScopeTeam) — so this is also where an admin decides whose records a
       // Team Lead's membership hands over, which is not the roster's question.
       return <TeamsCard />;
+    case "roles":
+      return <RolesSettings />;
     case "seats":
       return <LicenseCard />;
 
@@ -638,17 +641,14 @@ function AccountCard() {
         <QueryGate query={query} pendingLabel={t("settings.accountCard")}>
           {(me) => (
             <div className="settings-identity">
-              {/* Both halves are required on the wire, so the `?? ""` is not a
+              {/* Both halves are required on the wire, so the `|| ""` is not a
                   default — it is the promise that a server answering with
                   neither costs the reader an unnamed chip rather than the whole
                   page: this block renders inside the app shell, and a throw here
-                  takes the navigation down with it. */}
-              {/* The address is the tint's key, so this reader keeps the same
-                  colour here as in the rail's account block and as their turns
-                  in the onboarding transcript — and keeps it after they change
-                  their display name. */}
+                  takes the navigation down with it. The chip is keyed on the
+                  user id, like every other chip drawn for this seat. */}
               <Avatar
-                identity={me.user.email || undefined}
+                identity={me.user.id}
                 name={me.user.display_name || me.user.email || ""}
               />
               <div className="settings-identity-id">

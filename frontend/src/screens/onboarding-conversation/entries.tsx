@@ -295,13 +295,12 @@ export function UserTurn({ entry }: Readonly<{ entry: UserEntry }>) {
   // same chip rather than two ideas of who is signed in. An unresolved
   // identity keeps the turn — the message is theirs whether or not the probe
   // has landed — and the chip simply has no letter to show yet.
-  const me = useMe();
-  const email = me.data?.user.email ?? "";
-  const name = me.data?.user.display_name || email;
+  const user = useMe().data?.user;
+  const name = user?.display_name || user?.email || "";
   return (
     <div className="ob-conv-user">
       <p>{entry.i18nKey ? t(entry.i18nKey, entry.params) : entry.text}</p>
-      <Avatar identity={email || undefined} name={name} />
+      <Avatar identity={user?.id ?? ""} name={name} />
     </div>
   );
 }

@@ -59,6 +59,32 @@ const runAttempts = 3
 // the same failure at the price of another call.
 var runRetryBackoff = [runAttempts - 1]time.Duration{2 * time.Second, 8 * time.Second}
 
+// runThrottleBackoff is the wait when the provider is RATE LIMITING this
+// installation rather than having dropped a connection. A throttle clears on
+// the window the provider is enforcing, not on the timescale above: three
+// attempts spaced 2s and 8s land inside one saturated window, so the ladder
+// buys three refusals at the price of three calls and the task is abandoned
+// with no record — which the certification page then shows as untested, a word
+// reserved for an honest gap in what has been measured.
+//
+// Single digits to tens of seconds because that is the order of the windows
+// these providers enforce. Still a guess: the provider often NAMES the moment
+// to come back in Retry-After, and honouring that would beat any table here.
+// ai.providerRefusal already reads the header to classify the refusal, but the
+// value reaches no caller — carrying it out would change that module's error
+// contract, so it is its own change rather than a rider on this one.
+var runThrottleBackoff = [runAttempts - 1]time.Duration{30 * time.Second, 90 * time.Second}
+
+// backoffFor is the table the NEXT wait comes from, chosen by what the last
+// attempt failed with. The two faults ask for different waits and the error
+// already says which it is, so the choice is read rather than configured.
+func backoffFor(err error) [runAttempts - 1]time.Duration {
+	if errors.Is(err, ai.ErrProviderThrottled) {
+		return runThrottleBackoff
+	}
+	return runRetryBackoff
+}
+
 // sleepFunc is this file's injectable delay, the seam a test swaps so a retry
 // path is exercised without a real wait — the same pattern runner.go's nowFunc
 // uses, and for the same reason: a test that slept for real would be the sort of
@@ -92,7 +118,7 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 		if attempt > 1 {
 			log.WarnContext(ctx, "aicert: re-driving a run after the router exhausted every bound tier — the calls the failed attempt made are paid for and discarded",
 				"task", string(task), "scenario", sc.Name, "run", run, "attempt", attempt, "err", lastErr)
-			if err := sleepFunc(ctx, runRetryBackoff[attempt-2]); err != nil {
+			if err := sleepFunc(ctx, backoffFor(lastErr)[attempt-2]); err != nil {
 				return runOutcome{}, errors.Join(err, lastErr)
 			}
 		}

@@ -176,7 +176,7 @@ func SelectPersonalPurgeTx(
 	limitAt := "$" + strconv.Itoa(len(args))
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
-		       `+withheldReason(shielded, false)+` AS withheld,
+		       `+withheldReason(shielded, floor.shieldedAs(), false)+` AS withheld,
 		       (SELECT count(*) FROM capture_import o WHERE o.activity_id = a.id) AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $3

@@ -63,9 +63,11 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
+	anchor := contacts.NewStore(InstallationDB(pool))
 	authH := identity.NewHandlers(identitySvc).
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
-		WithInstallationDescribed(installationDescribed(contacts.NewStore(InstallationDB(pool))))
+		WithInstallationDescribed(installationDescribed(anchor)).
+		WithInstallationBrand(installationBrand(anchor))
 
 	// The transport directory, loaded on the REAL assembly path rather than in
 	// newServer: route-level tests construct that one directly with a pool that

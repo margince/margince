@@ -130,7 +130,11 @@ export function ContactActions({
       {/* A hairline between reaching the record and recording what happened
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
-      {logRefused && <p id={logRefusedId}>{t("record.logActivityRefused")}</p>}
+      {logRefused && (
+        <p className="t-caption" id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </p>
+      )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form
           when its rung decides logging is the thing to do next. */}

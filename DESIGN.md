@@ -236,8 +236,12 @@ to step. The three-state theme pattern (`:root`,
 - **A state is a soft badge before it is a solid one.** A column of states is a
   column of soft badges, one weight down the page; the solid fill is for a count
   and the one state a reader must not miss.
-- **Avatars are neutral.** `--bg3` with `--ink2` initials; a record is told
-  apart by its name.
+- **A monogram is the one soft gradient.** Most records never get a logo, so
+  a contact's or company's initials sit on a quiet mesh of two neighbouring
+  hues keyed on the record's id — never indigo, never danger red, never
+  moving. Every chip is round, a company's included; a record is told apart
+  by its name, and the mesh is what makes it findable. A logo replaces the
+  mesh outright: it waits on the neutral card ground and never on a gradient.
 
 ## 4. Type
 
@@ -959,7 +963,8 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
 
 - Does not put a pane inside a pane. A zone is one pane; inside it a title, a
   hairline and rows.
-- Does not cast a shadow of its own, a glow or a gradient. The resting layer
+- Does not cast a shadow of its own, a glow or a gradient (a monogram's mesh,
+  §3, is the one gradient). The resting layer
   is `--shadow-rest` and it comes from the token, never from a rule that spells
   its own; the two corner glows on the ground are the only other light; the
   only tinted thing inside a pane is the agent's row.

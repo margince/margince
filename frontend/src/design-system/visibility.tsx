@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  ChevronDown,
   EyeOff,
   Lock,
   type LucideIcon,
@@ -36,8 +37,10 @@ import "./visibility.css";
  * to narrow its audience, so everyone in the workspace really does read it. The
  * two are one word apart and a record borrowing `team` told its reader the
  * account was limited to a team while the tooltip beside it said everyone.
- * `private` is a captured contact's owner-only state; a message has no such
- * state, because the contacts on it can always read it.
+ * `private` is a record's owner-only state; a message has no such state,
+ * because the contacts on it can always read it. Its word names the state
+ * rather than the reader, because the same record is private to its owner and
+ * open to whoever it was shared with, and one badge is drawn for both.
  */
 export type Visibility =
   | "team"
@@ -80,13 +83,24 @@ function look(state: Visibility): "open" | "limited" | "withheld" {
   return state === "withheld" ? "withheld" : "limited";
 }
 
-export function VisibilityBadge({ state }: Readonly<{ state: Visibility }>) {
+/**
+ * `opens` draws the mark as the face of a control that opens more about it —
+ * the record header's access chip — with a caret after the word, so a reader
+ * can tell the pressable mark from the ones that only state a fact.
+ */
+export function VisibilityBadge({
+  state,
+  opens = false,
+}: Readonly<{ state: Visibility; opens?: boolean }>) {
   const t = useT();
   const Icon = ICON[state];
   return (
-    <span className={`visibility visibility-${look(state)}`}>
+    <span
+      className={`visibility visibility-${look(state)}${opens ? " visibility-opens" : ""}`}
+    >
       <Icon aria-hidden="true" />
       {t(WORD[state])}
+      {opens && <ChevronDown aria-hidden="true" />}
     </span>
   );
 }

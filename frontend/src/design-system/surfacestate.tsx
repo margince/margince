@@ -306,13 +306,15 @@ export function SurfaceState({
       {state === "partial" && (
         <>
           {children}
-          <p className="surfacestate-empty surfacestate-info">
-            {detail?.remaining
-              ? t("state.partialCount", {
-                  count: formatNumber(detail.remaining, locale),
-                })
-              : t("state.partial")}
-          </p>
+          <div className="surfacestate-partial-foot">
+            <p className="surfacestate-empty surfacestate-info">
+              {detail?.remaining
+                ? t("state.partialCount", {
+                    count: formatNumber(detail.remaining, locale),
+                  })
+                : t("state.partial")}
+            </p>
+          </div>
         </>
       )}
     </>
