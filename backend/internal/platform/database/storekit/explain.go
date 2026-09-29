@@ -62,7 +62,15 @@ type explainLeaf struct {
 	verdict  string
 	value    string
 	hasValue bool
+	// references is the row-scoped record type the value names, when it
+	// names one; such a value is shown only if the reader may see that row.
+	references string
 }
+
+// referencedTables are the reference targets whose rows carry a row scope.
+// A value naming one of them is an id a record read withholds from a reader
+// who cannot open that row, so an explanation withholds it the same way.
+var referencedTables = map[Reference]string{RefCompany: "company", RefProject: "project"}
 
 // Explain evaluates the filter for one record the caller can see. A record
 // outside the caller's row scope, or absent, answers ErrNotFound.
@@ -100,7 +108,15 @@ func (q Query) Explain(ctx context.Context, tx pgx.Tx, p Predicate, recordID ids
 		where += " AND " + scope
 	}
 	sql := fmt.Sprintf("SELECT %s FROM %s t WHERE %s", strings.Join(selects, ", "), q.Table, where)
-	return scanExplanation(tx.QueryRow(ctx, sql, args...), root, leaves)
+	why, err := scanExplanation(tx.QueryRow(ctx, sql, args...), root, leaves)
+	if err != nil {
+		return Explanation{}, err
+	}
+	if err := withholdUnseenReferences(ctx, tx, leaves); err != nil {
+		return Explanation{}, err
+	}
+	why.Root = *root
+	return why, nil
 }
 
 // scanExplanation reads the one explained row into the tree and checks the
@@ -156,12 +172,12 @@ func (q Query) explainTree(ctx context.Context, p Predicate, arg func(any) int) 
 			return err
 		}
 		node.Field, node.Op, node.Operand = p.Field, p.Op, p.Value
-		leaf := explainLeaf{node: node, verdict: verdict}
+		leaf := explainLeaf{node: node, verdict: verdict, references: referencedTables[q.Fields[p.Field].References]}
 		field := q.Fields[p.Field]
 		if field.Withheld || field.Link != "" {
 			node.Hidden = true
 		} else {
-			value, masked, err := q.shownValue(ctx, p.Field, field, arg)
+			value, masked, err := q.shownValue(ctx, p.Field, field)
 			if err != nil {
 				return err
 			}
@@ -182,8 +198,15 @@ func (q Query) explainTree(ctx context.Context, p Predicate, arg func(any) int) 
 // mask of this reader's covers is not shown at all, rather than shown on the
 // rows the mask spares: a why that showed a value on some members and not
 // others would tell the reader which rows the mask spares.
-func (q Query) shownValue(ctx context.Context, name string, field Field, arg func(any) int) (string, bool, error) {
-	_, masked, err := auth.MaskExcludedClause(ctx, q.Table, name, "t", arg)
+func (q Query) shownValue(ctx context.Context, name string, field Field) (string, bool, error) {
+	// Only whether a mask covers the field is asked, so the clause is built
+	// against arguments of its own and thrown away with them: registering
+	// them in the statement would leave parameters no SQL names.
+	var discarded []any
+	_, masked, err := auth.MaskExcludedClause(ctx, q.Table, name, "t", func(v any) int {
+		discarded = append(discarded, v)
+		return len(discarded)
+	})
 	if err != nil {
 		return "", false, err
 	}
@@ -238,3 +261,25 @@ func or3(a, b *bool) *bool {
 func isTrue(b *bool) bool  { return b != nil && *b }
 func isFalse(b *bool) bool { return b != nil && !*b }
 func boolPtr(b bool) *bool { return &b }
+
+// withholdUnseenReferences hides each shown value that names a row the reader
+// may not open, as the record read would: the verdict stays, the id does not.
+func withholdUnseenReferences(ctx context.Context, tx pgx.Tx, leaves []explainLeaf) error {
+	for _, leaf := range leaves {
+		if leaf.references == "" || leaf.node.Value == nil {
+			continue
+		}
+		id, err := ids.Parse(*leaf.node.Value)
+		if err != nil {
+			return fmt.Errorf("explain: a %s reference is not an id: %w", leaf.references, err)
+		}
+		visible, err := auth.VisibleSubset(ctx, tx, leaf.references, []ids.UUID{id})
+		if err != nil {
+			return err
+		}
+		if !visible[id] {
+			leaf.node.Value, leaf.node.Hidden = nil, true
+		}
+	}
+	return nil
+}

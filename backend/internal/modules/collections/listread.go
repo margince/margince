@@ -258,14 +258,17 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 // of records this reader can see, keyset-paged newest first.
 func historySQL(ctx context.Context, list listRow, after *storekit.Cursor, limit int, arg func(any) int) (string, error) {
 	listPos := arg(list.ID)
-	scope, err := recordScope(ctx, list.EntityType, "e", arg)
-	if err != nil {
-		return "", err
-	}
-	visible := fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = ev.entity_id AND %s)",
-		pgx.Identifier{list.EntityType}.Sanitize(), scope)
-	if auth.Require(ctx, list.EntityType, principal.ActionRead) != nil {
-		visible = "FALSE"
+	// A reader refused the record type sees none of its membership changes.
+	// Decided before the scope is built, so its arguments are registered only
+	// when its SQL is used.
+	visible := "FALSE"
+	if auth.Require(ctx, list.EntityType, principal.ActionRead) == nil {
+		scope, err := recordScope(ctx, list.EntityType, "e", arg)
+		if err != nil {
+			return "", err
+		}
+		visible = fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = ev.entity_id AND %s)",
+			pgx.Identifier{list.EntityType}.Sanitize(), scope)
 	}
 	page := ""
 	if after != nil {

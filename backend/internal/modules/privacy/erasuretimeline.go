@@ -184,25 +184,28 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
-	// And the Shortlists they were chosen for, with the notes on why.
-	if err := deleteSubjectListMemberships(ctx, tx, contactID); err != nil {
-		return nil, err
-	}
 	return redacted, nil
 }
 
-// deleteSubjectListMemberships takes the subject off every Shortlist, as a
-// contact and as the lead they were promoted from, and deletes the history of
+// deleteSubjectListMemberships takes the subject off every Shortlist, as the
+// contact and as each lead the same act anonymized, and deletes the history of
 // those memberships. Each row says somebody chose the subject for a purpose,
-// and its note says why in a colleague's words. Erasure anonymizes the contact
-// in place, so no archive runs and nothing else removes them.
-func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID) error {
+// and its note says why in a colleague's words. The act anonymizes in place, so
+// no archive runs and nothing else removes them.
+//
+// The leads are the ones the caller's own anonymize answered (anonymizeLeadTwins
+// for erasure), not a second selection: a lead matched there by address or by
+// conversion and missed here would keep the subject on a Shortlist.
+func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID, leads []ids.UUID) error {
 	const subject = `(entity_type = 'contact' AND entity_id = $1)
-		OR (entity_type = 'lead' AND entity_id IN (SELECT id FROM lead WHERE promoted_contact_id = $1))`
-	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, contactID); err != nil {
+		OR (entity_type = 'lead' AND entity_id = ANY($2))`
+	if leads == nil {
+		leads = []ids.UUID{}
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, contactID, leads); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list history: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM list_member WHERE `+subject, contactID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM list_member WHERE `+subject, contactID, leads); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list memberships: %w", err)
 	}
 	return nil

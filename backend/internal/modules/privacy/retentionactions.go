@@ -317,7 +317,9 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 		err = deleteSubjectHandoffs(ctx, tx, id)
 	}
 	if err == nil {
-		err = deleteSubjectListMemberships(ctx, tx, id)
+		// The contact alone: this anonymize leaves the leads it came from as
+		// they are, so their Shortlists stay theirs.
+		err = deleteSubjectListMemberships(ctx, tx, id, nil)
 	}
 	if err == nil {
 		err = purgeSubjectPurchases(ctx, tx, id)

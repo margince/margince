@@ -130,6 +130,11 @@ func admitMemberChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, change
 	if err := admitShortlistChange(ctx, tx, listID, change.EntityType); err != nil {
 		return "", err
 	}
+	// Naming a record reads it: a caller refused the record type is answered
+	// as for a record they cannot see, so the refusal says nothing about it.
+	if auth.Require(ctx, change.EntityType, principal.ActionRead) != nil {
+		return "", apperrors.ErrNotFound
+	}
 	if err := auth.EnsureLinkTarget(ctx, tx, change.EntityType, change.EntityID); err != nil {
 		return "", err
 	}
