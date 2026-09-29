@@ -29,7 +29,7 @@ import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 type View = components["schemas"]["Contact360"];
 
 const meta: Meta = {
-  title: "Records/Contact record/Rail grants",
+  title: "Records/Contact 360/Rail grants",
   parameters: { layout: "padded" },
 };
 export default meta;

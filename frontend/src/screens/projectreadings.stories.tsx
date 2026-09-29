@@ -17,7 +17,7 @@ import { StoryProviders } from "./story-utils";
 // a project looks like, and the two would drift.
 
 const meta: Meta<typeof RollupsStrip> = {
-  title: "Records/Project/Readings",
+  title: "Records/Project 360/Readings",
   component: RollupsStrip,
   parameters: { layout: "padded" },
 };

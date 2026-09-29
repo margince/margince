@@ -53,7 +53,7 @@ const graph: ContactGraph = {
 };
 
 const meta: Meta = {
-  title: "Records/Contact network/Edge detail",
+  title: "Records/Contact 360/Network/Edge detail",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -141,7 +141,7 @@ function card(activities: readonly Activity[]) {
 }
 
 const meta: Meta<typeof ContactMemory> = {
-  title: "Records/Contact record/Conversation memory",
+  title: "Records/Contact 360/Conversation memory",
   component: ContactMemory,
   parameters: { layout: "padded" },
 };

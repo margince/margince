@@ -19,7 +19,7 @@ import { DealIdentityFacts } from "./dealheaderfacts";
 // only be answered by opening Edit.
 
 const meta: Meta = {
-  title: "Records/Deal 360",
+  title: "Records/Deal 360/Header facts",
   parameters: { layout: "padded" },
 };
 export default meta;

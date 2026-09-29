@@ -101,7 +101,7 @@ function Rows({
 }
 
 const meta: Meta = {
-  title: "Records/Company record/Fact row",
+  title: "Records/Company 360/Fact row",
   parameters: { layout: "padded" },
 };
 export default meta;

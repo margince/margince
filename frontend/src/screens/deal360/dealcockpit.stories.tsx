@@ -15,7 +15,7 @@ import { DealCockpit } from "./dealcockpit";
 type Deal = components["schemas"]["Deal"];
 
 const meta: Meta = {
-  title: "Records/Deal 360",
+  title: "Records/Deal 360/Cockpit",
   parameters: { layout: "padded" },
 };
 export default meta;

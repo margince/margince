@@ -215,7 +215,7 @@ function render(
 }
 
 const meta: Meta<typeof ContactNetworkTab> = {
-  title: "Records/Contact/NetworkTab",
+  title: "Records/Contact 360/Network/Network tab",
   component: ContactNetworkTab,
   parameters: { layout: "fullscreen" },
 };
@@ -475,7 +475,8 @@ export const NoRoute: Story = {
 // 744px wide and scrolls inside its own box — it must not push the page
 // sideways, which is what it did when it sat inside a half-width column.
 export const Narrow390: Story = {
-  parameters: { viewport: { defaultViewport: "mobile1" } },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
   render: () => render(graph()),
 };
 

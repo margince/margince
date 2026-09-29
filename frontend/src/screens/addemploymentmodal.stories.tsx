@@ -92,7 +92,7 @@ const openTheDialog = async ({
 };
 
 const meta: Meta = {
-  title: "Records/Contact record/Add employment",
+  title: "Records/Contact 360/Add employment",
 };
 export default meta;
 

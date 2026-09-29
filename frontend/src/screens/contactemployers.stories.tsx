@@ -54,7 +54,7 @@ const view: components["schemas"]["Contact360"] = {
   },
 };
 const meta: Meta<typeof Employers> = {
-  title: "Records/Contact record/Employment history",
+  title: "Records/Contact 360/Employment history",
   component: Employers,
   args: { view },
   decorators: [

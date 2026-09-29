@@ -43,7 +43,7 @@ import {
 // withheld reading rendered — that state exists only here.
 
 const meta: Meta = {
-  title: "Records/Contact record/Page",
+  title: "Records/Contact 360/Page",
   parameters: { layout: "padded" },
 };
 export default meta;

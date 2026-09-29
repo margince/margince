@@ -13,7 +13,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // and a silence on a running stack.
 
 const meta: Meta<typeof DealEmailAside> = {
-  title: "Records/Deal/Email box",
+  title: "Records/Deal 360/Email box",
   component: DealEmailAside,
   parameters: { layout: "padded" },
 };

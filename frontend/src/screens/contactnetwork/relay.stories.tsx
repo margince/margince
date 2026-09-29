@@ -49,7 +49,7 @@ function ask(over: Partial<IntroRequest> = {}): IntroRequest {
 }
 
 const meta: Meta<typeof RelayPanel> = {
-  title: "Records/Contact/Introduction relay",
+  title: "Records/Contact 360/Network/Introduction relay",
   component: RelayPanel,
   beforeEach: () => {
     // The owner line asks the session who the reader is, for the ask whose

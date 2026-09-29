@@ -57,7 +57,7 @@ function Served({
 }
 
 const meta: Meta<typeof ProjectHealth> = {
-  title: "Records/Project/Delivery health",
+  title: "Records/Project 360/Delivery health",
   component: ProjectHealth,
   parameters: { layout: "padded" },
 };

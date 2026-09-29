@@ -83,7 +83,7 @@ function ask(over: Partial<IntroRequest> = {}): IntroRequest {
 }
 
 const meta: Meta<typeof DecisionStrip> = {
-  title: "Records/Contact/Decision strip",
+  title: "Records/Contact 360/Network/Decision strip",
   component: DecisionStrip,
   parameters: { layout: "padded" },
   beforeEach: () => {

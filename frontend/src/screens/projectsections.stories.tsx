@@ -8,7 +8,7 @@ import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The project page's cards that carry a badge per row: a deal's status (won in
 // the success tone, anything else in the default) and a stakeholder's seat.
-// The whole page is `Records/Project/Screen`; this file draws the two cards on
+// The whole page is `Records/Project 360/Page`; this file draws the two cards on
 // their own so the rows can be read without the rest of the page around them.
 //
 // The 360 comes from `projects.fixtures.ts`, the one the project suites build
@@ -66,7 +66,7 @@ const VIEW = project360({
 });
 
 const meta: Meta = {
-  title: "Records/Project/Sections",
+  title: "Records/Project 360/Sections",
   parameters: { layout: "padded" },
 };
 export default meta;

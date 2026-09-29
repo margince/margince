@@ -78,7 +78,7 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
   };
 }
 
-const meta: Meta = { title: "Records/Deal next step" };
+const meta: Meta = { title: "Records/Deal 360/Next step" };
 export default meta;
 type Story = StoryObj;
 

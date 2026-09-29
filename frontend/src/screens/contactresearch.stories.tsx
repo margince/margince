@@ -10,7 +10,7 @@ import { StoryProviders } from "./story-utils";
 // the provider half withheld for lack of a grant.
 
 const meta: Meta<typeof ContactResearchTab> = {
-  title: "Records/Contact record/Research tab",
+  title: "Records/Contact 360/Research tab",
   component: ContactResearchTab,
   parameters: { layout: "padded" },
 };

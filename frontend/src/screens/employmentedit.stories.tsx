@@ -3,7 +3,7 @@ import { EmploymentEdit } from "./employmentedit";
 import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof EmploymentEdit> = {
-  title: "Records/Contact record/Employment correction",
+  title: "Records/Contact 360/Employment correction",
   component: EmploymentEdit,
   decorators: [
     (Story) => (

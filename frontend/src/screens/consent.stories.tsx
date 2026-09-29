@@ -84,7 +84,7 @@ function section(routes: RouteMap) {
 }
 
 const meta: Meta<typeof ConsentSection> = {
-  title: "Records/Consent section",
+  title: "Records/Contact 360/Consent section",
   component: ConsentSection,
 };
 export default meta;

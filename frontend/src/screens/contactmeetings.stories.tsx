@@ -17,7 +17,7 @@ const view: components["schemas"]["Contact360"] = {
 };
 
 const meta: Meta<typeof ContactMeetingsTab> = {
-  title: "Records/Contact record/Meetings",
+  title: "Records/Contact 360/Meetings",
   component: ContactMeetingsTab,
   decorators: [
     (Story) => {

@@ -41,7 +41,7 @@ const profile: Profile = {
 };
 
 const meta: Meta<typeof BoughtAttributes> = {
-  title: "Records/Contact record/Bought attributes",
+  title: "Records/Contact 360/Bought attributes",
   component: BoughtAttributes,
   decorators: [
     (Story) => (

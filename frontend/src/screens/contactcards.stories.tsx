@@ -85,7 +85,7 @@ function card(value: ContactBrief | undefined) {
 }
 
 const meta: Meta<typeof ContactBriefCard> = {
-  title: "Records/Contact relationship brief",
+  title: "Records/Contact 360/Relationship brief",
   component: ContactBriefCard,
   parameters: { layout: "padded" },
 };

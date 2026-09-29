@@ -18,7 +18,7 @@ import {
 // header band offers in every one of those states.
 
 const meta: Meta = {
-  title: "Records/Contact record/Files tab",
+  title: "Records/Contact 360/Files tab",
   parameters: { layout: "padded" },
 };
 export default meta;
