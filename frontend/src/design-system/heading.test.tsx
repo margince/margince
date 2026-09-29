@@ -4,15 +4,22 @@
 
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { rulesIn } from "../testing/css";
+import { extensionLayers, filesMatching } from "../../scripts/lib/source-tree";
+import { type CssRule, rulesIn, withoutComments } from "../testing/css";
 import { Heading, type HeadingSize } from "./heading";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sheet = readFileSync(join(here, "heading.css"), "utf8");
+const srcDir = join(here, "..");
+const sheets = filesMatching(srcDir, /\.css$/).concat(
+  extensionLayers(join(srcDir, "..", "..", "extensions")).flatMap((layer) =>
+    filesMatching(layer, /\.css$/),
+  ),
+);
 
 // The element a size means with no `as`. This is the spec, written out: the
 // component's table and this one are two statements of one rule on purpose,
@@ -38,49 +45,49 @@ function headingTokens(): string[] {
     .filter((name, index, all) => all.indexOf(name) === index);
 }
 
-// Split at top-level commas only, so `:where(.a, .b)` stays one selector.
-function selectorsIn(list: string): string[] {
-  const selectors: string[] = [];
+// Split at depth 0 only, so `:where(.a, .b)` and `[x="a b"]` stay whole.
+function splitTopLevel(text: string, separator: RegExp): string[] {
+  const parts: string[] = [];
   let depth = 0;
   let from = 0;
-  for (let i = 0; i < list.length; i++) {
-    if ("([".includes(list[i])) depth++;
-    else if (")]".includes(list[i])) depth--;
-    else if (list[i] === "," && depth === 0) {
-      selectors.push(list.slice(from, i));
+  for (let i = 0; i < text.length; i++) {
+    if ("([".includes(text[i])) depth++;
+    else if (")]".includes(text[i])) depth--;
+    else if (depth === 0 && separator.test(text[i])) {
+      parts.push(text.slice(from, i));
       from = i + 1;
     }
   }
-  selectors.push(list.slice(from));
-  return selectors.map((selector) => selector.trim()).filter(Boolean);
+  parts.push(text.slice(from));
+  return parts.map((part) => part.trim()).filter(Boolean);
 }
 
-function whollyWhere(selector: string): boolean {
-  if (!selector.startsWith(":where(") || !selector.endsWith(")")) return false;
-  let depth = 0;
-  for (const char of selector.slice(":where(".length, -1)) {
-    if (char === "(") depth++;
-    if (char === ")") depth--;
-    if (depth < 0) return false;
-  }
-  return depth === 0;
+// `&` stands for the parent; a nested selector without one is its descendant.
+function resolvedSelectors(rule: CssRule): string[] {
+  return [...rule.parents, rule.selector].reduce<string[]>(
+    (outer, list) =>
+      splitTopLevel(list, /,/).flatMap((inner) =>
+        outer.length === 0
+          ? [inner]
+          : outer.map((parent) =>
+              inner.includes("&")
+                ? inner.replaceAll("&", parent)
+                : `${parent} ${inner}`,
+            ),
+      ),
+    [],
+  );
 }
 
-type MarginDeclaration = {
-  selector: string;
-  parents: string[];
-  value: string;
-  line: number;
-};
+type MarginDeclaration = { selector: string; value: string; line: number };
 
 function marginDeclarations(css: string): MarginDeclaration[] {
   return rulesIn(css).flatMap((rule) =>
     [
-      ...rule.body.matchAll(/(?:^|[;{])\s*margin[a-z-]*\s*:\s*([^;]+)/g),
+      ...rule.body.matchAll(/(?:^|[;{])\s*margin[a-z-]*\s*:\s*([^;]+)/gi),
     ].flatMap(([, value]) =>
-      selectorsIn(rule.selector).map((selector) => ({
+      resolvedSelectors(rule).map((selector) => ({
         selector,
-        parents: rule.parents,
         value: value.trim(),
         line: rule.line,
       })),
@@ -88,17 +95,19 @@ function marginDeclarations(css: string): MarginDeclaration[] {
   );
 }
 
-function weightedMargins(css: string): string[] {
+// A margin whose subject's only class is `.heading` races every caller's rule.
+function weightedHeadingMargins(css: string): string[] {
   return marginDeclarations(css)
-    .filter(({ selector, parents }) =>
-      [selector, ...parents.flatMap(selectorsIn)].some(
-        (one) => !whollyWhere(one),
-      ),
-    )
-    .map(
-      ({ selector, parents, line }) =>
-        `${[...parents, selector].join(" ")} (heading.css:${line})`,
-    );
+    .filter(({ selector }) => {
+      const subject = splitTopLevel(selector, /[\s>+~]/).at(-1) ?? "";
+      const classes = new Set(
+        subject
+          .replaceAll(/:[\w-]+\((?:[^()]|\([^()]*\))*\)|\[[^\]]*\]/g, "")
+          .match(/\.[\w-]+/g),
+      );
+      return classes.size === 1 && classes.has(".heading");
+    })
+    .map(({ selector, line }) => `${selector} (line ${line})`);
 }
 
 function elementOf(size: HeadingSize): string {
@@ -168,41 +177,55 @@ describe("Heading", () => {
     expect(seen[0]).toHaveAttribute("tabindex", "-1");
   });
 
-  // A heading that brought its own margin would be a second opinion about the
-  // gap above it, and the parent already has one. Zero is allowed because zero
-  // is how the UA's own heading margin is refused.
-  it("declares no margin of its own but the reset", () => {
-    for (const { selector, value, line } of marginDeclarations(sheet)) {
-      expect(value, `${selector} (heading.css:${line})`).toBe("0");
-    }
+  // Zero, because zero is how the UA's own heading margin is refused.
+  it("keeps the reset weightless, so a caller's rule sets the margin", () => {
+    expect(
+      withoutComments(sheet),
+      "an at-rule in heading.css hides a rule from this census",
+    ).not.toMatch(/@(media|supports|layer|scope|container)\b/i);
+    expect(marginDeclarations(sheet)).toEqual([
+      { selector: ":where(.heading)", value: "0", line: expect.any(Number) },
+    ]);
   });
 
-  it("keeps the reset weightless, so a caller's rule sets the margin", () => {
-    const weighted = weightedMargins(sheet);
-    expect(weighted, `not wrapped in :where(): ${weighted.join(", ")}`).toEqual(
+  it("leaves every heading's margin to its caller, in every sheet", () => {
+    expect(
+      sheets.length,
+      "the stylesheet walk came back small",
+    ).toBeGreaterThan(100);
+    expect(sheets).toContain(join(here, "heading.css"));
+    const found = sheets.flatMap((file) =>
+      weightedHeadingMargins(readFileSync(file, "utf8")).map(
+        (hit) => `${relative(srcDir, file)}: ${hit}`,
+      ),
+    );
+    expect(
+      found,
+      `a margin on .heading at class weight: ${found.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("tells a margin on a bare heading from a caller's own", () => {
+    expect(weightedHeadingMargins(".heading { margin: 0 }")).toEqual([
+      ".heading (line 1)",
+    ]);
+    expect(
+      weightedHeadingMargins(
+        '.panel h2.heading[data-size="large"] { MARGIN-BOTTOM: 4px }',
+      ),
+    ).toEqual(['.panel h2.heading[data-size="large"] (line 1)']);
+    expect(weightedHeadingMargins(".panel { .heading { margin: 0 } }")).toEqual(
+      [".panel .heading (line 1)"],
+    );
+    expect(
+      weightedHeadingMargins(":where(.lead), .heading { margin: 0 }"),
+    ).toEqual([".heading (line 1)"]);
+    expect(weightedHeadingMargins(":where(.heading) { margin: 0 }")).toEqual(
       [],
     );
-    expect(marginDeclarations(sheet)).toEqual([
-      {
-        selector: ":where(.heading)",
-        parents: [],
-        value: "0",
-        line: expect.any(Number),
-      },
-    ]);
-  });
-
-  it("tells a weighted margin from a weightless one", () => {
-    expect(weightedMargins(".heading { margin: 0 }")).toEqual([
-      ".heading (heading.css:1)",
-    ]);
     expect(
-      weightedMargins(":where(.heading, .lead), .heading-lead { margin: 0 }"),
-    ).toEqual([".heading-lead (heading.css:1)"]);
-    expect(
-      weightedMargins(".panel { :where(.heading) { margin: 0 } }"),
-    ).toEqual([".panel :where(.heading) (heading.css:1)"]);
-    expect(weightedMargins(":where(.heading) { margin: 0 }")).toEqual([]);
+      weightedHeadingMargins(".heading.modal-title { margin-bottom: 4px }"),
+    ).toEqual([]);
   });
 
   it("reads each size's type straight from its token", () => {
