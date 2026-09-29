@@ -253,7 +253,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 	s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
 	// The price refresh reads the same bindings and the same broker list, so
 	// its 15-minute cache is the picker's too.
-	s.voiceHandlers = s.voiceHandlers.WithCatalogueRefresh(routing, catalogue)
+	s.voiceHandlers = s.WithCatalogueRefresh(routing, catalogue)
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
