@@ -1086,6 +1086,18 @@ export const de = {
   "offline.body": "Margince lädt wieder, sobald die Verbindung zurück ist.",
   "offline.retry": "Erneut versuchen",
 
+  "connectivity.offline.title": "Gerät offline",
+  "connectivity.offline.body":
+    "Änderungen lassen sich erst speichern, wenn die Verbindung zurück ist.",
+  "connectivity.unreachable.title": "Margince nicht erreichbar",
+  "connectivity.unreachable.body":
+    "Änderungen lassen sich erst speichern, wenn der Server wieder antwortet.",
+  "connectivity.restored": "Verbindung wiederhergestellt",
+  "connectivity.unsaved.offline":
+    "Dieses Gerät ist offline, daher wurde nichts gespeichert. Versuche es erneut, sobald die Verbindung zurück ist.",
+  "connectivity.unsaved.unreachable":
+    "Margince war nicht erreichbar, daher wurde nichts gespeichert. Versuche es erneut, sobald die Verbindung zurück ist.",
+
   // Das neunteilige Zustandsvokabular (design-system/surfacestate.tsx):
   // gehört dem ZUSTAND, nicht einer einzelnen Fläche.
   "state.withheld": "Für deine Rolle ausgeblendet",

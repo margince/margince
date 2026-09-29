@@ -375,9 +375,8 @@ describe("a build that fails", () => {
   }
 
   it("shows the shared line and never our own internals", async () => {
-    stubBuild(() => {
-      throw new TypeError("Cannot read properties of undefined");
-    });
+    // The server answers, and the card's own reading of the answer breaks.
+    stubBuild(() => jsonResponse(null));
 
     await pressRebuild();
 

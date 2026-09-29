@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -10,9 +12,17 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  ConnectivityError,
+  connectivityNow,
+  reportReached,
+} from "../app/connectivity";
+import { meFixture } from "../app/mefixture";
+import { createQueryClient } from "../app/queryclient";
 import { STORAGE_KEYS } from "../app/storage";
 import { LocaleProvider, translate } from "../i18n";
 import {
+  AuthProbeError,
   isConsentNotGranted,
   logUnexpectedError,
   ProblemError,
@@ -25,6 +35,7 @@ import {
   QueryStates,
   resetToSignedOut,
   throwProblem,
+  useMe,
 } from "./common";
 import { CreateAction } from "./create";
 
@@ -523,6 +534,47 @@ describe("problemMessageOf", () => {
   });
 });
 
+describe("problemMessageOf, for a request that never reached Margince", () => {
+  const refused = (outage: "offline" | "unreachable", method: string) =>
+    new ConnectivityError(
+      outage,
+      new Request("https://test.local/v1/notes", { method }),
+      new TypeError("Failed to fetch"),
+    );
+
+  it("says a write was not saved, and which outage stopped it", () => {
+    expect(problemMessageOf(refused("offline", "POST"), t)).toBe(
+      t("connectivity.unsaved.offline"),
+    );
+    expect(problemMessageOf(refused("unreachable", "PATCH"), t)).toBe(
+      t("connectivity.unsaved.unreachable"),
+    );
+  });
+
+  it("names the outage over a surface's own copy, which cannot know it", () => {
+    expect(
+      problemMessageOf(
+        refused("unreachable", "DELETE"),
+        t,
+        t("connectors.loadFailed"),
+      ),
+    ).toBe(t("connectivity.unsaved.unreachable"));
+  });
+
+  it("leaves a read on the ordinary line: it saved nothing and runs again", () => {
+    expect(problemMessageOf(refused("offline", "GET"), t)).toBe(
+      t("common.errorNoCause"),
+    );
+    expect(
+      problemMessageOf(
+        refused("offline", "GET"),
+        t,
+        t("connectors.loadFailed"),
+      ),
+    ).toBe(t("connectors.loadFailed"));
+  });
+});
+
 // The other half of that rule. Deciding a failure is not fit to show is only
 // honest if the failure still exists somewhere an operator can read.
 describe("logUnexpectedError", () => {
@@ -670,5 +722,43 @@ describe("signing out", () => {
     expect(sessionStorage.getItem(STORAGE_KEYS.oauthAttempt.name)).toBeNull();
     expect(localStorage.getItem(STORAGE_KEYS.theme.name)).toBe("dark");
     expect(localStorage.getItem(declined)).toBe("1");
+  });
+});
+
+// A first session read that could not reach Margince draws the connection
+// screen; the reader must not have to reload once Margince answers again.
+describe("the session probe after Margince could not be reached", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reads the session again by itself once Margince answers", async () => {
+    let reachable = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        if (!reachable) throw new TypeError("Failed to fetch");
+        return new Response(JSON.stringify(meFixture({})), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    const client = createQueryClient();
+    const { result } = renderHook(() => useMe(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+    await waitFor(() =>
+      expect(result.current.error).toBeInstanceOf(AuthProbeError),
+    );
+    expect(result.current.error).toMatchObject({ kind: "connection" });
+    expect(connectivityNow()).toBe("unreachable");
+
+    // What the health probe does when Margince answers it.
+    reachable = true;
+    act(reportReached);
+
+    await waitFor(() => expect(result.current.data?.user).toBeDefined());
   });
 });

@@ -127,7 +127,29 @@ of:
 
 ## Connectivity
 
-Filled in by the connectivity and install work in this change.
+`frontend/src/app/connectivity.ts` holds one of three states, and the shell's
+banner (`app/connectivitybanner.tsx`) says which outage holds:
+
+- **offline**: the browser reports no network (`navigator.onLine` and the
+  `online`/`offline` events).
+- **unreachable**: the device is online, and a request to the api rejected at
+  the network level, outlived its client deadline, or got a bare 502, 503 or
+  504: a proxy (nginx, the Vite proxy, the desktop launcher) saying the api is
+  down, since the api writes every 5xx of its own as a problem body. None counts
+  on a model route, where a long wait is the work. Any api answer clears it.
+- **online**: neither.
+
+While Margince is unreachable the store probes `/healthz`: after 2 seconds, then
+doubling to a 30-second ceiling, never while the tab is hidden, and at once when
+the tab or the network comes back. Only a 2xx clears it.
+
+React Query's `onlineManager` follows the store, so reads pause while either
+outage holds and refetch when it clears, the session probe included. Writes
+never wait (`networkMode: "always"`): one held for later would land after the
+reader moved on. A refused write fails at once, and `problemMessageOf` says it
+was not saved and names the outage; a proxy's 5xx keeps the shared line, since
+the api may have acted first. The failure sinks leave a refused request out of
+the console, where the banner has already said it once.
 
 ## Install on this device
 

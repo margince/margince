@@ -1,5 +1,10 @@
 import type { paths } from "@composition/schema";
 import createClient from "openapi-fetch";
+import {
+  ConnectivityError,
+  reportReached,
+  reportUnreached,
+} from "../app/connectivity";
 import { readStored, STORAGE_KEYS } from "../app/storage";
 import { beginModelCall, endModelCall } from "./model-inflight";
 
@@ -99,6 +104,25 @@ export class RequestTimeoutError extends Error {
   }
 }
 
+// A request the caller abandoned says nothing about the connection. One the
+// deadline ended does, unless a model was still working on it.
+function reportFailure(
+  failure: unknown,
+  request: Request,
+  deadline: AbortSignal,
+): unknown {
+  if (request.signal.aborted) {
+    return failure;
+  }
+  if (!deadline.aborted) {
+    return new ConnectivityError(reportUnreached(), request, failure);
+  }
+  if (modelWaitOf(request) === null) {
+    reportUnreached();
+  }
+  return failure;
+}
+
 // A deadline on every request through this seam, because a request that opens
 // and never answers is indistinguishable, to everything above, from one still
 // arriving: `isPending` stays true, no error state is ever reached, and the
@@ -140,10 +164,13 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
     );
   }, timeoutMs);
   try {
-    return withGatewayProblem(
-      await globalThis.fetch(request, { signal: deadline.signal }),
-      request,
-    );
+    const response = await globalThis.fetch(request, {
+      signal: deadline.signal,
+    });
+    reportAnswer(response, request);
+    return withGatewayProblem(response, request);
+  } catch (failure) {
+    throw reportFailure(failure, request, deadline.signal);
   } finally {
     // Whatever the outcome. A cleared timer is what keeps a settled request
     // from holding the page awake, and — on a request that failed for its own
@@ -155,6 +182,21 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
 // The statuses a PROXY answers with when it gave up on the app behind it,
 // rather than the app refusing something.
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
+
+function carriesProblem(response: Response): boolean {
+  const contentType = response.headers.get("Content-Type") ?? "";
+  return contentType.includes("application/problem+json");
+}
+
+// The api writes every 5xx of its own as a problem body, so a bare gateway
+// status is a proxy reporting it gone; on a model route it only stopped waiting.
+function reportAnswer(response: Response, request: Request): void {
+  if (!GATEWAY_STATUSES.has(response.status) || carriesProblem(response)) {
+    reportReached();
+  } else if (modelWaitOf(request) === null) {
+    reportUnreached();
+  }
+}
 
 // The routes whose handler calls a model and waits, and whether they do so on
 // every call.
@@ -271,11 +313,11 @@ const MODEL_ROUTE_MATCHERS: readonly (readonly [
  * passes through untouched — the server's own sentence is always better.
  */
 function withGatewayProblem(response: Response, request: Request): Response {
-  if (!GATEWAY_STATUSES.has(response.status) || modelWaitOf(request) === null) {
-    return response;
-  }
-  const contentType = response.headers.get("Content-Type") ?? "";
-  if (contentType.includes("application/problem+json")) {
+  if (
+    !GATEWAY_STATUSES.has(response.status) ||
+    modelWaitOf(request) === null ||
+    carriesProblem(response)
+  ) {
     return response;
   }
   return new Response(

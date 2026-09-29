@@ -1,7 +1,16 @@
-import { MutationObserver, type QueryClient } from "@tanstack/react-query";
+import {
+  MutationObserver,
+  onlineManager,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
+import {
+  ConnectivityError,
+  reportReached,
+  reportUnreached,
+} from "./connectivity";
 import {
   createQueryClient,
   liveInterval,
@@ -266,5 +275,88 @@ describe("who can see a record", () => {
     }).mutate();
 
     expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  });
+});
+
+// Reads wait out an outage and run again when it clears; a write is attempted
+// at once, so its failure is on screen now rather than its success later.
+describe("while Margince cannot be reached", () => {
+  afterEach(() => {
+    reportReached();
+    vi.useRealTimers();
+  });
+
+  it("tells the data layer about the server, not only about the device", () => {
+    vi.useFakeTimers();
+    createQueryClient();
+    reportUnreached();
+    expect(onlineManager.isOnline()).toBe(false);
+    reportReached();
+    expect(onlineManager.isOnline()).toBe(true);
+  });
+
+  it("holds a read until Margince answers, then runs it", async () => {
+    vi.useFakeTimers();
+    const client = createQueryClient();
+    client.mount();
+    const read = vi.fn(async () => "fresh");
+    reportUnreached();
+
+    const answer = client.fetchQuery({
+      queryKey: ["outage-read"],
+      queryFn: read,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.getQueryState(["outage-read"])?.fetchStatus).toBe("paused");
+    expect(read).not.toHaveBeenCalled();
+
+    reportReached();
+    await expect(answer).resolves.toBe("fresh");
+    client.unmount();
+  });
+
+  it("attempts a write at once and lets it fail, rather than holding it for later", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    expect(client.getDefaultOptions().mutations?.networkMode).toBe("always");
+    reportUnreached();
+
+    const observer = new MutationObserver(client, {
+      mutationFn: () => Promise.reject(new Error("not reached")),
+    });
+    const attempt = observer.mutate();
+    expect(observer.getCurrentResult().isPaused).toBe(false);
+    await expect(attempt).rejects.toThrow("not reached");
+  });
+});
+
+// The banner states an outage once; a console line per refused request would
+// bury the failures an operator actually opens the console for.
+describe("the failure sinks during an outage", () => {
+  const refused = (method: string) =>
+    new ConnectivityError(
+      "unreachable",
+      new Request("http://localhost/v1/contacts", { method }),
+      new TypeError("Failed to fetch"),
+    );
+
+  it("report neither a read nor a write the network refused", async () => {
+    const reported = vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+
+    await expect(
+      client.fetchQuery({
+        queryKey: ["outage-sink"],
+        queryFn: () => Promise.reject(refused("GET")),
+      }),
+    ).rejects.toBeInstanceOf(ConnectivityError);
+    await expect(
+      new MutationObserver(client, {
+        mutationFn: () => Promise.reject(refused("PATCH")),
+      }).mutate(),
+    ).rejects.toBeInstanceOf(ConnectivityError);
+
+    expect(reported).not.toHaveBeenCalled();
   });
 });

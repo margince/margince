@@ -1109,6 +1109,20 @@ export const en = {
   "offline.body": "Margince will load again once the connection is back.",
   "offline.retry": "Retry",
 
+  // The shell's connectivity banner and the failure a refused write shows
+  // (app/connectivitybanner.tsx, app/connectivity.ts).
+  "connectivity.offline.title": "Device offline",
+  "connectivity.offline.body":
+    "Changes cannot be saved until the connection returns.",
+  "connectivity.unreachable.title": "Margince unreachable",
+  "connectivity.unreachable.body":
+    "Changes cannot be saved until the server answers again.",
+  "connectivity.restored": "Connection restored",
+  "connectivity.unsaved.offline":
+    "This device is offline, so nothing was saved. Retry when the connection returns.",
+  "connectivity.unsaved.unreachable":
+    "Margince could not be reached, so nothing was saved. Retry when the connection returns.",
+
   // The nine-state honesty vocabulary (design-system/surfacestate.tsx). These
   // words belong to the STATE and to no particular surface, which is why they
   // are keyed `state.*` rather than under any one screen — the same sentence

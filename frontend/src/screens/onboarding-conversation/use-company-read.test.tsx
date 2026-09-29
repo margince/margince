@@ -99,11 +99,18 @@ describe("safeStartError", () => {
   });
 
   it("never surfaces a raw exception when the request itself fails, and reports it exactly once", async () => {
+    const crash = new TypeError("Body stream was interrupted");
+    // The answer arrives and its body cannot be read: past the network, so it
+    // is a fault to report rather than an outage the banner already states.
+    const answer = new Response("{}", {
+      headers: { "Content-Type": "application/json" },
+    });
+    Object.defineProperty(answer, "text", {
+      value: () => Promise.reject(crash),
+    });
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
-        throw new TypeError("Failed to fetch");
-      }),
+      vi.fn(async () => answer),
     );
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = renderRead();
@@ -113,7 +120,7 @@ describe("safeStartError", () => {
     });
 
     await waitFor(() => expect(result.current.startRead.isError).toBe(true));
-    // The reader gets nothing to fill {detail} with — never "Failed to fetch".
+    // The reader gets nothing to fill {detail} with — never the raw message.
     expect(safeStartError(result.current.startRead.error, t)).toBe("");
     // ONE failure, ONE report, from the client's own sink. Reading the error
     // back is something the gate and the thread do on every render for as
@@ -121,6 +128,6 @@ describe("safeStartError", () => {
     // failure again for each of them.
     expect(safeStartError(result.current.startRead.error, t)).toBe("");
     expect(errorLog).toHaveBeenCalledTimes(1);
-    expect(errorLog).toHaveBeenCalledWith(result.current.startRead.error);
+    expect(errorLog).toHaveBeenCalledWith(crash);
   });
 });

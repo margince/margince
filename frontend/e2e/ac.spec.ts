@@ -2251,6 +2251,23 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expect(said).toBeHidden();
   });
 
+  // The connectivity banner stands above whatever page the reader is on, so it
+  // is swept where it lands first. Axe needs no network, so offline is safe.
+  test("no AA violations with the offline banner up", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await context.setOffline(true);
+    await expect(
+      page.getByText(de["connectivity.offline.title"]),
+    ).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "home (offline banner)");
+  });
+
   // The lead record (#/leads/<id>), for the same reason and on the same terms
   // as the company one above: an id-bearing route CORE_SCREENS does not name.
   // Unlike that one the harness answers this read properly, so the sweep

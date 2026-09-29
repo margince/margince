@@ -1071,6 +1071,18 @@ export const vi = {
   "offline.body": "Margince sẽ tải lại khi có kết nối trở lại.",
   "offline.retry": "Thử lại",
 
+  "connectivity.offline.title": "Thiết bị đang ngoại tuyến",
+  "connectivity.offline.body":
+    "Chưa thể lưu thay đổi cho đến khi có kết nối trở lại.",
+  "connectivity.unreachable.title": "Không kết nối được tới Margince",
+  "connectivity.unreachable.body":
+    "Chưa thể lưu thay đổi cho đến khi máy chủ phản hồi trở lại.",
+  "connectivity.restored": "Đã kết nối lại",
+  "connectivity.unsaved.offline":
+    "Thiết bị đang ngoại tuyến nên chưa lưu được gì. Hãy thử lại khi có kết nối trở lại.",
+  "connectivity.unsaved.unreachable":
+    "Không kết nối được tới Margince nên chưa lưu được gì. Hãy thử lại khi có kết nối trở lại.",
+
   "state.withheld": "Đã ẩn — vai trò của bạn không đọc được phần này",
   "state.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
   "state.failed": "Phần này không tải được.",

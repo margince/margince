@@ -20,6 +20,7 @@ import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
 import { BetaBadge } from "./betabadge";
 import { CaptureChip } from "./capture-chip";
+import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
 import { SCREEN_ENTITY } from "./entity";
@@ -944,15 +945,14 @@ export function Shell({
               onOpenSearch={onOpenSearch}
             />
           )}
-          {/* Public, onboarding, and preference routes are intentionally
-            railless; these advisories belong only here. */}
+          {/* These advisories stand in the railed shell only. */}
+          <ConnectivityBanner />
           <EconomyBanner />
           <EmbedReindexBanner />
           <LicenseBanner />
-          {/* The import's gauge, floating bottom-centre of this column for as
-            long as mail is arriving. Inside `.main` rather than beside the
-            edge below, because it is positioned against the content column
-            and not the window. */}
+          {/* The import's gauge, bottom-centre of this column while mail is
+            arriving: inside `.main`, not beside the edge below, because it is
+            positioned against the content column and not the window. */}
           <CaptureChip linked />
           {/* Focusable only as the skip link's destination — never a tab stop of
             its own, which is what tabIndex -1 buys. A reader who takes the skip

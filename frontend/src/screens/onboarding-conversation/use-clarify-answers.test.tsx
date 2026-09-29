@@ -656,11 +656,15 @@ describe("useClarifyAnswers — honest failures", () => {
 
   it("never surfaces a raw exception message when something unexpected breaks the round trip, and reports it exactly once", async () => {
     const crash = new TypeError("Cannot read properties of undefined");
+    // The answer arrives and its body cannot be read: past the network, so it
+    // is a fault to report rather than an outage the banner already states.
+    const answer = jsonResponse({});
+    Object.defineProperty(answer, "text", {
+      value: () => Promise.reject(crash),
+    });
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
-        throw crash;
-      }),
+      vi.fn(async () => answer),
     );
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
     const { result } = setupHook([]);

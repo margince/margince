@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ConnectivityError, unsavedWriteKey } from "../app/connectivity";
 import { forgetSeat } from "../app/storage";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -645,26 +646,25 @@ export function problemCodeOf(error: unknown): string | null {
 // The ONE way a caught failure becomes words on a screen, on the same terms as
 // problemCodeOf: only a ProblemError carries a server problem, and its RFC-7807
 // detail is a cause the server composed for a reader. Everything else — a
-// rejected fetch, a bug in a handler, a thrown string — reports in wording
-// nobody wrote for a user, and often names our own internals, so it never
-// reaches the screen: the reader gets the shared failure line instead.
+// rejected fetch, a bug, a thrown string — is in wording nobody wrote for a
+// reader, often our own internals, so it reads as the shared failure line.
 //
-// A ProblemError whose body carried no detail or title is in the same
-// position: a 502 from a proxy, or a refusal the server answered with no body
-// at all, is a failure nobody phrased for a reader. It reads as the shared
-// line too rather than as the developer placeholder problemMessage falls back
-// to. A body that DOES carry text always keeps it — the server's own words
-// can never be replaced from here.
+// A ProblemError whose body carried no detail or title is in the same position:
+// a proxy's 502, or a refusal sent with no body, is a failure nobody phrased
+// for a reader, so it reads as the shared line rather than as problemMessage's
+// developer placeholder. A body that DOES carry text always keeps it.
 //
-// A surface with better words for its own failure passes them as `fallback`:
-// the connector card saying it could not read the connectors beats the generic
-// line there. That is catalog copy the caller has already translated, which is
-// the only other thing allowed through here.
+// A surface with better words for its own failure passes them as `fallback`,
+// catalog copy it has already translated: the connector card saying it could
+// not read the connectors beats the generic line. A write the network refused
+// beats both, because it can say the change was not saved and why.
 export function problemMessageOf(
   error: unknown,
   t: (key: MessageKey) => string,
   fallback?: string,
 ): string {
+  const unsaved = unsavedWriteKey(error);
+  if (unsaved !== null) return t(unsaved);
   const detail =
     error instanceof ProblemError ? problemDetail(error.problem, t) : null;
   return detail ?? fallback ?? t("common.errorNoCause");
@@ -673,8 +673,7 @@ export function problemMessageOf(
 // The counterpart of that rule: the ONE place a failure the reader is NOT
 // shown reaches the console, so a production report of generic copy is still
 // diagnosable. A ProblemError is skipped — its detail is already on the screen
-// in the reader's own words, and logging it would report one failure twice
-// while adding nothing.
+// in the reader's own words — and so is an outage, which the banner states.
 //
 // Wired ONCE, as the client's mutation-cache sink (app/queryclient.ts,
 // FE-PARAM-4), never per mutation and never as a render-time call or an effect
@@ -685,7 +684,7 @@ export function problemMessageOf(
 // including the one where the reader leaves mid-flight and the component that
 // would have hosted an effect is already unmounted when the request settles.
 export function logUnexpectedError(error: unknown): void {
-  if (!(error instanceof ProblemError)) {
+  if (!(error instanceof ProblemError || error instanceof ConnectivityError)) {
     console.error(error);
   }
 }
