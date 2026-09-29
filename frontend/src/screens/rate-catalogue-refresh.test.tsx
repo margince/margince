@@ -49,7 +49,7 @@ const REPORT = {
 
 // Returns the fetch mock so a test can read exactly what the click sent.
 function mount(respond: () => Response) {
-  const fetchMock = vi.fn(async () => respond());
+  const fetchMock = vi.fn(async (_request: Request) => respond());
   vi.stubGlobal("fetch", fetchMock);
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidate = vi.spyOn(qc, "invalidateQueries");
@@ -87,9 +87,11 @@ describe("RefreshModelPrices", () => {
     expect(within(lines[1]).queryByText(/prices? written/)).toBeNull();
     expect(within(lines[2]).getByText("Unreachable")).toBeTruthy();
 
-    const request = fetchMock.mock.calls[0]?.[0] as Request;
-    expect(request.method).toBe("POST");
-    expect(new URL(request.url).pathname).toBe("/v1/ai-model-rates/refresh");
+    const request = fetchMock.mock.calls[0]?.[0];
+    expect(request?.method).toBe("POST");
+    expect(new URL(request?.url ?? "").pathname).toBe(
+      "/v1/ai-model-rates/refresh",
+    );
   });
 
   it("refreshes the lane prices once the sheet is written", async () => {
