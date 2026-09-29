@@ -51,7 +51,8 @@ const (
 
 // magicKeyPrefixes are the families the receipt sends: what happened, what it
 // means, why the machinery did it, and who it was. A key outside them
-// is ordinary screen copy, which the orphan gate in i18n.test.ts already holds.
+// is ordinary screen copy, which the orphan gate in orphan-keys.test.ts already
+// holds.
 var magicKeyPrefixes = []string{"magic.action.", "magic.consequence.", "magic.why.", "magic.by."}
 
 // magicKeyLiteral matches a quoted key in TypeScript. Both families in one
