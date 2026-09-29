@@ -151,6 +151,7 @@ jobs:
       - name: Census the test cache's inputs
         id: census
         if: ${{ !cancelled() }}
+        working-directory: .
         env:
           TESTLOG_DIR: ${{ runner.temp }}/testlogs
         run: |
