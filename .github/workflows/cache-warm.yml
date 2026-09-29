@@ -141,12 +141,30 @@ jobs:
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
         run: make check-backend
+      # The entry about to be saved replays test results, and a replay is only
+      # honest if the cache can see every input the test read. Go never rechecks
+      # a file outside the test's module, so each such read must go through its
+      # tree digest (gatekit.DeclareInputs). This reruns the cached pass with
+      # Go's test log on and judges what every package really read. A failing
+      # test does not decide it; only an undeclared read withholds the entry,
+      # leaving readers on the last one that was honest.
+      - name: Census the test cache's inputs
+        id: census
+        if: ${{ !cancelled() }}
+        env:
+          TESTLOG_DIR: ${{ runner.temp }}/testlogs
+        run: |
+          make -C backend -k test-cached test-extensions TEST_EXEC="$GITHUB_WORKSPACE/scripts/testlog-exec.sh" ||
+            echo "::warning::a test failed under the census; its inputs are judged all the same"
+          scripts/ci-stable-mtimes.sh --names > "$RUNNER_TEMP/tree-digest-names.tsv"
+          (cd backend && GOWORK="$GITHUB_WORKSPACE/go.work" go run ./tools/check-test-inputs \
+            -logs "$TESTLOG_DIR" -names "$RUNNER_TEMP/tree-digest-names.tsv")
       # !cancelled() rather than success(): a red gate still compiled the tree,
       # and those artifacts are exactly as reusable as a green run's. This
       # workflow is not a verdict, so a failure here must still leave the cache
-      # better than it found it.
+      # better than it found it — unless the census found a replay it cannot trust.
       - name: Refresh the shared build cache
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.census.outcome == 'success' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/go-build

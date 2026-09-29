@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -152,6 +153,31 @@ func TestEveryCachedTestFileThatShellsOutForTheTreeDeclaresItsInputs(t *testing.
 	if shelling < 3 {
 		t.Fatalf("found %d test files running git or go, and this tree has at least three — the "+
 			"recognizer has stopped seeing the calls it exists to judge", shelling)
+	}
+}
+
+// The script exports a digest under the name it derives and the test reads the
+// name gatekit derives; one differing character and the test reads an unset
+// variable, keying the cache on nothing while the census reports it declared.
+func TestTheScriptAndGatekitNameEveryTreeDigestAlike(t *testing.T) {
+	t.Parallel()
+	out, err := exec.Command("bash", filepath.Join(repoRoot, "scripts", "ci-stable-mtimes.sh"), "--names").Output()
+	if err != nil {
+		t.Fatalf("asking scripts/ci-stable-mtimes.sh for its digest names: %v", err)
+	}
+	named := 0
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		top, name, found := strings.Cut(line, "\t")
+		if !found {
+			t.Fatalf("scripts/ci-stable-mtimes.sh --names printed %q, not an entry and its variable", line)
+		}
+		if want := gatekit.TreeDigestVar(top); name != want {
+			t.Errorf("the script exports %s's digest as %s and gatekit.TreeDigestVar reads %s", top, name, want)
+		}
+		named++
+	}
+	if named < 10 {
+		t.Fatalf("the script named %d top-level entries, too few to be this repository", named)
 	}
 }
 

@@ -440,6 +440,26 @@ unit packages replayed before this and all 163 after. `./gates` and the ai
 module still run uncached on purpose — `UNCACHED_TEST_PKGS` in
 `backend/Makefile` says why.
 
+Two kinds of input stay invisible to that check, and each is declared through
+`gatekit.DeclareInputs`:
+
+- **Files outside the test's module.** Go never rechecks them at all — not
+  `docs/`, `config/`, `frontend/`, nor, for the `backend/tools` module,
+  `backend/` itself. The script exports one digest per top-level entry as
+  `TREE_DIGEST_<NAME>`, a test reading outside its module reads that
+  variable, and Go keys the result on every variable a test reads.
+- **What a child process read.** A test that runs `git ls-files` or `go list`
+  opens nothing itself, so it walks the paths the process read.
+
+The first kind is held by a census, not a scan, because such paths are mostly
+built at run time. Before `cache-warm` saves an entry, it reruns the cached pass
+through [`scripts/testlog-exec.sh`](../../scripts/testlog-exec.sh) with Go's
+test log on, and `backend/tools/check-test-inputs` fails on any package that
+read outside its module without reading the matching digest. A failing census
+withholds the entry, so readers stay on the last one that was honest. The
+second kind is held by a gate: a cached test file that runs `git` or `go` must
+declare its inputs.
+
 What this replaced: both refresh steps used to ride inside gating jobs, gated on
 `github.event_name == 'push' && github.ref == 'refs/heads/main'`. The cache was
 therefore seeded only when a `main` push survived to completion — and 64% of them

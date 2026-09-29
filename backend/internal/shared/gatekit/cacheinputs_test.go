@@ -27,6 +27,19 @@ func TestAnExistingFileAndANestedTreeAreDeclared(t *testing.T) {
 	}
 }
 
+func TestATreeDigestVariableIsNamedForItsEntry(t *testing.T) {
+	for top, want := range map[string]string{
+		"docs":       "TREE_DIGEST_DOCS",
+		".gitignore": "TREE_DIGEST__GITIGNORE",
+		"go.work":    "TREE_DIGEST_GO_WORK",
+		"user-guide": "TREE_DIGEST_USER_GUIDE",
+	} {
+		if got := TreeDigestVar(top); got != want {
+			t.Errorf("TreeDigestVar(%q) = %q, want %q", top, got, want)
+		}
+	}
+}
+
 func TestAnInputThatDoesNotExistYetIsDeclaredWithoutError(t *testing.T) {
 	if err := DeclareInputs(filepath.Join(t.TempDir(), ".gitignore")); err != nil {
 		t.Errorf("a missing ignore file is an input whose creation must invalidate, not an error: %v", err)

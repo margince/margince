@@ -9,17 +9,31 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 )
 
-// DeclareInputs makes Go's test cache key a result on files the test read
-// through another process — `git ls-files`, `go list`, `git check-ignore` —
-// whose reads the cache cannot see, so a replayed pass cannot outlive a change
-// to them. The cache records what the test itself opens: a directory by its
-// listing and every entry's size, mode and mtime, a file by its stat. So a
-// directory is walked, and a file is stated — a missing one too, because
-// creating it must invalidate the result as surely as editing it.
+// DeclareInputs makes Go's test cache key a result on files it would not
+// otherwise recheck, so a replayed pass cannot outlive a change to them. Two
+// kinds exist, and each path is declared the way its kind needs:
+//
+//   - inside the test's module, files a child process read (`git ls-files`,
+//     `go list`): the cache records only what the test itself opens, so a
+//     directory is walked — its listing and every entry's stat — and a file is
+//     stated, a missing one too, since creating it must invalidate as surely as
+//     editing it;
+//   - outside the test's module, anything at all: the cache never rechecks such
+//     a path, so the test reads the environment variable CI sets to a digest of
+//     the path's top-level tree (TreeDigestVar), and the cache keys on its value.
 func DeclareInputs(paths ...string) error {
 	for _, path := range paths {
+		declared, err := declareOutsideModule(path)
+		if err != nil {
+			return err
+		}
+		if declared {
+			continue
+		}
 		info, err := os.Stat(path)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -42,9 +56,75 @@ func DeclareInputs(paths ...string) error {
 // data depends on its files and on no package nested beneath it.
 func DeclareListings(dirs ...string) error {
 	for _, dir := range dirs {
+		declared, err := declareOutsideModule(dir)
+		if err != nil {
+			return err
+		}
+		if declared {
+			continue
+		}
 		if _, err := os.ReadDir(dir); err != nil {
 			return fmt.Errorf("declaring the listing of %s as a test input: %w", dir, err)
 		}
 	}
 	return nil
 }
+
+// TreeDigestVar names the environment variable scripts/ci-stable-mtimes.sh
+// sets to a digest of one top-level entry of the repository: TREE_DIGEST_
+// and the entry's name, upper-cased, every other byte an underscore.
+func TreeDigestVar(top string) string {
+	var name strings.Builder
+	name.WriteString("TREE_DIGEST_")
+	for _, b := range []byte(strings.ToUpper(top)) {
+		if (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') {
+			name.WriteByte(b)
+		} else {
+			name.WriteByte('_')
+		}
+	}
+	return name.String()
+}
+
+// declareOutsideModule reads the digest variable for path when it lies in the
+// repository but outside the test's module, and reports whether it did.
+func declareOutsideModule(path string) (bool, error) {
+	module, _, found := moduleRootAndPath()
+	repo := repositoryRoot()
+	if !found || repo == "" {
+		return false, nil
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return false, fmt.Errorf("resolving %s as a test input: %w", path, err)
+	}
+	slashed, moduleDir, repoDir := filepath.ToSlash(abs), filepath.ToSlash(module), filepath.ToSlash(repo)
+	if Under(slashed, moduleDir) || !Under(slashed, repoDir) || slashed == repoDir {
+		return false, nil
+	}
+	rel, err := filepath.Rel(repo, abs)
+	if err != nil {
+		return false, fmt.Errorf("placing %s in the repository: %w", path, err)
+	}
+	top, _, _ := strings.Cut(filepath.ToSlash(rel), "/")
+	// The read is the declaration: the test log records the variable and its value.
+	os.Getenv(TreeDigestVar(top))
+	return true, nil
+}
+
+// repositoryRoot is the nearest directory above the module holding .git — a
+// directory in a clone, a file in a worktree.
+var repositoryRoot = sync.OnceValue(func() string {
+	module, _, found := moduleRootAndPath()
+	if !found {
+		return ""
+	}
+	for dir := module; ; dir = filepath.Dir(dir) {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir
+		}
+		if filepath.Dir(dir) == dir {
+			return ""
+		}
+	}
+})

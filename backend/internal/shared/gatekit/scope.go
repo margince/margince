@@ -123,7 +123,7 @@ func (s Scope) sweep(tree string, roots []string) (inside []ParsedFile, outside 
 		}
 		covered := false
 		for i, root := range roots {
-			if under(subject.Path, root) {
+			if Under(subject.Path, root) {
 				perRoot[i]++
 				covered = true
 			}
@@ -223,9 +223,9 @@ func (s Scope) normalizedRoots(t testing.TB) (roots []string, usable bool) {
 	return roots, true
 }
 
-// under reports whether path lies in root, matching whole segments so that
-// "internal/modules" does not swallow "internal/modulesomething".
-func under(path, root string) bool {
+// Under reports whether the slash-separated path lies in root, matching whole
+// segments so that "internal/modules" does not swallow "internal/modulesomething".
+func Under(path, root string) bool {
 	return path == root || strings.HasPrefix(path, root+"/")
 }
 
