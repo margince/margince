@@ -2,10 +2,6 @@
    that overrides an atom's own declaration chains the atom's class, so it wins
    by specificity rather than by which sheet loaded last. */
 
-.heading.offers-edit-title {
-  margin-bottom: var(--space-3);
-}
-
 .offers-diff-summary {
   margin-top: var(--space-2);
 }

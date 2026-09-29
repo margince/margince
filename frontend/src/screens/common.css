@@ -1,4 +1,4 @@
-/* The shapes `common.tsx` draws for every list screen. */
+/* The shapes `common.tsx` draws: a list's Load more and QueryGate's failure. */
 
 /* "Load more" stands under the page it extends, spaced off it: it acts on the
    list above rather than being one more row of it. */

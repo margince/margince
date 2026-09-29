@@ -66,7 +66,12 @@ function whollyWhere(selector: string): boolean {
   return depth === 0;
 }
 
-type MarginDeclaration = { selector: string; value: string; line: number };
+type MarginDeclaration = {
+  selector: string;
+  parents: string[];
+  value: string;
+  line: number;
+};
 
 function marginDeclarations(css: string): MarginDeclaration[] {
   return rulesIn(css).flatMap((rule) =>
@@ -75,6 +80,7 @@ function marginDeclarations(css: string): MarginDeclaration[] {
     ].flatMap(([, value]) =>
       selectorsIn(rule.selector).map((selector) => ({
         selector,
+        parents: rule.parents,
         value: value.trim(),
         line: rule.line,
       })),
@@ -84,8 +90,15 @@ function marginDeclarations(css: string): MarginDeclaration[] {
 
 function weightedMargins(css: string): string[] {
   return marginDeclarations(css)
-    .filter(({ selector }) => !whollyWhere(selector))
-    .map(({ selector, line }) => `${selector} (heading.css:${line})`);
+    .filter(({ selector, parents }) =>
+      [selector, ...parents.flatMap(selectorsIn)].some(
+        (one) => !whollyWhere(one),
+      ),
+    )
+    .map(
+      ({ selector, parents, line }) =>
+        `${[...parents, selector].join(" ")} (heading.css:${line})`,
+    );
 }
 
 function elementOf(size: HeadingSize): string {
@@ -164,15 +177,19 @@ describe("Heading", () => {
     }
   });
 
-  it("keeps the reset weightless, so a caller's class sets the margin", () => {
-    expect(
-      rulesIn(sheet).length,
-      "heading.css parsed to no rules",
-    ).toBeGreaterThan(0);
+  it("keeps the reset weightless, so a caller's rule sets the margin", () => {
     const weighted = weightedMargins(sheet);
     expect(weighted, `not wrapped in :where(): ${weighted.join(", ")}`).toEqual(
       [],
     );
+    expect(marginDeclarations(sheet)).toEqual([
+      {
+        selector: ":where(.heading)",
+        parents: [],
+        value: "0",
+        line: expect.any(Number),
+      },
+    ]);
   });
 
   it("tells a weighted margin from a weightless one", () => {
@@ -182,6 +199,9 @@ describe("Heading", () => {
     expect(
       weightedMargins(":where(.heading, .lead), .heading-lead { margin: 0 }"),
     ).toEqual([".heading-lead (heading.css:1)"]);
+    expect(
+      weightedMargins(".panel { :where(.heading) { margin: 0 } }"),
+    ).toEqual([".panel :where(.heading) (heading.css:1)"]);
     expect(weightedMargins(":where(.heading) { margin: 0 }")).toEqual([]);
   });
 
