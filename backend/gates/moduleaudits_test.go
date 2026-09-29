@@ -46,6 +46,17 @@ import (
 // module's writes are not recorded at all", so the rationale has to explain
 // where the history actually lives.
 var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
+	// The restore-drill ledger IS the history. A drill row records who ran a
+	// rehearsal, what it restored to, when it started, when it finished and
+	// what it proved — the whole of what an audit row beside it would say,
+	// written by the act itself rather than about it. The table is append-only
+	// in intent and in enforcement: Begin inserts, Finish closes a running
+	// drill exactly once (the UPDATE matches on outcome = 'running', so a
+	// second close changes nothing and answers not-found), and nothing else
+	// mutates a row. There is no before-image to keep, because no field a
+	// reader relies on is ever overwritten.
+	"internal/modules/continuity": "the drill ledger IS the evidence record; its rows are append-only and closed once, so an audit row beside them would restate what the row already says",
+
 	// The audit writer itself. It owns audit_log, event_outbox, system_log and
 	// field_provenance, and auditing its own writes is circular — the audit row
 	// would need an audit row. Nothing above it is exempt: every caller of
