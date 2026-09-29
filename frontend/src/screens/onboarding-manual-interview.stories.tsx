@@ -60,7 +60,7 @@ type Story = StoryObj<typeof ManualCompanyInterview>;
 // dressed for is dark glass — so a story without the wrapper shows a surface
 // nobody can reach and hides the one everybody sees.
 function ArtifactPane({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="mw-review ob-conv-artifact">{children}</div>;
+  return <div className="ob-conv-artifact">{children}</div>;
 }
 
 function interview(values: CompanyForm) {

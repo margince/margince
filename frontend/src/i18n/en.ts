@@ -5440,6 +5440,45 @@ export const en = {
     "These duties name contacts and how they were obtained, so only users with access to privacy requests can see them.",
   "notice.dueAt": "Due {date}",
   "notice.overdue": "Overdue",
+  "notifications.bell": "Notifications",
+  "notifications.bellWaiting_one": "Notifications, {count} waiting",
+  "notifications.bellWaiting_other": "Notifications, {count} waiting",
+  "notifications.centre": "Notifications",
+  "notifications.markAllRead": "Mark all read",
+  "notifications.markRead": "Mark read",
+  "notifications.markAllFailed": "Nothing was marked read",
+  "notifications.markReadFailed": "That notice was not marked read",
+  "notifications.new": "New",
+  "notifications.byAgent": "By an agent",
+  "notifications.empty":
+    "Nothing has come in yet. What the product tells you about arrives here.",
+  "notifications.title": "How each kind reaches you",
+  "notifications.sub":
+    "Every notice is kept in your notification center whatever you choose here. This decides what else happens when one lands.",
+  "notifications.saveFailed": "That choice was not saved",
+  "notifications.saveFailedFor": "“{setting}” was not saved",
+  "notifications.class.approval_pending.label": "Approvals waiting on you",
+  "notifications.class.approval_pending.help":
+    "Somebody needs your decision before their work can go on.",
+  "notifications.class.automation.label": "Automations that ran",
+  "notifications.class.automation.help":
+    "A rule this company set fired, or could not.",
+  "notifications.class.lead_sla.label": "Leads past their deadline",
+  "notifications.class.lead_sla.help":
+    "A lead nobody has answered inside the time your team agreed.",
+  "notifications.class.capture.label": "Mail capture",
+  "notifications.class.capture.help":
+    "Trouble reading a mailbox of yours, or a backlog that has stopped moving.",
+  "notifications.class.system.label": "System notices",
+  "notifications.class.system.help":
+    "Maintenance, a limit reached, and anything else the installation has to tell you.",
+  "notifications.class.coach.label": "A colleague’s nudge",
+  "notifications.class.coach.help":
+    "Somebody on your team pointing at a deal, a reply or a backlog of yours. These always reach you somehow, so they cannot be switched off.",
+  "notifications.delivery.off": "Off",
+  "notifications.delivery.in_app": "In the app",
+  "notifications.delivery.email": "Email",
+  "notifications.delivery.digest": "Daily digest",
   "privacynotice.title": "What we hold about you",
   "privacynotice.intro":
     "We are telling you this because the law requires it. You do not need to reply or do anything.",
@@ -5718,45 +5757,8 @@ export const en = {
   "stage.criteria.kindTermsAccepted": "Terms accepted",
   "stage.criteria.kindCustom": "Custom",
 
-  "ob.url": "Website",
-  "ob.urlScheme": "https://",
   "ob.back": "Back",
   "ob.restoring": "Restoring setup…",
-  "ob.readManual": "Enter manually",
-  "ob.coreIntroTitle": "Start with the legal company",
-  "ob.coreIntroBody":
-    "Margince needs the legal name, address and VAT or register number, then what the company sells and to whom.",
-  "ob.coreLegalKicker": "Legal identity first",
-  "ob.corePathLabel": "What Margince learns",
-  "ob.corePathLegal": "Legal identity",
-  "ob.corePathOffer": "Offer",
-  "ob.corePathCustomer": "Customers",
-  "ob.coreReadingPage": "Reading",
-  "ob.coreWebsiteTitle": "Which website should Margince read?",
-  "ob.coreWebsiteBody":
-    "The legal notice is read first, then products, customers and positioning.",
-  "ob.corePreparing": "Preparing to read {host}",
-  "ob.coreLegalReading": "Reading legal identity on {host}",
-  "ob.coreLegalReadingBody":
-    "Looking for the legal notice, address and register or VAT number. Unstated details stay empty.",
-  "ob.coreBusinessReading": "Learning how the business works",
-  "ob.coreBusinessReadingBody":
-    "Linking products, customers and positioning to the public text that supports them.",
-  "ob.coreReady_one": "{count} cited company detail found",
-  "ob.coreReady_other": "{count} cited company details found",
-  "ob.corePartial_one": "{count} useful detail found. Some gaps remain.",
-  "ob.corePartial_other": "{count} useful details found. Some gaps remain.",
-  "ob.coreReadyBody":
-    "Nothing is saved yet. Review the legal identity first, then the offer and customer.",
-  "ob.coreDeferredBody": "This read resumes automatically.",
-  "ob.coreFailedBody":
-    "The site could not be read well enough, so reading stopped rather than guess. Enter the details manually.",
-  "ob.coreFindingsTitle": "Supported findings",
-  "ob.coreFindingsBody":
-    "Each value shows the public wording behind it. Values that cannot be verified stay empty.",
-  "ob.ai.identity": "Margince",
-  "ob.ai.role": "Company research AI",
-  "ob.ai.speaker": "M",
   "ob.ai.speakerName": "Margince",
   "ob.ai.ready": "Ready to research",
   "ob.ai.configured": "Configured AI",
@@ -5782,42 +5784,15 @@ export const en = {
   "ob.ai.tier.premium": "premium reasoning",
   "ob.ai.tier.frontier": "frontier reasoning",
   "ob.ai.tier.localLarge": "local, advanced",
-  // The rail footer's plain-language line: the exact ids sit one click away
-  // in the runtime chip's "Configured AI" row, so this says only what a
-  // non-technical reader needs at a glance — how many models, and where.
-  "ob.ai.summary.cloud_one": "1 model, running in the cloud",
-  "ob.ai.summary.cloud_other": "{count} models, running in the cloud",
-  "ob.ai.summary.local_one": "1 model, running locally",
-  "ob.ai.summary.local_other": "{count} models, running locally",
-  "ob.ai.summary.hybrid_one": "1 model, split between cloud and local",
-  "ob.ai.summary.hybrid_other": "{count} models, split between cloud and local",
-  "ob.ai.summary.development_one": "1 model, development mode",
-  "ob.ai.summary.development_other": "{count} models, development mode",
-  "ob.ai.summary.none": "No model configured yet",
-  "ob.ai.summaryProviders_one": "1 provider configured",
-  "ob.ai.summaryProviders_other": "{count} providers configured",
-  "ob.ai.readFirst": "Start company setup before asking about it.",
   "ob.ai.liveArtifact": "Live draft for review",
   "ob.ai.companyKnowledge": "Company knowledge",
   "ob.ai.companyKnowledgeBody":
     "Website evidence stays separate from this chat. You decide what becomes company context.",
   "ob.ai.companyKnowledgeManualBody":
     "Your answers and Margince’s suggestions stay editable here. You decide what becomes company context.",
-  "ob.ai.askPlaceholder":
-    "Ask about a finding, correct a detail or add what is missing",
-  "ob.ai.send": "Send to Margince",
-  "ob.ai.reviewBoundary":
-    "Margince can suggest changes here and applies them to the draft only when you approve.",
   "ob.ai.confirmBoundary":
     "Nothing becomes company context until you confirm this draft.",
   "ob.ai.confirmCompany": "Confirm and save company",
-  "ob.ai.thinking": "Checking the dossier…",
-  "ob.ai.suggestedChanges": "Suggested changes to the draft",
-  "ob.ai.applyChanges": "Apply to draft",
-  "ob.ai.applied": "Applied to draft",
-  "ob.ai.finding_one": "cited finding",
-  "ob.ai.finding_other": "cited findings",
-  "ob.continueManual": "Enter manually",
   "ob.readStatus.queued": "Preparing",
   "ob.readStatus.deferred": "Waiting for AI allowance",
   "ob.readStatus.reading": "Reading",
@@ -5826,13 +5801,6 @@ export const en = {
   "ob.readStatus.failed": "Input needed",
   "ob.readStatus.confirmed": "Choices saved",
   "ob.readStatus.abandoned": "Stopped",
-  "ob.pagesRead": "pages read",
-  "ob.legalEntitiesFound": "legal entities found",
-  "ob.coverageDetails": "Coverage and unread pages",
-  "ob.legalFoundTitle": "Legal entities found",
-  "ob.legalFoundBody":
-    "Each block shows the registered name, address and register or VAT number. Select the right one in the review.",
-  "ob.legalEntity": "Legal entity",
   "ob.confirmWebsite_one":
     "Based on {count} public page. Edit any value; unedited values keep their evidence.",
   "ob.confirmWebsite_other":
@@ -5854,7 +5822,6 @@ export const en = {
   "ob.s1.title": "Review company details",
   "ob.s1.sub":
     "Only details supported by the website are filled in. Correct anything that is wrong.",
-  "ob.s1.urlPlaceholder": "yourcompany.com",
   "ob.s1.identityLabel": "Legal company",
   "ob.s1.offerLabel": "Products and offer",
   "ob.s1.customerLabel": "Customer",
@@ -5865,10 +5832,7 @@ export const en = {
   "ob.s1.saveFailed": "Company not saved",
   "ob.s1.savedNote":
     "Saved to the company. Changes here are saved again when you continue.",
-  "ob.readGo": "Read website",
-  "ob.urlWillRead": "Reads {host}",
   "ob.readFromSite": "read from site",
-  "ob.failTitle": "Not enough could be read from this website",
 
   "ob.manualChapterLegal": "Legal company",
   "ob.manualChapterOffer": "Products and offer",
@@ -6557,7 +6521,6 @@ export const en = {
   "ob.s4.connectFailed": "Mailbox not connected",
   "ob.s4.notNow": "Not now",
 
-  "ob.conv.threadLabel": "Onboarding conversation",
   "ob.conv.read.started": "Reading {host}. I will report what I find.",
   "ob.conv.read.pages": "Pages read so far: {pages}.",
   "ob.conv.read.learnedField": "Learned {field}: {value}",
@@ -6570,8 +6533,6 @@ export const en = {
     "The read is paused. I will resume it automatically.",
   "ob.conv.read.pollFailed":
     "The connection dropped during reading. What I found is kept.",
-  "ob.conv.clarify.entity":
-    "The site names more than one legal entity. Which one is this installation for?",
   "ob.conv.company.confirmed":
     "Company profile confirmed. Every stored value records its source.",
   "ob.conv.manual.chosen": "I will enter it manually.",
@@ -6819,8 +6780,6 @@ export const en = {
   "ob.conv.scene.hideEvidence": "hide evidence",
   "ob.conv.scene.whyThis": "What I read",
   "ob.conv.scene.foundOn": "Found on",
-  "ob.conv.activity.steps_one": "{count} step",
-  "ob.conv.activity.steps_other": "{count} steps",
   "ob.conv.showField": "Show",
   "ob.conv.review.editDirectly": "Edit fields directly",
   "ob.conv.review.backToDossier": "Back to dossier",
@@ -6993,9 +6952,6 @@ export const en = {
   "ob.scan.costUnpriced": " · unpriced usage exists",
 
   // --- the live panel: what the read covered, and what it left ----------
-  "ob.live.stateDone": "done",
-  "ob.live.stateNow": "in progress",
-  "ob.live.stateWaiting": "waiting",
   "ob.live.review": "Review",
   "ob.live.hide": "Hide",
   "ob.live.countPages": "{read} read · {skipped} skipped",
@@ -7701,6 +7657,8 @@ export const en = {
   "settings.page.voice.sub": "The wording drafts use when they write as you.",
   "settings.page.agents.sub":
     "What an agent may do unattended, and which clients hold your credentials.",
+  "settings.page.notifications.sub":
+    "Which kinds of notice reach you, and how.",
   "settings.page.connections.sub":
     "Mailboxes and addresses this seat reads from.",
   "settings.page.capture-activity.sub":
@@ -7799,6 +7757,7 @@ export const en = {
   "settings.tab.account": "Account",
   "settings.tab.voice": "Writing voice",
   "settings.tab.agents": "Agents",
+  "settings.tab.notifications": "Notifications",
   "settings.tab.connections": "Connections",
   "settings.tab.general": "General",
   "settings.tab.users": "Users and teams",

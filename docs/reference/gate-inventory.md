@@ -221,6 +221,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |
+| `emptyarraycheck_test.go` | H2 | array\_length answers NULL for an EMPTY array, not 0, so a CHECK that bounds a length with it evaluates to UNKNOWN for `{}` — and Postgres ACCEPTS a row on an UNKNOWN check. |
 | `emptylistwire_test.go` | H2 | Every list envelope carries its rows in a field the writer can find. |
 | `enteredatwriters_test.go` | H2 | Nothing writes when a record entered the installation. |
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |

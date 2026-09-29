@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { resolveNesting, subjectOf } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
   extensionLayers,
@@ -180,45 +181,13 @@ function declarationAt(
 
 // ─── Selectors ─────────────────────────────────────────────────────────────
 
-/** Split at top-level separators, leaving `(…)` and `[…]` whole. */
-function splitTopLevel(text: string, isSeparator: RegExp): string[] {
-  const parts: string[] = [];
-  let depth = 0;
-  let from = 0;
-  for (let i = 0; i < text.length; i++) {
-    if ("([".includes(text[i])) {
-      depth++;
-    } else if (")]".includes(text[i])) {
-      depth--;
-    } else if (depth === 0 && isSeparator.test(text[i])) {
-      parts.push(text.slice(from, i));
-      from = i + 1;
-    }
-  }
-  parts.push(text.slice(from));
-  return parts.map((part) => part.trim()).filter(Boolean);
-}
-
 /**
  * Every complex selector a rule applies to, its nesting resolved: `&` stands
  * for each parent selector, and a nested selector without one is a
  * descendant of it.
  */
 function selectorsOf(rule: CssRule): string[] {
-  return [...rule.parents, rule.selector].reduce<string[]>(
-    (outer, selector) =>
-      splitTopLevel(selector, /,/).flatMap((inner) => {
-        if (outer.length === 0) {
-          return [inner];
-        }
-        return outer.map((parent) =>
-          inner.includes("&")
-            ? inner.replaceAll("&", parent)
-            : `${parent} ${inner}`,
-        );
-      }),
-    [],
-  );
+  return [...rule.parents, rule.selector].reduce<string[]>(resolveNesting, []);
 }
 
 /**
@@ -262,11 +231,6 @@ function namesBadge(selector: string): boolean {
     classesIn(selector).some((name) => badgeClass.test(name)) ||
     [...attributes].some((match) => /\bbadge/.test(match[1]))
   );
-}
-
-/** The rightmost compound: the element the rule actually draws. */
-function subjectOf(selector: string): string {
-  return splitTopLevel(selector, /[\s>+~]/).at(-1) ?? "";
 }
 
 // ─── Arm 1: restyling .badge ───────────────────────────────────────────────

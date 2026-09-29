@@ -175,6 +175,11 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 				Args: SendEmailArgs{DeliveryID: ids.NewV7().String()},
 			})
 		},
+		SendNotificationEmailArgs{}.Kind(): func(ctx context.Context) error {
+			return (&notificationMailWorker{}).Work(ctx, &river.Job[SendNotificationEmailArgs]{
+				Args: SendNotificationEmailArgs{NoticeID: ids.NewV7().String()},
+			})
+		},
 		CaptureBackfillArgs{}.Kind(): func(ctx context.Context) error {
 			return (&captureBackfillWorker{}).Work(ctx, &river.Job[CaptureBackfillArgs]{
 				Args: CaptureBackfillArgs{BackfillID: ids.NewV7().String()},

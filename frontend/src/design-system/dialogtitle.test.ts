@@ -7,6 +7,12 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
+  classesOf,
+  selectorList,
+  splitTopLevel,
+  subjectsOf,
+} from "../../scripts/lib/css-rules";
+import {
   extensionLayers,
   filesMatching,
   parseSource,
@@ -38,17 +44,6 @@ const BOTTOM =
 type Owners = { gap: Set<string>; band: Set<string>; row: Set<string> };
 type Title = { where: string; classes: string[]; owner: string | null };
 
-function splitTop(text: string, at: RegExp): string[] {
-  const parts = [""];
-  let depth = 0;
-  for (const ch of text) {
-    if (ch === "(") depth++;
-    if (ch === ")") depth--;
-    if (depth === 0 && at.test(ch)) parts.push("");
-    else parts[parts.length - 1] += ch;
-  }
-  return parts.map((p) => p.trim()).filter(Boolean);
-}
 const isZero = (v: string) =>
   /^(0[a-z%]*|none|auto|normal|unset|initial|inherit|revert(-layer)?)$/.test(
     v.replace(/!important/, "").trim(),
@@ -57,18 +52,11 @@ const decl = (body: string, prop: string) =>
   body.match(new RegExp(`(?:^|[;\\s])${prop}\\s*:\\s*([^;]+)`))?.[1];
 const display = (body: string, kind: string) =>
   new RegExp(`(^|[;\\s])display\\s*:\\s*(inline-)?${kind}\\b`).test(body);
-// A functional pseudo-class's argument names another element, not the subject.
-function subjectOf(selector: string): string[] {
-  let bare = splitTop(selector, /[\s>+~]/).at(-1) ?? "";
-  while (/\([^()]*\)/.test(bare))
-    bare = bare.replace(/:?[\w-]*\([^()]*\)/g, "");
-  return [...bare.matchAll(/\.([\w-]+)/g)].map(([, name]) => name);
-}
 
 function ownersIn(sheets: readonly string[]): Owners {
   const owners: Owners = { gap: new Set(), band: new Set(), row: new Set() };
   for (const { selector, body } of sheets.flatMap(rulesIn)) {
-    const box = (p: string) => splitTop(decl(body, p) ?? "", /\s/);
+    const box = (p: string) => splitTopLevel(decl(body, p) ?? "", " \t\n");
     const rowGap = decl(body, "row-gap") ?? box("gap")[0] ?? "0";
     const direction = decl(body, "flex-direction") ?? decl(body, "flex-flow");
     const column = /^\s*column/.test(direction ?? "");
@@ -79,7 +67,10 @@ function ownersIn(sheets: readonly string[]): Owners {
       ...["margin-block", "padding-block"].map((p) => box(p).at(-1)),
       ...["margin", "padding"].map((p) => box(p)[box(p).length > 2 ? 2 : 0]),
     ].some((v) => v !== undefined && !isZero(v));
-    for (const name of splitTop(selector, /,/).flatMap(subjectOf)) {
+    const names = selectorList(selector)
+      .flatMap(subjectsOf)
+      .flatMap((subject) => [...classesOf(subject)]);
+    for (const name of names) {
       if (gap) owners.gap.add(name);
       if (bottom) owners.band.add(name);
       if (flex && !column) owners.row.add(name);

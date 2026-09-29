@@ -72,7 +72,7 @@ export function VoiceActArtifact({
   const t = useT();
   const { locale } = useLocale();
   return (
-    <div className="mw-review ob-conv-artifact">
+    <div className="ob-conv-artifact">
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
         <Heading size="large">{t("ob.conv.voice.artifactTitle")}</Heading>

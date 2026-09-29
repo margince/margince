@@ -6,9 +6,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { chipInks } from "../../scripts/lib/chip-inks";
 import {
+  alternativesOf,
   classesOf,
   compounds,
   inks,
+  type Rule,
   rules,
   subjectClasses,
 } from "../../scripts/lib/css-rules";
@@ -59,6 +61,27 @@ describe("the chip fill's call sites", () => {
     return /:disabled|\[disabled\]|\[aria-disabled="true"\]/.test(selector);
   }
 
+  // A chip written `:is(.a, .b)` is two chips, each searched on its own subject.
+  function chipSubjects(chips: Rule[]) {
+    return chips.flatMap((chip) =>
+      alternativesOf(chip.selector).map((selector) => ({
+        chip,
+        selector,
+        wanted: subjectClasses(selector),
+      })),
+    );
+  }
+
+  function chainsNaming(selector: string, wanted: Set<string>): string[][] {
+    return alternativesOf(selector)
+      .map(compounds)
+      .filter((parts) =>
+        parts.some((part) =>
+          [...wanted].every((name) => classesOf(part).has(name)),
+        ),
+      );
+  }
+
   function paintsOwnGround(body: string): boolean {
     return /background(?:-color)?:(?![^;]*var\(--bgChip\))[^;]*(?:var\(|#|rgb)/.test(
       body,
@@ -91,6 +114,49 @@ describe("the chip fill's call sites", () => {
     ).toBe(false);
   });
 
+  it("reaches a rule through any one of its :is() alternatives", () => {
+    const remove = new Set(["token-remove"]);
+    const rule = {
+      file: "probe.css",
+      selector: ":is(.token-remove, .pill-remove)",
+      body: "",
+    };
+    expect(landsOn(rule, remove, [remove])).toBe(true);
+    expect(chainsNaming(":is(.token, .pill) .x", new Set(["token"]))).toEqual([
+      [".token", ".x"],
+    ]);
+  });
+
+  it("lets a rule override an ink only where it lands on that element", () => {
+    const chip = {
+      file: "probe.css",
+      selector: ".tok",
+      body: "background: var(--bgChip);",
+    };
+    const drawn = {
+      file: "probe.css",
+      selector: ".tok-x",
+      body: "color: var(--textSecondary);",
+    };
+    const within = new Map([["tok", [new Set(["tok-x"])]]]);
+    const overrides = (selector: string) =>
+      overriddenInside(
+        [
+          chip,
+          drawn,
+          { file: "probe.css", selector, body: "color: var(--textPrimary);" },
+        ],
+        chip,
+        drawn,
+        within,
+      );
+    expect(overrides(".tok :is(.q, .r)")).toBe(false);
+    expect(overrides(".tok :is(.tok-x, .r)")).toBe(true);
+    expect(overrides(".tok .q")).toBe(false);
+    expect(overrides(".tok span")).toBe(false);
+    expect(overrides(".tok *")).toBe(true);
+  });
+
   it("draws on --bgChip only in inks the contrast gate measures", () => {
     const chips = allRules.filter(({ body }) =>
       /background(?:-color)?:[^;]*var\(--bgChip\)/.test(body),
@@ -104,8 +170,7 @@ describe("the chip fill's call sites", () => {
     expect(inside.size).toBeGreaterThan(0);
 
     const offenders: string[] = [];
-    for (const chip of chips) {
-      const wanted = subjectClasses(chip.selector);
+    for (const { chip, wanted } of chipSubjects(chips)) {
       // A chip whose subject carries no class of its own — `.segmented
       // button:active` — is reached through the rule that names the track, so
       // there is nothing here to search on and nothing lost by not searching.
@@ -117,13 +182,7 @@ describe("the chip fill's call sites", () => {
       const below = [...wanted].flatMap((name) => inside.get(name) ?? []);
       const subtree = allRules.filter((rule) => {
         if (rule === chip) return false;
-        if (
-          compounds(rule.selector).some((part) =>
-            [...wanted].every((name) => classesOf(part).has(name)),
-          )
-        ) {
-          return true;
-        }
+        if (chainsNaming(rule.selector, wanted).length > 0) return true;
         return below.some((element) => landsOn(rule, element, below));
       });
       for (const rule of [chip, ...subtree]) {
@@ -163,8 +222,7 @@ describe("the chip fill's call sites", () => {
     expect(chips.length).toBeGreaterThan(0);
     expect(inside.size).toBeGreaterThan(0);
     const offenders: string[] = [];
-    for (const chip of chips) {
-      const wanted = subjectClasses(chip.selector);
+    for (const { chip, selector, wanted } of chipSubjects(chips)) {
       if (wanted.size === 0) continue;
       const below = [...wanted].flatMap((name) => inside.get(name) ?? []);
       for (const rule of chips) {
@@ -174,11 +232,9 @@ describe("the chip fill's call sites", () => {
         // fill rather than stacking on it. The components answer the case the
         // chain cannot: a descendant reached by a class of its own, which is
         // the same hole the ink scan above had.
-        const chained =
-          compounds(rule.selector).length > compounds(chip.selector).length &&
-          compounds(rule.selector).some((part) =>
-            [...wanted].every((name) => classesOf(part).has(name)),
-          );
+        const chained = chainsNaming(rule.selector, wanted).some(
+          (parts) => parts.length > compounds(selector).length,
+        );
         const nested =
           chained || below.some((element) => landsOn(rule, element, below));
         if (!nested) continue;

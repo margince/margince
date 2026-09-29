@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import {
   extensionFrontendFiles,
   extensionLayers,
@@ -203,8 +204,8 @@ function dangerOnlyClasses(sheets: readonly Sheet[]): Set<string> {
       .split(";")
       .map((declaration) => declaration.trim())
       .filter((declaration) => declaration.length > 0);
-    for (const selector of rule.selector.split(",")) {
-      const alone = /^\.([\w-]+)$/.exec(selector.trim());
+    for (const selector of selectorList(rule.selector)) {
+      const alone = /^\.([\w-]+)$/.exec(selector);
       if (!alone || dangerClass.test(alone[1]) || alone[1] === "field-error") {
         continue;
       }

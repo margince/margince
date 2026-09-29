@@ -70,6 +70,7 @@ describe("the scope each page declares", () => {
     meetings: "self",
     voice: "self",
     agents: "self",
+    notifications: "self",
 
     // Pages whose cards genuinely split across two scopes. `integrations`
     // is one: PATCH /integrations/settings is "the installation's
@@ -195,6 +196,7 @@ describe("what each page lets a reader change", () => {
     account: "always",
     meetings: "always",
     agents: "always",
+    notifications: "always",
     connections: "always",
     "capture-activity": "always",
     // Under the reader's own heading and still a grant: voice-dna.tsx asks the
@@ -375,6 +377,7 @@ describe("who may open what", () => {
       "meetings",
       "voice",
       "agents",
+      "notifications",
       "connections",
       "capture-activity",
     ]);
@@ -919,6 +922,7 @@ describe("what the rail carries and what it leaves behind", () => {
       "meetings",
       "voice",
       "agents",
+      "notifications",
       "connections",
       "capture-activity",
       // The outcome-review questions. A rep holds `custom_field:read`, and this

@@ -121,6 +121,7 @@ import { LinkedInReachCard } from "./linkedin-reach";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
+import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OvernightGrantCard } from "./overnight-grant";
@@ -200,6 +201,12 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return <VoiceDnaCard />;
     case "agents":
       return <AgentsTab />;
+    // What the product may send this reader, and where. Beside the brief and
+    // weekly nudges on Account rather than merged into them: those two rows are
+    // about a digest the reader subscribes to, and these are about every notice
+    // the product raises whether or not anybody asked for it.
+    case "notifications":
+      return <NotificationSettingsCard />;
     case "connections":
       return <ConnectionsTab />;
     // Beside `connections` and after it on purpose: that page says what you are
@@ -934,6 +941,7 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // what the server checks with `utf8.RuneCountInString`. `String.length` would
   // count UTF-16 units and refuse a name the server admits.
   const tooLong = [...trimmed].length > 255;
+  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
   return (
     <SettingRow
       label={t("settings.displayName")}
@@ -942,25 +950,17 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
       control={(row) => (
         // The catalogued pairing of field and verb, as the pipeline rows use.
         <div className="form-stack settingrow-measure">
-          <Field
-            label={t("settings.displayName")}
-            labelHidden
-            error={save.error ? problemMessageOf(save.error, t) : undefined}
-          >
+          <Field label={t("settings.displayName")} labelHidden error={refusal}>
             {(field) => (
               <TextInput
                 {...field}
                 aria-labelledby={row["aria-labelledby"]}
-                aria-describedby={[
-                  field["aria-describedby"],
-                  row["aria-describedby"],
-                ]
+                aria-describedby={[field, row]
+                  .map((owner) => owner["aria-describedby"])
                   .filter(Boolean)
                   .join(" ")}
                 value={shown}
-                // No native `maxLength`: it counts UTF-16 units and would cut a
-                // name of emoji at about half the 255 CHARACTERS the contract
-                // admits. The bound is checked below in runes, as the server does.
+                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
                 onChange={(event) => setDraft(event.target.value)}
               />
             )}

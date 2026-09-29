@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { selectorList } from "../../scripts/lib/css-rules";
 import { rulesIn } from "../testing/css";
 
 // A page's NAME is as wide as the page.
@@ -55,10 +56,7 @@ function read(path: string): string {
 
 /** The selectors of one rule, as written, comma by comma. */
 function selectorsOf(selector: string): string[] {
-  return selector
-    .split(",")
-    .map((one) => one.replace(/\s+/g, " ").trim())
-    .filter((one) => one.length > 0);
+  return selectorList(selector).map((one) => one.replace(/\s+/g, " "));
 }
 
 /** A rule's own `max-width`, or undefined — nested blocks are already stripped. */

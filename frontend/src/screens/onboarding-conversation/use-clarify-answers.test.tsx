@@ -8,8 +8,8 @@ import { createQueryClient } from "../../app/queryclient";
 import { translate } from "../../i18n";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, EMPTY_DRAFT } from "../onboarding";
-import type { SuggestedCompanyChange } from "../onboarding-read";
 import { draftWithLegalEntity } from "./company-proposal";
+import type { SuggestedCompanyChange } from "./use-clarify-answers";
 import { useClarifyAnswers } from "./use-clarify-answers";
 
 // The legal-entity clarify authorizes exactly legal_name (the contract's own

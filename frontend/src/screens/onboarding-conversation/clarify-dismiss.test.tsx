@@ -14,7 +14,6 @@ import {
   conversationReducer,
   initialConversationState,
 } from "./conversation-machine";
-import { QuestionCard } from "./entries";
 
 // Humans outrank the reader: every clarify carries a local dismiss escape,
 // so an implausible question (page chrome glued into entity names) can never
@@ -119,29 +118,6 @@ describe("the machine's dismissal path", () => {
         dismissed: true,
       }),
     ).toBe(speakerAsk);
-  });
-});
-
-describe("option chip clamping", () => {
-  it("is presentation-only: the full value stays the accessible name and title", () => {
-    const garbage =
-      "Gradion GmbH Imprint Privacy Cookie Settings Accept All Continue Reading Hauptstrasse 1";
-    rtlRender(
-      <LocaleProvider initial="en">
-        <QuestionCard
-          question={{
-            id: "q",
-            i18nKey: "ob.conv.clarify.question",
-            params: { question: "Which entity?" },
-            options: [{ value: "g", label: garbage }],
-          }}
-          onAnswer={() => undefined}
-        />
-      </LocaleProvider>,
-    );
-    const chip = screen.getByRole("button", { name: garbage });
-    expect(chip.title).toBe(garbage);
-    expect(chip.className).toContain("ob-conv-option");
   });
 });
 

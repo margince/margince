@@ -5206,6 +5206,45 @@ export const vi = {
     "Những nghĩa vụ này nêu tên liên hệ và cách chúng ta có được họ, nên chỉ hiển thị trong hộp thư quyền riêng tư.",
   "notice.dueAt": "Đến hạn {date}",
   "notice.overdue": "Quá hạn",
+  "notifications.bell": "Thông báo",
+  "notifications.bellWaiting_one": "Thông báo, {count} đang chờ",
+  "notifications.bellWaiting_other": "Thông báo, {count} đang chờ",
+  "notifications.centre": "Thông báo",
+  "notifications.markAllRead": "Đánh dấu tất cả đã đọc",
+  "notifications.markRead": "Đánh dấu đã đọc",
+  "notifications.markAllFailed": "Chưa đánh dấu được thông báo nào là đã đọc",
+  "notifications.markReadFailed": "Chưa đánh dấu được thông báo đó là đã đọc",
+  "notifications.new": "Mới",
+  "notifications.byAgent": "Do tác nhân tạo",
+  "notifications.empty":
+    "Chưa có gì gửi đến. Những điều sản phẩm cần cho bạn biết sẽ xuất hiện ở đây.",
+  "notifications.title": "Mỗi loại đến với bạn bằng cách nào",
+  "notifications.sub":
+    "Mọi thông báo đều được giữ trong trung tâm thông báo của bạn, bất kể bạn chọn gì ở đây. Lựa chọn này quyết định điều gì xảy ra thêm khi một thông báo đến.",
+  "notifications.saveFailed": "Lựa chọn đó chưa được lưu",
+  "notifications.saveFailedFor": "Chưa lưu được “{setting}”",
+  "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
+  "notifications.class.approval_pending.help":
+    "Đồng nghiệp cần quyết định của bạn để công việc của họ tiếp tục được.",
+  "notifications.class.automation.label": "Tự động hoá đã chạy",
+  "notifications.class.automation.help":
+    "Một quy tắc của tổ chức này đã chạy, hoặc đã không chạy được.",
+  "notifications.class.lead_sla.label": "Lead đã quá hạn",
+  "notifications.class.lead_sla.help":
+    "Một lead chưa ai trả lời trong khoảng thời gian nhóm bạn đã thống nhất.",
+  "notifications.class.capture.label": "Thu thập thư",
+  "notifications.class.capture.help":
+    "Sự cố khi đọc một hộp thư của bạn, hoặc một khối tồn đọng đã ngừng chuyển động.",
+  "notifications.class.system.label": "Thông báo hệ thống",
+  "notifications.class.system.help":
+    "Bảo trì, một giới hạn đã đạt tới, và mọi điều khác mà bản cài đặt phải cho bạn biết.",
+  "notifications.class.coach.label": "Lời nhắc của đồng nghiệp",
+  "notifications.class.coach.help":
+    "Đồng nghiệp trong nhóm bạn chỉ ra một deal, một câu trả lời hoặc một khối tồn đọng của bạn. Những lời nhắc này luôn đến được với bạn theo cách nào đó, nên không thể tắt.",
+  "notifications.delivery.off": "Tắt",
+  "notifications.delivery.in_app": "Trong ứng dụng",
+  "notifications.delivery.email": "Qua email",
+  "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
   "privacynotice.title": "Chúng tôi lưu giữ thông tin gì về quý vị",
   "privacynotice.intro":
     "Chúng tôi thông báo điều này vì pháp luật yêu cầu. Quý vị không cần trả lời hay làm gì cả.",
@@ -5496,47 +5535,8 @@ export const vi = {
   "stage.criteria.kindTermsAccepted": "Đã chấp nhận điều khoản",
   "stage.criteria.kindCustom": "Tùy chỉnh",
 
-  "ob.url": "Website",
-  "ob.urlScheme": "https://",
   "ob.back": "Quay lại",
   "ob.restoring": "Đang khôi phục thiết lập của bạn…",
-  "ob.readManual": "Bạn tự kể cho tôi",
-  "ob.coreIntroTitle": "Trước tiên, tôi cần biết pháp nhân của bạn.",
-  "ob.coreIntroBody":
-    "Tôi cần tên pháp lý, địa chỉ và mã số thuế. Sau đó tôi tìm hiểu bạn bán gì cho ai.",
-  "ob.coreLegalKicker": "Tôi bắt đầu từ danh tính pháp lý",
-  "ob.corePathLabel": "Những gì tôi sẽ tìm hiểu",
-  "ob.corePathLegal": "Danh tính pháp lý",
-  "ob.corePathOffer": "Sản phẩm dịch vụ",
-  "ob.corePathCustomer": "Khách hàng",
-  "ob.coreReadingPage": "Tôi đang đọc",
-  "ob.coreWebsiteTitle": "Tôi nên đọc website nào?",
-  "ob.coreWebsiteBody":
-    "Tôi đọc phần thông tin pháp lý trước, rồi đến sản phẩm, khách hàng và định vị.",
-  "ob.corePreparing": "Tôi đang chuẩn bị đọc {host}",
-  "ob.coreLegalReading": "Tôi đang đọc danh tính pháp lý trên {host}",
-  "ob.coreLegalReadingBody":
-    "Tôi tìm thông tin pháp lý, địa chỉ và mã số thuế. Gì không nêu thì để trống.",
-  "ob.coreBusinessReading": "Tôi đang tìm hiểu cách công ty vận hành",
-  "ob.coreBusinessReadingBody":
-    "Tôi đang nối sản phẩm, khách hàng và định vị với đúng đoạn văn bản công khai chứng minh cho chúng.",
-  "ob.coreReady_one": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.coreReady_other": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.corePartial_one":
-    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
-  "ob.corePartial_other":
-    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
-  "ob.coreReadyBody":
-    "Tôi chưa lưu gì. Hãy rà soát danh tính pháp lý trước, rồi đến sản phẩm dịch vụ.",
-  "ob.coreDeferredBody": "Tôi sẽ tự động đọc tiếp.",
-  "ob.coreFailedBody":
-    "Tôi không đọc chắc được website này nên dừng thay vì đoán. Bạn tự cho tôi biết nhé.",
-  "ob.coreFindingsTitle": "Những gì tôi tìm được và chứng minh được",
-  "ob.coreFindingsBody":
-    "Mỗi giá trị đều kèm đoạn văn bản công khai. Gì không xác minh được thì để trống.",
-  "ob.ai.identity": "Chào bạn, tôi là Margince",
-  "ob.ai.role": "AI tìm hiểu công ty của bạn",
-  "ob.ai.speaker": "M",
   "ob.ai.speakerName": "Margince",
   "ob.ai.ready": "Tôi đã sẵn sàng tìm hiểu",
   "ob.ai.configured": "AI đã cấu hình",
@@ -5563,42 +5563,15 @@ export const vi = {
   "ob.ai.tier.premium": "suy luận cao cấp",
   "ob.ai.tier.frontier": "suy luận tiên phong",
   "ob.ai.tier.localLarge": "cục bộ, mạnh",
-  // The rail footer's plain-language line: the exact ids sit one click away
-  // in the runtime chip's "Configured AI" row, so this says only what a
-  // non-technical reader needs at a glance — how many models, and where.
-  "ob.ai.summary.cloud_one": "1 mô hình, chạy trên đám mây",
-  "ob.ai.summary.cloud_other": "{count} mô hình, chạy trên đám mây",
-  "ob.ai.summary.local_one": "1 mô hình, chạy cục bộ",
-  "ob.ai.summary.local_other": "{count} mô hình, chạy cục bộ",
-  "ob.ai.summary.hybrid_one": "1 mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.hybrid_other": "{count} mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.development_one": "1 mô hình, chế độ phát triển",
-  "ob.ai.summary.development_other": "{count} mô hình, chế độ phát triển",
-  "ob.ai.summary.none": "Chưa cấu hình mô hình nào",
-  "ob.ai.summaryProviders_one": "1 nhà cung cấp đã cấu hình",
-  "ob.ai.summaryProviders_other": "{count} nhà cung cấp đã cấu hình",
-  "ob.ai.readFirst": "Hãy bắt đầu thiết lập công ty trước khi hỏi về phần này.",
   "ob.ai.liveArtifact": "Bản dựng trực tiếp, rà soát được",
   "ob.ai.companyKnowledge": "Những gì tôi hiểu về công ty của bạn",
   "ob.ai.companyKnowledgeBody":
     "Bằng chứng từ website được giữ tách khỏi cuộc trò chuyện. Bạn quyết định điều gì trở thành thông tin công ty.",
   "ob.ai.companyKnowledgeManualBody":
     "Câu trả lời của bạn và gợi ý của tôi vẫn sửa được ở đây. Bạn quyết định điều gì trở thành thông tin công ty.",
-  "ob.ai.askPlaceholder":
-    "Hỏi tôi về một phát hiện, sửa một chi tiết, hoặc cho biết tôi đã bỏ sót gì…",
-  "ob.ai.send": "Gửi cho Margince",
-  "ob.ai.reviewBoundary":
-    "Ở đây tôi chỉ đề xuất thay đổi. Tôi chỉ áp dụng vào bản nháp của bạn khi bạn duyệt.",
   "ob.ai.confirmBoundary":
     "Không gì trở thành thông tin công ty cho đến khi bạn xác nhận bản nháp này.",
   "ob.ai.confirmCompany": "Xác nhận và lưu công ty",
-  "ob.ai.thinking": "Tôi đang xem lại tập hồ sơ và chuẩn bị câu trả lời…",
-  "ob.ai.suggestedChanges": "Thay đổi được đề xuất cho bản nháp của bạn",
-  "ob.ai.applyChanges": "Áp dụng vào bản nháp",
-  "ob.ai.applied": "Đã áp dụng vào bản nháp",
-  "ob.ai.finding_one": "phát hiện có dẫn nguồn",
-  "ob.ai.finding_other": "phát hiện có dẫn nguồn",
-  "ob.continueManual": "Kể cho tôi thay vì đọc",
   "ob.readStatus.queued": "Tôi đang chuẩn bị",
   "ob.readStatus.deferred": "Tôi đang chờ hạn mức AI",
   "ob.readStatus.reading": "Tôi đang đọc",
@@ -5607,13 +5580,6 @@ export const vi = {
   "ob.readStatus.failed": "Tôi cần bạn giúp",
   "ob.readStatus.confirmed": "Tôi đã lưu lựa chọn của bạn",
   "ob.readStatus.abandoned": "Tôi đã dừng",
-  "ob.pagesRead": "trang tôi đã đọc",
-  "ob.legalEntitiesFound": "pháp nhân tôi tìm được",
-  "ob.coverageDetails": "Những gì tôi đã đọc và không đọc được",
-  "ob.legalFoundTitle": "Pháp nhân tôi tìm được",
-  "ob.legalFoundBody":
-    "Mỗi khối giữ tên đăng ký, địa chỉ và mã số thuế. Bạn chọn pháp nhân của mình khi rà soát.",
-  "ob.legalEntity": "Pháp nhân",
   "ob.confirmWebsite_one":
     "Phần này dựa trên {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
   "ob.confirmWebsite_other":
@@ -5635,7 +5601,6 @@ export const vi = {
   "ob.s1.title": "Rà soát những gì tôi tìm hiểu được về công ty bạn",
   "ob.s1.sub":
     "Tôi chỉ điền những gì chứng minh được từ website của bạn. Hãy sửa lại chỗ nào sai.",
-  "ob.s1.urlPlaceholder": "congtycuaban.com",
   "ob.s1.identityLabel": "Pháp nhân",
   "ob.s1.offerLabel": "Sản phẩm và dịch vụ",
   "ob.s1.customerLabel": "Khách hàng",
@@ -5647,10 +5612,7 @@ export const vi = {
   "ob.s1.saveFailed": "Không lưu được công ty của bạn",
   "ob.s1.savedNote":
     "Đã lưu vào tổ chức của bạn. Sửa gì ở đây rồi tiếp tục là lưu lại lần nữa.",
-  "ob.readGo": "Đọc website của tôi",
-  "ob.urlWillRead": "Tôi sẽ đọc {host}",
   "ob.readFromSite": "đọc từ website",
-  "ob.failTitle": "Tôi đọc được quá ít từ website này",
 
   "ob.manualChapterLegal": "Pháp nhân của bạn",
   "ob.manualChapterOffer": "Sản phẩm và dịch vụ",
@@ -6337,7 +6299,6 @@ export const vi = {
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
-  "ob.conv.threadLabel": "Cuộc trò chuyện onboarding",
   "ob.conv.read.started": "Đang đọc {host}. Tìm được gì tôi sẽ báo bạn.",
   "ob.conv.read.pages": "Số trang đã đọc: {pages}.",
   "ob.conv.read.learnedField": "Đã biết {field}: {value}",
@@ -6349,8 +6310,6 @@ export const vi = {
   "ob.conv.read.deferred": "Lượt đọc đang tạm dừng. Tôi sẽ tự động làm tiếp.",
   "ob.conv.read.pollFailed":
     "Tôi mất kết nối giữa chừng khi đang đọc. Những gì đã tìm được vẫn được giữ.",
-  "ob.conv.clarify.entity":
-    "Website nêu nhiều hơn một pháp nhân. Bản cài đặt này dành cho pháp nhân nào?",
   "ob.conv.company.confirmed":
     "Đã xác nhận hồ sơ công ty. Mọi thứ tôi lưu đều kèm nguồn.",
   "ob.conv.manual.chosen": "Tôi sẽ tự nhập.",
@@ -6584,8 +6543,6 @@ export const vi = {
   "ob.conv.scene.hideEvidence": "ẩn bằng chứng",
   "ob.conv.scene.whyThis": "Tôi đã đọc được gì",
   "ob.conv.scene.foundOn": "Tìm thấy tại",
-  "ob.conv.activity.steps_one": "{count} bước",
-  "ob.conv.activity.steps_other": "{count} bước",
   "ob.conv.showField": "Cho tôi xem",
   "ob.conv.review.editDirectly": "Sửa trực tiếp từng trường",
   "ob.conv.review.backToDossier": "Quay lại tập hồ sơ",
@@ -6754,9 +6711,6 @@ export const vi = {
   "ob.scan.costUnpriced": " · có phần dùng chưa có giá",
 
   // --- the live panel: what the read covered, and what it left ----------
-  "ob.live.stateDone": "xong",
-  "ob.live.stateNow": "đang chạy",
-  "ob.live.stateWaiting": "đang chờ",
   "ob.live.review": "Rà soát",
   "ob.live.hide": "Ẩn đi",
   "ob.live.countPages": "đọc {read} · bỏ qua {skipped}",
@@ -7452,6 +7406,8 @@ export const vi = {
     "T\u1eeb ng\u1eef b\u1ea3n nh\u00e1p d\u00f9ng khi vi\u1ebft thay b\u1ea1n.",
   "settings.page.agents.sub":
     "T\u00e1c nh\u00e2n \u0111\u01b0\u1ee3c l\u00e0m g\u00ec khi kh\u00f4ng c\u00f3 b\u1ea1n, v\u00e0 client n\u00e0o gi\u1eef th\u00f4ng tin \u0111\u0103ng nh\u1eadp c\u1ee7a b\u1ea1n.",
+  "settings.page.notifications.sub":
+    "Nh\u1eefng lo\u1ea1i th\u00f4ng b\u00e1o n\u00e0o \u0111\u1ebfn v\u1edbi b\u1ea1n, v\u00e0 b\u1eb1ng c\u00e1ch n\u00e0o.",
   "settings.page.connections.sub":
     "H\u1ed9p th\u01b0 v\u00e0 \u0111\u1ecba ch\u1ec9 m\u00e0 gh\u1ebf n\u00e0y \u0111\u1ecdc.",
   "settings.page.capture-activity.sub":
@@ -7558,6 +7514,7 @@ export const vi = {
   "settings.tab.account": "Tài khoản",
   "settings.tab.voice": "Giọng viết",
   "settings.tab.agents": "Tác nhân",
+  "settings.tab.notifications": "Thông báo",
   "settings.tab.connections": "Kết nối",
   "settings.tab.general": "Chung",
   "settings.tab.users": "Người dùng & nhóm",

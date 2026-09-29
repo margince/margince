@@ -44,6 +44,24 @@ var identityTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableLead: true, tableDeal: true, tableProject: true,
 }
 
+// RowScoped reports whether the row-scope primitives can answer about a table
+// at all — the membership test VisibleSubset, EnsureVisible and
+// OwnerScopeClauseFor each make before they will speak. It belongs beside the
+// classification above for the reason that classification is here: which tables
+// row scope narrows is a property of the TABLE.
+//
+// It is exported for a caller holding a table name it did not choose. A notice
+// records the type of the record it is about as a stored string, written by
+// whichever producer raised it, so the morning digest that quotes such a notice
+// has to know whether "may this reader open it" is a question this package can
+// answer before it asks. Without this the caller would have to read that fact
+// out of an error's prose, which is not something to branch on.
+//
+// FALSE IS NOT PERMISSION. It says the row scope has nothing to say about the
+// table — so a caller that withholds by default withholds, and one that needs a
+// different gate goes and finds it.
+func RowScoped(table string) bool { return ownerScopedTables[table] }
+
 // readsEveryRow reports whether the principal's READ of the table carries no
 // owner-scope arm: an unbounded actor, or any actor on an identity table. It is
 // the read-side twin of Unbounded and deliberately says nothing about writes.
