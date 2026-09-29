@@ -1327,6 +1327,18 @@ func (stubs) ResolveDealRoomThread(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "ResolveDealRoomThread")
 }
 
+func (stubs) ListDealSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealSuggestionsParams) {
+	httperr.NotImplemented(w, r, "ListDealSuggestions")
+}
+
+func (stubs) AcceptDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AcceptDealSuggestionParams) {
+	httperr.NotImplemented(w, r, "AcceptDealSuggestion")
+}
+
+func (stubs) DismissDealSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.DismissDealSuggestionParams) {
+	httperr.NotImplemented(w, r, "DismissDealSuggestion")
+}
+
 func (stubs) ListDeals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealsParams) {
 	httperr.NotImplemented(w, r, "ListDeals")
 }

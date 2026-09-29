@@ -59,7 +59,13 @@ var rowScopedResponses = map[string]expectedTarget{
 	// A Deal Room has no owner column either: its visibility IS its deal's. It
 	// hands back a record — title, welcome text, steward, expiry — so it is
 	// probed like any other rather than waved through for lacking an owner.
-	"DealRoom":            {object: "deal_room", moduleProbe: "deal_room", idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
+	"DealRoom": {object: "deal_room", moduleProbe: "deal_room", idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
+	// A Deal Scout suggestion has no owner column: it is visible only to a
+	// reader who may see its company and every piece of its evidence, a rule
+	// the deals store holds. It hands back evidence titles, so it is probed.
+	"DealSuggestion":           {object: "deal", moduleProbe: "deal_suggestion", idPath: "id", rowNote: "a suggestion carries no owner column; its visibility is its company's and its evidence's, so the deals store owns the probe"},
+	"DealSuggestionAcceptance": {object: "deal", moduleProbe: "deal_suggestion", idPath: "suggestion.id", rowNote: "the acceptance hands back the suggestion it decided, probed like DealSuggestion; the deal it opened rides as a companion"},
+
 	"Activity":            {table: "activity", idPath: "id"},
 	"VoiceProfile":        {table: "voice_profile", idPath: "id"},
 	"List":                {table: "list", idPath: "id"},

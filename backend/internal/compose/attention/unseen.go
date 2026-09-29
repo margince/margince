@@ -111,7 +111,12 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// Counts.DuplicatesOpen is that total, taken by the store under the same
 	// visibility rule as the page, so the two are answering one question about
 	// one reader.
-	bounded[sourceDuplicate] = duplicatesShown(day.NeedsYou) < openPairs(day)
+	bounded[sourceDuplicate] = shownFrom(day.NeedsYou, sourceDuplicate) < openPairs(day)
+	// Suggestions know their total too, for the same reason, and are absent
+	// when the reader may not read them.
+	if day.Counts.DealSuggestionsOpen != nil {
+		bounded[sourceDealSuggestion] = shownFrom(day.NeedsYou, sourceDealSuggestion) < *day.Counts.DealSuggestionsOpen
+	}
 	return bounded
 }
 
@@ -124,10 +129,11 @@ func openPairs(day crmcontracts.Attention) int {
 	return *day.Counts.DuplicatesOpen
 }
 
-func duplicatesShown(lane []crmcontracts.AttentionItem) int {
+// shownFrom counts the lane's rows from one source.
+func shownFrom(lane []crmcontracts.AttentionItem, source string) int {
 	shown := 0
 	for _, item := range lane {
-		if item.Source == sourceDuplicate {
+		if string(item.Source) == source {
 			shown++
 		}
 	}

@@ -141,6 +141,11 @@ var tableOwners = map[string]string{
 	// aged out by the retention engine and its verdicts go with it.
 	"deal_risk_day":     "internal/modules/deals",
 	"deal_risk_verdict": "internal/modules/deals",
+	// Deal Scout's suggestions and the evidence each cites. Written by
+	// compose's hourly deal_scout pass through deals.RecordSuggestionTx, and
+	// decided by a rep through the deals store.
+	"deal_suggestion":          "internal/modules/deals",
+	"deal_suggestion_evidence": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails

@@ -92,6 +92,21 @@ type InternalEventBriefOpened struct {
 	Unread int `json:"unread"`
 }
 
+// InternalEventDealSuggestionAccepted A rep accepted a suggestion and a deal was opened from it. The deal publishes its own deal.created; this records the decision.
+type InternalEventDealSuggestionAccepted struct{}
+
+// InternalEventDealSuggestionCreated Deal Scout suggested opening a deal for a company with no open deal. Entity-less, which keeps it off the subscribable set: a suggestion is visible only to a reader who may see every piece of its evidence, and no webhook consumer can be held to that. The suggestion id stays on the audit row the emit points at.
+type InternalEventDealSuggestionCreated struct {
+	// EvidenceCount How many pieces of evidence the suggestion cites.
+	EvidenceCount int `json:"evidence_count"`
+}
+
+// InternalEventDealSuggestionDismissed A rep dismissed a suggestion for the whole workspace. The company is suggested again only on evidence newer than the dismissal.
+type InternalEventDealSuggestionDismissed struct{}
+
+// InternalEventDealSuggestionSuperseded A suggestion stopped standing without anybody deciding it: its company gained an open deal or was archived, or a piece of its evidence was erased.
+type InternalEventDealSuggestionSuperseded struct{}
+
 // InternalEventMeetingInvitationUpdated The durable calendar operation changed state; consumers reread permissioned details.
 type InternalEventMeetingInvitationUpdated struct {
 	Status  string `json:"status"`
@@ -118,6 +133,22 @@ func (InternalEventBookingPageUpdated) EntityType() string { return "booking_pag
 func (InternalEventBriefOpened) EventType() string { return "brief.opened" }
 
 func (InternalEventBriefOpened) EntityType() string { return "" }
+
+func (InternalEventDealSuggestionAccepted) EventType() string { return "deal_suggestion.accepted" }
+
+func (InternalEventDealSuggestionAccepted) EntityType() string { return "" }
+
+func (InternalEventDealSuggestionCreated) EventType() string { return "deal_suggestion.created" }
+
+func (InternalEventDealSuggestionCreated) EntityType() string { return "" }
+
+func (InternalEventDealSuggestionDismissed) EventType() string { return "deal_suggestion.dismissed" }
+
+func (InternalEventDealSuggestionDismissed) EntityType() string { return "" }
+
+func (InternalEventDealSuggestionSuperseded) EventType() string { return "deal_suggestion.superseded" }
+
+func (InternalEventDealSuggestionSuperseded) EntityType() string { return "" }
 
 func (InternalEventMeetingInvitationUpdated) EventType() string { return "meeting_invitation.updated" }
 

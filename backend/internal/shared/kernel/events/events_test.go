@@ -74,7 +74,9 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"decided": true, "failed": true, "appended": true,
 		"changed": true, "applied": true, "sent": true, "accepted": true,
 		"rejected": true, "superseded": true, "disqualified": true, "demoted": true,
-		"received": true, "normalized": true, "skipped": true,
+		// A rep said a Deal Scout suggestion is not a deal.
+		"dismissed": true,
+		"received":  true, "normalized": true, "skipped": true,
 		// The recipient read the notice — the verb is its own past tense.
 		"read":               true,
 		"read_back_proposed": true, "detected": true, "resolved": true,

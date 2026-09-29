@@ -62,6 +62,9 @@ type Store struct {
 
 	// followOwner hands pending proposals to a deal's new owner (ownerfollow.go).
 	followOwner FollowOwner
+
+	// suggestionEffects are an accepted suggestion's writes outside this module.
+	suggestionEffects SuggestionEffects
 }
 
 // InstallationValue resolves ONE installation-identity value inside a

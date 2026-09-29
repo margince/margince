@@ -231,20 +231,28 @@ const (
 	statusOpen   = "open"
 )
 
+// The deciders AcknowledgeTx records on the outcome row.
+const (
+	ResolutionSourceApproval  = "approval"
+	ResolutionSourceDealScout = "deal_scout"
+)
+
 // AcknowledgeTx marks one open signal acknowledged inside the caller's
 // transaction, and reports whether it moved.
 //
-// It exists for the approval effects: a human accepting the consequence of a
-// signal has, by that act, seen it, and a page that moved the account while
-// still shouting the signal that moved it contradicts itself. The move rides
-// the SAME transaction as the structural write, so neither can land alone.
+// It exists for the approval effects and for an accepted Deal Scout
+// suggestion: a human accepting the consequence of a signal has, by that act,
+// seen it, and a page that moved the account while still shouting the signal
+// that moved it contradicts itself. The move rides the SAME transaction as the
+// structural write, so neither can land alone. source names which of the two
+// decided it on the signal_resolution row.
 //
 // Unlike UpdateSignal this takes no version pin. The caller is a released
 // approval, not an editor with a stale copy in a browser tab: the only thing
 // it needs to be true is that the signal is still open, and the WHERE clause
 // is that check. A signal a human already triaged is left exactly as they
 // left it, and the false says so.
-func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID) (bool, error) {
+func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source string) (bool, error) {
 	actor, err := storekit.Actor(ctx)
 	if err != nil {
 		return false, err
@@ -266,9 +274,9 @@ func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID) (bool, err
 	// write passed through.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO signal_resolution (id, signal_id, outcome, resolved_by, source, captured_by)
-		 VALUES ($1, $2, 'acknowledged', $3, 'approval', $4)`,
+		 VALUES ($1, $2, 'acknowledged', $3, $4, $5)`,
 		ids.NewV7(), signalID,
-		storekit.UUIDOrNil(actor.UserID), actor.ID); err != nil {
+		storekit.UUIDOrNil(actor.UserID), source, actor.ID); err != nil {
 		return false, fmt.Errorf("append the signal outcome: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "signal", signalID,
@@ -336,7 +344,7 @@ func AcknowledgeOpenForCompanyTx(
 	for _, signalID := range ids {
 		// Each through the same CAS the single-signal path takes, so a row a
 		// human triaged between the read and this write keeps their outcome.
-		moved, err := AcknowledgeTx(ctx, tx, signalID)
+		moved, err := AcknowledgeTx(ctx, tx, signalID, ResolutionSourceApproval)
 		if err != nil {
 			return settled, err
 		}

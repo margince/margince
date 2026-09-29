@@ -134,6 +134,7 @@ import {
   useProjectsOfCompany,
 } from "./dealproject";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
+import { useSuggestionGhosts } from "./dealsuggestion";
 import {
   EntityRef,
   type OwnerNaming,
@@ -1609,6 +1610,7 @@ function DealBoardBody({
     companies,
     companiesSettled,
   );
+  const suggestionGhosts = useSuggestionGhosts(effectivePipeline?.id);
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>
@@ -1640,6 +1642,7 @@ function DealBoardBody({
                 mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
+                columnExtras={suggestionGhosts}
               />
               <LoadMoreButton query={dealsQuery} />
             </>

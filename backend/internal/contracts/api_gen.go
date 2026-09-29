@@ -1836,6 +1836,7 @@ const (
 	AttentionItemSourceConversationClaim   AttentionItemSource = "conversation_claim"
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
+	AttentionItemSourceDealSuggestion      AttentionItemSource = "deal_suggestion"
 	AttentionItemSourceDedupeCandidate     AttentionItemSource = "dedupe_candidate"
 	AttentionItemSourceDomainQuestion      AttentionItemSource = "domain_question"
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
@@ -1871,6 +1872,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceCustomerWaiting:
 		return true
 	case AttentionItemSourceDealAtRisk:
+		return true
+	case AttentionItemSourceDealSuggestion:
 		return true
 	case AttentionItemSourceDedupeCandidate:
 		return true
@@ -8008,6 +8011,93 @@ func (e DealRoomState) Valid() bool {
 	case DealRoomStatePublishing:
 		return true
 	case DealRoomStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionKind.
+const (
+	DealSuggestionKindAdvanceStage DealSuggestionKind = "advance_stage"
+	DealSuggestionKindOpenDeal     DealSuggestionKind = "open_deal"
+	DealSuggestionKindRevive       DealSuggestionKind = "revive"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionKind enum.
+func (e DealSuggestionKind) Valid() bool {
+	switch e {
+	case DealSuggestionKindAdvanceStage:
+		return true
+	case DealSuggestionKindOpenDeal:
+		return true
+	case DealSuggestionKindRevive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionNameHint.
+const (
+	DealSuggestionNameHintMeetingHeld          DealSuggestionNameHint = "meeting_held"
+	DealSuggestionNameHintOpportunitySignalled DealSuggestionNameHint = "opportunity_signalled"
+	DealSuggestionNameHintProposalSent         DealSuggestionNameHint = "proposal_sent"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionNameHint enum.
+func (e DealSuggestionNameHint) Valid() bool {
+	switch e {
+	case DealSuggestionNameHintMeetingHeld:
+		return true
+	case DealSuggestionNameHintOpportunitySignalled:
+		return true
+	case DealSuggestionNameHintProposalSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionState.
+const (
+	DealSuggestionStateAccepted   DealSuggestionState = "accepted"
+	DealSuggestionStateDismissed  DealSuggestionState = "dismissed"
+	DealSuggestionStateOpen       DealSuggestionState = "open"
+	DealSuggestionStateSuperseded DealSuggestionState = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionState enum.
+func (e DealSuggestionState) Valid() bool {
+	switch e {
+	case DealSuggestionStateAccepted:
+		return true
+	case DealSuggestionStateDismissed:
+		return true
+	case DealSuggestionStateOpen:
+		return true
+	case DealSuggestionStateSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealSuggestionEvidenceKind.
+const (
+	DealSuggestionEvidenceKindAttachment DealSuggestionEvidenceKind = "attachment"
+	DealSuggestionEvidenceKindMeeting    DealSuggestionEvidenceKind = "meeting"
+	DealSuggestionEvidenceKindSignal     DealSuggestionEvidenceKind = "signal"
+)
+
+// Valid indicates whether the value is a known member of the DealSuggestionEvidenceKind enum.
+func (e DealSuggestionEvidenceKind) Valid() bool {
+	switch e {
+	case DealSuggestionEvidenceKindAttachment:
+		return true
+	case DealSuggestionEvidenceKindMeeting:
+		return true
+	case DealSuggestionEvidenceKindSignal:
 		return true
 	default:
 		return false
@@ -16750,6 +16840,7 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
@@ -16788,6 +16879,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDealSuggestion:
 		return true
 	case WorklistItemSourceDedupeCandidate:
 		return true
@@ -16885,6 +16978,7 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
@@ -16923,6 +17017,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDealSuggestion:
 		return true
 	case WorklistReachSourceDedupeCandidate:
 		return true
@@ -19220,6 +19316,25 @@ type AIFeedbackInputSubjectType string
 
 // AIFeedbackInputVerdict defines model for AIFeedbackInput.Verdict.
 type AIFeedbackInputVerdict string
+
+// AcceptDealSuggestionRequest The caller's corrections. An omitted field keeps the suggestion's value.
+type AcceptDealSuggestionRequest struct {
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// CloseDate A date the caller chose. Without one the deal carries the suggestion's date, marked provisional.
+	CloseDate *openapi_types.Date `json:"close_date,omitempty"`
+	Currency  *string             `json:"currency,omitempty"`
+
+	// Name Without one the deal is named after the company.
+	Name *string `json:"name,omitempty"`
+
+	// NoAmount Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.
+	NoAmount *bool               `json:"no_amount,omitempty"`
+	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// StageId Any open stage; the deal opens in that stage's pipeline.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+}
 
 // AcceptExtractionRequest defines model for AcceptExtractionRequest.
 type AcceptExtractionRequest struct {
@@ -21542,6 +21657,9 @@ type AttentionCounts struct {
 
 	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
+
+	// DealSuggestionsOpen Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all.
+	DealSuggestionsOpen *int `json:"deal_suggestions_open,omitempty"`
 
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
@@ -29995,6 +30113,78 @@ type DealStatusCardVerdict struct {
 	// A plain string, not an inline enum, for the reason
 	// `DealRoomParticipantCapability` gives.
 	Standing string `json:"standing"`
+}
+
+// DealSuggestion One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal.
+type DealSuggestion struct {
+	// AmountMinor Proposed only when a finished reading of a cited document stated both an amount and a currency.
+	AmountMinor *int64              `json:"amount_minor,omitempty"`
+	CloseDate   *openapi_types.Date `json:"close_date,omitempty"`
+	CompanyId   openapi_types.UUID  `json:"company_id"`
+	CompanyName string              `json:"company_name"`
+	Confidence  float32             `json:"confidence"`
+	CreatedAt   time.Time           `json:"created_at"`
+
+	// Currency Present exactly when amount_minor is.
+	Currency *string                  `json:"currency,omitempty"`
+	Evidence []DealSuggestionEvidence `json:"evidence"`
+	Id       openapi_types.UUID       `json:"id"`
+
+	// Kind Only open_deal is suggested today.
+	Kind DealSuggestionKind `json:"kind"`
+
+	// NameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+	NameHint   DealSuggestionNameHint `json:"name_hint"`
+	PipelineId openapi_types.UUID     `json:"pipeline_id"`
+
+	// StageId The stage the deal would open in: the default pipeline's first open stage.
+	StageId openapi_types.UUID  `json:"stage_id"`
+	State   DealSuggestionState `json:"state"`
+}
+
+// DealSuggestionKind Only open_deal is suggested today.
+type DealSuggestionKind string
+
+// DealSuggestionNameHint Which evidence leads, as a code the client words in the reader's language. The proposed deal name is the company's name and this hint; nothing in a suggestion is text copied out of a message.
+type DealSuggestionNameHint string
+
+// DealSuggestionState defines model for DealSuggestion.State.
+type DealSuggestionState string
+
+// DealSuggestionAcceptance defines model for DealSuggestionAcceptance.
+type DealSuggestionAcceptance struct {
+	AcknowledgedSignals int                `json:"acknowledged_signals"`
+	DealId              openapi_types.UUID `json:"deal_id"`
+
+	// Suggestion One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal.
+	Suggestion DealSuggestion `json:"suggestion"`
+
+	// UnlinkedActivityIds Evidence messages the caller may not move, left where they were.
+	UnlinkedActivityIds []openapi_types.UUID `json:"unlinked_activity_ids"`
+}
+
+// DealSuggestionEvidence One cited piece of evidence. Exactly one of the three ids is present, and it matches kind.
+type DealSuggestionEvidence struct {
+	// ActivityId The held meeting.
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// AttachmentId The document sent to the company.
+	AttachmentId *openapi_types.UUID        `json:"attachment_id,omitempty"`
+	Kind         DealSuggestionEvidenceKind `json:"kind"`
+	OccurredAt   time.Time                  `json:"occurred_at"`
+	SignalId     *openapi_types.UUID        `json:"signal_id,omitempty"`
+
+	// Title The meeting's subject, the signal's summary or the document's file name.
+	Title string `json:"title"`
+}
+
+// DealSuggestionEvidenceKind defines model for DealSuggestionEvidence.Kind.
+type DealSuggestionEvidenceKind string
+
+// DealSuggestionListResponse defines model for DealSuggestionListResponse.
+type DealSuggestionListResponse struct {
+	Data []DealSuggestion `json:"data"`
+	Page PageInfo         `json:"page"`
 }
 
 // DecideCommissionRequest defines model for DecideCommissionRequest.
@@ -45523,6 +45713,55 @@ type ListDealRoomThreadsParams struct {
 	DocumentId *openapi_types.UUID `form:"document_id,omitempty" json:"document_id,omitempty"`
 }
 
+// ListDealSuggestionsParams defines parameters for ListDealSuggestions.
+type ListDealSuggestionsParams struct {
+	CompanyId  *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+	PipelineId *openapi_types.UUID `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	StageId    *openapi_types.UUID `form:"stage_id,omitempty" json:"stage_id,omitempty"`
+
+	// Cursor Opaque keyset cursor.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// AcceptDealSuggestionParams defines parameters for AcceptDealSuggestion.
+type AcceptDealSuggestionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// DismissDealSuggestionParams defines parameters for DismissDealSuggestion.
+type DismissDealSuggestionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListDealsParams defines parameters for ListDeals.
 type ListDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -49088,6 +49327,9 @@ type OpenDealRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 
 // ReplyDealRoomThreadJSONRequestBody defines body for ReplyDealRoomThread for application/json ContentType.
 type ReplyDealRoomThreadJSONRequestBody = PostDealRoomCommentRequest
+
+// AcceptDealSuggestionJSONRequestBody defines body for AcceptDealSuggestion for application/json ContentType.
+type AcceptDealSuggestionJSONRequestBody = AcceptDealSuggestionRequest
 
 // CreateDealJSONRequestBody defines body for CreateDeal for application/json ContentType.
 type CreateDealJSONRequestBody = CreateDealRequest
@@ -60596,6 +60838,15 @@ type ServerInterface interface {
 	// Close a thread — the seller's side saying the point is settled.
 	// (POST /deal-rooms/{id}/threads/{threadId}/resolve)
 	ResolveDealRoomThread(w http.ResponseWriter, r *http.Request, id Id, threadId openapi_types.UUID)
+	// Open Deal Scout suggestions the caller may see, newest first.
+	// (GET /deal-suggestions)
+	ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams)
+	// Open the suggested deal, with the caller's corrections.
+	// (POST /deal-suggestions/{id}/accept)
+	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
+	// Record that the suggestion is not a deal, for the whole workspace.
+	// (POST /deal-suggestions/{id}/dismiss)
+	DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams)
 	// List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
 	// (GET /deals)
 	ListDeals(w http.ResponseWriter, r *http.Request, params ListDealsParams)
@@ -63689,6 +63940,24 @@ func (_ Unimplemented) ReplyDealRoomThread(w http.ResponseWriter, r *http.Reques
 // Close a thread — the seller's side saying the point is settled.
 // (POST /deal-rooms/{id}/threads/{threadId}/resolve)
 func (_ Unimplemented) ResolveDealRoomThread(w http.ResponseWriter, r *http.Request, id Id, threadId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open Deal Scout suggestions the caller may see, newest first.
+// (GET /deal-suggestions)
+func (_ Unimplemented) ListDealSuggestions(w http.ResponseWriter, r *http.Request, params ListDealSuggestionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open the suggested deal, with the caller's corrections.
+// (POST /deal-suggestions/{id}/accept)
+func (_ Unimplemented) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that the suggestion is not a deal, for the whole workspace.
+// (POST /deal-suggestions/{id}/dismiss)
+func (_ Unimplemented) DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -79404,6 +79673,209 @@ func (siw *ServerInterfaceWrapper) ResolveDealRoomThread(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveDealRoomThread(w, r, id, threadId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDealSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDealSuggestionsParams
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "stage_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stage_id", r.URL.Query(), &params.StageId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stage_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stage_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDealSuggestions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptDealSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AcceptDealSuggestionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptDealSuggestion(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissDealSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) DismissDealSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DismissDealSuggestionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissDealSuggestion(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -96719,6 +97191,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-rooms/{id}/threads/{threadId}/resolve", wrapper.ResolveDealRoomThread)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-suggestions", wrapper.ListDealSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deal-suggestions/{id}/accept", wrapper.AcceptDealSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deal-suggestions/{id}/dismiss", wrapper.DismissDealSuggestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals", wrapper.ListDeals)

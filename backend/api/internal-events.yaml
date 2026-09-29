@@ -239,3 +239,46 @@ components:
             Together with items it separates a first open from a return visit
             without needing a second event type for the difference.
       additionalProperties: false
+    InternalEventDealSuggestionCreated:
+      type: object
+      x-event-type: deal_suggestion.created
+      x-entity-type: ""
+      description: >-
+        Deal Scout suggested opening a deal for a company with no open deal.
+        Entity-less, which keeps it off the subscribable set: a suggestion is
+        visible only to a reader who may see every piece of its evidence, and
+        no webhook consumer can be held to that. The suggestion id stays on
+        the audit row the emit points at.
+      required:
+        - evidence_count
+      properties:
+        evidence_count:
+          type: integer
+          minimum: 1
+          description: How many pieces of evidence the suggestion cites.
+      additionalProperties: false
+    InternalEventDealSuggestionAccepted:
+      type: object
+      x-event-type: deal_suggestion.accepted
+      x-entity-type: ""
+      description: >-
+        A rep accepted a suggestion and a deal was opened from it. The deal
+        publishes its own deal.created; this records the decision.
+      additionalProperties: false
+    InternalEventDealSuggestionDismissed:
+      type: object
+      x-event-type: deal_suggestion.dismissed
+      x-entity-type: ""
+      description: >-
+        A rep dismissed a suggestion for the whole workspace. The company is
+        suggested again only on evidence newer than the dismissal.
+      additionalProperties: false
+    InternalEventDealSuggestionSuperseded:
+      type: object
+      x-event-type: deal_suggestion.superseded
+      x-entity-type: ""
+      description: >-
+        A suggestion stopped standing without anybody deciding it: its company
+        gained an open deal or was archived, or a piece of its evidence was
+        erased.
+      additionalProperties: false
