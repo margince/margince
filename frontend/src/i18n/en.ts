@@ -11104,6 +11104,11 @@ export const en = {
   "aiRates.manual.laneChat": "Chat",
   "aiRates.manual.laneEmbeddings": "Embeddings",
   "aiRates.manual.laneDecisions": "Decisions",
+  "aiRates.remove.verb": "Remove {model}",
+  "aiRates.remove.title": "Remove the price for {model}?",
+  "aiRates.remove.body":
+    "The price for {model} is removed and cost estimates for past calls of that model become unpriced.",
+  "aiRates.remove.confirm": "Remove",
   "firstRun.ignite.title": "Model connected",
   "firstRun.ignite.sub":
     "The key is stored and the model responded. This is what changes.",

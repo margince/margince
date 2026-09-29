@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
@@ -17,6 +18,7 @@ import {
   ProviderRefreshLine,
 } from "./rate-catalogue-refresh";
 import { PriceForm, today } from "./rate-manual";
+import { RemovePriceDialog } from "./rate-remove";
 import "./ai-settings.css";
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
@@ -116,6 +118,10 @@ export function ProviderSheet({
   );
 }
 
+// Where focus lands when the prices section takes it back: the verb that opens
+// the form when a writer holds one, else the first control in the section.
+const FIRST_VERB = "button.button-primary, button";
+
 // What is billed per model for this vendor, and the way to change it. Absent
 // for a reader without the sheet's read grant: an empty table there would say
 // the vendor has no prices, which is a claim about the data.
@@ -137,6 +143,8 @@ function ProviderPrices({
     initial?: SheetRow;
     draft?: { model: string; lane: ProviderUse["models"][number]["lane"] };
   } | null>(null);
+  // The row whose entry is about to leave the sheet, while the question is open.
+  const [removing, setRemoving] = useState<SheetRow | null>(null);
   // Swapping the table for the form unmounts the button that was pressed, which
   // drops focus onto the page. Focus follows the swap: into the form's first
   // field, and back to the verb that opens it.
@@ -147,9 +155,7 @@ function ProviderPrices({
       swapped.current = true;
       return;
     }
-    const target = form
-      ? 'input, [role="combobox"]'
-      : "button.button-primary, button";
+    const target = form ? 'input, [role="combobox"]' : FIRST_VERB;
     section.current?.querySelector<HTMLElement>(target)?.focus();
   }, [form]);
   if (!canRead) return null;
@@ -218,77 +224,116 @@ function ProviderPrices({
           {rows.length === 0 ? (
             <p className="t-sub">{t("aiProviders.noPrices")}</p>
           ) : (
-            <div className="ai-sheet-table">
-              <DataTable<SheetRow>
-                label={t("aiProviders.prices")}
-                rows={rows}
-                rowKey={(r) => `${r.lane}/${r.model_id}`}
-                columns={[
-                  {
-                    key: "model",
-                    header: t("settings.rates.colModel"),
-                    grow: true,
-                    render: (r) => (
-                      <span className="ai-sheet-model">
-                        {r.model_id}
-                        {r.effective_date > today() ? (
-                          <Badge tone="info">
-                            {t("aiRates.manual.from", {
-                              date: r.effective_date,
-                            })}
-                          </Badge>
-                        ) : null}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: "in",
-                    header: t("aiProviders.colInput"),
-                    align: "end",
-                    render: (r) => r.input_per_mtok,
-                  },
-                  {
-                    key: "out",
-                    header: t("aiProviders.colOutput"),
-                    align: "end",
-                    render: (r) => r.output_per_mtok,
-                  },
-                  {
-                    key: "cr",
-                    header: t("aiProviders.colCacheRead"),
-                    align: "end",
-                    render: (r) => r.cache_read_per_mtok,
-                  },
-                  {
-                    key: "cw",
-                    header: t("aiProviders.colCacheWrite"),
-                    align: "end",
-                    render: (r) => r.cache_write_per_mtok,
-                  },
-                  ...(canWrite
-                    ? [
-                        {
-                          key: "edit",
-                          header: t("aiRates.manual.edit"),
-                          align: "end" as const,
-                          render: (r: SheetRow) => (
-                            <Button
-                              variant="ghost"
-                              onClick={() => setForm({ initial: r })}
-                            >
-                              {t("aiRates.manual.edit")}
-                              <span className="sr-only"> {r.model_id}</span>
-                            </Button>
-                          ),
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-            </div>
+            <PriceTable
+              rows={rows}
+              verbs={canWrite}
+              onEdit={(r) => setForm({ initial: r })}
+              onRemove={setRemoving}
+            />
           )}
+          {removing ? (
+            <RemovePriceDialog
+              row={removing}
+              onClose={() => setRemoving(null)}
+              returnFocusTo={() =>
+                section.current?.querySelector<HTMLElement>(FIRST_VERB) ?? null
+              }
+            />
+          ) : null}
         </>
       )}
     </section>
+  );
+}
+
+// The prices themselves, one row per model, with the two verbs a writer holds
+// on a row: correcting the price, and taking the whole entry off the sheet.
+function PriceTable({
+  rows,
+  verbs,
+  onEdit,
+  onRemove,
+}: Readonly<{
+  rows: SheetRow[];
+  verbs: boolean;
+  onEdit: (row: SheetRow) => void;
+  onRemove: (row: SheetRow) => void;
+}>) {
+  const t = useT();
+  return (
+    <div className="ai-sheet-table">
+      <DataTable<SheetRow>
+        label={t("aiProviders.prices")}
+        rows={rows}
+        rowKey={(r) => `${r.lane}/${r.model_id}`}
+        columns={[
+          {
+            key: "model",
+            header: t("settings.rates.colModel"),
+            grow: true,
+            render: (r) => (
+              <span className="ai-sheet-model">
+                {r.model_id}
+                {r.effective_date > today() ? (
+                  <Badge tone="info">
+                    {t("aiRates.manual.from", { date: r.effective_date })}
+                  </Badge>
+                ) : null}
+              </span>
+            ),
+          },
+          {
+            key: "in",
+            header: t("aiProviders.colInput"),
+            align: "end",
+            render: (r) => r.input_per_mtok,
+          },
+          {
+            key: "out",
+            header: t("aiProviders.colOutput"),
+            align: "end",
+            render: (r) => r.output_per_mtok,
+          },
+          {
+            key: "cr",
+            header: t("aiProviders.colCacheRead"),
+            align: "end",
+            render: (r) => r.cache_read_per_mtok,
+          },
+          {
+            key: "cw",
+            header: t("aiProviders.colCacheWrite"),
+            align: "end",
+            render: (r) => r.cache_write_per_mtok,
+          },
+          ...(verbs
+            ? [
+                {
+                  key: "actions",
+                  header: t("table.actions"),
+                  align: "end" as const,
+                  render: (r: SheetRow) => (
+                    <div className="cell-actions">
+                      <Button variant="ghost" onClick={() => onEdit(r)}>
+                        {t("aiRates.manual.edit")}
+                        <span className="sr-only"> {r.model_id}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        aria-label={t("aiRates.remove.verb", {
+                          model: r.model_id,
+                        })}
+                        onClick={() => onRemove(r)}
+                      >
+                        <Trash2 aria-hidden />
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
+    </div>
   );
 }

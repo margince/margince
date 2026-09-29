@@ -10831,6 +10831,11 @@ export const vi = {
   "aiRates.manual.laneChat": "Trò chuyện",
   "aiRates.manual.laneEmbeddings": "Nhúng",
   "aiRates.manual.laneDecisions": "Quyết định",
+  "aiRates.remove.verb": "Xóa {model}",
+  "aiRates.remove.title": "Xóa giá của {model}?",
+  "aiRates.remove.body":
+    "Giá của {model} sẽ bị xóa và ước tính chi phí cho các lần gọi trước đây của mô hình này trở thành chưa có giá.",
+  "aiRates.remove.confirm": "Xóa",
   "firstRun.ai.foot":
     "Chưa có gì gửi tới nhà cung cấp của bạn cho tới khi bạn bấm Tiếp tục.",
   "contact.readings.title": "Vị thế của liên hệ này",

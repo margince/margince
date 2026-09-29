@@ -98,6 +98,7 @@ function stub(allow: GrantSpec = WRITER) {
     "GET /ai/available-models/{provider}": () =>
       jsonResponse({ provider: "gemini", models: [{ id: "gemini-4-pro" }] }),
     "POST /ai-model-rates": () => jsonResponse(RATES[0], 201),
+    "DELETE /ai-model-rates": () => new Response(null, { status: 204 }),
     "POST /ai/provider-keys/gemini/test": () =>
       jsonResponse({ provider: "gemini", ok: true, model_count: 42 }),
   });
@@ -148,6 +149,18 @@ export const AddingAPrice: Story = {
     const body = within(ctx.canvasElement.ownerDocument.body);
     await userEvent.click(
       await body.findByRole("button", { name: "Add price" }),
+    );
+  },
+};
+
+/** Removing a price asks first: every date of the entry goes, and its calls read as unpriced. */
+export const RemovingAPrice: Story = {
+  ...List,
+  play: async (ctx) => {
+    await openSheet("gemini")?.(ctx);
+    const body = within(ctx.canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Remove gemini-2.5-pro" }),
     );
   },
 };

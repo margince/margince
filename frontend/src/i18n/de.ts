@@ -10944,6 +10944,11 @@ export const de = {
   "aiRates.manual.laneChat": "Chat",
   "aiRates.manual.laneEmbeddings": "Einbettungen",
   "aiRates.manual.laneDecisions": "Entscheidungen",
+  "aiRates.remove.verb": "{model} entfernen",
+  "aiRates.remove.title": "Preis für {model} entfernen?",
+  "aiRates.remove.body":
+    "Der Preis für {model} wird entfernt; Kostenschätzungen für frühere Aufrufe dieses Modells gelten dann als ohne Preis.",
+  "aiRates.remove.confirm": "Entfernen",
   "firstRun.ai.foot":
     "Bis du „Weiter“ wählst, wird nichts an den Anbieter gesendet.",
   "contact.readings.title": "Kontaktstatus",

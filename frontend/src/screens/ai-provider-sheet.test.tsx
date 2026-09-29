@@ -79,7 +79,15 @@ const WRITER: GrantSpec = {
 
 type Posted = { url: string; body: unknown };
 
-function backend(allow: GrantSpec, posts: Posted[]) {
+// How the server answers a removal: the entry goes, or the call is refused.
+type Removal = "removed" | "refused";
+
+function backend(
+  allow: GrantSpec,
+  posts: Posted[],
+  deletes: string[],
+  removal: Removal,
+) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
       input instanceof Request ? input : new Request(String(input), init);
@@ -111,6 +119,19 @@ function backend(allow: GrantSpec, posts: Posted[]) {
       posts.push({ url: req.url, body: await req.json() });
       return jsonResponse(GEMINI_ROW, 201);
     }
+    if (path.endsWith("/ai-model-rates") && req.method === "DELETE") {
+      deletes.push(req.url);
+      return removal === "removed"
+        ? new Response(null, { status: 204 })
+        : jsonResponse(
+            {
+              status: 404,
+              code: "not_found",
+              detail: "The sheet has no such entry.",
+            },
+            404,
+          );
+    }
     if (path.endsWith("/ai-model-rates")) {
       return jsonResponse({
         data: [
@@ -123,9 +144,10 @@ function backend(allow: GrantSpec, posts: Posted[]) {
   });
 }
 
-function mount(allow: GrantSpec = WRITER) {
+function mount(allow: GrantSpec = WRITER, removal: Removal = "removed") {
   const posts: Posted[] = [];
-  vi.stubGlobal("fetch", backend(allow, posts));
+  const deletes: string[] = [];
+  vi.stubGlobal("fetch", backend(allow, posts, deletes, removal));
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -134,7 +156,7 @@ function mount(allow: GrantSpec = WRITER) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { posts };
+  return { posts, deletes };
 }
 
 async function open(
@@ -255,6 +277,65 @@ describe("a provider's sheet", () => {
     });
   });
 
+  it("removes a model's entry after the reader confirms, naming its provider, model and lane", async () => {
+    const user = userEvent.setup();
+    const { deletes } = mount();
+    const sheet = await open(user, "gemini");
+    await user.click(
+      await within(sheet).findByRole("button", {
+        name: "Remove gemini-3.5-flash",
+      }),
+    );
+    const question = await screen.findByRole("dialog", {
+      name: "Remove the price for gemini-3.5-flash?",
+    });
+    expect(
+      within(question).getByText(/past calls of that model become unpriced/),
+    ).toBeTruthy();
+    expect(deletes).toHaveLength(0);
+    await user.click(within(question).getByRole("button", { name: "Remove" }));
+    await vi.waitFor(() => expect(deletes).toHaveLength(1));
+    const sent = new URL(deletes[0] ?? "");
+    expect(sent.pathname.endsWith("/ai-model-rates")).toBe(true);
+    expect(Object.fromEntries(sent.searchParams)).toEqual({
+      provider: "gemini",
+      model_id: "gemini-3.5-flash",
+      lane: "chat",
+    });
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", {
+          name: "Remove the price for gemini-3.5-flash?",
+        }),
+      ).toBeNull(),
+    );
+  });
+
+  it("keeps the question open and shows the refusal when the server refuses", async () => {
+    const user = userEvent.setup();
+    const { deletes } = mount(WRITER, "refused");
+    const sheet = await open(user, "gemini");
+    await user.click(
+      await within(sheet).findByRole("button", {
+        name: "Remove gemini-3.5-flash",
+      }),
+    );
+    const question = await screen.findByRole("dialog", {
+      name: "Remove the price for gemini-3.5-flash?",
+    });
+    await user.click(within(question).getByRole("button", { name: "Remove" }));
+    const refusal = await within(question).findByText(
+      "The sheet has no such entry.",
+    );
+    expect(refusal.closest('[role="alert"]')).not.toBeNull();
+    expect(deletes).toHaveLength(1);
+    expect(
+      screen.getByRole("dialog", {
+        name: "Remove the price for gemini-3.5-flash?",
+      }),
+    ).toBeTruthy();
+  });
+
   it("says a refresh left this vendor to be priced by hand", async () => {
     const user = userEvent.setup();
     mount();
@@ -271,7 +352,7 @@ describe("a provider's sheet", () => {
     const sheet = await open(user, "gemini");
     await within(sheet).findByText("gemini-3.5-flash");
     expect(
-      within(sheet).queryByRole("button", { name: /Add price|Edit/ }),
+      within(sheet).queryByRole("button", { name: /Add price|Edit|Remove/ }),
     ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Refresh model prices" }),
