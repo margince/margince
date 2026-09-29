@@ -5,6 +5,7 @@ import { Layers, ListChecks, Server } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
+import "./ai-settings.css";
 
 // The three words this settings area is built from, each with one mark wherever
 // it appears: a PROVIDER is who is called, a TIER is a class of work with a

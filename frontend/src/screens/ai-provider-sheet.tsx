@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
@@ -323,11 +323,16 @@ function PriceTable({
                   align: "end" as const,
                   render: (r: SheetRow) => (
                     <div className="cell-actions">
-                      <Button variant="ghost" onClick={() => onEdit(r)}>
-                        {t("aiRates.manual.edit")}
-                        <span className="sr-only"> {r.model_id}</span>
+                      <Button
+                        iconOnly
+                        variant="ghost"
+                        aria-label={`${t("aiRates.manual.edit")} ${r.model_id}`}
+                        onClick={() => onEdit(r)}
+                      >
+                        <Pencil aria-hidden />
                       </Button>
                       <Button
+                        iconOnly
                         variant="ghost"
                         aria-label={t("aiRates.remove.verb", {
                           model: r.model_id,
