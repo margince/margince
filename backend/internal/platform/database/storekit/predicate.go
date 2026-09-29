@@ -285,14 +285,8 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 	if err != nil {
 		return "", err
 	}
-	if field.Withheld {
-		return "FALSE", nil
-	}
-	if field.Link != "" {
-		return compileLinkLeaf(p, field, arg)
-	}
-	if field.Instant && p.Op != OpExists {
-		return compileInstantLeaf(p, field, arg)
+	if sql, shaped, err := compileShapedLeaf(p, field, arg); shaped {
+		return sql, err
 	}
 	compared := comparedExpr(field)
 
@@ -335,6 +329,24 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 
 	default: // eq, neq, gt, gte, lt, lte — scalar comparisons.
 		return compileScalarLeaf(p, field, compared, arg)
+	}
+}
+
+// compileShapedLeaf compiles a leaf whose field is not a plain column: a
+// withheld one, a linked one, or a day read off a timestamp. shaped is false
+// for a plain column, which the caller compiles itself.
+func compileShapedLeaf(p Predicate, field Field, arg func(any) int) (sql string, shaped bool, err error) {
+	switch {
+	case field.Withheld:
+		return "FALSE", true, nil
+	case field.Link != "":
+		sql, err = compileLinkLeaf(p, field, arg)
+		return sql, true, err
+	case field.Instant && p.Op != OpExists:
+		sql, err = compileInstantLeaf(p, field, arg)
+		return sql, true, err
+	default:
+		return "", false, nil
 	}
 }
 
