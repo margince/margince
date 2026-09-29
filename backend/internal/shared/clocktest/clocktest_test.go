@@ -23,15 +23,7 @@ func TestAnOrdinaryRunDatesAFixtureFromWallTime(t *testing.T) {
 func TestTheFixtureApplierMovesTheBaseInstant(t *testing.T) {
 	t.Setenv(clockskew.EnvVar, "fixture:200")
 
-	shifted := Now(t).Sub(time.Now())
-	// A tolerance, because the two clock reads are not the same instant — and
-	// stated as a window around the offset rather than as an elapsed budget, so
-	// the assertion does not become the wall-clock comparison mergegateclockbounds
-	// prohibits.
-	want := 200 * 24 * time.Hour
-	if shifted < want-time.Minute || shifted > want+time.Minute {
-		t.Fatalf("Now() is %v from wall time; want %v", shifted, want)
-	}
+	assertOffsetFromWallTime(t, 200*24*time.Hour)
 }
 
 // The other two appliers move a clock this helper must not move again.
@@ -40,10 +32,30 @@ func TestAnAppliedClockIsNotShiftedTwice(t *testing.T) {
 		t.Run(value, func(t *testing.T) {
 			t.Setenv(clockskew.EnvVar, value)
 
-			if shifted := Now(t).Sub(time.Now()); shifted > time.Minute {
-				t.Fatalf("Now() is %v from wall time under %q; want wall time — the clock this "+
-					"applier moved is already the one time.Now() reads", shifted, value)
-			}
+			// The clock this applier moved is already the one time.Now() reads,
+			// so the helper owes no offset of its own.
+			assertOffsetFromWallTime(t, 0)
 		})
+	}
+}
+
+// assertOffsetFromWallTime brackets Now() between wall time plus want read on
+// either side of it.
+//
+// Bracketing rather than measuring the gap: the two clock reads are not the
+// same instant, and a gap compared against a threshold is a verdict about how
+// busy the machine is, which is what mergegateclockbounds_test.go prohibits and
+// what P3 means by real-clock flakiness. Three instants in order answer the same
+// on any machine, and need no tolerance to be invented for them.
+func assertOffsetFromWallTime(t *testing.T, want time.Duration) {
+	t.Helper()
+
+	earliest := time.Now().Add(want)
+	got := Now(t)
+	latest := time.Now().Add(want)
+
+	if got.Before(earliest) || got.After(latest) {
+		t.Fatalf("Now() = %v; want wall time plus %v, which is somewhere in [%v, %v]",
+			got, want, earliest, latest)
 	}
 }

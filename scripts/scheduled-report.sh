@@ -382,7 +382,7 @@ they are not the same finding:
 - The lane's own. If the clock did not actually move, or a time service
   re-synced mid-run, \`scripts/clock-drift-host.sh\` says so and the run is void
   rather than a finding about the tree. A red that blames the tree for the lane
-  is what teaches people to ignore a scheduled lane, so rule this out first.
+  is what teaches a reader to ignore a scheduled lane, so rule this out first.
 
 Reproduce locally with \`make backend-clock-drift\`, which defaults to the database
 applier. Read a green from it as weaker than this lane's: \`CURRENT_TIMESTAMP\` and

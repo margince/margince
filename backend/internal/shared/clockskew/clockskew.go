@@ -42,10 +42,11 @@ type Applier string
 // They are not interchangeable and the difference is not a preference:
 //
 //   - Machine moves the host's wall clock, which is what CI does. Linux has no
-//     CLOCK_REALTIME namespace — a container cannot hold a wall clock of its
-//     own — so the compose Postgres reads the same moved clock the Go process
-//     does, and the two cannot disagree. That is the only applier that shifts
-//     every reading of now(), including the ones written by a column DEFAULT.
+//     CLOCK_REALTIME namespace, so a container reads the host's wall clock
+//     rather than one of its own: the compose Postgres and the Go process are
+//     looking at the same moved clock. It reaches every reading of now(),
+//     including the ones a column DEFAULT wrote, which is what makes it the
+//     applier the lane runs under.
 //   - Database shadows now() in the test template, for a laptop where moving
 //     the host clock is not acceptable. It is strictly weaker: see
 //     ShadowLimits.
