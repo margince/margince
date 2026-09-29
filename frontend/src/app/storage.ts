@@ -6,8 +6,8 @@
 
 type StorageArea = "local" | "session";
 
-// `seat`: what one signed-in member did or holds, erased by `forgetSeat`.
-// `device` (a browser preference) and `account` (named by its account) stay.
+// `seat`: what whoever is signed in on this browser did or holds, erased by
+// `forgetSeat`; `device` (a preference) and `account` (named by one) stay.
 type Lifetime = "device" | "seat" | "account";
 
 type Declared = Readonly<{ area: StorageArea; lifetime: Lifetime }> &
@@ -143,8 +143,7 @@ function registeredAs(area: StorageArea, name: string): Registered | undefined {
   );
 }
 
-/** Erase what the signed-out member left in this browser, in both areas and
- *  every family; `device` and `account` keys stay. */
+/** Erase every `seat` key, in both areas and every family, at sign-out. */
 export function forgetSeat(): void {
   for (const area of ["local", "session"] as const) {
     withStorage(

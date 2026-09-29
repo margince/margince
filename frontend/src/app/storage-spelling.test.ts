@@ -37,7 +37,6 @@ function mayReachForStorage(text: string): boolean {
   return text.includes("localStorage") || text.includes("sessionStorage");
 }
 
-/** Every line in `source` that names Web Storage, once per line. */
 function storageReachesIn(source: ts.SourceFile): number[] {
   const lines = new Set<number>();
   const visit = (node: ts.Node) => {

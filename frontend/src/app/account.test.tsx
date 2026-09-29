@@ -12,7 +12,10 @@ import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { AccountMenu } from "./account";
 import { meFixture } from "./mefixture";
-import { setThemeChoice, THEME_KEY } from "./theme";
+import { STORAGE_KEYS } from "./storage";
+import { setThemeChoice } from "./theme";
+
+const THEME_KEY = STORAGE_KEYS.theme.name;
 
 // The account block: an avatar in the top bar's trail, and the menu it opens is
 // the product's ONE door into settings and its ONE appearance control — the

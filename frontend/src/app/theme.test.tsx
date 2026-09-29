@@ -8,15 +8,17 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
+import { STORAGE_KEYS } from "./storage";
 import {
   setThemeChoice,
   THEME_CHOICES,
-  THEME_KEY,
   type Theme,
   type ThemeChoice,
 } from "./theme";
 import { resetTheme } from "./theme-reset";
 import { ThemeToggle } from "./theme-toggle";
+
+const THEME_KEY = STORAGE_KEYS.theme.name;
 
 // The theme has toggles on two surfaces (sign-in and the onboarding rail) and a
 // three-way chooser in the account menu. Only one of them is ever mounted today,

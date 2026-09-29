@@ -49,9 +49,6 @@ export const THEME_CHOICES: readonly ThemeChoice[] = [
   "system",
 ];
 
-/** Where the choice is kept, named for the suites that assert on storage. */
-export const THEME_KEY = STORAGE_KEYS.theme.name;
-
 const PREFERS_DARK = "(prefers-color-scheme: dark)";
 
 /**
