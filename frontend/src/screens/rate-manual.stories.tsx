@@ -98,3 +98,10 @@ export const Refused: Story = {
     await userEvent.click(await body.findByRole("button", { name: "Save" }));
   },
 };
+
+/** At 390px the dialog is a full-screen sheet and the price table scrolls inside it. */
+export const ForAProviderPhone: Story = {
+  render: story("gemini"),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
