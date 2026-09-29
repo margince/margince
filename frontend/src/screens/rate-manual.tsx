@@ -10,9 +10,8 @@ import { ComboBox } from "../design-system/combobox";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
-import { calendarDay } from "../format/calendarday";
+import { today } from "../format/calendarday";
 import { PER_MTOK_PRICE } from "../format/priceinput";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { ModelLane } from "./ai-models";
@@ -24,13 +23,11 @@ import {
 import { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
 import { problemMessageOf, throwProblem, WriteRefused } from "./common";
 
-// The reader's own today, for the same reason the sheets read effective dates
-// against their calendar rather than UTC's. Shared with the currency sheet.
-export function today(): string {
-  return calendarDay(new Date(), viewerZone());
-}
-
 type SheetRow = components["schemas"]["AiModelRate"];
+type PriceWrite = components["schemas"]["SetAiModelRateRequest"];
+
+/** A model routing binds, with the lane it is bound in. */
+export type BoundModel = Readonly<{ model: string; lane: ModelLane }>;
 
 // A scheduled price is edited on its own date; an in-force one, from today.
 function startDate(row: SheetRow | undefined): string {
@@ -77,9 +74,10 @@ export function PriceForm({
 }: Readonly<{
   provider?: string;
   // A model to start the form on, for one that is in use and has no price.
-  draft?: { model: string; lane: ModelLane };
-  // The models routing binds on this vendor, offered first in the model box.
-  boundModels?: readonly string[];
+  draft?: BoundModel;
+  // The models routing binds on this vendor, offered first in the model box;
+  // picking one files the price in the lane it is bound in.
+  boundModels?: readonly BoundModel[];
   initial?: SheetRow;
   onDone: () => void;
   onCancel: () => void;
@@ -108,19 +106,8 @@ export function PriceForm({
   const [error, setError] = useState<string | null>(null);
 
   const save = useMutation({
-    mutationFn: async () => {
-      const { error: err } = await api.POST("/ai-model-rates", {
-        body: {
-          provider: provider.trim(),
-          model_id: modelId.trim(),
-          input_per_mtok: input.trim(),
-          output_per_mtok: output.trim(),
-          cache_read_per_mtok: cacheRead.trim() || "0",
-          cache_write_per_mtok: cacheWrite.trim() || "0",
-          lane,
-          effective_date: effectiveDate,
-        },
-      });
+    mutationFn: async (body: PriceWrite) => {
+      const { error: err } = await api.POST("/ai-model-rates", { body });
       if (err) {
         throwProblem(err);
       }
@@ -136,6 +123,13 @@ export function PriceForm({
   const malformed = decimals.some(
     (v) => v.trim() !== "" && !PER_MTOK_PRICE.test(v.trim()),
   );
+  // A bound model is priced in the lane it is bound in: the free-form pick
+  // starts on chat, and an embedder filed there never reaches its picker.
+  const pickModel = (next: string) => {
+    setModelId(next);
+    const bound = boundModels?.find((b) => b.model === next);
+    if (bound) setLane(bound.lane);
+  };
 
   // One box of this form. `Field` owns the id and hands it to the input.
   const field = (
@@ -176,7 +170,7 @@ export function PriceForm({
           typedProvider={typedProvider}
           onProvider={setProvider}
           modelId={modelId}
-          onModel={setModelId}
+          onModel={pickModel}
           lane={lane}
           boundModels={boundModels}
         />
@@ -219,15 +213,27 @@ export function PriceForm({
           variant="primary"
           onClick={() => {
             setError(null);
-            save.mutate();
+            save.mutate({
+              provider: provider.trim(),
+              model_id: modelId.trim(),
+              input_per_mtok: input.trim(),
+              output_per_mtok: output.trim(),
+              cache_read_per_mtok: cacheRead.trim() || "0",
+              cache_write_per_mtok: cacheWrite.trim() || "0",
+              lane,
+              effective_date: effectiveDate,
+            });
           }}
+          // A cleared date box reports "", and the server refuses an empty
+          // effective date; the refusal is spelled here, before the write.
           disabled={
             save.isPending ||
             malformed ||
             provider.trim() === "" ||
             modelId.trim() === "" ||
             input.trim() === "" ||
-            output.trim() === ""
+            output.trim() === "" ||
+            effectiveDate === ""
           }
         >
           {t("settings.rates.setRate")}
@@ -255,7 +261,7 @@ function NewPriceIdentity({
   modelId: string;
   onModel: (next: string) => void;
   lane: ModelLane;
-  boundModels?: readonly string[];
+  boundModels?: readonly BoundModel[];
 }>) {
   const t = useT();
   const provider = fixedProvider ?? typedProvider;
@@ -299,7 +305,8 @@ const PRICED_PROVIDERS: readonly string[] = [
   ...DECISION_PROVIDERS,
 ];
 
-const LANE_LABEL = {
+/** What each lane is called where a price is filed or removed. */
+export const LANE_LABEL = {
   chat: "aiRates.manual.laneChat",
   embeddings: "aiRates.manual.laneEmbeddings",
   decisions: "aiRates.manual.laneDecisions",
@@ -347,7 +354,7 @@ function VendorModelField({
   lane: ModelLane;
   value: string;
   onChange: (next: string) => void;
-  bound?: readonly string[];
+  bound?: readonly BoundModel[];
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -372,15 +379,16 @@ function VendorModelField({
 }
 
 // The models routing already runs on this vendor go first: they are the ones a
-// missing price is most likely to be missing for.
+// missing price is most likely to be missing for. Once each, because a model
+// bound on two lanes is still one id to offer.
 function withBound(
   offered: ReturnType<typeof offeredModels>,
-  bound: readonly string[] | undefined,
+  bound: readonly BoundModel[] | undefined,
   hint: string,
 ): ReturnType<typeof offeredModels> {
-  const inUse = new Set(bound ?? []);
+  const inUse = [...new Set((bound ?? []).map((b) => b.model))];
   return [
-    ...(bound ?? []).map((value) => ({ value, hint })),
-    ...offered.filter((s) => !inUse.has(s.value)),
+    ...inUse.map((value) => ({ value, hint })),
+    ...offered.filter((s) => !inUse.includes(s.value)),
   ];
 }

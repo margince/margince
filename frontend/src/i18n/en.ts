@@ -11109,9 +11109,9 @@ export const en = {
   "aiRates.manual.laneEmbeddings": "Embeddings",
   "aiRates.manual.laneDecisions": "Decisions",
   "aiRates.remove.verb": "Remove {model}",
-  "aiRates.remove.title": "Remove the price for {model}?",
+  "aiRates.remove.title": "Remove the price for {model} ({lane})?",
   "aiRates.remove.body":
-    "The price for {model} is removed and cost estimates for past calls of that model become unpriced.",
+    "The price for {model} used for {lane} is removed and cost estimates for past calls of that model become unpriced.",
   "aiRates.remove.confirm": "Remove",
   "firstRun.ignite.title": "Model connected",
   "firstRun.ignite.sub":

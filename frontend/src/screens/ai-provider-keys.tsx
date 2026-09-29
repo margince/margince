@@ -137,7 +137,11 @@ export function AiProviderKeysCard() {
   // is saved rather than holding a copy that goes stale.
   const [opened, setOpened] = useState<string | null>(null);
   const refresh = useRefreshModelPrices();
-  const canPrice = useCanUpsert("ai_model_rate");
+  // The refresh reads the sheet before it writes it, so the server asks for
+  // both grants; a writer without the read would press it into a refusal.
+  const canReadPrices = useCan("ai_model_rate", "read");
+  const canWritePrices = useCanUpsert("ai_model_rate");
+  const canPrice = canReadPrices && canWritePrices;
 
   if (!canSee) {
     // Withheld, not absent. An absent key card would say this installation has

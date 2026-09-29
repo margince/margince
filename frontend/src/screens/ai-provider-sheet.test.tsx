@@ -7,6 +7,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
@@ -87,11 +88,13 @@ function backend(
   posts: Posted[],
   deletes: string[],
   removal: Removal,
+  asked: string[],
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
       input instanceof Request ? input : new Request(String(input), init);
     const path = new URL(req.url).pathname;
+    asked.push(`${req.method} ${path}`);
     if (path.endsWith("/me")) return jsonResponse(meFixture({ allow }));
     if (path.endsWith("/ai/provider-keys")) return jsonResponse(KEYS);
     if (path.endsWith("/ai/routing")) return jsonResponse(ROUTING);
@@ -147,7 +150,9 @@ function backend(
 function mount(allow: GrantSpec = WRITER, removal: Removal = "removed") {
   const posts: Posted[] = [];
   const deletes: string[] = [];
-  vi.stubGlobal("fetch", backend(allow, posts, deletes, removal));
+  // Every request the card made, as `METHOD /path`.
+  const asked: string[] = [];
+  vi.stubGlobal("fetch", backend(allow, posts, deletes, removal, asked));
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -156,7 +161,7 @@ function mount(allow: GrantSpec = WRITER, removal: Removal = "removed") {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { posts, deletes };
+  return { posts, deletes, asked };
 }
 
 async function open(
@@ -277,6 +282,50 @@ describe("a provider's sheet", () => {
     });
   });
 
+  // The bound suggestion carries its lane: an embedder picked off the "in use"
+  // list is filed under embeddings, not under the form's chat default.
+  it("files a bound model picked off the list in the lane it is bound in", async () => {
+    const user = userEvent.setup();
+    const { posts } = mount();
+    const sheet = await open(user, "gemini");
+    await user.click(
+      await within(sheet).findByRole("button", { name: "Add price" }),
+    );
+    const laneBox = () => within(sheet).getByLabelText("Used for").textContent;
+    expect(laneBox()).toBe("Chat");
+    await pickSuggestion(
+      user,
+      within(sheet).getByRole("combobox", { name: "Model" }),
+      /^gemini-embedding-001/,
+    );
+    expect(laneBox()).toBe("Embeddings");
+    await user.type(within(sheet).getByLabelText("Input $/M"), "0.15");
+    await user.type(within(sheet).getByLabelText("Output $/M"), "0");
+    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]?.body).toMatchObject({
+      model_id: "gemini-embedding-001",
+      lane: "embeddings",
+    });
+  });
+
+  it("withholds Save while the date box is cleared", async () => {
+    const user = userEvent.setup();
+    const { posts } = mount();
+    const sheet = await open(user, "gemini");
+    await user.click(
+      await within(sheet).findByRole("button", { name: "Add price" }),
+    );
+    await user.type(within(sheet).getByLabelText("Model"), "gemini-4-pro");
+    await user.type(within(sheet).getByLabelText("Input $/M"), "2");
+    await user.type(within(sheet).getByLabelText("Output $/M"), "12");
+    const save = within(sheet).getByRole("button", { name: "Save" });
+    expect(save).toHaveProperty("disabled", false);
+    await user.clear(within(sheet).getByLabelText("Effective"));
+    expect(save).toHaveProperty("disabled", true);
+    expect(posts).toHaveLength(0);
+  });
+
   it("removes a model's entry after the reader confirms, naming its provider, model and lane", async () => {
     const user = userEvent.setup();
     const { deletes } = mount();
@@ -287,10 +336,12 @@ describe("a provider's sheet", () => {
       }),
     );
     const question = await screen.findByRole("dialog", {
-      name: "Remove the price for gemini-3.5-flash?",
+      name: "Remove the price for gemini-3.5-flash (Chat)?",
     });
     expect(
-      within(question).getByText(/past calls of that model become unpriced/),
+      within(question).getByText(
+        /gemini-3\.5-flash used for Chat is removed and cost estimates for past calls of that model become unpriced/,
+      ),
     ).toBeTruthy();
     expect(deletes).toHaveLength(0);
     await user.click(within(question).getByRole("button", { name: "Remove" }));
@@ -305,7 +356,7 @@ describe("a provider's sheet", () => {
     await vi.waitFor(() =>
       expect(
         screen.queryByRole("dialog", {
-          name: "Remove the price for gemini-3.5-flash?",
+          name: "Remove the price for gemini-3.5-flash (Chat)?",
         }),
       ).toBeNull(),
     );
@@ -321,7 +372,7 @@ describe("a provider's sheet", () => {
       }),
     );
     const question = await screen.findByRole("dialog", {
-      name: "Remove the price for gemini-3.5-flash?",
+      name: "Remove the price for gemini-3.5-flash (Chat)?",
     });
     await user.click(within(question).getByRole("button", { name: "Remove" }));
     const refusal = await within(question).findByText(
@@ -331,7 +382,7 @@ describe("a provider's sheet", () => {
     expect(deletes).toHaveLength(1);
     expect(
       screen.getByRole("dialog", {
-        name: "Remove the price for gemini-3.5-flash?",
+        name: "Remove the price for gemini-3.5-flash (Chat)?",
       }),
     ).toBeTruthy();
   });
@@ -357,5 +408,28 @@ describe("a provider's sheet", () => {
     expect(
       screen.queryByRole("button", { name: "Refresh model prices" }),
     ).toBeNull();
+  });
+
+  // The refresh reads the sheet before writing it, so a write grant without
+  // the read would press the button into a refusal.
+  it("offers no refresh to a writer who may not read the sheet", async () => {
+    const user = userEvent.setup();
+    mount({ ai_routing: ["read"], ai_model_rate: ["create", "update"] });
+    await open(user, "gemini");
+    expect(
+      screen.queryByRole("button", { name: "Refresh model prices" }),
+    ).toBeNull();
+  });
+
+  // A denial already known is not asked of the server: the 403 would only
+  // spend a request on the empty answer the hook stands in for.
+  it("asks for no prices on behalf of a reader who may not see them", async () => {
+    const user = userEvent.setup();
+    const { asked } = mount({ ai_routing: ["read"] });
+    const sheet = await open(user, "gemini");
+    await within(sheet).findByText("Connection");
+    expect(within(sheet).queryByText("Prices")).toBeNull();
+    expect(asked).not.toContain("GET /v1/ai-model-rates");
+    expect(asked).toContain("GET /v1/ai/provider-keys");
   });
 });

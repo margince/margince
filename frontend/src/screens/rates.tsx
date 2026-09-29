@@ -11,10 +11,10 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
-import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { today } from "../format/calendarday";
 import { useT } from "../i18n";
 import {
   problemMessageOf,
@@ -25,9 +25,10 @@ import {
 } from "./common";
 import {
   RefreshModelPricesButton,
+  RefreshSummary,
   useRefreshModelPrices,
 } from "./rate-catalogue-refresh";
-import { ModelPriceDialog, today } from "./rate-manual";
+import { ModelPriceDialog } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 
@@ -381,7 +382,6 @@ export function ModelCostsCard() {
             On the withheld body these two lines would explain one denial twice,
             in two different ways. */}
         {!canManage && <p>{t("settings.rates.readOnly")}</p>}
-        <ErrorLine error={refresh.error} inline />
         <SettingList>
           {/* Stacked for the reason spelled out on FxRatesCard: the price sheet
               is the subject, and this row names which prices they are. */}
@@ -449,6 +449,9 @@ export function ModelCostsCard() {
         </SettingList>
         {open ? <ModelPriceDialog onClose={() => setOpen(false)} /> : null}
       </PanelBody>
+      {/* Under the sheet and above the band that holds the button: what the
+          last refresh did, or why it was refused. */}
+      <RefreshSummary refresh={refresh} />
     </Panel>
   );
 }

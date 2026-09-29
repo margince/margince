@@ -8,6 +8,7 @@ import { useCan, useCanUpsert } from "../app/capability";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
+import { today } from "../format/calendarday";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAiModelCatalogue } from "./ai-models";
@@ -17,7 +18,7 @@ import {
   type ModelPriceRefresh,
   ProviderRefreshLine,
 } from "./rate-catalogue-refresh";
-import { PriceForm, today } from "./rate-manual";
+import { type BoundModel, PriceForm } from "./rate-manual";
 import { RemovePriceDialog } from "./rate-remove";
 import "./ai-settings.css";
 
@@ -120,7 +121,15 @@ export function ProviderSheet({
 
 // Where focus lands when the prices section takes it back: the verb that opens
 // the form when a writer holds one, else the first control in the section.
-const FIRST_VERB = "button.button-primary, button";
+// Two lookups rather than one selector list, which answers in document order
+// and would hand focus to whichever button comes first.
+function firstVerb(section: HTMLElement | null): HTMLElement | null {
+  return (
+    section?.querySelector<HTMLElement>("button.btn-primary") ??
+    section?.querySelector<HTMLElement>("button") ??
+    null
+  );
+}
 
 // What is billed per model for this vendor, and the way to change it. Absent
 // for a reader without the sheet's read grant: an empty table there would say
@@ -137,11 +146,11 @@ function ProviderPrices({
   const t = useT();
   const canRead = useCan("ai_model_rate", "read");
   const canWrite = useCanUpsert("ai_model_rate");
-  const sheet = useAiModelCatalogue();
+  const sheet = useAiModelCatalogue(canRead);
   // The row being edited, `{}` for a new price, nothing while the table shows.
   const [form, setForm] = useState<{
     initial?: SheetRow;
-    draft?: { model: string; lane: ProviderUse["models"][number]["lane"] };
+    draft?: BoundModel;
   } | null>(null);
   // The row whose entry is about to leave the sheet, while the question is open.
   const [removing, setRemoving] = useState<SheetRow | null>(null);
@@ -155,8 +164,10 @@ function ProviderPrices({
       swapped.current = true;
       return;
     }
-    const target = form ? 'input, [role="combobox"]' : FIRST_VERB;
-    section.current?.querySelector<HTMLElement>(target)?.focus();
+    const target = form
+      ? section.current?.querySelector<HTMLElement>('input, [role="combobox"]')
+      : firstVerb(section.current);
+    target?.focus();
   }, [form]);
   if (!canRead) return null;
   const rows = (sheet.data ?? []).filter((r) => r.provider === provider);
@@ -189,7 +200,7 @@ function ProviderPrices({
             provider={provider}
             initial={form.initial}
             draft={form.draft}
-            boundModels={usage?.models.map((m) => m.model)}
+            boundModels={usage?.models}
             onDone={() => setForm(null)}
             onCancel={() => setForm(null)}
           />
@@ -235,9 +246,7 @@ function ProviderPrices({
             <RemovePriceDialog
               row={removing}
               onClose={() => setRemoving(null)}
-              returnFocusTo={() =>
-                section.current?.querySelector<HTMLElement>(FIRST_VERB) ?? null
-              }
+              returnFocusTo={() => firstVerb(section.current)}
             />
           ) : null}
         </>
