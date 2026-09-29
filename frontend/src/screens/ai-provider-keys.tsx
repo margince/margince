@@ -30,6 +30,7 @@ import { providerUsage, useRouting } from "./ai-routing-query";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import {
   RefreshModelPricesButton,
+  RefreshSummary,
   useRefreshModelPrices,
 } from "./rate-catalogue-refresh";
 import "./ai-settings.css";
@@ -166,6 +167,7 @@ export function AiProviderKeysCard() {
           const openStatus = list.providers.find((p) => p.provider === opened);
           return (
             <>
+              <RefreshSummary refresh={refresh} />
               {list.providers.map((p) => (
                 <ProviderRow
                   key={p.provider}
@@ -221,7 +223,10 @@ function ProviderRow({
             {status.env_var === "" ? "\u2014" : status.env_var}
           </span>
         </span>
-        <span className="t-caption ai-provider-used">
+        <span
+          className="t-caption ai-provider-used"
+          title={usage?.for.join(", ")}
+        >
           {usage
             ? t("aiProviders.usedBy", { roles: usage.for.join(", ") })
             : t("aiProviders.notUsed")}

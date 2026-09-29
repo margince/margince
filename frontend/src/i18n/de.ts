@@ -10924,6 +10924,7 @@ export const de = {
   "aiProviders.state.inactive": "Nicht aktiv",
   "aiProviders.usedBy": "Verwendet von {roles}",
   "aiProviders.notUsed": "Nicht verwendet",
+  "aiProviders.opensNewTab": "(Öffnet in einem neuen Tab)",
   "aiProviders.manage": "Verwalten",
   "aiProviders.connection": "Verbindung",
   "aiProviders.prices": "Preise",
@@ -10938,6 +10939,7 @@ export const de = {
   "aiProviders.colCacheRead": "Cache lesen",
   "aiProviders.colCacheWrite": "Cache schreiben",
   "aiRates.manual.editing": "{model} bearbeiten · verwendet für {lane}",
+  "aiRates.manual.from": "ab {date}",
   "aiRates.manual.edit": "Bearbeiten",
   "aiRates.manual.malformed":
     "Preise sind einfache Zahlen wie 5 oder 0.25, mit höchstens sechs Nachkommastellen.",

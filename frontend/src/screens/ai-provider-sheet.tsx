@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCan, useCanUpsert } from "../app/capability";
 import { Badge, Button, Modal } from "../design-system/atoms";
@@ -15,7 +15,7 @@ import {
   type ModelPriceRefresh,
   ProviderRefreshLine,
 } from "./rate-catalogue-refresh";
-import { PriceForm } from "./rate-manual";
+import { PriceForm, today } from "./rate-manual";
 import "./ai-settings.css";
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
@@ -133,11 +133,26 @@ function ProviderPrices({
   const sheet = useAiModelCatalogue();
   // The row being edited, `{}` for a new price, nothing while the table shows.
   const [form, setForm] = useState<{ initial?: SheetRow } | null>(null);
+  // Swapping the table for the form unmounts the button that was pressed, which
+  // drops focus onto the page. Focus follows the swap: into the form's first
+  // field, and back to the verb that opens it.
+  const section = useRef<HTMLElement>(null);
+  const swapped = useRef(false);
+  useEffect(() => {
+    if (!swapped.current) {
+      swapped.current = true;
+      return;
+    }
+    const target = form
+      ? 'input, [role="combobox"]'
+      : "button.button-primary, button";
+    section.current?.querySelector<HTMLElement>(target)?.focus();
+  }, [form]);
   if (!canRead) return null;
   const rows = (sheet.data ?? []).filter((r) => r.provider === provider);
   const page = pricingPageFor(provider, usage?.baseUrls ?? []);
   return (
-    <section className="ai-sheet-section">
+    <section className="ai-sheet-section" ref={section}>
       <div className="ai-sheet-heading">
         <Heading size="small" className="t-h3">
           {t("aiProviders.prices")}
@@ -171,6 +186,10 @@ function ProviderPrices({
                 {" · "}
                 <a href={page} target="_blank" rel="noreferrer noopener">
                   {t("aiProviders.priceSource")}
+                  <span className="sr-only">
+                    {" "}
+                    {t("aiProviders.opensNewTab")}
+                  </span>
                 </a>
               </>
             ) : null}
@@ -189,7 +208,18 @@ function ProviderPrices({
                     key: "model",
                     header: t("settings.rates.colModel"),
                     grow: true,
-                    render: (r) => r.model_id,
+                    render: (r) => (
+                      <span className="ai-sheet-model">
+                        {r.model_id}
+                        {r.effective_date > today() ? (
+                          <Badge tone="info">
+                            {t("aiRates.manual.from", {
+                              date: r.effective_date,
+                            })}
+                          </Badge>
+                        ) : null}
+                      </span>
+                    ),
                   },
                   {
                     key: "in",

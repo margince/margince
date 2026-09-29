@@ -10812,6 +10812,7 @@ export const vi = {
   "aiProviders.state.inactive": "Không hoạt động",
   "aiProviders.usedBy": "Được dùng bởi {roles}",
   "aiProviders.notUsed": "Chưa dùng",
+  "aiProviders.opensNewTab": "(Mở trong tab mới)",
   "aiProviders.manage": "Quản lý",
   "aiProviders.connection": "Kết nối",
   "aiProviders.prices": "Giá",
@@ -10825,6 +10826,7 @@ export const vi = {
   "aiProviders.colCacheRead": "Đọc cache",
   "aiProviders.colCacheWrite": "Ghi cache",
   "aiRates.manual.editing": "Đang sửa {model} · dùng cho {lane}",
+  "aiRates.manual.from": "từ {date}",
   "aiRates.manual.edit": "Sửa",
   "aiRates.manual.malformed":
     "Giá là số thường như 5 hoặc 0.25, tối đa sáu chữ số thập phân.",

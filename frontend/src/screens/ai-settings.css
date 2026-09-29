@@ -123,8 +123,9 @@
   gap: var(--space-3);
 }
 
-.ai-provider-line .ai-provider-who {
-  flex: none;
+/* The pill is a grid item, which stretches; it is a label, not a column. */
+.ai-provider-line > .badge {
+  justify-self: start;
 }
 
 .ai-provider-line .ai-provider-used {
@@ -172,6 +173,15 @@
  * with Add price. */
 .ai-sheet-table {
   margin-inline: calc(var(--space-3) * -1);
+}
+
+/* A model id with the mark that its price starts later, stacked so a long id
+ * keeps the width. */
+.ai-sheet-model {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
 }
 
 .ai-sheet-heading {

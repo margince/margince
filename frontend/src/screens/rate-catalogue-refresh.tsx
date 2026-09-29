@@ -72,6 +72,39 @@ export function RefreshModelPricesButton({
   );
 }
 
+/**
+ * What the last refresh did overall, on the list where the button was pressed:
+ * a refusal, or how many prices moved and which vendors could not be reached.
+ * The per-vendor answer stays in that vendor's sheet.
+ */
+export function RefreshSummary({
+  refresh,
+}: Readonly<{ refresh: ModelPriceRefresh }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const plural = usePlural();
+  if (refresh.error) {
+    return <ErrorLine error={refresh.error} />;
+  }
+  if (!refresh.data) {
+    return null;
+  }
+  const updated = refresh.data.providers.reduce((n, p) => n + p.updated, 0);
+  const unreachable = refresh.data.providers
+    .filter((p) => p.outcome === "unreachable")
+    .map((p) => p.provider);
+  return (
+    <p className="t-caption" role="status">
+      {plural("aiRates.refresh.updatedCount", updated, {
+        count: formatNumber(updated, locale),
+      })}
+      {unreachable.length > 0
+        ? ` · ${t("aiRates.refresh.outcome.unreachable")}: ${unreachable.join(", ")}`
+        : ""}
+    </p>
+  );
+}
+
 /** What the last refresh did for ONE vendor, or nothing before there was one. */
 export function ProviderRefreshLine({
   refresh,
