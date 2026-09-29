@@ -35,7 +35,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -117,7 +116,6 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 	// name next.
 	defer carriesASecondEdgeKind.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	var findings []string
 	files := handWrittenGoSources(t)
 	judged := 0
@@ -125,7 +123,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		if filepath.ToSlash(path) == employmentCurrencyOwner {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -316,7 +314,7 @@ func read() string {
 
 func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tc := range employmentProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
@@ -539,14 +537,13 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 	// been fixed, and leaving it quietly re-exempts whatever takes its name.
 	defer slotBlockedByTheModuleDAG.AssertAllMatched(t)
 
-	fset := token.NewFileSet()
 	var findings []string
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
 		if filepath.ToSlash(path) == employmentCurrencyOwner {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -678,7 +675,7 @@ var slotProbes = []struct {
 
 func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, tc := range slotProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
@@ -727,8 +724,7 @@ func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
 // and they must be the probe tables.
 func TestTheProbeMarkerExemptsTheProbesAndNothingElse(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, probeOwner, nil, parser.ParseComments)
+	file, err := gatekit.ParseFile(probeOwner, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing this gate's own file: %v", err)
 	}
@@ -793,13 +789,13 @@ func declaredName(decl ast.Decl) string {
 // standing there to catch the first stray.
 func TestNoStrayProbeMarker(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	var stray []string
 	for _, path := range handWrittenGoSources(t) {
 		if filepath.ToSlash(path) == probeOwner {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, err := gatekit.ParseFile(path, parser.ParseComments)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

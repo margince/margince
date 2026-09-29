@@ -37,7 +37,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -89,7 +88,7 @@ func TestOnlyOneFunctionRegistersTheGoogleConnectors(t *testing.T) {
 			return err
 		}
 		walked = filepath.ToSlash(walked)
-		file, err := parser.ParseFile(token.NewFileSet(), walked, nil, 0)
+		file, err := gatekit.ParseFile(walked, 0)
 		if err != nil {
 			return err
 		}
@@ -141,7 +140,7 @@ import . "github.com/margince/margince/backend/internal/modules/capture/gmail"
 
 func hidden() any { return New(nil, nil) }
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "planted.go", planted, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +245,7 @@ func hidden() any {
 
 var _ = gmail.New
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "planted.go", planted, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +275,7 @@ type wiring struct{ gmail string }
 
 func used(w wiring) any { return gmail.New(nil, nil) }
 `
-	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "planted.go", planted, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

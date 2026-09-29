@@ -26,8 +26,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"maps"
 	"path/filepath"
@@ -180,7 +178,6 @@ func modulesOwningTables() []string {
 // audit writer.
 func moduleWritesAuditRow(module string, subjects map[string]bool) (bool, error) {
 	found := false
-	fset := token.NewFileSet()
 	err := filepath.WalkDir(module, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -199,7 +196,7 @@ func moduleWritesAuditRow(module string, subjects map[string]bool) (bool, error)
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return nil
 		}
-		file, err := parser.ParseFile(fset, filepath.ToSlash(path), nil, 0)
+		file, err := gatekit.ParseFile(filepath.ToSlash(path), 0)
 		if err != nil {
 			return err
 		}

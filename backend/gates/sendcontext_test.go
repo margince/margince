@@ -31,7 +31,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -117,9 +116,8 @@ func TestEverySendStatesWhyItIsBeingSent(t *testing.T) {
 func TestTheClaimDecoderStillSetsWhatThisGateLooksFor(t *testing.T) {
 	t.Parallel()
 
-	fset := token.NewFileSet()
 	path := filepath.Join("internal", "modules", "activities", "sendcontext.go")
-	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing the claim decoder: %v", err)
 	}

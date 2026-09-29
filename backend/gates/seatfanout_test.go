@@ -41,8 +41,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -175,7 +173,7 @@ type triggerRefCall struct {
 func triggerRefCalls(t *testing.T) []triggerRefCall {
 	t.Helper()
 	var out []triggerRefCall
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	const root = "internal"
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -184,7 +182,7 @@ func triggerRefCalls(t *testing.T) []triggerRefCall {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		file, perr := parser.ParseFile(fset, path, nil, 0)
+		file, perr := gatekit.ParseFile(path, 0)
 		if perr != nil {
 			return perr
 		}

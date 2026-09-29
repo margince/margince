@@ -35,7 +35,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -71,7 +70,7 @@ func TestEveryDetachedContextSaysWhatBoundsIt(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+			file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 			if err != nil {
 				t.Fatalf("parsing %s: %v", path, err)
 			}

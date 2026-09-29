@@ -17,10 +17,11 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const policyFile = "internal/modules/identity/internal/policy/policy.go"
@@ -30,7 +31,7 @@ const policyFile = "internal/modules/identity/internal/policy/policy.go"
 // declaration fails loudly rather than silently shrinking a gate's coverage.
 func coreObjectsFromSource(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), policyFile, nil, 0)
+	file, err := gatekit.ParseFile(policyFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", policyFile, err)
 	}

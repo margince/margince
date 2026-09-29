@@ -16,7 +16,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strings"
 	"testing"
@@ -37,7 +36,7 @@ import (
 func publishedActivityKinds(t *testing.T) []string {
 	t.Helper()
 	const generated = "internal/contracts/api_gen.go"
-	file, err := parser.ParseFile(token.NewFileSet(), generated, nil, 0)
+	file, err := gatekit.ParseFile(generated, 0)
 	if err != nil {
 		t.Fatalf("reading the generated contract: %v", err)
 	}

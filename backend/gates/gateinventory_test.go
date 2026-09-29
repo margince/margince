@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -31,6 +30,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // gateKinds is the closed set of shapes, in the order the page renders them.
@@ -241,7 +242,7 @@ func readGateDeclarations(t *testing.T) (gates []gate, untagged []string) {
 // the prose below an import block reachable.
 func parseGateFile(t *testing.T, path string, source []byte) *ast.File {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, source, parser.ParseComments)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), path, source, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

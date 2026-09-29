@@ -24,7 +24,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,6 +32,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryGrantFundsTheToolsItsAgentDeclares(t *testing.T) {
@@ -141,12 +142,11 @@ func toolScopes(t *testing.T) map[string]string {
 	if err != nil {
 		t.Fatalf("reading the agents package: %v", err)
 	}
-	fset := token.NewFileSet()
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
 			continue
 		}
-		parsed, err := parser.ParseFile(fset, filepath.Join(dir, e.Name()), nil, parser.SkipObjectResolution)
+		parsed, err := gatekit.ParseFile(filepath.Join(dir, e.Name()), parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", e.Name(), err)
 		}

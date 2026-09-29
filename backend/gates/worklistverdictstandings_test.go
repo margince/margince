@@ -39,8 +39,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"regexp"
 	"slices"
@@ -50,6 +48,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheQueueCarriesEveryStandingTheDealCardCanDecide(t *testing.T) {
@@ -114,8 +113,7 @@ func TestTheStandingParseSeesEveryWordTheMapperNames(t *testing.T) {
 // code.
 func standingsTheMapperServes(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(),
-		"internal/compose/attention/dealstanding.go", nil, 0)
+	file, err := gatekit.ParseFile("internal/compose/attention/dealstanding.go", 0)
 	if err != nil {
 		t.Fatalf("parsing the mapper: %v", err)
 	}

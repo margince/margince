@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"slices"
@@ -32,6 +31,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // rowScopedResponses maps a contract response schema to the row-scoped record
@@ -526,7 +527,7 @@ func stringLiteral(t *testing.T, expr ast.Expr) string {
 // it silently.
 func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast.Expr)) {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), replayScopeSource, nil, 0)
+	file, err := gatekit.ParseFile(replayScopeSource, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", replayScopeSource, err)
 	}

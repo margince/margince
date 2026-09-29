@@ -20,7 +20,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"slices"
@@ -28,6 +27,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const searchBranchFile = "internal/modules/search/branches.go"
@@ -106,7 +107,7 @@ func contextAnchorEnum(t *testing.T) []string {
 // copied, so a branch added or withdrawn reaches this gate on its own.
 func searchableEntitiesFromSource(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), searchBranchFile, nil, 0)
+	file, err := gatekit.ParseFile(searchBranchFile, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", searchBranchFile, err)
 	}

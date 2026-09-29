@@ -30,11 +30,11 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -115,7 +115,7 @@ func TestEveryToolRegistrarIsInvokedByEveryFullRegistry(t *testing.T) {
 // receiver is what tells the two apart.
 func toolRegistrars(t *testing.T) (registrars []toolRegistrar, methods []string) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	files := parsePackageDir(t, fset, agentsDir) // reused from versionguard_test.go
 	for _, file := range files {
 		for _, decl := range file.Decls {
@@ -171,8 +171,7 @@ func pointsAtRegistry(expr ast.Expr) bool {
 // import (the production builder in package compose).
 func registrarCalls(t *testing.T, path, builder string) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

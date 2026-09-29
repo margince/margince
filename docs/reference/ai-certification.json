@@ -3026,6 +3026,3582 @@
       "unrecognised": 0
     }
   ],
+  "families": [
+    {
+      "name": "Gemini",
+      "answer": "mostly",
+      "sites_shipped": 47,
+      "sites_measured": 45,
+      "ready": 29,
+      "usable_with_care": 15,
+      "not_reliable_yet": 1,
+      "recheck_pending": 6,
+      "models": [
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "sites": 41,
+          "sites_current": 37,
+          "sites_partial": 0,
+          "sites_stale": 4,
+          "runs": 579,
+          "passed": 571,
+          "reliability": 0.9861830742659758,
+          "slowest_p95_ms": 26137,
+          "bands": {
+            "certified": 23,
+            "supported_degraded": 16,
+            "not_supported": 2
+          }
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "cloud_frontier"
+          },
+          "sites": 6,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 6,
+          "runs": 36,
+          "passed": 36,
+          "reliability": 1,
+          "slowest_p95_ms": 46554,
+          "bands": {
+            "certified": 4,
+            "supported_degraded": 0,
+            "not_supported": 2
+          }
+        },
+        {
+          "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "sites": 13,
+          "sites_current": 7,
+          "sites_partial": 0,
+          "sites_stale": 6,
+          "runs": 108,
+          "passed": 108,
+          "reliability": 1,
+          "slowest_p95_ms": 11911,
+          "bands": {
+            "certified": 7,
+            "supported_degraded": 3,
+            "not_supported": 3
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 21,
+          "passed": 21,
+          "records": 1
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 17,
+          "records": 1
+        },
+        {
+          "key": "corpus_ask/corpus_ask",
+          "task": "corpus_ask",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 21,
+          "passed": 21,
+          "records": 1
+        },
+        {
+          "key": "document_extract/fields",
+          "task": "document_extract",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-pro-preview",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 12,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 21,
+          "passed": 21,
+          "records": 1
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "rate_extract/pricing",
+          "task": "rate_extract",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.5-flash",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 27,
+          "passed": 27,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 17,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 21,
+          "passed": 21,
+          "records": 1
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 45,
+          "passed": 45,
+          "records": 1
+        }
+      ]
+    },
+    {
+      "name": "Gemma",
+      "answer": "mostly",
+      "sites_shipped": 47,
+      "sites_measured": 44,
+      "ready": 22,
+      "usable_with_care": 17,
+      "not_reliable_yet": 5,
+      "recheck_pending": 4,
+      "models": [
+        {
+          "binding": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "sites": 13,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 13,
+          "runs": 111,
+          "passed": 90,
+          "reliability": 0.8108108108108109,
+          "slowest_p95_ms": 56477,
+          "bands": {
+            "certified": 7,
+            "supported_degraded": 1,
+            "not_supported": 5
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "sites": 6,
+          "sites_current": 3,
+          "sites_partial": 0,
+          "sites_stale": 3,
+          "runs": 177,
+          "passed": 154,
+          "reliability": 0.8700564971751412,
+          "slowest_p95_ms": 93955,
+          "bands": {
+            "certified": 2,
+            "supported_degraded": 2,
+            "not_supported": 2
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "sites": 40,
+          "sites_current": 40,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 501,
+          "passed": 473,
+          "reliability": 0.9441117764471058,
+          "slowest_p95_ms": 139188,
+          "bands": {
+            "certified": 19,
+            "supported_degraded": 16,
+            "not_supported": 5
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 2
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 12,
+          "passed": 11,
+          "records": 1
+        },
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 27,
+          "passed": 21,
+          "records": 2
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 2
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "corpus_ask/corpus_ask",
+          "task": "corpus_ask",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 27,
+          "passed": 27,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 24,
+          "passed": 24,
+          "records": 1
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 16,
+          "records": 2
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 2
+        },
+        {
+          "key": "rate_extract/pricing",
+          "task": "rate_extract",
+          "best": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 12,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 2
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 2
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 27,
+          "passed": 27,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 18,
+          "passed": 10,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 17,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 2
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 27,
+          "passed": 18,
+          "records": 1
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 45,
+          "passed": 45,
+          "records": 1
+        }
+      ]
+    },
+    {
+      "name": "Qwen",
+      "answer": "not_yet",
+      "sites_shipped": 47,
+      "sites_measured": 46,
+      "ready": 11,
+      "usable_with_care": 7,
+      "not_reliable_yet": 28,
+      "recheck_pending": 46,
+      "models": [
+        {
+          "binding": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "sites": 46,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 46,
+          "runs": 444,
+          "passed": 329,
+          "reliability": 0.740990990990991,
+          "slowest_p95_ms": 105742,
+          "bands": {
+            "certified": 11,
+            "supported_degraded": 7,
+            "not_supported": 28
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 15,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "capture_confidentiality_verdict/thread",
+          "task": "capture_confidentiality_verdict",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 42,
+          "passed": 36,
+          "records": 1
+        },
+        {
+          "key": "capture_counterparty_verdict/verdict",
+          "task": "capture_counterparty_verdict",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 57,
+          "passed": 46,
+          "records": 1
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 3,
+          "passed": 2,
+          "records": 1
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "corpus_ask/corpus_ask",
+          "task": "corpus_ask",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 13,
+          "records": 1
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 8,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 0,
+          "records": 1
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 5,
+          "records": 1
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "rate_extract/pricing",
+          "task": "rate_extract",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 13,
+          "records": 1
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 27,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 5,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 0,
+          "records": 1
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 0,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 0,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 3,
+          "passed": 2,
+          "records": 1
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 0,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 2,
+          "records": 1
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 12,
+          "passed": 11,
+          "records": 1
+        }
+      ]
+    },
+    {
+      "name": "Mistral",
+      "answer": "not_yet",
+      "sites_shipped": 47,
+      "sites_measured": 44,
+      "ready": 21,
+      "usable_with_care": 7,
+      "not_reliable_yet": 16,
+      "recheck_pending": 16,
+      "models": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "sites": 10,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 10,
+          "runs": 45,
+          "passed": 39,
+          "reliability": 0.8666666666666667,
+          "slowest_p95_ms": 20620,
+          "bands": {
+            "certified": 8,
+            "supported_degraded": 0,
+            "not_supported": 2
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "sites": 34,
+          "sites_current": 28,
+          "sites_partial": 0,
+          "sites_stale": 6,
+          "runs": 453,
+          "passed": 352,
+          "reliability": 0.7770419426048565,
+          "slowest_p95_ms": 83052,
+          "bands": {
+            "certified": 7,
+            "supported_degraded": 10,
+            "not_supported": 17
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "cloud_frontier"
+          },
+          "sites": 3,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 3,
+          "runs": 15,
+          "passed": 14,
+          "reliability": 0.9333333333333333,
+          "slowest_p95_ms": 22390,
+          "bands": {
+            "certified": 1,
+            "supported_degraded": 2,
+            "not_supported": 0
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "sites": 6,
+          "sites_current": 3,
+          "sites_partial": 0,
+          "sites_stale": 3,
+          "runs": 159,
+          "passed": 139,
+          "reliability": 0.8742138364779874,
+          "slowest_p95_ms": 5569,
+          "bands": {
+            "certified": 2,
+            "supported_degraded": 1,
+            "not_supported": 3
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "sites": 6,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 6,
+          "runs": 42,
+          "passed": 38,
+          "reliability": 0.9047619047619048,
+          "slowest_p95_ms": 4313,
+          "bands": {
+            "certified": 4,
+            "supported_degraded": 1,
+            "not_supported": 1
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "sites": 6,
+          "sites_current": 6,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 75,
+          "passed": 69,
+          "reliability": 0.92,
+          "slowest_p95_ms": 4453,
+          "bands": {
+            "certified": 3,
+            "supported_degraded": 2,
+            "not_supported": 1
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "sites": 6,
+          "sites_current": 6,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 96,
+          "passed": 80,
+          "reliability": 0.8333333333333334,
+          "slowest_p95_ms": 4105,
+          "bands": {
+            "certified": 3,
+            "supported_degraded": 2,
+            "not_supported": 1
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-small-2603",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 2
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "corpus_ask/corpus_ask",
+          "task": "corpus_ask",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 24,
+          "passed": 24,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 1,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 3,
+          "passed": 2,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 3,
+          "passed": 0,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 6,
+          "passed": 0,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 9,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 16,
+          "records": 1
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 39,
+          "passed": 36,
+          "records": 2
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 7,
+          "records": 1
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "rate_extract/pricing",
+          "task": "rate_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-large-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 24,
+          "passed": 23,
+          "records": 1
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 7,
+          "records": 1
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/mistral-medium-3-5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 30,
+          "passed": 24,
+          "records": 3
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 2
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 45,
+          "passed": 27,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 18,
+          "passed": 11,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 1,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 7,
+          "records": 1
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 2,
+          "records": 2
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 2
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 24,
+          "passed": 23,
+          "records": 1
+        }
+      ]
+    },
+    {
+      "name": "GPT",
+      "answer": "not_yet",
+      "sites_shipped": 47,
+      "sites_measured": 39,
+      "ready": 11,
+      "usable_with_care": 18,
+      "not_reliable_yet": 10,
+      "recheck_pending": 2,
+      "models": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "sites": 41,
+          "sites_current": 37,
+          "sites_partial": 0,
+          "sites_stale": 4,
+          "runs": 723,
+          "passed": 647,
+          "reliability": 0.8948824343015215,
+          "slowest_p95_ms": 8813,
+          "bands": {
+            "certified": 11,
+            "supported_degraded": 19,
+            "not_supported": 11
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 12,
+          "passed": 11,
+          "records": 1
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 24,
+          "passed": 23,
+          "records": 1
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 21,
+          "passed": 21,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 21,
+          "passed": 16,
+          "records": 1
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 30,
+          "passed": 30,
+          "records": 1
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "runs": 9,
+          "passed": 8,
+          "records": 1
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 45,
+          "passed": 44,
+          "records": 1
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 24,
+          "passed": 23,
+          "records": 1
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 27,
+          "passed": 20,
+          "records": 1
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 1
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 21,
+          "passed": 18,
+          "records": 1
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 81,
+          "passed": 65,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 18,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 18,
+          "passed": 11,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 4,
+          "records": 1
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 5,
+          "records": 1
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 15,
+          "passed": 11,
+          "records": 1
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 8,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 1
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 45,
+          "passed": 45,
+          "records": 1
+        }
+      ]
+    },
+    {
+      "name": "GLM",
+      "answer": "not_enough_tested",
+      "sites_shipped": 47,
+      "sites_measured": 5,
+      "ready": 4,
+      "usable_with_care": 0,
+      "not_reliable_yet": 1,
+      "recheck_pending": 5,
+      "models": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "sites": 5,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 5,
+          "runs": 30,
+          "passed": 28,
+          "reliability": 0.9333333333333333,
+          "slowest_p95_ms": 18372,
+          "bands": {
+            "certified": 4,
+            "supported_degraded": 0,
+            "not_supported": 1
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 6,
+          "passed": 6,
+          "records": 1
+        },
+        {
+          "key": "rate_extract/pricing",
+          "task": "rate_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 3,
+          "passed": 3,
+          "records": 1
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "z-ai/glm-5.2",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 12,
+          "passed": 10,
+          "records": 1
+        }
+      ]
+    },
+    {
+      "name": "Claude",
+      "answer": "not_enough_tested",
+      "sites_shipped": 47,
+      "sites_measured": 1,
+      "ready": 0,
+      "usable_with_care": 0,
+      "not_reliable_yet": 1,
+      "recheck_pending": 1,
+      "models": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "anthropic/claude-haiku-4.5",
+            "env": "cloud_frontier"
+          },
+          "sites": 1,
+          "sites_current": 0,
+          "sites_partial": 0,
+          "sites_stale": 1,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "slowest_p95_ms": 3731,
+          "bands": {
+            "certified": 0,
+            "supported_degraded": 0,
+            "not_supported": 1
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "anthropic/claude-haiku-4.5",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "runs": 15,
+          "passed": 9,
+          "records": 1
+        }
+      ]
+    }
+  ],
   "bindings": [
     {
       "binding": {

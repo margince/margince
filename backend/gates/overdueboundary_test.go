@@ -30,8 +30,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -137,7 +135,6 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 
 	var inGo, inSQL []string
 	judged := 0
-	fset := token.NewFileSet()
 	for _, root := range []string{"internal", "../extensions"} {
 		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
@@ -167,7 +164,7 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 					inSQL = append(inSQL, rel+": "+gatekit.FirstLineOf(statement))
 				}
 			}
-			file, parseErr := parser.ParseFile(fset, path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

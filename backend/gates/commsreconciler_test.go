@@ -24,12 +24,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // identityArg is the position of comms.NewStore's message-identity seam:
@@ -52,7 +52,7 @@ func isCommsNewStore(fun ast.Expr) bool {
 
 func TestEveryComposedDeliveryStoreCarriesAMessageIdentityReconciler(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	found := 0
 	for _, root := range []string{"internal", "cmd"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -60,7 +60,7 @@ func TestEveryComposedDeliveryStoreCarriesAMessageIdentityReconciler(t *testing.
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err
 			}
-			file, err := parser.ParseFile(fset, filepath.ToSlash(path), nil, 0)
+			file, err := gatekit.ParseFile(filepath.ToSlash(path), 0)
 			if err != nil {
 				return err
 			}

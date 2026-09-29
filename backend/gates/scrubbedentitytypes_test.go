@@ -33,7 +33,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -41,6 +40,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // scrubTombstoneWriters are the call sites that stamp a scrub tombstone.
@@ -137,7 +138,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 	found := map[string]bool{}
 	var opaque []string
 	dir := filepath.Join(moduleRoot(t), "internal", "modules", "privacy")
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the privacy module: %v", err)
@@ -147,7 +148,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+		file, parseErr := gatekit.ParseFile(filepath.Join(dir, name), 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", name, parseErr)
 		}

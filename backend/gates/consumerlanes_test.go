@@ -24,7 +24,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
@@ -77,14 +76,14 @@ func TestEveryDeclaredConsumerGroupIsSubscribedSomewhere(t *testing.T) {
 func groupNamesTheRolesName(t *testing.T) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, root := range []string{"cmd", "internal/compose"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err
 			}
-			file, parseErr := parser.ParseFile(fset, path, nil, 0)
+			file, parseErr := gatekit.ParseFile(path, 0)
 			if parseErr != nil {
 				return parseErr
 			}

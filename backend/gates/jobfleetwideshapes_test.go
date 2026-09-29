@@ -18,12 +18,14 @@ import (
 	"go/parser"
 	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // parseFleetWideSource parses one synthetic compose file.
 func parseFleetWideSource(t *testing.T, src string) (*token.FileSet, []*ast.File) {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	file, err := parser.ParseFile(fset, "synthetic.go", src, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing the synthetic source: %v", err)

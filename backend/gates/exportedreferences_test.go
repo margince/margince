@@ -26,7 +26,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -36,6 +35,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // foreignKeyToRowScoped matches a catalog line declaring one table's FK to
@@ -93,7 +94,7 @@ func TestEveryExportedReferenceToARowScopedTableIsWithheld(t *testing.T) {
 func declaredExportReferences(t *testing.T) map[string][]string {
 	t.Helper()
 	const declaration = "internal/compose/exportreferences.go"
-	file, err := parser.ParseFile(token.NewFileSet(), declaration, nil, 0)
+	file, err := gatekit.ParseFile(declaration, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", declaration, err)
 	}
@@ -176,7 +177,7 @@ func composeStringConstants(t *testing.T) map[string]string {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		file, err := gatekit.ParseFile(source, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", source, err)
 		}

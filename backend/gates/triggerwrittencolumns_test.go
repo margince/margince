@@ -37,8 +37,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -346,7 +344,7 @@ func TestNoStatementWritesAColumnItsTriggerAlreadyWrites(t *testing.T) {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

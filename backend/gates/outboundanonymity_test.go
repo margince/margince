@@ -562,7 +562,7 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			parsed, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			parsed, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", tc.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}

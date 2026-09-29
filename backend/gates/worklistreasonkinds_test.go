@@ -25,7 +25,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -103,7 +102,7 @@ func reasonKindsEmitted(t *testing.T) []string {
 		if readErr != nil {
 			return readErr
 		}
-		parsed, parseErr := parser.ParseFile(token.NewFileSet(), path, src, parser.SkipObjectResolution)
+		parsed, parseErr := parser.ParseFile(gatekit.SourceFileSet(), path, src, parser.SkipObjectResolution)
 		if parseErr != nil {
 			return parseErr
 		}

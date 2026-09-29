@@ -42,7 +42,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
@@ -188,7 +187,7 @@ func roleMailboxListsIn(t *testing.T, roots ...string) []string {
 // composite literal in one source file naming two or more DISTINCT role tokens.
 func roleMailboxListsInSource(t *testing.T, name, code string) []string {
 	t.Helper()
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	file, err := parser.ParseFile(fset, name, code, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", name, err)

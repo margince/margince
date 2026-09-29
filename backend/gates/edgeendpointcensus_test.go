@@ -37,6 +37,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -226,8 +228,7 @@ func endpointIdentifiers(body string) []string {
 // too, and a census satisfied by a comment is a census that passes a broken read.
 func endpointColumnsInTheRead(t *testing.T) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, edgeReadSource, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(edgeReadSource, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", edgeReadSource, err)
 	}
@@ -348,8 +349,7 @@ func TestTheRelationshipExportTestsEveryEndpointTheTableHas(t *testing.T) {
 // is the contract, and the column is first.
 func endpointColumnsInTheExport(t *testing.T) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, edgeExportSource, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(edgeExportSource, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", edgeExportSource, err)
 	}
@@ -424,8 +424,7 @@ func TestTheRelationshipRowScopeTestsEveryEndpointTheTableHas(t *testing.T) {
 // contract there exactly as it is in the export's list.
 func endpointColumnsInScopeVar(t *testing.T) map[string]bool {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, edgeScopeSource, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(edgeScopeSource, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", edgeScopeSource, err)
 	}

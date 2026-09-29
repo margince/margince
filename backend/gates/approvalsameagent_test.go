@@ -32,12 +32,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // mentionsPassportID reports whether an expression reaches a PassportID field
@@ -75,7 +76,7 @@ func TestTheProposersIdentityHasOneSpelling(t *testing.T) {
 	t.Parallel()
 
 	const root = "internal/modules/approvals"
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	compared, permitted := 0, 0
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
@@ -83,7 +84,7 @@ func TestTheProposersIdentityHasOneSpelling(t *testing.T) {
 			return err
 		}
 		path = filepath.ToSlash(path)
-		file, parseErr := parser.ParseFile(fset, path, nil, 0)
+		file, parseErr := gatekit.ParseFile(path, 0)
 		if parseErr != nil {
 			return parseErr
 		}

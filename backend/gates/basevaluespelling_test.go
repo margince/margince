@@ -22,11 +22,12 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two copies, by the file that holds each and the function that renders it.
@@ -65,7 +66,7 @@ both packages can import and delete this gate.`,
 // the gate stopped reading either copy.
 func baseValueFormat(t *testing.T, path, fn string) string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

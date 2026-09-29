@@ -8,7 +8,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path"
 	"path/filepath"
@@ -203,13 +202,12 @@ var sqlFragmentMarker = regexp.MustCompile(`(?i)\b(SELECT|CASE|WHEN|COALESCE|SUM
 func dealAmountBuilderNames(t testing.TB) map[string]bool {
 	t.Helper()
 	names := map[string]bool{}
-	fset := token.NewFileSet()
 	err := filepath.Walk("internal", func(filePath string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
 			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
 			return err
 		}
-		file, parseErr := parser.ParseFile(fset, filePath, nil, 0)
+		file, parseErr := gatekit.ParseFile(filePath, 0)
 		if parseErr != nil {
 			return parseErr
 		}
@@ -336,7 +334,7 @@ func TestTheBuilderDerivationReadsFragmentsAndNotProse(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", "package p\n"+c.source, 0)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "fixture.go", "package p\n"+c.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the fixture: %v", err)
 			}
@@ -490,7 +488,7 @@ func TestTheObjectGateDoesNotVouchForAMask(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", "package p\n"+c.source, 0)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "fixture.go", "package p\n"+c.source, 0)
 			if err != nil {
 				t.Fatalf("parsing the fixture: %v", err)
 			}

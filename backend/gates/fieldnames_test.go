@@ -76,7 +76,6 @@ type parsedFile struct {
 func parseInternalTree(t *testing.T) []parsedFile {
 	t.Helper()
 	var out []parsedFile
-	fset := token.NewFileSet()
 	err := filepath.WalkDir(internalTree, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -89,7 +88,7 @@ func parseInternalTree(t *testing.T) []parsedFile {
 			strings.HasPrefix(path, internalTree+"/contracts/") {
 			return nil
 		}
-		file, parseErr := parser.ParseFile(fset, path, nil, parser.ParseComments)
+		file, parseErr := gatekit.ParseFile(path, parser.ParseComments)
 		if parseErr != nil {
 			return parseErr
 		}
@@ -410,7 +409,7 @@ func TestEveryValidationFieldLiteralNamesAContractField(t *testing.T) {
 func contractFieldNames(t *testing.T) map[string]bool {
 	t.Helper()
 	path := filepath.Join(internalTree, "contracts", "api_gen.go")
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

@@ -20,7 +20,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -28,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // clearableMapsByRecordType names the declaration in each module that lists what
@@ -76,7 +77,7 @@ func storeClearableFields(t *testing.T) map[string][]string {
 				continue
 			}
 			path := filepath.Join(root, entry.Name())
-			file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				t.Fatalf("parse %s: %v", path, err)
 			}
@@ -171,7 +172,7 @@ func TestTheFieldsARestoreClearsAreTheFieldsTheStoresClear(t *testing.T) {
 func composeClearableFields(t *testing.T) map[string][]string {
 	t.Helper()
 	path := filepath.Join("internal", "compose", "clearablefields.go")
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}

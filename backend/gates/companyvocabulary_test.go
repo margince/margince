@@ -324,6 +324,11 @@ func TestThePathCheckSeesAConcatenatedName(t *testing.T) {
 // namesTheOtherWord reports whether a line calls this record type by a former
 // name, once the words that merely resemble it are taken out.
 func namesTheOtherWord(line string) bool {
+	// Every spelling matched, and every spelling removed first, contains "org"
+	// in some case, so a line without it cannot match — and most lines lack it.
+	if !strings.Contains(strings.ToLower(line), "org") {
+		return false
+	}
 	line = hostname.ReplaceAllString(line, "")
 	line = notThisRecordType.ReplaceAllString(line, "")
 	return theOtherWord.MatchString(line)

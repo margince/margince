@@ -25,9 +25,7 @@ package gates
 import (
 	"bytes"
 	"go/ast"
-	"go/parser"
 	"go/printer"
-	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -72,8 +70,8 @@ var claimWithoutFence = gatekit.Waive(map[string]string{})
 // fence rule provable rather than suggestive.
 func sourceWithoutComments(t *testing.T, path string) string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	fset := gatekit.SourceFileSet()
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		// A Go file the tree cannot parse is a real defect, not a file to skip.
 		t.Fatalf("parsing %s: %v", path, err)
@@ -221,8 +219,8 @@ func TestEveryBoundaryClaimWaiverIsStillReachable(t *testing.T) {
 // program loaded to judge one file.
 func claimantsIn(t *testing.T, path string) (claiming int, unfenced []string) {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	fset := gatekit.SourceFileSet()
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

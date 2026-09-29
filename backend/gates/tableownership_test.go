@@ -34,7 +34,6 @@ import (
 	"bufio"
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"maps"
@@ -139,7 +138,7 @@ func stringConstsByPackage(t *testing.T, fset *token.FileSet, roots []string) ma
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
-			file, err := parser.ParseFile(fset, filepath.ToSlash(path), nil, 0)
+			file, err := gatekit.ParseFile(filepath.ToSlash(path), 0)
 			if err != nil {
 				return err
 			}
@@ -251,7 +250,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 	// matcher that matches nothing is indistinguishable from a tree with no
 	// versioned writes in it. The floor is what tells those two apart.
 	storekitWrites := 0
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	roots := append([]string{"internal/modules", "internal/compose"}, platformStoreDirs(t)...)
 	consts := stringConstsByPackage(t, fset, roots)
 	for _, root := range roots {
@@ -262,7 +261,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 				return err
 			}
 			path = filepath.ToSlash(path)
-			file, err := parser.ParseFile(fset, path, nil, 0)
+			file, err := gatekit.ParseFile(path, 0)
 			if err != nil {
 				return err
 			}

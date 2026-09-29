@@ -23,7 +23,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"regexp"
 	"strings"
 	"testing"
@@ -279,7 +278,7 @@ func applyFieldVerdicts() {}`,
 // case states the SQL it means and nothing else.
 func parseProbe(t *testing.T, source string) *ast.File {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", "package probe\n\n"+source, 0)
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe.go", "package probe\n\n"+source, 0)
 	if err != nil {
 		t.Fatalf("parsing the probe: %v", err)
 	}

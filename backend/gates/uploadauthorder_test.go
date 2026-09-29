@@ -36,6 +36,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two ways a handler takes a multipart body apart. Both are the cost this
@@ -78,7 +80,7 @@ func TestEveryMultipartParseRefusesBeforeItReads(t *testing.T) {
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		file, perr := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		file, perr := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if perr != nil {
 			t.Fatalf("parsing %s: %v", path, perr)
 		}

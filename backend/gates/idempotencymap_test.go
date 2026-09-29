@@ -18,7 +18,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"strconv"
@@ -108,7 +107,7 @@ func idempotencyKeyDeclarations(t *testing.T) map[string]bool {
 // never a silently dropped operation.
 func mappedIdempotentOperations(t *testing.T) map[string]bool {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), idempotencyMapSource, nil, 0)
+	file, err := gatekit.ParseFile(idempotencyMapSource, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", idempotencyMapSource, err)
 	}

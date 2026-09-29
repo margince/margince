@@ -21,8 +21,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path"
 	"path/filepath"
@@ -289,14 +287,13 @@ func packageFunctionReferences(t *testing.T, pkg string) map[string][]references
 
 func parsePackage(t *testing.T, pkg string, entries []os.DirEntry, dir string) []*ast.File {
 	t.Helper()
-	fset := token.NewFileSet()
 	var out []*ast.File
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, parseErr := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+		file, parseErr := gatekit.ParseFile(filepath.Join(dir, name), 0)
 		if parseErr != nil {
 			t.Fatalf("parsing %s/%s to resolve its object gates: %v", pkg, name, parseErr)
 		}

@@ -172,7 +172,7 @@ func calledName(call *ast.CallExpr) string {
 func TestEveryDecimalParseIsFencedBeforeBigRatReadsIt(t *testing.T) {
 	t.Parallel()
 	defer unfencedRatParseWaivers.AssertAllMatched(t)
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	judged := 0
 	sawFxRate := false
 	for _, root := range []string{"internal", "cmd"} {
@@ -187,7 +187,7 @@ func TestEveryDecimalParseIsFencedBeforeBigRatReadsIt(t *testing.T) {
 				strings.HasPrefix(path, "internal/contracts/") {
 				return nil
 			}
-			file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 			if err != nil {
 				return err
 			}
@@ -241,7 +241,7 @@ func TestTheDecimalFenceCensusRefusesTheShapesItExistsFor(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			src := "package p\nfunc parse(s string) {\n" + tc.body + "\n}\n"
-			fset := token.NewFileSet()
+			fset := gatekit.SourceFileSet()
 			file, err := parser.ParseFile(fset, "p.go", src, parser.SkipObjectResolution)
 			if err != nil {
 				t.Fatal(err)

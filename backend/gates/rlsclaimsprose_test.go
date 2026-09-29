@@ -250,6 +250,10 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 			return nil
 		}
 		checked++
+		// Every spelling proseRLSClaim matches contains one of these.
+		if !mayHoldFolded(string(b), "rls", "level security") {
+			return nil
+		}
 		for i, line := range strings.Split(string(b), "\n") {
 			if !proseRLSClaim.MatchString(line) || deniesTheControl(line) {
 				continue

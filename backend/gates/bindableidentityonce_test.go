@@ -30,11 +30,11 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // theBindingRule names the predicates that together decide a bind. Neither is
@@ -94,8 +94,7 @@ func TestOneFunctionDecidesWhoMayBindToAMessage(t *testing.T) {
 // file that call it.
 func bindingRuleCallers(t *testing.T, path string) map[string][]string {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

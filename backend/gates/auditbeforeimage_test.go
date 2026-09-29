@@ -501,7 +501,7 @@ func isAbsentImageExpr(call *ast.CallExpr) bool {
 func packageConstants(t *testing.T, files []gatekit.ParsedFile) map[string]map[string]string {
 	t.Helper()
 	byPackage := map[string]map[string]string{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, parsed := range files {
 		dir := filepath.Dir(parsed.Path)
 		if byPackage[dir] != nil {

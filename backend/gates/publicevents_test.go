@@ -40,7 +40,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"io/fs"
 	"os"
@@ -349,8 +348,7 @@ type deliveryClassification struct {
 
 func parseDeliveryClassification(t *testing.T) deliveryClassification {
 	t.Helper()
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, deliveryVisibilityPath, nil, 0)
+	file, err := gatekit.ParseFile(deliveryVisibilityPath, 0)
 	if err != nil {
 		t.Fatalf("parse %s: %v", deliveryVisibilityPath, err)
 	}
@@ -479,13 +477,12 @@ func TestNoRawEmitForSubscribableEvent(t *testing.T) {
 	for tp := range crmcontracts.PublicEventVersions {
 		subscribable[tp] = true
 	}
-	fset := token.NewFileSet()
 	err := filepath.WalkDir("internal/modules", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
 		path = filepath.ToSlash(path)
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}

@@ -22,13 +22,13 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // acquisitionDecisions records, per contact-creation door, what it does about
@@ -133,13 +133,12 @@ func createContactCallers(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading the contacts package: %v", err)
 	}
-	fset := token.NewFileSet()
 	var out []string
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(dir, e.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(dir, e.Name()), 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", e.Name(), err)
 		}

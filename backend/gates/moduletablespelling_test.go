@@ -151,7 +151,7 @@ func TestAModuleThatNamedItsTableUsesThatName(t *testing.T) {
 		maps.Copy(declared[dir], tableConstsIn(parsed.File))
 	}
 
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	tableArgs, objectArgs := authorityArgs(t, fset)
 
 	judged, gated, opted := 0, 0, 0
