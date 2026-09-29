@@ -13,7 +13,7 @@ import {
   usableName,
 } from "./entityref.queries";
 import { useMemberName } from "./membernames";
-import { type RosterKind, type useRoster, useRosterWalk } from "./roster";
+import { type RosterKind, useRosterWalk } from "./roster";
 
 // A cross-record reference rendered as the target's display name plus a
 // backlink to its 360, resolved by id. Records point at each other by id
@@ -315,31 +315,20 @@ export function rosterOwnerName(
 /**
  * How a caller that maps records onto cards names their owners.
  *
- * A function rather than the roster itself, for the same reason the company
- * mapping takes `CompanyNaming`: the mapper is pure and the roster is a query,
- * and a mapper that reads a query's `.data` is one that every story and test
- * of it has to assemble a query for. Null is BOTH "unowned" and "the roster
- * cannot name this id" — on a card the two draw the same nothing, and the
- * table's owner column is where they are told apart.
- *
- * Still walks rather than reading `useMemberName` by id: its callers label
- * every card on a board in one synchronous pass over already-loaded data, not
- * one component per id, and a hook cannot be called from inside that loop.
- * Moving this onto the by-id read is a rendering-shape change to the board's
- * cards, not a call-site swap.
+ * A function rather than the map itself, for the same reason the company
+ * mapping takes `CompanyNaming`: the mapper is pure and `useMemberNames`'s
+ * result is a hook's, and a mapper that reads one directly is one that every
+ * story and test of it has to assemble a hook result for. Null is BOTH
+ * "unowned" and "the read has not named this id" — on a card the two draw
+ * the same nothing, and the table's owner column is where they are told
+ * apart.
  */
 export type OwnerNaming = (ownerId: string | null | undefined) => string | null;
 
 export function rosterOwnerNaming(
-  roster: ReturnType<typeof useRoster>,
+  names: ReadonlyMap<string, string>,
 ): OwnerNaming {
-  return (ownerId) => {
-    if (!ownerId) {
-      return null;
-    }
-    const found = (roster.data ?? []).find((entry) => entry.id === ownerId);
-    return found && "display_name" in found ? found.display_name : null;
-  };
+  return (ownerId) => (ownerId ? (names.get(ownerId) ?? null) : null);
 }
 
 /**

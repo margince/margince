@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useMemberName } from "./membernames";
+import { useMemberName, useMemberNames } from "./membernames";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -151,5 +151,83 @@ describe("useMemberName", () => {
     await waitFor(() => expect(second.result.current.data).toBe("Name u-2"));
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useMemberNames", () => {
+  it("names every id it is given", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({
+        data: [
+          { id: "u-1", display_name: "Ada Lovelace" },
+          { id: "u-2", display_name: "Grace Hopper" },
+        ],
+      }),
+    );
+
+    const { result } = renderHook(() => useMemberNames(["u-1", "u-2"]), {
+      wrapper,
+    });
+
+    await waitFor(() =>
+      expect(result.current.names.get("u-2")).toBe("Grace Hopper"),
+    );
+    expect(result.current.names.get("u-1")).toBe("Ada Lovelace");
+  });
+
+  it("holds a failed id as unreadable, not a settled absence", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({ title: "Server error" }, 500),
+    );
+
+    const { result } = renderHook(() => useMemberNames(["u-1", "u-2"]), {
+      wrapper,
+    });
+
+    await waitFor(() =>
+      expect(result.current.unreadable.has("u-1")).toBe(true),
+    );
+    expect(result.current.unreadable.has("u-2")).toBe(true);
+    expect(result.current.names.size).toBe(0);
+  });
+
+  it("shares one request and one cache entry with useMemberName for an id named in the same tick", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        data: [
+          { id: "u-1", display_name: "Ada Lovelace" },
+          { id: "u-2", display_name: "Grace Hopper" },
+        ],
+      }),
+    );
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+
+    const { result } = renderHook(
+      () => ({
+        bulk: useMemberNames(["u-1", "u-2"]),
+        single: useMemberName("u-2"),
+      }),
+      { wrapper },
+    );
+
+    await waitFor(() =>
+      expect(result.current.single.data).toBe("Grace Hopper"),
+    );
+    expect(result.current.bulk.names.get("u-2")).toBe("Grace Hopper");
+    // One request for the whole tick: the bulk read's per-id queries and the
+    // single hook's own query key into the SAME cache entry for u-2, so
+    // react-query coalesces all three into the one batch window
+    // membernames.ts opens rather than asking twice for the same id.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks nothing for an empty list", () => {
+    const fetchMock = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+
+    const { result } = renderHook(() => useMemberNames([]), { wrapper });
+
+    expect(result.current.names.size).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
