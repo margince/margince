@@ -6,7 +6,6 @@ import { type Locale, useT } from "../../i18n";
 import { ProblemError, problemMessageOf } from "../common";
 import type { CompanyDraft } from "../onboarding";
 import { onboardingDraftPayload } from "../onboarding";
-import type { SuggestedCompanyChange } from "../onboarding-read";
 import type { ClarifyAnswer } from "./company-proposal";
 import {
   isCompanyField,
@@ -41,6 +40,8 @@ import { onboardingLocale } from "./onboarding-locale";
 type MessageReply = components["schemas"]["OnboardingCompanyMessageReply"];
 type Proposal = components["schemas"]["OnboardingCompanyProposal"];
 type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
+export type SuggestedCompanyChange =
+  components["schemas"]["CompanySiteReadSuggestedChange"];
 
 type OptionSelection = Readonly<{
   clarifyId: string;

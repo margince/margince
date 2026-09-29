@@ -5475,47 +5475,8 @@ export const vi = {
   "stage.criteria.kindTermsAccepted": "Đã chấp nhận điều khoản",
   "stage.criteria.kindCustom": "Tùy chỉnh",
 
-  "ob.url": "Website",
-  "ob.urlScheme": "https://",
   "ob.back": "Quay lại",
   "ob.restoring": "Đang khôi phục thiết lập của bạn…",
-  "ob.readManual": "Bạn tự kể cho tôi",
-  "ob.coreIntroTitle": "Trước tiên, tôi cần biết pháp nhân của bạn.",
-  "ob.coreIntroBody":
-    "Tôi cần tên pháp lý, địa chỉ và mã số thuế. Sau đó tôi tìm hiểu bạn bán gì cho ai.",
-  "ob.coreLegalKicker": "Tôi bắt đầu từ danh tính pháp lý",
-  "ob.corePathLabel": "Những gì tôi sẽ tìm hiểu",
-  "ob.corePathLegal": "Danh tính pháp lý",
-  "ob.corePathOffer": "Sản phẩm dịch vụ",
-  "ob.corePathCustomer": "Khách hàng",
-  "ob.coreReadingPage": "Tôi đang đọc",
-  "ob.coreWebsiteTitle": "Tôi nên đọc website nào?",
-  "ob.coreWebsiteBody":
-    "Tôi đọc phần thông tin pháp lý trước, rồi đến sản phẩm, khách hàng và định vị.",
-  "ob.corePreparing": "Tôi đang chuẩn bị đọc {host}",
-  "ob.coreLegalReading": "Tôi đang đọc danh tính pháp lý trên {host}",
-  "ob.coreLegalReadingBody":
-    "Tôi tìm thông tin pháp lý, địa chỉ và mã số thuế. Gì không nêu thì để trống.",
-  "ob.coreBusinessReading": "Tôi đang tìm hiểu cách công ty vận hành",
-  "ob.coreBusinessReadingBody":
-    "Tôi đang nối sản phẩm, khách hàng và định vị với đúng đoạn văn bản công khai chứng minh cho chúng.",
-  "ob.coreReady_one": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.coreReady_other": "Đã tìm được {count} chi tiết công ty có dẫn nguồn",
-  "ob.corePartial_one":
-    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
-  "ob.corePartial_other":
-    "Đã tìm được {count} chi tiết hữu ích, còn vài chỗ trống",
-  "ob.coreReadyBody":
-    "Tôi chưa lưu gì. Hãy rà soát danh tính pháp lý trước, rồi đến sản phẩm dịch vụ.",
-  "ob.coreDeferredBody": "Tôi sẽ tự động đọc tiếp.",
-  "ob.coreFailedBody":
-    "Tôi không đọc chắc được website này nên dừng thay vì đoán. Bạn tự cho tôi biết nhé.",
-  "ob.coreFindingsTitle": "Những gì tôi tìm được và chứng minh được",
-  "ob.coreFindingsBody":
-    "Mỗi giá trị đều kèm đoạn văn bản công khai. Gì không xác minh được thì để trống.",
-  "ob.ai.identity": "Chào bạn, tôi là Margince",
-  "ob.ai.role": "AI tìm hiểu công ty của bạn",
-  "ob.ai.speaker": "M",
   "ob.ai.speakerName": "Margince",
   "ob.ai.ready": "Tôi đã sẵn sàng tìm hiểu",
   "ob.ai.configured": "AI đã cấu hình",
@@ -5542,42 +5503,15 @@ export const vi = {
   "ob.ai.tier.premium": "suy luận cao cấp",
   "ob.ai.tier.frontier": "suy luận tiên phong",
   "ob.ai.tier.localLarge": "cục bộ, mạnh",
-  // The rail footer's plain-language line: the exact ids sit one click away
-  // in the runtime chip's "Configured AI" row, so this says only what a
-  // non-technical reader needs at a glance — how many models, and where.
-  "ob.ai.summary.cloud_one": "1 mô hình, chạy trên đám mây",
-  "ob.ai.summary.cloud_other": "{count} mô hình, chạy trên đám mây",
-  "ob.ai.summary.local_one": "1 mô hình, chạy cục bộ",
-  "ob.ai.summary.local_other": "{count} mô hình, chạy cục bộ",
-  "ob.ai.summary.hybrid_one": "1 mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.hybrid_other": "{count} mô hình, chia giữa đám mây và cục bộ",
-  "ob.ai.summary.development_one": "1 mô hình, chế độ phát triển",
-  "ob.ai.summary.development_other": "{count} mô hình, chế độ phát triển",
-  "ob.ai.summary.none": "Chưa cấu hình mô hình nào",
-  "ob.ai.summaryProviders_one": "1 nhà cung cấp đã cấu hình",
-  "ob.ai.summaryProviders_other": "{count} nhà cung cấp đã cấu hình",
-  "ob.ai.readFirst": "Hãy bắt đầu thiết lập công ty trước khi hỏi về phần này.",
   "ob.ai.liveArtifact": "Bản dựng trực tiếp, rà soát được",
   "ob.ai.companyKnowledge": "Những gì tôi hiểu về công ty của bạn",
   "ob.ai.companyKnowledgeBody":
     "Bằng chứng từ website được giữ tách khỏi cuộc trò chuyện. Bạn quyết định điều gì trở thành thông tin công ty.",
   "ob.ai.companyKnowledgeManualBody":
     "Câu trả lời của bạn và gợi ý của tôi vẫn sửa được ở đây. Bạn quyết định điều gì trở thành thông tin công ty.",
-  "ob.ai.askPlaceholder":
-    "Hỏi tôi về một phát hiện, sửa một chi tiết, hoặc cho biết tôi đã bỏ sót gì…",
-  "ob.ai.send": "Gửi cho Margince",
-  "ob.ai.reviewBoundary":
-    "Ở đây tôi chỉ đề xuất thay đổi. Tôi chỉ áp dụng vào bản nháp của bạn khi bạn duyệt.",
   "ob.ai.confirmBoundary":
     "Không gì trở thành thông tin công ty cho đến khi bạn xác nhận bản nháp này.",
   "ob.ai.confirmCompany": "Xác nhận và lưu công ty",
-  "ob.ai.thinking": "Tôi đang xem lại tập hồ sơ và chuẩn bị câu trả lời…",
-  "ob.ai.suggestedChanges": "Thay đổi được đề xuất cho bản nháp của bạn",
-  "ob.ai.applyChanges": "Áp dụng vào bản nháp",
-  "ob.ai.applied": "Đã áp dụng vào bản nháp",
-  "ob.ai.finding_one": "phát hiện có dẫn nguồn",
-  "ob.ai.finding_other": "phát hiện có dẫn nguồn",
-  "ob.continueManual": "Kể cho tôi thay vì đọc",
   "ob.readStatus.queued": "Tôi đang chuẩn bị",
   "ob.readStatus.deferred": "Tôi đang chờ hạn mức AI",
   "ob.readStatus.reading": "Tôi đang đọc",
@@ -5586,13 +5520,6 @@ export const vi = {
   "ob.readStatus.failed": "Tôi cần bạn giúp",
   "ob.readStatus.confirmed": "Tôi đã lưu lựa chọn của bạn",
   "ob.readStatus.abandoned": "Tôi đã dừng",
-  "ob.pagesRead": "trang tôi đã đọc",
-  "ob.legalEntitiesFound": "pháp nhân tôi tìm được",
-  "ob.coverageDetails": "Những gì tôi đã đọc và không đọc được",
-  "ob.legalFoundTitle": "Pháp nhân tôi tìm được",
-  "ob.legalFoundBody":
-    "Mỗi khối giữ tên đăng ký, địa chỉ và mã số thuế. Bạn chọn pháp nhân của mình khi rà soát.",
-  "ob.legalEntity": "Pháp nhân",
   "ob.confirmWebsite_one":
     "Phần này dựa trên {count} trang công khai. Bạn sửa được mọi thứ; giá trị nào không đụng tới thì vẫn giữ bằng chứng.",
   "ob.confirmWebsite_other":
@@ -5614,7 +5541,6 @@ export const vi = {
   "ob.s1.title": "Rà soát những gì tôi tìm hiểu được về công ty bạn",
   "ob.s1.sub":
     "Tôi chỉ điền những gì chứng minh được từ website của bạn. Hãy sửa lại chỗ nào sai.",
-  "ob.s1.urlPlaceholder": "congtycuaban.com",
   "ob.s1.identityLabel": "Pháp nhân",
   "ob.s1.offerLabel": "Sản phẩm và dịch vụ",
   "ob.s1.customerLabel": "Khách hàng",
@@ -5626,10 +5552,7 @@ export const vi = {
   "ob.s1.saveFailed": "Không lưu được công ty của bạn",
   "ob.s1.savedNote":
     "Đã lưu vào tổ chức của bạn. Sửa gì ở đây rồi tiếp tục là lưu lại lần nữa.",
-  "ob.readGo": "Đọc website của tôi",
-  "ob.urlWillRead": "Tôi sẽ đọc {host}",
   "ob.readFromSite": "đọc từ website",
-  "ob.failTitle": "Tôi đọc được quá ít từ website này",
 
   "ob.manualChapterLegal": "Pháp nhân của bạn",
   "ob.manualChapterOffer": "Sản phẩm và dịch vụ",
@@ -6316,7 +6239,6 @@ export const vi = {
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
-  "ob.conv.threadLabel": "Cuộc trò chuyện onboarding",
   "ob.conv.read.started": "Đang đọc {host}. Tìm được gì tôi sẽ báo bạn.",
   "ob.conv.read.pages": "Số trang đã đọc: {pages}.",
   "ob.conv.read.learnedField": "Đã biết {field}: {value}",
@@ -6328,8 +6250,6 @@ export const vi = {
   "ob.conv.read.deferred": "Lượt đọc đang tạm dừng. Tôi sẽ tự động làm tiếp.",
   "ob.conv.read.pollFailed":
     "Tôi mất kết nối giữa chừng khi đang đọc. Những gì đã tìm được vẫn được giữ.",
-  "ob.conv.clarify.entity":
-    "Website nêu nhiều hơn một pháp nhân. Bản cài đặt này dành cho pháp nhân nào?",
   "ob.conv.company.confirmed":
     "Đã xác nhận hồ sơ công ty. Mọi thứ tôi lưu đều kèm nguồn.",
   "ob.conv.manual.chosen": "Tôi sẽ tự nhập.",
@@ -6563,8 +6483,6 @@ export const vi = {
   "ob.conv.scene.hideEvidence": "ẩn bằng chứng",
   "ob.conv.scene.whyThis": "Tôi đã đọc được gì",
   "ob.conv.scene.foundOn": "Tìm thấy tại",
-  "ob.conv.activity.steps_one": "{count} bước",
-  "ob.conv.activity.steps_other": "{count} bước",
   "ob.conv.showField": "Cho tôi xem",
   "ob.conv.review.editDirectly": "Sửa trực tiếp từng trường",
   "ob.conv.review.backToDossier": "Quay lại tập hồ sơ",
@@ -6733,9 +6651,6 @@ export const vi = {
   "ob.scan.costUnpriced": " · có phần dùng chưa có giá",
 
   // --- the live panel: what the read covered, and what it left ----------
-  "ob.live.stateDone": "xong",
-  "ob.live.stateNow": "đang chạy",
-  "ob.live.stateWaiting": "đang chờ",
   "ob.live.review": "Rà soát",
   "ob.live.hide": "Ẩn đi",
   "ob.live.countPages": "đọc {read} · bỏ qua {skipped}",

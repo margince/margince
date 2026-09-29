@@ -5,12 +5,7 @@ import { describe, expect, it } from "vitest";
 import { withoutComments } from "../testing/css";
 
 // `Card` is the one card surface, and a hand-rolled one is a second card the
-// moment any of its chrome moves — which is not a warning, it is a description
-// of what this tree did. `onboarding.css` grew SIX card classes: `.rcard` was
-// byte-identical to `.card`, `.finding-card` dropped the shadow and swapped the
-// background, `.legal-preview-card` reached for a stronger border, and
-// `.fact-card` / `.legal-card` were the same card twice — identical chrome with
-// text rules that had already drifted apart.
+// moment any of its chrome moves.
 //
 // So the rule is derived rather than remembered: any rule that declares
 // `.card`'s OWN chrome — the same four token values, plus the card shadow — is
@@ -22,10 +17,9 @@ import { withoutComments } from "../testing/css";
 // teaches contacts to skip its output. "A border, a radius and a padded
 // background" describes 64 rules in this tree — chips, search fields, plates,
 // callouts — and almost none of them is a card. So this asks the narrow
-// question it can answer: is this the card surface, copied. A VARIANT of it
-// (`.finding-card` dropped the shadow and swapped the background) is a design
-// decision somebody has to make, not a duplicate a test can name, and reporting
-// every one would be this gate asserting an answer nobody gave.
+// question it can answer: is this the card surface, copied. A VARIANT of it is
+// a design decision somebody has to make, not a duplicate a test can name, and
+// reporting every one would be this gate asserting an answer nobody gave.
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const designSystem = join(frontendRoot, "src", "design-system");

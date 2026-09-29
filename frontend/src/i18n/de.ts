@@ -5531,47 +5531,8 @@ export const de = {
   "stage.criteria.kindTermsAccepted": "Bedingungen akzeptiert",
   "stage.criteria.kindCustom": "Eigenes",
 
-  "ob.url": "Website",
-  "ob.urlScheme": "https://",
   "ob.back": "Zurück",
   "ob.restoring": "Einrichtung wird wiederhergestellt…",
-  "ob.readManual": "Manuell eingeben",
-  "ob.coreIntroTitle": "Zuerst der Rechtsträger",
-  "ob.coreIntroBody":
-    "Margince braucht den rechtlichen Namen, die Anschrift und die USt-ID oder Registernummer, danach, was das Unternehmen verkauft und an wen.",
-  "ob.coreLegalKicker": "Zuerst die rechtliche Identität",
-  "ob.corePathLabel": "Was Margince lernt",
-  "ob.corePathLegal": "Rechtliche Identität",
-  "ob.corePathOffer": "Angebot",
-  "ob.corePathCustomer": "Kunden",
-  "ob.coreReadingPage": "Wird gelesen",
-  "ob.coreWebsiteTitle": "Welche Website soll Margince lesen?",
-  "ob.coreWebsiteBody":
-    "Zuerst wird das Impressum gelesen, dann Produkte, Kunden und Positionierung.",
-  "ob.corePreparing": "Lesen von {host} wird vorbereitet",
-  "ob.coreLegalReading": "Rechtliche Identität auf {host} wird gelesen",
-  "ob.coreLegalReadingBody":
-    "Gesucht werden Impressum, Anschrift und Registernummer oder USt-ID. Nicht genannte Angaben bleiben leer.",
-  "ob.coreBusinessReading": "Geschäftsmodell wird erfasst",
-  "ob.coreBusinessReadingBody":
-    "Produkte, Kunden und Positionierung werden mit dem öffentlichen Text verknüpft, der sie belegt.",
-  "ob.coreReady_one": "{count} belegte Unternehmensangabe gefunden",
-  "ob.coreReady_other": "{count} belegte Unternehmensangaben gefunden",
-  "ob.corePartial_one":
-    "{count} verwertbare Angabe gefunden. Einige Lücken bleiben offen.",
-  "ob.corePartial_other":
-    "{count} verwertbare Angaben gefunden. Einige Lücken bleiben offen.",
-  "ob.coreReadyBody":
-    "Noch ist nichts gespeichert. Prüfe zuerst die rechtliche Identität, dann Angebot und Kunden.",
-  "ob.coreDeferredBody": "Das Lesen wird automatisch fortgesetzt.",
-  "ob.coreFailedBody":
-    "Die Website war nicht gut genug lesbar. Statt zu raten, wurde das Lesen beendet. Gib die Angaben manuell ein.",
-  "ob.coreFindingsTitle": "Belegte Befunde",
-  "ob.coreFindingsBody":
-    "Jeder Wert zeigt den öffentlichen Wortlaut, auf dem er beruht. Nicht überprüfbare Werte bleiben leer.",
-  "ob.ai.identity": "Margince",
-  "ob.ai.role": "KI für Unternehmensrecherche",
-  "ob.ai.speaker": "M",
   "ob.ai.speakerName": "Margince",
   "ob.ai.ready": "Bereit für die Recherche",
   "ob.ai.configured": "Konfigurierte KI",
@@ -5597,44 +5558,15 @@ export const de = {
   "ob.ai.tier.premium": "Premium-Reasoning",
   "ob.ai.tier.frontier": "Frontier-Reasoning",
   "ob.ai.tier.localLarge": "lokal, erweitert",
-  // Die Klartext-Zeile im Rail-Footer: Die genauen IDs sind einen Klick
-  // entfernt in der Zeile „Konfigurierte KI“ des Laufzeit-Chips — hier steht
-  // nur, was auf den ersten Blick zählt: wie viele Modelle, und wo sie laufen.
-  "ob.ai.summary.cloud_one": "1 Modell, läuft in der Cloud",
-  "ob.ai.summary.cloud_other": "{count} Modelle, laufen in der Cloud",
-  "ob.ai.summary.local_one": "1 Modell, läuft lokal",
-  "ob.ai.summary.local_other": "{count} Modelle, laufen lokal",
-  "ob.ai.summary.hybrid_one": "1 Modell, teils in der Cloud, teils lokal",
-  "ob.ai.summary.hybrid_other":
-    "{count} Modelle, teils in der Cloud, teils lokal",
-  "ob.ai.summary.development_one": "1 Modell, Entwicklungsmodus",
-  "ob.ai.summary.development_other": "{count} Modelle, Entwicklungsmodus",
-  "ob.ai.summary.none": "Noch kein Modell konfiguriert",
-  "ob.ai.summaryProviders_one": "1 Anbieter konfiguriert",
-  "ob.ai.summaryProviders_other": "{count} Anbieter konfiguriert",
-  "ob.ai.readFirst":
-    "Starte die Unternehmenseinrichtung, bevor du Fragen dazu stellst.",
   "ob.ai.liveArtifact": "Live-Entwurf zur Prüfung",
   "ob.ai.companyKnowledge": "Unternehmenswissen",
   "ob.ai.companyKnowledgeBody":
     "Belege von der Website bleiben von diesem Chat getrennt. Du entscheidest, was Unternehmenskontext wird.",
   "ob.ai.companyKnowledgeManualBody":
     "Deine Antworten und die Vorschläge von Margince bleiben hier bearbeitbar. Du entscheidest, was Unternehmenskontext wird.",
-  "ob.ai.askPlaceholder":
-    "Frage nach einem Befund, korrigiere eine Angabe oder ergänze, was fehlt",
-  "ob.ai.send": "An Margince senden",
-  "ob.ai.reviewBoundary":
-    "Margince kann hier Änderungen vorschlagen und übernimmt sie erst nach deiner Freigabe in den Entwurf.",
   "ob.ai.confirmBoundary":
     "Nichts wird Unternehmenskontext, bevor du diesen Entwurf bestätigst.",
   "ob.ai.confirmCompany": "Unternehmen bestätigen und speichern",
-  "ob.ai.thinking": "Dossier wird geprüft…",
-  "ob.ai.suggestedChanges": "Vorgeschlagene Änderungen am Entwurf",
-  "ob.ai.applyChanges": "In Entwurf übernehmen",
-  "ob.ai.applied": "In Entwurf übernommen",
-  "ob.ai.finding_one": "belegter Befund",
-  "ob.ai.finding_other": "belegte Befunde",
-  "ob.continueManual": "Manuell eingeben",
   "ob.readStatus.queued": "Wird vorbereitet",
   "ob.readStatus.deferred": "Wartet auf KI-Kontingent",
   "ob.readStatus.reading": "Wird gelesen",
@@ -5643,13 +5575,6 @@ export const de = {
   "ob.readStatus.failed": "Eingabe erforderlich",
   "ob.readStatus.confirmed": "Auswahl gespeichert",
   "ob.readStatus.abandoned": "Angehalten",
-  "ob.pagesRead": "gelesene Seiten",
-  "ob.legalEntitiesFound": "gefundene Rechtsträger",
-  "ob.coverageDetails": "Abdeckung und ungelesene Seiten",
-  "ob.legalFoundTitle": "Gefundene Rechtsträger",
-  "ob.legalFoundBody":
-    "Jeder Block zeigt eingetragenen Namen, Anschrift und Registernummer oder USt-ID. Wähle in der Prüfung den richtigen Rechtsträger aus.",
-  "ob.legalEntity": "Rechtsträger",
   "ob.confirmWebsite_one":
     "Basiert auf {count} öffentlichen Seite. Du kannst jeden Wert bearbeiten; unveränderte Werte behalten ihre Belege.",
   "ob.confirmWebsite_other":
@@ -5671,7 +5596,6 @@ export const de = {
   "ob.s1.title": "Unternehmensangaben prüfen",
   "ob.s1.sub":
     "Ausgefüllt sind nur Angaben, die die Website belegt. Korrigiere, was nicht stimmt.",
-  "ob.s1.urlPlaceholder": "deinunternehmen.de",
   "ob.s1.identityLabel": "Rechtsträger",
   "ob.s1.offerLabel": "Produkte und Angebot",
   "ob.s1.customerLabel": "Kunden",
@@ -5682,10 +5606,7 @@ export const de = {
   "ob.s1.saveFailed": "Unternehmen nicht gespeichert",
   "ob.s1.savedNote":
     "Im Unternehmen gespeichert. Änderungen hier werden beim Fortfahren erneut gespeichert.",
-  "ob.readGo": "Website lesen",
-  "ob.urlWillRead": "Margince liest {host}",
   "ob.readFromSite": "von der Website gelesen",
-  "ob.failTitle": "Von dieser Website ließ sich nicht genug lesen",
 
   "ob.manualChapterLegal": "Rechtsträger",
   "ob.manualChapterOffer": "Produkte und Angebot",
@@ -6374,7 +6295,6 @@ export const de = {
   "ob.s4.connectFailed": "Postfach nicht verbunden",
   "ob.s4.notNow": "Nicht jetzt",
 
-  "ob.conv.threadLabel": "Einrichtungsgespräch",
   "ob.conv.read.started": "Ich lese {host} und berichte, was ich finde.",
   "ob.conv.read.pages": "Bisher gelesene Seiten: {pages}.",
   "ob.conv.read.learnedField": "{field} gelernt: {value}",
@@ -6387,8 +6307,6 @@ export const de = {
     "Die Verbindung ist beim Lesen abgebrochen. Was ich gefunden habe, bleibt erhalten.",
   "ob.conv.read.deferred":
     "Das Lesen ist pausiert. Ich setze es automatisch fort.",
-  "ob.conv.clarify.entity":
-    "Die Website nennt mehr als einen Rechtsträger. Für welchen ist diese Installation gedacht?",
   "ob.conv.company.confirmed":
     "Unternehmensprofil bestätigt. Jeder gespeicherte Wert hält seine Quelle fest.",
   "ob.conv.manual.chosen": "Ich gebe es manuell ein.",
@@ -6627,8 +6545,6 @@ export const de = {
   "ob.conv.scene.hideEvidence": "Beleg ausblenden",
   "ob.conv.scene.whyThis": "Was ich gelesen habe",
   "ob.conv.scene.foundOn": "Gefunden auf",
-  "ob.conv.activity.steps_one": "{count} Schritt",
-  "ob.conv.activity.steps_other": "{count} Schritte",
   "ob.conv.showField": "Anzeigen",
   "ob.conv.review.editDirectly": "Felder direkt bearbeiten",
   "ob.conv.review.backToDossier": "Zurück zum Dossier",
@@ -6799,9 +6715,6 @@ export const de = {
   "ob.scan.costUnpriced": " · Nutzung ohne Preisangabe vorhanden",
 
   // --- das Live-Panel: was der Lauf abgedeckt hat und was nicht ----------
-  "ob.live.stateDone": "fertig",
-  "ob.live.stateNow": "läuft",
-  "ob.live.stateWaiting": "wartet",
   "ob.live.review": "Prüfen",
   "ob.live.hide": "Ausblenden",
   "ob.live.countPages": "{read} gelesen · {skipped} übersprungen",

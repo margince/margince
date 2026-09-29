@@ -152,7 +152,8 @@ describe("clarify interplay with read terminals", () => {
   it("promotes a second open question to the decision surface once the first resolves in co.review", () => {
     const secondQuestion: ConversationQuestion = {
       id: "clarify-industry",
-      i18nKey: "ob.conv.clarify.entity",
+      i18nKey: "ob.conv.clarify.question",
+      params: { question: "Which industry is this company in?" },
       options: [{ value: "robotics", label: "Robotics" }],
     };
     let state = conversationReducer(clarifying(), {
@@ -183,7 +184,8 @@ describe("clarify interplay with read terminals", () => {
   it("rejects a clarify from a different read while promoting later questions in co.review", () => {
     const secondQuestion: ConversationQuestion = {
       id: "clarify-industry",
-      i18nKey: "ob.conv.clarify.entity",
+      i18nKey: "ob.conv.clarify.question",
+      params: { question: "Which industry is this company in?" },
       options: [{ value: "robotics", label: "Robotics" }],
     };
     let state = conversationReducer(clarifying(), {

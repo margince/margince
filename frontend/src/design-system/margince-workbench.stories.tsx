@@ -235,9 +235,8 @@ export const RailWithoutContact: Story = {
  * The split variant, for comparison.
  *
  * The conversation takes the wider column and the artifact is a reference
- * dossier beside it, so the chrome re-orders: the numbered step list runs above
- * the brand line rather than as a progress bar under it, and the transparency
- * chip rides in the header instead of a footer bar.
+ * dossier beside it, so the chrome re-orders: no progress bar, and the
+ * transparency chip rides in the header instead of a footer bar.
  *
  * `contact` is deliberately passed and deliberately not drawn — the foot row is
  * rail-only, and a story that omitted the prop here would leave that a claim in

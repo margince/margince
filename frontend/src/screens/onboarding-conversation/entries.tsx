@@ -1,26 +1,15 @@
-import type { LucideIcon } from "lucide-react";
-import { ChevronDown, CircleAlert, CircleCheck, Clock } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
-import { Avatar, Button } from "../../design-system/atoms";
+import { Fragment } from "react";
 import { Logomark } from "../../design-system/logomark";
-import { formatNumber } from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useMe } from "../common";
-import type {
-  ConversationQuestion,
-  OutcomeTone,
-  ThreadEntry,
-} from "./conversation-machine";
+import type { ThreadEntry } from "./conversation-machine";
 import "./conversation.css";
 
-// Presentational pieces for the conversation thread. Copy always resolves
-// through the i18n catalogs; server-derived values (option labels, params)
-// arrive as data and render verbatim, while paramKeys are translated here.
+// Presentational pieces for the conversation. Copy always resolves through the
+// i18n catalogs; server-derived params arrive as data and render verbatim, while
+// paramKeys are translated here.
 
 type NarrationEntry = Extract<ThreadEntry, { kind: "narration" }>;
-type UserEntry = Extract<ThreadEntry, { kind: "user" }>;
-type OutcomeEntry = Extract<ThreadEntry, { kind: "outcome" }>;
 
 function resolvedParams(
   t: Translator,
@@ -187,65 +176,6 @@ export function jumpToFindings(ids: readonly string[]): void {
   }, JUMP_PULSE_MS);
 }
 
-/**
- * A run of progress narration, folded the way a working agent's activity
- * log folds: one line showing the LATEST step and the count, the full list
- * one press away. Progress is what the AI did — it must be visible as
- * motion and auditable on demand, but it is not a message anyone owes a
- * reply to, so it does not stack bubbles. A step that names fields is a
- * button that jumps to and lights them.
- */
-export function ActivityGroup({
-  entries,
-}: Readonly<{ entries: readonly NarrationEntry[] }>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const latest = entries.at(-1);
-  if (latest === undefined) {
-    return null;
-  }
-  const textOf = (entry: NarrationEntry) =>
-    t(entry.i18nKey, resolvedParams(t, entry.params, entry.paramKeys));
-  return (
-    <div className="ob-conv-activity">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <i aria-hidden />
-        <span>{textOf(latest)}</span>
-        <b className="t-caption">
-          {plural("ob.conv.activity.steps", entries.length, {
-            count: formatNumber(entries.length, locale),
-          })}
-        </b>
-        <ChevronDown aria-hidden />
-      </button>
-      {open && (
-        <ul>
-          {entries.map((entry) =>
-            entry.findingIds !== undefined && entry.findingIds.length > 0 ? (
-              <li key={entry.id}>
-                <button
-                  type="button"
-                  onClick={() => jumpToFindings(entry.findingIds ?? [])}
-                >
-                  {textOf(entry)}
-                </button>
-              </li>
-            ) : (
-              <li key={entry.id}>{textOf(entry)}</li>
-            ),
-          )}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 export function NarrationBubble({
   entry,
   reveal = false,
@@ -285,141 +215,5 @@ export function NarrationBubble({
         )}
       </p>
     </div>
-  );
-}
-
-export function UserTurn({ entry }: Readonly<{ entry: UserEntry }>) {
-  const t = useT();
-  // The same ["me"] cache entry the shell's own footer reads, so the reader's
-  // monogram in the transcript and their monogram at the rail's foot are the
-  // same chip rather than two ideas of who is signed in. An unresolved
-  // identity keeps the turn — the message is theirs whether or not the probe
-  // has landed — and the chip simply has no letter to show yet.
-  const user = useMe().data?.user;
-  const name = user?.display_name || user?.email || "";
-  return (
-    <div className="ob-conv-user">
-      <p>{entry.i18nKey ? t(entry.i18nKey, entry.params) : entry.text}</p>
-      <Avatar identity={user?.id ?? ""} name={name} />
-    </div>
-  );
-}
-
-const outcomeIcons: Record<OutcomeTone, LucideIcon> = {
-  success: CircleCheck,
-  deferred: Clock,
-  failure: CircleAlert,
-};
-
-// No live-region role here: the surrounding thread is the announcing log,
-// and a nested one would double-announce every outcome.
-export function OutcomeCard({ entry }: Readonly<{ entry: OutcomeEntry }>) {
-  const t = useT();
-  const Icon = outcomeIcons[entry.tone];
-  return (
-    <div className="ob-conv-outcome" data-tone={entry.tone}>
-      <Icon aria-hidden />
-      <p>{t(entry.i18nKey, entry.params)}</p>
-    </div>
-  );
-}
-
-/** What a resolved question recorded: the chosen option, or the dismissal.
- * Read back from the thread's own answer turn — see `selectionFor` in
- * thread.ts — never from a live card, which no longer carries either shape
- * once answered (see QuestionCard below). */
-export type QuestionSelection =
-  | { kind: "option"; value: string }
-  | { kind: "dismissed" };
-
-type QuestionCardProps = Readonly<{
-  question: ConversationQuestion;
-  /** The card is the one live question: keyboard focus moves to its first
-   * option — unless the human is mid-thought in a text field. */
-  focusFirstOption?: boolean;
-  onAnswer: (questionId: string, value: string) => void;
-  /** The local-dismiss escape; rendered only when the question carries a
-   * dismiss label AND the surface wires a handler. */
-  onDismiss?: (questionId: string) => void;
-}>;
-
-// The full candidate list and its dismiss escape — genuinely live only: a
-// resolved question is never re-rendered as this card. The rail keeps the
-// choice as the one-line answer turn the machine already appends beside it
-// (UserTurn); the review's own open-questions list drops a question from
-// its feed the moment it is answered. Neither caller has a use for
-// re-showing rejected candidates, so there is no "answered" shape here to
-// drift from either.
-export function QuestionCard({
-  question,
-  focusFirstOption = false,
-  onAnswer,
-  onDismiss,
-}: QuestionCardProps) {
-  const t = useT();
-  const card = useRef<HTMLFieldSetElement>(null);
-
-  useEffect(() => {
-    if (!focusFirstOption) {
-      return;
-    }
-    const button = card.current?.querySelector("button");
-    if (button == null) {
-      return;
-    }
-    // Never steal focus from someone typing: any focused text field wins,
-    // and a composer still holding a draft keeps its claim even unfocused.
-    const active = button.ownerDocument.activeElement;
-    if (
-      active instanceof HTMLTextAreaElement ||
-      active instanceof HTMLInputElement
-    ) {
-      return;
-    }
-    const composer = button
-      .closest(".ob-workbench-panel")
-      ?.querySelector<HTMLTextAreaElement>(".mw-composer textarea");
-    if (composer != null && composer.value !== "") {
-      return;
-    }
-    button.focus();
-  }, [focusFirstOption]);
-
-  return (
-    <fieldset ref={card} className="ob-conv-question">
-      <legend>{t(question.i18nKey, question.params)}</legend>
-      <div className="ob-conv-options">
-        {question.options.map((option) => {
-          const label = option.labelKey
-            ? t(option.labelKey, option.params)
-            : option.label;
-          return (
-            <Button
-              key={option.value}
-              className="ob-conv-option"
-              // The chip clamps long values visually (CSS line-clamp); the
-              // full text stays the accessible name via content and here as
-              // the hover title.
-              title={label}
-              onClick={() => onAnswer(question.id, option.value)}
-            >
-              <span>{label}</span>
-              {option.detailKey && (
-                <small>{t(option.detailKey, option.params)}</small>
-              )}
-            </Button>
-          );
-        })}
-      </div>
-      {question.dismissLabelKey !== undefined && onDismiss !== undefined && (
-        <Button
-          variant="ghost"
-          className="ob-conv-question-dismiss"
-          onClick={() => onDismiss(question.id)}
-        >
-          {t(question.dismissLabelKey)}
-        </Button>
-      )}
-    </fieldset>
   );
 }
