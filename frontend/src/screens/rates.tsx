@@ -354,9 +354,8 @@ export function ModelCostsCard() {
   }
 
   return (
-    // The verbs in the action band, for the reason spelled out on FxRatesCard:
-    // beside the title they were an unwrappable row that widened the card past
-    // a 390px viewport.
+    // The verbs in the action band, for the reason on FxRatesCard: beside the
+    // title they were an unwrappable row wider than a 390px viewport.
     <Panel
       title={t("settings.rates.modelTitle")}
       actions={
