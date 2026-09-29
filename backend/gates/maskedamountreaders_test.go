@@ -246,12 +246,9 @@ var dealTableRead = gatekit.TableReadPattern("deal")
 // maskOwner is the module that OWNS the deal object and the mask, and the one
 // place this census may not stop reaching.
 //
-// It was exempt WHOLESALE once, on the reading that the owner of a mask applies
-// it. What that bought was a project-header total summing every deal filed
-// under a project with no mask on it at all — an aggregate the census could not
-// see because of where it lived, while every sibling total outside the module
-// was guarded. Owning the mask is the reason to read the module closely, not a
-// reason to skip it: this is where a statement reaches the column most directly.
+// Owning the mask is the reason to read the module closely rather than a reason
+// to skip it: this is where a statement reaches the column most directly, and a
+// total inside it is as free to sum an unmasked deal as any sibling outside.
 const maskOwner = "internal/modules/deals/"
 
 // The seeds are LISTED rather than derived from platform/auth's Mask* surface,

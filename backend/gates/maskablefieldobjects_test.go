@@ -225,12 +225,15 @@ func catalogObjects(t *testing.T) []string {
 		t.Fatalf("reading %s: %v", maskableCatalog, err)
 	}
 	seen := make(map[string]bool)
-	for _, line := range strings.Split(string(body), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
+	// catalogPair, not a second split: one parser decides what a catalog line
+	// is, and a line this dropped where that one refuses would leave the
+	// census sweeping fewer objects with nothing to say so.
+	for number, line := range strings.Split(string(body), "\n") {
+		object, _, err := catalogPair(line)
+		if err != nil {
+			t.Fatalf("%s line %d: %v", maskableCatalog, number+1, err)
 		}
-		if object, _, isPair := strings.Cut(line, " "); isPair {
+		if object != "" {
 			seen[object] = true
 		}
 	}
