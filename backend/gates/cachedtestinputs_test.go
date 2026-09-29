@@ -111,7 +111,12 @@ func declaresItsInputs(file *ast.File) bool {
 	}
 	declared := false
 	ast.Inspect(file, func(node ast.Node) bool {
-		sel, isSel := node.(*ast.SelectorExpr)
+		// A call, not a mention: `_ = gatekit.DeclareInputs` declares nothing.
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall {
+			return !declared
+		}
+		sel, isSel := call.Fun.(*ast.SelectorExpr)
 		if isSel && (sel.Sel.Name == "DeclareInputs" || sel.Sel.Name == "DeclareListings") {
 			if pkg, isIdent := sel.X.(*ast.Ident); isIdent && pkg.Name == gk {
 				declared = true
@@ -219,6 +224,7 @@ func TestTheShellOutCensusKnowsADeclarationFromALookalike(t *testing.T) {
 		{"a declared listing", gatekitImport, `gatekit.DeclareListings(".")`, true},
 		{"an aliased import", "gk " + gatekitImport, `gk.DeclareInputs(".")`, true},
 		{"another gatekit helper", gatekitImport, `gatekit.SourceFileSet()`, false},
+		{"a mention that is never called", gatekitImport, `gatekit.DeclareInputs`, false},
 		{"another package's DeclareInputs", `gatekit "example.com/other"`, `gatekit.DeclareInputs(".")`, false},
 	} {
 		source := "package p\nimport (\n\"os/exec\"\n" + tc.imports + "\n)\n" +
