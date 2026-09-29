@@ -8438,7 +8438,8 @@ export const de = {
   "aiusage.decisions.col.asked": "Gefragt",
   "aiusage.decisions.col.passRate": "Bestanden",
   "aiusage.decisions.col.fallbackRate": "Rückfälle",
-  "aiusage.decisions.reasonsFor": "Rückfälle nach Grund für {rate}",
+  "aiusage.decisions.reasonsFor":
+    "Rückfallgründe bei einer Rückfallrate von {rate}",
 
   "aibanner.degraded":
     "80 % des KI-Kontingents erreicht. Prüfe die betroffenen Funktionen.",

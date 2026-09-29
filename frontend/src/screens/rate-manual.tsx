@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
@@ -104,6 +104,22 @@ export function PriceForm({
     initial?.lane ?? draft?.lane ?? "chat",
   );
   const [error, setError] = useState<string | null>(null);
+  // A refusal describes the values that were sent; once any of them changes it
+  // no longer describes the form.
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the fields are the trigger, not read
+  useEffect(() => {
+    setError(null);
+  }, [
+    provider,
+    modelId,
+    input,
+    output,
+    cacheRead,
+    cacheWrite,
+    effectiveDate,
+    lane,
+  ]);
 
   const save = useMutation({
     mutationFn: async (body: PriceWrite) => {
