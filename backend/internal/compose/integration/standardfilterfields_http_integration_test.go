@@ -167,22 +167,26 @@ func TestTheStandardLeadFieldsSelectTheirRecords(t *testing.T) {
 		"full_name": "Carla Webinar", "email": "carla@lead.example", "source": "webinar",
 	})
 	manual := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Dan Manual", "source": "manual"})
-	var scored struct {
+	var judged struct {
 		Score int `json:"score"`
 	}
-	mustCall(t, e, "GET", "/v1/leads/"+webinar, nil, http.StatusOK, &scored)
+	mustCall(t, e, "PATCH", "/v1/leads/"+webinar, AnyMap{
+		"score": 85, "score_override_reason": "Asked for a quote on the call",
+	}, http.StatusOK, &judged)
+	if judged.Score != 85 {
+		t.Fatalf("the override left the score at %d", judged.Score)
+	}
 
 	expectSelects(t, e, "lead", []filterCase{
 		{leaf("name", "eq", "Dan Manual"), []string{manual}},
 		{leaf("email", "eq", "CARLA@lead.example"), []string{webinar}},
 		{leaf("email", "exists", false), []string{manual}},
 		{leaf("source", "eq", "webinar"), []string{webinar}},
-		{leaf("score", "gte", scored.Score), []string{webinar}},
+		{leaf("score", "gte", 85), []string{webinar}},
+		{leaf("score", "gt", 85), []string{}},
+		{leaf("score", "lt", 84.5), []string{manual}},
 		{leaf("created_at", "gte", daysAgo(0)), []string{webinar, manual}},
 	})
-	if got := previewIDs(t, e, "lead", leaf("score", "gt", scored.Score)); slices.Contains(got, webinar) {
-		t.Errorf("score gt %d selected the lead scoring exactly %d", scored.Score, scored.Score)
-	}
 }
 
 // clauseWire is one explained clause of a Live List's filter.
