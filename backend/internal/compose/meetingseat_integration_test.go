@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -106,5 +107,84 @@ func TestASeatlessPrincipalHoldsNothing(t *testing.T) {
 
 	if seatHolds(t, e, ids.Nil, captured) {
 		t.Error("a principal with no seat behind it holds a meeting")
+	}
+}
+
+// The defect, end to end: a calendar connection stating another seat's event id
+// reached that seat's meeting, because the provider check binds the key to the
+// acting CONNECTOR and nothing bound it to the seat.
+func TestAStrangerCalendarDoesNotCancelThisSeatsMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+
+	if err := calendarSink(e).CancelMeeting(
+		calendarOwnerCtx(e, ids.NewV7()), meetingKey, meetingStart); err != nil {
+		t.Fatalf("cancelling: %v", err)
+	}
+
+	if status, set := readMeetingStatus(t, e, captured); set && status == "canceled" {
+		t.Error("a calendar that does not hold the meeting cancelled it")
+	}
+}
+
+// The other direction, which matters as much: a colleague who genuinely sits on
+// the meeting still closes it. Refusing them would leave the row booked forever
+// whenever the seat who captured it loses its connection.
+func TestAParticipantSeatCancelsTheMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	colleague := e.Rep2
+	seatOnMeeting(t, e, captured, colleague)
+
+	if err := calendarSink(e).CancelMeeting(
+		calendarOwnerCtx(e, colleague), meetingKey, meetingStart); err != nil {
+		t.Fatalf("cancelling: %v", err)
+	}
+
+	if status, _ := readMeetingStatus(t, e, captured); status != "canceled" {
+		t.Errorf("a colleague on the meeting left it %q, want canceled", status)
+	}
+}
+
+// A refusal is not a licence to go looking elsewhere. The identity fallback
+// runs only when NOTHING was captured under the key; a row this seat may not
+// touch is still a row under the key, and reading the refusal as absence would
+// send the cancellation to a different meeting entirely.
+func TestARefusedCancelDoesNotOpenTheIdentityFallback(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	imported := importMeeting(t, e, "human:"+e.AdminUser.String())
+
+	if err := identifiedCalendarSink(e).CancelIdentifiedMeeting(
+		calendarOwnerCtx(e, ids.NewV7()), meetingKey, importedIdentity, meetingStart); err != nil {
+		t.Fatalf("cancelling: %v", err)
+	}
+
+	if status, set := readMeetingStatus(t, e, captured); set && status == "canceled" {
+		t.Error("a refused cancellation closed the meeting under the key anyway")
+	}
+	if status, set := readMeetingStatus(t, e, imported); set && status == "canceled" {
+		t.Error("a refused cancellation fell through to the meeting the identity names")
+	}
+}
+
+// The RSVP backfill re-reads a row's OWN stored original under a principal with
+// no seat. It carries its provenance by construction and takes no guard, so a
+// guard that reached it would turn every historical cancellation into a no-op
+// the pass then marks `answered` — and a marked meeting is never offered again.
+func TestTheBackfillWriterStillCancelsWithoutASeat(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, _, err := activities.CancelCapturedMeetingTx(
+			e.Admin(), tx, meetingKey, meetingStart)
+		return err
+	}); err != nil {
+		t.Fatalf("the backfill writer: %v", err)
+	}
+
+	if status, _ := readMeetingStatus(t, e, captured); status != "canceled" {
+		t.Errorf("the backfill writer left the meeting %q, want canceled", status)
 	}
 }
