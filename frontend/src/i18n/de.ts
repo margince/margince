@@ -8814,8 +8814,6 @@ export const de = {
   "aiSettings.withheld": "Eingeschränkt",
   "aiSettings.unread": "Nicht verfügbar",
   "aiSettings.pending": "Wird geladen…",
-  "aiSettings.spend.label": "Tokens · dieser Monat",
-  "aiSettings.spend.value": "{spent} von {budget}",
   "aiSettings.spend.estimated": "≈ {amount} ausgegeben",
   "aiSettings.spend.notPriced": "Ohne Preis",
   "aiSettings.providers.label": "Anbieterschlüssel",

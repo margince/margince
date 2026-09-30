@@ -8736,8 +8736,6 @@ export const vi = {
   "aiSettings.withheld": "Không thuộc quyền xem của bạn",
   "aiSettings.unread": "Không đọc được",
   "aiSettings.pending": "Đang đọc…",
-  "aiSettings.spend.label": "Chi tiêu tháng này",
-  "aiSettings.spend.value": "{spent} trên {budget} token",
   "aiSettings.spend.estimated": "≈ {amount} ước tính",
   "aiSettings.spend.notPriced": "Chưa có giá",
   "aiSettings.providers.label": "Nhà cung cấp",

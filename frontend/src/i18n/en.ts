@@ -8963,8 +8963,6 @@ export const en = {
   "aiSettings.withheld": "Restricted",
   "aiSettings.unread": "Unavailable",
   "aiSettings.pending": "Loading…",
-  "aiSettings.spend.label": "Tokens · this month",
-  "aiSettings.spend.value": "{spent} of {budget}",
   "aiSettings.spend.estimated": "≈ {amount} spent",
   "aiSettings.spend.notPriced": "Not priced",
   "aiSettings.providers.label": "Provider keys",

@@ -89,14 +89,6 @@ export function AiFeatureTable({
                 <span className="t-caption">
                   {row.task} · {row.execution_mode}
                 </span>
-                {canTrace ? (
-                  <a
-                    className="link-button t-caption"
-                    href={callsHref(row.task)}
-                  >
-                    {t("aiTasks.viewCalls")}
-                  </a>
-                ) : null}
                 {row.decision_first ? (
                   <Badge>{t("aiTasks.decisionFirst")}</Badge>
                 ) : null}
@@ -125,7 +117,14 @@ export function AiFeatureTable({
           key: "tier",
           header: t("aiTerms.tier"),
           render: (row: Feature) => (
-            <TermChip term="tier">{tierLabel(row.leading_tier, t)}</TermChip>
+            <CellStack>
+              <TermChip term="tier">{tierLabel(row.leading_tier, t)}</TermChip>
+              {canTrace ? (
+                <a className="link-button t-caption" href={callsHref(row.task)}>
+                  {t("aiTasks.viewCalls")}
+                </a>
+              ) : null}
+            </CellStack>
           ),
         },
         {

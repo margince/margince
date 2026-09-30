@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ProvidersStat, SpendStat } from "./ai-settings";
+import { ProvidersStat, SpendEstimate } from "./ai-settings";
 
 // Settings → AI, as one page: two readings above a strip that chooses between
 // five bodies.
@@ -186,13 +186,9 @@ afterEach(() => {
 // behaviour that no longer exists, because leaving the routing page is an
 // address change the app's own unsaved guard sees.
 
-// Anchored and case-exact: `formatTokens` owns the K/M/B markers, so the ICU
-// build Node ships cannot move this string.
-const TOKENS_READING = /^214K of 1M$/;
-
 const BothStats = () => (
   <>
-    <SpendStat />
+    <SpendEstimate />
     <ProvidersStat />
   </>
 );
@@ -222,12 +218,9 @@ describe("the AI readings", () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR));
     render(<BothStats />);
 
-    // Tokens are the budget the runtime actually enforces, so they ARE the
-    // figure and the unit is in the label; the money is the estimate priced on
-    // read and rides the line under it.
-    expect(screen.getByText(en["aiSettings.spend.label"])).toBeTruthy();
-    expect(await screen.findByText(TOKENS_READING)).toBeTruthy();
-    expect(screen.getByText(/US\$4\.12 spent/)).toBeTruthy();
+    // The money is the estimate priced on read; the tokens it qualifies are
+    // the allowance card's, beside it.
+    expect(await screen.findByText(/US\$4\.12 spent/)).toBeTruthy();
     // One vendor keyed OUT OF the vendors this installation knows about, and
     // the one the routing binds without a key named as the thing to act on.
     expect(await screen.findByText("1 of 2")).toBeTruthy();
@@ -290,7 +283,7 @@ describe("the AI readings", () => {
     vi.stubGlobal("fetch", backendFor(BOTH_READINGS));
     render(<BothStats />);
 
-    expect(await screen.findByText(TOKENS_READING)).toBeTruthy();
+    expect(await screen.findByText(/US\$4\.12 spent/)).toBeTruthy();
     expect(await screen.findByText("1 of 2")).toBeTruthy();
     expect(screen.queryByText("Restricted")).toBeNull();
   });
@@ -316,10 +309,11 @@ describe("the AI readings", () => {
       "fetch",
       backendFor(OPERATOR, {}, ROUTING, { usage: UNPRICED_USAGE }),
     );
-    render(<SpendStat />);
+    render(<SpendEstimate />);
 
-    expect(await screen.findByText(TOKENS_READING)).toBeTruthy();
-    expect(screen.getByText(en["aiSettings.spend.notPriced"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["aiSettings.spend.notPriced"]),
+    ).toBeTruthy();
     expect(screen.queryByText(/spent/)).toBeNull();
   });
 

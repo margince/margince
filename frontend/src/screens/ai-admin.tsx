@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
@@ -22,6 +22,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
 import { AiFeatureTable } from "./ai-feature-table";
+import { SpendEstimate } from "./ai-settings";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
@@ -70,7 +71,10 @@ export function AiBudgetCard() {
   );
 }
 
-function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
+function BudgetReading({
+  budget,
+  estimate,
+}: Readonly<{ budget: Budget; estimate?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
   const number = (value: number) => formatNumber(value, locale);
@@ -96,6 +100,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
           date: formatDateTime(budget.resets_at, locale, "UTC"),
         })}
       </p>
+      {estimate}
       <p>
         {budget.source === "company_override"
           ? t("aiAdmin.fixed")
@@ -201,7 +206,7 @@ function BudgetBody({
   const busy = preview.isPending || save.isPending;
   return (
     <>
-      <BudgetReading budget={budget} />
+      <BudgetReading budget={budget} estimate={<SpendEstimate />} />
       {save.isSuccess && (
         <Callout kind="outcome" tone="success" title={t("aiAdmin.saved")}>
           {t("aiAdmin.recovery")}
