@@ -19,7 +19,7 @@ import { signalKindLabel, signalTone } from "./labels";
 // neighbours.
 
 const meta: Meta = {
-  title: "Records/Record 360/Signal labels",
+  title: "Records/Company 360/Signal labels",
   parameters: { layout: "padded" },
 };
 export default meta;

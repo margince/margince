@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CompanyContextCard, ManualCompanySetup } from "./company-context";
+import { CompanyContextCard } from "./company-context";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,16 +12,12 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Two surfaces the company-context rollout shares one read hook between:
-// ManualCompanySetup is the rollback-safe floor below the `onboarding` stage
-// and never calls useCompanyContextCapabilities, so it needs no capability
-// stub at all. CompanyContextCard sits above the rollout gate: its own
-// docblock withholds itself entirely (renders null) once the capability
-// answer comes back `read_enabled: false`, so a granted rollout has to be
-// stubbed explicitly or every story below would render nothing.
+// CompanyContextCard sits above the rollout gate: it renders null once the
+// capability answer comes back `read_enabled: false`, so a granted rollout has
+// to be stubbed explicitly or every story below would render nothing.
 
 const meta: Meta = {
-  title: "Records/Company 360/Context",
+  title: "Settings/Company/Company profile/Company profile states",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -110,51 +106,6 @@ const EMPTY_PROFILE: CompanyProfile = {
   minimum_complete: true,
   updated_at: "2026-06-20T08:00:00Z",
   fields: [],
-};
-
-function ManualSetup() {
-  return (
-    <StoryProviders>
-      <ManualCompanySetup />
-    </StoryProviders>
-  );
-}
-
-export const ManualSetupDefault: Story = {
-  render: () => <ManualSetup />,
-};
-
-// The reviewer fills the semantic minimum and submits, but the workspace
-// PUT fails server-side (a duplicate domain, a validation the client can't
-// see), the one branch that shows the form's own error paragraph rather
-// than a disabled button.
-export const ManualSetupSaveFailed: Story = {
-  render: () => {
-    installFetchStub({
-      "PUT /company": () =>
-        jsonResponse(
-          { title: "A workspace already exists for this domain." },
-          409,
-        ),
-    });
-    return <ManualSetup />;
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Company name"), "Havbris AS");
-    await userEvent.type(
-      canvas.getByLabelText("Products and services"),
-      "Coastal ferry maintenance contracts.",
-    );
-    await userEvent.type(
-      canvas.getByLabelText("Ideal customer"),
-      "Municipal ferry operators.",
-    );
-    await userEvent.click(
-      canvas.getByRole("button", { name: /Create company context/ }),
-    );
-    await canvas.findByText(/already exists for this domain/);
-  },
 };
 
 // The reviewer every card story below is seen through. The card admits its

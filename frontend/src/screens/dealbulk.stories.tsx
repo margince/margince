@@ -11,9 +11,9 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The bar that appears under the deals table while rows are selected. It reads
-// the user roster for the owner picker; everything else it needs is passed in,
-// so these stories are the bar's own states rather than the table's.
+// The bar under the deals table while rows are selected. It reads the roster
+// for the owner picker and the session (`GET /me`) for the Shortlist verb;
+// everything else is passed in, so these are the bar's states, not the table's.
 const meta: Meta = {
   title: "Records/Deals/Bulk bar",
   parameters: { layout: "padded" },

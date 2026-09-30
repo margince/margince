@@ -713,7 +713,7 @@ rather than the file:
 | `Components/` | One node per component in this directory, under the category below that says what it is for. |
 | `Patterns/` | Screen-tier building blocks that are not a page: the query gate, the create/edit/merge/share actions, the composer. |
 | `Shell/` | The application frame and the Home page. |
-| `Records/` | The pages a rep works in, and the cards on them. Each record page is one node (`Contact 360/`, `Company 360/`, `Deal 360/`, `Project 360/`), `Record 360/` holds the pieces two or more of them mount, and every other page (a list, `Worklist/`, `Reports/`) is a leaf or a node of its own. |
+| `Records/` | The pages a rep works in, and the cards on them. Each page a record opens is one node: `Contact 360/`, `Company 360/`, `Deal 360/`, `Project 360/`, `Leads/`, `Offers/` and `Deal room/`. `Record 360/` holds the pieces two or more of those pages mount. A list page, the table of every record of one kind (`Companies`, `Contacts`, `Deals/`, `Projects`, `Partners`), is a leaf or node of its own, except the leads list, which sits in `Leads/` beside the lead page. `Worklist/` and `Reports/` are nodes of their own. |
 | `Settings/` | `<Group>/<Page>/<Card>`, mirroring the settings catalog one for one: the seven groups of `SETTINGS_GROUPS` and the pages of `SETTINGS_PAGES`, under their own sidebar labels. `screens/settingsstories.test.ts` holds the two together, so a story filed under a group or page the catalog does not declare fails. |
 | `Onboarding/`, `Signed out/` | The first run, and the pages reachable without a session. |
 | `MCP Apps/` | The governed tool surfaces and their document forms. |

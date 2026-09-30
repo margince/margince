@@ -10,8 +10,8 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The bar the contacts and companies lists show while rows are selected. Each
-// verb opens the preview in bulkchange.stories.tsx.
+// The bar the contacts, companies and deals lists show while rows are selected.
+// Each verb opens the preview in bulkchange.stories.tsx.
 const meta: Meta = {
   title: "Records/Bulk change/Bar",
   parameters: { layout: "padded" },

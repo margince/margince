@@ -12,7 +12,7 @@ import { StoryProviders } from "./story-utils";
 // Read them in both themes — tone reaches the heading's ink and nothing else.
 
 const meta: Meta = {
-  title: "Records/Company 360/Context notices",
+  title: "Settings/Company/Company profile/Company profile notices",
   parameters: { layout: "padded" },
 };
 export default meta;
