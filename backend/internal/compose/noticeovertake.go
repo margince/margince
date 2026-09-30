@@ -125,8 +125,8 @@ func (w *noticeOvertakeWorker) overtakingAmong(
 		if err != nil {
 			return nil, err
 		}
-		for _, settled := range terminal {
-			overtaking = append(overtaking, notices.Overtaking{Approval: settled.ID, By: settled.DecidedBy})
+		for _, stopped := range terminal {
+			overtaking = append(overtaking, notices.Overtaking{Approval: stopped.ID, By: stopped.DecidedBy})
 		}
 	}
 	return overtaking, nil
