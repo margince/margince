@@ -2065,7 +2065,6 @@ public.communication_suppression.recorded_at timestamp with time zone NOT NULL g
 public.communication_suppression.revoked_at timestamp with time zone gen=- def=-
 public.communication_suppression.source text NOT NULL gen=- def=-
 public.communication_suppression_live_address CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))
-public.communication_suppression_live_contact CREATE INDEX communication_suppression_live_contact ON public.communication_suppression USING btree (contact_id) WHERE ((contact_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_one_live_bounce CREATE UNIQUE INDEX communication_suppression_one_live_bounce ON public.communication_suppression USING btree (lower(address)) WHERE ((kind = 'hard_bounce'::text) AND (address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
 public.company acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -3010,7 +3009,6 @@ public.conversation_claim.task_activity_id uuid gen=- def=-
 public.conversation_claim.trg_conversation_claim_updated CREATE TRIGGER trg_conversation_claim_updated BEFORE UPDATE ON public.conversation_claim FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.conversation_claim.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.conversation_claim.version bigint NOT NULL gen=- def=1
-public.conversation_claim_activity_ix CREATE INDEX conversation_claim_activity_ix ON public.conversation_claim USING btree (source_activity_id) WHERE (archived_at IS NULL)
 public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
 public.currency_minor_digits acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
@@ -4083,7 +4081,6 @@ public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.aut
 public.idx_auth_token_user CREATE INDEX idx_auth_token_user ON public.auth_token USING btree (user_id, purpose) WHERE (used_at IS NULL)
 public.idx_auth_token_user_cascade CREATE INDEX idx_auth_token_user_cascade ON public.auth_token USING btree (user_id)
 public.idx_automation_key_live CREATE INDEX idx_automation_key_live ON public.automation USING btree (key) WHERE (enabled AND (archived_at IS NULL))
-public.idx_booking_page_host CREATE INDEX idx_booking_page_host ON public.booking_page USING btree (host_user_id) WHERE (revoked_at IS NULL)
 public.idx_booking_page_host_user CREATE INDEX idx_booking_page_host_user ON public.booking_page USING btree (host_user_id)
 public.idx_brief_item_deal CREATE INDEX idx_brief_item_deal ON public.brief_item USING btree (deal_id)
 public.idx_brief_item_run CREATE INDEX idx_brief_item_run ON public.brief_item USING btree (brief_run_id, rank)
@@ -4134,7 +4131,6 @@ public.idx_company_name_trgm CREATE INDEX idx_company_name_trgm ON public.compan
 public.idx_company_owner CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_company_parent CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL)
 public.idx_company_rel_type_cascade CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id)
-public.idx_company_rel_type_company CREATE INDEX idx_company_rel_type_company ON public.company_relationship_type USING btree (company_id) WHERE (archived_at IS NULL)
 public.idx_company_search CREATE INDEX idx_company_search ON public.company USING gin (search_tsv)
 public.idx_company_technical_state_due CREATE INDEX idx_company_technical_state_due ON public.company_technical_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_company_updated_keyset CREATE INDEX idx_company_updated_keyset ON public.company USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -4270,7 +4266,6 @@ public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON publi
 public.idx_oli_offer CREATE INDEX idx_oli_offer ON public.offer_line_item USING btree (offer_id, "position")
 public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage) WHERE (archived_at IS NULL)
 public.idx_partner_tier CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL)
-public.idx_passport_obo CREATE INDEX idx_passport_obo ON public.passport USING btree (on_behalf_of) WHERE (revoked_at IS NULL)
 public.idx_passport_on_behalf_of CREATE INDEX idx_passport_on_behalf_of ON public.passport USING btree (on_behalf_of)
 public.idx_pph_project CREATE INDEX idx_pph_project ON public.project_phase_history USING btree (project_id, occurred_at DESC)
 public.idx_preference_token_contact CREATE INDEX idx_preference_token_contact ON public.preference_token USING btree (contact_id)
@@ -4278,7 +4273,6 @@ public.idx_privacy_notice_case_contact CREATE INDEX idx_privacy_notice_case_cont
 public.idx_product_active CREATE INDEX idx_product_active ON public.product USING btree (active) WHERE (archived_at IS NULL)
 public.idx_product_search CREATE INDEX idx_product_search ON public.product USING gin (search_tsv)
 public.idx_project_company CREATE INDEX idx_project_company ON public.project USING btree (company_id) WHERE (archived_at IS NULL)
-public.idx_project_company_open CREATE INDEX idx_project_company_open ON public.project USING btree (company_id) WHERE ((phase <> 'closed'::text) AND (archived_at IS NULL))
 public.idx_project_health_current CREATE INDEX idx_project_health_current ON public.project_health_assessment USING btree (project_id, assessed_at DESC, created_at DESC, id DESC)
 public.idx_project_last_activity_keyset CREATE INDEX idx_project_last_activity_keyset ON public.project USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_project_name_trgm CREATE INDEX idx_project_name_trgm ON public.project USING gin (f_unaccent(lower(name)) gin_trgm_ops)

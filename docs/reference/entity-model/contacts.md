@@ -357,7 +357,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_relationship_type_pkey` — `unique, btree (id)`
 - `idx_company_rel_type_cascade` — `btree (company_id)`
-- `idx_company_rel_type_company` — `btree (company_id) WHERE (archived_at IS NULL)`
 - `uq_company_rel_type` — `unique, btree (company_id, relationship_type) WHERE (archived_at IS NULL)`
 
 **Triggers**
@@ -844,7 +843,6 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `conversation_claim_activity_ix` — `btree (source_activity_id) WHERE (archived_at IS NULL)`
 - `conversation_claim_contact_ix` — `btree (contact_id, kind) WHERE (archived_at IS NULL)`
 - `conversation_claim_pkey` — `unique, btree (id)`
 - `idx_conversation_claim_contact` — `btree (contact_id)`

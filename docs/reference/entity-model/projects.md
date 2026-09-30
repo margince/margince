@@ -57,7 +57,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `idx_project_company` — `btree (company_id) WHERE (archived_at IS NULL)`
-- `idx_project_company_open` — `btree (company_id) WHERE ((phase <> 'closed') AND (archived_at IS NULL))`
 - `idx_project_last_activity_keyset` — `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_project_name_trgm` — `gin (f_unaccent(lower(name)) gin_trgm_ops)`
 - `idx_project_owner` — `btree (owner_id) WHERE (archived_at IS NULL)`
