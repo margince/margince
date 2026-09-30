@@ -29,6 +29,9 @@ type Notice = {
   body?: string;
   created_at: string;
   read_at?: string;
+  overtaken_at?: string;
+  overtaken_by?: string;
+  overtaken_by_name?: string;
   target?: { type: string; id: string };
   origin?: {
     event_id: string;
@@ -187,9 +190,59 @@ export const CentreOpenDark: Story = {
         occurred_at: "2026-09-15T08:59:00Z",
       },
     }),
-    notice("n2", "An automation could not run", {
+    notice("n2", "An expense claim is waiting on your decision", {
+      created_at: "2026-09-14T09:00:00Z",
+      overtaken_at: "2026-09-14T11:00:00Z",
+      overtaken_by: "55555555-5555-4555-8555-555555555555",
+      overtaken_by_name: "Rosa Lindqvist",
+    }),
+    notice("n3", "An automation could not run", {
       created_at: "2026-09-13T09:00:00Z",
       read_at: "2026-09-13T10:00:00Z",
+    }),
+  ]),
+  play: openIt,
+};
+
+// A COLLEAGUE DECIDED IT. The notice went to every seat that could have
+// decided, so one person answering leaves the rest holding a line that waits
+// on nobody — quieted like history, with the reason it stopped waiting under
+// the subject and the unread mark still on it, because the reader never opened
+// it and it is still theirs to clear.
+export const OvertakenByColleague: Story = {
+  render: story([
+    notice("n1", "An expense claim is waiting on your decision", {
+      target: { type: "deal", id: "22222222-2222-4222-8222-222222222222" },
+      overtaken_at: "2026-09-15T09:30:00Z",
+      overtaken_by: "55555555-5555-4555-8555-555555555555",
+      overtaken_by_name: "Rosa Lindqvist",
+    }),
+    notice("n2", "A lead is past its deadline", {
+      created_at: "2026-09-14T09:00:00Z",
+    }),
+  ]),
+  play: openIt,
+};
+
+// NOBODY DECIDED IT: the window closed, or the approval was withdrawn. There
+// is no colleague to name, and the line still has to stop asking.
+export const OvertakenWithNoDecider: Story = {
+  render: story([
+    notice("n1", "An expense claim is waiting on your decision", {
+      overtaken_at: "2026-09-15T09:30:00Z",
+    }),
+  ]),
+  play: openIt,
+};
+
+// THE DECIDER HAS LEFT. A name resolves through the membership-scoped seat
+// read and a departed seat is absent from it, so the id arrives with no name
+// beside it — and the row says what it knows rather than printing the uuid.
+export const OvertakenByDepartedColleague: Story = {
+  render: story([
+    notice("n1", "An expense claim is waiting on your decision", {
+      overtaken_at: "2026-09-15T09:30:00Z",
+      overtaken_by: "66666666-6666-4666-8666-666666666666",
     }),
   ]),
   play: openIt,

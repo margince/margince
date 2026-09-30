@@ -5449,6 +5449,8 @@ export const de = {
     "Diese Meldung wurde nicht als gelesen markiert",
   "notifications.new": "Neu",
   "notifications.byAgent": "Von einem Agenten",
+  "notifications.overtakenBy": "Entschieden von {name}",
+  "notifications.overtaken": "Wartet nicht mehr auf dich",
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
   "notifications.title": "Wie du von welcher Art erfährst",

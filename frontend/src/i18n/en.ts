@@ -5621,6 +5621,8 @@ export const en = {
   "notifications.markReadFailed": "That notice was not marked read",
   "notifications.new": "New",
   "notifications.byAgent": "By an agent",
+  "notifications.overtakenBy": "Decided by {name}",
+  "notifications.overtaken": "No longer waiting on you",
   "notifications.empty":
     "Nothing has come in yet. What the product tells you about arrives here.",
   "notifications.title": "How each kind reaches you",

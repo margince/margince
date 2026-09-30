@@ -66,11 +66,12 @@
   border-bottom: none;
 }
 
-/* A notice already answered is HISTORY, and reads as history: the ink comes
-   down to the caption's share so the eye passes over it on its way to what is
-   still waiting. Not hidden and not struck through — it is still something the
-   reader may want to find again. */
-.notifrow-settled .notifrow-subject {
+/* A notice that has stopped waiting — the reader answered it, or somebody
+   else's decision took it back — is HISTORY, and reads as history: the ink
+   comes down to the caption's share so the eye passes over it on its way to
+   what is still waiting. Not hidden and not struck through — it is still
+   something the reader may want to find again. */
+.notifrow-quiet .notifrow-subject {
   color: var(--textSecondary);
 }
 
@@ -89,8 +90,10 @@ span.notifrow-subject {
   color: var(--textPrimary);
 }
 
-/* The words wear `.t-sub`; this only takes the paragraph margin off them. */
-.notifrow-body {
+/* The notice's own words wear `.t-sub` and the reason beneath the subject
+   wears `.t-caption`; this only takes the paragraph margin off both. */
+.notifrow-body,
+.notifrow-reason {
   margin: 0;
 }
 

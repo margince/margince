@@ -278,8 +278,15 @@ function NoticeRow({
   const t = useT();
   const route = recordRoute(notice.target?.type, notice.target?.id);
   const settled = notice.read_at !== undefined;
+  // TWO STAMPS AND TWO FACTS: `read_at` is the reader opening the line,
+  // `overtaken_at` is somebody else's decision making it untrue. Both quiet the
+  // row, and neither may stand in for the other — a client that drew the second
+  // as the first would tell a reader they had read something they never opened.
+  const overtaken = notice.overtaken_at !== undefined;
   return (
-    <li className={settled ? "notifrow notifrow-settled" : "notifrow"}>
+    <li
+      className={settled || overtaken ? "notifrow notifrow-quiet" : "notifrow"}
+    >
       <div className="notifrow-head">
         {route ? (
           <a
@@ -295,11 +302,26 @@ function NoticeRow({
           // cannot reach.
           <span className="notifrow-subject">{notice.subject}</span>
         )}
+        {/* NEW IS ABOUT READING and not about waiting: an overtaken line the
+            reader never opened is still unread, and still theirs to clear. */}
         {!settled && <Badge tone="accent">{t("notifications.new")}</Badge>}
         {agentAuthored(notice) && (
           <Badge tone="ai">{t("notifications.byAgent")}</Badge>
         )}
       </div>
+      {/* ONE LINE OF REASON, naming a colleague only where the seat read could.
+          A decider who has since left resolves to no name, which is the same
+          sentence as nobody having decided at all: each says the line stopped
+          waiting, and neither puts a uuid where a person's name belongs. */}
+      {overtaken && (
+        <p className="notifrow-reason t-caption">
+          {notice.overtaken_by_name !== undefined
+            ? t("notifications.overtakenBy", {
+                name: notice.overtaken_by_name,
+              })
+            : t("notifications.overtaken")}
+        </p>
+      )}
       {notice.body !== undefined && (
         <p className="notifrow-body t-sub">{notice.body}</p>
       )}

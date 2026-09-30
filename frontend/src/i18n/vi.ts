@@ -5385,6 +5385,8 @@ export const vi = {
   "notifications.markReadFailed": "Chưa đánh dấu được thông báo đó là đã đọc",
   "notifications.new": "Mới",
   "notifications.byAgent": "Do tác nhân tạo",
+  "notifications.overtakenBy": "Quyết định bởi {name}",
+  "notifications.overtaken": "Không còn chờ bạn nữa",
   "notifications.empty":
     "Chưa có gì gửi đến. Những điều sản phẩm cần cho bạn biết sẽ xuất hiện ở đây.",
   "notifications.title": "Mỗi loại đến với bạn bằng cách nào",

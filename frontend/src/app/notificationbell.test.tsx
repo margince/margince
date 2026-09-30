@@ -28,6 +28,9 @@ type Notice = {
   body?: string;
   created_at: string;
   read_at?: string;
+  overtaken_at?: string;
+  overtaken_by?: string;
+  overtaken_by_name?: string;
   target?: { type: string; id: string };
   origin?: {
     event_id: string;
@@ -586,5 +589,106 @@ describe("NotificationBell", () => {
         name: /Alle als gelesen markieren/i,
       }),
     ).not.toBeNull();
+  });
+
+  // A LINE TAKEN BACK IS NOT A LINE ANSWERED. One seat deciding a staged
+  // approval makes every other decider's notice untrue without those readers
+  // doing anything, so the row has to say who decided rather than leave a
+  // reader hunting for work that waits on nobody.
+  it("says who decided a line the reader never answered", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "An approval is waiting on you", {
+          overtaken_at: "2026-09-15T09:30:00Z",
+          overtaken_by: "55555555-5555-4555-8555-555555555555",
+          overtaken_by_name: "Rosa Lindqvist",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const row = (await screen.findAllByRole("listitem"))[0] as HTMLElement;
+    expect(within(row).getByText("Decided by Rosa Lindqvist")).not.toBeNull();
+    // And it reads as past rather than as one more thing to get to, which is
+    // the whole complaint: the reader never opened it, so nothing else about
+    // the row would have told them it had stopped being true.
+    expect(row.className).toContain("notifrow-quiet");
+  });
+
+  // NOBODY DECIDED IT. The window closed, or the approval was withdrawn, so
+  // there is no colleague to name and the line still has to stop asking.
+  it("says a line is no longer waiting when nobody decided it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "An approval is waiting on you", {
+          overtaken_at: "2026-09-15T09:30:00Z",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const row = (await screen.findAllByRole("listitem"))[0] as HTMLElement;
+    expect(within(row).getByText("No longer waiting on you")).not.toBeNull();
+    expect(within(row).queryByText(/Decided by/)).toBeNull();
+  });
+
+  // A DEPARTED SEAT HAS NO NAME TO RESOLVE. The name comes from the
+  // membership-scoped seat read and a seat that has left is simply absent from
+  // it, so the id arrives with no name beside it and the row still has to draw.
+  it("renders an overtaken line whose decider has left, without a name", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "An approval is waiting on you", {
+          overtaken_at: "2026-09-15T09:30:00Z",
+          overtaken_by: "66666666-6666-4666-8666-666666666666",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const row = (await screen.findAllByRole("listitem"))[0] as HTMLElement;
+    expect(within(row).getByText("No longer waiting on you")).not.toBeNull();
+    // The id is never the fallback for the missing name: a uuid on a row tells
+    // a reader nothing and reads as the product leaking its own plumbing.
+    expect(row.textContent).not.toContain("66666666");
+  });
+
+  // THE TWO STAMPS ARE INDEPENDENT FACTS. Opening an overtaken line settles it
+  // without changing who decided it, and a row that dropped the reason once
+  // `read_at` landed would leave the reader no way to learn it a second time.
+  it("keeps the reason on a line the reader has since opened", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "An approval is waiting on you", {
+          read_at: "2026-09-15T10:00:00Z",
+          overtaken_at: "2026-09-15T09:30:00Z",
+          overtaken_by: "55555555-5555-4555-8555-555555555555",
+          overtaken_by_name: "Rosa Lindqvist",
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
+
+    const row = (await screen.findAllByRole("listitem"))[0] as HTMLElement;
+    expect(within(row).getByText("Decided by Rosa Lindqvist")).not.toBeNull();
+    expect(within(row).queryByText("New")).toBeNull();
   });
 });
