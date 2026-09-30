@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package database
+package storekit
 
 import (
 	"context"
@@ -10,15 +10,13 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
-
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 func TestALockCycleVictimIsRunAgainUntilItCommits(t *testing.T) {
 	for _, code := range []string{"40P01", "40001"} {
 		t.Run(code, func(t *testing.T) {
 			runs := 0
-			err := retryLockCycles(context.Background(), func() error {
+			err := RetryLockCycles(context.Background(), func() error {
 				runs++
 				if runs < 3 {
 					return fmt.Errorf("logging: %w", &pgconn.PgError{Code: code})
@@ -34,11 +32,11 @@ func TestALockCycleVictimIsRunAgainUntilItCommits(t *testing.T) {
 
 func TestTheLastLockCycleIsReturnedOnceTheAttemptsAreSpent(t *testing.T) {
 	runs := 0
-	err := retryLockCycles(context.Background(), func() error {
+	err := RetryLockCycles(context.Background(), func() error {
 		runs++
 		return &pgconn.PgError{Code: "40P01"}
 	})
-	if !storekit.IsLockCycle(err) || runs != 3 {
+	if !IsLockCycle(err) || runs != 3 {
 		t.Fatalf("got %v after %d runs, want the deadlock after exactly 3", err, runs)
 	}
 }
@@ -48,7 +46,7 @@ func TestTheLastLockCycleIsReturnedOnceTheAttemptsAreSpent(t *testing.T) {
 func TestAnyOtherOutcomeIsNotRetried(t *testing.T) {
 	for _, outcome := range []error{nil, errors.New("refused"), &pgconn.PgError{Code: "23505"}} {
 		runs := 0
-		got := retryLockCycles(context.Background(), func() error {
+		got := RetryLockCycles(context.Background(), func() error {
 			runs++
 			return outcome
 		})
@@ -61,12 +59,12 @@ func TestAnyOtherOutcomeIsNotRetried(t *testing.T) {
 func TestACancelledCallerStopsWaitingForTheNextAttempt(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	runs := 0
-	err := retryLockCycles(ctx, func() error {
+	err := RetryLockCycles(ctx, func() error {
 		runs++
 		cancel()
 		return &pgconn.PgError{Code: "40P01"}
 	})
-	if runs != 1 || !storekit.IsLockCycle(err) {
+	if runs != 1 || !IsLockCycle(err) {
 		t.Fatalf("ran %d times and returned %v, want one run and its deadlock", runs, err)
 	}
 }

@@ -164,7 +164,7 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 // txRetryingLockCycles is tx for a write that files under shared records and
 // has no effect outside its transaction, so a deadlock victim is run again.
 func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
-	return s.db.TxRetryingLockCycles(ctx, fn)
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
 }
 
 // txSnapshot is tx for a read whose answer is COMPOSED from more than one
