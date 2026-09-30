@@ -209,7 +209,8 @@ func (s *Service) worklistFrom(
 	}
 	rows := classifyDay(day, day.AsOf, s.money)
 	rows = append(rows, s.planRows...)
-	rows = append(rows, s.rankedWaits(ctx, waiting, day.AsOf, scope)...)
+	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
+	rows = append(rows, waits...)
 	rows = append(rows, rankedLeads(leads, day.AsOf)...)
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
@@ -256,7 +257,8 @@ func (s *Service) worklistFrom(
 	// their crowding was decided — and running them through it again keeps
 	// nothing new: each filter is a per-row test, so a row it kept once it keeps
 	// again.
-	rows = s.narrowToScope(ctx, rows, scope, s.taskOwner)
+	rows, rowNote := s.narrowToScope(ctx, rows, scope, s.taskOwner)
+	scoped := rowNote.merge(waitNote)
 	// The lead read's own bound, which boundedSources cannot see: it reads
 	// beside the assembled day rather than as one of its lanes, so the figure
 	// travels with the rows.
@@ -357,6 +359,7 @@ func (s *Service) worklistFrom(
 		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
 		missing[i].Category = &category
 	}
+	missing = withRosterRefusal(missing, scoped)
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
@@ -392,6 +395,10 @@ func (s *Service) worklistFrom(
 		// fifth, in a sentence shaped like a breakdown of the total.
 		Summary:            walk.statedOver(summarize(considered, materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
+		// Said on the page rather than per source: the cap is a bound on the
+		// ROSTER the scope resolves against, so what it cut is a colleague's
+		// whole queue across every lane rather than the tail of any one of them.
+		ScopeTruncated: truncationOf(scoped),
 		// `considered` is every candidate this read weighed, `shown` what
 		// survived folding and the cut. Both are already in hand, so no figure
 		// here costs a query that could disagree with the page it describes.
@@ -458,7 +465,7 @@ func (s *Service) worklistFrom(
 // filter could not see an owner this loop could.
 func (s *Service) rankedWaits(
 	ctx context.Context, waiting waitingRead, asOf time.Time, scope string,
-) []ranked {
+) ([]ranked, scopeNote) {
 	waits := make([]ranked, 0, len(waiting.rows))
 	for _, customer := range waiting.rows {
 		waits = append(waits, classifyWaiting(customer, asOf))
