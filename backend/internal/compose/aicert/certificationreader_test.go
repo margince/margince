@@ -180,16 +180,12 @@ func writeAICertPresetSummary(page *strings.Builder, presets []aiCertPreset) {
 }
 
 // writeAICertLegend says what each grade means for the reader's own decision:
-// what was measured, and what to do about it. Off and the private-mail note are
-// explained only when a preset shows them, so the legend never explains a mark
-// the page lacks.
+// what was measured, and what to do about it. Off is explained only when a
+// preset shows it, so the legend never explains a mark the page lacks.
 func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
-	anyOff, anyPrivateMail := false, false
+	anyOff := false
 	for _, p := range presets {
 		anyOff = anyOff || p.Unbound > 0
-		for _, row := range p.Tasks {
-			anyPrivateMail = anyPrivateMail || row.SendsPrivateMailTo != ""
-		}
 	}
 	page.WriteString("**What the grades mean**\n\n")
 	page.WriteString("| Grade | What we measured | What to do |\n|---|---|---|\n")
@@ -207,11 +203,6 @@ func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
 	page.WriteString("The router falls back only when a call fails — an error, a timeout, an answer broken\n")
 	page.WriteString("off midway — and never because an answer was wrong, so a fallback does not rescue a\n")
 	page.WriteString("feature graded below.\n")
-	if anyPrivateMail {
-		page.WriteString("\n*sends private mail to* marks a feature that reads the private content of a mailbox\n")
-		page.WriteString("(`local_only` in `backend/api/ai-tasks.yaml`) on a preset whose model for it is not on\n")
-		page.WriteString("your own servers: that mail leaves your machine for the provider named.\n")
-	}
 	page.WriteString("\n*re-check pending* after a grade means the product has changed since it was\n")
 	page.WriteString("measured. The grade is the last one we have, and it is shown until the next test replaces it.\n")
 	page.WriteString("[How the scoring works](#how-the-scoring-works) explains how a grade is reached.\n\n")
@@ -335,9 +326,6 @@ func aiCertRouteLine(row aiCertPresetTask) string {
 		} else {
 			line += ", with no other model to take them"
 		}
-	}
-	if row.SendsPrivateMailTo != "" {
-		line += "; sends private mail to " + row.SendsPrivateMailTo
 	}
 	return line
 }
@@ -662,27 +650,11 @@ func TestAPresetsBottomLineSaysHowManyGradesArePending(t *testing.T) {
 }
 
 // The legend says a fallback answers only a failed call, so no reader takes a
-// fallback's grade for a second chance at a wrong answer, and it explains the
-// private-mail note only on a page that shows one.
+// fallback's grade for a second chance at a wrong answer.
 func TestTheLegendSaysAFallbackAnswersOnlyAFailedCall(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		mailTo   string
-		wantNote bool
-	}{
-		{"no feature sends private mail", "", false},
-		{"a feature sends private mail", "broker.example", true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			var page strings.Builder
-			writeAICertLegend(&page, []aiCertPreset{{Tasks: []aiCertPresetTask{{Tier: "local_small", SendsPrivateMailTo: tc.mailTo}}}})
-			legend := page.String()
-			if !strings.Contains(legend, "never because an answer was wrong") {
-				t.Errorf("the legend does not say a fallback answers only a failed call:\n%s", legend)
-			}
-			if got := strings.Contains(legend, "*sends private mail to*"); got != tc.wantNote {
-				t.Errorf("legend explains the private-mail note = %v, want %v", got, tc.wantNote)
-			}
-		})
+	var page strings.Builder
+	writeAICertLegend(&page, []aiCertPreset{{Tasks: []aiCertPresetTask{{Tier: "local_small"}}}})
+	if legend := page.String(); !strings.Contains(legend, "never because an answer was wrong") {
+		t.Errorf("the legend does not say a fallback answers only a failed call:\n%s", legend)
 	}
 }
