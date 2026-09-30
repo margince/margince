@@ -53,8 +53,10 @@ type insertSite string
 // are helpers that hand the number's ownership somewhere else, and in both the
 // omission is load-bearing rather than forgotten.
 var capExemptSites = gatekit.Waive(map[insertSite]string{
-	"internal/compose/jobs.go:sweepInsertOpts":       "the uniqueness half of the periodic insert and nothing else. River reads the explicit opts BEFORE the args type's, so a cap here would outrank every max_attempts api/jobs.yaml publishes for an opts_owner: args kind and make the declared ladder a number nothing runs at; periodicInsertOpts adds one only where no args type owns it",
-	"internal/compose/dispatch.go:markedAsFleetPass": "it copies the caller's opts to add the sweep tag, so the cap it carries is whichever one the caller already chose. Naming one here would silently retune every fleet pass, and do it inside a function whose subject is a tag",
+	"internal/compose/jobs.go:sweepInsertOpts":        "the uniqueness half of the periodic insert and nothing else. River reads the explicit opts BEFORE the args type's, so a cap here would outrank every max_attempts api/jobs.yaml publishes for an opts_owner: args kind and make the declared ladder a number nothing runs at; periodicInsertOpts adds one only where no args type owns it",
+	"internal/compose/dispatch.go:markedAsFleetPass":  "it copies the caller's opts to add the sweep tag, so the cap it carries is whichever one the caller already chose. Naming one here would silently retune every fleet pass, and do it inside a function whose subject is a tag",
+	"internal/platform/jobs/queuedas.go:QueuedAs":     "it copies the caller's opts to supply the declared queue, so the cap it carries is the caller's. Naming one here would outrank every cap in the tree, and do it inside a function whose subject is the queue",
+	"internal/platform/jobs/queuedas.go:QueuedAsKind": "QueuedAs's answer, for the same reason: the literal is a copy of the caller's opts and the queue is the only field it decides",
 })
 
 // TestEveryInsertDeclaresAnAttemptCap is the census the caller-owned tier had
@@ -63,7 +65,10 @@ func TestEveryInsertDeclaresAnAttemptCap(t *testing.T) {
 	t.Parallel()
 	defer capExemptSites.AssertAllMatched(t)
 	scope := gatekit.Scope{
-		Roots:   []string{"internal/compose"},
+		// platform/jobs beside compose: QueuedAs builds the literal every insert
+		// now passes through, so a cap named there would reach the whole tree
+		// from outside the tier that used to hold every site.
+		Roots:   []string{"internal/compose", "internal/platform/jobs"},
 		Subject: func(_ string, file *ast.File) bool { return len(insertOptsLiterals(file)) > 0 },
 		Exempt:  gatekit.Waive(map[string]string{}),
 	}

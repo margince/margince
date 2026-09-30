@@ -436,6 +436,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `integrationmigrateonce_test.go` | H2 | Migrate-once discipline for everything the integration lane compiles, as a fitness function. |
 | `jobargscontent_test.go` | H2 | Job args carry REFERENCES, never content. |
 | `jobfleetscan_test.go` | H2 | The fleet enumeration lives at ratified sites only. |
+| `jobqueuesupplied_test.go` | H2 | A job's queue is SUPPLIED from api/jobs.yaml, never written at the insert. |
 | `jobregistrationban_test.go` | H2 | The forbidigo rule that bans a direct River registration, held to River's own API rather than to a remembered list of its spellings. |
 | `jobtestonly_test.go` | H2 | jobs.Config.TestOnly and compose.JobRunnerConfig.TestOnly carry River's flag of the same name, which disables machinery that is "useful in production, but which may be harmful to tests" — in the pinned river@v0.43.0, the maintenance services' staggered startup. |
 | `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault ONCE. |

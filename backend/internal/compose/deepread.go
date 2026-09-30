@@ -103,21 +103,20 @@ const DeepReadPriorityLive = river.PriorityDefault
 // sweep already queued — is promoteQueuedSiteReadPriority, not this comment.
 const DeepReadPriorityHousekeeping = 4
 
-// siteDeepReadInsertOpts routes the job to its own queue, deduplicates by
+// siteDeepReadInsertOpts deduplicates by
 // args (the dossier id is unique per read, so a re-submitted enqueue of the
 // SAME read collapses while a fresh read always queues), and sets priority —
 // DeepReadPriorityLive for a human or agent-initiated read,
 // DeepReadPriorityHousekeeping for one a sweep fanned out on its own.
 func siteDeepReadInsertOpts(priority int) *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue:    deepReadQueue,
+	return jobs.QueuedAs[SiteDeepReadArgs](&river.InsertOpts{
 		Priority: priority,
 		// Swept: capture_auto_enrich_sweep re-nominates a company that is
 		// still due on its next daily pass, so a crawl that cannot finish is
 		// re-read tomorrow rather than re-walked all afternoon.
 		MaxAttempts: sweptJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true},
-	}
+	})
 }
 
 // promoteQueuedSiteReadPriority raises an already-queued read's priority to

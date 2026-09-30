@@ -67,8 +67,8 @@ func (CheckCompanyVatArgs) Kind() string { return "check_company_vat" }
 // WorkspaceID binds this consultation to its tenant (jobs.WorkspaceScoped).
 func (a CheckCompanyVatArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// vatCheckQueue is declared in api/jobs.yaml at one worker; the name is spelled
-// here because the insert has to name it.
+// vatCheckQueue mirrors api/jobs.yaml, and sizes the pool below; the insert
+// takes the queue from the declaration itself (jobs.QueuedAs).
 const (
 	vatCheckQueue = "vat_check"
 	// vatCheckMaxWorkers mirrors api/jobs.yaml. One, for the reason stated at
@@ -121,13 +121,12 @@ type vatCheckEnqueuer interface {
 // useful, because the worker reads the number when it RUNS rather than from the
 // args.
 func vatCheckInsertOpts() *river.InsertOpts {
-	return &river.InsertOpts{
-		Queue: vatCheckQueue,
+	return jobs.QueuedAs[CheckCompanyVatArgs](&river.InsertOpts{
 		// ByArgs across every ACTIVE state: River requires the unique set to
 		// include pending and running and refuses a narrower one outright.
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 		MaxAttempts: vatCheckMaxAttempts,
-	}
+	})
 }
 
 // vatCheckWorker consults the register about one company.

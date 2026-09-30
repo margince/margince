@@ -105,11 +105,10 @@ func (WebhookRetryArgs) Kind() string { return "webhook_retry" }
 // number is held equal to api/jobs.yaml by
 // TestArgsOwnedAttemptCapsMatchTheirDeclaration.
 func (WebhookRetryArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{
-		Queue:       webhookRetryQueue,
+	return *jobs.QueuedAs[WebhookRetryArgs](&river.InsertOpts{
 		MaxAttempts: 3,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
-	}
+	})
 }
 
 // webhookRetryWorker re-attempts the due deliveries.
