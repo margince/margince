@@ -49,8 +49,8 @@ import (
 // It is the THIRD bound on this fan-out, not the only one, and knowing what the
 // other two already do is what sets the number:
 //
-//   - Concurrency is bounded by deepReadMaxWorkers (2): a burst never occupies
-//     more than two workers however long the queue is.
+//   - Concurrency is bounded by deepReadMaxWorkers: a burst never occupies
+//     more than that pool however long the queue is.
 //   - Money is bounded by the ADR-0020 AI budget: background model calls defer
 //     to the next window at the monthly cap, whatever this counter says.
 //   - And a read only ever happens for a company the workspace CREATED, which
