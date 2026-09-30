@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -273,6 +274,9 @@ type Fault struct {
 	// addresses are operator reading, not caller reading — so the surface
 	// logs this instead of showing it.
 	InfraCause error
+
+	// RetryAfterSeconds, when positive, is rendered as a Retry-After header.
+	RetryAfterSeconds int
 }
 
 // transientCodes are the refusals that clear ON THEIR OWN: a rate limit whose
@@ -285,6 +289,7 @@ var transientCodes = map[string]struct{}{
 	"rate_limited":               {},
 	"incumbent_budget_exhausted": {},
 	schemaChangedCode:            {},
+	writeContentionCode:          {},
 }
 
 // Transient reports whether repeating the same call unchanged could succeed
@@ -373,6 +378,9 @@ func Classify(err error) (Fault, bool) {
 	if fault, ok := stalePlanFault(err); ok {
 		return fault, true
 	}
+	if fault, ok := lockCycleFault(err); ok {
+		return fault, true
+	}
 	if fault, ok := constraintFault(err); ok {
 		return fault, true
 	}
@@ -428,6 +436,9 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 		}
 		merged[fieldErrorsKey] = fieldDetails(fault.Fields)[fieldErrorsKey]
 		details = merged
+	}
+	if fault.RetryAfterSeconds > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(fault.RetryAfterSeconds))
 	}
 	writeProblem(w, problem{
 		Status:  fault.Status,

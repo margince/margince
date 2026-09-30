@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -104,6 +105,12 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}
+	// The whole reach locked once, before the first probe: sorting the links
+	// below orders the firings, but not what each firing reaches through a
+	// contact or a deal, nor the probe's share the trigger then upgrades.
+	if err := storekit.LockLastActivityTargets(ctx, tx, lastActivityTargets(links)); err != nil {
+		return err
+	}
 	// SORTED, and the order is the one the last-activity trigger locks in.
 	//
 	// Each link's insert fires refresh_last_activity_for_link, which takes a
@@ -170,6 +177,26 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 		}
 	}
 	return nil
+}
+
+// lastActivityTargets groups the links by the record types a last-activity
+// trigger moves. A type outside them reaches no clock, and an unknown one is
+// refused by the insert loop.
+func lastActivityTargets(links []ActivityLinkInput) storekit.LastActivityTargets {
+	var targets storekit.LastActivityTargets
+	for _, link := range links {
+		switch link.EntityType {
+		case linkEntityContact:
+			targets.Contacts = append(targets.Contacts, link.EntityID)
+		case linkEntityDeal:
+			targets.Deals = append(targets.Deals, link.EntityID)
+		case linkEntityCompany:
+			targets.Companies = append(targets.Companies, link.EntityID)
+		case linkEntityProject:
+			targets.Projects = append(targets.Projects, link.EntityID)
+		}
+	}
+	return targets
 }
 
 // refuseACompanyMeeting answers the company link on a meeting or a call the way
