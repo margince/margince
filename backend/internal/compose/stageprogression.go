@@ -168,7 +168,7 @@ func (p *StageProgressionProposer) stageCard(
 ) error {
 	// One language for the card and its payload, so the summary and the
 	// "because" a decider opens are the same sentence.
-	lang := baseLanguageForSummary(ctx, tx)
+	lang := identity.BaseLanguageForRecord(ctx, tx)
 	raw, err := json.Marshal(progressionChange(facts, lang))
 	if err != nil {
 		return fmt.Errorf("render the proposed stage move: %w", err)

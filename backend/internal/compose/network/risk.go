@@ -246,11 +246,11 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 
 	// The finding is shared-record text — written once, read by everyone on the
 	// deal — so it follows the installation rather than whoever opened the page.
-	lang, err := identity.BaseLanguageOf(ctx, tx)
-	if err != nil {
-		return out, fmt.Errorf("read base language: %w", err)
-	}
-	out.Risks = foldRisks(out, now, langcopy.For(lang))
+	// A degraded resolve never fails the whole assembly: identity.BaseLanguageForRecord
+	// falls back to English and logs, rather than losing every gathered stakeholder,
+	// edge and risk over a settings read that only chooses a wording.
+	lang := identity.BaseLanguageForRecord(ctx, tx)
+	out.Risks = foldRisks(out, now, langcopy.For(string(lang)))
 	return out, nil
 }
 

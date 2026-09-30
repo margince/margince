@@ -418,6 +418,32 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 	return lang
 }
 
+// BaseLanguageForRecord resolves the base language for a caller that holds a
+// TRANSACTION rather than a pool — BaseLanguageForPrompt's sibling for that
+// case, for the same never-fail reason: refusing to file a real observation
+// about an account, or withhold a coverage finding, because a settings read
+// failed trades a fact for a formatting preference. On any error the answer
+// is English.
+//
+// The failure IS logged, and it has to be: this returns a language and
+// nothing else, so a caller has no way to notice a degraded resolve and say
+// so itself.
+//
+// BaseLanguageOf keeps its error return and its callers — a write inside the
+// same transaction that must not proceed on a bad read still wants one. This
+// is for the read whose only job is choosing a wording for shared-record
+// text: a summary, a finding, a note, stored once and read by everyone who
+// can see it.
+func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
+	lang, err := BaseLanguageOf(ctx, tx)
+	if err != nil {
+		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
+			"reason", err)
+		return textlang.English
+	}
+	return textlang.Lang(lang)
+}
+
 // InstallationNameOf reads the installation's own display label inside a
 // transaction the caller already holds.
 //

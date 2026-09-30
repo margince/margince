@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -45,7 +46,7 @@ const (
 // together or not at all.
 func technicalChangeRecorder() contacts.TechnicalChangeRecorder {
 	return func(ctx context.Context, tx pgx.Tx, change contacts.TechnicalChange, at time.Time) error {
-		summary, ok := technicalChangeSummary(baseLanguageForSummary(ctx, tx), change)
+		summary, ok := technicalChangeSummary(identity.BaseLanguageForRecord(ctx, tx), change)
 		if !ok {
 			// A change in a field nobody would act on. The record still holds
 			// it; it just does not earn a line on the account's signal list.
