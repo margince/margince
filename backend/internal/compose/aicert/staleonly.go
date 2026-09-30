@@ -47,7 +47,10 @@ func currentBindings(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][
 	for task, scenarios := range byTask {
 		rows, err := readinessOf(ctx, cfg.Census, task, scenarios, records)
 		if err != nil {
-			return nil, err
+			// Left to be measured: certifyTask reports the same failure for this
+			// task alone, where one broken scenario costs one record.
+			log.WarnContext(ctx, "aicert: STALE_ONLY cannot judge this task, so it is measured", "task", string(task), "err", err)
+			continue
 		}
 		cands, _, err := taskCandidates(cfg, task)
 		if err != nil {
@@ -55,7 +58,8 @@ func currentBindings(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][
 		}
 		decisions, err := decisionsCurrent(cfg, task, scenarios, records)
 		if err != nil {
-			return nil, err
+			log.WarnContext(ctx, "aicert: STALE_ONLY cannot judge this task's decision records, so it is measured", "task", string(task), "err", err)
+			decisions = false
 		}
 		for _, c := range cands {
 			// The answering rung carries the decision leg, so it is current only
@@ -77,7 +81,7 @@ func currentBindings(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][
 func readinessOf(ctx context.Context, census *aitasks.Registry, task ai.Task, scenarios []Scenario, records []Record) ([]ReadinessRow, error) {
 	taskStamps, perSite, err := CurrentStamps(ctx, scenarios, census)
 	if err != nil {
-		return nil, fmt.Errorf("task %s: stamping its scenarios for STALE_ONLY: %w", task, err)
+		return nil, fmt.Errorf("task %s: stamping its scenarios: %w", task, err)
 	}
 	var sites []aitasks.Site
 	for _, site := range census.All() {

@@ -31,8 +31,8 @@ import (
 // deployment runs every day. One invariant, spelled on both sides: production
 // picks the first bound rung, so certification certifies the first bound rung.
 //
-// The rungs BELOW it are reachable too, under budget pressure
-// (ai.ServableTiers walks that closure) and want their own runs — a sweep, not a
+// The rungs BELOW it are reachable too, on a failed call or under budget
+// pressure, and taskCandidates gives each distinct one its own run — not a
 // pooled record that could not say which model answered.
 func resolveBinding(routing ai.RoutingConfig, task ai.Task) (ai.ProviderConfig, ai.Tier, bool) {
 	rungs := boundLadder(routing, task)

@@ -348,9 +348,9 @@ endif
 AICERT_TIMEOUT ?= 90m
 
 # ROUTING= certifies a DEPLOYMENT rather than a model: it reads that config's
-# `seeds.ai_routing` and certifies each task against the model bound at the task's
-# LEADING ladder rung — the one that would actually serve it. One run therefore
-# writes records across several models, which is what the config binds.
+# `seeds.ai_routing` and certifies each task against every distinct model its
+# ladder binds — the rung that answers, then each fallback a failed call falls
+# to. One run therefore writes records across several models.
 #
 # It is mutually exclusive with MODEL=, and the run refuses both: one names a
 # deployment, the other one candidate to A/B a prompt fix against. Under ROUTING=

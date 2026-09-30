@@ -89,8 +89,8 @@ func TestE2ECertify(t *testing.T) {
 	// Two ways to say what to certify, and they are different questions.
 	//
 	// ROUTING= names a DEPLOYMENT: its seeds.ai_routing binds a model per tier,
-	// and each task is certified against the model at its leading rung — the one
-	// that would actually serve it. MODEL= names one candidate and binds it to
+	// and each task is certified against every distinct model its ladder binds,
+	// the answering rung first. MODEL= names one candidate and binds it to
 	// every tier, which is how a prompt fix is A/B'd against a single model.
 	//
 	// Neither is a default read off the runner's disk. A verdict recorded against

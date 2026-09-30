@@ -74,9 +74,9 @@ type RunnerConfig struct {
 	// which one it measured rather than inheriting it from a file.
 	// Routing, when set, resolves the candidate binding PER TASK from a
 	// deployment's own tier→model map instead of Binding naming one model for
-	// every task: each task is certified against the model bound at its LEADING
-	// ladder rung (ai.LeadingTier), which is the model that would actually serve
-	// it, and Profile comes from the file rather than the environment.
+	// every task: each task is certified against every distinct model its ladder
+	// binds — the rung that answers, then each fallback a failed call falls to —
+	// one record each, and Profile comes from the file rather than the environment.
 	//
 	// It exists because a model is not a thing anybody deploys. A hand-typed
 	// MODEL= measures whichever model an engineer chose; a deployment binds

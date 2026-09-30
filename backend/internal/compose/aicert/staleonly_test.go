@@ -121,3 +121,18 @@ func TestTheDecisionPreflightSkipsATaskWhoseRungIsCurrent(t *testing.T) {
 		t.Errorf("the decision pre-flight asked the lane %d time(s) for a task that will not run", decider.called())
 	}
 }
+
+// A task whose scenarios cannot be stamped is certifyTask's to report, per task:
+// the STALE_ONLY check leaves it to be measured and never costs the rest of the run.
+func TestATaskThatCannotBeStampedDoesNotStopTheOthers(t *testing.T) {
+	census := decidingCensus(t, ai.TaskSummarize, defaultWidgetForm())
+	broken := Scenario{Name: "broken", Task: string(ai.TaskSummarize), Site: "no-such-site"}
+	cfg := RunnerConfig{Census: census, Binding: candidateA, JudgeBinding: aGeminiJudge, RecordDir: t.TempDir()}
+	current, err := currentBindings(wsContext(t), cfg, map[ai.Task][]Scenario{ai.TaskSummarize: {broken}}, quietLogger())
+	if err != nil {
+		t.Fatalf("one unstampable task stopped the STALE_ONLY check for every task: %v", err)
+	}
+	if current[candidateKey(ai.TaskSummarize, candidateA)] {
+		t.Error("an unstampable task was skipped as current; it must be measured, where its error is reported")
+	}
+}
