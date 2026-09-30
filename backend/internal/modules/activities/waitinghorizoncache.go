@@ -6,15 +6,12 @@ package activities
 // The waiting horizon, remembered for an hour rather than re-measured on every
 // read that needs it.
 //
-// The measurement is a 95th percentile of first-response times over a year,
-// and every waiting read, the hidden-backlog guardrail and every owed_verdict
-// pass took it afresh. On a production installation with forty thousand
-// activities that was thirty seconds per call — the owed pass ran it inside
-// its statement budget, timed out (57014), and was discarded fifteen times
-// over — to recompute a number that CANNOT move within the hour: it is whole
-// days, three times a year-long percentile, floored at a fortnight. An hour of
-// new answers is a rounding error inside that, and the queue that reads it is
-// judged in days.
+// The measurement is a 95th percentile of first-response times over a year:
+// the most expensive read the waiting lane, the hidden-backlog guardrail and
+// the owed pass depend on, and one whose answer cannot move within the hour.
+// It is whole days, three times a year-long percentile, floored at a
+// fortnight; an hour of new answers is a rounding error inside that, and the
+// queue that reads it is judged in days.
 //
 // IN PROCESS, on the store, rather than in a table the owed job refreshes.
 // The horizon is the same number for every reader of a workspace — that is the
