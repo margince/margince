@@ -138,7 +138,10 @@ describe("the runtime chip", () => {
           return this.classList.contains("mw-aistat-pop") ? 1200 : 0;
         });
     });
-    afterEach(() => scrollHeight.mockRestore());
+    afterEach(() => {
+      scrollHeight.mockRestore();
+      vi.unstubAllGlobals();
+    });
 
     it("lets Tab into the popover, named by its own heading, and Escape back out", async () => {
       render(chip());
@@ -157,6 +160,50 @@ describe("the runtime chip", () => {
       await userEvent.keyboard("{Escape}");
       expect(button).toHaveFocus();
       expect(button).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("re-measures its room when the chip moves under it without a render", async () => {
+      vi.stubGlobal("innerHeight", 800);
+      // Each observer's callback is reached through the boxes it was asked to
+      // watch, so the test holds which box the popover's room listens to.
+      const observers: { fire: () => void; boxes: Element[] }[] = [];
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          private readonly watching: { fire: () => void; boxes: Element[] };
+          constructor(fire: () => void) {
+            this.watching = { fire, boxes: [] };
+            observers.push(this.watching);
+          }
+          observe(box: Element) {
+            this.watching.boxes.push(box);
+          }
+          disconnect() {
+            this.watching.boxes = [];
+          }
+        },
+      );
+      const { container } = render(chip());
+      const chipBox = container.firstElementChild;
+      if (!(chipBox instanceof HTMLElement))
+        throw new Error("no chip rendered");
+      const foot = vi
+        .spyOn(chipBox, "getBoundingClientRect")
+        .mockReturnValue(new DOMRect(0, 60, 120, 40));
+
+      await userEvent.tab();
+      await userEvent.tab();
+      const region = screen.getByRole("region", { name: LABELS.answering });
+      expect(region.style.getPropertyValue("--aistatRoom")).toBe("700px");
+
+      // The band wraps and pushes the chip 200px down; nothing re-renders it.
+      foot.mockReturnValue(new DOMRect(0, 260, 120, 40));
+      const watcher = observers.find(({ boxes }) => boxes.includes(chipBox));
+      act(() => watcher?.fire());
+      expect(region.style.getPropertyValue("--aistatRoom")).toBe("500px");
+
+      await userEvent.keyboard("{Escape}");
+      expect(watcher?.boxes).toEqual([]);
     });
 
     it("stays open when the window loses focus while the reader is in it", async () => {

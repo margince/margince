@@ -242,17 +242,28 @@ export function AiRuntimeChip({
 
 type RoomBelow = CSSProperties & Readonly<{ "--aistatRoom": string }>;
 
-// Where the popover stops being painted: the viewport's foot, or higher where an
-// ancestor clips (the onboarding stage hides its overflow above a phone's width).
-function paintedFoot(from: HTMLElement): number {
-  let foot = globalThis.innerHeight;
+/** Every box between the chip and the body, nearest first. */
+function ancestorsOf(from: HTMLElement): HTMLElement[] {
+  const found: HTMLElement[] = [];
   for (
     let at = from.parentElement;
     at && at !== document.body;
     at = at.parentElement
   ) {
+    found.push(at);
+  }
+  return found;
+}
+
+const CLIPS = new Set(["hidden", "clip", "auto", "scroll"]);
+
+// Where the popover stops being painted: the viewport's foot, or higher where an
+// ancestor clips (the onboarding stage hides its overflow above a phone's width).
+function paintedFoot(from: HTMLElement): number {
+  let foot = globalThis.innerHeight;
+  for (const at of ancestorsOf(from)) {
     const style = getComputedStyle(at);
-    if (style.overflowY !== "visible" && style.display !== "contents") {
+    if (CLIPS.has(style.overflowY) && style.display !== "contents") {
       const inner = at.getBoundingClientRect().bottom;
       foot = Math.min(foot, inner - Number.parseFloat(style.borderBottomWidth));
     }
@@ -295,7 +306,23 @@ function useRoomBelow(
     };
     globalThis.addEventListener("resize", measure);
     globalThis.addEventListener("scroll", measure, true);
+    // The chip moves when anything above it grows (the band wrapping, the text
+    // size changing), and none of that renders this component or fires an event.
+    const resized =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(() => {
+            if (anchor.current) {
+              setRoom(roomBelow(anchor.current));
+            }
+          });
+    if (resized && anchor.current) {
+      for (const box of [anchor.current, ...ancestorsOf(anchor.current)]) {
+        resized.observe(box);
+      }
+    }
     return () => {
+      resized?.disconnect();
       globalThis.removeEventListener("resize", measure);
       globalThis.removeEventListener("scroll", measure, true);
     };
