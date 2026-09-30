@@ -263,6 +263,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{}, nil, nil)
+	RegisterReportingTool(r, func(context.Context, ReportingRead) (ReportingAnswer, error) {
+		return ReportingAnswer{}, errSeamReached
+	})
 	RegisterMeetingInvitationTool(r, seamProbeInviter{}, seamProbeProvider{})
 	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, errSeamReached })
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {

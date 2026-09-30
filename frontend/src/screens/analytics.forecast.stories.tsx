@@ -6,7 +6,7 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import type { AnalyticsSelection } from "./analytics.context";
-import { ForecastView } from "./analytics.forecast";
+import { ForecastView, SharedForecastView } from "./analytics.forecast";
 import {
   installFetchStub,
   jsonResponse,
@@ -175,3 +175,25 @@ export const EveryDealPricedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+function recipient(kind: "live" | "snapshot") {
+  return () => {
+    const view = {
+      kind,
+      target: "forecast",
+      as_of: kind === "snapshot" ? "2026-07-14T06:00:00Z" : undefined,
+      readings: readings(),
+      withheld: false,
+    } satisfies components["schemas"]["SharedForecastView"];
+    installFetchStub({
+      "GET /forecast/shared/fixture": () => jsonResponse(view),
+    });
+    return (
+      <StoryProviders>
+        <SharedForecastView token="fixture" />
+      </StoryProviders>
+    );
+  };
+}
+export const LiveRecipient: Story = { render: recipient("live") };
+export const SnapshotRecipient: Story = { render: recipient("snapshot") };

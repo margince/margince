@@ -344,3 +344,8 @@ lists:
 #   # real deployment — a fake send that reads as a real one to a customer is
 #   # a worse failure than the capability merely existing.
 #   allow_test_mailbox: false
+
+# Enable the governed Performance, saved reports, targets and daily capture contexts.
+# Pilot rollout and durable schedule pause: docs/how-to/operate-reporting.md.
+analytics:
+  performance_enabled: false

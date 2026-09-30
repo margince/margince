@@ -13,7 +13,7 @@ open it rather than guessing.
 
 ### Where can I see my forecast?
 To see your forecast in Margince, click **Analytics** in the sidebar (under **Intelligence**) and open the **Forecast** section.
-1. Click **Analytics**. **Forecast** is the first tab under **Analytics sections**.
+1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
 3. Read **Current call**, **Evidence** (confirmed close dates), **Already won** and **Landing**, then **Checks before the call** and **Data and evidence checked**.
 A manager records a call with **Update call**. Also called: sales forecast, projected revenue, quarter forecast, landing.
@@ -45,14 +45,18 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
 The row leaves the list and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
-Margince does not compute a win rate and has no export button on the Analytics screen. **Won and lost** under **Performance** gives won and lost counts and value, so you can compare them yourself. To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
+When sales reporting is enabled, **Performance** offers a closed win rate with a minimum cohort and governed CSV export; see [Performance and saved sales reports](sales-reporting.md). With the feature disabled, the legacy Analytics screen has no win-rate or report-export button. **Won and lost** under **Performance** gives won and lost counts and value, so you can compare them yourself. To get deal rows out, open **Filters and views** in the sidebar, choose **Deals** as the **Record type**, build a filter, then press **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
 
-## The six sections
+## The reporting sections
 
 **Forecast** · **Deals** · **Performance** · **My outcomes** ·
 **Data coverage** · **Delivery**
 
-Two of the six Analytics sections are conditional, and their absence means
+When sales reporting is enabled, **Reports**, **Targets** and **Definitions**
+join the graph-first Performance view. [Sales reporting](sales-reporting.md) covers
+saving, scheduling and comparing editions.
+
+Other Analytics sections are conditional, and their absence means
 something:
 
 - **My outcomes** appears only for a seat whose own records are its whole

@@ -162,6 +162,7 @@ Columns:
 | `review_commitments` | 🟢 | `read` | — |
 | `run_analytics_query` | 🟢 | `read` | — |
 | `run_report` | 🟢 | `read` | — |
+| `read_reporting` | 🟢 | `read` | Reporting catalog, metrics, evidence and saved editions; enabled with reporting. |
 | `compose_analytics_report` | 🟢 | `read` | — |
 | `forecast_readings` | 🟢 | `read` | — |
 | `forecast_movement` | 🟢 | `read` | — |

@@ -45,6 +45,9 @@ func (e *InvalidError) Unwrap() error { return apperrors.ErrInvalidArgument }
 // so the refusal says so rather than a renderer discovering it.
 const MaxBlocks = 200
 
+// MaxCells bounds report rendering work before accepting an untrusted document.
+const MaxCells = 1000
+
 // Validate refuses a document that a reader could not trust.
 //
 // Returns the distinct run ids the document cites, so the caller can check
@@ -70,6 +73,7 @@ func Validate(doc Document) ([]ids.UUID, error) {
 	// failed, and a map's iteration order would make that message differ
 	// between two identical documents.
 	var runIDs []ids.UUID
+	cells := 0
 	seen := map[ids.UUID]bool{}
 
 	for i, b := range doc.Blocks {
@@ -96,12 +100,16 @@ func Validate(doc Document) ([]ids.UUID, error) {
 		if err := checkFigures(b, where); err != nil {
 			return nil, err
 		}
+		cells += len(b.Cells)
+		if cells > MaxCells {
+			return nil, &InvalidError{Where: where, Reason: "a report carries at most 1000 figure references"}
+		}
 		for j, c := range b.Cells {
 			id, err := checkCell(c, fmt.Sprintf("%s cell %d", where, j))
 			if err != nil {
 				return nil, err
 			}
-			if !seen[id] {
+			if !id.IsZero() && !seen[id] {
 				seen[id] = true
 				runIDs = append(runIDs, id)
 			}
@@ -194,6 +202,28 @@ func checkFigures(b Block, where string) error {
 
 // checkCell validates one handle and returns the run it names.
 func checkCell(c Cell, where string) (ids.UUID, error) {
+	references := 0
+	if c.RunID != "" {
+		references++
+	}
+	if c.MetricRef != nil {
+		references++
+	}
+	if c.EditionRef != nil {
+		references++
+	}
+	if references != 1 {
+		return ids.Nil, &InvalidError{Where: where, Reason: "choose exactly one saved run, live metric or frozen edition reference"}
+	}
+	if c.MetricRef != nil || c.EditionRef != nil {
+		if c.Column != "" || len(c.Group) > 0 {
+			return ids.Nil, &InvalidError{Where: where, Reason: "metric references cannot carry run columns or group keys"}
+		}
+		if c.MetricRef != nil && c.MetricRef.Metric == "" || c.EditionRef != nil && (c.EditionRef.Metric == "" || c.EditionRef.EditionId == [16]byte{}) {
+			return ids.Nil, &InvalidError{Where: where, Reason: "name an existing metric and edition"}
+		}
+		return ids.Nil, nil
+	}
 	id, err := ids.Parse(c.RunID)
 	if err != nil {
 		return ids.UUID{}, &InvalidError{

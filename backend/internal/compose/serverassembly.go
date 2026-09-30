@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -220,6 +221,9 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // across the literal and here would put half of that seam out of sight of the
 // other half.
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
+	reportingService := newReportingService(pool, time.Now)
+	s.reportingHandlers = reporting.NewHandlers(reportingService)
+	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.forecastHandlers = forecasting.NewHandlers(
 		forecasting.NewStore(InstallationDB(pool)),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,

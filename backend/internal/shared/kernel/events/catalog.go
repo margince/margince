@@ -173,6 +173,7 @@ var catalog = map[string]struct {
 	"list.member_added":   {contactStreamEntity, 1},
 	"list.member_removed": {contactStreamEntity, 1},
 
+	"reporting.changed":          {identityStreamEntity, 1},
 	"booking_page.updated":       {identityStreamEntity, 1},
 	"meeting_proposal.updated":   {activityStreamEntity, 1},
 	"meeting_invitation.updated": {activityStreamEntity, 1},

@@ -184,6 +184,8 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 // gate impossible to green over wrappers that are correct; merely counting them
 // would let a real defect through in silence.
 var unresolvableAuditActions = gatekit.Waive(map[string]string{
+	"internal/modules/reporting/persistence.go:recordChange":            "The shared mutation writer requires a non-nil before image for every non-create action before invoking Audit.",
+	"internal/modules/forecasting/capturestatus.go:RecordCaptureStatus": "The locked capture-status row is the before image; only its absence selects create, while update always carries the previously stored status.",
 	// The seam that routes an extension's own change, choosing the door from
 	// what the change carries rather than from a verb it cannot read.
 	"internal/compose/extledger.go:recordExtensionChange": "the verb is the unit's own, and the seam picks the door from whether the change declared a before-image, so an update either carries one or is recorded as the occurrence it says it is",

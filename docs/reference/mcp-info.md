@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 80 |
+| Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 235.4 KB |
+| Tool catalog | 239.8 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 61299 |
+| Approx. wire tokens | 62438 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 106.2 KB | 45% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 60.0 KB | 25% | Yes, every step |
-| Input schemas | 52.4 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 16.7 KB | 7% | Partly |
-| **Description + input schema** | **112.5 KB** | **47%** | **the recurring cost** |
+| Output schemas | 107.2 KB | 44% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 60.8 KB | 25% | Yes, every step |
+| Input schemas | 54.8 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.9 KB | 7% | Partly |
+| **Description + input schema** | **115.7 KB** | **48%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -59,7 +59,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/handoff.html`](#handoff_view) — Delivery handoff
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 
-### Tools (80)
+### Tools (81)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -76,7 +76,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.0 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
-| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 2.8 KB |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.1 KB |
 | [`create_record`](#create_record) | Create a record |  |  | 3.6 KB |
 | [`create_tag`](#create_tag) | Create a tag |  |  | 1.9 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
@@ -124,6 +124,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.1 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.2 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.0 KB |
@@ -2955,13 +2956,14 @@ Answer "is this deal covered?": which roles at the company we have a relationshi
 
 **Compose an analytics report**
 
-WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting — whose every number comes from a saved analytics run instead of being typed. Not for answering with a figure: a number in the reply is run_analytics_query's or run_report's. The document carries the STRUCTURE and the WORDS; each figure names a run id and a cell inside it, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Save a run first — run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
+WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting — whose numbers come from governed queries, standard metrics or frozen editions instead of being typed. Not for answering with a figure: a number in the reply is run_analytics_query's or run_report's. The document carries the STRUCTURE and the WORDS; each figure names a query cell, metric_ref or edition_ref, and the server resolves those handles under the reader's own authority. It writes no number of its own and refuses any document that does. A block carrying a literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the two can disagree, and no reader could tell the page shows a figure the database never computed. Preserve returned coverage, units and capture context. For a query cell, run an analytics query with save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the answer is a report somebody reads. describe_report_blocks holds the block kinds and their fields for a caller that wants them before composing. Never put a number in a block — cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set, so a first attempt costs one refusal rather than a lookup. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
 ```json
 {
   "additionalProperties": false,
+  "description": "Discover pipeline and stage IDs with list_pipelines.",
   "properties": {
     "blocks": {
       "items": {
@@ -2970,21 +2972,119 @@ WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary fo
           "cells": {
             "items": {
               "additionalProperties": false,
+              "description": "Choose exactly one saved-run cell, metric_ref, or edition_ref.",
               "properties": {
                 "column": {
                   "type": "string"
                 },
+                "edition_ref": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "edition_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "metric": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "edition_id",
+                    "metric"
+                  ],
+                  "type": "object"
+                },
                 "group": {
                   "type": "array"
+                },
+                "metric_ref": {
+                  "description": "A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+                  "properties": {
+                    "metric": {
+                      "type": "string"
+                    },
+                    "selection": {
+                      "properties": {
+                        "blocks": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "close_window": {
+                          "type": "string"
+                        },
+                        "interval": {
+                          "properties": {
+                            "end_at": {
+                              "type": "string"
+                            },
+                            "start_at": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "end_at",
+                            "start_at"
+                          ],
+                          "type": "object"
+                        },
+                        "metrics": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "period": {
+                          "type": "string"
+                        },
+                        "pipeline_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "scope": {
+                          "properties": {
+                            "id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "type": "object"
+                        },
+                        "target_basis": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "blocks",
+                        "close_window",
+                        "metrics",
+                        "period",
+                        "scope",
+                        "target_basis"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "metric",
+                    "selection"
+                  ],
+                  "type": "object"
                 },
                 "run_id": {
                   "type": "string"
                 }
               },
-              "required": [
-                "run_id",
-                "column"
-              ],
               "type": "object"
             },
             "type": "array"
@@ -12678,6 +12778,266 @@ Read one record's own stored fields — the values a reader would see on its det
 
 </details>
 
+### read_reporting
+
+**Read sales reporting**
+
+Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions. Read only. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers. Use list_pipelines to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics. (Governance: runs immediately; requires passport scope "read".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "description": "A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines.",
+  "properties": {
+    "cursor": {
+      "type": "string"
+    },
+    "evaluated_at": {
+      "type": "string"
+    },
+    "evaluation_key": {
+      "type": "string"
+    },
+    "framework_revision": {
+      "type": "integer"
+    },
+    "id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "limit": {
+      "type": "integer"
+    },
+    "mode": {
+      "type": "string"
+    },
+    "reference": {
+      "properties": {
+        "context_id": {
+          "type": "string"
+        },
+        "group_key": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "through": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "context_id",
+        "metric"
+      ],
+      "type": "object"
+    },
+    "right_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "scheduled": {
+      "type": "boolean"
+    },
+    "selection": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "close_window": {
+          "type": "string"
+        },
+        "interval": {
+          "properties": {
+            "end_at": {
+              "type": "string"
+            },
+            "start_at": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_at",
+            "start_at"
+          ],
+          "type": "object"
+        },
+        "metrics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "period": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "scope": {
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        "target_basis": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "blocks",
+        "close_window",
+        "metrics",
+        "period",
+        "scope",
+        "target_basis"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog": {
+          "type": "object"
+        },
+        "comparison": {
+          "type": "object"
+        },
+        "edition": {
+          "type": "object"
+        },
+        "editions": {
+          "type": "object"
+        },
+        "evaluation": {
+          "type": "object"
+        },
+        "evidence": {
+          "type": "object"
+        },
+        "report": {
+          "type": "object"
+        },
+        "reports": {
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### relink_activities
 
 **Re-associate a set of activities to a record**
@@ -14045,11 +14405,11 @@ Answer a question about totals, counts or breakdowns by running one of this work
       "type": "array"
     },
     "filters": {
-      "description": "Equality predicates keyed by this report's filter names — {\"owner_id\":\"\u003cuuid\u003e\"}. A key outside the report's list is refused.",
+      "description": "Equality predicates using this report's published filter names.",
       "type": "object"
     },
     "group_by": {
-      "description": "Dimension names from this report's list. Omit for the report's own default grouping.",
+      "description": "Published dimension names; omit for default grouping.",
       "items": {
         "type": "string"
       },
@@ -14072,6 +14432,21 @@ Answer a question about totals, counts or breakdowns by running one of this work
         "win-loss"
       ],
       "type": "string"
+    },
+    "scope": {
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
     }
   },
   "required": [

@@ -82,6 +82,7 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
+	ReportingEnabled bool
 	// TestOnly is jobs.Config.TestOnly, carried here because jobtest boots its
 	// runners through NewJobRunner rather than through jobs.New — see there for
 	// what River does with it and why it keeps River's own name. Production
@@ -395,7 +396,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.ReportingEnabled)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addGmailCaptureJobs(reg, pool, cfg, log)
@@ -437,6 +438,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
+		periodicFor(cfg, ReportScheduleSweepArgs{}),
 		periodicFor(cfg, RiskVerdictSweepArgs{}),
 		periodicFor(cfg, TimeScanArgs{}),
 		periodicFor(cfg, VoiceBuildRetryArgs{}),

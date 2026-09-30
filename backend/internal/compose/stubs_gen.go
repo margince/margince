@@ -147,6 +147,10 @@ func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }
 
+func (stubs) PauseReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PauseReportingSchedules")
+}
+
 func (stubs) ResetData(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ResetData")
 }
@@ -255,16 +259,108 @@ func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
 
+func (stubs) CompareReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CompareReportingEditionsParams) {
+	httperr.NotImplemented(w, r, "CompareReportingEditions")
+}
+
+func (stubs) GetReportingEdition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingEdition")
+}
+
+func (stubs) GetReportingEditionEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetReportingEditionEvidenceParams) {
+	httperr.NotImplemented(w, r, "GetReportingEditionEvidence")
+}
+
+func (stubs) ExportReportingEdition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ExportReportingEdition")
+}
+
+func (stubs) EvaluateReporting(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.EvaluateReportingParams) {
+	httperr.NotImplemented(w, r, "EvaluateReporting")
+}
+
+func (stubs) ExportReportingEvaluation(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ExportReportingEvaluationParams) {
+	httperr.NotImplemented(w, r, "ExportReportingEvaluation")
+}
+
+func (stubs) GetReportingEvidence(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetReportingEvidenceParams) {
+	httperr.NotImplemented(w, r, "GetReportingEvidence")
+}
+
+func (stubs) GetReportingExecution(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingExecution")
+}
+
+func (stubs) RetryReportingExecution(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RetryReportingExecution")
+}
+
 func (stubs) ExplainAnalyticsCell(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ExplainAnalyticsCell")
+}
+
+func (stubs) GetReportingFramework(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetReportingFramework")
+}
+
+func (stubs) PublishReportingFramework(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PublishReportingFrameworkParams) {
+	httperr.NotImplemented(w, r, "PublishReportingFramework")
+}
+
+func (stubs) GetReportingMetrics(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetReportingMetrics")
 }
 
 func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
 
+func (stubs) ListReportingReports(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingReportsParams) {
+	httperr.NotImplemented(w, r, "ListReportingReports")
+}
+
+func (stubs) CreateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateReportingReport")
+}
+
 func (stubs) RenderAnalyticsReport(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RenderAnalyticsReport")
+}
+
+func (stubs) ArchiveReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveReportingReport")
+}
+
+func (stubs) GetReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingReport")
+}
+
+func (stubs) UpdateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateReportingReportParams) {
+	httperr.NotImplemented(w, r, "UpdateReportingReport")
+}
+
+func (stubs) ListReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListReportingEditionsParams) {
+	httperr.NotImplemented(w, r, "ListReportingEditions")
+}
+
+func (stubs) FreezeReportingEdition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.FreezeReportingEditionParams) {
+	httperr.NotImplemented(w, r, "FreezeReportingEdition")
+}
+
+func (stubs) EvaluateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.EvaluateReportingReportParams) {
+	httperr.NotImplemented(w, r, "EvaluateReportingReport")
+}
+
+func (stubs) ListReportingExecutions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListReportingExecutionsParams) {
+	httperr.NotImplemented(w, r, "ListReportingExecutions")
+}
+
+func (stubs) ListReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListReportingSchedules")
+}
+
+func (stubs) CreateReportingSchedule(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "CreateReportingSchedule")
 }
 
 func (stubs) GetReportRun(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
@@ -275,8 +371,28 @@ func (stubs) ExplainReportRunCell(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ExplainReportRunCell")
 }
 
+func (stubs) UpdateReportingSchedule(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateReportingScheduleParams) {
+	httperr.NotImplemented(w, r, "UpdateReportingSchedule")
+}
+
 func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
+}
+
+func (stubs) ListReportingTargets(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingTargetsParams) {
+	httperr.NotImplemented(w, r, "ListReportingTargets")
+}
+
+func (stubs) CreateReportingTarget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateReportingTarget")
+}
+
+func (stubs) GetReportingTarget(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetReportingTarget")
+}
+
+func (stubs) UpdateReportingTarget(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateReportingTargetParams) {
+	httperr.NotImplemented(w, r, "UpdateReportingTarget")
 }
 
 func (stubs) ApproveApprovalBundle(w nethttp.ResponseWriter, r *nethttp.Request, bundleId crmcontracts.BundleId) {

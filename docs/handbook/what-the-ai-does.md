@@ -157,8 +157,8 @@ The **Home** brief ranks accounts and shows the factors behind each ranking —
 winnability, revenue, timing, momentum, warmth — with the evidence rows behind
 them.
 
-The **AI** group in Settings holds four pages: **Models and routing**,
-**Automations**, **AI usage** and **Model calls**. **Settings → Agents** is where
+The **AI** group in Settings holds four pages: **AI usage**,
+**AI models**, **AI call log** and **Automations**. **Settings → Agents** is where
 you mint your own passports, connect MCP clients and switch **Automatic
 changes** on or off. **Settings → Audit log** holds the full audit trail: every action,
 attributed to a human, an agent or a connector.

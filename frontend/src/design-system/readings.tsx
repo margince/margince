@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import "./readings.css";
 import { webUrl } from "../format/weburl";
+import { Button } from "./atoms";
 
 // Three ways to draw a reading that is not a number in a box: a proportion as
 // a bar, a series as a line, and a labelled attribute as a pill. Copy always
@@ -263,7 +264,9 @@ export function BarList({
   rows,
   label,
   max,
+  onSelect,
 }: Readonly<{
+  onSelect?: (key: string) => void;
   rows: readonly BarListRow[];
   // What the whole list is a reading OF, for a reader who meets it without the
   // surrounding card — and the caption of the table equivalent below.
@@ -286,19 +289,41 @@ export function BarList({
       {/* The bars carry the shape and the table carries the figures. A reader
           on a screen reader gets the second, which is the one with the values
           in it — so the bars are hidden rather than announced twice. */}
-      <ul className="barlist-rows" aria-hidden="true">
+      <ul className="barlist-rows" aria-hidden={onSelect ? undefined : true}>
         {rows.map((row) => (
-          <li key={row.key} className="barlist-row">
-            <span className="barlist-label">{row.label}</span>
-            <Meter
-              value={row.value}
-              max={denominator}
-              label={row.label}
-              tone={row.tone}
-              dense
-              flat
-            />
-            <span className="barlist-amount t-num">{row.amount}</span>
+          <li key={row.key}>
+            {onSelect ? (
+              <Button
+                variant="link"
+                className="barlist-row barlist-action"
+                onClick={() => onSelect(row.key)}
+                aria-label={`${row.label}: ${row.amount}`}
+              >
+                <span className="barlist-label">{row.label}</span>
+                <Meter
+                  value={row.value}
+                  max={denominator}
+                  label={row.label}
+                  tone={row.tone}
+                  dense
+                  flat
+                />
+                <span className="barlist-amount t-num">{row.amount}</span>
+              </Button>
+            ) : (
+              <div className="barlist-row">
+                <span className="barlist-label">{row.label}</span>
+                <Meter
+                  value={row.value}
+                  max={denominator}
+                  label={row.label}
+                  tone={row.tone}
+                  dense
+                  flat
+                />
+                <span className="barlist-amount t-num">{row.amount}</span>
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -348,8 +373,10 @@ export function SegmentBar({
   parts,
   marker,
   label,
+  onSelect,
 }: Readonly<{
   parts: SegmentBarParts;
+  onSelect?: (key: string) => void;
   // A figure the parts are read against rather than one of them: a line across
   // the track, drawn in ink so it never reads as a fourth part.
   marker?: SegmentBarPart;
@@ -362,14 +389,25 @@ export function SegmentBar({
   const scale = Math.max(total, marker?.value ?? 0);
   return (
     <div className="segbar">
-      <div className="segbar-track" aria-hidden="true">
-        {parts.map((part, step) => (
-          <span
-            key={part.key}
-            className={`segbar-part segbar-step-${step}`}
-            style={{ width: `${percentOf(part.value, scale)}%` }}
-          />
-        ))}
+      <div className="segbar-track" aria-hidden={onSelect ? undefined : true}>
+        {parts.map((part, step) =>
+          onSelect ? (
+            <Button
+              key={part.key}
+              variant="link"
+              className={segmentActionClass(step)}
+              style={{ width: `${percentOf(part.value, scale)}%` }}
+              aria-label={`${part.label}: ${part.amount}`}
+              onClick={() => onSelect(part.key)}
+            />
+          ) : (
+            <span
+              key={part.key}
+              className={`segbar-part segbar-step-${step}`}
+              style={{ width: `${percentOf(part.value, scale)}%` }}
+            />
+          ),
+        )}
         {marker && (
           <span
             className="segbar-marker"
@@ -413,3 +451,7 @@ export type SegmentBarParts =
   | readonly [SegmentBarPart]
   | readonly [SegmentBarPart, SegmentBarPart]
   | readonly [SegmentBarPart, SegmentBarPart, SegmentBarPart];
+
+function segmentActionClass(step: number): string {
+  return `segbar-part segbar-action segbar-step-${step}`;
+}

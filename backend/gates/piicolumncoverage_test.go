@@ -58,6 +58,10 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// Metric/type enums, generated UUID grouping and opaque context/contribution hashes contain no subject prose.
+	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
+	// Closed publication access class (private/team/workspace), never subject-authored content.
+	"report_edition": {"publication_audience"},
 	// A decision's own vocabulary: what kind of message it was, what the engine
 	// and the old gate each answered, and which rollout mode was in force. Every
 	// value is drawn from a closed set this repository defines — none of it is

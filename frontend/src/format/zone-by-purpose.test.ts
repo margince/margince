@@ -142,6 +142,14 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/reporting.fixtures.ts",
+    why: "The report API fixture carries the installation timezone so schedule and frozen-period rendering remain independent of the browser zone.",
+  },
+  {
+    file: "screens/reporting.schedule.tsx",
+    why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
+  },
+  {
     file: "screens/book.testkit.ts",
     why: "The booking API fixture supplies the host’s effective working-hours timezone independently of the viewer’s zone, so the form can show the actual calendar policy.",
   },

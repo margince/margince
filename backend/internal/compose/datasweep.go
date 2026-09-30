@@ -3,11 +3,7 @@
 
 package compose
 
-// What a data reset does to Postgres: which tables it sweeps, the order it
-// discovers at runtime, the outbox drain, and the cf_* column drop that runs
-// on the owner pool afterwards. datareset.go holds
-// the transport and the orchestration that calls these; datareset_runtime.go
-// holds the non-Postgres surfaces.
+// The sweep derives deletion order from foreign keys and preserves controller configuration.
 
 import (
 	"context"
@@ -41,6 +37,7 @@ import (
 //   - the job runtime, which is River's to manage and not ours to truncate
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
+	"report_projection_fence": true,
 	// The installation's own published wording. Not tenant data: it is the
 	// controller's text, shared across every subject who saw it, and a proof row
 	// surviving the reset would otherwise point at a version the sweep removed.

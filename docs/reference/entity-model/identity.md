@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-22 columns · primary key `(id)` · referenced by 119 foreign keys
+22 columns · primary key `(id)` · referenced by 125 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -59,6 +59,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `app_user_forget_weekly_plan_responses` — `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()`
+- `report_authority_user_change` — `BEFORE UPDATE OF status, archived_at, seat_type, is_agent FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
+- `report_authority_user_delete` — `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_app_user_updated` — `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## auth_token
@@ -150,6 +152,10 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `field_mask_pkey` — `unique, btree (id)`
 - `field_mask_role_key_object_field_key` — `unique, btree (role_key, object, field)`
+
+**Triggers**
+
+- `report_authority_field_mask` — `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 
 ## maskable_field
 
@@ -488,6 +494,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `report_authority_role` — `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_role_updated` — `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## role_assignment
@@ -520,6 +527,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `report_authority_role_assignment` — `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_role_assignment_updated` — `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## session
@@ -578,7 +586,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 6 foreign keys
+6 columns · primary key `(id)` · referenced by 7 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -606,6 +614,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `report_authority_team_change` — `BEFORE UPDATE OF archived_at FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
+- `report_authority_team_delete` — `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_team_updated` — `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## team_membership
@@ -640,6 +650,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `report_authority_team_membership` — `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_team_membership_updated` — `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## user_mfa

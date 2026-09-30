@@ -1583,17 +1583,19 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## sdr_handoff_event
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid` | yes | Primary key. |
 | `actor` | `text` | yes | Required `text`. |
+| `deal_id_at_change` | `uuid` |  | Optional `uuid`. |
 | `handoff_id` | `uuid` | yes | Points at `sdr_handoff.id` — deleting the parent deletes this row. |
 | `note` | `text` |  | Optional `text`. |
 | `occurred_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `reason_applies_to` | `text` |  | Optional `text`. |
 | `reason_id` | `uuid` |  | Optional `uuid`. |
+| `submitter_id_at_change` | `uuid` |  | Optional `uuid`. |
 | `to_status` | `text` | yes | One of `submitted`, `accepted`, `rejected`, `recycled`. |
 
 **Points at**
@@ -1612,6 +1614,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `idx_sdr_handoff_event_handoff` — `btree (handoff_id, occurred_at DESC)`
+- `reporting_primary_credit` — `btree (deal_id_at_change, occurred_at, id) WHERE (to_status = 'accepted')`
 - `sdr_handoff_event_pkey` — `unique, btree (id)`
 
 ## sdr_handoff_reason

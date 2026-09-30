@@ -26,6 +26,7 @@ import (
 )
 
 type UpdateActivityInput struct {
+	recordedAt         *time.Time
 	calendarSettlement bool
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail           storekit.AuditTrail
@@ -49,6 +50,8 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	at := s.now()
+	in.recordedAt = &at
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -128,6 +131,7 @@ func updateActivityInTx(
 	// already holds is somebody saving a form, and recording it would make
 	// "booked twice" a countable event.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
+		RecordedAt:     in.recordedAt,
 		ActivityID:     id,
 		Status:         changedMeetingStatus(current, out),
 		ScheduledStart: &out.OccurredAt,

@@ -44,6 +44,7 @@ type retentionExecutor func(s *RetentionService, ctx context.Context, tx pgx.Tx,
 // dispatches it before opening one. Nil means "runs outside the transaction",
 // never "unsupported" — membership is the key, not the value.
 var retentionActions = map[string]retentionExecutor{
+	"report_edition/erase":  (*RetentionService).eraseReportEdition,
 	"contact/erase":         nil,
 	"activity/archive":      (*RetentionService).archiveActivity,
 	"activity/erase":        (*RetentionService).eraseActivityContent,
@@ -194,24 +195,12 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	return err
 }
 
-// anonymizeContactRecord is the contact/anonymize action: it strips the subject's
-// own identifying fields and the rows that carry their addresses, so the record
-// stops naming them by any key it is resolved on. The subject may lawfully return, so no suppression entry is
-// written.
-//
-// It is NOT what the eraser does minus that entry. Tables the eraser clears are
-// untouched here — the raw captures and attachments their messages came from,
-// their lead rows and scores, their preference tokens, their deal-room seats.
-//
-// What survives is written down per table in
-// TestErasingAndAnonymizingClearTheSameTables (backend/gates/contactscrub_test.go),
-// which fails when the gap widens in either direction. That test compares which
-// TABLES each act writes and cannot see two acts clearing one table to
-// different depths, which is why the custom columns above are nulled here
-// deliberately rather than left for it to notice.
-//
-// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/contactscrub_test.go)
+// Anonymization clears identifiers without suppressing a subject who may return.
+// The erasure parity gate holds table coverage; custom fields need the same depth of scrub.
 func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, payloads PayloadPurger) error {
+	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+		return err
+	}
 	if err := eraseContactMeetingCapabilities(ctx, tx, id, payloads); err != nil {
 		return err
 	}

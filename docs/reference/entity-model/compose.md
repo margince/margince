@@ -708,7 +708,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review
 
-22 columns · primary key `(id)` · referenced by 2 foreign keys
+23 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -727,6 +727,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `local_week_start` | `date` | yes | Required `date`. |
 | `meetings_held` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `meetings_with_next_step` | `integer` | yes | Required `integer`, defaulting to `0`. |
+| `numeric_summary` | `jsonb` |  | Optional `jsonb`. |
 | `pipeline_created_minor` | `bigint` |  | Optional `bigint`. |
 | `pipeline_lost_minor` | `bigint` |  | Optional `bigint`. |
 | `pipeline_won_minor` | `bigint` |  | Optional `bigint`. |
@@ -861,7 +862,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review
 
-34 columns · primary key `(id)` · referenced by 7 foreign keys
+35 columns · primary key `(id)` · referenced by 7 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -888,6 +889,7 @@ The 36 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `meetings_with_next_step` | `integer` | yes | Required `integer`, defaulting to `0`. |
 | `narrated_at` | `timestamp with time zone` |  | When a narrative pass last ran, null when none has. |
 | `narrative` | `text` |  | One or two sentences over the week's own counts and deal lines. |
+| `numeric_summary` | `jsonb` |  | Optional `jsonb`. |
 | `pipeline_created_minor` | `bigint` |  | Optional `bigint`. |
 | `pipeline_lost_minor` | `bigint` |  | Optional `bigint`. |
 | `pipeline_won_minor` | `bigint` |  | Optional `bigint`. |

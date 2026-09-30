@@ -545,7 +545,7 @@ func (e *forecastEnv) render(
 	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
-			out, err = RenderReport(ctx, tx, doc, analyticsquery.DefaultFloor)
+			out, err = RenderReport(ctx, tx, doc, analyticsquery.DefaultFloor, nil)
 			return err
 		})
 	return out, err
@@ -665,5 +665,5 @@ func (e *forecastEnv) composeTool(
 	if err != nil {
 		t.Fatalf("encoding the document: %v", err)
 	}
-	return analyticsReportComposer(e.Pool, analyticsquery.DefaultFloor)(ctx, encoded)
+	return analyticsReportComposer(e.Pool, analyticsquery.DefaultFloor, false)(ctx, encoded)
 }

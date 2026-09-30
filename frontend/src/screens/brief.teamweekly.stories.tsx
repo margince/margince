@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { team, teamWeek } from "./brief.fixtures";
+import { team, teamWeek, unavailableWeeklyNumbers } from "./brief.fixtures";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import {
   jsonResponse,
@@ -165,5 +165,17 @@ export const NoPriorityIsNotInactivity: Story = {
           focus_label: "A quiet week",
         })),
       }),
+  }),
+};
+
+export const SharedMetricsUnavailable: Story = {
+  render: panel({
+    "GET /teams": () =>
+      jsonResponse({
+        data: [team],
+        page: { next_cursor: null, has_more: false },
+      }),
+    "GET /weekly-reviews/team": () =>
+      jsonResponse({ ...teamWeek, numeric_summary: unavailableWeeklyNumbers }),
   }),
 };

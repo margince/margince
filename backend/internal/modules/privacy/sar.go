@@ -29,9 +29,10 @@ import (
 // SARPackage is the assembled export. Sections hold raw row maps —
 // the package is a data handover, not an API shape.
 type SARPackage struct {
-	Subject map[string]any   `json:"subject"`
-	Emails  []map[string]any `json:"emails"`
-	Phones  []map[string]any `json:"phones"`
+	ReportingContributions []map[string]any `json:"reporting_contributions"`
+	Subject                map[string]any   `json:"subject"`
+	Emails                 []map[string]any `json:"emails"`
+	Phones                 []map[string]any `json:"phones"`
 	// The messaging-channel accounts bound to the subject: which provider
 	// identity writes as them, the handle it carries, whether they have blocked
 	// this installation's bot, and whether the binding is still live.

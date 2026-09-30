@@ -169,10 +169,10 @@ func (s *AnalyticsShareStore) Issue(
 	// not a place to keep the thing the link is protected by.
 	auditID, err := storekit.AuditEvent(ctx, tx, "create", tableAnalyticsShare, out.ID,
 		map[string]any{
-			paramKind:    in.Kind,
-			"target":     in.Target,
-			"scope_kind": in.Scope.Kind,
-			"expires_at": expires,
+			paramKind:          in.Kind,
+			reportingTarget:    in.Target,
+			reportingScopeKind: in.Scope.Kind,
+			"expires_at":       expires,
 		})
 	if err != nil {
 		return Share{}, "", err
@@ -250,7 +250,7 @@ func checkSnapshotScope(ctx context.Context, tx pgx.Tx, in NewShare) error {
 	var kind string
 	var id *ids.UUID
 	if err := tx.QueryRow(ctx, `
-		SELECT scope_kind, scope_id FROM forecast_snapshot WHERE id = $1`,
+		SELECT scope_kind, scope_id FROM forecast_snapshot WHERE id = $1 AND pipeline_id IS NULL`,
 		*in.SnapshotID).Scan(&kind, &id); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

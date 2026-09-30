@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 80,
+    "tools": 81,
     "system_frame_tokens": 516,
-    "tokens": 26626,
-    "median_tool_tokens": 277,
-    "mean_tool_tokens": 332
+    "tokens": 27439,
+    "median_tool_tokens": 278,
+    "mean_tool_tokens": 338
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 80,
+      "of_served_tools": 81,
       "tokens": 3551,
       "listing_tokens": 1746,
       "step_schema_tokens": 1288,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 80,
+      "of_served_tools": 81,
       "tokens": 4908,
       "listing_tokens": 2585,
       "step_schema_tokens": 1807,
@@ -88,7 +88,7 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1010
+      "tokens": 1014
     },
     {
       "name": "send_company_email",
@@ -97,6 +97,10 @@
     {
       "name": "send_email",
       "tokens": 754
+    },
+    {
+      "name": "compose_analytics_report",
+      "tokens": 743
     },
     {
       "name": "preview_import",
@@ -135,6 +139,10 @@
       "tokens": 509
     },
     {
+      "name": "read_reporting",
+      "tokens": 506
+    },
+    {
       "name": "progress_deal",
       "tokens": 505
     },
@@ -161,10 +169,6 @@
     {
       "name": "advance_deal",
       "tokens": 446
-    },
-    {
-      "name": "compose_analytics_report",
-      "tokens": 440
     },
     {
       "name": "annotate_brief",

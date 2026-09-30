@@ -18,7 +18,7 @@ Margince Settings has 32 pages in seven groups:
 - **People**: Members, Teams, Seats and license.
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Knowledge, Data import.
-- **AI**: Models and routing, Automations, AI usage, Model calls.
+- **AI**: AI usage, AI models, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, Extensions, Reset data.
 You see only the pages your permissions open. The Reset data page appears only where the deployment enables it.
 
@@ -55,9 +55,9 @@ Sales and data settings in Margince each have one page.
 
 ### Which settings page do I need for AI and governance?
 AI and governance settings in Margince each have one page.
-- Which model does which work, and provider keys: **Models and routing**.
+- Which model does which work, and provider keys: **AI models**.
 - Trigger-and-action rules: **Automations**.
-- The monthly AI allowance and what was spent: **AI usage**. Each call that ran: **Model calls**.
+- The monthly AI allowance and what was spent: **AI usage**. Each call that ran: **AI call log**.
 - Consent purposes, retention and privacy requests: **Privacy and retention**.
 - Who did what, and when: **Audit log**.
 - Background jobs and rebuilding the search index: **System health**.
@@ -229,17 +229,19 @@ seats they appear under **Read-only settings** on **Overview**. Two stay in a sa
 authors, and **Outcome reviews**, where reading the questions is itself the
 point of opening the page.
 
-## Models and routing, Automations, AI usage, and Model calls
+## AI usage, AI models, AI call log, and Automations
 
-The AI group in Settings has four pages: **Models and routing**,
-**Automations**, **AI usage** and **Model calls**.
+The AI group in Settings has four pages: **AI usage**,
+**AI models**, **AI call log** and **Automations**.
 
 **Model routing** — which model serves each kind of work, presented by activity
-rather than by tier. What you see is the current policy; **Model calls** is what
+rather than by tier. What you see is the current policy; **AI call log** is what
 actually ran. Shared bindings sit under Advanced, and changing one can move
 several activities at once. Prices name input and output cost per million tokens
 separately, rather than one unexplained arrow, and a tier name proves nothing
-about where data is processed or what it costs — read the binding.
+about where data is processed or what it costs — read the binding. Each row in
+**AI tasks** names the tier the task runs on, and **View calls** opens the
+**AI call log** narrowed to that task.
 
 Changes take effect without a restart: a running process picks up a saved
 binding within about a minute, and a call already in flight keeps the one it
@@ -271,7 +273,7 @@ Preview an allowance or model change before saving. A save is refused if the
 stored configuration has moved since you previewed it, so you never save against
 an answer you did not see.
 
-**AI usage** and **Model calls** — "AI spend this month against the
+**AI usage** and **AI call log** — "AI spend this month against the
 allowance", and "each model request and its response". Anything that failed
 outright stays visible in **Background jobs**, on **System health**, instead.
 

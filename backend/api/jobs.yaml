@@ -822,6 +822,19 @@ kinds:
       the sooner the first one exists the sooner the second is worth taking.
 
 
+  report_schedule_sweep:
+    role: worker
+    fleet: true
+    go_type: ReportScheduleSweepArgs
+    queue: default
+    timeout: 6m
+    opts_owner: caller
+    cadence: 5m
+    reason: >-
+      Materializes durable reporting executions and resumes at most twenty ready
+      runs. Each evaluation has a sixty-second timeout and a ninety-second lease;
+      the sweep leaves a full evaluation budget before beginning another run.
+
   risk_verdict_sweep:
     role: worker
     fleet: true
@@ -1299,7 +1312,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 6h45m0s
+      value: 7h18m20s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin

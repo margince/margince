@@ -22,6 +22,7 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
+import { weeklyNumericStatus } from "./brief.numeric";
 import { BriefTeamSelect, weekTeams } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import { OutlookPanel } from "./brief.waterfall";
@@ -76,8 +77,13 @@ export function TeamWeeklySection({
       </>
     );
   const measured = review.counts.reps_counted > 0;
+  const numeric = weeklyNumericStatus(review.numeric_summary);
   return (
     <section id="brief-team-weekly">
+      <p className="t-sub">{t(numeric.basis)}</p>
+      {numeric.partial && (
+        <p className="t-sub">{t("brief.weekly.numericPartial")}</p>
+      )}
       <WeekPicker week={week ?? review.local_week_start} />
       <p>
         {t("teamweekly.weekOf", {
@@ -147,7 +153,11 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
   const counts = review.counts;
-  if (counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0)
+  if (
+    counts.reps_counted === 0 ||
+    (review.reps_unread ?? 0) > 0 ||
+    weeklyNumericStatus(review.numeric_summary).partial
+  )
     return (
       <Heading size="medium" className="teamweekly-headline">
         {t(
@@ -253,6 +263,9 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
   const counts = review.counts;
+  const { bookingsUnavailable, meetingsUnavailable } = weeklyNumericStatus(
+    review.numeric_summary,
+  );
   const n = (value: number) => formatNumber(value, locale);
   const won = wonValue(review, locale);
   // A SHARE NEEDS A DENOMINATOR. "0 of 0" is a rate nobody could have scored,
@@ -291,12 +304,17 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
       <StatCard
         narrow="row"
         label={t("teamweekly.card.meetings")}
-        {...share(
-          counts.meetings_with_next_step,
-          counts.meetings_held,
-          "teamweekly.card.noMeetings",
-          t("teamweekly.card.meetingsBasis"),
-        )}
+        {...(meetingsUnavailable
+          ? {
+              value: t("reporting.unavailable"),
+              detail: review.numeric_summary?.meetings_coverage.reason,
+            }
+          : share(
+              counts.meetings_with_next_step,
+              counts.meetings_held,
+              "teamweekly.card.noMeetings",
+              t("teamweekly.card.meetingsBasis"),
+            ))}
       />
       <StatCard
         narrow="row"
@@ -311,7 +329,9 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
       <StatCard
         narrow="row"
         label={t("teamweekly.card.won")}
-        value={n(counts.deals_won)}
+        value={
+          bookingsUnavailable ? t("reporting.unavailable") : n(counts.deals_won)
+        }
         // What the wins were WORTH, beside how many were lost. The count alone
         // says a week of five small renewals and a week of one company-making
         // deal are the same week — and the money was computed, FX-converted and
@@ -321,12 +341,14 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         // strip can be read across as one comparison. The lost count stays,
         // because it is a different fact rather than a delta the money replaces.
         detail={
-          won === undefined
-            ? t("teamweekly.card.wonBasis", { lost: n(counts.deals_lost) })
-            : t("teamweekly.card.wonBasisValue", {
-                value: won,
-                lost: n(counts.deals_lost),
-              })
+          bookingsUnavailable
+            ? review.numeric_summary?.bookings_coverage.reason
+            : won === undefined
+              ? t("teamweekly.card.wonBasis", { lost: n(counts.deals_lost) })
+              : t("teamweekly.card.wonBasisValue", {
+                  value: won,
+                  lost: n(counts.deals_lost),
+                })
         }
       />
       <StatCard
@@ -361,6 +383,7 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
   const counts = review.counts;
+  const numeric = weeklyNumericStatus(review.numeric_summary);
   const rows = [
     { key: "teamweekly.movement.won" as const, value: counts.deals_won },
     { key: "teamweekly.movement.lost" as const, value: counts.deals_lost },
@@ -375,7 +398,14 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
       value: counts.meetings_held,
     },
     { key: "teamweekly.movement.leads" as const, value: counts.leads_routed },
-  ];
+  ].filter(
+    (row) =>
+      !(row.key === "teamweekly.movement.won" && numeric.bookingsUnavailable) &&
+      !(
+        row.key === "teamweekly.movement.meetings" &&
+        numeric.meetingsUnavailable
+      ),
+  );
   // One baseline for every bar. A per-row max would draw four full bars and say
   // nothing about which number is the big one.
   const max = Math.max(...rows.map((row) => row.value));

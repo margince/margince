@@ -14,6 +14,7 @@ package reportdoc
 import (
 	"fmt"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -61,23 +62,25 @@ const (
 	SeverityUnsupported Severity = "unsupported"
 )
 
-// Cell names one figure: a saved run and, within it, one cell's group keys.
+// Cell references a saved query cell, a governed live metric, or a frozen edition metric.
 //
-// This is the ONLY way a number reaches a report. The document says where the
+// The document says where the
 // figure lives; what it IS resolves at read time, under the reader's own
 // grants, which is why two readers of one report can legitimately see
 // different figures and one of them can see a refusal.
 type Cell struct {
+	MetricRef  *crmcontracts.ReportMetricReference  `json:"metric_ref,omitempty"`
+	EditionRef *crmcontracts.ReportEditionReference `json:"edition_ref,omitempty"`
 	// RunID is the saved run. A string rather than a parsed uuid because this
 	// is wire-shaped input and a malformed one is a refusal with a message,
 	// not a parse panic.
-	RunID string `json:"run_id"`
+	RunID string `json:"run_id,omitempty"`
 	// Group binds the cell's keys, one per grouping in the saved question.
 	// Empty for an ungrouped run, which has one cell.
 	Group []any `json:"group,omitempty"`
 	// Column names which measure of the cell to show. A cell can carry several
 	// and a block shows one.
-	Column string `json:"column"`
+	Column string `json:"column,omitempty"`
 }
 
 // Block is one element of a report.

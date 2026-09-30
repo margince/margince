@@ -24,6 +24,7 @@ package privacy
 // half-applied. Every query filters the hold column — and for
 // activities, the holds of every linked record plus the statutory floor.
 var retentionSelectors = map[string]string{
+	"report_edition/": reportingRetentionSelector(),
 	// An ARCHIVE policy passes over leads already archived, or it would pick the
 	// same batch every night and never reach the rest. An ANONYMIZE policy does
 	// not: an archived lead still holds its name and address, so a policy

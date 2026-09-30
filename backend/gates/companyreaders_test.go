@@ -92,6 +92,7 @@ var predicateCompanyReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	// Deal Scout: its system-principal evidence read and the suggestion writer's own conditions.
 	"internal/modules/activities/meetingcounterparty.go:HeldMeetingCounterparties": "the held-meeting walk Deal Scout reads as the system principal: the company is joined to leave out the installation's own and archived accounts, and what leaves is an (activity, company) pair the scout turns into a suggestion. A reader sees that suggestion only through its visibility clause, which asks the company grant",
 	"internal/modules/deals/suggestion.go:SuggestableCompanyClause":                "the condition a company must meet to be offered a suggestion — live, not the installation's own, no open deal. Composed only into the system-only suggestion writer and the scout's system-principal evidence read; it narrows which companies are suggested and selects no company column",

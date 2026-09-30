@@ -53,7 +53,7 @@ const asOfKey = "as_of"
 // reservedDerivationKeys are the query-string names a handle owns. Report
 // vocabularies may not squat on them, or a minted URL would be ambiguous.
 // Derived from here rather than restated, so adding a key updates the gate.
-var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, reservedDerivationColumn}
+var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, reservedDerivationColumn, reportingScopeKind, "scope_id", reportingHandleVersion}
 
 // groupByKey names the dimensions a handle groups by. Named because a refusal
 // quotes it back, and a refusal naming an argument the caller did not send is
@@ -65,6 +65,7 @@ const groupByKey = "by"
 // group-key values), which of those keys were grouping dimensions, and
 // the aggregates being explained.
 type derivationQuery struct {
+	Scope *RequestedScope
 	// Predicates bind field → value. The empty string means the empty string;
 	// an unset column is named in Unset instead.
 	Predicates map[string]string
@@ -95,6 +96,7 @@ type boundExpr struct {
 // drill-through SELECT list, the aggregate recompute list, and the
 // plain-language definition — everything but the execution.
 type derivationPlan struct {
+	scope *RequestedScope
 	preds []boundExpr
 	// predicates is the handle's raw field → value map, kept for the scoped
 	// filter gate the execution half runs before the WHERE side binds.
@@ -149,10 +151,11 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 		Report:     report,
 		Definition: plan.definition,
 		Plan: map[string]any{
-			"object":     string(spec.entity),
-			"predicates": q.Predicates,
-			"group_by":   q.GroupBy,
-			"aggregates": plan.aggregates,
+			"object":       string(spec.entity),
+			"predicates":   q.Predicates,
+			reportingScope: q.Scope,
+			"group_by":     q.GroupBy,
+			"aggregates":   plan.aggregates,
 		},
 		// The outcome's own slice: the fetch appends the label column to it
 		// when a row was named, while plan.columns still drives the scan.
@@ -183,7 +186,10 @@ func (e *reportEngine) Derive(ctx context.Context, report string, q derivationQu
 // compileDerivation validates a parsed handle against the report's
 // closed vocabulary and renders every SQL fragment and the definition.
 func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, error) {
-	plan := derivationPlan{aggregates: q.Aggregates, predicates: q.Predicates}
+	if err := checkReportScope(spec, q.Scope); err != nil {
+		return derivationPlan{}, err
+	}
+	plan := derivationPlan{scope: q.Scope, aggregates: q.Aggregates, predicates: q.Predicates}
 	if len(plan.aggregates) == 0 {
 		plan.aggregates = spec.defaultAggs
 	}

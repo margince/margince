@@ -323,8 +323,17 @@
         }
       }
     },
-    "lists": {
+    "analytics": {
       "description": "Lists switches Live Lists and Shortlists on. They are off until an operator turns them on: the product is being built, and nothing an installation shows should advertise an unfinished surface.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "performance_enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lists": {
       "type": "object",
       "additionalProperties": false,
       "properties": {

@@ -87,3 +87,9 @@ func (h Handlers) WithListsAvailable(available bool) Handlers {
 	h.listsAvailable = available
 	return h
 }
+
+// WithReportingAvailable publishes the rollout state used by the authenticated shell.
+func (h Handlers) WithReportingAvailable(available bool) Handlers {
+	h.reportingAvailable = available
+	return h
+}

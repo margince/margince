@@ -21,9 +21,12 @@ import { navigate } from "../app/router";
 // section draws against this type, so a section cannot be addressable here and
 // missing there.
 export const SECTIONS = [
-  "forecast",
-  "pipeline",
   "performance",
+  "forecast",
+  "reports",
+  "targets",
+  "definitions",
+  "pipeline",
   "outcomes",
   "coverage",
   "delivery",
@@ -55,14 +58,17 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   "projects-gone-quiet": "delivery",
 };
 
-export function sectionFromAddress(segment: string | undefined): Section {
+export function sectionFromAddress(
+  segment: string | undefined,
+  fallback: Section = "forecast",
+): Section {
   if (isSection(segment)) {
     return segment;
   }
   if (segment && segment in SECTION_OF_REPORT) {
     return SECTION_OF_REPORT[segment];
   }
-  return "forecast";
+  return fallback;
 }
 
 /**

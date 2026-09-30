@@ -1,3 +1,4 @@
+import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -898,3 +899,33 @@ export function taskRow(id: string, title: string): WorklistItem {
     actions: ["complete", "open"],
   };
 }
+
+export const sharedWeeklyNumbers: components["schemas"]["WeeklyNumericSummary"] =
+  {
+    version: "analytics-1",
+    timezone: REPORTING_FIXTURE_ZONE,
+    currency: "EUR",
+    interval: {
+      start_at: "2026-09-07T00:00:00Z",
+      end_at: "2026-09-14T00:00:00Z",
+    },
+    evaluated_at: "2026-09-14T06:00:00Z",
+    won_minor: 21600000,
+    bookings_coverage: { status: "ok", withheld: false },
+    meetings_coverage: { status: "ok", withheld: false },
+  };
+export const unavailableWeeklyNumbers: components["schemas"]["WeeklyNumericSummary"] =
+  {
+    ...sharedWeeklyNumbers,
+    won_minor: undefined,
+    bookings_coverage: {
+      status: "unavailable",
+      withheld: true,
+      reason: "Some source values are no longer readable.",
+    },
+    meetings_coverage: {
+      status: "partial",
+      withheld: false,
+      reason: "Some meeting history predates confirmed outcomes.",
+    },
+  };

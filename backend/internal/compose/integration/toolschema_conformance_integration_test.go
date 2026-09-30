@@ -129,6 +129,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 
 	calls := []struct{ tool, args string }{
 		{"list_pipelines", `{}`},
+		{"read_reporting", `{"mode":"catalog"}`},
 		{"read_brief", `{}`},
 		// The night writing back onto the morning it just read. The narrative
 		// is the run-level half and the item names one the snapshot above

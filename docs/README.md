@@ -81,6 +81,7 @@ a 24-hour deadline is not a thing to work out under pressure.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
+- [Operate sales reporting](how-to/operate-reporting.md) — pilot setup, captures, schedules, privacy and durable rollback.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.
 - [add-a-job.md](how-to/add-a-job.md) — declare a background job kind in the job contract, then write and register its worker.

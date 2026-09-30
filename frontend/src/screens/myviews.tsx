@@ -65,9 +65,11 @@ function ViewGroup({
           label={title}
           rows={rows}
           rowKey={(view) => view.id}
-          // The builder reads the object off the address and loads the view
-          // from its own menu; opening one here takes the reader there.
-          onRowClick={() => navigate({ screen: "filters", id: resource })}
+          // The builder reads the object and the view off the address, so the
+          // view opens already loaded and Back returns here.
+          onRowClick={(view) =>
+            navigate({ screen: "filters", id: resource, id2: view.id })
+          }
           columns={[
             {
               key: "name",

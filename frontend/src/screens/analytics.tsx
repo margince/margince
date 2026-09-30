@@ -11,7 +11,6 @@ import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
-import { SurfaceState } from "../design-system/surfacestate";
 import {
   formatDateTime,
   formatMoneyCompact,
@@ -54,19 +53,22 @@ import {
   ExplainPanel,
   rowDerivationUrl,
 } from "./analytics.explain";
-import { ForecastView } from "./analytics.forecast";
+import { ForecastView, SharedForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
+import { MyOutcomesView } from "./analytics.outcomes";
 import { StageAgeTable, WinLossTable } from "./analytics.performance";
 import { QuestionsView } from "./analytics.questions";
-import {
-  FORECAST_CATEGORIES,
-  MEETING_STATUSES,
-} from "./analytics.questions.values";
+import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ForecastShareActions } from "./analytics.share";
-import { QueryGate, throwProblem } from "./common";
+import { QueryGate, throwProblem, useMe } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
+import { ReportingDefinitions } from "./reporting.definitions";
+import { ReportingForecastGraphs } from "./reporting.forecast";
+import { ReportingLibrary } from "./reporting.library";
+import { ReportingOverview } from "./reporting.overview";
+import { ReportingTargets } from "./reporting.targets";
 import "./analytics.css";
 
 // Analytics: a picker over three reports — deals-by-stage (unweighted beside
@@ -112,6 +114,9 @@ type ReportKey =
 // and the bodies both read this, so a section cannot come to list a report it
 // does not draw.
 const SECTION_REPORTS = {
+  reports: [],
+  targets: [],
+  definitions: [],
   // The forecast section draws its own view — readings, a call and a receipt,
   // none of which is a row set — so it lists no report card.
   forecast: [],
@@ -179,18 +184,6 @@ function pricedFootnote(
     priced: formatNumber(pricedDeals, locale),
     total: formatNumber(total, locale),
   });
-}
-
-// What a reading says when the row it needs is not there. THREE facts, not one:
-// a read in flight resolves by waiting, a failed one never will, and a lens
-// that answered with nothing has told the truth. One word over all three said
-// "nothing to read yet" over a request that had failed.
-function absentReading(
-  query: Readonly<{ isLoading: boolean; isError: boolean }>,
-): MessageKey {
-  if (query.isLoading) return "analytics.readingLoading";
-  if (query.isError) return "analytics.readingUnavailable";
-  return "analytics.readingNone";
 }
 
 // The line under a report's title, for the reports whose copy says something
@@ -787,165 +780,6 @@ function useDataCoverage() {
   });
 }
 
-type AnalyticsScopeWire = components["schemas"]["AnalyticsScope"];
-
-// The seat's own outcomes: open pipeline and meetings, nothing computed here.
-//
-// Drawn only under an OWNER default lens. The report engine's population
-// default is the caller's own row scope, so for a wider lens the same
-// requests would measure a team while the heading said "my" — and there is
-// no per-report scope override on the wire to force self. The tab is hidden
-// for those lenses; a hand-typed address gets the explanation instead.
-function MyOutcomesView({
-  defaultScope,
-  locale,
-}: Readonly<{ defaultScope: AnalyticsScopeWire; locale: Locale }>) {
-  const t = useT();
-  const self = defaultScope.kind === "owner" ? (defaultScope.id ?? null) : null;
-
-  const pipelineQuery = useQuery({
-    queryKey: ["report", "pipeline-current", "outcomes", self],
-    enabled: self != null,
-    queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "pipeline-current" } },
-        body: {
-          // The seat pinned EXPLICITLY, not left to the server's default
-          // population: the default is also the caller's own today, so the
-          // two agree, but this card's heading says "my" and a heading must
-          // not be true by a coincidence this file cannot see.
-          filters: { owner_id: self },
-          aggregates: [
-            { fn: "count", as: "deal_count" },
-            { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-          ],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  const meetingsQuery = useQuery({
-    queryKey: ["report", "activities-by-kind", "outcomes", self],
-    enabled: self != null,
-    queryFn: async () => {
-      const { data, error } = await api.POST("/reports/{report}", {
-        params: { path: { report: "activities-by-kind" } },
-        body: {
-          filters: { kind: "meeting", host_user_id: self },
-          group_by: ["meeting_status"],
-          aggregates: [{ fn: "count", as: "meetings" }],
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  if (self == null) {
-    // A hand-typed address under a manager lens: the numbers this view could
-    // fetch would measure the default population, not the contact. `withheld`
-    // and not `empty`, which would claim they have no outcomes.
-    return (
-      <SurfaceState
-        state="withheld"
-        emptyLabel={t("common.empty")}
-        loadingLabel={t("analytics.sectionOutcomes")}
-        detail={{ withheldReason: t("analytics.outcomesOwnLensOnly") }}
-      >
-        {null}
-      </SurfaceState>
-    );
-  }
-
-  const pipelineRow = pipelineQuery.data?.rows[0];
-  const baseCurrency = pipelineQuery.data?.base_currency ?? null;
-  const noRow = t(absentReading(pipelineQuery));
-  const pipelineCount = pipelineRow
-    ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
-    : noRow;
-  const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
-  // The currency names what the figure is IN, so a read with none to name drops
-  // the parenthetical. TWO absences follow, never one word for both: no
-  // currency is a setting to fill, an absent sum is a row with no priced deal
-  // in it — and only the first has a reason worth a detail line.
-  const valueLabel = baseCurrency
-    ? t("analytics.baseValue", { currency: baseCurrency })
-    : t("analytics.baseValueUnnamed");
-  const openMoney = !baseCurrency
-    ? t("analytics.noBaseCurrency")
-    : rawMinor == null
-      ? t("analytics.forecastNoAmount")
-      : formatMoneyCompact(rawMinor, baseCurrency, locale);
-  const meetingRows = meetingsQuery.data?.rows ?? [];
-  const meetingsByStatus = new Map(
-    meetingRows
-      .filter((row) => typeof row.meeting_status === "string")
-      .map((row) => [String(row.meeting_status), rowCount(row, "meetings")]),
-  );
-
-  return (
-    <>
-      <Panel title={t("analytics.myPipeline")}>
-        <PanelBody>
-          <StatStrip>
-            {/* Both readings are one row of the pipeline report, and the
-                pipeline section draws that report — so the door is that
-                section rather than a deal list this view never queried. */}
-            <StatCard
-              narrow="row"
-              label={t("analytics.count")}
-              value={pipelineCount}
-              onOpen={() => openAnalyticsSection("pipeline")}
-            />
-            <StatCard
-              narrow="row"
-              label={valueLabel}
-              value={pipelineRow ? openMoney : noRow}
-              // WHY there is no figure, where a row came back and no currency
-              // names it: an installation that never set one is a setting away
-              // from a number, and "No amount" alone reads as a book worth
-              // nothing.
-              detail={
-                pipelineRow && !baseCurrency
-                  ? t("analytics.noBaseCurrencyWhy")
-                  : undefined
-              }
-              onOpen={() => openAnalyticsSection("pipeline")}
-            />
-          </StatStrip>
-        </PanelBody>
-      </Panel>
-      <Panel title={t("analytics.myMeetings")}>
-        <PanelBody>
-          {/* Current standing, stated as such: a held meeting was once booked
-              and the record no longer says so, so these are today's facts and
-              not a funnel. */}
-          <PanelIntro>{t("analytics.meetingsAsTheyStand")}</PanelIntro>
-          <StatStrip>
-            {MEETING_STATUSES.map((status) => (
-              <StatCard
-                key={status.key}
-                narrow="row"
-                label={t(status.labelKey)}
-                value={formatNumber(
-                  meetingsByStatus.get(status.key) ?? 0,
-                  locale,
-                )}
-              />
-            ))}
-          </StatStrip>
-        </PanelBody>
-      </Panel>
-    </>
-  );
-}
-
 // Which table a report's rows become — a switch in its own component so the
 // card's render stays a frame plus a choice.
 function ReportBody({
@@ -1125,9 +959,20 @@ export function AnalyticsScreen() {
   // Read here rather than taken as a prop, so this screen stays drivable on its
   // own: a suite that renders it directly goes on pressing the tabs.
   const route = useRoute();
-  const section = sectionFromAddress(
+  const reportingEnabled =
+    useMe().data?.settings_availability?.reporting === true;
+  const requested = sectionFromAddress(
     route.screen === "analytics" ? route.id : undefined,
+    reportingEnabled ? "performance" : "forecast",
   );
+  const section =
+    !reportingEnabled &&
+    (requested === "reports" ||
+      requested === "targets" ||
+      requested === "definitions" ||
+      (route.screen === "analytics" && !route.id))
+      ? "forecast"
+      : requested;
   // The server decides which population this reader measures and which ones
   // they may choose. Read once here and handed down, so every card on the page
   // is answering about the same set.
@@ -1150,12 +995,21 @@ export function AnalyticsScreen() {
   // Sharing sits beside the tabs rather than inside a section, because the
   // thing being shared is the SECTION the reader is on — a button that moved
   // with the content would read as sharing one card.
+  const canReadReports = useCan("report_definition", "read");
+  const canReadTargets = useCan("sales_target", "read");
+  const canReadFramework = useCan("reporting_framework", "read");
   const canReadCoverage = useCan("data_coverage", "read");
   const coverageProbe = useDataCoverage();
   const header = (
     <div className="analytics-header">
       <RecordTabs
         options={SECTIONS.filter((candidate) => {
+          if (candidate === "reports")
+            return reportingEnabled && canReadReports;
+          if (candidate === "targets")
+            return reportingEnabled && canReadTargets;
+          if (candidate === "definitions")
+            return reportingEnabled && canReadFramework;
           if (candidate === "outcomes") {
             return context.data?.default_scope.kind === "owner";
           }
@@ -1169,6 +1023,9 @@ export function AnalyticsScreen() {
         value={section}
         onChange={openAnalyticsSection}
         labels={{
+          reports: t("reporting.reports"),
+          targets: t("reporting.targets"),
+          definitions: t("reporting.definitions"),
           forecast: t("analytics.sectionForecast"),
           pipeline: t("analytics.sectionPipeline"),
           performance: t("analytics.sectionPerformance"),
@@ -1187,12 +1044,15 @@ export function AnalyticsScreen() {
             onSelect={selectScope}
           />
         ) : null}
-        {section === "forecast" && selection ? (
+        {section === "forecast" && selection && !reportingEnabled ? (
           <ForecastShareActions target="forecast" scope={selection.scope} />
         ) : null}
       </div>
     </div>
   );
+
+  if (route.screen === "analytics" && route.id === "shared" && route.id2)
+    return <SharedForecastView token={route.id2} />;
 
   return (
     <div className="wrap">
@@ -1200,6 +1060,7 @@ export function AnalyticsScreen() {
       <div className="analytics-body">
         <SectionBody
           section={section}
+          reportingEnabled={reportingEnabled}
           locale={locale}
           context={context.data}
           selection={selection}
@@ -1215,6 +1076,7 @@ export function AnalyticsScreen() {
 // stays a header plus a choice rather than a ladder of ternaries.
 function SectionBody({
   section,
+  reportingEnabled,
   locale,
   context,
   selection,
@@ -1222,6 +1084,7 @@ function SectionBody({
   stages,
 }: Readonly<{
   section: Section;
+  reportingEnabled: boolean;
   locale: Locale;
   context: components["schemas"]["AnalyticsContext"] | undefined;
   selection: AnalyticsSelection | null;
@@ -1229,6 +1092,21 @@ function SectionBody({
   stages: readonly Stage[];
 }>) {
   switch (section) {
+    case "performance":
+      return (
+        <PerformanceSection
+          enabled={reportingEnabled}
+          selection={selection}
+          stages={stages}
+          locale={locale}
+        />
+      );
+    case "reports":
+      return <ReportingLibrary />;
+    case "targets":
+      return <ReportingTargets />;
+    case "definitions":
+      return <ReportingDefinitions />;
     case "questions":
       return selection && context ? (
         <QuestionsView
@@ -1248,10 +1126,18 @@ function SectionBody({
       ) : null;
     case "forecast":
       return selection && context ? (
-        <ForecastView
-          selection={selection}
-          canSubmit={context.capabilities.submit_manager_forecast}
-        />
+        <>
+          {reportingEnabled ? (
+            <ReportingForecastGraphs
+              key={JSON.stringify(selection.scope)}
+              scope={selection.scope}
+            />
+          ) : null}
+          <ForecastView
+            selection={selection}
+            canSubmit={context.capabilities.submit_manager_forecast}
+          />
+        </>
       ) : null;
     default:
       return (
@@ -1267,4 +1153,36 @@ function SectionBody({
         </>
       );
   }
+}
+
+function PerformanceSection({
+  enabled,
+  selection,
+  stages,
+  locale,
+}: Readonly<{
+  enabled: boolean;
+  selection: AnalyticsSelection | null;
+  stages: readonly Stage[];
+  locale: Locale;
+}>) {
+  if (enabled)
+    return selection ? (
+      <ReportingOverview
+        key={JSON.stringify(selection.scope)}
+        scope={selection.scope}
+      />
+    ) : null;
+  return (
+    <>
+      {SECTION_REPORTS.performance.map((report) => (
+        <ReportCard
+          key={report}
+          report={report}
+          stages={stages}
+          locale={locale}
+        />
+      ))}
+    </>
+  );
 }

@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "34cdf57109948553cb8170f251fd21e57d5d866c5da34bf64f3c11afd3e273ac"
+const JobContractHash = "33efc4ca3323fac76de9d4eb03d2e78125239efc06b1ab9b5bcec2a11721ee08"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -629,7 +629,7 @@ var specs = map[string]Spec{
 		GoType:      "PrivacyRetentionArgs",
 		Role:        Worker,
 		Queue:       "privacy_retention",
-		Timeout:     TimeoutPolicy{Fixed: 405 * time.Minute, DerivedFrom: "privacyRetentionPassTimeout"},
+		Timeout:     TimeoutPolicy{Fixed: 26300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{OperatorField: "PrivacyRetention.Interval", ScheduleWhenPositive: "PrivacyRetention.Interval"},
@@ -666,6 +666,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsArgs,
 		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
 		Args:         []ArgField{{Name: "RunID"}, {Name: "Workspace"}},
+	},
+	"report_schedule_sweep": {
+		Kind:      "report_schedule_sweep",
+		GoType:    "ReportScheduleSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 6 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 5 * time.Minute},
 	},
 	"risk_verdict_sweep": {
 		Kind:      "risk_verdict_sweep",

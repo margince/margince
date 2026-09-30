@@ -104,7 +104,7 @@ const (
 	fieldPartnerSourced   = "partner_sourced"
 	fieldPartnerCompanyID = "partner_company_id"
 	fieldStalled          = "stalled"
-	fieldCurrency         = "currency"
+	fieldCurrency         = reportingCurrency
 	fieldPipelineID       = "pipeline_id"
 	fieldOwnerID          = "owner_id"
 	fieldAmountMinor      = "amount_minor"
@@ -145,6 +145,7 @@ type reportAggregate struct {
 }
 
 type reportRequest struct {
+	Scope      *RequestedScope   `json:"scope,omitempty"`
 	Filters    map[string]any    `json:"filters,omitempty"`
 	GroupBy    []string          `json:"group_by,omitempty"`
 	Aggregates []reportAggregate `json:"aggregates,omitempty"`
@@ -268,6 +269,7 @@ func (s reportSpec) fromClause() string {
 // Filters/GroupBy/Aggregates carry the EFFECTIVE plan (defaults applied)
 // so the transport can mint derivation handles for exactly what ran.
 type reportOutcome struct {
+	Scope      *RequestedScope
 	Report     string
 	Plan       map[string]any
 	Filters    map[string]any
@@ -296,6 +298,9 @@ type reportOutcome struct {
 // runSpec executes one validated vocabulary; Run (prebuilt catalog) and
 // runAdHocPlan (schema-descriptor vocabulary) both land here.
 func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSpec, req reportRequest) (reportOutcome, error) {
+	if err := checkReportScope(spec, req.Scope); err != nil {
+		return reportOutcome{}, err
+	}
 	if err := auth.Require(ctx, string(spec.entity), principal.ActionRead); err != nil {
 		return reportOutcome{}, err
 	}
@@ -351,11 +356,13 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		PopulationNarrowed:   fetched.narrowed,
 		Report:               report,
 		Plan: map[string]any{
-			"object":     string(spec.entity),
-			"filters":    req.Filters,
-			"group_by":   groupBy,
-			"aggregates": aggregates,
+			"object":       string(spec.entity),
+			reportingScope: req.Scope,
+			"filters":      req.Filters,
+			"group_by":     groupBy,
+			"aggregates":   aggregates,
 		},
+		Scope:      req.Scope,
 		Filters:    req.Filters,
 		GroupBy:    groupBy,
 		Aggregates: aggregates,

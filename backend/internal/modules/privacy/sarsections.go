@@ -20,6 +20,7 @@ import (
 // order the chapters concatenate in is the order the export runs them in.
 func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities []ids.UUID) []sarSection {
 	sections := sarIdentitySections(pkg)
+	sections = append(sections, sarReportingSections(pkg))
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)

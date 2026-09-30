@@ -88,6 +88,7 @@ Records, deals and mail in Margince, by page:
 - **[Your day and your week](your-day-and-your-week.md)** — the Worklist's
   bands and how a row earns its place, pinning, snoozing and what each verb
   reaches, the frozen weekly review, planning a week, and what a team lead sees.
+- **[Performance and saved reports](sales-reporting.md)** — graphs, targets, scheduled editions, comparisons and exports.
 - **[Analytics and forecasting](analytics.md)** — the six report sections, what
   each number covers and how to open the rows behind it, forecast calls, the
   projected landing, and the pipeline-needed figure that is deliberately not a

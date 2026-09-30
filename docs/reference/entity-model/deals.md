@@ -391,21 +391,28 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_stage_history
 
-12 columns · primary key `(id)` · referenced by 2 foreign keys
+19 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid` | yes | Primary key. |
 | `amount_minor_at_change` | `bigint` |  | Optional `bigint`. |
 | `approval_id` | `uuid` |  | Optional `uuid`. |
+| `base_currency_at_change` | `text` |  | Optional `text`. |
+| `base_minor_at_change` | `bigint` |  | Optional `bigint`. |
 | `changed_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`, defaulting to `now()`. |
 | `changed_by` | `text` | yes | Required `text`. |
 | `currency_at_change` | `character(3)` |  | Optional `character(3)`. |
 | `deal_id` | `uuid` | yes | Points at `deal.id` — deleting the parent deletes this row. |
 | `from_stage_id` | `uuid` |  | Points at `stage.id` — deleting the parent keeps this row and clears the link. |
+| `fx_date_at_change` | `date` |  | Optional `date`. |
+| `fx_rate_at_change` | `numeric` |  | Optional `numeric`. |
+| `owner_id_at_change` | `uuid` |  | Optional `uuid`. |
+| `pipeline_id_at_change` | `uuid` |  | Optional `uuid`. |
 | `reversal_of` | `uuid` |  | Points at `deal_stage_history.id` — deleting the parent keeps this row and clears the link. |
 | `semantic_at_change` | `text` |  | One of `open`, `won`, `lost`. |
 | `to_stage_id` | `uuid` | yes | Points at `stage.id` — the parent cannot be deleted while this row points at it. |
+| `valuation_provenance` | `text` |  | Optional `text`. |
 | `win_probability_at_change` | `smallint` |  | Optional `smallint`. |
 
 **Points at**
@@ -429,6 +436,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_stage_history_pkey` — `unique, btree (id)`
 - `idx_deal_stage_history_changed` — `btree (changed_at)`
 - `idx_dsh_deal` — `btree (deal_id, changed_at)`
+- `reporting_stage_events` — `btree (deal_id, changed_at, id)`
 
 ## deal_suggestion
 
@@ -715,7 +723,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## pipeline
 
-8 columns · primary key `(id)` · referenced by 5 foreign keys
+8 columns · primary key `(id)` · referenced by 7 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -75,8 +76,9 @@ func (t runReport) Spec() mcp.ToolSpec {
 		OpenAPIOp: "runReport",
 		InputSchema: schema(`{"type":"object","required":["report"],"properties":{
 			"report":` + reportProperty(t.catalog) + `,
-			"filters":{"type":"object","description":"Equality predicates keyed by this report's filter names — {\"owner_id\":\"<uuid>\"}. A key outside the report's list is refused."},
-			"group_by":{"type":"array","items":{"type":"string"},"description":"Dimension names from this report's list. Omit for the report's own default grouping."},
+            "scope":` + string(schemaFor[crmcontracts.ReportScope]()) + `,
+			"filters":{"type":"object","description":"Equality predicates using this report's published filter names."},
+			"group_by":{"type":"array","items":{"type":"string"},"description":"Published dimension names; omit for default grouping."},
 			"aggregates":{"type":"array","items":{"type":"object","required":["fn"],"properties":{
 				"fn":` + aggregateFunctionProperty(t.plan.Functions) + `,
 				"field":{"type":"string","description":"A measure name from this report's list. Omit only with fn=count."},

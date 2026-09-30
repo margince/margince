@@ -1650,3 +1650,11 @@ Two operator gotchas, verified against current vendor docs:
 2. **Vendor `-latest` model aliases drift and some are being deprecated**
    (e.g. Mistral). Pin an explicit versioned id, or resolve via the
    vendor's `/models` endpoint, rather than hardcoding an alias.
+
+## Sales reporting
+
+`analytics.performance_enabled` (default `false`) enables governed sales reporting
+in both API and worker. It controls availability, the metric MCP tool, scheduled
+editions and configured forecast captures. The legacy analytics and workspace
+forecast continue when disabled. [Operate reporting](../how-to/operate-reporting.md)
+covers pilot setup, durable pause, history gaps and rollback.

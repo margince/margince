@@ -94,7 +94,7 @@ func buildReportWhere(
 	// their Forecast — narrowed by this same resolver — shows their own. Two
 	// Analytics tabs disagreeing about which records they cover, with nothing
 	// on screen saying so.
-	if spec.population == measureCallersOwn {
+	if spec.population == measureCallersOwn || requested.Kind != "" {
 		population, err := reportPopulationClause(ctx, tx, requested, arg)
 		if err != nil {
 			return nil, "", err
@@ -104,7 +104,7 @@ func buildReportWhere(
 		}
 	}
 	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
-		breaksDownByOwner(spec, req.GroupBy) && !pinsOwner(spec, filterKeys), arg)
+		requested.Kind == "" && breaksDownByOwner(spec, req.GroupBy) && !pinsOwner(spec, filterKeys), arg)
 	if err != nil {
 		return nil, "", err
 	}

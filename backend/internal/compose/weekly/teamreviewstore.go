@@ -31,7 +31,7 @@ const teamReviewSelect = `
 	       meetings_held, meetings_with_next_step,
 	       commitments_due, commitments_kept,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
-	       base_currency, reps_unread
+	       base_currency, reps_unread, numeric_summary
 	  FROM team_weekly_review`
 
 // memberWeek reads one member's frozen week, and how many commitments they
@@ -95,6 +95,7 @@ func insertTeamReview(ctx context.Context, tx pgx.Tx, review TeamReview) (ids.UU
 		cols = append(cols, name)
 		args = append(args, value)
 	}
+	add("numeric_summary", review.NumericSummary)
 	add("team_id", review.TeamID)
 	add("team_name", review.TeamName)
 	add("local_week_start", review.LocalWeekStart)
@@ -285,7 +286,7 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&c.CommitmentsDue, &c.CommitmentsKept,
-		&created, &won, &lost, &currency, &review.RepsUnread); {
+		&created, &won, &lost, &currency, &review.RepsUnread, &review.NumericSummary); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return TeamReview{}, apperrors.ErrNotFound
 	case err != nil:

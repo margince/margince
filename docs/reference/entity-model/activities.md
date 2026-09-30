@@ -272,14 +272,16 @@ The 25 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_meeting_history
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id` — deleting the parent deletes this row. |
 | `actor` | `text` | yes | Required `text`. |
+| `customer_eligible_at_change` | `boolean` |  | Optional `boolean`. |
 | `effective_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`. |
+| `host_id_at_change` | `uuid` |  | Optional `uuid`. |
 | `partial_pre_history` | `boolean` | yes | Required `boolean`, defaulting to `false`. |
 | `scheduled_start` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `source_id` | `text` |  | Optional `text`. |

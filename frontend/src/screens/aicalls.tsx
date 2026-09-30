@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
+import { useUrlParams } from "../app/urlstate";
 import { Badge, Button, EmptyState, TableScroll } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
@@ -104,6 +105,9 @@ export function useLastCallAt(): LastCall {
     : { state: "never" };
 }
 
+/** The address dial the trace is narrowed by, so a task row can link to its calls. */
+export const CALL_TASK_PARAM = "task";
+
 export function AiCallsCard() {
   const t = useT();
   const { locale } = useLocale();
@@ -113,7 +117,13 @@ export function AiCallsCard() {
   // seat may still read a diagnostic.
   const canSee = useCan("ai_diagnostics", "read");
   const zone = viewerZone();
-  const [task, setTask] = useState("");
+  const [params, setParams] = useUrlParams();
+  const task = params.get(CALL_TASK_PARAM) ?? "";
+  const setTask = (next: string) => {
+    const dials = new Map(params);
+    dials.set(CALL_TASK_PARAM, next);
+    setParams(dials);
+  };
   const [expanded, setExpanded] = useState<string | null>(null);
   const query = useCallTrace(task, canSee);
   const calls = query.data?.pages.flatMap((page) => page.data) ?? [];
@@ -121,7 +131,10 @@ export function AiCallsCard() {
   // The filter options are the server's complete task set (carried on every
   // page), NOT the tasks on the loaded rows: deriving them from `calls` would
   // collapse the dropdown to the one selected task once a filter is applied.
-  const tasks = query.data?.pages[0]?.tasks ?? [];
+  const listed = query.data?.pages[0]?.tasks ?? [];
+  // A task reached by link may have no calls yet and so be absent from the
+  // server's set; it stays selectable so the select shows what is filtered.
+  const tasks = task && !listed.includes(task) ? [task, ...listed] : listed;
 
   if (!canSee) {
     // Withheld, not absent — the same choice the spend card above it makes. An

@@ -114,11 +114,7 @@ var prebuiltReports = map[string]reportSpec{
 			// The most recent entry into the CURRENT stage. A deal that moved
 			// out and back counts from its return, because that is when the
 			// clock a reader cares about started again.
-			`LEFT JOIN LATERAL (
-				SELECT max(h.changed_at) AS entered_at
-				FROM deal_stage_history h
-				WHERE h.deal_id = t.id AND h.to_stage_id = t.stage_id
-			) entry ON true`,
+			currentStageEntryJoin,
 		},
 		baseWhere: whereArchivedNull + " AND t.status = 'open'",
 		basePlain: "live (unarchived) open deals, aged from the last time each entered its current stage",
@@ -136,7 +132,7 @@ var prebuiltReports = map[string]reportSpec{
 			// one whose stage was set at creation before any move — falls back
 			// to its creation date rather than reporting NULL: the age is real
 			// even where the history is silent about it.
-			fieldDaysInStage: "EXTRACT(DAY FROM (now() - COALESCE(entry.entered_at, t.created_at)))",
+			fieldDaysInStage: currentStageAgeSQL("now()"),
 		},
 		filters: map[string]string{
 			fieldPipelineID: colPipelineID,
@@ -342,7 +338,7 @@ var prebuiltReports = map[string]reportSpec{
 	// expression the drill-through rows expose. Stakeholders never join
 	// in: the grain is one row per deal, so a multi-stakeholder deal
 	// counts once (AC-F2).
-	"forecast": {
+	objectForecast: {
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
@@ -412,4 +408,14 @@ var prebuiltReports = map[string]reportSpec{
 			{Fn: aggFnSum, Field: fieldWeightedAmountMinor, As: "weighted_minor"},
 		},
 	},
+}
+
+const currentStageEntryJoin = `LEFT JOIN LATERAL (
+				SELECT max(h.changed_at) AS entered_at
+				FROM deal_stage_history h
+				WHERE h.deal_id = t.id AND h.to_stage_id = t.stage_id
+			) entry ON true`
+
+func currentStageAgeSQL(at string) string {
+	return "EXTRACT(DAY FROM (" + at + " - COALESCE(entry.entered_at, t.created_at)))"
 }

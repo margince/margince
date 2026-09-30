@@ -16,6 +16,13 @@ when it has content.
 
 ### Added
 
+- Opt-in visual analytics for sellers and managers: bookings trends, pipeline
+  stages and age, SDR outcomes, target attainment, forecast composition and
+  captured movement, with permission-checked evidence and CSV export.
+- Saved report revisions, weekly/monthly schedules and dated editions retain
+  their chart data for later comparison. Shared metric definitions, explicit
+  scoped targets and the `read_reporting` MCP tool use the same reporting engine.
+
 - Mail history: setup and Settings share a dropdown through ten years, show the
   preview start date, and qualify capped message and cost estimates.
 
@@ -43,6 +50,10 @@ when it has content.
   token must set one of the two on upgrade, or its scrapes answer 401.
 
 ### Fixed
+
+- Mobile record action bars and truncated contact deal-room lists keep their
+  explanatory text inset from the surface edge. The unchecked Forecast story
+  includes its first-run preview.
 
 - **A failed-login lock no longer keeps out a browser that has signed in
   before.** Signing in sets a `crm_device` cookie; while an account is locked, a

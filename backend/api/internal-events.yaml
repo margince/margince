@@ -15,6 +15,15 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventReportingChanged:
+      type: object
+      x-event-type: reporting.changed
+      x-entity-type: dynamic
+      description: Reporting configuration or publication changed; consumers re-read authorized state.
+      required: [object, action]
+      properties:
+        object: { type: string }
+        action: { type: string }
     InternalEventBookingPageUpdated:
       type: object
       x-event-type: booking_page.updated

@@ -791,7 +791,7 @@
        reach. */
     z-index: 2;
     margin: 12px 0 0;
-    padding: var(--space-2) 0;
+    padding: var(--space-2) var(--padCard);
     background: var(--bgPage);
     border-top: 1px solid var(--borderSubtle);
   }
