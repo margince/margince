@@ -166,8 +166,28 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
     ).toBeNull(),
   );
   expect(screen.getByText("Personal link · Intro call")).toBeTruthy();
+  // The Withdraw button that opened the dialog went with its card.
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Book a meeting" }),
+    ),
+  );
   // The archived proposal still sits on the contact's timeline until it is read again.
   expect(client.getQueryState(["contact360", "p-1"])?.isInvalidated).toBe(true);
+});
+
+it("returns focus to the Withdraw button when the withdrawal is cancelled", async () => {
+  const user = userEvent.setup();
+  mount(() => [proposed]);
+  const row = (
+    await screen.findByText("Proposed 2 times · Project discovery")
+  ).closest("article");
+  if (!row) throw new Error("Each proposal is drawn as its own card");
+  const opener = within(row).getByRole("button", { name: "Withdraw" });
+  await user.click(opener);
+  const dialog = await screen.findByRole("dialog");
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(document.activeElement).toBe(opener));
 });
 
 it("resends an invitation through the composer with the email it was sent with", async () => {

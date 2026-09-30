@@ -81,7 +81,13 @@ export const WaitingOnReplyPhone: Story = {
 // the read again rather than vanishing as if nothing were waiting.
 function WaitingUnreadable() {
   const proposals = useMeetingProposals(view.contact.id);
-  return <WaitingSection contact={view.contact} proposals={proposals} />;
+  return (
+    <WaitingSection
+      contact={view.contact}
+      proposals={proposals}
+      afterWithdraw={() => null}
+    />
+  );
 }
 export const WaitingFailed: StoryObj = {
   decorators: [

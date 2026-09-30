@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
@@ -50,12 +50,17 @@ export function useMeetingProposals(contactId: string | undefined) {
 export function WaitingSection({
   contact,
   proposals,
+  afterWithdraw,
 }: Readonly<{
   contact: Contact;
   proposals: ReturnType<typeof useMeetingProposals>;
+  // Where focus lands once a withdrawal removes the card that opened the
+  // dialog; the last one takes this whole section with it.
+  afterWithdraw: () => HTMLElement | null;
 }>) {
   const t = useT();
   const client = useQueryClient();
+  const withdrawn = useRef(false);
   const [withdrawing, setWithdrawing] = useState<Proposal | null>(null);
   const [resending, setResending] = useState<Proposal | null>(null);
   const withdraw = useMutation({
@@ -68,6 +73,7 @@ export function WaitingSection({
       if (error) throwProblem(error);
     },
     onSuccess: async (_done, { contactId }) => {
+      withdrawn.current = true;
       setWithdrawing(null);
       await Promise.all(
         [
@@ -101,6 +107,7 @@ export function WaitingSection({
             proposal={proposal}
             onResend={() => setResending(proposal)}
             onWithdraw={() => {
+              withdrawn.current = false;
               withdraw.reset();
               setWithdrawing(proposal);
             }}
@@ -110,6 +117,7 @@ export function WaitingSection({
       <ConfirmModal
         open={withdrawing !== null}
         onClose={() => setWithdrawing(null)}
+        returnFocusTo={() => (withdrawn.current ? afterWithdraw() : null)}
         title={t("contact.meetings.withdrawTitle")}
         confirmLabel={t("contact.meetings.withdrawConfirm")}
         confirmVariant="danger"

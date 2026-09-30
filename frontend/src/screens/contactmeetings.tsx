@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
@@ -227,6 +228,7 @@ export function ContactMeetingsTab({
   // meeting at all.
   const meetingPrep =
     view?.moment?.rule === "meeting_prep" ? view.moment : undefined;
+  const bookButton = useRef<HTMLButtonElement>(null);
   return (
     <div className="record-stack">
       <div className="pe-meetings-head">
@@ -238,6 +240,7 @@ export function ContactMeetingsTab({
         <div className="pe-meeting-actions">
           <CopyBookingLink />
           <Button
+            ref={bookButton}
             variant="primary"
             disabled={loading || !view || !grantKnown}
             reason={
@@ -296,7 +299,13 @@ export function ContactMeetingsTab({
           )}
         </SurfaceState>
       </section>
-      {view && <WaitingSection contact={view.contact} proposals={proposals} />}
+      {view && (
+        <WaitingSection
+          contact={view.contact}
+          proposals={proposals}
+          afterWithdraw={() => bookButton.current}
+        />
+      )}
       <section>
         <Heading size="large" className="t-h3">
           {t("contact.meetings.past")}
