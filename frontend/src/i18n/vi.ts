@@ -10124,6 +10124,11 @@ export const vi = {
   "lists.members.why": "V\u00ec sao?",
   "lists.members.selectAll_one": "Chọn tất cả {count} thành viên",
   "lists.members.selectAll_other": "Chọn tất cả {count} thành viên",
+  "lists.members.selectionFullTitle": "Đã chọn tối đa",
+  "lists.members.selectionFull_one":
+    "Đã chọn {count} thành viên, mức tối đa cho một thay đổi. Bỏ chọn một thành viên để chọn thành viên khác.",
+  "lists.members.selectionFull_other":
+    "Đã chọn {count} thành viên, mức tối đa cho một thay đổi. Bỏ chọn một thành viên để chọn thành viên khác.",
   "lists.members.selectAllCappedTitle": "Chưa chọn hết thành viên",
   "lists.members.selectAllCapped_one":
     "Chỉ chọn được {count} thành viên đầu tiên một lần. Xử lý thành viên này rồi chọn phần còn lại.",

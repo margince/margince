@@ -90,8 +90,11 @@ func (s *Store) LockLeadForBulkTx(ctx context.Context, tx pgx.Tx, id ids.LeadID)
 	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
 		return BulkRow{}, err
 	}
+	// A lead may carry only an address, so its label falls back to the email
+	// and then to nothing rather than scanning a NULL into the label.
 	return lockForBulk(ctx, tx, "lead", id.UUID,
-		`SELECT full_name, version, owner_id FROM lead WHERE id = $1 AND archived_at IS NULL FOR UPDATE`)
+		`SELECT COALESCE(NULLIF(btrim(full_name), ''), email::text, ''), version, owner_id
+		   FROM lead WHERE id = $1 AND archived_at IS NULL FOR UPDATE`)
 }
 
 // ReassignLeadTx hands one lead to owner, conditioned on ifVersion — the write

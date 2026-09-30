@@ -179,6 +179,55 @@ describe("acting on a list's members", () => {
     ).toBeInTheDocument();
   });
 
+  it("adds no member past the cap but still lets one be unticked", async () => {
+    let walked = 0;
+    const others = (from: number, n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        id: `01a0f000-0000-7000-8000-${String(from + i).padStart(12, "0")}`,
+        display_name: `Company ${from + i}`,
+        version: 1,
+      }));
+    const user = userEvent.setup();
+    openList(LIVE_ID, {
+      "GET /companies": () => {
+        walked += 1;
+        const data =
+          walked === 1
+            ? members
+            : walked === 2
+              ? [members[0], ...others(1000, 199)]
+              : others(walked * 1000, 200);
+        return jsonResponse({
+          data,
+          page: { has_more: walked < 4, next_cursor: `c${walked}` },
+        });
+      },
+    });
+    await screen.findByText("MiTek");
+    await user.click(
+      screen.getByRole("button", {
+        name: en["lists.members.selectAll_other"].replace("{count}", "42"),
+      }),
+    );
+    const selected = (n: number) =>
+      en["bulk.selected_other"].replace("{count}", String(n));
+    expect(await screen.findByText(selected(500))).toBeInTheDocument();
+    const nordfracht = en["bulk.selectRow"].replace("{name}", "Nordfracht");
+    await user.click(screen.getByRole("checkbox", { name: nordfracht }));
+    expect(screen.getByText(selected(500))).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: nordfracht }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByText(en["lists.members.selectionFullTitle"]),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: selectMiTek }));
+    expect(await screen.findByText(selected(499))).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: nordfracht }));
+    expect(await screen.findByText(selected(500))).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: nordfracht })).toBeChecked();
+  });
+
   it("exports the list's members through the list's own export", async () => {
     const exports: unknown[] = [];
     const user = userEvent.setup();

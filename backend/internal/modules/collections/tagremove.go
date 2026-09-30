@@ -38,7 +38,7 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := removeTagTx(ctx, tx, tagID, entityType, entityID)
+		_, err := removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
 		return err
 	})
 }
@@ -50,7 +50,20 @@ func (s *Store) RemoveTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, ent
 	if err := requireTagRemoval(ctx, entityType, entityID); err != nil {
 		return false, err
 	}
-	return removeTagTx(ctx, tx, tagID, entityType, entityID)
+	return removeTagTx(ctx, tx, tagID, entityType, entityID, nil)
+}
+
+// RemoveTagAssignmentTx is RemoveTagTx held to one assignment: it takes the tag
+// off only while the record still carries the very assignment named, so undoing
+// a bulk tag never removes a tag somebody put back on after it. It answers
+// whether that assignment was still there.
+func (s *Store) RemoveTagAssignmentTx(
+	ctx context.Context, tx pgx.Tx, assignment ids.UUID, tagID ids.TagID, entityType string, entityID ids.UUID,
+) (bool, error) {
+	if err := requireTagRemoval(ctx, entityType, entityID); err != nil {
+		return false, err
+	}
+	return removeTagTx(ctx, tx, tagID, entityType, entityID, &assignment)
 }
 
 // requireTagRemoval is the object half of taking a tag off a record: the
@@ -79,7 +92,9 @@ func requireTagRemoval(ctx context.Context, entityType string, entityID ids.UUID
 // the record: recordTagRows returns archived assignments deliberately, so the
 // surface hands a caller a retired tag it must be able to take off. Only a tag
 // that never existed is not-found here.
-func removeTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) (bool, error) {
+func removeTagTx(
+	ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID, assignment *ids.UUID,
+) (bool, error) {
 	var exists bool
 	if err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1)`, tagID).Scan(&exists); err != nil {
@@ -94,8 +109,9 @@ func removeTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType str
 		return false, err
 	}
 	tag, err := tx.Exec(ctx, `
-		DELETE FROM taggable WHERE tag_id = $1 AND entity_type = $2 AND entity_id = $3`,
-		tagID, entityType, entityID)
+		DELETE FROM taggable WHERE tag_id = $1 AND entity_type = $2 AND entity_id = $3
+		   AND ($4::uuid IS NULL OR id = $4)`,
+		tagID, entityType, entityID, assignment)
 	if err != nil {
 		return false, err
 	}

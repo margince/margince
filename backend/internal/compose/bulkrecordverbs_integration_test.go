@@ -103,6 +103,40 @@ func TestABulkTagPutsATagOnTheSelectionAndItsUndoTakesOffOnlyWhatItAdded(t *test
 	}
 }
 
+// A tag somebody took off and put back after the batch is their assignment,
+// not the batch's: the undo leaves it and says why.
+func TestUndoingABulkTagLeavesATagSomebodyPutBackSince(t *testing.T) {
+	e := integration.Setup(t)
+	tag := seedBulkTag(t, e)
+	items := seedBulkContacts(t, e, e.Rep1, 2)
+	engine := bulkEngineFor(e)
+	out, err := engine.Execute(e.Admin(), tagChange(crmcontracts.BulkVerbAddTag, tag, items))
+	if err != nil || out.Changed != 2 {
+		t.Fatalf("execute → %+v, %v", out, err)
+	}
+	tags := collections.NewStore(e.DB())
+	reapplied := ids.UUID(items[0].Id)
+	if err := tags.RemoveTag(e.Admin(), tag, "contact", reapplied); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tags.ApplyTag(e.Admin(), tag, "contact", reapplied); err != nil {
+		t.Fatal(err)
+	}
+
+	undone, err := engine.Undo(e.Admin(), ids.UUID(out.BatchId), "")
+	if err != nil || undone.Changed != 1 {
+		t.Fatalf("undo → %+v, %v; want only the untouched assignment removed", undone, err)
+	}
+	assertReasons(t, "undo", skipReasons(undone.Skipped),
+		map[openapi_types.UUID]crmcontracts.BulkSkipReason{items[0].Id: crmcontracts.BulkSkipReasonChangedSinceBatch})
+	if n := e.WsCount(t, `SELECT count(*) FROM taggable WHERE tag_id = $1 AND entity_id = $2`, tag, reapplied); n != 1 {
+		t.Error("the undo removed a tag somebody put back after the batch")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM taggable WHERE tag_id = $1 AND entity_id = $2`, tag, items[1].Id); n != 0 {
+		t.Error("the undo left the batch's own assignment in place")
+	}
+}
+
 func TestABulkRemoveTagAndItsUndoPutsItBack(t *testing.T) {
 	e := integration.Setup(t)
 	tag := seedBulkTag(t, e)
@@ -285,6 +319,33 @@ func seedBulkLeads(t *testing.T, e *integration.Env, owner ids.UUID, n int) []cr
 		items = append(items, crmcontracts.BulkItem{Id: created.Id, Version: *created.Version})
 	}
 	return items
+}
+
+// A lead known only by its address is still a row of the batch, labelled by
+// that address, rather than a NULL that aborts every other row.
+func TestABulkChangeOverAnUnnamedLeadLabelsItByItsAddress(t *testing.T) {
+	e := integration.Setup(t)
+	email := "unnamed-" + ids.NewV7().String()[:8] + "@example.com"
+	ownerID := ids.From[ids.UserKind](e.Rep1)
+	unnamed, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Email: &email, OwnerID: &ownerID, Source: "manual"})
+	if err != nil {
+		t.Fatalf("seeding an unnamed lead: %v", err)
+	}
+	items := append(seedBulkLeads(t, e, e.Rep1, 1), crmcontracts.BulkItem{Id: unnamed.Id, Version: *unnamed.Version})
+	owner := e.Rep2
+	preview, err := bulkEngineFor(e).Preview(e.Admin(), bulkChange{
+		recordType: crmcontracts.BulkRecordTypeLead, verb: crmcontracts.BulkVerbReassignOwner, items: items, ownerID: &owner,
+	})
+	if err != nil || preview.Count != 2 {
+		t.Fatalf("preview over an unnamed lead → %+v, %v; want both leads", preview, err)
+	}
+	labels := map[openapi_types.UUID]string{}
+	for _, row := range preview.Sample {
+		labels[row.Id] = row.Label
+	}
+	if labels[unnamed.Id] != email {
+		t.Errorf("the unnamed lead is labelled %q, want its address", labels[unnamed.Id])
+	}
 }
 
 func TestLeadsTakeEveryBulkVerbButArchive(t *testing.T) {

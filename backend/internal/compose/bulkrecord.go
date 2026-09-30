@@ -34,6 +34,8 @@ type bulkOutcome struct {
 	// TaskID and TaskVersion are the task create_task filed under the record.
 	TaskID      *openapi_types.UUID `json:"task_id,omitempty"`
 	TaskVersion int64               `json:"task_version,omitempty"`
+	// TaggableID is the tag assignment add_tag made on the record.
+	TaggableID *openapi_types.UUID `json:"taggable_id,omitempty"`
 }
 
 // bulkResult is bulk_operation.result. A skip keeps its reason and code but

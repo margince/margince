@@ -38,6 +38,8 @@ type bulkUndoPlan struct {
 	ownersBefore map[openapi_types.UUID]*openapi_types.UUID
 	// tasks is the task create_task filed under each record.
 	tasks map[openapi_types.UUID]bulkCreatedTask
+	// taggings is the tag assignment add_tag made on each record.
+	taggings map[openapi_types.UUID]openapi_types.UUID
 }
 
 // bulkCreatedTask is one task create_task filed, at the version it left it.
@@ -105,6 +107,7 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		batchID:      batchID,
 		ownersBefore: make(map[openapi_types.UUID]*openapi_types.UUID, len(op.result.Changed)),
 		tasks:        map[openapi_types.UUID]bulkCreatedTask{},
+		taggings:     map[openapi_types.UUID]openapi_types.UUID{},
 	}
 	items := make([]crmcontracts.BulkItem, len(op.result.Changed))
 	for i, outcome := range op.result.Changed {
@@ -112,6 +115,9 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		plan.ownersBefore[outcome.ID] = outcome.OwnerBefore
 		if outcome.TaskID != nil {
 			plan.tasks[outcome.ID] = bulkCreatedTask{id: *outcome.TaskID, version: outcome.TaskVersion}
+		}
+		if outcome.TaggableID != nil {
+			plan.taggings[outcome.ID] = *outcome.TaggableID
 		}
 	}
 	return bulkChange{

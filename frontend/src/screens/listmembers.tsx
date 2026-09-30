@@ -194,6 +194,7 @@ function useMemberSelection(
   return {
     selectAll,
     capped,
+    full: selected.size >= BULK_MAX_ITEMS,
     selection: {
       selected,
       selectable: (row: MemberRow) => row.archived_at == null,
@@ -202,7 +203,9 @@ function useMemberSelection(
           const next = new Set(prev);
           if (next.has(row.id)) {
             next.delete(row.id);
-          } else {
+          } else if (next.size < BULK_MAX_ITEMS) {
+            // At the cap a tick adds nothing: one change takes no more
+            // records, and the notice says so. Unticking stays open.
             next.add(row.id);
           }
           return next;
@@ -225,7 +228,7 @@ function useMemberSelection(
   };
 }
 
-/** "Select all N members", the cap's notice, and the list's export. */
+/** "Select all N members", the cap's notices, and the list's export. */
 function MemberTools({
   list,
   source,
@@ -235,14 +238,28 @@ function MemberTools({
   const plural = usePlural();
   const { locale } = useLocale();
   const total = list.visible_count ?? 0;
-  let notice: ReactNode = null;
+  const cap = { count: formatNumber(BULK_MAX_ITEMS, locale) };
+  const notices: ReactNode[] = [];
   if (chosen.capped) {
-    notice = (
-      <Callout tone="info" title={t("lists.members.selectAllCappedTitle")}>
-        {plural("lists.members.selectAllCapped", BULK_MAX_ITEMS, {
-          count: formatNumber(BULK_MAX_ITEMS, locale),
-        })}
-      </Callout>
+    notices.push(
+      <Callout
+        key="capped"
+        tone="info"
+        title={t("lists.members.selectAllCappedTitle")}
+      >
+        {plural("lists.members.selectAllCapped", BULK_MAX_ITEMS, cap)}
+      </Callout>,
+    );
+  }
+  if (chosen.full) {
+    notices.push(
+      <Callout
+        key="full"
+        tone="info"
+        title={t("lists.members.selectionFullTitle")}
+      >
+        {plural("lists.members.selectionFull", BULK_MAX_ITEMS, cap)}
+      </Callout>,
     );
   }
   return (
@@ -262,7 +279,7 @@ function MemberTools({
         <ExportListAction list={list} source={source} />
       </div>
       <ErrorLine inline error={chosen.selectAll.error} />
-      {notice}
+      {notices}
     </>
   );
 }

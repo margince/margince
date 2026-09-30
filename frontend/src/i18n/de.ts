@@ -10219,6 +10219,11 @@ export const de = {
   "lists.members.why": "Warum?",
   "lists.members.selectAll_one": "Alle {count} Mitglied auswählen",
   "lists.members.selectAll_other": "Alle {count} Mitglieder auswählen",
+  "lists.members.selectionFullTitle": "Die Auswahl ist voll",
+  "lists.members.selectionFull_one":
+    "{count} Mitglied ist ausgewählt, mehr nimmt eine Änderung nicht. Entferne eines, um ein anderes auszuwählen.",
+  "lists.members.selectionFull_other":
+    "{count} Mitglieder sind ausgewählt, mehr nimmt eine Änderung nicht. Entferne eines, um ein anderes auszuwählen.",
   "lists.members.selectAllCappedTitle": "Nicht alle Mitglieder ausgewählt",
   "lists.members.selectAllCapped_one":
     "Nur das erste {count} Mitglied lässt sich auf einmal auswählen. Bearbeite es, dann wähle den Rest.",
