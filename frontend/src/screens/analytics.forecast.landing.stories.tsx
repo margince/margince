@@ -44,7 +44,7 @@ function landing(over: Partial<Landing> = {}): Landing {
 }
 
 const meta: Meta<typeof LandingCard> = {
-  title: "Records/Forecast readings",
+  title: "Records/Reports/Forecast/Readings",
   component: LandingCard,
 };
 export default meta;

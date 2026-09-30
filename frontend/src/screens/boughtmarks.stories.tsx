@@ -33,7 +33,7 @@ function Marks() {
 }
 
 const meta: Meta = {
-  title: "Records/Contact record/Bought values",
+  title: "Records/Contact 360/Bought values",
   parameters: { layout: "padded" },
 };
 export default meta;

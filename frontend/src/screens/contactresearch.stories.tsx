@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { providerCompletedProfile } from "./contactprovider.fixtures";
 import { ContactResearchTab } from "./contactresearch";
-import { StoryProviders } from "./story-utils";
+import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The Research tab's own gallery: the two halves it stacks (the bought
 // provider snapshot and the enrichment evidence sidecar), the tab-wide empty
@@ -10,7 +10,7 @@ import { StoryProviders } from "./story-utils";
 // the provider half withheld for lack of a grant.
 
 const meta: Meta<typeof ContactResearchTab> = {
-  title: "Records/Contact record/Research tab",
+  title: "Records/Contact 360/Research tab",
   component: ContactResearchTab,
   parameters: { layout: "padded" },
 };
@@ -56,6 +56,15 @@ const profileFields: components["schemas"]["ContactProfileField"][] = [
   },
 ];
 
+function researchTab(view: View) {
+  installFetchStub({ "GET /me": meRoute({ contact: ["read"] }) });
+  return (
+    <StoryProviders>
+      <ContactResearchTab view={view} />
+    </StoryProviders>
+  );
+}
+
 const populated: View = {
   as_of: "2026-08-13T09:00:00Z",
   contact,
@@ -67,11 +76,7 @@ const populated: View = {
 /** Both halves populated: a bought snapshot and enrichment evidence with a
  *  provenance mark per value. */
 export const Populated: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactResearchTab view={populated} />
-    </StoryProviders>
-  ),
+  render: () => researchTab(populated),
 };
 
 const empty: View = {
@@ -121,11 +126,7 @@ const neverBought: View = {
  *  naming the lookup carries the whole invitation, above evidence the app's own
  *  capture already found for free. */
 export const NeverBought: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactResearchTab view={neverBought} />
-    </StoryProviders>
-  ),
+  render: () => researchTab(neverBought),
 };
 
 const providerWithheld: View = {
@@ -139,9 +140,5 @@ const providerWithheld: View = {
  *  still has evidence to show — withheld and empty are different facts, and
  *  only the provider half is the withheld one here. */
 export const ProviderWithheld: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactResearchTab view={providerWithheld} />
-    </StoryProviders>
-  ),
+  render: () => researchTab(providerWithheld),
 };

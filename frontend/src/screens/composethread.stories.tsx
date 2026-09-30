@@ -62,7 +62,7 @@ function Conversation() {
     </StoryProviders>
   );
 }
-const meta: Meta = { title: "Patterns/Composer conversation" };
+const meta: Meta = { title: "Patterns/Compose mail/Conversation" };
 export default meta;
 export const SelectAndPreview: StoryObj = { render: () => <Conversation /> };
 function selectedReplyRoutes() {

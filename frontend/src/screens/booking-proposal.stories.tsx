@@ -8,7 +8,7 @@ import "./book.css";
 
 const meta: Meta<typeof BookingProposal> = {
   parameters: { layout: "fullscreen" },
-  title: "Patterns/Booking/BookingProposal",
+  title: "Patterns/Booking/Proposal",
   component: BookingProposal,
 };
 export default meta;

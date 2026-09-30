@@ -106,7 +106,7 @@ function part(node: React.ReactNode, routes: RouteMap = RAIL_ROUTES) {
 }
 
 const meta: Meta = {
-  title: "Shell/Home parts",
+  title: "Shell/Home/Parts",
 };
 export default meta;
 type Story = StoryObj;
@@ -300,7 +300,7 @@ export const ReadingsCapped: Story = {
 // cards and 600px of readings before a reader reached the day's own work. The
 // shape belongs to `StatStrip` and keys off the slots declaring
 // `narrow="row"`, which the record strips now declare too —
-// `Design System/StatStrip` has both side by side.
+// `Components/Text and data display/Stat strip` has both side by side.
 export const ReadingsOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
   render: part(

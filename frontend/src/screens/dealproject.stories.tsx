@@ -16,7 +16,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // the deal rather than about the reader's grants.
 
 const meta: Meta = {
-  title: "Records/Deal/Project",
+  title: "Records/Deal 360/Project",
   parameters: { layout: "padded" },
 };
 export default meta;

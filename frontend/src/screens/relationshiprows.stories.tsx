@@ -9,7 +9,7 @@ import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 // The rows without their panel, the shape the deal's committee card mounts.
 // The remove dialog portals to document.body, so it is reached via `screen`.
 const meta: Meta = {
-  title: "Records/Relationship rows",
+  title: "Records/Record 360/Relationship rows",
   parameters: { layout: "padded" },
 };
 export default meta;

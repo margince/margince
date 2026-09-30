@@ -15,7 +15,7 @@ type Company = components["schemas"]["Company"];
 // monogram keyed on the company's id when no logo resolved, and the empty slot
 // a second row for the same employer keeps so the names still line up.
 const meta: Meta = {
-  title: "Records/Contact record/Employment logo",
+  title: "Records/Contact 360/Employment logo",
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (

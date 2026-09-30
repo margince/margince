@@ -13,7 +13,7 @@ import "./company360.css";
 // render nothing, so neither has a story.
 
 const meta: Meta<typeof ContactBillingRoles> = {
-  title: "Records/Contact record/Billing roles",
+  title: "Records/Contact 360/Billing roles",
   component: ContactBillingRoles,
   parameters: { layout: "padded" },
 };

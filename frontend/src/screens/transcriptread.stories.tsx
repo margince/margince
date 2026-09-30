@@ -30,7 +30,7 @@ function stubbed(report: Record<string, unknown>) {
 }
 
 const meta: Meta<typeof TranscriptReadCard> = {
-  title: "Records/Transcript read",
+  title: "Records/Record 360/Transcript read",
   component: TranscriptReadCard,
 };
 export default meta;

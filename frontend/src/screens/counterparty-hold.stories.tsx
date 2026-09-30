@@ -38,7 +38,7 @@ function story(holds: unknown[], email = "office@studiolegal.de") {
 }
 
 const meta: Meta<typeof CounterpartyHoldRow> = {
-  title: "Records/Rail/Counterparty hold",
+  title: "Records/Record 360/Counterparty hold",
   component: CounterpartyHoldRow,
 };
 export default meta;

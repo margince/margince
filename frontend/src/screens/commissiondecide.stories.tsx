@@ -72,7 +72,7 @@ const accepted = (over: Partial<CommissionEntry>) => () =>
   jsonResponse({ ...ENTRY, ...over }, 200);
 
 const meta: Meta<typeof CommissionDecision> = {
-  title: "Records/Partner/Commission decision",
+  title: "Records/Company 360/Partner tab/Commission decision",
   component: CommissionDecision,
   parameters: { layout: "padded" },
 };

@@ -48,7 +48,7 @@ function panel(routes: RouteMap) {
 }
 
 const meta: Meta<typeof TeamWeeklyPanel> = {
-  title: "Shell/Home team weekly",
+  title: "Shell/Home/Team weekly",
   component: TeamWeeklyPanel,
 };
 export default meta;

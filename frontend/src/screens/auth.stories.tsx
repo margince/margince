@@ -14,11 +14,11 @@ import {
 /**
  * The unauthenticated surface, whole (ADR-0076).
  *
- * The Core is a design-system primitive now, so its own states live in
- * `Design System/Margince Core`; these stories are about the SURFACE — the two
- * regions, the runtime posture the identity region reads from the server, the
- * two narrow layouts where the regions stop being side by side, and the states
- * that are not a failed password.
+ * The Core is a design-system primitive, so its own states live in
+ * `Components/AI and provenance/Margince core`; these stories are about the
+ * SURFACE — the two regions, the runtime posture the identity region reads from
+ * the server, the two narrow layouts where the regions stop being side by
+ * side, and the states that are not a failed password.
  *
  * Two kinds of failure are treated differently here, and the split is an
  * argument rather than an accident. A LOGIN failure changes one sentence, so the
@@ -36,7 +36,7 @@ const meta: Meta = {
     // Two widths, named after the RULE each one exercises rather than after a
     // device: the surface changes shape at 959 and again at 560, and "iPad Pro
     // 11-in" tells a reviewer nothing about which of those is in force. The
-    // viewport tool ships inside Storybook 9 itself, so this adds no addon to
+    // viewport tool ships inside Storybook itself, so this adds no addon to
     // `.storybook/main.ts`.
     viewport: {
       options: {

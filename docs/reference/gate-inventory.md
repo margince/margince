@@ -58,6 +58,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `disclosureseam_test.go` | H1 | The two halves of the disclosure seam describe the same thing. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
+| `entitymodel_test.go` | H3 | The entity model pages say what the schema says. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `exportedreferences_test.go` | H2 | Every reference an exported row carries to a row-scoped record is one the export withholds from a reader who could not open it. |
 | `extensionrefusalvocabulary_test.go` | H3 | The refusal vocabulary is spelled on both sides of the wire, so it is ONE item. |
@@ -225,6 +226,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `emptyarraycheck_test.go` | H2 | array\_length answers NULL for an EMPTY array, not 0, so a CHECK that bounds a length with it evaluates to UNKNOWN for `{}` — and Postgres ACCEPTS a row on an UNKNOWN check. |
 | `emptylistwire_test.go` | H2 | Every list envelope carries its rows in a field the writer can find. |
 | `enteredatwriters_test.go` | H2 | Nothing writes when a record entered the installation. |
+| `entitymodelowners_test.go` | H3 | The ownership map and the schema name the same tables. |
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |
 | `erasurecascadereach_test.go` | H2 | Every file the Art. 17 cascade executes SQL from is one the PII censuses read. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |

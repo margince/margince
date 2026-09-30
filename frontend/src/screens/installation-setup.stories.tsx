@@ -19,7 +19,7 @@ import {
 // Worth flipping the Theme control on both — the stage's ground, the light and
 // the Core all resolve from tokens that move with it.
 const meta: Meta<typeof InstallationSetup> = {
-  title: "Onboarding/First run",
+  title: "Onboarding/First run/Questions",
   component: InstallationSetup,
   parameters: { layout: "fullscreen" },
 };

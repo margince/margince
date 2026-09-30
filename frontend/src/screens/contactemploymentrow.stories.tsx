@@ -78,7 +78,7 @@ function Rows({ data }: Readonly<{ data: Contact360 }>) {
 }
 
 const meta: Meta = {
-  title: "Records/Contact record/Employment row",
+  title: "Records/Contact 360/Employment row",
   parameters: { layout: "padded" },
 };
 export default meta;

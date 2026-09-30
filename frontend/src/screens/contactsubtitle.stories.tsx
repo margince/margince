@@ -52,7 +52,7 @@ const boughtView: Contact360 = {
 };
 
 const meta: Meta<typeof ContactSubtitle> = {
-  title: "Records/Contact record/Header subtitle",
+  title: "Records/Contact 360/Header subtitle",
   component: ContactSubtitle,
   decorators: [
     (Story) => (

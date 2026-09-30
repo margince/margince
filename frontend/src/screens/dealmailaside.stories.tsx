@@ -14,7 +14,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // this reader may know nothing about.
 
 const meta: Meta<typeof DealMailAside> = {
-  title: "Records/Deal/Mail flyout",
+  title: "Records/Deal 360/Mail flyout",
   component: DealMailAside,
   parameters: { layout: "padded" },
 };

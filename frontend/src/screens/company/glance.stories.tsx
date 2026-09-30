@@ -91,7 +91,7 @@ function Fold({ data }: Readonly<{ data: Company360 }>) {
 }
 
 const meta: Meta = {
-  title: "Records/Company record/Thread fold",
+  title: "Records/Company 360/Thread fold",
   parameters: { layout: "padded" },
 };
 export default meta;

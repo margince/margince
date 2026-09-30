@@ -41,7 +41,7 @@ function Lines({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 const meta: Meta<typeof Lines> = {
-  title: "Onboarding/Profile digest lines",
+  title: "Onboarding/Conversation/Profile digest lines",
   component: Lines,
 };
 export default meta;

@@ -20,7 +20,7 @@ import {
 // empty state.
 
 const meta: Meta = {
-  title: "Records/Company rail/Rail",
+  title: "Records/Company 360/Rail/Full rail",
   parameters: { layout: "padded" },
 };
 export default meta;

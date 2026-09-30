@@ -8,7 +8,7 @@ import { shortlist } from "./lists.fixtures";
 import { StoryProviders } from "./story-utils";
 
 // The Shortlists an account is on, as one more slice of the company rail.
-const meta: Meta = { title: "Records/Company rail/Lists" };
+const meta: Meta = { title: "Records/Company 360/Rail/Lists" };
 export default meta;
 
 type Story = StoryObj;

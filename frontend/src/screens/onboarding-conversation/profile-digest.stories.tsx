@@ -270,7 +270,7 @@ function Digest({
 }
 
 const meta: Meta<typeof Digest> = {
-  title: "Onboarding/Profile digest",
+  title: "Onboarding/Conversation/Profile digest",
   component: Digest,
   parameters: { layout: "fullscreen" },
 };

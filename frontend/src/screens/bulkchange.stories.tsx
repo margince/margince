@@ -9,7 +9,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // The preview a bulk verb opens before anything is written, in each state the
 // server can answer with.
 const meta: Meta = {
-  title: "Records/Bulk change",
+  title: "Records/Bulk change/Preview",
   parameters: { layout: "padded" },
 };
 export default meta;

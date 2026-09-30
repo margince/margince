@@ -80,7 +80,7 @@ function Row({ row }: Readonly<{ row: PairRow }>) {
 }
 
 const meta: Meta<typeof Row> = {
-  title: "Records/Record history/Reversal pair row",
+  title: "Records/Record 360/Record history/Reversal pair row",
   component: Row,
 };
 export default meta;

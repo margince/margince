@@ -83,7 +83,7 @@ function Frame({ activity }: Readonly<{ activity: Activity }>) {
 }
 
 const meta: Meta<typeof Frame> = {
-  title: "Records/Timeline actions",
+  title: "Records/Record 360/Timeline actions",
   component: Frame,
 };
 export default meta;

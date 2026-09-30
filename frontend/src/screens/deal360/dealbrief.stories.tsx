@@ -14,7 +14,7 @@ import { DealBrief } from "./dealbrief";
 // that already fits offers a "Read more" that reveals nothing.
 
 const meta: Meta<typeof DealBrief> = {
-  title: "Records/Deal brief",
+  title: "Records/Deal 360/Brief",
   component: DealBrief,
   parameters: { layout: "padded" },
   decorators: [

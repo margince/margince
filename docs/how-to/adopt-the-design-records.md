@@ -70,8 +70,8 @@ Rewrite the shape assertions in `company-record.spec.ts` in the same commit
 (readings under the tabs; "one Company 360 pane" leads; context panel on the
 right, closed, one pane of named sections). Update `company360.test.tsx`,
 `companyheader.test.tsx`, `companyrail.test.tsx` for markup, not behaviour.
-`history.spec.ts` unchanged. Storybook: `Records/Company` stories for every
-state row in §3.2 (this is where "empty", "withheld", "never read" and
+`history.spec.ts` unchanged. Storybook: the `Records/Company 360/` stories for
+every state row in §3.2 (this is where "empty", "withheld", "never read" and
 "stale" get their pictures).
 
 ## 4. Contact

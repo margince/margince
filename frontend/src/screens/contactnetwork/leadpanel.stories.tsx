@@ -83,7 +83,7 @@ function draw(candidate: RouteCandidate) {
 }
 
 const meta: Meta<typeof LeadPanel> = {
-  title: "Records/Contact network/Recommended route",
+  title: "Records/Contact 360/Network/Recommended route",
   component: LeadPanel,
   parameters: { layout: "padded" },
 };

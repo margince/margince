@@ -21,7 +21,7 @@ type Contact = components["schemas"]["Contact"];
 // showing them in a bare row would document a shape the product does not
 // have.
 const meta: Meta = {
-  title: "Records/Contact write verbs",
+  title: "Records/Contact 360/Write verbs",
   parameters: { layout: "padded" },
 };
 export default meta;

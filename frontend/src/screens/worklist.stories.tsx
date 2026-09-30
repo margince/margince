@@ -52,7 +52,7 @@ function stubDay(day: Worklist, board: TeamBoard = aLoadedTeam) {
 }
 
 const meta: Meta<typeof WorklistScreen> = {
-  title: "Records/Worklist/Screen",
+  title: "Records/Worklist/Page",
   component: WorklistScreen,
   parameters: { layout: "fullscreen" },
 };

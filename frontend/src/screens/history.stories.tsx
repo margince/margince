@@ -21,7 +21,7 @@ import {
 // formatDateTime on an Invalid time value — this keeps each endpoint's
 // response shaped for the schema it actually is.
 const meta: Meta = {
-  title: "Records/Record history",
+  title: "Records/Record 360/Record history/History tab",
   parameters: { layout: "padded" },
 };
 export default meta;

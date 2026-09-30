@@ -8,7 +8,7 @@ import "./book.css";
 
 const meta: Meta<typeof BookingInviteScreen> = {
   parameters: { layout: "fullscreen" },
-  title: "Patterns/Booking/BookingInviteScreen",
+  title: "Patterns/Booking/Invite page",
   component: BookingInviteScreen,
 };
 export default meta;

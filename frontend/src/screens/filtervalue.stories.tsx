@@ -9,11 +9,11 @@ import { ValueControl } from "./filtervalue";
 import type { FilterOp, LeafValue } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// One operand control per kind of value a clause can compare against. The
+// One control per kind of value a clause can compare against. The
 // Filters builder and the Analytics question builder both draw this, so each
 // kind is shown here on its own rather than inside either host.
 const meta: Meta<typeof ValueControl> = {
-  title: "Patterns/Filter value",
+  title: "Patterns/Filter value/By value kind",
   component: ValueControl,
   parameters: { layout: "padded" },
 };

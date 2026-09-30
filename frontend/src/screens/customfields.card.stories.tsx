@@ -84,7 +84,7 @@ function story(
 }
 
 const meta: Meta<typeof CustomFieldsPanel> = {
-  title: "Records/Company/Custom fields",
+  title: "Records/Record 360/Custom fields panel",
   component: CustomFieldsPanel,
 };
 export default meta;

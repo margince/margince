@@ -101,7 +101,7 @@ function card(payload: ContactGraph, skipLead: boolean) {
 }
 
 const meta: Meta<typeof RoutesPanel> = {
-  title: "Records/Contact network/Ways in",
+  title: "Records/Contact 360/Network/Ways in",
   component: RoutesPanel,
   parameters: { layout: "padded" },
 };

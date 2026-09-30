@@ -10,7 +10,7 @@ type RecordAccess = components["schemas"]["RecordAccess"];
 type Member = components["schemas"]["RecordAccessMember"];
 
 const meta: Meta = {
-  title: "Records/Who can see this record",
+  title: "Records/Record 360/Who can see this record",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -7,7 +7,7 @@ import type { MagicReceipt } from "./magic.queries";
 import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 const meta: Meta<typeof MagicPanel> = {
-  title: "Shell/Home receipt",
+  title: "Shell/Home/Receipt",
   component: MagicPanel,
 };
 export default meta;

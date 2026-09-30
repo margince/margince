@@ -18,7 +18,7 @@ type Contact360 = components["schemas"]["Contact360"];
 // open, everything else one press behind the ellipsis. The division is what
 // the story is for — read the row closed first, then the menu.
 const meta: Meta = {
-  title: "Records/Contact header actions",
+  title: "Records/Contact 360/Header actions",
   parameters: { layout: "padded" },
 };
 export default meta;

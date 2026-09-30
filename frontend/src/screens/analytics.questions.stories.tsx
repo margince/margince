@@ -26,7 +26,7 @@ import {
 
 // The Questions section of Analytics: the schema read, the builder, the answer
 // it asks for, and a saved question opened at its own address.
-const meta: Meta = { title: "Records/Reports/Questions" };
+const meta: Meta = { title: "Records/Reports/Questions/Section" };
 export default meta;
 
 type Story = StoryObj;

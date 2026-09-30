@@ -193,7 +193,7 @@ function ReviewBoard({
 }
 
 const meta: Meta<typeof ReviewBoard> = {
-  title: "Onboarding/Company confirm card",
+  title: "Onboarding/Conversation/Company confirm card",
   component: ReviewBoard,
   parameters: { layout: "fullscreen" },
 };

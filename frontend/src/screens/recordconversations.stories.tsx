@@ -51,7 +51,7 @@ function List({ groups }: Readonly<{ groups: readonly TimelineGroup[] }>) {
 }
 
 const meta: Meta<typeof List> = {
-  title: "Records/Conversations",
+  title: "Records/Record 360/Conversations",
   component: List,
 };
 export default meta;

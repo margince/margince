@@ -89,11 +89,12 @@ const preview: Preview = {
   // The viewport tool ships with Storybook itself, so this adds no addon.
   parameters: {
     // A literal: Storybook reads this block out of the file without running it,
-    // and catalog.test.ts holds its order to the README's tables.
+    // and sidebar.test.ts holds its order to the README's tables.
     options: {
       storySort: {
         method: "alphabetical",
         order: [
+          "Get started",
           "Foundations",
           ["Color", "Typography", "Radius", "Brand"],
           "Components",

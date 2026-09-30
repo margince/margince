@@ -42,7 +42,7 @@ function planOf(brief: MeetingBrief): MeetingPlan {
 }
 
 const meta: Meta<typeof ObjectivePanel> = {
-  title: "Records/Contact record/Meeting brief/Plan",
+  title: "Records/Record 360/Meeting brief/Plan",
   component: ObjectivePanel,
 };
 export default meta;

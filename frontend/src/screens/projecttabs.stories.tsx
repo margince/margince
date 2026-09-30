@@ -12,7 +12,7 @@ import { StoryProviders } from "./story-utils";
 // that earns the row.
 
 const meta: Meta<typeof ProjectTabs> = {
-  title: "Records/Project/Tabs",
+  title: "Records/Project 360/Tabs",
   component: ProjectTabs,
   parameters: { layout: "padded" },
 };

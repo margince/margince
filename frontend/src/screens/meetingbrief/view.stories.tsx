@@ -8,15 +8,15 @@ import { type BriefViewState, MeetingBriefView } from "./view";
 import "../contact360.css";
 
 // The brief's body as a pure component: state in, prose out, no fetching. The
-// connected drawer's stories (Records/Contact record/Meeting brief) cover the
-// read; these cover the four states the body itself can be in, from a fixture.
+// connected drawer's stories (meetingbrief.stories.tsx) cover the read; these
+// cover the four states the body itself can be in, from a fixture.
 //
 // Every date here is fixed rather than relative: the suite runs at +200 days
 // under `make fe-clock-drift` and must reach the same verdict there, so
 // `formatWhen` returns a constant instead of reading a clock.
 
 const meta: Meta<typeof MeetingBriefView> = {
-  title: "Records/Contact record/Meeting brief/Body",
+  title: "Records/Record 360/Meeting brief/Body",
   component: MeetingBriefView,
   parameters: { layout: "fullscreen" },
 };

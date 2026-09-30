@@ -12,7 +12,6 @@ import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -20,6 +19,7 @@ import {
 import { availableParallelism } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDocsPage, storyCensus } from "./lib/story-files.ts";
 import {
   FAILURE_EVENTS,
   outcomeErrors,
@@ -130,18 +130,19 @@ const changed = git(`diff --name-only --diff-filter=d ${base}..HEAD`)
 //    to the story sitting at the component's own path.
 //    DIRECT imports only, deliberately: a transitive graph would let one screen
 //    story claim half the tree, and the gate would then render everything.
-const srcRoot = join(repoRoot, "frontend/src");
 const sourceExtensions = [".tsx", ".ts", ".jsx", ".js"];
 
-function sourceFilesUnder(dir) {
-  const files = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) files.push(...sourceFilesUnder(full));
-    else if (entry.isFile()) files.push(full);
-  }
-  return files;
+// The story files Storybook loads, off the same census the catalog gates read.
+// A docs page renders prose, not a component, so it is no story to capture.
+const census = storyCensus(join(repoRoot, "frontend"));
+if (census.suffixes === null) {
+  console.error(
+    "fe-uat: the stories globs in frontend/.storybook/main.ts could not be read",
+  );
+  process.exit(2);
 }
+const isStoryFile = (file) =>
+  !isDocsPage(file) && census.suffixes.some((suffix) => file.endsWith(suffix));
 
 // Coverage means a story RENDERS the component, so a specifier only counts
 // where the module system would honour it: comments are stripped first, and
@@ -207,9 +208,8 @@ function resolveSpecifier(fromFile, specifier) {
 }
 
 const coveringStories = new Map();
-for (const abs of sourceFilesUnder(srcRoot)) {
+for (const abs of census.files.filter(isStoryFile)) {
   const story = relative(repoRoot, abs);
-  if (!/\.stories\.[tj]sx?$/.test(story)) continue;
   for (const specifier of importSpecifiers(readFileSync(abs, "utf8"))) {
     const imported = resolveSpecifier(story, specifier);
     if (!imported) continue;
@@ -231,7 +231,7 @@ for (const f of changed) {
   // requiring a story for them is a false gate. Skip them.
   if (f.endsWith(".d.ts")) continue;
   if (f === documentEntry) continue;
-  if (/\.stories\.[tj]sx?$/.test(f)) {
+  if (isStoryFile(f)) {
     storyFiles.add(f);
     fanOut.set(f, [f]);
   } else if (needsStory(f)) {

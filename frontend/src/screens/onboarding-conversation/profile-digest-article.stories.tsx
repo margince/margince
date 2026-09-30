@@ -23,7 +23,8 @@ import "./profile-digest.css";
 // The whole-record document's LEFT COLUMN on its own — the record grouped into
 // the four sections a reader recognises from reading it, then what the crawl
 // found beyond those fields, then the numbered pages every line above cited.
-// The header and the sidebar beside it are Onboarding/Profile digest.
+// The header and the sidebar beside it are
+// Onboarding/Conversation/Profile digest.
 //
 // The column takes no data of its own, so every state it can be in comes from
 // the props. The numbering and the fact grouping are derived through the
@@ -190,7 +191,7 @@ function Article({
 }
 
 const meta: Meta<typeof Article> = {
-  title: "Onboarding/Profile article",
+  title: "Onboarding/Conversation/Profile article",
   component: Article,
   parameters: { layout: "padded" },
 };
