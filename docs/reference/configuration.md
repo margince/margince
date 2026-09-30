@@ -1175,12 +1175,13 @@ injects bounded context into declared AI tasks; `onboarding` additionally enable
 the five-step first-run flow. The default is `onboarding`. Moving backward is a
 reversible operational kill switch and never deletes confirmed company data.
 
-`lists.enabled` switches Live Lists and Shortlists on. The default is `false`:
-the `/v1/lists` routes answer 404, the `list_id` narrowing of the contact,
-company, deal and lead lists answers 404, the filtered export refuses a
+`lists.enabled` switches Live Lists and Shortlists. The default is `true`. Set
+it to `false` to hide them: the `/v1/lists` routes answer 404, the `list_id`
+narrowing of the contact, company, deal and lead lists answers 404, the filtered export refuses a
 `list_id` source, the company page names no list, no agent list tool is
 registered, and `/me` reports `settings_availability.lists: false`, so no screen
-offers them. Switching it off again hides lists without deleting any.
+offers them. Switching it off hides lists without deleting any, and switching
+it back on shows them as they were.
 
 ### `POST /v1/connectors/test_mailbox/connect` — the QC-only fake mailbox
 

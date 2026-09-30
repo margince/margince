@@ -10155,7 +10155,7 @@ export const vi = {
   "lists.archive": "L\u01b0u tr\u1eef danh s\u00e1ch",
   "lists.restore": "Kh\u00f4i ph\u1ee5c",
   "lists.unavailable":
-    "Danh s\u00e1ch ch\u01b0a \u0111\u01b0\u1ee3c b\u1eadt cho h\u1ec7 th\u1ed1ng n\u00e0y.",
+    "Danh s\u00e1ch \u0111\u00e3 b\u1ecb t\u1eaft cho h\u1ec7 th\u1ed1ng n\u00e0y.",
   "lists.gone":
     "Danh s\u00e1ch n\u00e0y kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c kh\u00f4ng \u0111\u01b0\u1ee3c chia s\u1ebb v\u1edbi b\u1ea1n.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",

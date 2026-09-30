@@ -41182,7 +41182,7 @@ type SettingsAvailability struct {
 	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
 	EmbeddingReindex bool `json:"embedding_reindex"`
 
-	// Lists True when the installation has switched on Live Lists and Shortlists (`lists.enabled`). False while they are being built: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
+	// Lists True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
 	Lists *bool `json:"lists,omitempty"`
 
 	// Reporting Whether analytics.performance_enabled makes saved reporting available.

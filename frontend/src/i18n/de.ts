@@ -10246,8 +10246,7 @@ export const de = {
   "lists.settingsTitle": "Diese Liste bearbeiten",
   "lists.archive": "Liste archivieren",
   "lists.restore": "Wiederherstellen",
-  "lists.unavailable":
-    "Listen sind in dieser Installation nicht eingeschaltet.",
+  "lists.unavailable": "Listen sind in dieser Installation ausgeschaltet.",
   "lists.gone":
     "Diese Liste gibt es nicht, oder sie ist nicht mit dir geteilt.",
   "lists.unnamed": "Ohne Namen",

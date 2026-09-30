@@ -188,8 +188,8 @@ The reasoning is that a shared pipeline is the point. Two narrowings survive: a
 record created by a connector can stay private to its owner until promoted, and a
 per-record share can widen access further.
 
-Your personal things (lists, saved views, automations, your writing voice) keep
-the classic owner rule.
+Saved views, automations and your writing voice keep the classic owner rule; a
+shared list shows each reader only the records they may see.
 
 **Team lead is the one team-scoped role.** A Team lead reads and works the
 records of everyone sharing a live team with them, with no share arranged first.

@@ -10399,7 +10399,7 @@ export const en = {
   "lists.settingsTitle": "Edit this list",
   "lists.archive": "Archive list",
   "lists.restore": "Restore",
-  "lists.unavailable": "Lists are not switched on for this installation.",
+  "lists.unavailable": "Lists are switched off for this installation.",
   "lists.gone": "This list is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
   "lists.head.facts":

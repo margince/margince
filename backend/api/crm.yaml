@@ -10177,8 +10177,8 @@ paths:
   # ------------------------------ /lists ------------------------------------
   # A list is a named, shared set of one record type: a Live List (list_type
   # dynamic) whose members are its filter's current result, or a Shortlist
-  # (static) whose members were chosen by hand. Every route answers 404 while
-  # the installation has not switched lists on (`lists.enabled`).
+  # (static) whose members were chosen by hand. Every route answers 404 when an
+  # operator has switched lists off (`lists.enabled: false`).
   /lists:
     get:
       tags: [Lists]
@@ -45348,9 +45348,9 @@ components:
         lists:
           type: boolean
           description: >
-            True when the installation has switched on Live Lists and Shortlists
-            (`lists.enabled`). False while they are being built: the `/lists` routes answer
-            404, no agent tool reaches them, and no screen offers them.
+            True when Live Lists and Shortlists are on (`lists.enabled`, on by
+            default). False when an operator has switched them off: the `/lists` routes
+            answer 404, no agent tool reaches them, and no screen offers them.
         embedding_reindex:
           type: boolean
           description: >
