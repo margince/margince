@@ -89,7 +89,7 @@ func (f *liveListFixture) retitle(t *testing.T, contact ids.UUID, title string) 
 }
 
 // observed reads the entered and left entries of the list's history as ctx.
-func (f *liveListFixture) observed(t *testing.T, ctx context.Context) []collections.HistoryEntry {
+func (f *liveListFixture) observed(ctx context.Context, t *testing.T) []collections.HistoryEntry {
 	t.Helper()
 	history, _, err := f.store.History(ctx, f.list, 50, "")
 	if err != nil {
@@ -116,13 +116,13 @@ func TestALiveListRecordsWhoEnteredAndWhoLeftAtTheCheckThatSawIt(t *testing.T) {
 	f := newLiveListFixture(t)
 	f.check(t)
 	contact := f.contactTitled(t, "Bea Buyer", "Buyer")
-	if got := f.observed(t, f.e.Admin()); len(got) != 0 {
+	if got := f.observed(f.e.Admin(), t); len(got) != 0 {
 		t.Fatalf("a change was recorded before any check saw it: %+v", got)
 	}
 
 	f.check(t)
 	entered := f.clock
-	got := f.observed(t, f.e.Admin())
+	got := f.observed(f.e.Admin(), t)
 	if len(got) != 1 || got[0].Kind != "member_entered" || *got[0].EntityID != contact ||
 		!got[0].OccurredAt.Equal(entered) || *got[0].Reason != "evaluated" {
 		t.Fatalf("after the check, history = %+v, want the contact entering at %s", got, entered)
@@ -130,7 +130,7 @@ func TestALiveListRecordsWhoEnteredAndWhoLeftAtTheCheckThatSawIt(t *testing.T) {
 
 	f.retitle(t, contact, "Seller")
 	f.check(t)
-	got = f.observed(t, f.e.Admin())
+	got = f.observed(f.e.Admin(), t)
 	if len(got) != 2 || got[0].Kind != "member_left" || *got[0].EntityID != contact || !got[0].OccurredAt.Equal(f.clock) {
 		t.Fatalf("after the retitle, history = %+v, want the contact leaving first", got)
 	}
@@ -143,7 +143,7 @@ func TestTheFirstCheckTakesTheMembersWithoutRecordingThemAsJoining(t *testing.T)
 	if len(checks) != 1 || checks[0].Outcome != collections.CheckComplete || checks[0].Members != 1 || checks[0].Entered != 0 {
 		t.Fatalf("the first check = %+v, want one member held and nothing recorded", checks)
 	}
-	if got := f.observed(t, f.e.Admin()); len(got) != 0 {
+	if got := f.observed(f.e.Admin(), t); len(got) != 0 {
 		t.Fatalf("the first check recorded %+v", got)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM list_live_member WHERE list_id = $1`, f.list); n != 1 {
@@ -164,10 +164,10 @@ func TestAReaderWhoCannotSeeTheRecordSeesNeitherItsChangeNorItsCount(t *testing.
 	f.e.MakeCapturePrivate(t, "contact", private, f.e.Rep1)
 	f.check(t)
 
-	if got := f.observed(t, f.rep1()); len(got) != 1 {
+	if got := f.observed(f.rep1(), t); len(got) != 1 {
 		t.Fatalf("the capturer read %+v, want the entry", got)
 	}
-	if got := f.observed(t, f.outsider()); len(got) != 0 {
+	if got := f.observed(f.outsider(), t); len(got) != 0 {
 		t.Fatalf("a reader outside the contact's scope read %+v", got)
 	}
 	seen, err := f.store.ListView(f.rep1(), f.list)
@@ -200,7 +200,7 @@ func TestAChangedFilterIsComparedAgainstTheLastCheckUnderItsNewVersion(t *testin
 		t.Fatal(err)
 	}
 	f.check(t)
-	got := f.observed(t, f.e.Admin())
+	got := f.observed(f.e.Admin(), t)
 	if len(got) != 2 {
 		t.Fatalf("after the filter changed, history = %+v, want one entered and one left", got)
 	}
@@ -215,7 +215,7 @@ func TestAChangedFilterIsComparedAgainstTheLastCheckUnderItsNewVersion(t *testin
 	}
 	f.retitle(t, buyer, "Seller")
 	f.check(t)
-	if latest := f.observed(t, f.e.Admin())[0]; *latest.Reason != "evaluated" {
+	if latest := f.observed(f.e.Admin(), t)[0]; *latest.Reason != "evaluated" {
 		t.Fatalf("the check after the rebaseline still says %q", *latest.Reason)
 	}
 }

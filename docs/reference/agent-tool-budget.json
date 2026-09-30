@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 516,
-    "tokens": 27532,
+    "tokens": 27588,
     "median_tool_tokens": 278,
-    "mean_tool_tokens": 339
+    "mean_tool_tokens": 340
   },
   "agents": [
     {
@@ -116,7 +116,7 @@
     },
     {
       "name": "read_lists",
-      "tokens": 621
+      "tokens": 676
     },
     {
       "name": "send_message",

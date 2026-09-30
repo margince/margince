@@ -87,25 +87,28 @@ func (s *Store) observedFor(ctx context.Context, out *listSummary) error {
 		default:
 			out.LastCheck = &check
 		}
-		out.Pulse, err = pulseSince(ctx, tx, out.listRow)
+		pulse, visited, err := pulseSince(ctx, tx, out.listRow)
+		if visited {
+			out.Pulse = &pulse
+		}
 		return err
 	})
 }
 
 // pulseSince counts the entered and left events since the reader's last
-// visit, of records the reader can see now; nil when they never visited.
-func pulseSince(ctx context.Context, tx pgx.Tx, l listRow) (*listPulse, error) {
+// visit, of records the reader can see now; visited is false when they never
+// opened the list.
+func pulseSince(ctx context.Context, tx pgx.Tx, l listRow) (pulse listPulse, visited bool, err error) {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.UserID == (ids.UUID{}) {
-		return nil, nil
+		return listPulse{}, false, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	visible, err := observedVisibleClause(ctx, l.EntityType, arg)
 	if err != nil {
-		return nil, err
+		return listPulse{}, false, err
 	}
-	var pulse listPulse
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT v.visited_at,
 		       count(ev.id) FILTER (WHERE ev.action = $%[1]d),
@@ -117,12 +120,9 @@ func pulseSince(ctx context.Context, tx pgx.Tx, l listRow) (*listPulse, error) {
 		GROUP BY v.visited_at`, arg(memberEntered), arg(memberLeft), visible, arg(p.UserID), arg(l.ID)),
 		args...).Scan(&pulse.Since, &pulse.Entered, &pulse.Left)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return listPulse{}, false, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &pulse, nil
+	return pulse, err == nil, err
 }
 
 // observedVisibleClause is the test a membership event's record must pass for
@@ -131,13 +131,14 @@ func pulseSince(ctx context.Context, tx pgx.Tx, l listRow) (*listPulse, error) {
 // the record type sees none; the choice is made before the scope is built, so
 // its arguments are registered only when its SQL is used.
 func observedVisibleClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
-	if auth.Require(ctx, entityType, principal.ActionRead) != nil {
-		return "FALSE", nil
+	visible := "FALSE"
+	if auth.Require(ctx, entityType, principal.ActionRead) == nil {
+		scope, err := recordScope(ctx, entityType, "e", arg)
+		if err != nil {
+			return "", err
+		}
+		visible = fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = ev.entity_id AND %s)",
+			pgx.Identifier{entityType}.Sanitize(), scope)
 	}
-	scope, err := recordScope(ctx, entityType, "e", arg)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = ev.entity_id AND %s)",
-		pgx.Identifier{entityType}.Sanitize(), scope), nil
+	return visible, nil
 }

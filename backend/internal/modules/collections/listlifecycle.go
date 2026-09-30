@@ -87,7 +87,7 @@ func (s *Store) checkUpdate(ctx context.Context, id ids.ListID, in UpdateListInp
 		return err
 	}
 	if in.IfVersion == nil {
-		return &BadInputError{Field: "version", Reason: "name the version you read, so a change nobody saw is not overwritten"}
+		return &BadInputError{Field: versionField, Reason: "name the version you read, so a change nobody saw is not overwritten"}
 	}
 	if in.Sharing != nil {
 		if err := checkSharing(*in.Sharing); err != nil {
@@ -255,7 +255,7 @@ func writeRevision(ctx context.Context, tx pgx.Tx, l listRow) error {
 		INSERT INTO list_revision (list_id, version, name, purpose, definition, sharing, team_id, steward_id, changed_by)
 		VALUES (@list_id, @version, @name, @purpose, @definition, @sharing, @team_id, @steward_id, @changed_by)`,
 		pgx.StrictNamedArgs{
-			listIDField: l.ID, "version": l.Version, nameField: l.Name, purposeField: l.Purpose, definitionField: l.Definition,
+			listIDField: l.ID, versionField: l.Version, nameField: l.Name, purposeField: l.Purpose, definitionField: l.Definition,
 			sharingField: l.Sharing, teamIDField: l.TeamID, stewardIDField: l.StewardID, "changed_by": actor,
 		})
 	if err != nil {

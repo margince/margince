@@ -156,13 +156,13 @@ func matchAll(ctx context.Context, tx pgx.Tx, engine storekit.Query, pred storek
 // snapshot: a list that existed before anyone watched it has no changes to
 // report, only members.
 func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, matched []ids.UUID, at time.Time, check *LiveCheck) error {
-	prior, err := readSnapshotVersion(ctx, tx, l.ID)
+	prior, held, err := readSnapshotVersion(ctx, tx, l.ID)
 	if err != nil {
 		return err
 	}
 	reason := reasonEvaluated
-	if prior != nil {
-		changed, err := filterChangedSince(ctx, tx, l, *prior)
+	if held {
+		changed, err := filterChangedSince(ctx, tx, l, prior)
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, match
 	}
 	args := pgx.StrictNamedArgs{
 		listIDField: l.ID, "matched": matched, "at": at,
-		"version": l.Version, "reason": reason, "actor": actor, "record": prior != nil,
+		versionField: l.Version, "reason": reason, "actor": actor, "record": held,
 	}
 	if err := tx.QueryRow(ctx, leaveStatement, args).Scan(&check.Left); err != nil {
 		return fmt.Errorf("record who left: %w", err)
@@ -187,10 +187,10 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, match
 	}
 	if _, err := tx.Exec(ctx, `UPDATE list_live_member SET definition_version = @version
 		WHERE list_id = @list_id AND definition_version <> @version`,
-		pgx.StrictNamedArgs{listIDField: l.ID, "version": l.Version}); err != nil {
+		pgx.StrictNamedArgs{listIDField: l.ID, versionField: l.Version}); err != nil {
 		return err
 	}
-	if prior == nil {
+	if !held {
 		check.Entered, check.Left = 0, 0
 	}
 	if err := writeCheckpoint(ctx, tx, l, at, *check, &l.Version); err != nil {
@@ -225,16 +225,19 @@ const enterStatement = `WITH came AS (
 		SELECT @list_id, c.entity_type, c.entity_id, 'entered', @reason, @actor, @at, @version FROM came c WHERE @record::boolean)
 	SELECT count(*) FROM came`
 
-// readSnapshotVersion answers the version the held members were taken under,
-// nil when no check of the list has completed yet.
-func readSnapshotVersion(ctx context.Context, tx pgx.Tx, listID ids.ListID) (*int64, error) {
-	var version *int64
-	err := tx.QueryRow(ctx, `SELECT snapshot_version FROM list_evaluation WHERE list_id = @list_id`,
-		pgx.StrictNamedArgs{listIDField: listID}).Scan(&version)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+// readSnapshotVersion answers the version the held members were taken under;
+// held is false until a check of the list has completed.
+func readSnapshotVersion(ctx context.Context, tx pgx.Tx, listID ids.ListID) (version int64, held bool, err error) {
+	var stored *int64
+	err = tx.QueryRow(ctx, `SELECT snapshot_version FROM list_evaluation WHERE list_id = @list_id`,
+		pgx.StrictNamedArgs{listIDField: listID}).Scan(&stored)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && stored == nil) {
+		return 0, false, nil
 	}
-	return version, err
+	if err != nil {
+		return 0, false, err
+	}
+	return *stored, true, nil
 }
 
 // filterChangedSince says whether the list's filter differs from the one it
@@ -248,7 +251,7 @@ func filterChangedSince(ctx context.Context, tx pgx.Tx, l listRow, version int64
 	err := tx.QueryRow(ctx, `SELECT NOT EXISTS (
 			SELECT 1 FROM list_revision r JOIN list l ON l.id = r.list_id
 			WHERE r.list_id = @list_id AND r.version = @version AND r.definition IS NOT DISTINCT FROM l.definition)`,
-		pgx.StrictNamedArgs{listIDField: l.ID, "version": version}).Scan(&changed)
+		pgx.StrictNamedArgs{listIDField: l.ID, versionField: version}).Scan(&changed)
 	return changed, err
 }
 
@@ -263,7 +266,7 @@ func writeCheckpoint(ctx context.Context, tx pgx.Tx, l listRow, at time.Time, ch
 			outcome = EXCLUDED.outcome,
 			snapshot_version = COALESCE(EXCLUDED.snapshot_version, list_evaluation.snapshot_version)`,
 		pgx.StrictNamedArgs{
-			listIDField: l.ID, "version": l.Version, "at": at, "members": check.Members,
+			listIDField: l.ID, versionField: l.Version, "at": at, "members": check.Members,
 			"outcome": check.Outcome, "snapshot": snapshot,
 		})
 	return err
