@@ -66,7 +66,7 @@ func setupAccessWorld(t *testing.T) *accessWorld {
 	w := &accessWorld{e: e, directory: identity.NewService(e.Pool), reads: compose.NewRecordAccessReads(e.Pool)}
 	w.reader, w.roleless, w.rep4, w.gone = ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO app_user (id, email, display_name, seat_type) VALUES
-		($1, 'reader@access.test', 'Reader', 'read'), ($2, 'roleless@access.test', 'Roleless', 'full'),
+		($1, 'reader@access.test', 'Reader', 'full'), ($2, 'roleless@access.test', 'Roleless', 'full'),
 		($3, 'rep4@access.test', 'Rep Four', 'full'), ($4, 'gone@access.test', 'Gone', 'full')`,
 		w.reader, w.roleless, w.rep4, w.gone)
 	for _, user := range []ids.UUID{w.reader, w.gone} {
@@ -82,6 +82,11 @@ func setupAccessWorld(t *testing.T) *accessWorld {
 
 	w.workspaceContact = e.SeedContact(t, "Open Contact", &e.Rep1)
 	w.readerContact = e.SeedContact(t, "Reader's Contact", &w.reader)
+	// A read seat owns a record by being DOWNGRADED to one, never by being
+	// handed it: a create refuses a read seat as owner, the same way a
+	// handover does. The record outliving the seat change is the state these
+	// cases are about, and the only way to reach it.
+	e.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, w.reader)
 	w.privateContact = w.seedPrivateContact(t, &e.Rep3)
 	w.ownedCompany = e.SeedCompany(t, "Owned GmbH", &e.Rep3)
 	w.ownerlessCompany = e.SeedCompany(t, "Nobody's AG", &e.Rep3)

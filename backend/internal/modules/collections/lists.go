@@ -341,10 +341,10 @@ func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 		return err
 	}
 	if in.StewardID == nil {
-		in.StewardID = storekit.OwnerOrActor(ctx, nil)
+		in.StewardID = storekit.OwnerOrActor(ctx)
 	}
 	if in.OwnerID == nil {
-		in.OwnerID = storekit.OwnerOrActor(ctx, nil)
+		in.OwnerID = storekit.OwnerOrActor(ctx)
 	}
 	switch in.ListType {
 	case listTypeDynamic:
