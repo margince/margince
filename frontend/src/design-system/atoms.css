@@ -40,6 +40,16 @@
 .badge > svg {
   flex: none;
 }
+/* A label whose every word is read wraps instead. It takes a box's radius, so
+   two lines leave the end letters clear of the curve; one line still reads as
+   the pill. */
+.badge-wrap,
+.badge-wrap .badge-label {
+  white-space: normal;
+}
+.badge-wrap {
+  border-radius: var(--r-sm);
+}
 /* The status tints are TRANSLUCENT by canon, so a badge painted with one
    takes its contrast from whatever it lands on: --success on --successBg read
    4.54:1 over --bgElevated and failed AA at 4.05:1 over a PanelPlate's

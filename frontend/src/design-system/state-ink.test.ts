@@ -65,6 +65,21 @@ function readable(node: ts.Expression): boolean {
   );
 }
 
+// SVG text built outside JSX has classes this census cannot read.
+function createsSvgText(call: ts.CallExpression): boolean {
+  const callee = ts.isPropertyAccessExpression(call.expression)
+    ? call.expression.name.text
+    : call.expression.getText();
+  return (
+    /^createElement(NS)?$/.test(callee) &&
+    call.arguments.some(
+      (argument) =>
+        ts.isStringLiteralLike(argument) &&
+        /^(?:text|tspan|textPath)$/i.test(argument.text),
+    )
+  );
+}
+
 // The classes the app puts on SVG text, read off the TSX.
 function svgTextClasses(
   sources: readonly Readonly<{ path: string; text: string }>[],
@@ -100,6 +115,11 @@ function svgTextClasses(
           }
         }
       }
+      if (ts.isCallExpression(node) && createsSvgText(node)) {
+        unread.push(
+          `${relative(frontendRoot, path)}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1} ${node.getText(source)}`,
+        );
+      }
       ts.forEachChild(node, visit);
     };
     visit(source);
@@ -109,12 +129,12 @@ function svgTextClasses(
 
 function appModules() {
   return [
-    ...filesMatching(join(frontendRoot, "src"), /\.tsx$/),
+    ...filesMatching(join(frontendRoot, "src"), /\.tsx?$/),
     ...extensionFrontendFiles(join(frontendRoot, "..", "extensions")).filter(
-      (path) => path.endsWith(".tsx"),
+      (path) => /\.tsx?$/.test(path),
     ),
   ]
-    .filter((path) => !/\.(test|stories|testkit)\.tsx$/.test(path))
+    .filter((path) => !/\.(test|stories|testkit)\.tsx?$|\.d\.ts$/.test(path))
     .map((path) => ({ path, text: readFileSync(path, "utf8") }));
 }
 
@@ -195,6 +215,8 @@ describe("text in a state colour", () => {
     ["a suffix template", `<textPath className={\`${slot("tone")}-label\`} />`],
     ["a whole-class expression", `<text className={\`a ${slot("tone")}\`} />`],
     ["a spread", "<text {...rest} />"],
+    ["a createElement", 'createElement("text", { className: "a" })'],
+    ["a createElementNS", 'document.createElementNS(svgNs, "tspan")'],
   ])("refuses to pass %s on SVG text unread", (_, markup) => {
     const probe = svgTextClasses([
       { path: join(frontendRoot, "probe.tsx"), text: `const x = ${markup};` },

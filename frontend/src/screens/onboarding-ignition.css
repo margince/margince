@@ -119,14 +119,6 @@
   animation: ob-ig-rise var(--dur-enter) var(--ease-out) 3600ms both;
 }
 
-/* On the stacked stage the vendor is the half that matters, so the badge wraps
-   rather than truncating it out of sight. */
-@media (max-width: 60rem) {
-  .ob-ig-sealed .badge-label {
-    white-space: normal;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   /*
    * The sequence ENDS rather than never happening. Every line is present and

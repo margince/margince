@@ -112,7 +112,9 @@ export function Ignition({
       {/* The wash is the STAGE's — it comes from the orb, which is in the other
           column, and the stage is what knows where the orb is. */}
       <p className="ob-ig-sealed">
-        <Badge tone="accent">{t("firstRun.ignite.sealed", { vendor })}</Badge>
+        <Badge tone="accent" wrap>
+          {t("firstRun.ignite.sealed", { vendor })}
+        </Badge>
       </p>
       <p className="ob-ig-beat" data-beat="1">
         {t("firstRun.ignite.reaching")}

@@ -382,8 +382,7 @@ export const BADGE_TONES = [
 ] as const;
 
 type BadgeTone = (typeof BADGE_TONES)[number];
-// The leading slot holds ONE mark, a glyph or the `live` dot. An `ai` badge's
-// mark is always Sparkles, so that tone is given neither to choose.
+// ONE leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
 type BadgeMark =
   | { tone?: Exclude<BadgeTone, "ai">; icon?: LucideIcon; live?: never }
   | { tone?: Exclude<BadgeTone, "ai">; icon?: never; live?: boolean }
@@ -394,23 +393,24 @@ export function Badge({
   tone = "default",
   icon,
   live,
+  wrap,
   children,
 }: Readonly<
   {
-    // `soft` is the tint a status wears beside prose and down a column;
-    // `primary` the solid fill for the one status a reader must not miss.
+    // `soft` tints a status in prose or a column; `primary` fills a must-see.
     variant?: "soft" | "primary";
+    wrap?: boolean;
     children: ReactNode;
   } & BadgeMark
 >) {
-  // `live` is true AS THE PAGE IS READ: the one place motion is a fact. The ai
-  // mark is decided here as well, for a tone that arrives untyped.
+  // `live` is true AS THE PAGE IS READ: the one place motion is a fact.
   const provenance = tone === "ai";
   const Icon = provenance ? Sparkles : icon;
   const classes = [
     "badge",
     variant === "primary" && "badge-primary",
     tone !== "default" && `badge-${tone}`,
+    wrap && "badge-wrap",
   ].filter(Boolean);
   return (
     <span className={classes.join(" ")}>
