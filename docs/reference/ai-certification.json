@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 46,
-    "sites_best_current": 40,
+    "sites_best_current": 39,
     "sites_best_partial": 0,
-    "sites_best_stale": 6,
+    "sites_best_stale": 7,
     "sites_absent": 0,
     "scenarios": 156,
     "records": 245,
@@ -479,7 +479,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -489,7 +489,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 9,
@@ -1296,7 +1296,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 0,
@@ -2089,7 +2089,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2099,7 +2099,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 9,
@@ -2882,7 +2882,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2892,7 +2892,7 @@
             },
             "same_model": false,
             "band": "supported_degraded",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 9,
@@ -3675,7 +3675,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -3685,7 +3685,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 9,
@@ -4468,7 +4468,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -4478,7 +4478,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 9,
@@ -4803,7 +4803,7 @@
       "ready": 27,
       "usable_with_care": 14,
       "not_reliable_yet": 4,
-      "recheck_pending": 6,
+      "recheck_pending": 7,
       "models": [
         {
           "binding": {
@@ -4812,9 +4812,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 39,
+          "sites_current": 38,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 783,
           "passed": 629,
           "reliability": 0.8033205619412516,
@@ -4852,9 +4852,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 37,
+          "sites_current": 36,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 573,
           "passed": 539,
           "reliability": 0.9406631762652705,
@@ -5226,7 +5226,7 @@
             "env": "sovereign"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 6,
           "passed": 6,
           "records": 2
@@ -5507,7 +5507,7 @@
       "ready": 26,
       "usable_with_care": 11,
       "not_reliable_yet": 8,
-      "recheck_pending": 6,
+      "recheck_pending": 7,
       "models": [
         {
           "binding": {
@@ -5516,9 +5516,9 @@
             "env": "eu_hosted"
           },
           "sites": 41,
-          "sites_current": 35,
+          "sites_current": 34,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 570,
           "passed": 473,
           "reliability": 0.8298245614035088,
@@ -5556,9 +5556,9 @@
             "env": "cloud_frontier"
           },
           "sites": 39,
-          "sites_current": 33,
+          "sites_current": 32,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 540,
           "passed": 504,
           "reliability": 0.9333333333333333,
@@ -5576,9 +5576,9 @@
             "env": "eu_hosted"
           },
           "sites": 39,
-          "sites_current": 33,
+          "sites_current": 32,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 504,
           "passed": 473,
           "reliability": 0.9384920634920635,
@@ -5950,7 +5950,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 3
@@ -6231,7 +6231,7 @@
       "ready": 25,
       "usable_with_care": 16,
       "not_reliable_yet": 2,
-      "recheck_pending": 6,
+      "recheck_pending": 7,
       "models": [
         {
           "binding": {
@@ -6240,9 +6240,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 37,
+          "sites_current": 36,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 606,
           "passed": 598,
           "reliability": 0.9867986798679867,
@@ -6600,7 +6600,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 1
@@ -6867,7 +6867,7 @@
       "ready": 9,
       "usable_with_care": 8,
       "not_reliable_yet": 28,
-      "recheck_pending": 6,
+      "recheck_pending": 7,
       "models": [
         {
           "binding": {
@@ -6876,9 +6876,9 @@
             "env": "sovereign"
           },
           "sites": 45,
-          "sites_current": 39,
+          "sites_current": 38,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 750,
           "passed": 591,
           "reliability": 0.788,
@@ -7250,7 +7250,7 @@
             "env": "sovereign"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 6,
           "passed": 6,
           "records": 1
@@ -7531,7 +7531,7 @@
       "ready": 13,
       "usable_with_care": 19,
       "not_reliable_yet": 11,
-      "recheck_pending": 6,
+      "recheck_pending": 7,
       "models": [
         {
           "binding": {
@@ -7540,9 +7540,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 37,
+          "sites_current": 36,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 768,
           "passed": 685,
           "reliability": 0.8919270833333334,
@@ -7900,7 +7900,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 8,
           "records": 1
@@ -8168,9 +8168,9 @@
         "env": "cloud_frontier"
       },
       "sites": 44,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 621,
       "passed": 613,
       "reliability": 0.9871175523349437,
@@ -8208,9 +8208,9 @@
         "env": "cloud_frontier"
       },
       "sites": 40,
-      "sites_current": 34,
+      "sites_current": 33,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 453,
       "passed": 427,
       "reliability": 0.9426048565121413,
@@ -8228,9 +8228,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 39,
+      "sites_current": 38,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 783,
       "passed": 629,
       "reliability": 0.8033205619412516,
@@ -8268,9 +8268,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 37,
+      "sites_current": 36,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 573,
       "passed": 539,
       "reliability": 0.9406631762652705,
@@ -8288,9 +8288,9 @@
         "env": "eu_hosted"
       },
       "sites": 41,
-      "sites_current": 35,
+      "sites_current": 34,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 570,
       "passed": 473,
       "reliability": 0.8298245614035088,
@@ -8328,9 +8328,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 33,
+      "sites_current": 32,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 540,
       "passed": 504,
       "reliability": 0.9333333333333333,
@@ -8348,9 +8348,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 33,
+      "sites_current": 32,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 504,
       "passed": 473,
       "reliability": 0.9384920634920635,
@@ -8368,9 +8368,9 @@
         "env": "eu_hosted"
       },
       "sites": 5,
-      "sites_current": 5,
+      "sites_current": 4,
       "sites_partial": 0,
-      "sites_stale": 0,
+      "sites_stale": 1,
       "runs": 93,
       "passed": 77,
       "reliability": 0.8279569892473119,
@@ -8388,9 +8388,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 37,
+      "sites_current": 36,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 768,
       "passed": 685,
       "reliability": 0.8919270833333334,
@@ -8408,9 +8408,9 @@
         "env": "sovereign"
       },
       "sites": 45,
-      "sites_current": 39,
+      "sites_current": 38,
       "sites_partial": 0,
-      "sites_stale": 6,
+      "sites_stale": 7,
       "runs": 750,
       "passed": 591,
       "reliability": 0.788,
@@ -15157,17 +15157,8 @@
       "key": "rate_extract/fx",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "fx_rates_json_api_grounded",
@@ -15189,9 +15180,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -15204,7 +15195,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15212,9 +15209,9 @@
             "model": "gemini-3.5-flash",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -15227,7 +15224,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15235,9 +15238,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -15250,7 +15253,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15258,9 +15267,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -15273,7 +15282,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15281,9 +15296,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -15296,7 +15311,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15304,9 +15325,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -15319,7 +15340,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15327,9 +15354,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -15342,7 +15369,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15350,9 +15383,9 @@
             "model": "mistralai/mistral-small-2603",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -15365,7 +15398,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15373,9 +15412,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 9,
           "passed": 8,
@@ -15388,7 +15427,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         },
         {
           "binding": {
@@ -15396,9 +15441,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -15411,7 +15456,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends): fx_rates_json_api_grounded, fx_rates_two_pairs_grounded",
+          "stale_cause": {
+            "prompt_changed": [
+              "fx_rates_json_api_grounded",
+              "fx_rates_two_pairs_grounded"
+            ]
+          }
         }
       ]
     },
