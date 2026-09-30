@@ -97,7 +97,7 @@ describe("the Questions section", () => {
     const names = within(tabs)
       .getAllByRole("button")
       .map((tab) => tab.textContent);
-    expect(names.at(-1)).toBe("Questions");
+    expect(names.at(-1)).toBe("Custom reports");
   });
 
   it("says the builder is withheld when the seat can read no population", async () => {
@@ -111,7 +111,7 @@ describe("the Questions section", () => {
         "No report data is readable with your role. An administrator can grant access.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Ask" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Run report" })).toBeNull();
   });
 
   it("asks over the page's population and shows the answer", async () => {
@@ -119,7 +119,7 @@ describe("the Questions section", () => {
     const asked = stubServer();
     renderView();
     await chooseDeals(user);
-    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await user.click(screen.getByRole("button", { name: "Run report" }));
     expect(
       await screen.findByRole("columnheader", { name: "Stage" }),
     ).toBeTruthy();
@@ -213,12 +213,12 @@ describe("an answer and the question on screen", () => {
     stubServer();
     renderView();
     await chooseDeals(user);
-    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await user.click(screen.getByRole("button", { name: "Run report" }));
     await screen.findByRole("columnheader", { name: "Stage" });
-    expect(screen.queryByText("Answer is out of date")).toBeNull();
+    expect(screen.queryByText("Report is out of date")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Add measure" }));
-    expect(await screen.findByText("Answer is out of date")).toBeTruthy();
+    expect(await screen.findByText("Report is out of date")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Stage" })).toBeTruthy();
   });
 
@@ -244,7 +244,7 @@ describe("an answer and the question on screen", () => {
     }
     render(<Harness />);
     await chooseDeals(user);
-    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await user.click(screen.getByRole("button", { name: "Run report" }));
     await screen.findByRole("columnheader", { name: "Stage" });
     await user.click(screen.getByRole("button", { name: "Measure team" }));
     expect(screen.queryByRole("columnheader", { name: "Stage" })).toBeNull();

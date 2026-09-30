@@ -1,3 +1,4 @@
+import "./reporting.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
@@ -5,12 +6,12 @@ import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { useCan } from "../app/capability";
 import { navigate } from "../app/router";
-import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import { Button, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
-import { formatNumber, INTL_LOCALE } from "../format/format";
+import { INTL_LOCALE } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
 import type { ReportingReport } from "./reporting.model";
@@ -51,16 +52,6 @@ export function ReportingScheduleDialog({
     },
   });
   const ready = readiness.data?.schedule_ready === true;
-  const revisionValue = String(definition.report_revision);
-  const dayValue = String(definition.day);
-  const revisionOptions = [
-    ...new Set([definition.report_revision, report.revision]),
-  ].map((revision) => ({
-    value: String(revision),
-    label: t("reporting.revision", {
-      revision: formatNumber(revision, locale),
-    }),
-  }));
   const write = useMutation({
     mutationFn: async ({
       reportId,
@@ -94,6 +85,7 @@ export function ReportingScheduleDialog({
       onClose();
     },
   });
+  const dayValue = String(definition.day);
   const days = Array.from(
     { length: definition.frequency === "weekly" ? 7 : 31 },
     (_, index) => ({
@@ -116,7 +108,7 @@ export function ReportingScheduleDialog({
           write.mutate({
             reportId: report.id,
             previous: schedule,
-            input: definition,
+            input: { ...definition, enabled: true },
           });
         }}
       >
@@ -127,7 +119,7 @@ export function ReportingScheduleDialog({
           {report.selection.scope.label} · {t(`reporting.${report.audience}`)} ·{" "}
           {timezone}
         </p>
-        <p className="t-caption">{t("reporting.scheduleBasis")}</p>
+        <p className="t-caption">{t("reporting.scheduleResult")}</p>
         {readiness.isSuccess && !ready && (
           <p role="status">{t("reporting.scheduleSetup")}</p>
         )}
@@ -140,22 +132,22 @@ export function ReportingScheduleDialog({
           </Button>
         )}
         <ErrorLine error={readiness.error} />
-        <Field
-          label={t("reporting.revision", {
-            revision: formatNumber(definition.report_revision, locale),
-          })}
-        >
-          {(field) => (
-            <Select
-              {...field}
-              value={revisionValue}
-              options={revisionOptions}
-              onChange={(value) =>
-                setDefinition({ ...definition, report_revision: Number(value) })
+        {definition.report_revision !== report.revision && (
+          <div>
+            <p>{t("reporting.pinnedSettings")}</p>
+            <Button
+              variant="link"
+              onClick={() =>
+                setDefinition({
+                  ...definition,
+                  report_revision: report.revision,
+                })
               }
-            />
-          )}
-        </Field>
+            >
+              {t("reporting.useCurrentSettings")}
+            </Button>
+          </div>
+        )}
         <Field label={t("reporting.frequency")}>
           {(field) => (
             <Select
@@ -196,24 +188,30 @@ export function ReportingScheduleDialog({
             />
           )}
         </Field>
-        <Checkbox
-          label={t("reporting.enabled")}
-          checked={definition.enabled}
-          disabled={!ready && !definition.enabled}
-          onChange={(event) =>
-            setDefinition({ ...definition, enabled: event.target.checked })
-          }
-        />
         <ErrorLine error={write.error} />
         <div className="reporting-dialog-actions">
           <Button variant="ghost" onClick={onClose}>
             {t("reporting.cancel")}
           </Button>
           <Button
-            type="submit"
-            disabled={write.isPending || (definition.enabled && !ready)}
+            variant="ghost"
+            disabled={write.isPending}
+            onClick={() =>
+              write.mutate({
+                reportId: report.id,
+                previous: schedule,
+                input: { ...definition, enabled: false },
+              })
+            }
           >
-            {t("reporting.schedule")}
+            {t("reporting.savePaused")}
+          </Button>
+          <Button type="submit" disabled={write.isPending || !ready}>
+            {t(
+              schedule?.definition.enabled
+                ? "reporting.updateSchedule"
+                : "reporting.activateSchedule",
+            )}
           </Button>
         </div>
       </form>

@@ -13,6 +13,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { downloadBytes } from "./download";
 import { ReportingDefinitions } from "./reporting.definitions";
+import { ReportingExportButton } from "./reporting.export";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
 import {
@@ -20,7 +21,6 @@ import {
   reportingSchedule,
   reportingTargets,
 } from "./reporting.scenarios";
-import { ReportingScorecard } from "./reporting.scorecard";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -50,7 +50,7 @@ it("sends independent pipeline, target-period and expected-close filters and ope
       <ReportingOverview scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Won deal value over time" });
+  await screen.findByRole("heading", { name: "Sales won over time" });
   await pickOption(
     user,
     screen.getByRole("combobox", { name: "Pipeline" }),
@@ -58,12 +58,12 @@ it("sends independent pipeline, target-period and expected-close filters and ope
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Target period" }),
-    "Fiscal quarter",
+    screen.getByRole("combobox", { name: "Date range" }),
+    "This fiscal quarter",
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Expected close window" }),
+    screen.getByRole("combobox", { name: "Open pipeline · expected close" }),
     "All open deals",
   );
   await waitFor(() =>
@@ -124,6 +124,9 @@ it("captures the saved revision with an idempotency key and exposes report editi
   expect(
     request instanceof Request && request.headers.get("Idempotency-Key"),
   ).toMatch(/^[\da-f-]{36}$/);
+  await user.click(
+    await screen.findByRole("button", { name: "Report actions" }),
+  );
   await user.click(screen.getByRole("button", { name: "Edit report" }));
   expect(
     await screen.findByRole("dialog", { name: "Edit report" }),
@@ -147,7 +150,9 @@ it("captures the saved revision with an idempotency key and exposes report editi
   await user.click(
     within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }),
   );
-  await user.click(screen.getByRole("button", { name: "Live preview" }));
+  expect(
+    screen.getByRole("combobox", { name: "Saved snapshots" }),
+  ).toHaveTextContent("Live report");
   expect(window.location.hash).toContain("report");
 });
 
@@ -194,9 +199,14 @@ it("creates a pipeline-specific fiscal-quarter count target and pages the target
     dialog.getByRole("combobox", { name: "Target period" }),
     "Fiscal quarter",
   );
-  fireEvent.change(dialog.getByLabelText(/First day of target period/), {
-    target: { value: "2026-10-01" },
+  fireEvent.change(dialog.getByLabelText(/Year/), {
+    target: { value: "2026" },
   });
+  await pickOption(
+    user,
+    dialog.getByRole("combobox", { name: /Month starting/ }),
+    "October",
+  );
   fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
     target: { value: "120" },
   });
@@ -226,6 +236,9 @@ it("removes a capture context without leaving an enabled phantom capture", async
       <ReportingDefinitions />
     </StoryProviders>,
   );
+  await user.click(
+    await screen.findByRole("button", { name: "Reporting setup" }),
+  );
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Add capture" })).toBeEnabled(),
   );
@@ -235,7 +248,9 @@ it("removes a capture context without leaving an enabled phantom capture", async
     screen.queryByRole("button", { name: "Remove capture" }),
   ).not.toBeInTheDocument();
   await user.type(screen.getByLabelText(/Reason/), "Stop unnecessary capture");
-  await user.click(screen.getByRole("button", { name: "Publish framework" }));
+  await user.click(
+    screen.getByRole("button", { name: "Save reporting settings" }),
+  );
   await waitFor(() =>
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({ capture_contexts: [] }),
@@ -259,10 +274,9 @@ it.each([undefined, "edition-september"])(
     });
     render(
       <StoryProviders>
-        <ReportingScorecard
+        <ReportingExportButton
           evaluation={reportingStoryEvaluation}
           editionId={editionId}
-          onEvidence={() => {}}
         />
       </StoryProviders>,
     );

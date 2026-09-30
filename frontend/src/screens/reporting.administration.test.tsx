@@ -47,9 +47,14 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByRole("button", { name: "Set target" })).toBeDisabled();
   await dialog.findByRole("combobox", { name: "Metrics" });
-  fireEvent.change(dialog.getByLabelText(/First day of target period/), {
-    target: { value: "2026-10-01" },
+  fireEvent.change(dialog.getByLabelText(/Year/), {
+    target: { value: "2026" },
   });
+  await pickOption(
+    user,
+    dialog.getByRole("combobox", { name: /Month starting/ }),
+    "October",
+  );
   await user.type(
     dialog.getByRole("spinbutton", { name: /^Target/ }),
     "1250.25",
@@ -86,12 +91,12 @@ it("revises a count target without rescaling it or changing its identity", async
     </StoryProviders>,
   );
   const row = (
-    await screen.findByRole("cell", { name: "Meetings held" })
+    await screen.findByRole("cell", { name: /Meetings held/ })
   ).closest("tr");
   if (!row) throw new Error("Missing commitment row");
   await user.click(within(row).getByRole("button", { name: "Revise target" }));
   const dialog = within(await screen.findByRole("dialog"));
-  expect(dialog.getByLabelText(/First day of target period/)).toBeDisabled();
+  expect(dialog.getByLabelText(/Year/)).toBeDisabled();
   expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeDisabled();
   expect(dialog.getByRole("spinbutton", { name: /^Target/ })).toHaveValue(40);
   fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
@@ -126,7 +131,7 @@ it("keeps target authoring unavailable to a read seat", async () => {
       <ReportingTargets />
     </StoryProviders>,
   );
-  await screen.findByRole("cell", { name: "Meetings held" });
+  await screen.findByRole("cell", { name: /Meetings held/ });
   expect(
     screen.queryByRole("button", { name: "Set target" }),
   ).not.toBeInTheDocument();
@@ -160,6 +165,9 @@ it("publishes stage qualification and capture contexts with a reason and version
       <ReportingDefinitions />
     </StoryProviders>,
   );
+  await user.click(
+    await screen.findByRole("button", { name: "Reporting setup" }),
+  );
   await user.click(await screen.findByRole("checkbox", { name: "Qualified" }));
   await user.click(screen.getByRole("checkbox", { name: "Proposal" }));
   await user.click(screen.getByRole("checkbox", { name: "Proposal" }));
@@ -172,13 +180,15 @@ it("publishes stage qualification and capture contexts with a reason and version
   const pipelinePickers = screen.getAllByRole("combobox", { name: "Pipeline" });
   await pickOption(user, pipelinePickers[pipelinePickers.length - 1], "Sales");
   expect(
-    screen.getByRole("button", { name: "Publish framework" }),
+    screen.getByRole("button", { name: "Save reporting settings" }),
   ).toBeDisabled();
   await user.type(
     screen.getByLabelText(/Reason/),
     "Align qualification across markets",
   );
-  await user.click(screen.getByRole("button", { name: "Publish framework" }));
+  await user.click(
+    screen.getByRole("button", { name: "Save reporting settings" }),
+  );
   await waitFor(() =>
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -200,9 +210,12 @@ it("does not expose framework publication to read-only readers", async () => {
       <ReportingDefinitions />
     </StoryProviders>,
   );
-  await screen.findByText("Revision 1 · Sales");
+  await screen.findByRole("heading", { name: "Metric definitions" });
   expect(
-    screen.queryByRole("button", { name: "Publish framework" }),
+    screen.queryByRole("button", { name: "Reporting setup" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Save reporting settings" }),
   ).not.toBeInTheDocument();
 });
 
@@ -236,14 +249,14 @@ it("creates a month-end schedule pinned to the selected report revision", async 
   fireEvent.change(screen.getByLabelText(/Local time/), {
     target: { value: "17:30" },
   });
-  await user.click(screen.getByRole("button", { name: "Schedule" }));
+  await user.click(screen.getByRole("button", { name: "Activate schedule" }));
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith({
       report_revision: reportingStoryReport.revision,
       frequency: "monthly",
       day: 31,
       local_time: "17:30",
-      enabled: false,
+      enabled: true,
     }),
   );
   expect(close).toHaveBeenCalledOnce();
@@ -275,8 +288,7 @@ it("resets an edited schedule's day when its cadence changes and can resume it",
   expect(screen.getByRole("combobox", { name: "Run day" })).toHaveTextContent(
     "Monday",
   );
-  await user.click(screen.getByRole("checkbox", { name: "Schedule enabled" }));
-  await user.click(screen.getByRole("button", { name: "Schedule" }));
+  await user.click(screen.getByRole("button", { name: "Activate schedule" }));
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith({
       report_revision: 3,
@@ -311,12 +323,7 @@ it("lets an author pause an enabled schedule after retention becomes unavailable
       />
     </StoryProviders>,
   );
-  const enabled = await screen.findByRole("checkbox", {
-    name: "Schedule enabled",
-  });
-  expect(enabled).toBeEnabled();
-  await user.click(enabled);
-  await user.click(screen.getByRole("button", { name: "Schedule" }));
+  await user.click(screen.getByRole("button", { name: "Save paused" }));
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({ enabled: false }),
@@ -347,7 +354,7 @@ it("waits for readiness before claiming retention setup is needed", async () => 
     </StoryProviders>,
   );
   await waitFor(() => expect(readiness).toHaveBeenCalledOnce());
-  const enabled = screen.getByRole("checkbox", { name: "Schedule enabled" });
+  const enabled = screen.getByRole("button", { name: "Activate schedule" });
   expect(enabled).toBeDisabled();
   expect(
     screen.queryByText(/Enable snapshot retention/),
@@ -362,4 +369,112 @@ it("waits for readiness before claiming retention setup is needed", async () => 
   expect(
     screen.queryByText(/Enable snapshot retention/),
   ).not.toBeInTheDocument();
+});
+
+it("offers only fiscal-quarter start months and submits the selected boundary", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingTargets[0]));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /installation/settings": () =>
+      jsonResponse({
+        fiscal_year_start_month: 2,
+        timezone: REPORTING_FIXTURE_ZONE,
+      }),
+    "POST /analytics/targets": write,
+  });
+  render(
+    <StoryProviders>
+      <ReportingTargets />
+    </StoryProviders>,
+  );
+  await user.click(await screen.findByRole("button", { name: "Set target" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  await pickOption(
+    user,
+    dialog.getByRole("combobox", { name: "Target period" }),
+    "Fiscal quarter",
+  );
+  await user.click(dialog.getByRole("combobox", { name: /Month starting/ }));
+  expect(
+    screen.getAllByRole("option").map((option) => option.textContent),
+  ).toEqual(["February", "May", "August", "November"]);
+  await user.click(screen.getByRole("option", { name: "November" }));
+  await user.type(dialog.getByRole("spinbutton", { name: /^Target/ }), "1200");
+  await user.type(
+    dialog.getByRole("textbox", { name: /Reason/ }),
+    "Agreed fiscal-quarter target",
+  );
+  await user.click(dialog.getByRole("button", { name: "Set target" }));
+  await waitFor(() =>
+    expect(write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        period_kind: "fiscal_quarter",
+        period_start: "2026-11-01",
+        value: 120000,
+      }),
+    ),
+  );
+});
+
+it("filters targets on the server and resets a paged result when status changes", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/targets": () =>
+      jsonResponse({ data: reportingTargets, next_cursor: "next-page" }),
+  });
+  const fetch = vi.spyOn(globalThis, "fetch");
+  const targetQueries = () =>
+    fetch.mock.calls.flatMap(([input]) =>
+      input instanceof Request && input.url.includes("/analytics/targets?")
+        ? [new URL(input.url).searchParams]
+        : [],
+    );
+  render(
+    <StoryProviders>
+      <ReportingTargets />
+    </StoryProviders>,
+  );
+  await screen.findByRole("button", { name: "Next page" });
+  expect(targetQueries().at(-1)?.get("retired")).toBe("false");
+  await user.click(screen.getByRole("button", { name: "Next page" }));
+  await waitFor(() =>
+    expect(targetQueries().at(-1)?.get("cursor")).toBe("next-page"),
+  );
+  await user.click(screen.getByRole("button", { name: "Target retired" }));
+  await waitFor(() =>
+    expect(targetQueries().at(-1)?.get("retired")).toBe("true"),
+  );
+  expect(targetQueries().at(-1)?.has("cursor")).toBe(false);
+  fireEvent.change(screen.getByLabelText("Month starting"), {
+    target: { value: "2026-10" },
+  });
+  await waitFor(() =>
+    expect(targetQueries().at(-1)?.get("period_start")).toBe("2026-10-01"),
+  );
+});
+
+it("saves a new schedule paused without claiming it will run", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingSchedule));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports/report/schedules": write,
+  });
+  render(
+    <StoryProviders>
+      <ReportingScheduleDialog
+        report={reportingStoryReport}
+        timezone={REPORTING_FIXTURE_ZONE}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.click(screen.getByRole("button", { name: "Save paused" }));
+  await waitFor(() =>
+    expect(write).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: false }),
+    ),
+  );
 });

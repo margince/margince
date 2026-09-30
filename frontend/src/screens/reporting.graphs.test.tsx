@@ -7,6 +7,7 @@ import { ReportingCharts } from "./reporting.charts";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
 import {
+  reportingStoryEvaluation,
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
@@ -75,7 +76,7 @@ it("renders forecast support and reconciled movement with boundary evidence", as
     context_id: "movement_delta",
     group_key: "new",
   });
-  expect(screen.getByText(/Manager call/)).toBeVisible();
+  expect(screen.getByText(/Manager forecast/)).toBeVisible();
 });
 
 it("labels snapshot selection as sharing and keeps the forecast at one quarterly scope", async () => {
@@ -175,34 +176,34 @@ it.each(["Capture failed; retry the scheduled capture", undefined])(
         <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
       </StoryProviders>,
     );
-    expect(screen.getByRole("status")).toHaveTextContent(
-      failure ?? "Unavailable",
-    );
+    if (failure) expect(screen.getByRole("status")).toHaveTextContent(failure);
+    else expect(screen.queryByRole("status")).not.toBeInTheDocument();
   },
 );
 
-it("opens the at-risk worklist from stage age while frozen editions remain historical", async () => {
+it("opens the stage-age chart evidence context", async () => {
   const user = userEvent.setup({ delay: null });
-  installFetchStub(reportingStoryRoutes(forecastEvaluation));
-  const view = render(
+  const evidence = vi.fn();
+  const evaluation = {
+    ...forecastEvaluation,
+    charts: forecastEvaluation.charts.filter(
+      (chart) => chart.kind === "stage_age",
+    ),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
     <StoryProviders>
-      <ReportingCharts evaluation={forecastEvaluation} onEvidence={() => {}} />
-    </StoryProviders>,
-  );
-  await user.click(screen.getByRole("button", { name: /Open my worklist/ }));
-  expect(window.location.hash).toContain("deals_at_risk");
-  view.rerender(
-    <StoryProviders>
-      <ReportingCharts
-        evaluation={forecastEvaluation}
-        editionId="frozen"
-        onEvidence={() => {}}
-      />
+      <ReportingCharts evaluation={evaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
   expect(
     screen.queryByRole("button", { name: /Open my worklist/ }),
   ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "View records" }));
+  expect(evidence).toHaveBeenCalledWith({
+    metric: evaluation.charts[0].metric,
+    context_id: evaluation.charts[0].context_id,
+  });
 });
 
 it("shows accepted handoffs alone and hides targets without an allocation", async () => {
@@ -231,4 +232,56 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
     document.querySelectorAll(".report-chart-column").length,
   ).toBeGreaterThan(0);
   expect(screen.queryByText("Progress against target")).not.toBeInTheDocument();
+});
+
+it.each([
+  { actual: 21600000, label: "€84k remaining" },
+  { actual: 34000000, label: "€40k above target" },
+])("shows target attainment with $label", ({ actual, label }) => {
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    metrics: [
+      {
+        ...reportingStoryEvaluation.metrics[0],
+        target: 30000000,
+        target_actual: actual,
+      },
+    ],
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  expect(screen.getByText(label, { exact: false })).toBeVisible();
+});
+
+it("omits unassigned target columns for SDR outcomes", async () => {
+  const user = userEvent.setup({ delay: null });
+  const evaluation = {
+    ...sdrEvaluation,
+    charts: sdrEvaluation.charts.map((chart) => ({
+      ...chart,
+      points: chart.points.map((point) => ({ ...point, target: undefined })),
+    })),
+    metrics: sdrEvaluation.metrics.map((metric) => ({
+      ...metric,
+      target: undefined,
+      target_actual: undefined,
+    })),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  await user.click(screen.getByText("All metrics"));
+  expect(
+    screen.queryByRole("columnheader", { name: "Target" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByText("34", { selector: ".stat-card-value" }),
+  ).toBeVisible();
 });

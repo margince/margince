@@ -5,9 +5,9 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import {
   Button,
+  Disclosure,
   Field,
   SegmentedControl,
-  StatCard,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -90,6 +90,12 @@ export function ForecastView({
       <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
         {(data) => (
           <>
+            {data.period_start && data.period_end && (
+              <p className="t-caption">
+                {formatDateAbbrev(data.period_start, locale, data.timezone)} –{" "}
+                {formatDateAbbrev(data.period_end, locale, data.timezone)}
+              </p>
+            )}
             <ForecastAnswer readings={data} locale={locale} />
             {reportingEnabled && period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />
@@ -109,31 +115,33 @@ export function ForecastView({
               four numbers. */}
             <div className="analytics-pair">
               <ForecastReview />
-              <EvidenceReceipt
-                title={t("forecast.receipt")}
-                counts={[
-                  {
-                    key: "eligible",
-                    term: t("forecast.eligible"),
-                    value: formatNumber(data.eligible_count, locale),
-                  },
-                  {
-                    key: "priced",
-                    term: t("forecast.priced"),
-                    value: formatNumber(data.priced_count, locale),
-                  },
-                  {
-                    key: "confirmed",
-                    term: t("forecast.confirmed"),
-                    value: formatNumber(data.confirmed_date_count, locale),
-                  },
-                  {
-                    key: "fx",
-                    term: t("forecast.fxMissing"),
-                    value: formatNumber(data.fx_missing_count, locale),
-                  },
-                ]}
-              />
+              <Disclosure summary={t("forecast.receipt")}>
+                <EvidenceReceipt
+                  title={t("forecast.receipt")}
+                  counts={[
+                    {
+                      key: "eligible",
+                      term: t("forecast.eligible"),
+                      value: formatNumber(data.eligible_count, locale),
+                    },
+                    {
+                      key: "priced",
+                      term: t("forecast.priced"),
+                      value: formatNumber(data.priced_count, locale),
+                    },
+                    {
+                      key: "confirmed",
+                      term: t("forecast.confirmed"),
+                      value: formatNumber(data.confirmed_date_count, locale),
+                    },
+                    {
+                      key: "fx",
+                      term: t("forecast.fxMissing"),
+                      value: formatNumber(data.fx_missing_count, locale),
+                    },
+                  ]}
+                />
+              </Disclosure>
             </div>
           </>
         )}
@@ -142,15 +150,7 @@ export function ForecastView({
   );
 }
 
-// How far the call sits from the evidence, in the sentence that direction
-// needs.
-//
-// THREE sentences and an UNSIGNED magnitude, because a difference cannot be
-// said in one. A signed figure in a sentence ending "over evidence" printed a
-// call twenty thousand SHORT of its evidence as "-€20,000.00 over evidence",
-// which is the wrong direction stated twice and then contradicted by a minus
-// sign. Equal is its own arm rather than a zero: "±€0 over evidence" is a
-// difference nobody has.
+// Compare the period forecast with won sales plus confirmed committed deals.
 function callDetail(
   call: NonNullable<Readings["current_call"]>,
   readings: Readings,
@@ -161,7 +161,8 @@ function callDetail(
   // in: a reporting figure and the date beside it must not be bucketed on two
   // different calendars.
   const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
-  const difference = call.amount_minor - readings.evidence_minor;
+  const difference =
+    call.amount_minor - (readings.won_minor + readings.evidence_minor);
   if (difference === 0) {
     return t("forecast.currentCallDetailEven", { date });
   }
@@ -228,10 +229,10 @@ function ForecastAnswer({
             {call
               ? t("forecast.answerWithCall", {
                   call: money(call.amount_minor),
-                  evidence: money(readings.evidence_minor),
+                  evidence: money(readings.won_minor + readings.evidence_minor),
                 })
               : t("forecast.answerNoCall", {
-                  evidence: money(readings.evidence_minor),
+                  evidence: money(readings.won_minor + readings.evidence_minor),
                 })}
           </p>
           {/* The same answer as one shape: what is banked, what is committed
@@ -272,6 +273,9 @@ function ForecastAnswer({
                 : undefined
             }
           />
+          {call && (
+            <p className="t-caption">{callDetail(call, readings, locale, t)}</p>
+          )}
         </PanelBody>
       </Panel>
 
@@ -295,27 +299,6 @@ function ForecastAnswer({
           fold is the strip's, so a card that did not declare it would keep its
           box while the rows beside it lost theirs. */}
       <StatStrip>
-        <StatCard
-          narrow="row"
-          label={t("forecast.currentCall")}
-          // No call is a reading, not a missing figure: the sentence above
-          // already says the book is running on evidence alone, and a slot in a
-          // row compared across must not answer that with a glyph.
-          value={call ? slot(call.amount_minor) : t("forecast.currentCallNone")}
-          detail={call ? callDetail(call, readings, locale, t) : undefined}
-        />
-        <StatCard
-          narrow="row"
-          label={t("forecast.evidence")}
-          value={slot(readings.evidence_minor)}
-          detail={t("forecast.evidenceDetail")}
-        />
-        <StatCard
-          narrow="row"
-          label={t("forecast.alreadyWon")}
-          value={slot(readings.won_minor)}
-          detail={t("forecast.alreadyWonDetail")}
-        />
         {/* Both are absent for a managed-teams reading, which covers several
             populations at once: a landing summed across books that are called
             separately, and a coverage rate blended over them, would each

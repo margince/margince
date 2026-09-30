@@ -134,7 +134,7 @@ const SECTION_REPORTS = {
   // Source health: an ops view over the nightly check's own coverage rows.
   coverage: [],
   // What was sold becoming what is delivered: the three project reports.
-  delivery: ["projects-by-phase", "project-commitments", "projects-gone-quiet"],
+  delivery: ["project-commitments", "projects-gone-quiet", "projects-by-phase"],
   questions: [],
 } as const satisfies Record<Section, readonly ReportKey[]>;
 
@@ -364,7 +364,9 @@ function ForecastStrip({
       {/* How to read the second figure in every slot, as the panel's one
           descriptive line: a notice box inside the panel was a pane inside a
           pane, and it outweighed the readings it was only explaining. */}
-      <PanelIntro>{t("analytics.forecastBanner")}</PanelIntro>
+      <Popover onHover label={t("analytics.weighted")}>
+        <p>{t("analytics.forecastBanner")}</p>
+      </Popover>
       {/* ONE strip, because there is now one denomination. A plate of ruled
           slots claims its figures are ONE comparison, and a strip per currency
           — the only honest way to show native sums, since adding euros to dong
@@ -754,7 +756,15 @@ function DataCoverageView({
               />
               {/* Record-level input problems live where they are answered: the
                 Forecast input review. One resolution surface, not two. */}
-              <p className="t-sub">{t("analytics.coverageInputsElsewhere")}</p>
+              <Button
+                variant="link"
+                onClick={() => openAnalyticsSection("forecast")}
+              >
+                {t("review.title")}
+              </Button>
+              {run.sources.some((source) => source.state !== "checked") && (
+                <p className="t-caption">{t("reporting.coverageAction")}</p>
+              )}
             </PanelBody>
           </Panel>
         )
@@ -1102,11 +1112,13 @@ export function AnalyticsScreen() {
         {selection &&
         context.data &&
         scopePickerApplies(section, reportingEnabled) ? (
-          <AnalyticsScopePicker
-            scopes={context.data.allowed_scopes}
-            selected={selection.scope}
-            onSelect={selectScope}
-          />
+          <div className="analytics-scope-control">
+            <AnalyticsScopePicker
+              scopes={context.data.allowed_scopes}
+              selected={selection.scope}
+              onSelect={selectScope}
+            />
+          </div>
         ) : null}
         {section === "forecast" && selection && !reportingEnabled ? (
           <ForecastShareActions target="forecast" scope={selection.scope} />

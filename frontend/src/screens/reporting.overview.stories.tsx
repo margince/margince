@@ -57,6 +57,12 @@ export const MissingTargets: Story = {
   render: () => {
     const evaluation = {
       ...reportingStoryEvaluation,
+      metrics: reportingStoryEvaluation.metrics.map((metric) => ({
+        ...metric,
+        target: undefined,
+        target_actual: undefined,
+        attainment: undefined,
+      })),
       charts: reportingStoryEvaluation.charts.map((chart) => ({
         ...chart,
         points: chart.points.map((point) => ({ ...point, target: undefined })),

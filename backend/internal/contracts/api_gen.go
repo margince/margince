@@ -46046,6 +46046,12 @@ type UpdateReportingScheduleParams struct {
 type ListReportingTargetsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Retired Filter by retirement status; omitted includes both active and retired targets.
+	Retired *bool `form:"retired,omitempty" json:"retired,omitempty"`
+
+	// PeriodStart Filter by the first local day of the target period.
+	PeriodStart *openapi_types.Date `form:"period_start,omitempty" json:"period_start,omitempty"`
 }
 
 // UpdateReportingTargetParams defines parameters for UpdateReportingTarget.
@@ -73444,6 +73450,32 @@ func (siw *ServerInterfaceWrapper) ListReportingTargets(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "retired" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "retired", r.URL.Query(), &params.Retired, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "retired"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "retired", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period_start" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period_start", r.URL.Query(), &params.PeriodStart, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period_start"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period_start", Err: err})
 		}
 		return
 	}

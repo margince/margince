@@ -8,13 +8,13 @@ import { ReportingComparison } from "./reporting.comparison";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExecutions } from "./reporting.executions";
+import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { ReportingLibrary } from "./reporting.library";
 import { ReportingReportDetail } from "./reporting.report";
 import { reportingEditions, reportingSchedule } from "./reporting.scenarios";
 import { ReportingScheduleDialog } from "./reporting.schedule";
-import { ReportingScorecard } from "./reporting.scorecard";
 import {
   reportingStoryEvaluation,
   reportingStoryReport,
@@ -42,11 +42,6 @@ const cases: { name: string; route: string; view: ReactNode }[] = [
   {
     name: "metric definitions",
     route: "GET /analytics/metrics",
-    view: <ReportingDefinitions />,
-  },
-  {
-    name: "framework",
-    route: "GET /analytics/framework",
     view: <ReportingDefinitions />,
   },
   {
@@ -129,7 +124,12 @@ it("keeps a rejected schedule edit open with the entered cadence", async () => {
       />
     </StoryProviders>,
   );
-  await user.click(screen.getByRole("button", { name: "Schedule" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Activate schedule" }),
+    ).toBeEnabled(),
+  );
+  await user.click(screen.getByRole("button", { name: "Activate schedule" }));
   expect(
     await screen.findByText("Refresh the schedule before editing it"),
   ).toBeVisible();
@@ -180,10 +180,9 @@ it.each([undefined, "edition-september"])(
     installFetchStub({ ...reportingStoryRoutes(), [route]: denied });
     render(
       <StoryProviders>
-        <ReportingScorecard
+        <ReportingExportButton
           evaluation={reportingStoryEvaluation}
           editionId={editionId}
-          onEvidence={() => {}}
         />
       </StoryProviders>,
     );
@@ -193,3 +192,20 @@ it.each([undefined, "edition-september"])(
     ).toBeVisible();
   },
 );
+
+it("shows a refused reporting setup instead of an empty editor", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/framework": denied,
+  });
+  render(
+    <StoryProviders>
+      <ReportingDefinitions />
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Reporting setup" }),
+  );
+  expect(await screen.findByText("Reporting access has changed")).toBeVisible();
+});

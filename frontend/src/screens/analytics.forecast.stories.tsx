@@ -144,7 +144,7 @@ export const RecordingACall: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Update call",
+        name: "Update forecast",
       }),
     );
   },

@@ -53266,6 +53266,10 @@ export interface operations {
             query?: {
                 cursor?: string;
                 limit?: number;
+                /** @description Filter by retirement status; omitted includes both active and retired targets. */
+                retired?: boolean;
+                /** @description Filter by the first local day of the target period. */
+                period_start?: string;
             };
             header?: never;
             path?: never;

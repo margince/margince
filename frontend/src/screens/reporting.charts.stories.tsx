@@ -45,3 +45,30 @@ export const PartialHistory: Story = {
     </StoryProviders>
   ),
 };
+
+export const LongStageNames: Story = {
+  render: () => (
+    <StoryProviders>
+      <ReportingCharts
+        evaluation={{
+          ...reportingStoryEvaluation,
+          charts: reportingStoryEvaluation.charts.map((chart) =>
+            chart.kind === "stage_distribution"
+              ? {
+                  ...chart,
+                  points: chart.points.map((point, index) => ({
+                    ...point,
+                    label: [
+                      "Procurement, legal and security approval",
+                      "Technical pilot and stakeholder alignment",
+                    ][index % 2],
+                  })),
+                }
+              : chart,
+          ),
+        }}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
