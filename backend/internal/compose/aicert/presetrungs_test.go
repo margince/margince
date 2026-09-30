@@ -40,8 +40,10 @@ func TestAPresetRowGivesTheFirstRungAndTheFallbackTheirOwnState(t *testing.T) {
 		},
 		"the worst site decides": {
 			map[ai.Tier]ai.ProviderConfig{ladder[0]: candidateA, ladder[1]: candidateB},
-			[]ReadinessRow{rowFor("brief", candidateA, StatusCurrent), rowFor("long", candidateA, StatusStale),
-				rowFor("brief", candidateB, StatusCurrent), rowFor("long", candidateB, StatusPartial)},
+			[]ReadinessRow{
+				rowFor("brief", candidateA, StatusCurrent), rowFor("long", candidateA, StatusStale),
+				rowFor("brief", candidateB, StatusCurrent), rowFor("long", candidateB, StatusPartial),
+			},
 			StatusStale, StatusPartial,
 		},
 		"a site without a row is absent": {

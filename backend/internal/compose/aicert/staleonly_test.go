@@ -39,8 +39,10 @@ func TestRecordMeasuresMatchesTheRungItGrades(t *testing.T) {
 // A run whose every candidate is current sends nothing: no candidate is probed,
 // and neither is the judge, since there is nothing left for it to grade.
 func TestARunWithEveryCandidateCurrentProbesNothing(t *testing.T) {
-	cfg := RunnerConfig{Binding: candidateA, JudgeBinding: aGeminiJudge,
-		current: map[string]bool{candidateKey(ai.TaskSummarize, candidateA): true}}
+	cfg := RunnerConfig{
+		Binding: candidateA, JudgeBinding: aGeminiJudge,
+		current: map[string]bool{candidateKey(ai.TaskSummarize, candidateA): true},
+	}
 	if probes := preflightProbes(cfg, []ai.Task{ai.TaskSummarize}, &certifyHooks{}); len(probes) != 0 {
 		t.Errorf("pre-flight probes = %d, want none — every candidate's record is current", len(probes))
 	}

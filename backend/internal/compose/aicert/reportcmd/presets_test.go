@@ -20,10 +20,14 @@ func TestThePresetReportNamesEachRungAndItsRecordsState(t *testing.T) {
 	out := renderPresets([]presetReport{{
 		File: "openrouter_cloud_eu.yaml",
 		Rungs: []aicert.PresetRungState{
-			{Task: ai.TaskSummarize, FirstTier: "cheap_cloud", FirstModel: "vendor/a", FirstState: aicert.StatusCurrent,
-				FallbackTier: "premium", FallbackModel: "vendor/b", FallbackState: aicert.StatusAbsent},
-			{Task: ai.TaskColdStart, FirstTier: "cheap_cloud", FirstModel: "vendor/a", FirstState: aicert.StatusStale,
-				FallbackState: aicert.RungNone},
+			{
+				Task: ai.TaskSummarize, FirstTier: "cheap_cloud", FirstModel: "vendor/a", FirstState: aicert.StatusCurrent,
+				FallbackTier: "premium", FallbackModel: "vendor/b", FallbackState: aicert.StatusAbsent,
+			},
+			{
+				Task: ai.TaskColdStart, FirstTier: "cheap_cloud", FirstModel: "vendor/a", FirstState: aicert.StatusStale,
+				FallbackState: aicert.RungNone,
+			},
 		},
 	}})
 	for _, want := range []string{
@@ -40,8 +44,10 @@ func TestThePresetReportNamesEachRungAndItsRecordsState(t *testing.T) {
 // A same-model rung is said to be no fallback rather than rendered as a record.
 func TestThePresetReportSaysASameModelRungIsNoFallback(t *testing.T) {
 	out := renderPresets([]presetReport{{File: "p.yaml", Rungs: []aicert.PresetRungState{
-		{Task: ai.TaskSummarize, FirstTier: "local_small", FirstModel: "gemma", FirstState: aicert.StatusCurrent,
-			FallbackTier: "cheap_cloud", FallbackModel: "gemma", FallbackState: aicert.RungSameModel},
+		{
+			Task: ai.TaskSummarize, FirstTier: "local_small", FirstModel: "gemma", FirstState: aicert.StatusCurrent,
+			FallbackTier: "cheap_cloud", FallbackModel: "gemma", FallbackState: aicert.RungSameModel,
+		},
 	}}})
 	if !strings.Contains(out, "same model") || strings.Contains(out, "cheap_cloud · gemma") {
 		t.Errorf("a same-model rung must read \"same model\", not as a record:\n%s", out)
