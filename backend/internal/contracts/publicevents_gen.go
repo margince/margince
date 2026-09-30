@@ -1787,9 +1787,9 @@ type PublicEventListEvaluated struct {
 	FilterChanged bool `json:"filter_changed"`
 }
 
-// PublicEventListMemberAdded Payload for list.member_added — a record was added to a Shortlist by hand or in a bulk change. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
+// PublicEventListMemberAdded Payload for list.member_added — a record was added to a Shortlist by hand, in a bulk change or by an automation rule. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
 type PublicEventListMemberAdded struct {
-	// Reason chosen or bulk.
+	// Reason chosen, bulk or automation.
 	Reason string `json:"reason"`
 }
 

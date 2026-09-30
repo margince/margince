@@ -62,6 +62,9 @@ func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) 
 	if summary.Joined, err = s.joinedSinceVisit(ctx, l); err != nil {
 		return crmcontracts.List{}, err
 	}
+	if summary.Changes, err = s.changesSinceVisit(ctx, l); err != nil {
+		return crmcontracts.List{}, err
+	}
 	if summary.Dependencies, err = s.Dependencies(ctx, l.ID); err != nil {
 		return crmcontracts.List{}, err
 	}
@@ -213,13 +216,41 @@ func wireList(l listSummary) crmcontracts.List {
 	if l.Dependencies != nil {
 		deps := make([]crmcontracts.ListDependency, 0, len(l.Dependencies))
 		for _, d := range l.Dependencies {
-			deps = append(deps, crmcontracts.ListDependency{
-				Kind: crmcontracts.ListDependencyKind(d.Kind), OccurredAt: d.OccurredAt, Actor: d.Actor,
-			})
+			deps = append(deps, wireDependency(d))
 		}
 		out.Dependencies = &deps
 	}
+	if l.Changes != nil {
+		out.ChangesSinceVisit = &crmcontracts.ListChangeSummary{
+			Since: l.Changes.Since, FilterChanges: l.Changes.FilterChanges,
+			Joined: wireChangeGroup(l.Changes.Joined), Left: wireChangeGroup(l.Changes.Left),
+		}
+	}
 	return out
+}
+
+func wireDependency(d listDependency) crmcontracts.ListDependency {
+	out := crmcontracts.ListDependency{
+		Kind: crmcontracts.ListDependencyKind(d.Kind), OccurredAt: d.OccurredAt, Actor: d.Actor,
+	}
+	if d.Rule == nil {
+		return out
+	}
+	role := crmcontracts.ListDependencyRole(d.Rule.Role)
+	out.Role = &role
+	if d.Rule.Name != "" {
+		id := openapi_types.UUID(d.Rule.ID)
+		out.AutomationId, out.AutomationName = &id, &d.Rule.Name
+	}
+	return out
+}
+
+func wireChangeGroup(g changeGroup) crmcontracts.ListChangeGroup {
+	records := make([]crmcontracts.ListChangedRecord, 0, len(g.Records))
+	for _, r := range g.Records {
+		records = append(records, crmcontracts.ListChangedRecord{EntityId: openapi_types.UUID(r.ID), Name: r.Name})
+	}
+	return crmcontracts.ListChangeGroup{Count: g.Count, Records: records}
 }
 
 func userUUID(id *ids.UserID) *openapi_types.UUID {

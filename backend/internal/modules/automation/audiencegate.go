@@ -93,28 +93,15 @@ func checkOwnerCanReadSubject(ctx context.Context, db *database.DB, resolver aut
 	if ev.OwnerID == ids.Nil {
 		return checkOwnerlessSubject(ctx, db, ev)
 	}
-	if resolver == nil {
-		// A composed engine always carries a resolver (compose/workflows.go);
-		// reaching here is a wiring bug, not a permission question — and it
-		// must not be swallowed into a false "allow".
-		return gateDecision{}, errors.New("automation: audience gate composed with no authz.Resolver")
+	ownerCtx, err := ownerContext(ctx, resolver, ev.WorkspaceID, ev.OwnerID)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		// A gone, archived or suspended owner is a real denial, not an
+		// outage — the same honest hard case the object gate handles.
+		return gateDecision{blocked: true, reason: reasonOwnerGone}, nil
 	}
-	rbac, err := resolver.EffectiveRBAC(ctx, ev.WorkspaceID, ev.OwnerID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			// A gone, archived or suspended owner is a real denial, not an
-			// outage — the same honest hard case the object gate handles.
-			return gateDecision{blocked: true, reason: reasonOwnerGone}, nil
-		}
 		return gateDecision{}, fmt.Errorf("automation: resolving the owner's live authority: %w", err)
 	}
-	ownerCtx := principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + ev.OwnerID.String(),
-		UserID:      ev.OwnerID,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	})
 	// The OBJECT grant first, then the row. This is the order the real read
 	// path runs (activities/audience.go's GetActivityContent) and both halves
 	// are load-bearing: EnsureActivityContentVisibleLive answers row and
@@ -194,4 +181,27 @@ func checkOwnerlessSubject(ctx context.Context, db *database.DB, ev workflow.Eve
 		return gateDecision{}, nil
 	}
 	return gateDecision{blocked: true, reason: reasonOwnerlessHeld}, nil
+}
+
+// ownerContext binds an automation owner's live grants as the acting
+// principal, for the questions only their own row scope answers: whether they
+// may read a message, and which of a list's changes they can see. A gone,
+// archived or suspended owner answers apperrors.ErrNotFound.
+func ownerContext(ctx context.Context, resolver authz.Resolver, workspace, owner ids.UUID) (context.Context, error) {
+	if resolver == nil {
+		// A composed engine always carries a resolver (compose/workflows.go);
+		// reaching here is a wiring bug, and it must not become a false "allow".
+		return nil, errors.New("automation: no authz.Resolver to resolve the owner's authority")
+	}
+	rbac, err := resolver.EffectiveRBAC(ctx, workspace, owner)
+	if err != nil {
+		return nil, err
+	}
+	return principal.WithActor(ctx, principal.Principal{
+		Type:        principal.PrincipalHuman,
+		ID:          principal.HumanIDPrefix + owner.String(),
+		UserID:      owner,
+		TeamIDs:     rbac.TeamIDs,
+		Permissions: rbac.Permissions,
+	}), nil
 }

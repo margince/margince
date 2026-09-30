@@ -41831,9 +41831,17 @@ components:
             On a single Live List read: the members this caller can see that a check saw joining
             since their last visit and that are still members, newest first, at most 500. Absent
             from the library.
+        changes_since_visit:
+          $ref: '#/components/schemas/ListChangeSummary'
+          description: >-
+            On a single Live List read: what changed since this caller last opened it, counted from
+            the list's history under their row scope, with no model involved. Absent on a first
+            visit, for a Shortlist and from the library.
         dependencies:
           type: array
-          description: What uses this list. Exports are listed as usage and block nothing.
+          description: >-
+            What uses this list: the active automation rules that watch or add to it, then its
+            filtered exports. Neither blocks a change; a rule pauses itself when its list is archived.
           items: { $ref: '#/components/schemas/ListDependency' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -41849,6 +41857,32 @@ components:
       properties:
         checked_at: { type: string, format: date-time }
         outcome: { type: string, enum: [complete, too_large, invalid] }
+
+    ListChangeSummary:
+      type: object
+      required: [since, joined, left, filter_changes]
+      properties:
+        since: { type: string, format: date-time, description: 'The visit the summary runs from.' }
+        joined: { $ref: '#/components/schemas/ListChangeGroup' }
+        left: { $ref: '#/components/schemas/ListChangeGroup' }
+        filter_changes: { type: integer, description: 'How many times the filter changed since then.' }
+
+    ListChangeGroup:
+      type: object
+      description: The distinct records this caller can see that moved one way, and the newest three by name.
+      required: [count, records]
+      properties:
+        count: { type: integer }
+        records:
+          type: array
+          items: { $ref: '#/components/schemas/ListChangedRecord' }
+
+    ListChangedRecord:
+      type: object
+      required: [entity_id]
+      properties:
+        entity_id: { type: string, format: uuid }
+        name: { type: [string, 'null'] }
 
     ListPulse:
       type: object
@@ -41870,10 +41904,22 @@ components:
       type: object
       required: [kind, occurred_at, blocking]
       properties:
-        kind: { type: string, enum: [export] }
-        occurred_at: { type: string, format: date-time }
+        kind: { type: string, enum: [export, automation] }
+        occurred_at: { type: string, format: date-time, description: 'When the export ran, or the rule was made.' }
         actor: { type: [string, 'null'] }
         blocking: { type: boolean, description: 'Whether it refuses a breaking change or archive of the list.' }
+        role:
+          type: [string, 'null']
+          enum: [watches, writes, null]
+          description: 'For an automation: whether it watches this Live List or adds to this Shortlist.'
+        automation_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'For an automation: the rule. Null for a caller who may not read automations.'
+        automation_name:
+          type: [string, 'null']
+          description: 'For an automation: its name. Null for a caller who may not read automations.'
+
 
     ListMember:
       type: object
@@ -41982,7 +42028,7 @@ components:
           format: int64
           description: >-
             For an observed change, the list version whose filter it was seen under.
-        reason: { type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, evaluated, filter_changed, null], description: '`filter_changed` marks the first check after the filter changed.' }
+        reason: { type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, evaluated, filter_changed, automation, null], description: '`filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.' }
         occurred_at: { type: string, format: date-time }
         actor: { type: string }
         actor_name: { type: [string, 'null'] }
@@ -49237,6 +49283,13 @@ components:
         key: { type: string, description: The catalog type this instance is built from. }
         name: { type: string }
         status: { type: string, enum: [enabled, paused] }
+        paused_reason:
+          type: [string, 'null']
+          enum: [list_archived, list_invalid, list_unavailable, burst, null]
+          description: >-
+            Why a rule paused itself: the list it watches or adds to was archived, its filter stopped
+            working, its owner can no longer find it, or one check moved more than 100 records.
+            Null for a rule running or paused by hand. Resuming clears it.
         params: { type: object, additionalProperties: true }
         version: { type: integer }
         created_at: { type: string, format: date-time }

@@ -6,7 +6,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## automation
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -18,6 +18,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `origin` | `text` | yes | One of `catalog`, `agent_authored`. |
 | `owner_id` | `uuid` |  | Points at `app_user.id` — deleting the parent keeps this row and clears the link. |
 | `params` | `jsonb` | yes | Required `jsonb`, defaulting to `'{}'::jsonb`. |
+| `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. |
 | `tier` | `text` | yes | One of `auto_execute`, `confirmation_required`. |
 | `trigger` | `jsonb` | yes | Required `jsonb`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -34,6 +35,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 **Rules**
 
 - `automation_origin_check` — `CHECK ((origin = ANY (ARRAY['catalog', 'agent_authored'])))`
+- `automation_paused_reason_check` — `CHECK ((paused_reason = ANY (ARRAY['list_archived', 'list_invalid', 'list_unavailable', 'burst'])))`
 - `automation_tier_check` — `CHECK ((tier = ANY (ARRAY['auto_execute', 'confirmation_required'])))`
 
 **Indexes**

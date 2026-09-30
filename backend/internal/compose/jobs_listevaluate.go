@@ -9,13 +9,17 @@ package compose
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -68,10 +72,23 @@ func (w *listEvaluateWorker) checkWorkspace(ctx context.Context, workspace ids.U
 // CheckLiveLists runs one pass over a workspace's Live Lists as the system:
 // the check has to see every record, and each reader's scope is applied when
 // they read what it recorded. Each list is stamped with now read as its own
-// check starts.
+// check starts. A list whose filter no longer evaluates pauses the rules that
+// watch it; the check repeats every pass, so a pause missed now lands on the
+// next.
 func CheckLiveLists(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID, now func() time.Time) ([]collections.LiveCheck, error) {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), listCheckerActor)
-	return NewCollectionsStore(pool).CheckLiveLists(wsCtx, func() time.Time { return now().UTC() })
+	checks, err := NewCollectionsStore(pool).CheckLiveLists(wsCtx, func() time.Time { return now().UTC() })
+	db := InstallationDB(pool)
+	pauser := automation.NewRulePauser(db, noticesNotifier{store: notices.NewStore(db)})
+	for _, check := range checks {
+		if check.Outcome != collections.CheckInvalid {
+			continue
+		}
+		if pauseErr := pauser.PauseRulesOnList(wsCtx, check.ListID.UUID, automation.PausedListInvalid); pauseErr != nil {
+			err = errors.Join(err, fmt.Errorf("pause the rules on list %s: %w", check.ListID, pauseErr))
+		}
+	}
+	return checks, err
 }
 
 // addListEvaluateJobs registers the check and hands back its schedule, whose

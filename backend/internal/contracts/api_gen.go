@@ -2317,6 +2317,30 @@ func (e AuthorizationSeatType) Valid() bool {
 	}
 }
 
+// Defines values for AutomationPausedReason.
+const (
+	AutomationPausedReasonBurst           AutomationPausedReason = "burst"
+	AutomationPausedReasonListArchived    AutomationPausedReason = "list_archived"
+	AutomationPausedReasonListInvalid     AutomationPausedReason = "list_invalid"
+	AutomationPausedReasonListUnavailable AutomationPausedReason = "list_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the AutomationPausedReason enum.
+func (e AutomationPausedReason) Valid() bool {
+	switch e {
+	case AutomationPausedReasonBurst:
+		return true
+	case AutomationPausedReasonListArchived:
+		return true
+	case AutomationPausedReasonListInvalid:
+		return true
+	case AutomationPausedReasonListUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationStatus.
 const (
 	AutomationStatusEnabled AutomationStatus = "enabled"
@@ -10530,13 +10554,34 @@ func (e ListClauseVerdictJoin) Valid() bool {
 
 // Defines values for ListDependencyKind.
 const (
-	ListDependencyKindExport ListDependencyKind = "export"
+	ListDependencyKindAutomation ListDependencyKind = "automation"
+	ListDependencyKindExport     ListDependencyKind = "export"
 )
 
 // Valid indicates whether the value is a known member of the ListDependencyKind enum.
 func (e ListDependencyKind) Valid() bool {
 	switch e {
+	case ListDependencyKindAutomation:
+		return true
 	case ListDependencyKindExport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListDependencyRole.
+const (
+	ListDependencyRoleWatches ListDependencyRole = "watches"
+	ListDependencyRoleWrites  ListDependencyRole = "writes"
+)
+
+// Valid indicates whether the value is a known member of the ListDependencyRole enum.
+func (e ListDependencyRole) Valid() bool {
+	switch e {
+	case ListDependencyRoleWatches:
+		return true
+	case ListDependencyRoleWrites:
 		return true
 	default:
 		return false
@@ -10572,6 +10617,7 @@ func (e ListHistoryEntryKind) Valid() bool {
 
 // Defines values for ListHistoryEntryReason.
 const (
+	ListHistoryEntryReasonAutomation     ListHistoryEntryReason = "automation"
 	ListHistoryEntryReasonBulk           ListHistoryEntryReason = "bulk"
 	ListHistoryEntryReasonChosen         ListHistoryEntryReason = "chosen"
 	ListHistoryEntryReasonEvaluated      ListHistoryEntryReason = "evaluated"
@@ -10583,6 +10629,8 @@ const (
 // Valid indicates whether the value is a known member of the ListHistoryEntryReason enum.
 func (e ListHistoryEntryReason) Valid() bool {
 	switch e {
+	case ListHistoryEntryReasonAutomation:
+		return true
 	case ListHistoryEntryReasonBulk:
 		return true
 	case ListHistoryEntryReasonChosen:
@@ -23554,13 +23602,19 @@ type Automation struct {
 	Id        openapi_types.UUID `json:"id"`
 
 	// Key The catalog type this instance is built from.
-	Key       string                 `json:"key"`
-	Name      string                 `json:"name"`
-	Params    map[string]interface{} `json:"params"`
-	Status    AutomationStatus       `json:"status"`
-	UpdatedAt *time.Time             `json:"updated_at,omitempty"`
-	Version   *int                   `json:"version,omitempty"`
+	Key    string                 `json:"key"`
+	Name   string                 `json:"name"`
+	Params map[string]interface{} `json:"params"`
+
+	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
+	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
+	Status       AutomationStatus        `json:"status"`
+	UpdatedAt    *time.Time              `json:"updated_at,omitempty"`
+	Version      *int                    `json:"version,omitempty"`
 }
+
+// AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
+type AutomationPausedReason string
 
 // AutomationStatus defines model for Automation.Status.
 type AutomationStatus string
@@ -34812,13 +34866,14 @@ type List struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// CanEdit Whether this caller holds list authority over the list.
-	CanEdit   bool       `json:"can_edit"`
-	CreatedAt *time.Time `json:"created_at,omitempty"`
+	CanEdit           bool               `json:"can_edit"`
+	ChangesSinceVisit *ListChangeSummary `json:"changes_since_visit,omitempty"`
+	CreatedAt         *time.Time         `json:"created_at,omitempty"`
 
 	// Definition A Live List's filter tree; null for a Shortlist.
 	Definition *map[string]interface{} `json:"definition,omitempty"`
 
-	// Dependencies What uses this list. Exports are listed as usage and block nothing.
+	// Dependencies What uses this list: the active automation rules that watch or add to it, then its filtered exports. Neither blocks a change; a rule pauses itself when its list is archived.
 	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
 	EntityType   ListEntityType    `json:"entity_type"`
 
@@ -34870,6 +34925,33 @@ type ListListType string
 // ListSharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
 type ListSharing string
 
+// ListChangeGroup The distinct records this caller can see that moved one way, and the newest three by name.
+type ListChangeGroup struct {
+	Count   int                 `json:"count"`
+	Records []ListChangedRecord `json:"records"`
+}
+
+// ListChangeSummary defines model for ListChangeSummary.
+type ListChangeSummary struct {
+	// FilterChanges How many times the filter changed since then.
+	FilterChanges int `json:"filter_changes"`
+
+	// Joined The distinct records this caller can see that moved one way, and the newest three by name.
+	Joined ListChangeGroup `json:"joined"`
+
+	// Left The distinct records this caller can see that moved one way, and the newest three by name.
+	Left ListChangeGroup `json:"left"`
+
+	// Since The visit the summary runs from.
+	Since time.Time `json:"since"`
+}
+
+// ListChangedRecord defines model for ListChangedRecord.
+type ListChangedRecord struct {
+	EntityId openapi_types.UUID `json:"entity_id"`
+	Name     *string            `json:"name,omitempty"`
+}
+
 // ListCheck When a Live List's members were last compared with the check before. `complete` recorded who joined and left; `too_large` matched more records than one check may hold, so nothing was recorded; `invalid` could not evaluate the filter.
 type ListCheck struct {
 	CheckedAt time.Time        `json:"checked_at"`
@@ -34904,14 +34986,28 @@ type ListClauseVerdictJoin string
 type ListDependency struct {
 	Actor *string `json:"actor,omitempty"`
 
+	// AutomationId For an automation: the rule. Null for a caller who may not read automations.
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationName For an automation: its name. Null for a caller who may not read automations.
+	AutomationName *string `json:"automation_name,omitempty"`
+
 	// Blocking Whether it refuses a breaking change or archive of the list.
-	Blocking   bool               `json:"blocking"`
-	Kind       ListDependencyKind `json:"kind"`
-	OccurredAt time.Time          `json:"occurred_at"`
+	Blocking bool               `json:"blocking"`
+	Kind     ListDependencyKind `json:"kind"`
+
+	// OccurredAt When the export ran, or the rule was made.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Role For an automation: whether it watches this Live List or adds to this Shortlist.
+	Role *ListDependencyRole `json:"role,omitempty"`
 }
 
 // ListDependencyKind defines model for ListDependency.Kind.
 type ListDependencyKind string
+
+// ListDependencyRole For an automation: whether it watches this Live List or adds to this Shortlist.
+type ListDependencyRole string
 
 // ListHistoryEntry defines model for ListHistoryEntry.
 type ListHistoryEntry struct {
@@ -34931,7 +35027,7 @@ type ListHistoryEntry struct {
 	Note       *string              `json:"note,omitempty"`
 	OccurredAt time.Time            `json:"occurred_at"`
 
-	// Reason `filter_changed` marks the first check after the filter changed.
+	// Reason `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
 	Reason  *ListHistoryEntryReason `json:"reason,omitempty"`
 	Sharing *string                 `json:"sharing,omitempty"`
 	Version *int64                  `json:"version,omitempty"`
@@ -34940,7 +35036,7 @@ type ListHistoryEntry struct {
 // ListHistoryEntryKind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
 type ListHistoryEntryKind string
 
-// ListHistoryEntryReason `filter_changed` marks the first check after the filter changed.
+// ListHistoryEntryReason `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
 type ListHistoryEntryReason string
 
 // ListHistoryResponse defines model for ListHistoryResponse.
