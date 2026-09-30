@@ -18,7 +18,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -28,6 +27,18 @@ import (
 // one does not fail to compile — it renders "%!s(MISSING)" into a card — and a
 // translation that adds one consumes an argument nobody passed.
 var verbs = regexp.MustCompile(`%[a-zA-Z]|%%`)
+
+// reporter is the slice of *testing.T's methods this package calls. Narrower
+// than testing.TB on purpose: TB carries an unexported method precisely to
+// keep anyone from implementing it outside the standard library, which would
+// rule out a test double for this package's own tests — so the walk's every
+// PROBLEM branch would run only on the three well-formed tables this repo
+// happens to have today, never once observed reporting a real one.
+type reporter interface {
+	Helper()
+	Errorf(format string, args ...any)
+	Fatalf(format string, args ...any)
+}
 
 // Census fails unless every Phrase a table holds is written in every shipped
 // language with the placeholders its English sentence was given.
@@ -47,7 +58,7 @@ var verbs = regexp.MustCompile(`%[a-zA-Z]|%%`)
 // this is the one census every migrated table calls.
 //
 //craft:ignore naked-any every caller passes a different copy table's own struct or map type — the parameter names the shape this walks, not a shape of ours
-func Census(t *testing.T, table any) {
+func Census(t reporter, table any) {
 	t.Helper()
 	shape := reflect.TypeOf(table)
 	value := reflect.ValueOf(table)
@@ -63,13 +74,13 @@ func Census(t *testing.T, table any) {
 		t.Fatalf("a census needs a struct or map of phrases, got %T", table)
 	}
 	if phrases == 0 {
-		t.Fatal("the table holds no phrases; this census would certify nothing")
+		t.Fatalf("the table holds no phrases; this census would certify nothing")
 	}
 }
 
 // censusField reads one struct field, which is either a phrase directly or a
 // map of them, and reports how many phrases it found.
-func censusField(t *testing.T, name string, field reflect.Value) int {
+func censusField(t reporter, name string, field reflect.Value) int {
 	t.Helper()
 	if p, ok := field.Interface().(langcopy.Phrase); ok {
 		censusEntry(t, name, p)
@@ -86,7 +97,7 @@ func censusField(t *testing.T, name string, field reflect.Value) int {
 // map's own random iteration order — an unsorted walk reorders its failures
 // between runs, and a reader comparing two runs cannot tell what changed.
 // prefix names the enclosing field, empty for a table that is itself a map.
-func censusMap(t *testing.T, prefix string, table reflect.Value) int {
+func censusMap(t reporter, prefix string, table reflect.Value) int {
 	t.Helper()
 	keys := table.MapKeys()
 	sort.Slice(keys, func(i, j int) bool {
@@ -109,7 +120,7 @@ func censusMap(t *testing.T, prefix string, table reflect.Value) int {
 // censusEntry holds the one check every phrase answers to, however it was
 // reached: written in every shipped language, with the same placeholders its
 // English sentence was given.
-func censusEntry(t *testing.T, name string, p langcopy.Phrase) {
+func censusEntry(t reporter, name string, p langcopy.Phrase) {
 	t.Helper()
 	english := p.In(textlang.English)
 	if strings.TrimSpace(english) == "" {
@@ -135,7 +146,7 @@ func censusEntry(t *testing.T, name string, p langcopy.Phrase) {
 // NoCount fails unless each named phrase is written without a placeholder, for
 // the sentences that speak about exactly one of something. "1 days" and
 // "1 Tagen" both read as a machine talking, and the second is not German.
-func NoCount(t *testing.T, singulars map[string]langcopy.Phrase) {
+func NoCount(t reporter, singulars map[string]langcopy.Phrase) {
 	t.Helper()
 	for _, lang := range textlang.Shipped {
 		for name, p := range singulars {
