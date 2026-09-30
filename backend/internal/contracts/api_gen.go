@@ -34739,6 +34739,9 @@ type List struct {
 	Health ListHealth         `json:"health"`
 	Id     openapi_types.UUID `json:"id"`
 
+	// JoinedSinceVisit On a single Live List read: the members this caller can see that a check saw joining since their last visit and that are still members, newest first, at most 500. Absent from the library.
+	JoinedSinceVisit *[]openapi_types.UUID `json:"joined_since_visit,omitempty"`
+
 	// LastCheck When a Live List's members were last compared with the check before. `complete` recorded who joined and left; `too_large` matched more records than one check may hold, so nothing was recorded; `invalid` could not evaluate the filter.
 	LastCheck *ListCheck          `json:"last_check,omitempty"`
 	ListType  ListListType        `json:"list_type"`

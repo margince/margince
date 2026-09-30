@@ -32,7 +32,6 @@ import {
   type ListRecordType,
   useArchiveList,
   useList,
-  useListHistory,
   useListsAvailable,
   useUpdateList,
   useVisitList,
@@ -70,7 +69,7 @@ export function ListScreen({ listID }: Readonly<{ listID?: string }>) {
 function ListBody({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
   const list = useList(listID);
-  const previousVisit = useVisitOnce(listID, list.isSuccess);
+  useVisitOnce(listID, list.isSuccess && list.isFetchedAfterMount);
   if (list.isPending) {
     return null;
   }
@@ -81,7 +80,7 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
     <div className="wrap lists-page">
       <ListHead list={list.data} />
       <ListNotices list={list.data} />
-      <MembersPanel list={list.data} previousVisit={previousVisit} />
+      <MembersPanel list={list.data} />
       <ListHistoryPanel
         listID={list.data.id}
         live={list.data.list_type === "dynamic"}
@@ -91,21 +90,20 @@ function ListBody({ listID }: Readonly<{ listID: string }>) {
 }
 
 /**
- * Records one visit per opened list, after the list has been read so its
- * "since your last visit" counts from the visit before this one. Answers that
- * earlier visit, null on a first visit or until the server has answered.
+ * Records one visit per opened list, once this page has read the list itself
+ * rather than a cached copy. The server counts "since your last visit" from
+ * the visit before the one in progress, so the read and the visit may land in
+ * either order and the page shows the same counts.
  */
-function useVisitOnce(listID: string, listRead: boolean): string | null {
-  const visit = useVisitList();
+function useVisitOnce(listID: string, readThisMount: boolean) {
+  const { mutate } = useVisitList();
   const visited = useRef<string | null>(null);
-  const { mutate } = visit;
   useEffect(() => {
-    if (listRead && visited.current !== listID) {
+    if (readThisMount && visited.current !== listID) {
       visited.current = listID;
       mutate(listID);
     }
-  }, [listID, listRead, mutate]);
-  return visit.data?.previous_visit_at ?? null;
+  }, [listID, readThisMount, mutate]);
 }
 
 function ListHead({ list }: Readonly<{ list: List }>) {
@@ -274,38 +272,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
 
 type MemberRow = Readonly<Record<string, unknown> & { id: string }>;
 
-/**
- * The members a Live List's checks saw joining since the reader's previous
- * visit, read from the newest page of its history.
- */
-function useJoinedSince(list: List, since: string | null): ReadonlySet<string> {
-  const history = useListHistory(list.id);
-  return useMemo(() => {
-    const joined = new Set<string>();
-    if (list.list_type !== "dynamic" || since === null) {
-      return joined;
-    }
-    const after = Date.parse(since);
-    for (const entry of history.data?.data ?? []) {
-      if (
-        entry.kind === "member_entered" &&
-        entry.entity_id &&
-        Date.parse(entry.occurred_at) > after
-      ) {
-        joined.add(entry.entity_id);
-      }
-    }
-    return joined;
-  }, [history.data, list.list_type, since]);
-}
-
-function MembersPanel({
-  list,
-  previousVisit,
-}: Readonly<{ list: List; previousVisit: string | null }>) {
+function MembersPanel({ list }: Readonly<{ list: List }>) {
   const t = useT();
   const [why, setWhy] = useState<MemberRow | null>(null);
-  const joined = useJoinedSince(list, previousVisit);
+  const joined = useMemo(
+    () => new Set(list.joined_since_visit ?? []),
+    [list.joined_since_visit],
+  );
   if (!isMemberSource(list.entity_type)) {
     return (
       <Panel title={t("lists.members.title")}>

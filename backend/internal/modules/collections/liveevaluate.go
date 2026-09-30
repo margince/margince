@@ -30,11 +30,13 @@ const (
 	liveCheckPage      = 200
 )
 
-// How a check ended (list_evaluation_outcome_check).
+// How a check ended (list_evaluation_outcome_check). CheckFailed is never
+// stored: the list keeps its last checkpoint, so the next pass takes it first.
 const (
 	CheckComplete = "complete"
 	CheckTooLarge = "too_large"
 	CheckInvalid  = "invalid"
+	CheckFailed   = "failed"
 )
 
 // Why a Live List member was recorded entering or leaving.
@@ -53,33 +55,43 @@ const (
 // records, and the ledger row its list.evaluated event traces to.
 const listEvaluatedAction = "list_evaluated"
 
-// LiveCheck is what one check of one list did.
+// LiveCheck is what one check of one list did. Err is set when the check
+// failed and recorded nothing.
 type LiveCheck struct {
 	ListID  ids.ListID
 	Outcome string
 	Members int
 	Entered int
 	Left    int
+	Err     error
 }
 
 // CheckLiveLists checks the Live Lists checked longest ago, up to the pass's
-// list budget, each in its own transaction, so a pass cut short loses nothing
-// and the next resumes with the lists it did not reach. The caller is the
-// system: the check must see every record, whoever reads it later.
-func (s *Store) CheckLiveLists(ctx context.Context, at time.Time) ([]LiveCheck, error) {
+// list budget, each in its own transaction and stamped with its own clock
+// reading, so a pass cut short loses nothing and the next resumes with the
+// lists it did not reach. One list's failure is reported on its LiveCheck and
+// never stops the lists after it. The caller is the system: the check must see
+// every record, whoever reads it later.
+func (s *Store) CheckLiveLists(ctx context.Context, now func() time.Time) ([]LiveCheck, error) {
 	due, err := s.dueLiveLists(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]LiveCheck, 0, len(due))
 	for _, l := range due {
-		check, err := s.checkLiveList(ctx, l, at)
+		check, err := s.checkLiveList(ctx, l, now())
 		if err != nil {
-			return out, fmt.Errorf("check list %s: %w", l.ID, err)
+			check = LiveCheck{ListID: l.ID, Outcome: CheckFailed, Err: fmt.Errorf("check list %s: %w", l.ID, err)}
 		}
 		out = append(out, check)
 	}
 	return out, nil
+}
+
+// invalidFilter says the stored filter can no longer be evaluated: it does not
+// decode, or it names what the vocabulary no longer holds.
+func invalidFilter(err error) bool {
+	return errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree)
 }
 
 // dueLiveLists reads the live, non-archived Live Lists, never-checked first
@@ -105,14 +117,23 @@ func (s *Store) dueLiveLists(ctx context.Context) ([]listRow, error) {
 // its checkpoint. A filter that no longer compiles is checkpointed invalid
 // rather than failing the pass for every other list.
 func (s *Store) checkLiveList(ctx context.Context, l listRow, at time.Time) (LiveCheck, error) {
+	check, err := s.compareLiveList(ctx, l, at)
+	if !invalidFilter(err) {
+		return check, err
+	}
+	check = LiveCheck{ListID: l.ID, Outcome: CheckInvalid}
+	return check, s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return writeCheckpoint(ctx, tx, l, at, check, nil)
+	})
+}
+
+// compareLiveList runs the filter and records the difference in one
+// REPEATABLE READ transaction. A record changed by another transaction after
+// the filter ran fails the row lock the write takes, so an erasure that lands
+// in between aborts this check rather than being written back.
+func (s *Store) compareLiveList(ctx context.Context, l listRow, at time.Time) (LiveCheck, error) {
 	check := LiveCheck{ListID: l.ID}
 	engine, pred, err := s.liveFilter(ctx, l)
-	if errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree) {
-		check.Outcome = CheckInvalid
-		return check, s.db.Tx(ctx, func(tx pgx.Tx) error {
-			return writeCheckpoint(ctx, tx, l, at, check, nil)
-		})
-	}
 	if err != nil {
 		return check, err
 	}
@@ -174,14 +195,21 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, match
 	if err != nil {
 		return err
 	}
+	came, gone, err := snapshotDifference(ctx, tx, l, matched)
+	if err != nil {
+		return err
+	}
+	if err := lockChangedRecords(ctx, tx, l.EntityType, came, gone); err != nil {
+		return err
+	}
 	args := pgx.StrictNamedArgs{
-		listIDField: l.ID, "matched": matched, "at": at,
+		listIDField: l.ID, "changed": gone, "at": at,
 		versionField: l.Version, "reason": reason, "actor": actor, "record": held,
 	}
 	if err := tx.QueryRow(ctx, leaveStatement, args).Scan(&check.Left); err != nil {
 		return fmt.Errorf("record who left: %w", err)
 	}
-	args[entityTypeField] = l.EntityType
+	args["changed"], args[entityTypeField] = came, l.EntityType
 	if err := tx.QueryRow(ctx, enterStatement, args).Scan(&check.Entered); err != nil {
 		return fmt.Errorf("record who entered: %w", err)
 	}
@@ -202,11 +230,58 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, match
 	return announceCheck(ctx, tx, l, at, *check, reason == reasonFilterChanged)
 }
 
+// snapshotDifference answers which matched records the list does not hold
+// yet, and which held members the filter no longer selects.
+func snapshotDifference(ctx context.Context, tx pgx.Tx, l listRow, matched []ids.UUID) (came, gone []ids.UUID, err error) {
+	args := pgx.StrictNamedArgs{listIDField: l.ID, "matched": matched}
+	rows, err := tx.Query(ctx, `SELECT m.id FROM unnest(@matched::uuid[]) AS m(id)
+		WHERE NOT EXISTS (SELECT 1 FROM list_live_member s WHERE s.list_id = @list_id AND s.entity_id = m.id)`, args)
+	if err != nil {
+		return nil, nil, err
+	}
+	if came, err = storekit.ScanUUIDColumn(rows, "the records a Live List gained"); err != nil {
+		return nil, nil, err
+	}
+	rows, err = tx.Query(ctx, `SELECT s.entity_id FROM list_live_member s WHERE s.list_id = @list_id
+		AND s.entity_id NOT IN (SELECT unnest(@matched::uuid[]))`, args)
+	if err != nil {
+		return nil, nil, err
+	}
+	gone, err = storekit.ScanUUIDColumn(rows, "the records a Live List lost")
+	return nonNil(came), nonNil(gone), err
+}
+
+// nonNil keeps an empty set an empty array: a nil slice binds as SQL NULL.
+func nonNil(set []ids.UUID) []ids.UUID {
+	if set == nil {
+		return []ids.UUID{}
+	}
+	return set
+}
+
+// lockChangedRecords takes a share lock on every record about to be written
+// as entered or left. Erasure updates the record before it clears the list
+// rows, so either it waits for this check and then clears what it wrote, or
+// it got there first and this REPEATABLE READ check fails on the lock instead
+// of writing an erased record back.
+func lockChangedRecords(ctx context.Context, tx pgx.Tx, entityType string, came, gone []ids.UUID) error {
+	if len(came)+len(gone) == 0 {
+		return nil
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(
+		`SELECT e.id FROM %s e WHERE e.id = ANY(@came) OR e.id = ANY(@gone) ORDER BY e.id FOR SHARE`,
+		pgx.Identifier{entityType}.Sanitize()), pgx.StrictNamedArgs{"came": came, "gone": gone})
+	if err != nil {
+		return err
+	}
+	_, err = storekit.ScanUUIDColumn(rows, "the records a Live List check writes")
+	return err
+}
+
 // leaveStatement drops the held members the filter no longer selects and,
 // past the first check, records each as having left.
 const leaveStatement = `WITH gone AS (
-		DELETE FROM list_live_member s WHERE s.list_id = @list_id
-		  AND s.entity_id NOT IN (SELECT unnest(@matched::uuid[]))
+		DELETE FROM list_live_member s WHERE s.list_id = @list_id AND s.entity_id = ANY(@changed::uuid[])
 		RETURNING s.entity_type, s.entity_id),
 	logged AS (
 		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version)
@@ -217,8 +292,8 @@ const leaveStatement = `WITH gone AS (
 // first check, records each as having entered.
 const enterStatement = `WITH came AS (
 		INSERT INTO list_live_member (list_id, entity_type, entity_id, member_since, definition_version)
-		SELECT @list_id, @entity_type, m.id, @at, @version FROM unnest(@matched::uuid[]) AS m(id)
-		WHERE NOT EXISTS (SELECT 1 FROM list_live_member s WHERE s.list_id = @list_id AND s.entity_id = m.id)
+		SELECT @list_id, @entity_type, m.id, @at, @version FROM unnest(@changed::uuid[]) AS m(id)
+		ON CONFLICT (list_id, entity_id) DO NOTHING
 		RETURNING entity_type, entity_id),
 	logged AS (
 		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version)

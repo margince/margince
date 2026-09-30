@@ -151,11 +151,12 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	}
 	mustCall(t, e, "GET", "/v1/lists/"+short.ID+"/history?limit=50&cursor="+*history.Page.NextCursor, nil, http.StatusOK, &history)
 
-	// A visit answers the one before it, null the first time.
+	// A first visit, and one straight after it that only extends it, have no
+	// earlier visit to count from.
 	var firstVisit, secondVisit AnyMap
 	mustCall(t, e, "POST", "/v1/lists/"+live.ID+"/visit", nil, http.StatusOK, &firstVisit)
 	mustCall(t, e, "POST", "/v1/lists/"+live.ID+"/visit", nil, http.StatusOK, &secondVisit)
-	if firstVisit["previous_visit_at"] != nil || secondVisit["previous_visit_at"] != firstVisit["visited_at"] {
+	if firstVisit["previous_visit_at"] != nil || secondVisit["previous_visit_at"] != nil || secondVisit["visited_at"] == nil {
 		t.Fatalf("visits answered %v then %v", firstVisit, secondVisit)
 	}
 

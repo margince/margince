@@ -23,13 +23,20 @@ func (s *Store) ListsPage(ctx context.Context, filter ListFilter) (crmcontracts.
 	if err != nil {
 		return crmcontracts.ListListResponse{}, err
 	}
-	data := make([]crmcontracts.List, 0, len(lists))
+	summaries := make([]*listSummary, 0, len(lists))
 	for _, l := range lists {
 		summary, err := s.summarize(ctx, l)
 		if err != nil {
 			return crmcontracts.ListListResponse{}, err
 		}
-		data = append(data, wireList(summary))
+		summaries = append(summaries, &summary)
+	}
+	if err := s.observedFor(ctx, summaries); err != nil {
+		return crmcontracts.ListListResponse{}, err
+	}
+	data := make([]crmcontracts.List, 0, len(summaries))
+	for _, summary := range summaries {
+		data = append(data, wireList(*summary))
 	}
 	return crmcontracts.ListListResponse{Data: data, Page: crmcontracts.PageInfo{HasMore: truncated}}, nil
 }
@@ -47,6 +54,12 @@ func (s *Store) ListView(ctx context.Context, id ids.ListID) (crmcontracts.List,
 func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) {
 	summary, err := s.summarize(ctx, l)
 	if err != nil {
+		return crmcontracts.List{}, err
+	}
+	if err := s.observedFor(ctx, []*listSummary{&summary}); err != nil {
+		return crmcontracts.List{}, err
+	}
+	if summary.Joined, err = s.joinedSinceVisit(ctx, l); err != nil {
 		return crmcontracts.List{}, err
 	}
 	if summary.Dependencies, err = s.Dependencies(ctx, l.ID); err != nil {
@@ -189,6 +202,13 @@ func wireList(l listSummary) crmcontracts.List {
 	}
 	if l.Pulse != nil {
 		out.SinceLastVisit = &crmcontracts.ListPulse{Since: l.Pulse.Since, Entered: l.Pulse.Entered, Left: l.Pulse.Left}
+	}
+	if l.Joined != nil {
+		joined := make([]openapi_types.UUID, 0, len(l.Joined))
+		for _, id := range l.Joined {
+			joined = append(joined, openapi_types.UUID(id))
+		}
+		out.JoinedSinceVisit = &joined
 	}
 	if l.Dependencies != nil {
 		deps := make([]crmcontracts.ListDependency, 0, len(l.Dependencies))

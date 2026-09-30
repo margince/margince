@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -61,7 +62,7 @@ func titleIs(title string) map[string]any {
 func (f *liveListFixture) check(t *testing.T) []collections.LiveCheck {
 	t.Helper()
 	f.clock = f.clock.Add(time.Minute)
-	checks, err := compose.CheckLiveLists(context.Background(), f.e.Pool, f.e.WS, f.clock)
+	checks, err := compose.CheckLiveLists(context.Background(), f.e.Pool, f.e.WS, func() time.Time { return f.clock })
 	if err != nil {
 		t.Fatalf("check the Live Lists: %v", err)
 	}
@@ -102,6 +103,26 @@ func (f *liveListFixture) observed(ctx context.Context, t *testing.T) []collecti
 		}
 	}
 	return out
+}
+
+// visitedAnHourAgo records a visit by ctx and moves it an hour back, past the
+// half hour a visit stays in progress, so the next read counts from it. The
+// fixture's clock moves to that visit, so later checks come after it.
+func (f *liveListFixture) visitedAnHourAgo(ctx context.Context, t *testing.T, user ids.UUID) time.Time {
+	t.Helper()
+	if _, err := f.store.VisitList(ctx, f.list); err != nil {
+		t.Fatalf("visit: %v", err)
+	}
+	f.e.WsExec(t, `UPDATE list_visit SET visited_at = visited_at - interval '1 hour' WHERE user_id = $1 AND list_id = $2`, user, f.list)
+	var at time.Time
+	if err := f.e.Pool.QueryRow(context.Background(),
+		`SELECT visited_at FROM list_visit WHERE user_id = $1 AND list_id = $2`, user, f.list).Scan(&at); err != nil {
+		t.Fatal(err)
+	}
+	if at.After(f.clock) {
+		f.clock = at
+	}
+	return at
 }
 
 func (f *liveListFixture) rep1() context.Context {
@@ -154,11 +175,8 @@ func TestTheFirstCheckTakesTheMembersWithoutRecordingThemAsJoining(t *testing.T)
 func TestAReaderWhoCannotSeeTheRecordSeesNeitherItsChangeNorItsCount(t *testing.T) {
 	f := newLiveListFixture(t)
 	f.check(t)
-	for _, ctx := range []context.Context{f.rep1(), f.outsider()} {
-		if _, err := f.store.VisitList(ctx, f.list); err != nil {
-			t.Fatalf("visit: %v", err)
-		}
-	}
+	f.visitedAnHourAgo(f.rep1(), t, f.e.Rep1)
+	f.visitedAnHourAgo(f.outsider(), t, f.e.Rep3)
 	// Capture-private to Rep1: the one boundary a contact read keeps.
 	private := f.contactTitled(t, "Private Buyer", "Buyer")
 	f.e.MakeCapturePrivate(t, "contact", private, f.e.Rep1)
@@ -174,9 +192,15 @@ func TestAReaderWhoCannotSeeTheRecordSeesNeitherItsChangeNorItsCount(t *testing.
 	if err != nil || seen.SinceLastVisit == nil || seen.SinceLastVisit.Entered != 1 {
 		t.Fatalf("the capturer's pulse = %+v (%v), want one joined", seen.SinceLastVisit, err)
 	}
+	if seen.JoinedSinceVisit == nil || len(*seen.JoinedSinceVisit) != 1 {
+		t.Fatalf("the capturer's joined members = %v, want the one", seen.JoinedSinceVisit)
+	}
 	hidden, err := f.store.ListView(f.outsider(), f.list)
 	if err != nil || hidden.SinceLastVisit == nil || hidden.SinceLastVisit.Entered != 0 {
 		t.Fatalf("the outsider's pulse = %+v (%v), want nothing joined", hidden.SinceLastVisit, err)
+	}
+	if hidden.JoinedSinceVisit != nil && len(*hidden.JoinedSinceVisit) != 0 {
+		t.Fatalf("the outsider was named %v as joined", *hidden.JoinedSinceVisit)
 	}
 	library, err := f.store.ListsPage(f.outsider(), collections.ListFilter{})
 	if err != nil || len(library.Data) != 1 || library.Data[0].SinceLastVisit == nil || library.Data[0].SinceLastVisit.Entered != 0 {
@@ -245,25 +269,45 @@ func TestSinceLastVisitCountsFromTheVisitBefore(t *testing.T) {
 	reader := f.rep1()
 	first, err := f.store.VisitList(reader, f.list)
 	if err != nil || first.Previous != nil {
-		t.Fatalf("a first visit = %+v (%v), want no previous visit", first, err)
+		t.Fatalf("a first visit = %+v (%v), want nothing to count from", first, err)
 	}
-	if view, err := f.store.ListView(reader, f.list); err != nil || view.SinceLastVisit == nil {
-		t.Fatalf("after one visit the pulse = %+v (%v), want counts from it", view.SinceLastVisit, err)
+	if view, err := f.store.ListView(reader, f.list); err != nil || view.SinceLastVisit != nil {
+		t.Fatalf("during a first visit the pulse = %+v (%v), want none", view.SinceLastVisit, err)
 	}
-	f.clock = first.VisitedAt
+	earlier := f.visitedAnHourAgo(reader, t, f.e.Rep1)
 	stays := f.contactTitled(t, "Stays", "Buyer")
-	f.contactTitled(t, "Joins", "Buyer")
+	joins := f.contactTitled(t, "Joins", "Buyer")
 	f.check(t)
 	f.retitle(t, stays, "Seller")
 	f.check(t)
-	view, err := f.store.ListView(reader, f.list)
-	if err != nil || view.SinceLastVisit == nil || view.SinceLastVisit.Entered != 2 || view.SinceLastVisit.Left != 1 {
-		t.Fatalf("the pulse = %+v (%v), want two joined and one left", view.SinceLastVisit, err)
-	}
+	before := f.pulseOf(reader, t)
 	second, err := f.store.VisitList(reader, f.list)
-	if err != nil || second.Previous == nil || !second.Previous.Equal(first.VisitedAt) {
-		t.Fatalf("the second visit = %+v (%v), want the first as its previous", second, err)
+	if err != nil || second.Previous == nil || !second.Previous.Equal(earlier) {
+		t.Fatalf("the next visit = %+v (%v), want it to count from %s", second, err, earlier)
 	}
+	// Read before or after its own visit is recorded, the page counts the same.
+	after := f.pulseOf(reader, t)
+	for _, view := range []crmcontracts.List{before, after} {
+		if view.SinceLastVisit == nil || view.SinceLastVisit.Entered != 2 || view.SinceLastVisit.Left != 1 {
+			t.Fatalf("the pulse = %+v, want two joined and one left", view.SinceLastVisit)
+		}
+		if view.JoinedSinceVisit == nil || len(*view.JoinedSinceVisit) != 1 || ids.UUID((*view.JoinedSinceVisit)[0]) != joins {
+			t.Fatalf("joined since the visit = %v, want only the member still on the list", view.JoinedSinceVisit)
+		}
+	}
+	third, err := f.store.VisitList(reader, f.list)
+	if err != nil || third.Previous == nil || !third.Previous.Equal(earlier) {
+		t.Fatalf("a visit inside the half hour = %+v (%v), want it to keep counting from %s", third, err, earlier)
+	}
+}
+
+func (f *liveListFixture) pulseOf(ctx context.Context, t *testing.T) crmcontracts.List {
+	t.Helper()
+	view, err := f.store.ListView(ctx, f.list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return view
 }
 
 func TestAnAgentReadingThroughAPassportIsNotAVisit(t *testing.T) {

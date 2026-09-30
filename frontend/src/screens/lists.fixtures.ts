@@ -45,6 +45,7 @@ export const liveList: List = {
   dependencies: [],
   last_check: { checked_at: "2026-09-29T08:15:00Z", outcome: "complete" },
   since_last_visit: { since: "2026-09-28T17:00:00Z", entered: 3, left: 1 },
+  joined_since_visit: [MEMBER_ID],
 };
 
 export const shortlist: List = {

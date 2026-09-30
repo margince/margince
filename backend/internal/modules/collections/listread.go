@@ -48,8 +48,9 @@ type listSummary struct {
 	Dependencies []listDependency
 	// RetiredFields is the retired custom fields a Live List's filter names.
 	RetiredFields []string
-	LastCheck    *listCheck
-	Pulse        *listPulse
+	LastCheck     *listCheck
+	Pulse         *listPulse
+	Joined        []ids.UUID
 }
 
 type listDependency struct {
@@ -74,9 +75,6 @@ func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
 		return listSummary{}, err
 	default:
 		out.VisibleCount = &count
-	}
-	if err := s.observedFor(ctx, &out); err != nil {
-		return listSummary{}, err
 	}
 	if out.Health != healthOK {
 		return out, nil

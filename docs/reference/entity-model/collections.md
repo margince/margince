@@ -205,11 +205,12 @@ The 10 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## list_visit
 
-3 columns · primary key `(user_id, list_id)` · referenced by 0 foreign keys
+4 columns · primary key `(user_id, list_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `list_id` | `uuid` | yes | Points at `list.id` — deleting the parent deletes this row. |
+| `previous_visited_at` | `timestamp with time zone` |  | Optional `timestamp with time zone`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id` — deleting the parent deletes this row. |
 | `visited_at` | `timestamp with time zone` | yes | Required `timestamp with time zone`. |
 

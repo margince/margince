@@ -4,7 +4,13 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -148,17 +154,17 @@ describe("an opened list", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("records the visit once the list is read, and marks members who joined since the visit before", async () => {
+  it("records the visit once the list is read, reads it again, and marks the members the server says joined", async () => {
     const visits: string[] = [];
-    let listRead = false;
+    let listReads = 0;
     installFetchStub({
       "GET /me": listsMe(true),
       [`GET /lists/${LIVE_ID}`]: () => {
-        listRead = true;
+        listReads++;
         return jsonResponse(liveList);
       },
       [`POST /lists/${LIVE_ID}/visit`]: () => {
-        visits.push(listRead ? "after the read" : "before the read");
+        visits.push(listReads > 0 ? "after the read" : "before the read");
         return visitAnswer(LIVE_ID)();
       },
       [`GET /lists/${LIVE_ID}/history`]: () =>
@@ -178,6 +184,7 @@ describe("an opened list", () => {
       within(stayed).queryByText(en["lists.members.new"]),
     ).not.toBeInTheDocument();
     expect(visits).toEqual(["after the read"]);
+    await waitFor(() => expect(listReads).toBe(2));
   });
 
   it("says when a Live List was last checked and what it gained and lost since the last visit", async () => {

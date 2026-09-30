@@ -52,12 +52,15 @@ CREATE TABLE list_evaluation (
 
 CREATE INDEX idx_list_evaluation_due ON list_evaluation USING btree (evaluated_at);
 
--- When a person last opened a list: what "since your last visit" counts from.
--- Their own view state, read by nobody else.
+-- When a user last opened a list, and the visit before that: "since your
+-- last visit" counts from the visit before the one still in progress, so a
+-- page read after its own visit is recorded still shows what was new. Their
+-- own view state, read by nobody else.
 CREATE TABLE list_visit (
     user_id uuid NOT NULL,
     list_id uuid NOT NULL,
     visited_at timestamptz NOT NULL,
+    previous_visited_at timestamptz,
 
     CONSTRAINT list_visit_pkey PRIMARY KEY (user_id, list_id),
     CONSTRAINT list_visit_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE,

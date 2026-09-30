@@ -6920,8 +6920,9 @@ export interface paths {
         /**
          * Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
          * @description The mark moves only here, never as a side effect of reading the list, so a prefetch is not
-         *     a visit. It never moves backwards. The answer carries the previous visit, which is what the
-         *     page highlights new members against; null on a first visit.
+         *     a visit. It never moves backwards. A visit within half an hour of the last extends it
+         *     rather than starting a new one. The answer carries the visit `since_last_visit` now counts
+         *     from; null on a first visit.
          */
         post: operations["visitList"];
         delete?: never;
@@ -30571,8 +30572,10 @@ export interface components {
             can_edit: boolean;
             /** @description A Live List's latest check; absent for a Shortlist or a Live List not checked yet. */
             last_check?: components["schemas"]["ListCheck"];
-            /** @description What a Live List gained and lost since this caller last opened it, counting only records they can see now. Absent on a first visit and for a Shortlist. */
+            /** @description What a Live List gained and lost since this caller last opened it, counting only records they can see now. Absent on a first visit and for a Shortlist. A visit recorded in the last half hour is the one in progress, so the counts run from the visit before it. */
             since_last_visit?: components["schemas"]["ListPulse"];
+            /** @description On a single Live List read: the members this caller can see that a check saw joining since their last visit and that are still members, newest first, at most 500. Absent from the library. */
+            joined_since_visit?: string[];
             /** @description What uses this list. Exports are listed as usage and block nothing. */
             dependencies?: components["schemas"]["ListDependency"][];
             /** Format: date-time */

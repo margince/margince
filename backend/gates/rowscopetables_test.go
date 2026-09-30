@@ -481,5 +481,9 @@ const (
 	// every record for the history to be whole. They hand the caller counts,
 	// never a reference, and every read of the events they write applies the
 	// reader's current row scope (observedVisibleClause).
-	modulesTierUnscopedCeiling = 111
+	//
+	// 112: collections.lastChecks reads the latest check of lists its caller
+	// already found through their sharing (ListLists, GetList); it answers only
+	// for the ids it was handed, so it names no list the reader could not find.
+	modulesTierUnscopedCeiling = 112
 )

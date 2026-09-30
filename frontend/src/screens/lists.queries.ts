@@ -97,9 +97,9 @@ export function useListHistory(id: string) {
 }
 
 /**
- * Records that the reader opened a list and answers their visit before it.
- * The open list keeps the counts it was read with, so the page can still say
- * what was new; only the library, which shows the counts elsewhere, refreshes.
+ * Records that the reader opened a list. The server keeps counting from the
+ * visit before this one while it is in progress, so the list and the library
+ * are read again and still say what was new.
  */
 export function useVisitList() {
   const client = useQueryClient();
@@ -113,7 +113,11 @@ export function useVisitList() {
       }
       return data;
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: [LISTS_KEY, "all"] }),
+    onSuccess: (_visit, id) =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: [LISTS_KEY, "all"] }),
+        client.invalidateQueries({ queryKey: [LISTS_KEY, "one", id] }),
+      ]),
   });
 }
 
