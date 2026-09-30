@@ -613,37 +613,6 @@ export const SETTINGS_PAGES = [
   },
 
   {
-    id: "models",
-    group: "ai",
-    // Installation, not workspace: `PUT /ai/routing` re-points which vendor
-    // processes the installation's text, and `/ai/provider-keys` writes the
-    // installation key vault. Both contract summaries say "installation".
-    scope: "installation",
-    // The routing and provider-key cards read on `ai_routing`; the tiers card's
-    // health and the AI tasks card read on `ai_diagnostics` (ai/health.go), and
-    // on that grant alone the tiers card still answers (ai-routing.tsx
-    // HealthOnly). Management is seeded diagnostics WITHOUT routing.
-    requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
-    // Bindings and keys write on `ai_routing:update`, a provider sheet's prices
-    // on the `ai_model_rate` upsert (removal is admitted on update).
-    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
-  },
-  {
-    id: "automations",
-    group: "ai",
-    scope: "workspace",
-    // The write, which admin and ops alone hold. Management and manager read
-    // `automation` — they see what ran, on the records it touched — but a role
-    // that cannot change an automation has nothing to do on the page that
-    // defines them.
-    requires: writes("automation"),
-    // Not the sentinel: this page's `requires` is already a write, so resolving
-    // `changes` to it would inherit a requirement that deliberately carries no
-    // seat ceiling — a read seat holding the automation grants would be told the
-    // page is theirs to work in. The card offers delete as well.
-    changes: acts(writes("automation"), destroys("automation")),
-  },
-  {
     id: "usage",
     group: "ai",
     scope: "workspace",
@@ -663,12 +632,43 @@ export const SETTINGS_PAGES = [
     ),
   },
   {
+    id: "models",
+    group: "ai",
+    // Installation, not workspace: `PUT /ai/routing` re-points which vendor
+    // processes the installation's text, and `/ai/provider-keys` writes the
+    // installation key vault. Both contract summaries say "installation".
+    scope: "installation",
+    // The routing and provider-key cards read on `ai_routing`; the tiers card's
+    // health and the AI tasks card read on `ai_diagnostics` (ai/health.go), and
+    // on that grant alone the tiers card still answers (ai-routing.tsx
+    // HealthOnly). Management is seeded diagnostics WITHOUT routing.
+    requires: anyOf(reads("ai_routing"), reads("ai_diagnostics")),
+    // Bindings and keys write on `ai_routing:update`, a provider sheet's prices
+    // on the `ai_model_rate` upsert (removal is admitted on update).
+    changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
+  },
+  {
     id: "model-calls",
     group: "ai",
     scope: "workspace",
     requires: reads("ai_diagnostics"),
     // AiCallsCard is a read of what the models were asked. Reading it is the act.
     changes: readingIsTheAct,
+  },
+  {
+    id: "automations",
+    group: "ai",
+    scope: "workspace",
+    // The write, which admin and ops alone hold. Management and manager read
+    // `automation` — they see what ran, on the records it touched — but a role
+    // that cannot change an automation has nothing to do on the page that
+    // defines them.
+    requires: writes("automation"),
+    // Not the sentinel: this page's `requires` is already a write, so resolving
+    // `changes` to it would inherit a requirement that deliberately carries no
+    // seat ceiling — a read seat holding the automation grants would be told the
+    // page is theirs to work in. The card offers delete as well.
+    changes: acts(writes("automation"), destroys("automation")),
   },
 
   {

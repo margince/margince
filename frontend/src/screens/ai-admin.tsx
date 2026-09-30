@@ -8,7 +8,6 @@ import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
-  Badge,
   Button,
   Disclosure,
   EmptyState,
@@ -16,23 +15,17 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { CellStack } from "../design-system/cellstack";
-import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
-import { decisionSkipLabel } from "./ai-decision-labels";
-import { decisionFirstOrder } from "./ai-feature-order";
-import { TaskState } from "./ai-lane-state";
-import { ModelChain, ModelRef } from "./ai-terms";
+import { AiFeatureTable } from "./ai-feature-table";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
-type Feature = components["schemas"]["AiFeatureRoute"];
 type Deferred = components["schemas"]["AiDeferredWork"];
 
 export function useAiStatus(enabled: boolean) {
@@ -148,7 +141,7 @@ function BudgetPreview({
       {canDiagnose && <DeferredWork rows={preview.deferred_work} />}
       {canRoute && (
         <Disclosure summary={t("aiAdmin.features")}>
-          <AiFeatureTable rows={preview.features} />
+          <AiFeatureTable rows={preview.features} canTrace={canDiagnose} />
         </Disclosure>
       )}
     </>
@@ -215,21 +208,23 @@ function BudgetBody({
         </Callout>
       )}
       {!editing && canManage && (
-        <Button
-          onClick={() => {
-            setPerUser(String(budget.config.tokens_per_full_user));
-            setCompany(
-              budget.config.company_monthly_tokens === null
-                ? ""
-                : String(budget.config.company_monthly_tokens),
-            );
-            setRevision(budget.revision);
-            setEditing(true);
-            save.reset();
-          }}
-        >
-          {t("aiAdmin.edit")}
-        </Button>
+        <div className="card-actions">
+          <Button
+            onClick={() => {
+              setPerUser(String(budget.config.tokens_per_full_user));
+              setCompany(
+                budget.config.company_monthly_tokens === null
+                  ? ""
+                  : String(budget.config.company_monthly_tokens),
+              );
+              setRevision(budget.revision);
+              setEditing(true);
+              save.reset();
+            }}
+          >
+            {t("aiAdmin.edit")}
+          </Button>
+        </div>
       )}
       {editing && (
         <>
@@ -356,116 +351,5 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
       </ul>
       <p>{t("aiAdmin.recovery")}</p>
     </Disclosure>
-  );
-}
-
-// Read-only by design: a task's tier is fixed by the task contract, and the
-// binding a tier names is edited on the Model tiers card.
-export function AiFeatureTable({
-  rows,
-  health,
-}: Readonly<{
-  rows: Feature[];
-  // Present for a reader who may see how the lanes answer.
-  health?: components["schemas"]["AiHealth"];
-}>) {
-  const t = useT();
-  // Only a departure from the default is worth a badge; the unchanged case is
-  // what every quiet row already says.
-  const impact = (row: Feature) => {
-    switch (row.impact) {
-      case "budget_blocked":
-        return t("aiAdmin.impact.blocked");
-      case "model_changed":
-        return t("aiAdmin.impact.model");
-      case "decision_changed":
-        return t("aiAdmin.impact.decision");
-      case "fallback_changed":
-        return t("aiAdmin.impact.fallback");
-      case "unconfigured":
-        return t("aiAdmin.impact.unconfigured");
-      case "unchanged":
-        return row.budget_exempt ? t("aiAdmin.impact.exempt") : null;
-      default:
-        // A new impact must be named here rather than read as "unchanged".
-        return row.impact satisfies never;
-    }
-  };
-  // Which model answers, and where the decision model stands in front of the
-  // ladder. Only the lead is summarized: the rungs behind it are the tiers
-  // above, and repeating them per task is the same list said again.
-  const summary = (row: Feature) => {
-    const lead = row.effective_candidates[0];
-    const ladder = <ModelRef provider={lead.provider} model={lead.model} />;
-    const decision = row.decision_candidate;
-    if (!row.decision_first || !decision) {
-      return ladder;
-    }
-    return (
-      <ModelChain
-        steps={[decision, lead]}
-        connector={t("aiAdmin.thenLadder")}
-      />
-    );
-  };
-  const modelCell = (row: Feature) =>
-    row.effective_candidates.length ? summary(row) : "—";
-  return (
-    <DataTable
-      label={t("aiAdmin.features")}
-      rows={decisionFirstOrder(rows)}
-      rowKey={(row) => row.task}
-      columns={[
-        {
-          key: "activity",
-          header: t("aiAdmin.activity"),
-          render: (row: Feature) => {
-            const changed = impact(row);
-            return (
-              <CellStack>
-                <span>{row.display_name}</span>
-                <span className="t-caption">
-                  {row.task} · {row.execution_mode}
-                </span>
-                {row.decision_first ? (
-                  <Badge>{t("aiTasks.decisionFirst")}</Badge>
-                ) : null}
-                <TaskState
-                  health={health}
-                  tier={row.leading_tier}
-                  decisionFirst={row.decision_first === true}
-                />
-                {changed ? (
-                  <Badge
-                    tone={
-                      row.impact === "budget_blocked" ||
-                      row.impact === "unconfigured"
-                        ? "warning"
-                        : undefined
-                    }
-                  >
-                    {changed}
-                  </Badge>
-                ) : null}
-              </CellStack>
-            );
-          },
-        },
-        {
-          key: "model",
-          header: t("aiAdmin.model"),
-          render: (row: Feature) => (
-            <>
-              {modelCell(row)}
-              {row.decision_skip_reason ? (
-                <p className="t-caption">
-                  {decisionSkipLabel(row.decision_skip_reason, t)}
-                </p>
-              ) : null}
-            </>
-          ),
-        },
-      ]}
-    />
   );
 }

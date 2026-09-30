@@ -339,11 +339,12 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "usage":
       return (
         <>
-          {/* What the month cost, then the breakdown, then which activity ran
-              on what. */}
-          <AiBudgetCard />
+          {/* The month's figure, then where it went, then the allowance that
+              bounds it and the prices the estimate is drawn from — what a
+              reader asks first, down to what they rarely need. */}
           <SpendStat />
           <AiUsageCard />
+          <AiBudgetCard />
           <ModelPriceDetails />
         </>
       );

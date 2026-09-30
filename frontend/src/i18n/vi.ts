@@ -7606,10 +7606,10 @@ export const vi = {
   "settings.tab.tags": "Thẻ",
   "settings.tab.products": "Sản phẩm & báo giá",
   "settings.tab.import": "Nhập dữ liệu",
-  "settings.tab.models": "Mô hình & định tuyến",
+  "settings.tab.models": "Mô hình AI",
   "settings.tab.automations": "Tự động hoá",
   "settings.tab.usage": "Mức dùng AI",
-  "settings.tab.model-calls": "Lượt gọi mô hình",
+  "settings.tab.model-calls": "Nhật ký gọi AI",
   "settings.tab.audit": "Nhật ký kiểm toán",
   "settings.tab.system-health": "Tình trạng hệ thống",
   "settings.tab.reset": "Đặt lại dữ liệu",
@@ -8891,8 +8891,9 @@ export const vi = {
   "aiRouting.median": "Trung vị {ms} ms",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
-    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng bắt đầu bằng mô hình nó đang chạy.",
+    "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
+  "aiTasks.viewCalls": "Xem lượt gọi",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",

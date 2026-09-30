@@ -68,6 +68,20 @@ describe("AiTasksCard", () => {
     expect(screen.queryByText(/does not show provider status/i)).toBeNull();
   });
 
+  it("names each task's tier and links to that task's calls", async () => {
+    vi.stubGlobal("fetch", withDiagnostics(EVERYTHING));
+    render(<AiTasksCard />);
+
+    const row = (await screen.findByText(feature.display_name)).closest("tr");
+    if (!row) throw new Error("the task has no row");
+    expect(within(row).getByText(feature.leading_tier)).toBeTruthy();
+    expect(
+      within(row)
+        .getByRole("link", { name: "View calls" })
+        .getAttribute("href"),
+    ).toBe(`#/settings/model-calls?task=${feature.task}`);
+  });
+
   // `/ai/status` answers an empty task list to a seat without routing read,
   // and nothing to one without diagnostics or budget read. Each gets the
   // withheld panel rather than a table that reads as "no tasks".

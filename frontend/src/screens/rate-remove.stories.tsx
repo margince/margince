@@ -49,7 +49,7 @@ function story(refuse = false) {
 }
 
 const meta: Meta<typeof RemovePriceDialog> = {
-  title: "Settings/AI/Models and routing/Remove a price",
+  title: "Settings/AI/AI models/Remove a price",
   component: RemovePriceDialog,
   parameters: { layout: "fullscreen" },
 };

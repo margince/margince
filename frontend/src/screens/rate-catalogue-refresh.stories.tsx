@@ -66,7 +66,7 @@ function Demo() {
 }
 
 const meta: Meta<typeof Demo> = {
-  title: "Settings/AI/Models and routing/Refresh model prices",
+  title: "Settings/AI/AI models/Refresh model prices",
   component: Demo,
 };
 export default meta;

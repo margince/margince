@@ -7661,10 +7661,10 @@ export const de = {
   "settings.tab.tags": "Tags",
   "settings.tab.products": "Produkte und Angebote",
   "settings.tab.import": "Datenimport",
-  "settings.tab.models": "Modelle und Routing",
+  "settings.tab.models": "KI-Modelle",
   "settings.tab.automations": "Automatisierungen",
   "settings.tab.usage": "KI-Nutzung",
-  "settings.tab.model-calls": "Modellaufrufe",
+  "settings.tab.model-calls": "KI-Aufrufprotokoll",
   "settings.tab.audit": "Audit-Log",
   "settings.tab.system-health": "Systemzustand",
   "settings.tab.reset": "Daten zurücksetzen",
@@ -8971,8 +8971,9 @@ export const de = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
-    "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile beginnt mit dem Modell, auf dem sie gerade läuft.",
+    "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
+  "aiTasks.viewCalls": "Aufrufe ansehen",
   "workingHours.title": "Buchbare Zeiten",
   "workingHours.sub":
     "Persönliche Einstellung. Nur du legst deine Zeiten fest.",

@@ -121,7 +121,7 @@ async function pressSave(canvasElement: HTMLElement) {
 }
 
 const meta = {
-  title: "Settings/AI/Models and routing/Binding editor",
+  title: "Settings/AI/AI models/Binding editor",
   component: BindingEditor,
   args: {
     opened: OPENED,
