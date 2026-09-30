@@ -353,6 +353,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactscrub_test.go` | H2 | Erasing a contact and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `dedupespine_test.go` | H2 | The identity-spine fitness functions. |
 | `effectredemption_test.go` | H2 | Every approval effect redeems the approval it ran. |
+| `gopinsrenovatereach_test.go` | H3 | Every Go pin this tree holds is one Renovate can move, and it moves them together. |
 | `liveprobelock_test.go` | H2 | A live-probed write of a HELD row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
