@@ -106,7 +106,7 @@
 }
 .readfail.warning .rfi {
   background: var(--warningBg);
-  color: var(--warning);
+  color: var(--warningText);
 }
 
 .readfail .rfi svg {

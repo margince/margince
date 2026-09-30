@@ -93,7 +93,7 @@
 790 frontend/src/screens/companycontacts/summary.tsx
 792 frontend/src/screens/import.tsx
 810 frontend/src/screens/voice-dna.tsx
-834 frontend/src/screens/record360/spine.tsx
+831 frontend/src/screens/record360/spine.tsx
 547 frontend/src/screens/relationships.tsx
 855 frontend/src/screens/onboarding-gate.tsx
 852 frontend/src/screens/worklist.copy.ts

@@ -238,8 +238,7 @@ ground it can land on, on its own `Surface` and on its own `Bg` over every
 ground, in BOTH themes; holds every stated member to its base's OKLCh hue; holds
 `Surface` and `Bg` to one share; and fails when a state is missing from either
 dark arm. `state-ink.test.ts` holds the side that USES them, in every sheet
-the app ships: text is never lettered in a base, which only an svg or a named
-glyph tile may wear. A colour that does not mean one of these five belongs to another
+the app ships: text is never lettered in a base, which only an svg may wear. A colour that does not mean one of these five belongs to another
 family — `--accent` is brand and primary action, `--ai` is agent provenance,
 `--orbAmber` / `--orbRed` are an agent run's outcome at a size chrome colours go
 muddy at, and the `--tag*` row means only "not that other tag".

@@ -1373,7 +1373,7 @@ describe("CompanyScreen — next-step suggestions", () => {
       company360: { ...company360, suggestions: [unanswered] },
     });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
     await waitFor(() =>
       expect(container.querySelector(".co-rail")).toBeTruthy(),
     );
@@ -1634,7 +1634,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("puts the account's context on the right, beside the work", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     await waitFor(() =>
       expect(container.querySelector(".co-overview-stack")).toBeTruthy(),
@@ -1658,7 +1658,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("carries every panel of the overview stack, and files what is left in the context column", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     // The overview stack: what is worth doing and the pipeline's own figures.
     // The advice rows are the suggestions suite's above.
@@ -1712,7 +1712,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("stacks the glance in one column: what needs a contact, the money, what the account is, then the questions", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     const stack = container.querySelector(".co-overview-stack");
     expect(container.querySelector(".co-glance-cols")).toBeNull();
@@ -1744,7 +1744,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   it("leaves the details pane standing while a composer is open", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
     await waitFor(() =>
       expect(container.querySelector(".co-rail")).toBeTruthy(),
     );
@@ -1782,7 +1782,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       },
     });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     // Folded on arrival, naming how much it holds: that subjectless call
     // counts.
@@ -1831,7 +1831,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       },
     });
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
 
     const fold = container
       .querySelector(".co-overview-stack")
@@ -1937,7 +1937,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     vi.stubGlobal("fetch", held360);
 
     const { container } = render(<CompanyScreen id="o-1" />);
-    await screen.findByText("Brandt Automotive GmbH");
+    await screen.findByRole("heading", { name: company.display_name });
     await openProfile();
 
     // Asserted on the panel headings the tab is built from: these words also

@@ -24,6 +24,10 @@
      the card already draws a boundary at every place it becomes one. */
   padding-top: var(--space-4);
 }
+.co-spine-scroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 
 .co-spine-track {
   list-style: none;

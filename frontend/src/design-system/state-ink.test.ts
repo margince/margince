@@ -7,7 +7,6 @@ import { describe, expect, it } from "vitest";
 import {
   alternativesOf,
   appStylesheets,
-  classesOf,
   colorValues,
   type Rule,
   rulesOf,
@@ -28,16 +27,7 @@ const BASE_INK = new RegExp(`var\\(\\s*--(?:${states.join("|")})\\s*[,)]`);
 const GRAPHIC =
   /^(?:svg|path|circle|ellipse|rect|line|polyline|polygon|use|g)(?![\w-])/i;
 
-// Boxes that hold one aria-hidden icon and no text, each with where that holds.
-const GLYPH_TILES: Readonly<Record<string, string>> = {
-  "capture-mark": "backfillrunview.tsx: an aria-hidden span around one icon",
-  "capture-stat-glyph":
-    "backfillrunview.tsx: an aria-hidden span around one icon",
-  "unsub-done-mark": "unsubscribe.tsx: an aria-hidden span around one check",
-  rfi: "the read-failure tile: a span around one icon, beside its own heading",
-};
-
-type Finding = Readonly<{ at: string; value: string; tile?: string }>;
+type Finding = Readonly<{ at: string; value: string }>;
 
 function baseInked(all: readonly Rule[]): Finding[] {
   return all.flatMap((rule) => {
@@ -48,9 +38,8 @@ function baseInked(all: readonly Rule[]): Finding[] {
     return alternativesOf(rule.selector).flatMap((selector) => {
       const subject = subjectOf(selector);
       if (GRAPHIC.test(splitTopLevel(subject, ":")[0] ?? "")) return [];
-      const tile = [...classesOf(subject)].find((name) => name in GLYPH_TILES);
       const at = `${relative(frontendRoot, rule.file)} ${selector}`;
-      return values.map((value) => ({ at, value, tile }));
+      return values.map((value) => ({ at, value }));
     });
   });
 }
@@ -76,16 +65,7 @@ describe("text in a state colour", () => {
       ),
     );
     expect(textInks.length).toBeGreaterThan(70);
-    expect(
-      found
-        .filter((finding) => finding.tile === undefined)
-        .map(({ at, value }) => `${at} { color: ${value} }`),
-    ).toEqual([]);
-  });
-
-  it("keeps every glyph-tile waiver on a rule that still needs it", () => {
-    const used = new Set(found.map((finding) => finding.tile));
-    expect(Object.keys(GLYPH_TILES).filter((name) => !used.has(name))).toEqual(
+    expect(found.map(({ at, value }) => `${at} { color: ${value} }`)).toEqual(
       [],
     );
   });
@@ -109,14 +89,5 @@ describe("text in a state colour", () => {
     ],
   ])("reads %s { %s } as %i base-inked text", (selector, body, count) => {
     expect(baseInked(probe(selector, body))).toHaveLength(count);
-  });
-
-  it("waives a named glyph tile and nothing that merely resembles one", () => {
-    const [tile] = baseInked(probe(".capture-mark", "color: var(--success);"));
-    expect(tile?.tile).toBe("capture-mark");
-    const [text] = baseInked(
-      probe(".capture-mark-label", "color: var(--success);"),
-    );
-    expect(text?.tile).toBeUndefined();
   });
 });

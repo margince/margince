@@ -434,6 +434,11 @@
 .ob-stage[data-core="work"] .ob-stage-board {
   padding-left: var(--ob-board-inset-work);
 }
+/* Inset, because the room clips anything drawn outside the board. */
+.ob-stage-board:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 /*
  * `start` is for a surface that GROWS while somebody reads it: the read theatre
  * gains a tile per page, and a centred board re-centres on every arrival, so the
