@@ -38992,6 +38992,15 @@ export interface components {
              */
             scope: "mine" | "unassigned" | "team" | "all";
             /**
+             * @description True when `scope` is `team` and the roster behind it came back at its cap, so
+             *     rows owned by teammates past the cap were never weighed. The same admission
+             *     `/worklist/team` makes with its own `truncated`, and for the same reason: a
+             *     page short by a colleague's whole queue is still a page, and one that did not
+             *     say so would read as a clear day. Absent or false means the scope was answered
+             *     whole.
+             */
+            scope_truncated?: boolean;
+            /**
              * @description The scopes this reader may ask for, narrowest first — derived from their own
              *     row scope. A client draws a control only when there is more than one, so a
              *     rep who can only see their own work is never offered a switch that would 403.
