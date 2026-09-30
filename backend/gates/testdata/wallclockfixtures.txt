@@ -10,8 +10,9 @@
 # wall clock — it takes its instant from clocktest.Now(t), which is what lets
 # the drift lane move it.
 #
-# The length of this list is the measure of the debt, not an argument for
-# tolerating it: 330 files and 1058 reads on the day the ratchet was armed.
+# THIS FILE IS THE ONLY PLACE THE POPULATION IS COUNTED. It moves whenever this
+# branch rebases, so prose that repeated the number went stale every time; the
+# documents point here instead.
 
 internal/compose/agentcost_test.go 2
 internal/compose/agenttaskhandle_integration_test.go 1
@@ -153,7 +154,7 @@ internal/compose/integration/providerclaims_integration_test.go 1
 internal/compose/integration/providerprofile_integration_test.go 5
 internal/compose/integration/providerrevert_integration_test.go 2
 internal/compose/integration/public_booking_integration_test.go 1
-internal/compose/integration/rates_http_integration_test.go 4
+internal/compose/integration/rates_http_integration_test.go 5
 internal/compose/integration/recordaccess_integration_test.go 1
 internal/compose/integration/recordhistory_http_integration_test.go 1
 internal/compose/integration/recordhistory_integration_test.go 5
@@ -175,6 +176,7 @@ internal/compose/integration/signalextract_integration_test.go 1
 internal/compose/integration/signals_integration_test.go 3
 internal/compose/integration/signalscan_integration_test.go 3
 internal/compose/integration/signalscan_project_integration_test.go 2
+internal/compose/integration/standardfilterfields_http_integration_test.go 1
 internal/compose/integration/testmailbox_integration_test.go 2
 internal/compose/integration/toolschema_conformance_integration_test.go 5
 internal/compose/integration/voice_lifecycle_http_integration_test.go 1
@@ -210,6 +212,7 @@ internal/compose/publicoriginprobe_test.go 7
 internal/compose/rateproposals_integration_test.go 3
 internal/compose/reconcile_integration_test.go 3
 internal/compose/report_dealsbystage_integration_test.go 1
+internal/compose/reporting_bench_test.go 1
 internal/compose/restoredrill_integration_test.go 6
 internal/compose/retentiongraph_integration_test.go 1
 internal/compose/riskverdict_integration_test.go 6

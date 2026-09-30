@@ -203,7 +203,7 @@ Every other workflow sits beside the gate, deliberately outside it:
   date in a file that never pins the clock" matches 129 files, nearly all
   harmless, so the gate is a second run rather than a pattern.
   The **backend clock-drift** lane is the same instrument on the harder half:
-  330 backend test files read the wall clock and 905 more compare
+  several hundred backend test files read the wall clock — `backend/gates/testdata/wallclockfixtures.txt` is the count — and 905 more compare
   against Postgres' `now()`, so the shift has to reach both clocks or the
   failures are the lane's own. It moves the RUNNER's clock, which is the only
   shift that reaches them together — Go reads the wall clock through the vDSO,

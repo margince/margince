@@ -616,7 +616,8 @@ fe-clock-drift:
 		FE_CLOCK_SKEW_DAYS=$(FE_CLOCK_SKEW_DAYS) pnpm exec vitest run
 
 ## backend-clock-drift — the same argument for the backend, which is the harder
-## half: 330 of its test files read the wall clock, and 905 more
+## half: several hundred of its test files read the wall clock
+## (backend/gates/testdata/wallclockfixtures.txt counts them), and 905 more
 ## compare against Postgres' now(). Both clocks have to move together or the
 ## failures belong to the lane rather than to the tree.
 ##

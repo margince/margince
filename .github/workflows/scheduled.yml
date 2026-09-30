@@ -267,8 +267,9 @@ jobs:
         run: make check-backend
 
   # The backend's counterpart to fe-clock-drift, and the harder half of the same
-  # argument: the suite's verdict must not depend on the calendar. 330 backend
-  # test files read the wall clock and 905 more compare against Postgres' now(), and one confirmed instance — a task seeded seven days out,
+  # argument: the suite's verdict must not depend on the calendar. Several hundred
+  # backend test files read the wall clock (gates/testdata/wallclockfixtures.txt
+  # counts them) and 905 more compare against Postgres' now(), and one confirmed instance — a task seeded seven days out,
   # asserted to group as `later`, answering `this_week` on a Thursday — cost two
   # sessions a working stretch of bisecting a red main.
   #

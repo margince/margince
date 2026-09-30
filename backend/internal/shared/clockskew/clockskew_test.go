@@ -25,13 +25,19 @@ func TestAnUnsetVariableIsTheOrdinaryRun(t *testing.T) {
 func TestAnOffsetNamesItsApplierAndItsAmount(t *testing.T) {
 	t.Parallel()
 
-	want := map[string]Skew{
-		"machine:200":   {Applier: Machine, Days: 200},
-		"database:200":  {Applier: Database, Days: 200},
-		"fixture:1":     {Applier: Fixture, Days: 1},
-		" machine : 7 ": {Applier: Machine, Days: 7},
+	// A slice rather than a map, because the padded case is the point of the
+	// last row and a map key carrying deliberate whitespace reads as a typo.
+	want := []struct {
+		value    string
+		expected Skew
+	}{
+		{"machine:200", Skew{Applier: Machine, Days: 200}},
+		{"database:200", Skew{Applier: Database, Days: 200}},
+		{"fixture:1", Skew{Applier: Fixture, Days: 1}},
+		{" machine : 7 ", Skew{Applier: Machine, Days: 7}},
 	}
-	for value, expected := range want {
+	for _, row := range want {
+		value, expected := row.value, row.expected
 		skew, err := Parse(value)
 		if err != nil {
 			t.Fatalf("Parse(%q) = %v; want %+v", value, err, expected)

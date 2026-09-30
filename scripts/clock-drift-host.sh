@@ -33,13 +33,21 @@ usage() {
 	exit 2
 }
 
-# days validates the offset before it reaches arithmetic. Bash evaluates a
-# variable's VALUE recursively inside $(( )), so a non-numeric argument is both
-# a confusing failure and a way to smuggle an expression in.
+# days validates the offset before it reaches arithmetic.
+#
+# Bash evaluates a variable's VALUE recursively inside $(( )), so a non-numeric
+# argument is both a confusing failure and a way to smuggle an expression in.
+#
+# A LEADING ZERO is rejected rather than normalised, and it is the case with
+# teeth: `08` is octal to the shell and aborts the arithmetic, but `move` has
+# already jumped the clock by then — so the run ends with the machine shifted,
+# time sync off, and a `restore 08` that dies the same way. Bare `0` goes with
+# it: it makes the wanted offset nothing, which the shortfall check then reads
+# as satisfied by a clock that never moved.
 days() {
 	case "$1" in
-	'' | *[!0-9]*)
-		echo "clock-drift-host: $1 is not a number of days" >&2
+	'' | 0 | *[!0-9]* | 0[0-9]*)
+		echo "clock-drift-host: $1 is not a positive number of days without a leading zero" >&2
 		exit 2
 		;;
 	esac
