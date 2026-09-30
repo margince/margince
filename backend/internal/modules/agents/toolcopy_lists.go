@@ -11,7 +11,8 @@ var readListsCopy = toolCopy{
 		"filter would select before a Live List is saved.",
 	Limits: "Every count, member and reason is what the user you act for may see: a list shared " +
 		"with them never shows a member record they cannot read, so two users may see different " +
-		"counts for one list. A Live List is checked every 15 minutes, so a record that joined and " +
+		"counts for one list. Live Lists are checked every 15 minutes, longest-unchecked first, so " +
+		"with very many lists one can wait longer (last_check says when); a record that joined and " +
 		"left between two checks is not recorded. A preview is logged as a read of those records. " +
 		"A list with health retired_field still works but filters on a retired custom field, named " +
 		"in retired_fields; its steward should replace that clause.",

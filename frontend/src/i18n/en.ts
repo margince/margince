@@ -10401,7 +10401,7 @@ export const en = {
   "lists.history.reason.filterChanged": "after the filter changed",
   "lists.history.checker": "The 15-minute check",
   "lists.history.liveNote":
-    "A Live List is checked every 15 minutes, and who joined and left is recorded as of the check that saw it. A record that joins and leaves between two checks is not recorded.",
+    "The check runs every 15 minutes and takes the lists checked longest ago first, so with very many lists one can wait longer; “Last checked” says when it was. Who joined and left is recorded as of the check that noticed it, and a record that joins and leaves between two checks is not recorded.",
   "lists.history.someone": "Someone",
 
   // The Filters & views screen's own chrome. The match line is keyed per object

@@ -10426,9 +10426,11 @@ paths:
       description: |
         Every change of the list's definition, every Shortlist membership change, and every record
         a Live List was seen to gain or lose, about a record this caller can see now. A change
-        about a record they cannot see is absent. A Live List is checked every 15 minutes, so
-        `member_entered` and `member_left` are stamped with the check that saw them, and a record
-        that joined and left between two checks is not recorded.
+        about a record they cannot see is absent. The check runs every 15 minutes and takes the
+        Live Lists checked longest ago first, so with very many lists one can wait longer; the
+        list's `last_check` says when it was. `member_entered` and `member_left` are stamped with
+        the check that saw them, and a record that joined and left between two checks is not
+        recorded.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'

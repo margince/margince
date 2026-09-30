@@ -10165,9 +10165,9 @@ export const vi = {
   "lists.history.entered": "Đã vào, tính đến {when}",
   "lists.history.left": "Đã rời đi, tính đến {when}",
   "lists.history.reason.filterChanged": "sau khi bộ lọc thay đổi",
-  "lists.history.checker": "Lần kiểm tra 15 phút",
+  "lists.history.checker": "Lần kiểm tra định kỳ (15 phút một lần)",
   "lists.history.liveNote":
-    "Danh sách động được kiểm tra 15 phút một lần, và bản ghi vào hay rời đi được ghi nhận theo lần kiểm tra đã thấy nó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+    "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
   "lists.history.someone": "Ai \u0111\u00f3",
 
   // Giao di\u1ec7n B\u1ed9 l\u1ecdc & Ch\u1ee7 \u0111\u1ec1.
