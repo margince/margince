@@ -269,3 +269,68 @@ func TestTheAISectionIsHarmlessWhenTheSurfaceIsOff(t *testing.T) {
 		t.Errorf("an off surface bound %q; nothing should be listening", observe.Addr)
 	}
 }
+
+// startWithPprofForTest is startForTest with --observe-pprof decided by the
+// caller, so the off and on cases are the same listener differing in one field.
+func startWithPprofForTest(t *testing.T, pprofOn bool) string {
+	t.Helper()
+	observe, err := startObserveListener(t.Context(),
+		workerConfig{observeAddr: "127.0.0.1:0", observePprof: pprofOn}, nil, nil, &bootGate{}, quietLog())
+	if err != nil {
+		t.Fatalf("startObserveListener: %v", err)
+	}
+	t.Cleanup(observe.Stop)
+	return "http://" + observe.Addr
+}
+
+// TestProfilesAreNotServedUnlessAskedFor — off is the default, and off has to
+// mean the paths do not exist, not that they exist behind something. Importing
+// net/http/pprof registers its handlers on http.DefaultServeMux as a side
+// effect, so this is also the proof that the observe listener does not serve
+// the default mux: were it ever wired to, every one of these would answer.
+func TestProfilesAreNotServedUnlessAskedFor(t *testing.T) {
+	base := startWithPprofForTest(t, false)
+	for _, path := range []string{"/debug/pprof/", "/debug/pprof/heap", "/debug/pprof/goroutine", "/debug/pprof/cmdline"} {
+		if status, _ := get(t, base+path); status != http.StatusNotFound {
+			t.Errorf("GET %s with --observe-pprof off answered %d; want 404 — a goroutine dump and the command line are not part of the default surface", path, status)
+		}
+	}
+	// The listener itself is still up: the 404s above are the profiles being
+	// absent, not the port being dead.
+	if status, _ := get(t, base+"/healthz"); status != http.StatusOK {
+		t.Errorf("/healthz answered %d with pprof off; the rest of the surface must be unaffected", status)
+	}
+}
+
+// TestProfilesAreServedWhenAskedFor — on, the heap profile a memory burst is
+// diagnosed from answers 200 with a real profile: pprof's wire format is a
+// gzipped protobuf, so the gzip magic is the cheapest check that the handler
+// behind the path is runtime/pprof's and not an index page or an error body.
+func TestProfilesAreServedWhenAskedFor(t *testing.T) {
+	base := startWithPprofForTest(t, true)
+
+	status, body := get(t, base+"/debug/pprof/heap")
+	if status != http.StatusOK {
+		t.Fatalf("GET /debug/pprof/heap with --observe-pprof on answered %d: %s", status, body)
+	}
+	if !strings.HasPrefix(body, "\x1f\x8b") {
+		t.Errorf("/debug/pprof/heap did not answer a gzipped profile; first bytes %q", body[:min(len(body), 16)])
+	}
+
+	// The index names the named profiles, which is how an operator discovers
+	// what else is there without reading this file.
+	status, body = get(t, base+"/debug/pprof/")
+	if status != http.StatusOK || !strings.Contains(body, "goroutine") {
+		t.Errorf("GET /debug/pprof/ answered %d without listing goroutine: %.200s", status, body)
+	}
+
+	// The handlers that are not runtime/pprof profiles, mounted by name.
+	if status, _ := get(t, base+"/debug/pprof/cmdline"); status != http.StatusOK {
+		t.Errorf("GET /debug/pprof/cmdline answered %d; want 200", status)
+	}
+
+	// Mounting profiles must not displace what the listener exists for.
+	if status, _ := get(t, base+"/healthz"); status != http.StatusOK {
+		t.Errorf("/healthz answered %d with pprof on; the probes must be unaffected", status)
+	}
+}

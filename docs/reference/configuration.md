@@ -461,6 +461,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
+| `--observe-pprof` | `MARGINCE_OBSERVE_PPROF` | `false` | `true` also serves Go's `net/http/pprof` profiles under `/debug/pprof/` on that same listener; requires `--observe-addr`. Enable temporarily — see below |
 
 ### The worker's own operator surface
 
@@ -534,6 +535,47 @@ and process capacity, so exposing it is an operator decision, and so is the
 interface it binds. Bind it to a loopback or a private interface, never a public
 one. An address that cannot be bound is a **boot error** naming it — a worker
 that could not serve its probes must not carry on looking healthy.
+
+### Profiling a running worker — `--observe-pprof`
+
+`MARGINCE_OBSERVE_PPROF=true` mounts Go's standard `net/http/pprof` handlers
+under `/debug/pprof/` on the observe listener. It exists for the problem the
+metrics above can show but not explain: a worker whose heap bursts, or whose CPU
+pins, inside one process where nothing outside can see which code path did it.
+`go_memstats_*` says the heap grew; a heap profile says **what holds it**.
+
+**Off by default, and meant to be switched on temporarily** — for the rollout
+that has to catch a problem, then back off. It adds no listener and no port: the
+profiles are served on the same address, with the same absence of
+authentication and the same in-cluster containment, as `/healthz` and
+`/metrics`. That is also why it is not on by default — the surface it adds is
+wider than the probes. A goroutine dump names every goroutine's stack, and
+`/debug/pprof/cmdline` answers the process's command line, including any flag
+passed there rather than through the environment (a `--dsn` carries its
+password). The worker logs a `WARN` line naming the address at every boot with
+it on.
+
+It is a **boot error** to set it `true` with no `--observe-addr` — there would
+be no listener to serve it on, and a setting that silently does nothing is the
+worse failure — and a value `strconv.ParseBool` rejects is a boot error too,
+rather than being read as off.
+
+From a pod's own network (the listener binds a private interface):
+
+```sh
+# the heap as it is right now — what a memory burst is diagnosed from
+curl -s http://<pod>:9101/debug/pprof/heap > heap.pb.gz
+# allocations over the next 10s, as a delta — what is being allocated DURING a burst
+curl -s 'http://<pod>:9101/debug/pprof/allocs?seconds=10' > allocs.pb.gz
+go tool pprof -top heap.pb.gz
+```
+
+`/debug/pprof/` lists every named profile (`heap`, `allocs`, `goroutine`,
+`block`, `mutex`, `threadcreate`); `profile` and `trace` are CPU profiling and
+the execution trace. The listener keeps its 10s write timeout for everything
+else; a request that samples over `?seconds=N` extends its own deadline by `N`,
+so `profile?seconds=30` works as it does anywhere else. A heap snapshot is
+immediate.
 
 ### `worker siteread` — the deep-read debug loop (no DB)
 
