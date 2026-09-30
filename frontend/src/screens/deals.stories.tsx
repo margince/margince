@@ -20,7 +20,7 @@ import {
 // base still unnamed, where a converted figure cannot be stated at all. The
 // DealScreen stories exercise the offers panel over the shared fetch stub.
 const meta: Meta = {
-  title: "Records/Deals",
+  title: "Records/Deals/Page",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -30,7 +30,7 @@ type Pipeline = components["schemas"]["Pipeline"];
 const page = { has_more: false, next_cursor: null };
 
 const meta: Meta = {
-  title: "Records/Company 360/Actions",
+  title: "Records/Record 360/New deal action",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -713,7 +713,7 @@ rather than the file:
 | `Components/` | One node per component in this directory, under the category below that says what it is for. |
 | `Patterns/` | Screen-tier building blocks that are not a page: the query gate, the create/edit/merge/share actions, the composer. |
 | `Shell/` | The application frame and the Home page. |
-| `Records/` | The screens a rep works in, and the cards on them (`Company 360/`, `Company rail/`). |
+| `Records/` | The pages a rep works in, and the cards on them. Each record page is one node (`Contact 360/`, `Company 360/`, `Deal 360/`, `Project 360/`), `Record 360/` holds the pieces two or more of them mount, and every other page (a list, `Worklist/`, `Reports/`) is a leaf or a node of its own. |
 | `Settings/` | `<Group>/<Page>/<Card>`, mirroring the settings catalog one for one: the seven groups of `SETTINGS_GROUPS` and the pages of `SETTINGS_PAGES`, under their own sidebar labels. `screens/settingsstories.test.ts` holds the two together, so a story filed under a group or page the catalog does not declare fails. |
 | `Onboarding/`, `Signed out/` | The first run, and the pages reachable without a session. |
 | `MCP Apps/` | The governed tool surfaces and their document forms. |
@@ -736,10 +736,10 @@ them, with AI and provenance as the one category of our own:
 | Primitives | Stack and Row |
 | AI and provenance | What an agent proposed and where a value came from: Decision card, Decision deck, AI pending, Evidence mark, Evidence receipt, Source email panel, Trust, Margince core |
 
-Under every root but `Design System/` and `Records/`, every segment is
-Sentence case and a declared acronym or proper noun (`AI`, `Margince`,
-`MCP Apps`) keeps its spelling. There, `sidebar.test.ts` holds one title per
-story file and no title that is both a leaf and a group.
+Under every root but `Design System/`, every segment is Sentence case and a
+declared acronym or proper noun (`AI`, `Margince`, `MCP Apps`) keeps its
+spelling. There, `sidebar.test.ts` holds one title per story file and no title
+that is both a leaf and a group.
 
 ## Driving a control in a test
 

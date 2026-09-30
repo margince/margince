@@ -20,7 +20,7 @@ export const customFieldFixture: components["schemas"]["CustomField"] = {
   updated_at: "2026-01-01T00:00:00Z",
 };
 const meta: Meta<typeof RecordCustomFields> = {
-  title: "Records/Custom Details",
+  title: "Records/Record 360/Custom details",
   excludeStories: ["customFieldFixture"],
   component: RecordCustomFields,
   decorators: [

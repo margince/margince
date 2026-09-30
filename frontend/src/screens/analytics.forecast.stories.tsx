@@ -94,7 +94,7 @@ function routes(data: Readings): RouteMap {
 }
 
 const meta: Meta<typeof ForecastView> = {
-  title: "Records/Forecast section",
+  title: "Records/Reports/Forecast/Section",
   component: ForecastView,
 };
 export default meta;

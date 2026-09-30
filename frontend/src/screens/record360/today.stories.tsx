@@ -29,7 +29,7 @@ import { FoundMove, TodayPanel, TodoRow } from "./today";
 // move's verbs sit under its claim rather than beside it.
 
 const meta: Meta<typeof TodayPanel> = {
-  title: "Records/Record reading/What needs you",
+  title: "Records/Record 360/What needs you",
   component: TodayPanel,
   parameters: { layout: "padded" },
 };

@@ -5,11 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { BulkVerbs } from "./bulkverbs";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The bar the contacts and companies lists show while rows are selected: the
-// count, the owner picker with its verb, and archive. Each verb opens the
-// preview in `Records/Bulk change`.
+// The bar the contacts and companies lists show while rows are selected. Each
+// verb opens the preview in bulkchange.stories.tsx.
 const meta: Meta = {
-  title: "Records/Bulk verbs",
+  title: "Records/Bulk change/Bar",
   parameters: { layout: "padded" },
 };
 export default meta;

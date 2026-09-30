@@ -10,7 +10,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // the user roster for the owner picker; everything else it needs is passed in,
 // so these stories are the bar's own states rather than the table's.
 const meta: Meta = {
-  title: "Records/Deal bulk bar",
+  title: "Records/Deals/Bulk bar",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -265,7 +265,7 @@ const clickButton =
     }
   };
 
-const meta: Meta = { title: "Records/Reports" };
+const meta: Meta = { title: "Records/Reports/Page" };
 export default meta;
 
 type Story = StoryObj;

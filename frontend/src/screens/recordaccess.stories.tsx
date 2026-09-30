@@ -22,7 +22,7 @@ type Company = components["schemas"]["Company"];
 // chip is one pill among the others; most stories open it, because what
 // differs between readers is the sentence and the switch behind it.
 const meta: Meta = {
-  title: "Records/Record access",
+  title: "Records/Record 360/Record access",
   parameters: { layout: "padded" },
 };
 export default meta;

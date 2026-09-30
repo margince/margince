@@ -22,7 +22,7 @@ import {
 // the form at all.
 
 const meta: Meta = {
-  title: "Records/Company 360/Add a document",
+  title: "Records/Record 360/Add a document",
   parameters: { layout: "padded" },
 };
 export default meta;

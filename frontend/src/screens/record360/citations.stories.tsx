@@ -18,7 +18,7 @@ import { type Cited, SentenceList } from "./citations";
 // "activity" for want of a click.
 
 const meta: Meta = {
-  title: "Records/Grounded prose/Citations",
+  title: "Records/Record 360/Citations",
   parameters: { layout: "padded" },
 };
 export default meta;

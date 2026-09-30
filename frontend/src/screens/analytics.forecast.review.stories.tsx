@@ -102,7 +102,7 @@ function routes(
 }
 
 const meta: Meta<typeof ForecastReview> = {
-  title: "Records/Forecast section/Review",
+  title: "Records/Reports/Forecast/Review",
   component: ForecastReview,
 };
 export default meta;

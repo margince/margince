@@ -8,7 +8,7 @@ import {
 } from "./story-utils";
 
 const meta: Meta = {
-  title: "Records/Offers",
+  title: "Records/Offers/Page",
   parameters: { layout: "padded" },
 };
 export default meta;

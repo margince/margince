@@ -21,7 +21,7 @@ import { EmailVerb, RecordEmailAside, RecordEmailVerb } from "./recordemail";
 // the one the page is for, and whether the refused one still says why.
 
 const meta: Meta<typeof RecordEmailAside> = {
-  title: "Records/Email box",
+  title: "Records/Record 360/Email box/Aside",
   component: RecordEmailAside,
   parameters: { layout: "padded" },
 };

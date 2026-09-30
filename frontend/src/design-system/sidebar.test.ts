@@ -47,10 +47,6 @@ const UNSHAPED = new Map([
     "Design System",
     "the kitchen-sink sheets, each composing many components under one title",
   ],
-  [
-    "Records",
-    "record pages whose shared titles and leaf-and-group nodes are unresolved",
-  ],
 ]);
 const SHAPED_ROOTS = roots.filter((root) => !UNSHAPED.has(root));
 
@@ -67,6 +63,7 @@ const ACRONYMS = new Map([
   ["AI", "the agent tier, as the product's copy writes it"],
   ["IMAP", "the mail protocol, as the copy writes it"],
   ["DNA", "Voice DNA, the product's name for a writing voice"],
+  ["VAT", "the tax, as the copy writes it"],
 ]);
 
 type Filed = { path: string; title: string };
@@ -421,6 +418,7 @@ describe("the sidebar detectors report what they are for", () => {
       "Linkedin import",
       "Oauth return",
       "VCard import",
+      "Vat mark",
     ]) {
       expect(isSentenceCase(segment)).toBe(false);
     }
@@ -440,6 +438,7 @@ describe("the sidebar detectors report what they are for", () => {
       "vCard import",
       "Voice DNA",
       "Add to Shortlist",
+      "VAT mark",
     ]) {
       expect(isSentenceCase(segment)).toBe(true);
     }
