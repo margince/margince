@@ -14,6 +14,7 @@ import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   AuditRail,
   CustomFieldsAdmin,
@@ -267,7 +268,10 @@ function customFieldsBackend(
   companyFields: CustomField[],
   calls: Recorded[],
   allow: GrantSpec = FIELD_MANAGER,
-  opts: { failCreate?: boolean } = {},
+  opts: {
+    failCreate?: boolean;
+    liveLists?: components["schemas"]["CustomFieldLiveLists"];
+  } = {},
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -288,6 +292,10 @@ function customFieldsBackend(
     if (url.includes("/retire") && method === "POST") {
       calls.push({ method, url, body: null });
       return jsonResponse(field({ id: "archived", status: "retired" }));
+    }
+    if (url.endsWith("/lists") && method === "GET") {
+      calls.push({ method, url, body: null });
+      return jsonResponse(opts.liveLists ?? { lists: [], unseen_count: 0 });
     }
     if (url.includes("/custom-fields") && method === "PATCH") {
       const body = await readBody();
@@ -573,6 +581,14 @@ describe("CustomFieldsAdmin", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /Archive field/i }),
     );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(en["cf.retire.noLists"]),
+    ).toBeInTheDocument();
+    expect(calls.some((call) => call.url.includes("/retire"))).toBe(false);
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: en["cf.archive"] }),
+    );
     await waitFor(() =>
       expect(
         calls.some(
@@ -584,6 +600,44 @@ describe("CustomFieldsAdmin", () => {
     expect(retire?.url).toContain("/custom-fields/d1/retire");
     await waitFor(() =>
       expect(screen.getByText(/archived/)).toBeInTheDocument(),
+    );
+  });
+
+  it("names the Live Lists that filter on a field before it is archived, and only counts the rest", async () => {
+    const calls: Recorded[] = [];
+    vi.stubGlobal(
+      "fetch",
+      customFieldsBackend(
+        [field({ id: "d1", label: "Renewal date" })],
+        [],
+        calls,
+        FIELD_MANAGER,
+        {
+          liveLists: {
+            lists: [
+              { id: "l1", name: "Renewals this quarter", sharing: "team" },
+            ],
+            unseen_count: 2,
+          },
+        },
+      ),
+    );
+    renderAdmin();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Archive field/i }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Renewals this quarter"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText(en["cf.retire.lists"])).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        en["cf.retire.unseen_other"].replace("{count}", "2"),
+      ),
+    ).toBeInTheDocument();
+    expect(calls.find((call) => call.url.endsWith("/lists"))?.url).toContain(
+      "/custom-fields/d1/lists",
     );
   });
 

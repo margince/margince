@@ -33,7 +33,11 @@ func reachOf(considered, shown []ranked, bounds map[crmcontracts.WorklistItemSou
 		if row, ok := seen[source]; ok {
 			return row
 		}
-		row := &crmcontracts.WorklistReach{Source: crmcontracts.WorklistReachSource(source), MoreAvailable: bounds[source]}
+		personal := sourceAnswersForTheActorOnly[source]
+		row := &crmcontracts.WorklistReach{
+			Source: crmcontracts.WorklistReachSource(source), MoreAvailable: bounds[source],
+			Personal: &personal,
+		}
 		seen[source] = row
 		order = append(order, source)
 		return row

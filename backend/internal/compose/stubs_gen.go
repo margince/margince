@@ -1343,6 +1343,10 @@ func (stubs) RenameCustomField(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "RenameCustomField")
 }
 
+func (stubs) ListCustomFieldLiveLists(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCustomFieldLiveLists")
+}
+
 func (stubs) UpdateCustomFieldOptions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateCustomFieldOptionsParams) {
 	httperr.NotImplemented(w, r, "UpdateCustomFieldOptions")
 }

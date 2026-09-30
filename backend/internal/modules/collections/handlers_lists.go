@@ -46,6 +46,11 @@ func (h Handlers) ListLists(w http.ResponseWriter, r *http.Request, params crmco
 		v := string(*params.ListType)
 		filter.ListType = &v
 	}
+	if params.Sharing != nil {
+		for _, sharing := range *params.Sharing {
+			filter.Sharing = append(filter.Sharing, string(sharing))
+		}
+	}
 	if params.IncludeArchived != nil && *params.IncludeArchived {
 		filter.Archived = storekit.IncludeArchived
 	}

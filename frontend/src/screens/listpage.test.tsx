@@ -116,4 +116,33 @@ describe("an opened list", () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it("says which retired field a Live List still filters on and who should replace it", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`GET /lists/${LIVE_ID}`]: () =>
+        jsonResponse({
+          ...liveList,
+          health: "retired_field",
+          retired_fields: ["cf_last_touch"],
+        }),
+      [`GET /lists/${LIVE_ID}/history`]: () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
+      "GET /companies": () =>
+        jsonResponse({ data: members, page: { has_more: false } }),
+      "GET /filters/vocabulary": () => jsonResponse(vocabulary),
+    });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.retiredField.title"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        en["lists.retiredField.body_one"].replace("{fields}", "last touch"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(en["lists.health.retiredField"]).length,
+    ).toBeGreaterThan(0);
+  });
 });

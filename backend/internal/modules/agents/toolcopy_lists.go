@@ -10,7 +10,9 @@ var readListsCopy = toolCopy{
 		"before a Live List is saved.",
 	Limits: "Every count, member and reason is what the user you act for may see: a list shared " +
 		"with them never shows a member record they cannot read, so two users may see different " +
-		"counts for one list. A preview is logged as a read of those records.",
+		"counts for one list. A preview is logged as a read of those records. A list with health " +
+		"retired_field still works but filters on a retired custom field, named in retired_fields; " +
+		"its steward should replace that clause.",
 	Instead: "search_records finds records by name; tags are applied with apply_tag, not lists.",
 	Retain:  "Keep list_id, the version for a later change, and next_cursor to read the next page.",
 }

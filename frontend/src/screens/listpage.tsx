@@ -20,6 +20,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { throwProblem, useMe } from "./common";
+import { customColumnLabel } from "./filterdata";
 import { ListHistoryPanel } from "./listhistory";
 import {
   ListHealthBadge,
@@ -133,9 +134,13 @@ function ListHead({ list }: Readonly<{ list: List }>) {
   );
 }
 
-/** What the list says about itself: archived, broken, or looked after by nobody. */
+/**
+ * What the list says about itself: archived, broken, looked after by nobody,
+ * or filtering on a field that was retired.
+ */
 function ListNotices({ list }: Readonly<{ list: List }>) {
   const t = useT();
+  const plural = usePlural();
   const me = useMe();
   const update = useUpdateList();
   const archive = useArchiveList();
@@ -163,6 +168,16 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
     return (
       <Callout tone="danger" title={t("lists.invalid.title")}>
         {t("lists.invalid.body")}
+      </Callout>
+    );
+  }
+  if (list.health === "retired_field") {
+    const fields = list.retired_fields ?? [];
+    return (
+      <Callout tone="warning" title={t("lists.retiredField.title")}>
+        {plural("lists.retiredField.body", fields.length, {
+          fields: fields.map(customColumnLabel).join(", "),
+        })}
       </Callout>
     );
   }

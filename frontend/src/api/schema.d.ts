@@ -12154,6 +12154,32 @@ export interface paths {
         patch: operations["renameCustomField"];
         trace?: never;
     };
+    "/custom-fields/{id}/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The Live Lists whose filter names this custom field.
+         * @description What retiring the field would leave behind, asked before the retire is confirmed. A list
+         *     the caller may find is named; the ones they may not find are only counted, so a private
+         *     list's name never leaves its owner and steward. Archived lists are left out. Needs the
+         *     grant that retires a field.
+         */
+        get: operations["listCustomFieldLiveLists"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/custom-fields/{id}/retire": {
         parameters: {
             query?: never;
@@ -12173,7 +12199,11 @@ export interface paths {
          *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). 🟡 (mirrors `archiveContact`'s
          *     posture: an irreversible-feeling state change users must confirm) — an agent caller
          *     must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
-         *     on a still-fetchable row, not `archived_at` (which stays null).
+         *     on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
+         *     refused because a Live List filters on the field: the list keeps evaluating on the kept
+         *     values and reports health `retired_field`. Which lists those are is read, for the
+         *     caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
+         *     replayed answer would otherwise repeat list names the caller may no longer find.
          */
         post: operations["retireCustomField"];
         delete?: never;
@@ -30549,10 +30579,12 @@ export interface components {
             /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size. */
             visible_count?: number | null;
             /**
-             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles.
+             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
              * @enum {string}
              */
-            health: "ok" | "ownerless" | "invalid";
+            health: "ok" | "ownerless" | "invalid" | "retired_field";
+            /** @description The retired custom fields a Live List's filter names, by column name. Absent when it names none. */
+            retired_fields?: string[];
             /** @description Whether this caller holds list authority over the list. */
             can_edit: boolean;
             /** @description What uses this list. Exports are listed as usage and block nothing. */
@@ -33136,6 +33168,19 @@ export interface components {
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
+        };
+        /** @description The Live Lists whose filter names a custom field: the ones the caller may find by name, and how many more exist that they may not find. */
+        CustomFieldLiveLists: {
+            lists: components["schemas"]["CustomFieldLiveList"][];
+            /** @description Live Lists that name the field but that this caller may not find. */
+            unseen_count: number;
+        };
+        CustomFieldLiveList: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @enum {string} */
+            sharing: "private" | "team" | "workspace";
         };
         CustomFieldListResponse: {
             data: components["schemas"]["CustomField"][];
@@ -39088,6 +39133,25 @@ export interface components {
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
             shown: number;
+            /**
+             * @description True when this source answers for the ACTING USER only, whatever `scope` was
+             *     asked for. `team` and `all` widen the record-bearing sources, because a wider
+             *     row scope is what reaches a colleague's work; they cannot widen a source bound
+             *     to the reader inside the module that owns it — notices filter on the recipient,
+             *     the capture and AI health lanes refuse a principal with no human behind them,
+             *     and an introduction ask names one colleague, so there is no wider tier for it to
+             *     widen to.
+             *
+             *     A reader asking for `all` therefore gets every shared record they may see PLUS
+             *     their own personal queue, and this field is which half each source answered.
+             *     Without it a manager reading `all` believes they have seen everything, and the
+             *     parts that stayed personal are invisible rather than named.
+             *
+             *     It is a fact about the SOURCE, not about this read, so it is true under `mine`
+             *     as well — where it happens to tell the reader nothing new, because everything
+             *     is theirs. Absent from an older server, which a client reads as false.
+             */
+            personal?: boolean;
             /**
              * @description True when this source was read to its work bound, so candidates MAY exist past what
              *     was considered. A lane that came back exactly full cannot tell a full page from a
@@ -52513,6 +52577,8 @@ export interface operations {
                 list_type?: "static" | "dynamic";
                 /** @description Matches the name or purpose, case-insensitively. */
                 q?: string;
+                /** @description Only lists with one of these sharing settings. `private` alone reads the caller's own private lists; `team` and `workspace` together read the lists shared with others. */
+                sharing?: ("private" | "team" | "workspace")[];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
             };
@@ -59548,6 +59614,32 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listCustomFieldLiveLists: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The Live Lists that filter on the field. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldLiveLists"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     retireCustomField: {
