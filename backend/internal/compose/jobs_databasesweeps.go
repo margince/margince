@@ -27,8 +27,9 @@ import (
 //     dispatcher is ticked (the schedules in wireJobs); the workspace worker is
 //     enqueued by it and never scheduled.
 //   - Installation-wide, with no workspace fan-out — agent-task retention,
-//     approval expiry, intro expiry, approval auto-apply. One row does the whole
-//     installation, so there is no child kind to enqueue.
+//     approval expiry, intro expiry, approval auto-apply, the overtaken-notice
+//     sweep. One row does the whole installation, so there is no child kind to
+//     enqueue.
 //
 // It also pulls in the AI-activity and brief-generate groups. Those are their
 // own functions because their WORKERS need collaborators the rest of this group
@@ -65,6 +66,8 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
+	addDeclaredWorker[NoticeOvertakeArgs](reg, newNoticeOvertakeWorker(
+		InstallationDB(pool), identity.NewService(pool), log))
 	addDeclaredWorker[IntroExpiryArgs](reg, &introExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})

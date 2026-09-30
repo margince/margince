@@ -1125,6 +1125,34 @@ kinds:
       which point the claims already taken make the retry a no-op for everyone
       who was already served.
 
+  # One job, not a dispatcher and a child (ADR-0103 §1): one scan over an
+  # installation-wide table, so there is nothing to fan out over.
+  notice_overtaken_sweep:
+    role: worker
+    go_type: NoticeOvertakeArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 5m
+    reason: >-
+      A staged approval is announced to every seat that could decide it, and
+      three of the five routes to a terminal approval — supersession, withdrawal
+      and privacy erasure — write the row and emit nothing, by explicit design
+      against a closed event catalog. No consumer can see those, so without this
+      pass every colleague who did not decide keeps an unread line saying a
+      decision waits on them, for a card their own inbox already hides.
+
+      Five minutes, matching approval_expiry: the lag is time a colleague spends
+      being asked for a decision that is no longer theirs to make, measured
+      against their attention on an inbox rather than against a day. A tick that
+      finds nothing costs one indexed read of the standing lines, which is what
+      most ticks do.
+
+      One attempt, not three: the pass is idempotent — a line already taken back
+      is not taken back again — and its retry is the next tick, five minutes
+      away. A backing-off row would only suppress that tick.
+
   # One job, not a dispatcher and a child (ADR-0103 §1). The delete it runs was
   # already table-wide once agent_task lost its tenant column, so the fan-out
   # was N identical passes over the same rows.
