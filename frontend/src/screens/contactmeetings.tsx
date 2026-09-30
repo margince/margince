@@ -3,12 +3,15 @@ import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, type ButtonVariant } from "../design-system/atoms";
+import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { dateTileParts } from "../format/datetile";
-import { formatTimeOfDay } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { formatNumber, formatTimeOfDay } from "../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
+import { useMeetingProposals, WaitingSection } from "./contactmeetings.waiting";
+import { useSchedulingProfile } from "./scheduling-profile-query";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -192,6 +195,9 @@ export function ContactMeetingsTab({
   const canBook = useCanWrite("activity", "create");
   const me = useMe();
   const grantKnown = me.data?.authorization !== undefined;
+  // Only a reader who may book reads the proposals: the list answers 403 to
+  // anyone else, and the section they fill is theirs alone.
+  const proposals = useMeetingProposals(canBook ? view?.contact.id : undefined);
   // The booked meeting is drawn above, from the server's own next-meeting
   // read. It is also an activity, so an unfiltered list draws it a second time
   // under "already held" — which was merely untidy while the rows were inert
@@ -223,22 +229,30 @@ export function ContactMeetingsTab({
     view?.moment?.rule === "meeting_prep" ? view.moment : undefined;
   return (
     <div className="record-stack">
-      <div className="pe-meeting-actions">
-        <Button
-          variant="primary"
-          disabled={loading || !view || !grantKnown}
-          reason={
-            view && grantKnown && !canBook
-              ? t("scheduling.bookRefused")
-              : undefined
-          }
-          onClick={() => {
-            if (view)
-              navigate({ screen: "book", id: `contact-${view.contact.id}` });
-          }}
-        >
-          {t("scheduling.bookContact")}
-        </Button>
+      <div className="pe-meetings-head">
+        <MeetingsCount
+          upcoming={next ? 1 : 0}
+          waiting={proposals.data?.length ?? 0}
+          ready={Boolean(view)}
+        />
+        <div className="pe-meeting-actions">
+          <CopyBookingLink />
+          <Button
+            variant="primary"
+            disabled={loading || !view || !grantKnown}
+            reason={
+              view && grantKnown && !canBook
+                ? t("scheduling.bookRefused")
+                : undefined
+            }
+            onClick={() => {
+              if (view)
+                navigate({ screen: "book", id: `contact-${view.contact.id}` });
+            }}
+          >
+            {t("scheduling.bookContact")}
+          </Button>
+        </div>
       </div>
       <section>
         <Heading size="large" className="t-h3">
@@ -282,6 +296,7 @@ export function ContactMeetingsTab({
           )}
         </SurfaceState>
       </section>
+      {view && <WaitingSection contact={view.contact} proposals={proposals} />}
       <section>
         <Heading size="large" className="t-h3">
           {t("contact.meetings.past")}
@@ -306,5 +321,54 @@ export function ContactMeetingsTab({
         </SurfaceState>
       </section>
     </div>
+  );
+}
+
+// How much is in motion with this contact, ahead of the sections that list it.
+function MeetingsCount({
+  upcoming,
+  waiting,
+  ready,
+}: Readonly<{ upcoming: number; waiting: number; ready: boolean }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (!ready) return <span />;
+  const parts = [
+    plural("contact.meetings.countUpcoming", upcoming, {
+      count: formatNumber(upcoming, locale),
+    }),
+  ];
+  if (waiting > 0)
+    parts.push(
+      plural("contact.meetings.countWaiting", waiting, {
+        count: formatNumber(waiting, locale),
+      }),
+    );
+  return <p className="t-caption">{parts.join(" · ")}</p>;
+}
+
+// The reader's own public link, for a contact who would rather pick a time
+// themselves. Offered only while the page takes bookings: a paused link hands
+// the contact a page that turns them away.
+function CopyBookingLink() {
+  const t = useT();
+  const profile = useSchedulingProfile();
+  const url = profile.data?.enabled ? (profile.data.public_url ?? "") : "";
+  const copy = useClipboardCopy(url, {
+    copy: t("contact.meetings.copyBookingLink"),
+    copied: t("scheduling.copied"),
+    remedy: t("scheduling.copyFallback"),
+  });
+  if (!url) return null;
+  return (
+    <>
+      <Button onClick={copy.copy}>{copy.label}</Button>
+      {copy.notice && (
+        <div className="pe-waiting-notice">
+          {copy.notice}
+          <p className="pe-waiting-url">{url}</p>
+        </div>
+      )}
+    </>
   );
 }

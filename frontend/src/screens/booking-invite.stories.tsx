@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { bookingFrame } from "./book.storykit";
-import { bookingContact, bookingProfile } from "./book.testkit";
+import {
+  bookingConnection,
+  bookingContact,
+  bookingProfile,
+} from "./book.testkit";
 import { BookingInviteScreen } from "./booking-invite";
 import { jsonResponse } from "./story-utils";
 
@@ -44,3 +48,29 @@ export const BusyWeek: Story = {
   ),
 };
 export const BusyWeekDark: Story = { ...BusyWeek, globals: { theme: "dark" } };
+
+// Outlook names Microsoft Teams in the video switch; the rest of the flow is
+// the same whichever calendar sends the invite.
+export const OutlookCalendar: Story = {
+  render: bookingFrame(
+    () => <BookingInviteScreen contactId={bookingContact.id} />,
+    {
+      "GET /scheduling/profile": () =>
+        jsonResponse({ ...bookingProfile, provider: "graphcal" }),
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            {
+              ...bookingConnection,
+              provider: "graphcal",
+              scopes: ["Calendars.ReadWrite"],
+            },
+          ],
+        }),
+    },
+  ),
+};
+export const OutlookCalendarDark: Story = {
+  ...OutlookCalendar,
+  globals: { theme: "dark" },
+};

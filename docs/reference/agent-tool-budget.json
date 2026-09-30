@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 81,
     "system_frame_tokens": 516,
-    "tokens": 27439,
+    "tokens": 27447,
     "median_tool_tokens": 278,
     "mean_tool_tokens": 338
   },
@@ -276,7 +276,7 @@
     },
     {
       "name": "invite_meeting",
-      "tokens": 256
+      "tokens": 264
     },
     {
       "name": "company_coverage",

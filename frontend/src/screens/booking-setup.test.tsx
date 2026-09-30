@@ -101,9 +101,11 @@ for (const status of [
     await waitFor(() =>
       expect(changes).toEqual([{ action: "cancel", version: 1 }]),
     );
-    expect(
-      await screen.findByRole("heading", { name: "Canceling your meeting…" }),
-    ).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Canceling your meeting…",
+      ),
+    );
   });
 }
 it("shows the personal proposal's title, duration and location", async () => {
@@ -182,9 +184,11 @@ it("refreshes the worker's version after a cancellation conflict", async () => {
   await user.click(
     within(dialog).getByRole("button", { name: "Cancel meeting" }),
   );
-  expect(
-    await screen.findByRole("heading", { name: "Canceling your meeting…" }),
-  ).toBeTruthy();
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toBe(
+      "Canceling your meeting…",
+    ),
+  );
   expect(changes).toEqual([
     { action: "cancel", version: 1 },
     { action: "cancel", version: 2 },

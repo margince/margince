@@ -4425,6 +4425,9 @@
           "management_token": {
             "type": "string"
           },
+          "provider": {
+            "type": "string"
+          },
           "reminder_status": {
             "type": "string"
           },
@@ -4439,6 +4442,12 @@
           },
           "version": {
             "type": "integer"
+          },
+          "video_call": {
+            "type": "boolean"
+          },
+          "video_url": {
+            "type": "string"
           }
         },
         "required": [

@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 44,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 15530,
+    "tokens_served_but_never_driven": 15538,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 0,
@@ -1577,7 +1577,7 @@
     },
     {
       "name": "invite_meeting",
-      "tokens": 256,
+      "tokens": 264,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

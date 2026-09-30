@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 81 |
 | Resources | 11 |
-| Tool catalog | 239.8 KB |
+| Tool catalog | 239.9 KB |
 | Resource catalog | 4.1 KB |
-| Approx. wire tokens | 62438 |
+| Approx. wire tokens | 62468 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,9 +29,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 107.2 KB | 44% | **No** — a result's shape, never listed to a model |
+| Output schemas | 107.3 KB | 44% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 60.8 KB | 25% | Yes, every step |
-| Input schemas | 54.8 KB | 22% | Yes, every step |
+| Input schemas | 54.9 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 16.9 KB | 7% | Partly |
 | **Description + input schema** | **115.7 KB** | **48%** | **the recurring cost** |
 
@@ -99,7 +99,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
 | [`get_tag`](#get_tag) | Get a tag | yes |  | 1.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
-| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.5 KB |
+| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.6 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
 | [`list_colleagues`](#list_colleagues) | List colleagues | yes |  | 2.4 KB |
@@ -6805,6 +6805,9 @@ Create a real calendar invitation for one contact and notify their chosen addres
     },
     "subject": {
       "type": "string"
+    },
+    "video_call": {
+      "type": "boolean"
     }
   },
   "required": [
@@ -6845,6 +6848,9 @@ Create a real calendar invitation for one contact and notify their chosen addres
         "management_token": {
           "type": "string"
         },
+        "provider": {
+          "type": "string"
+        },
         "reminder_status": {
           "type": "string"
         },
@@ -6859,6 +6865,12 @@ Create a real calendar invitation for one contact and notify their chosen addres
         },
         "version": {
           "type": "integer"
+        },
+        "video_call": {
+          "type": "boolean"
+        },
+        "video_url": {
+          "type": "string"
         }
       },
       "required": [

@@ -815,7 +815,8 @@
    what to do about it in the one beside it. Both the booked meeting and every
    one already held share this shape, so a reader learns it once rather than
    reading a different card for "next" and "already happened". */
-.pe-meeting {
+.pe-meeting,
+.pe-waiting {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-2) var(--space-4);
@@ -825,8 +826,43 @@
   background: var(--bgElevated);
 }
 
-.pe-meeting + .pe-meeting {
+.pe-meeting + .pe-meeting,
+.pe-waiting + .pe-waiting {
   margin-top: var(--space-2);
+}
+
+/* An invitation still waiting on the contact has no date to hang a tile on
+   (a personal link offers no times at all), so it is the meeting card's box
+   holding one column. */
+.pe-waiting {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+/* The URL a failed copy leaves behind, selectable, under the notice that says
+   the browser refused. */
+.pe-waiting-url {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.pe-waiting-notice {
+  flex-basis: 100%;
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* The tab's own head: what is in motion on the left, the two ways to start
+   something new on the right. */
+.pe-meetings-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.pe-meetings-head > p {
+  margin: 0;
 }
 
 /* Weekday over day over month, centred rather than left-set: a date read as a

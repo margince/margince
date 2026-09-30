@@ -68,6 +68,7 @@ export function Calendar({
   onSelect,
   today,
   locale,
+  isDisabled,
 }: Readonly<{
   month: Date;
   onMonthChange: (next: Date) => void;
@@ -75,6 +76,12 @@ export function Calendar({
   onSelect: (next: ISODay) => void;
   today: Date;
   locale: Locale;
+  /**
+   * A day that cannot be chosen: in the past, or with nothing left to book on
+   * it. It stays in the grid, drawn quieter and refused, so the month keeps its
+   * shape and a reader can see WHICH days are open rather than only that some are.
+   */
+  isDisabled?: (day: ISODay) => boolean;
 }>) {
   const t = useT();
   const days = monthGrid(month);
@@ -115,6 +122,7 @@ export function Calendar({
             inMonth={day.getMonth() === month.getMonth()}
             isToday={isoDay(day) === isoDay(today)}
             isSelected={isoDay(day) === selected}
+            isDisabled={isDisabled?.(isoDay(day)) ?? false}
             onSelect={onSelect}
             locale={locale}
           />
@@ -129,6 +137,7 @@ function CalendarDay({
   inMonth,
   isToday,
   isSelected,
+  isDisabled,
   onSelect,
   locale,
 }: Readonly<{
@@ -136,6 +145,7 @@ function CalendarDay({
   inMonth: boolean;
   isToday: boolean;
   isSelected: boolean;
+  isDisabled: boolean;
   onSelect: (next: ISODay) => void;
   locale: Locale;
 }>) {
@@ -157,6 +167,7 @@ function CalendarDay({
       // nothing about which month it belongs to, and the grid's own heading is
       // several stops away by then.
       aria-label={fullDayName(day, locale)}
+      disabled={isDisabled}
       onClick={() => onSelect(isoDay(day))}
     >
       {formatNumber(day.getDate(), locale)}

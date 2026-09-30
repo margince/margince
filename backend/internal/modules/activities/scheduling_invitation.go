@@ -81,9 +81,24 @@ func invitationView(row invitationRow) crmcontracts.MeetingInvitation {
 	}
 	reminder := crmcontracts.MeetingInvitationReminderStatus(row.ReminderStatus)
 	out.ReminderStatus = &reminder
+	out.VideoCall = &row.Appointment.VideoCall
+	if row.Provider != "" {
+		provider := crmcontracts.MeetingInvitationProvider(row.Provider)
+		out.Provider = &provider
+	}
 	if row.Receipt != nil && row.Receipt.URL != "" {
 		out.CalendarUrl = &row.Receipt.URL
 	}
+	if row.Receipt != nil && row.Receipt.VideoURL != "" {
+		out.VideoUrl = &row.Receipt.VideoURL
+	}
+	return out
+}
+
+// guestInvitationView is what a management or proposal link may show: the
+// host's calendar link and provider describe the host's account, not the meeting.
+func guestInvitationView(out crmcontracts.MeetingInvitation) crmcontracts.MeetingInvitation {
+	out.CalendarUrl, out.Provider = nil, nil
 	return out
 }
 
@@ -130,6 +145,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	row.Appointment = connector.CalendarAppointment{
 		ContactID: ids.UUID(in.ContactId), CalendarID: profile.CalendarId, Subject: in.Subject, Description: in.Description,
 		Location: in.Location, Start: in.Start, End: in.End, Attendees: []string{string(in.AttendeeEmail)},
+		VideoCall: videoCallFor(profile, in.VideoCall),
 	}
 	if profile.EmailReminder != nil && *profile.EmailReminder {
 		row.Appointment.EmailReminder = true

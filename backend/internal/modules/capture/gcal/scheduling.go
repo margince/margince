@@ -113,6 +113,34 @@ type scheduledEvent struct {
 	Start       eventTime       `json:"start"`
 	End         eventTime       `json:"end"`
 	Attendees   []eventAttendee `json:"attendees"`
+	Conference  *conferenceData `json:"conferenceData,omitempty"`
+	VideoURL    string          `json:"hangoutLink,omitempty"`
+}
+
+type conferenceData struct {
+	CreateRequest *conferenceRequest `json:"createRequest,omitempty"`
+}
+type conferenceRequest struct {
+	RequestID   string              `json:"requestId,omitempty"`
+	SolutionKey *conferenceSolution `json:"conferenceSolutionKey,omitempty"`
+	Status      *conferenceStatus   `json:"status,omitempty"`
+}
+type conferenceSolution struct {
+	Type string `json:"type"`
+}
+type conferenceStatus struct {
+	Code string `json:"statusCode"`
+}
+
+// meetRequest keys the conference to the invitation's stable request id, so a
+// retried create cannot ask Google for a second Meet.
+func meetRequest(requestID string) *conferenceData {
+	return &conferenceData{CreateRequest: &conferenceRequest{RequestID: requestID, SolutionKey: &conferenceSolution{Type: "hangoutsMeet"}}}
+}
+
+func (e scheduledEvent) conferencePending() bool {
+	return e.Conference != nil && e.Conference.CreateRequest != nil && e.Conference.CreateRequest.Status != nil &&
+		e.Conference.CreateRequest.Status.Code == "pending"
 }
 
 func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarAppointment) (connector.CalendarReceipt, error) {
@@ -124,16 +152,20 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 		event.Attendees = append(event.Attendees, eventAttendee{email})
 	}
 	path := a.base + "/calendars/" + url.PathEscape(in.CalendarID) + "/events"
-	method := http.MethodPost
+	method, query := http.MethodPost, "?sendUpdates=all"
 	if in.EventID != "" {
 		path += "/" + url.PathEscape(in.EventID)
 		method = http.MethodPatch
 	} else {
 		// A UUID's hexadecimal alphabet is a valid Google event id.
 		event.ID = strings.ReplaceAll(in.RequestID, "-", "")
+		if in.VideoCall {
+			event.Conference = meetRequest(in.RequestID)
+			query += "&conferenceDataVersion=1"
+		}
 	}
 	var result scheduledEvent
-	status, err := calendarwire.Request(ctx, a.client, token, method, path+"?sendUpdates=all", event, &result)
+	status, err := calendarwire.Request(ctx, a.client, token, method, path+query, event, &result)
 	if status == http.StatusConflict && in.EventID == "" {
 		existing, lookupErr := a.Lookup(ctx, token, in)
 		if lookupErr != nil {
@@ -150,7 +182,22 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 	if result.ID == "" || result.Status == calendarCanceled {
 		return connector.CalendarReceipt{}, fmt.Errorf("calendar: event was not confirmed")
 	}
-	return connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL}, nil
+	receipt := connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL, VideoURL: result.VideoURL}
+	if receipt.VideoURL == "" && result.conferencePending() {
+		receipt.VideoURL, err = a.videoURL(ctx, token, in.CalendarID, result.ID)
+	}
+	return receipt, err
+}
+
+// videoURL reads a Meet link Google was still creating when it answered the
+// insert. One read, not a poll: a link that is still missing leaves a
+// delivered meeting without one, and a failed read retries through Lookup.
+func (a *httpAPI) videoURL(ctx context.Context, token, calendar, event string) (string, error) {
+	var current scheduledEvent
+	if _, err := calendarwire.Request(ctx, a.client, token, http.MethodGet, a.base+"/calendars/"+url.PathEscape(calendar)+"/events/"+url.PathEscape(event), nil, &current); err != nil {
+		return "", fmt.Errorf("calendar: read the new event's video link: %w", err)
+	}
+	return current.VideoURL, nil
 }
 
 func (a *httpAPI) Cancel(ctx context.Context, token, calendar, event string) error {

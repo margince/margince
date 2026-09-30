@@ -113,6 +113,21 @@ type scheduledEvent struct {
 	Response  struct {
 		Response string `json:"response"`
 	} `json:"responseStatus,omitempty"`
+	// Online leaves onlineMeetingProvider unset so Outlook uses the calendar's
+	// own default, which is Teams for a work account.
+	Online        bool           `json:"isOnlineMeeting,omitempty"`
+	OnlineMeeting *onlineMeeting `json:"onlineMeeting,omitempty"`
+}
+
+type onlineMeeting struct {
+	JoinURL string `json:"joinUrl"`
+}
+
+func (e scheduledEvent) videoURL() string {
+	if e.OnlineMeeting == nil {
+		return ""
+	}
+	return e.OnlineMeeting.JoinURL
 }
 
 func calendarPath(calendar string) string {
@@ -188,6 +203,8 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 		path = a.base + "/me/events/" + url.PathEscape(in.EventID)
 		method = http.MethodPatch
 		event.RequestID = ""
+	} else {
+		event.Online = in.VideoCall
 	}
 	var result scheduledEvent
 	if _, err := calendarwire.Request(ctx, a.client, token, method, path, event, &result); err != nil {
@@ -196,7 +213,7 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 	if result.ID == "" || result.Canceled {
 		return connector.CalendarReceipt{}, fmt.Errorf("calendar: event was not confirmed")
 	}
-	return connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL}, nil
+	return connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL, VideoURL: result.videoURL()}, nil
 }
 
 func (a *httpAPI) Cancel(ctx context.Context, token, _ string, event string) error {

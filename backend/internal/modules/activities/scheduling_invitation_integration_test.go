@@ -39,7 +39,11 @@ func (c *invitationCalendar) Save(_ context.Context, _ ids.UserID, _ string, in 
 	if c.fail {
 		return connector.CalendarReceipt{}, connector.ErrUnreachable
 	}
-	return connector.CalendarReceipt{EventID: in.RequestID, UID: in.RequestID + "@calendar.test", URL: "https://calendar.example.test/event"}, nil
+	receipt := connector.CalendarReceipt{EventID: in.RequestID, UID: in.RequestID + "@calendar.test", URL: "https://calendar.example.test/event"}
+	if in.VideoCall {
+		receipt.VideoURL = "https://meet.example.test/" + in.RequestID
+	}
+	return receipt, nil
 }
 
 func (c *invitationCalendar) Cancel(context.Context, ids.UserID, string, string, string) error {

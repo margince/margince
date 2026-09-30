@@ -74,3 +74,22 @@ export const ShortMonthKeepsSixWeeks: Story = {
     />
   ),
 };
+
+// Only some days can be chosen: the weekends and everything before today are
+// refused, drawn quieter and struck through, while the month keeps its shape.
+export const SomeDaysUnavailable: Story = {
+  render: () => (
+    <Calendar
+      month={TODAY}
+      onMonthChange={() => {}}
+      selected="2026-08-28"
+      onSelect={() => {}}
+      today={TODAY}
+      locale="en"
+      isDisabled={(day) => {
+        const date = new Date(`${day}T12:00:00`);
+        return date < TODAY || date.getDay() === 0 || date.getDay() === 6;
+      }}
+    />
+  ),
+};

@@ -31,7 +31,7 @@ This page does not grade single steps or name a best model per site — that is
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 44 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 15530 |
+| Prompt tokens spent on tools no case requires | 15538 |
 | Use cases | 21 |
 | Acceptance criteria the cases declare, each with a statement | 49 |
 
@@ -438,7 +438,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `draft_follow_ups_for` | 273 | — | — | — |
 | `prepare_handoff` | 267 | — | `case41_close_the_project` | — |
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |
-| `invite_meeting` | 256 | — | — | — |
+| `invite_meeting` | 264 | — | — | — |
 | `company_coverage` | 246 | — | `case5_before_the_meeting` | — |
 | `describe_report_blocks` | 245 | — | `case20_put_it_in_the_board_pack` | — |
 | `decide_approval_bundle` | 235 | — | — | — |
