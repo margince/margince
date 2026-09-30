@@ -70,7 +70,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-44 columns · primary key `(id)` · referenced by 22 foreign keys
+43 columns · primary key `(id)` · referenced by 22 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -112,7 +112,6 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean` | yes | True while a litigation or investigation hold is preserving this record. |
-| `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |

@@ -2121,7 +2121,6 @@ public.company.name_source text NOT NULL gen=- def='human'::text
 public.company.owner_id uuid gen=- def=-
 public.company.parent_company_id uuid gen=- def=-
 public.company.quarantined_at timestamp with time zone gen=- def=-
-public.company.raw jsonb gen=- def=-
 public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
 public.company.size_band text gen=- def=-
 public.company.source text NOT NULL gen=- def=-
@@ -2696,7 +2695,6 @@ public.contact.owner_id uuid gen=- def=-
 public.contact.photo_object_key text gen=- def=-
 public.contact.photo_origin text gen=- def=-
 public.contact.quarantined_at timestamp with time zone gen=- def=-
-public.contact.raw jsonb gen=- def=-
 public.contact.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))
 public.contact.source text NOT NULL gen=- def=-
 public.contact.source_author_id uuid gen=- def=-
@@ -3130,7 +3128,6 @@ CASE priority
     ELSE NULL::integer
 END
 public.deal.project_id uuid gen=- def=-
-public.deal.raw jsonb gen=- def=-
 public.deal.search_tsv tsvector gen=s def=((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char"))
 public.deal.source text NOT NULL gen=- def=-
 public.deal.source_author_id uuid gen=- def=-
@@ -3572,7 +3569,6 @@ public.dedupe_candidate.id uuid NOT NULL gen=- def=uuidv7()
 public.dedupe_candidate.left_company_id uuid gen=- def=-
 public.dedupe_candidate.left_contact_id uuid gen=- def=-
 public.dedupe_candidate.left_lead_id uuid gen=- def=-
-public.dedupe_candidate.raw jsonb gen=- def=-
 public.dedupe_candidate.right_company_id uuid gen=- def=-
 public.dedupe_candidate.right_contact_id uuid gen=- def=-
 public.dedupe_candidate.right_lead_id uuid gen=- def=-
@@ -4594,7 +4590,6 @@ public.lead.project_id uuid gen=- def=-
 public.lead.promoted_at timestamp with time zone gen=- def=-
 public.lead.promoted_contact_id uuid gen=- def=-
 public.lead.qualified_deal_id uuid gen=- def=-
-public.lead.raw jsonb gen=- def=-
 public.lead.routed_at timestamp with time zone gen=- def=-
 public.lead.score smallint NOT NULL gen=- def=0
 public.lead.score_computed smallint gen=- def=-
@@ -5230,7 +5225,6 @@ public.partner.partner_relationship_health_check CHECK (((relationship_health IS
 public.partner.partner_relationship_stage_check CHECK ((relationship_stage = ANY (ARRAY['research'::text, 'identified'::text, 'contacted'::text, 'in_conversation'::text, 'fit_confirmed'::text, 'agreement_pending'::text, 'active'::text, 'active_referring'::text, 'dormant'::text, 'no_fit'::text])))
 public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))
 public.partner.partner_role text gen=- def=-
-public.partner.raw jsonb gen=- def=-
 public.partner.relationship_health numeric(3,2) gen=- def=-
 public.partner.relationship_stage text NOT NULL gen=- def='research'::text
 public.partner.renews_at date gen=- def=-
@@ -5382,7 +5376,6 @@ public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text
 public.project.project_pkey PRIMARY KEY (id)
 public.project.project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.project.project_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
-public.project.raw jsonb gen=- def=-
 public.project.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))
 public.project.source text NOT NULL gen=- def=-
 public.project.source_author_id uuid gen=- def=-
