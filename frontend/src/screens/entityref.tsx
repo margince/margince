@@ -90,6 +90,27 @@ function missLabel(
   return reading === "failed" ? t("ref.nameLoadFailed") : unlisted;
 }
 
+/**
+ * What to call a roster id the WALK could not name.
+ *
+ * A team is named this way: teams carry no invited seats, so the walk's page
+ * budget was never a naming question for them. A colleague is named by id
+ * through `useMemberName`, which answers about that id alone and has no walk to
+ * stop short.
+ *
+ * A picker whose current value matches no option renders blank — indistinguish-
+ * able from unset — so a value the roster cannot name still needs a label, and
+ * this is the one that is honest about why it has none.
+ */
+export function rosterMissLabel(
+  roster: Readonly<{ isPending: boolean; isError: boolean }>,
+  partial: boolean,
+  t: ReturnType<typeof useT>,
+  unlisted: string,
+): string {
+  return missLabel(rosterReading(roster, partial), t, unlisted);
+}
+
 function UnnamedRef({
   id,
   reading,
