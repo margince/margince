@@ -475,5 +475,15 @@ const (
 	// in list_member_event. The list ids go into the archive's own audit
 	// evidence, which an un-archive reads to put the memberships back; no
 	// reader is handed one, so there is no list scope to apply.
-	modulesTierUnscopedCeiling = 109
+	//
+	// 110, 111: collections.Store.compareSnapshot's two statements write a Live
+	// List's entered and left events under the system checker, which has to see
+	// every record for the history to be whole. They hand the caller counts,
+	// never a reference, and every read of the events they write applies the
+	// reader's current row scope (observedVisibleClause).
+	//
+	// 112: collections.lastChecks reads the latest check of lists its caller
+	// already found through their sharing (ListLists, GetList); it answers only
+	// for the ids it was handed, so it names no list the reader could not find.
+	modulesTierUnscopedCeiling = 112
 )

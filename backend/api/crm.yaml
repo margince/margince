@@ -10424,8 +10424,13 @@ paths:
       x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
       summary: Read what changed on a list, newest first.
       description: |
-        Every change of the list's definition, and every Shortlist membership change of a record
-        this caller can see now. A change about a record they cannot see is absent.
+        Every change of the list's definition, every Shortlist membership change, and every record
+        a Live List was seen to gain or lose, about a record this caller can see now. A change
+        about a record they cannot see is absent. The check runs every 15 minutes and takes the
+        Live Lists checked longest ago first, so with very many lists one can wait longer; the
+        list's `last_check` says when it was. `member_entered` and `member_left` are stamped with
+        the check that saw them, and a record that joined and left between two checks is not
+        recorded.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -10439,6 +10444,30 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /lists/{id}/visit:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Lists]
+      operationId: visitList
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
+      description: |
+        The mark moves only here, never as a side effect of reading the list, so a prefetch is not
+        a visit. It never moves backwards. A visit within half an hour of the last extends it
+        rather than starting a new one. The answer carries the visit `since_last_visit` now counts
+        from; null on a first visit.
+      responses:
+        '200':
+          description: The stored visit and the one before it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ListVisit' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------- /filters/vocabulary -----------------------------
   /filters/vocabulary:
@@ -41731,6 +41760,22 @@ components:
             The retired custom fields a Live List's filter names, by column name. Absent when it
             names none.
         can_edit: { type: boolean, description: 'Whether this caller holds list authority over the list.' }
+        last_check:
+          $ref: '#/components/schemas/ListCheck'
+          description: A Live List's latest check; absent for a Shortlist or a Live List not checked yet.
+        since_last_visit:
+          $ref: '#/components/schemas/ListPulse'
+          description: >-
+            What a Live List gained and lost since this caller last opened it, counting only records
+            they can see now. Absent on a first visit and for a Shortlist. A visit recorded in the
+            last half hour is the one in progress, so the counts run from the visit before it.
+        joined_since_visit:
+          type: array
+          items: { type: string, format: uuid }
+          description: >-
+            On a single Live List read: the members this caller can see that a check saw joining
+            since their last visit and that are still members, newest first, at most 500. Absent
+            from the library.
         dependencies:
           type: array
           description: What uses this list. Exports are listed as usage and block nothing.
@@ -41738,6 +41783,33 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+
+    ListCheck:
+      type: object
+      description: >-
+        When a Live List's members were last compared with the check before. `complete` recorded
+        who joined and left; `too_large` matched more records than one check may hold, so nothing
+        was recorded; `invalid` could not evaluate the filter.
+      required: [checked_at, outcome]
+      properties:
+        checked_at: { type: string, format: date-time }
+        outcome: { type: string, enum: [complete, too_large, invalid] }
+
+    ListPulse:
+      type: object
+      required: [since, entered, left]
+      properties:
+        since: { type: string, format: date-time, description: 'The visit the counts run from.' }
+        entered: { type: integer, description: 'Records seen joining since then.' }
+        left: { type: integer, description: 'Records seen leaving since then.' }
+
+    ListVisit:
+      type: object
+      required: [list_id, visited_at]
+      properties:
+        list_id: { type: string, format: uuid }
+        visited_at: { type: string, format: date-time }
+        previous_visit_at: { type: [string, 'null'], format: date-time, description: 'Null on a first visit.' }
 
     ListDependency:
       type: object
@@ -41844,13 +41916,23 @@ components:
       required: [id, kind, occurred_at, actor]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [member_added, member_removed, revised] }
+        kind:
+          type: string
+          enum: [member_added, member_removed, member_entered, member_left, revised]
+          description: >-
+            `member_entered` and `member_left` are a Live List's observed changes, stamped with the
+            check that saw them.
+        definition_version:
+          type: [integer, 'null']
+          format: int64
+          description: >-
+            For an observed change, the list version whose filter it was seen under.
+        reason: { type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, evaluated, filter_changed, null], description: '`filter_changed` marks the first check after the filter changed.' }
         occurred_at: { type: string, format: date-time }
         actor: { type: string }
         actor_name: { type: [string, 'null'] }
         entity_type: { type: [string, 'null'] }
         entity_id: { type: [string, 'null'], format: uuid }
-        reason: { type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, null] }
         note: { type: [string, 'null'] }
         version: { type: [integer, 'null'], format: int64 }
         name: { type: [string, 'null'] }

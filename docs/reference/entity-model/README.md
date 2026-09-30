@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 290 |
-| Columns | 3474 |
-| Foreign keys | 468 |
+| Tables | 293 |
+| Columns | 3490 |
+| Foreign keys | 472 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them, so this list follows the schema r
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 125 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 22 | 126 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 33 | 41 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 40 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 58 | 32 |
@@ -97,7 +97,7 @@ erDiagram
 | [assurance](assurance.md) | 7 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 22 |
-| [collections](collections.md) | 7 |
+| [collections](collections.md) | 10 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 36 |
@@ -158,7 +158,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 22 | 125 |
+| [`app_user`](identity.md#app_user) | identity | 22 | 126 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 3 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -304,10 +304,13 @@ erDiagram
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
 | [`linkedin_account`](contacts.md#linkedin_account) | contacts | 5 | 0 |
 | [`linkedin_connection`](contacts.md#linkedin_connection) | contacts | 19 | 0 |
-| [`list`](collections.md#list) | collections | 14 | 3 |
+| [`list`](collections.md#list) | collections | 14 | 6 |
+| [`list_evaluation`](collections.md#list_evaluation) | collections | 6 | 0 |
+| [`list_live_member`](collections.md#list_live_member) | collections | 5 | 0 |
 | [`list_member`](collections.md#list_member) | collections | 7 | 0 |
-| [`list_member_event`](collections.md#list_member_event) | collections | 9 | 0 |
+| [`list_member_event`](collections.md#list_member_event) | collections | 10 | 0 |
 | [`list_revision`](collections.md#list_revision) | collections | 11 | 0 |
+| [`list_visit`](collections.md#list_visit) | collections | 4 | 0 |
 | [`mail_draft`](activities.md#mail_draft) | activities | 13 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_invitation`](activities.md#meeting_invitation) | activities | 19 | 1 |

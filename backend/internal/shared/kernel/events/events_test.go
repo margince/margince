@@ -72,7 +72,9 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"sla_breached": true,
 		// A record joined or left a Shortlist.
 		"member_added": true, "member_removed": true,
-		"promoted": true, "captured": true, "requested": true,
+		// A Live List's scheduled check saw records join or leave it.
+		"evaluated": true,
+		"promoted":  true, "captured": true, "requested": true,
 		"decided": true, "failed": true, "appended": true,
 		"changed": true, "applied": true, "sent": true, "accepted": true,
 		"rejected": true, "superseded": true, "disqualified": true, "demoted": true,

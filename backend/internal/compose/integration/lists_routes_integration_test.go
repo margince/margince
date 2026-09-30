@@ -151,6 +151,15 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	}
 	mustCall(t, e, "GET", "/v1/lists/"+short.ID+"/history?limit=50&cursor="+*history.Page.NextCursor, nil, http.StatusOK, &history)
 
+	// A first visit, and one straight after it that only extends it, have no
+	// earlier visit to count from.
+	var firstVisit, secondVisit AnyMap
+	mustCall(t, e, "POST", "/v1/lists/"+live.ID+"/visit", nil, http.StatusOK, &firstVisit)
+	mustCall(t, e, "POST", "/v1/lists/"+live.ID+"/visit", nil, http.StatusOK, &secondVisit)
+	if firstVisit["previous_visit_at"] != nil || secondVisit["previous_visit_at"] != nil || secondVisit["visited_at"] == nil {
+		t.Fatalf("visits answered %v then %v", firstVisit, secondVisit)
+	}
+
 	// The Live List exported, then named among its uses.
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": live.ID, "format": "json"}, http.StatusOK, nil)
 	mustCall(t, e, "POST", "/v1/exports", AnyMap{"list_id": short.ID, "format": "json"}, http.StatusUnprocessableEntity, nil)

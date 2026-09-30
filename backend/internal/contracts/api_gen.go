@@ -10477,6 +10477,27 @@ func (e ListSharing) Valid() bool {
 	}
 }
 
+// Defines values for ListCheckOutcome.
+const (
+	ListCheckOutcomeComplete ListCheckOutcome = "complete"
+	ListCheckOutcomeInvalid  ListCheckOutcome = "invalid"
+	ListCheckOutcomeTooLarge ListCheckOutcome = "too_large"
+)
+
+// Valid indicates whether the value is a known member of the ListCheckOutcome enum.
+func (e ListCheckOutcome) Valid() bool {
+	switch e {
+	case ListCheckOutcomeComplete:
+		return true
+	case ListCheckOutcomeInvalid:
+		return true
+	case ListCheckOutcomeTooLarge:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListClauseVerdictJoin.
 const (
 	ListClauseVerdictJoinAnd ListClauseVerdictJoin = "and"
@@ -10513,6 +10534,8 @@ func (e ListDependencyKind) Valid() bool {
 // Defines values for ListHistoryEntryKind.
 const (
 	ListHistoryEntryKindMemberAdded   ListHistoryEntryKind = "member_added"
+	ListHistoryEntryKindMemberEntered ListHistoryEntryKind = "member_entered"
+	ListHistoryEntryKindMemberLeft    ListHistoryEntryKind = "member_left"
 	ListHistoryEntryKindMemberRemoved ListHistoryEntryKind = "member_removed"
 	ListHistoryEntryKindRevised       ListHistoryEntryKind = "revised"
 )
@@ -10521,6 +10544,10 @@ const (
 func (e ListHistoryEntryKind) Valid() bool {
 	switch e {
 	case ListHistoryEntryKindMemberAdded:
+		return true
+	case ListHistoryEntryKindMemberEntered:
+		return true
+	case ListHistoryEntryKindMemberLeft:
 		return true
 	case ListHistoryEntryKindMemberRemoved:
 		return true
@@ -10535,6 +10562,8 @@ func (e ListHistoryEntryKind) Valid() bool {
 const (
 	ListHistoryEntryReasonBulk           ListHistoryEntryReason = "bulk"
 	ListHistoryEntryReasonChosen         ListHistoryEntryReason = "chosen"
+	ListHistoryEntryReasonEvaluated      ListHistoryEntryReason = "evaluated"
+	ListHistoryEntryReasonFilterChanged  ListHistoryEntryReason = "filter_changed"
 	ListHistoryEntryReasonRecordArchived ListHistoryEntryReason = "record_archived"
 	ListHistoryEntryReasonRecordRestored ListHistoryEntryReason = "record_restored"
 )
@@ -10545,6 +10574,10 @@ func (e ListHistoryEntryReason) Valid() bool {
 	case ListHistoryEntryReasonBulk:
 		return true
 	case ListHistoryEntryReasonChosen:
+		return true
+	case ListHistoryEntryReasonEvaluated:
+		return true
+	case ListHistoryEntryReasonFilterChanged:
 		return true
 	case ListHistoryEntryReasonRecordArchived:
 		return true
@@ -34703,11 +34736,17 @@ type List struct {
 	EntityType   ListEntityType    `json:"entity_type"`
 
 	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `invalid` outranks `ownerless`, which outranks `retired_field`.
-	Health   ListHealth          `json:"health"`
-	Id       openapi_types.UUID  `json:"id"`
-	ListType ListListType        `json:"list_type"`
-	Name     string              `json:"name"`
-	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
+	Health ListHealth         `json:"health"`
+	Id     openapi_types.UUID `json:"id"`
+
+	// JoinedSinceVisit On a single Live List read: the members this caller can see that a check saw joining since their last visit and that are still members, newest first, at most 500. Absent from the library.
+	JoinedSinceVisit *[]openapi_types.UUID `json:"joined_since_visit,omitempty"`
+
+	// LastCheck When a Live List's members were last compared with the check before. `complete` recorded who joined and left; `too_large` matched more records than one check may hold, so nothing was recorded; `invalid` could not evaluate the filter.
+	LastCheck *ListCheck          `json:"last_check,omitempty"`
+	ListType  ListListType        `json:"list_type"`
+	Name      string              `json:"name"`
+	OwnerId   *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Purpose What the list is for, in the words of its steward.
 	Purpose *string `json:"purpose,omitempty"`
@@ -34716,7 +34755,8 @@ type List struct {
 	RetiredFields *[]string `json:"retired_fields,omitempty"`
 
 	// Sharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
-	Sharing ListSharing `json:"sharing"`
+	Sharing        ListSharing `json:"sharing"`
+	SinceLastVisit *ListPulse  `json:"since_last_visit,omitempty"`
 
 	// StewardId Who looks after the list and may change it.
 	StewardId   *openapi_types.UUID `json:"steward_id,omitempty"`
@@ -34742,6 +34782,15 @@ type ListListType string
 
 // ListSharing Who may FIND the list. Never who may see its members: every member read applies the reader's own row scope.
 type ListSharing string
+
+// ListCheck When a Live List's members were last compared with the check before. `complete` recorded who joined and left; `too_large` matched more records than one check may hold, so nothing was recorded; `invalid` could not evaluate the filter.
+type ListCheck struct {
+	CheckedAt time.Time        `json:"checked_at"`
+	Outcome   ListCheckOutcome `json:"outcome"`
+}
+
+// ListCheckOutcome defines model for ListCheck.Outcome.
+type ListCheckOutcome string
 
 // ListClauseVerdict One node of a Live List's filter judged for one record: a group (`join`, `children`) or a clause (`field`, `op`, `operand`). `result` is null where SQL answers unknown, which the filter treats as not selected.
 type ListClauseVerdict struct {
@@ -34782,22 +34831,29 @@ type ListHistoryEntry struct {
 	Actor      string                  `json:"actor"`
 	ActorName  *string                 `json:"actor_name,omitempty"`
 	Definition *map[string]interface{} `json:"definition,omitempty"`
-	EntityId   *openapi_types.UUID     `json:"entity_id,omitempty"`
-	EntityType *string                 `json:"entity_type,omitempty"`
-	Id         openapi_types.UUID      `json:"id"`
-	Kind       ListHistoryEntryKind    `json:"kind"`
-	Name       *string                 `json:"name,omitempty"`
-	Note       *string                 `json:"note,omitempty"`
-	OccurredAt time.Time               `json:"occurred_at"`
-	Reason     *ListHistoryEntryReason `json:"reason,omitempty"`
-	Sharing    *string                 `json:"sharing,omitempty"`
-	Version    *int64                  `json:"version,omitempty"`
+
+	// DefinitionVersion For an observed change, the list version whose filter it was seen under.
+	DefinitionVersion *int64              `json:"definition_version,omitempty"`
+	EntityId          *openapi_types.UUID `json:"entity_id,omitempty"`
+	EntityType        *string             `json:"entity_type,omitempty"`
+	Id                openapi_types.UUID  `json:"id"`
+
+	// Kind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
+	Kind       ListHistoryEntryKind `json:"kind"`
+	Name       *string              `json:"name,omitempty"`
+	Note       *string              `json:"note,omitempty"`
+	OccurredAt time.Time            `json:"occurred_at"`
+
+	// Reason `filter_changed` marks the first check after the filter changed.
+	Reason  *ListHistoryEntryReason `json:"reason,omitempty"`
+	Sharing *string                 `json:"sharing,omitempty"`
+	Version *int64                  `json:"version,omitempty"`
 }
 
-// ListHistoryEntryKind defines model for ListHistoryEntry.Kind.
+// ListHistoryEntryKind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
 type ListHistoryEntryKind string
 
-// ListHistoryEntryReason defines model for ListHistoryEntry.Reason.
+// ListHistoryEntryReason `filter_changed` marks the first check after the filter changed.
 type ListHistoryEntryReason string
 
 // ListHistoryResponse defines model for ListHistoryResponse.
@@ -34864,6 +34920,27 @@ type ListMemberExplanationListType string
 type ListMemberListResponse struct {
 	Data []ListMember `json:"data"`
 	Page PageInfo     `json:"page"`
+}
+
+// ListPulse defines model for ListPulse.
+type ListPulse struct {
+	// Entered Records seen joining since then.
+	Entered int `json:"entered"`
+
+	// Left Records seen leaving since then.
+	Left int `json:"left"`
+
+	// Since The visit the counts run from.
+	Since time.Time `json:"since"`
+}
+
+// ListVisit defines model for ListVisit.
+type ListVisit struct {
+	ListId openapi_types.UUID `json:"list_id"`
+
+	// PreviousVisitAt Null on a first visit.
+	PreviousVisitAt *time.Time `json:"previous_visit_at,omitempty"`
+	VisitedAt       time.Time  `json:"visited_at"`
 }
 
 // LoginRequest defines model for LoginRequest.
@@ -63925,6 +64002,9 @@ type ServerInterface interface {
 	// Bring an archived list back.
 	// (POST /lists/{id}/restore)
 	RestoreList(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
+	// (POST /lists/{id}/visit)
+	VisitList(w http.ResponseWriter, r *http.Request, id Id)
 	// What the machinery did, what it needs, what it could not finish, and what it is watching.
 	// (GET /magic)
 	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
@@ -67657,6 +67737,12 @@ func (_ Unimplemented) ExplainListMember(w http.ResponseWriter, r *http.Request,
 // Bring an archived list back.
 // (POST /lists/{id}/restore)
 func (_ Unimplemented) RestoreList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
+// (POST /lists/{id}/visit)
+func (_ Unimplemented) VisitList(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -90000,6 +90086,38 @@ func (siw *ServerInterfaceWrapper) RestoreList(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// VisitList operation middleware
+func (siw *ServerInterfaceWrapper) VisitList(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VisitList(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMagic operation middleware
 func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Request) {
 
@@ -103495,6 +103613,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/lists/{id}/restore", wrapper.RestoreList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lists/{id}/visit", wrapper.VisitList)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)

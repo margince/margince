@@ -10386,6 +10386,21 @@ export const en = {
   "lists.myLists.title": "My lists",
   "lists.myLists.empty":
     "No private lists. A list only you can find shows here. Share it and it moves to Shared views.",
+  "lists.pulse.chip": "+{entered} / −{left}",
+  "lists.pulse.label": "{entered} joined and {left} left since your last visit",
+  "lists.head.lastChecked": "Last checked {when}",
+  "lists.head.notChecked":
+    "Not checked yet. Who joins and leaves is recorded from the first check on.",
+  "lists.head.tooLarge":
+    "Last checked {when}. It matched too many records to record who joined and left.",
+  "lists.head.pulse": "Since your last visit: {entered} joined, {left} left",
+  "lists.members.new": "New",
+  "lists.history.entered": "Joined as of {when}",
+  "lists.history.left": "Left as of {when}",
+  "lists.history.reason.filterChanged": "after the filter changed",
+  "lists.history.checker": "The 15-minute check",
+  "lists.history.liveNote":
+    "The check runs every 15 minutes and takes the lists checked longest ago first, so with very many lists one can wait longer; “Last checked” says when it was. Who joined and left is recorded as of the check that noticed it, and a record that joins and leaves between two checks is not recorded.",
   "lists.history.someone": "Someone",
 
   // The Filters & views screen's own chrome. The match line is keyed per object

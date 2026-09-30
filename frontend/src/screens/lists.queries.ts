@@ -15,6 +15,7 @@ export type ListRecordType = List["entity_type"];
 export type ListHistoryEntry = components["schemas"]["ListHistoryEntry"];
 export type ListExplanation = components["schemas"]["ListMemberExplanation"];
 export type ListClauseVerdict = components["schemas"]["ListClauseVerdict"];
+export type ListVisit = components["schemas"]["ListVisit"];
 
 /** Every cache entry a list write can make stale starts with this key. */
 export const LISTS_KEY = "lists";
@@ -92,6 +93,31 @@ export function useListHistory(id: string) {
       }
       return data;
     },
+  });
+}
+
+/**
+ * Records that the reader opened a list. The server keeps counting from the
+ * visit before this one while it is in progress, so the list and the library
+ * are read again and still say what was new.
+ */
+export function useVisitList() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<ListVisit> => {
+      const { data, error } = await api.POST("/lists/{id}/visit", {
+        params: { path: { id } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: (_visit, id) =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: [LISTS_KEY, "all"] }),
+        client.invalidateQueries({ queryKey: [LISTS_KEY, "one", id] }),
+      ]),
   });
 }
 
