@@ -30,6 +30,13 @@ import {
 import { canExportFilter, ExportFilterMenu } from "./filterexport";
 import { SaveFilterListAction } from "./filterlist";
 import {
+  buildTabOf,
+  EDIT_LIST_SEGMENT,
+  EditingListNotice,
+  SaveToListAction,
+  useOpenListFromAddress,
+} from "./filterlistedit";
+import {
   PlainWordsFilter,
   type UnusedPhrase,
   UnusedPhrases,
@@ -37,7 +44,7 @@ import {
 import { FilterResults } from "./filterresults";
 import { ListLibrary } from "./listlibrary";
 import { ListScreen } from "./listpage";
-import { useListsAvailable } from "./lists.queries";
+import { useList, useListsAvailable } from "./lists.queries";
 import { MyViews } from "./myviews";
 import "./filters.css";
 import {
@@ -163,15 +170,34 @@ export function FiltersScreen({
       </div>
       {section === "lists" && <ListLibrary />}
       {section === "views" && <MyViews />}
-      {section === "build" && <FilterBuildScreen id={id} view={view} />}
+      {section === "build" &&
+        (id === EDIT_LIST_SEGMENT && view ? (
+          <ListFilterBuild listID={view} />
+        ) : (
+          <FilterBuildScreen id={id} view={view} />
+        ))}
     </div>
   );
+}
+
+/**
+ * `#/filters/list/<id>`: the builder on that Live List's filter, on the tab of
+ * its record type once the list has been read.
+ */
+function ListFilterBuild({ listID }: Readonly<{ listID: string }>) {
+  const list = useList(listID);
+  if (list.isPending) {
+    return null;
+  }
+  const tab = list.data ? buildTabOf(list.data.entity_type) : undefined;
+  return <FilterBuildScreen id={tab} editList={tab ? listID : undefined} />;
 }
 
 function FilterBuildScreen({
   id,
   view,
-}: Readonly<{ id?: string; view?: string }>) {
+  editList,
+}: Readonly<{ id?: string; view?: string; editList?: string }>) {
   const t = useT();
   // The ADDRESS is which object is being filtered. It was read once, on mount,
   // and never written back — so pressing a tab moved the screen and left the
@@ -185,7 +211,13 @@ function FilterBuildScreen({
   // What the last plain-words proposal could not use, kept until the next one
   // or until the reader puts it away.
   const [unused, setUnused] = useState<readonly UnusedPhrase[]>([]);
-  const opening = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
+  const openingView = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
+  const { edited, opening: openingList } = useOpenListFromAddress(
+    editList,
+    tab,
+    setTree,
+  );
+  const opening = openingView || openingList;
 
   const resource = RESOURCE_OF[tab];
   const vocabulary = useFilterVocabulary(resource);
@@ -221,6 +253,7 @@ function FilterBuildScreen({
         />
       </div>
 
+      {edited && <EditingListNotice edited={edited} />}
       <Panel
         title={t("filters.builderTitle")}
         // Below the builder, not beside the count: the export takes the filter
@@ -258,6 +291,7 @@ function FilterBuildScreen({
           <Badge tone="accent">{t("filters.dynamic")}</Badge>
           <LoadFilterViewMenu resource={VIEW_OF[tab]} onLoad={setTree} />
           <SaveFilterViewAction resource={VIEW_OF[tab]} tree={tree} />
+          {edited && <SaveToListAction edited={edited} tree={tree} />}
           <SaveFilterListAction resource={resource} tree={tree} />
         </PanelBody>
         <PanelBody>

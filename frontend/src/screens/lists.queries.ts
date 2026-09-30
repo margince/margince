@@ -66,8 +66,9 @@ export function useLists(query: ListQuery, enabled = true) {
   });
 }
 
-export function useList(id: string) {
+export function useList(id: string, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [LISTS_KEY, "one", id],
     queryFn: async () => {
       const { data, error } = await api.GET("/lists/{id}", {
@@ -193,6 +194,8 @@ export type ListEdit = Readonly<{
   /** Absent leaves the team as it is; null moves it to the owner's teams. */
   teamId?: string | null;
   stewardId?: string;
+  /** A Live List's new filter tree, in the stored encoding. */
+  definition?: Record<string, unknown>;
 }>;
 
 export function useUpdateList() {
@@ -208,6 +211,7 @@ export function useUpdateList() {
           sharing: edit.sharing,
           team_id: edit.teamId,
           steward_id: edit.stewardId,
+          definition: edit.definition,
         },
       });
       if (error) {

@@ -17,6 +17,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMe } from "./common";
 import { customColumnLabel } from "./filterdata";
+import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import { ListChangeSummary } from "./listchanges";
 import { ListHistoryPanel } from "./listhistory";
 import {
@@ -139,6 +140,7 @@ function ListHead({ list }: Readonly<{ list: List }>) {
       {list.can_edit && !list.archived_at && (
         <div className="card-actions">
           <ListSettingsAction list={list} />
+          <EditFilterAction list={list} />
           <ArchiveListAction list={list} />
         </div>
       )}
@@ -228,7 +230,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   }
   if (list.health === "invalid") {
     return (
-      <Callout tone="danger" title={t("lists.invalid.title")}>
+      <Callout
+        tone="danger"
+        title={t("lists.invalid.title")}
+        actions={
+          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+        }
+      >
         {t("lists.invalid.body")}
       </Callout>
     );
@@ -236,7 +244,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   if (list.health === "retired_field") {
     const fields = list.retired_fields ?? [];
     return (
-      <Callout tone="warning" title={t("lists.retiredField.title")}>
+      <Callout
+        tone="warning"
+        title={t("lists.retiredField.title")}
+        actions={
+          mayEditFilter(list) ? <EditFilterAction list={list} /> : undefined
+        }
+      >
         {plural("lists.retiredField.body", fields.length, {
           fields: fields.map(customColumnLabel).join(", "),
         })}

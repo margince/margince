@@ -343,9 +343,17 @@ One change takes at most 500 records. **Select all** selects the first 500 and s
 Also called: bulk edit a list, reassign everyone on a list, export a list.
 
 ### What does "Uses a retired field" mean on a list?
-A Live List shows **Uses a retired field** when its filter names a custom field that has been archived. The list still works on the values already stored, but nothing new is recorded in that field, so its steward should replace the clause in the builder. Archiving a custom field names the Live Lists that filter on it before you confirm.
-**Filter no longer works** means a field the filter names has changed so the filter cannot run; its steward fixes the filter in the builder.
+A Live List shows **Uses a retired field** when its filter names a custom field that has been archived. The list still works on the values already stored, but nothing new is recorded in that field, so its steward should replace the clause: press **Edit filter** on the notice. Archiving a custom field names the Live Lists that filter on it before you confirm.
+**Filter no longer works** means a field the filter names has changed so the filter cannot run; its steward fixes it the same way, with **Edit filter**.
 Also called: broken list, list warning, archived custom field.
+
+### How do I change a Live List's filter?
+To change which records a Margince Live List holds, open the list and press **Edit filter**. The builder opens on the list's filter, with a notice naming the list.
+1. Change, add or delete clauses; the match count updates as you go.
+2. Press **Save to** and the list's name, then **Save filter**. The list's page opens.
+3. From then on records join and leave by the new filter, and **What changed** records the change.
+If someone changed the list after you opened it, Margince says so and saves nothing: open the list again and redo the edit. **Save as Live List** in the same place makes a new list instead. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
+Also called: edit a list's criteria, change a segment, update a smart list.
 
 ### How do I rename, archive or restore a list?
 To change a list in Margince, open it and press **Edit list**: change the **Name**, **What it is for** and **Who can find it**, then press **Save**. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit list**.

@@ -10358,6 +10358,17 @@ export const de = {
   "lists.history.checker": "Die 15-Minuten-Prüfung",
   "lists.history.liveNote":
     "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
+  "lists.editFilter": "Filter bearbeiten",
+  "lists.editingTitle": "Du bearbeitest den Filter von {name}",
+  "lists.editingBody":
+    "Speichere in die Liste, um zu ändern, welche Datensätze sie enthält. „Als Live-Liste speichern“ legt stattdessen eine neue Liste an.",
+  "lists.saveFilterTo": "In {name} speichern",
+  "lists.saveFilterTitle": "Filter von {name} ändern?",
+  "lists.saveFilterBody":
+    "Ab jetzt kommen Datensätze nach dem neuen Filter in die Liste und verlassen sie, und die Änderung bleibt in ihrem Verlauf. Alle, die die Liste finden können, sehen die neuen Mitglieder.",
+  "lists.saveFilterConfirm": "Filter speichern",
+  "lists.saveFilterConflict":
+    "Jemand hat diese Liste geändert, nachdem du sie geöffnet hast. Öffne die Liste erneut, um die Änderung zu sehen, und bearbeite dann den Filter.",
   "lists.history.someone": "Jemand",
   "lists.changes.since": "Seit deinem Besuch am {when}:",
   "lists.changes.joined_one": "{count} hinzugekommen",

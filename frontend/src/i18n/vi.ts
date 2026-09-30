@@ -10279,6 +10279,18 @@ export const vi = {
   "lists.history.checker": "Lần kiểm tra định kỳ (15 phút một lần)",
   "lists.history.liveNote":
     "Việc kiểm tra chạy 15 phút một lần và ưu tiên các danh sách lâu nhất chưa được kiểm tra, nên khi có rất nhiều danh sách, một danh sách có thể phải chờ lâu hơn; “Kiểm tra lần cuối” cho biết lần kiểm tra gần nhất. Bản ghi vào hay rời đi được ghi nhận tại lần kiểm tra phát hiện ra thay đổi đó. Bản ghi vào rồi rời đi giữa hai lần kiểm tra sẽ không được ghi nhận.",
+  "lists.editFilter": "S\u1eeda b\u1ed9 l\u1ecdc",
+  "lists.editingTitle": "\u0110ang s\u1eeda b\u1ed9 l\u1ecdc c\u1ee7a {name}",
+  "lists.editingBody":
+    "L\u01b0u v\u00e0o danh s\u00e1ch \u0111\u1ec3 thay \u0111\u1ed5i c\u00e1c b\u1ea3n ghi m\u00e0 n\u00f3 ch\u1ee9a. L\u01b0u th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng s\u1ebd t\u1ea1o m\u1ed9t danh s\u00e1ch m\u1edbi.",
+  "lists.saveFilterTo": "L\u01b0u v\u00e0o {name}",
+  "lists.saveFilterTitle":
+    "Thay \u0111\u1ed5i b\u1ed9 l\u1ecdc c\u1ee7a {name}?",
+  "lists.saveFilterBody":
+    "T\u1eeb b\u00e2y gi\u1edd, c\u00e1c b\u1ea3n ghi v\u00e0o v\u00e0 r\u1eddi danh s\u00e1ch theo b\u1ed9 l\u1ecdc m\u1edbi, v\u00e0 thay \u0111\u1ed5i \u0111\u01b0\u1ee3c gi\u1eef trong l\u1ecbch s\u1eed. Ai t\u00ecm \u0111\u01b0\u1ee3c danh s\u00e1ch c\u0169ng s\u1ebd th\u1ea5y c\u00e1c th\u00e0nh vi\u00ean m\u1edbi.",
+  "lists.saveFilterConfirm": "L\u01b0u b\u1ed9 l\u1ecdc",
+  "lists.saveFilterConflict":
+    "Ai \u0111\u00f3 \u0111\u00e3 thay \u0111\u1ed5i danh s\u00e1ch n\u00e0y sau khi b\u1ea1n m\u1edf n\u00f3. H\u00e3y m\u1edf l\u1ea1i danh s\u00e1ch \u0111\u1ec3 xem thay \u0111\u1ed5i, r\u1ed3i s\u1eeda b\u1ed9 l\u1ecdc.",
   "lists.history.someone": "Ai \u0111\u00f3",
   "lists.changes.since": "Kể từ lần bạn xem ngày {when}:",
   "lists.changes.joined_one": "{count} vào",
