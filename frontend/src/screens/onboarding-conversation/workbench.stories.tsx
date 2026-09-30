@@ -72,8 +72,8 @@ export const SignedIn: Story = {
   render: () => <Shell session={meRoute({ automation: ["update"] })} />,
 };
 
-// `uat-phone` drives the capture gate to 390px, where the band's end slot
-// takes a row of its own under the masthead.
+// The only full-bleed capture of the band at 390px with the runtime chip in it:
+// `uat-phone` drives the capture gate to that width.
 export const SignedInPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

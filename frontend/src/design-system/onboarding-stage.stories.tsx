@@ -49,6 +49,13 @@ export const Lit: Story = {
   },
 };
 
+// A phone, where the band's end slot takes a row of its own under the mark.
+export const OnAPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: { ...Lit.args, coreStateLabel: "Core · reading input" },
+};
+
 // The read theatre's anchor. A surface that gains a tile per page cannot be
 // centred: the column would re-centre on every arrival and carry the line
 // somebody is reading upward while they read it.

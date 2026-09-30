@@ -146,8 +146,10 @@ function StageBand({
             The STAGE owns it rather than each screen passing one, because it is
             true of every onboarding screen and a per-caller prop is a rule that
             holds until the screen that forgets it. */}
-        <span className="ob-stage-rule" aria-hidden="true" />
-        <ThemeToggle />
+        <span className="ob-stage-pref">
+          <span className="ob-stage-rule" aria-hidden="true" />
+          <ThemeToggle />
+        </span>
       </div>
     </div>
   );
