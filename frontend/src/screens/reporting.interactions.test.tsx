@@ -76,7 +76,7 @@ it("opens keyboard-selected evidence with its receipt and restores focus", async
       <ReportingOverview scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Bookings progress" });
+  await screen.findByRole("heading", { name: "Won deal value over time" });
   const point = container.querySelector<HTMLButtonElement>(
     ".report-chart-point",
   );
@@ -109,7 +109,7 @@ it("uses local inclusive custom dates without querying an incomplete range", asy
   );
   await pickOption(
     user,
-    await screen.findByRole("combobox", { name: "Event period" }),
+    await screen.findByRole("combobox", { name: "Date range" }),
     "Custom interval",
   );
   const before = fetch.mock.calls.length;
@@ -159,10 +159,10 @@ it("does not request editions or schedules without their read grants", async () 
     ),
   ).toBe(false);
   expect(
-    screen.queryByRole("button", { name: "Capture edition" }),
+    screen.queryByRole("button", { name: "Save snapshot" }),
   ).not.toBeInTheDocument();
 });
-it("preserves the sales pipeline when returning from SDR outcomes", async () => {
+it("preserves the sales pipeline after changing the SDR date range", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub(reportingStoryRoutes());
   render(
@@ -176,7 +176,15 @@ it("preserves the sales pipeline when returning from SDR outcomes", async () => 
   expect(
     screen.queryByRole("combobox", { name: "Pipeline" }),
   ).not.toBeInTheDocument();
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Date range" }),
+    "Last month",
+  );
   await user.click(screen.getByRole("button", { name: "Sales" }));
+  expect(
+    screen.getByRole("combobox", { name: "Date range" }),
+  ).toHaveTextContent("Last month");
   expect(screen.getByRole("combobox", { name: "Pipeline" })).toHaveTextContent(
     "Sales",
   );
@@ -200,7 +208,7 @@ it("requires confirmation before archiving and explains the schedule effect", as
   const dialog = await screen.findByRole("dialog");
   expect(
     within(dialog).getByText(
-      "Archive this report and pause its schedules? Saved editions remain available.",
+      "Archive this report and pause its schedules? Saved snapshots remain available.",
     ),
   ).toBeVisible();
   expect(archive).not.toHaveBeenCalled();
@@ -213,4 +221,36 @@ it("requires confirmation before archiving and explains the schedule effect", as
     }),
   );
   await waitFor(() => expect(archive).toHaveBeenCalledOnce());
+});
+
+it("restores the selected period and close window after reopening performance", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub(reportingStoryRoutes());
+  const first = render(
+    <StoryProviders>
+      <ReportingOverview scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: "Date range" }),
+    "Last month",
+  );
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Expected close window" }),
+    "Fiscal quarter",
+  );
+  first.unmount();
+  render(
+    <StoryProviders>
+      <ReportingOverview scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("combobox", { name: "Date range" }),
+  ).toHaveTextContent("Last month");
+  expect(
+    screen.getByRole("combobox", { name: "Expected close window" }),
+  ).toHaveTextContent("Fiscal quarter");
 });

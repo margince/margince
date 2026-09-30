@@ -10,16 +10,16 @@
   "totals": {
     "tools": 81,
     "resources": 11,
-    "tool_catalog_bytes": 245573,
+    "tool_catalog_bytes": 245945,
     "resource_catalog_bytes": 4179,
-    "approx_wire_tokens_total": 62438,
+    "approx_wire_tokens_total": 62531,
     "largest_tool_bytes": 9253,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 62299,
-      "input_schema_bytes": 56159,
+      "description_bytes": 62448,
+      "input_schema_bytes": 56382,
       "output_schema_bytes": 109768,
-      "description_plus_input_schema_bytes": 118458
+      "description_plus_input_schema_bytes": 118830
     }
   },
   "tools": {
@@ -10916,7 +10916,7 @@
           "readOnlyHint": true,
           "title": "Find and read lists"
         },
-        "description": "Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it, or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. A preview is logged as a read of those records. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Find the team's Live Lists (saved filters whose members join and leave on their own) and Shortlists (records chosen by hand), read one, page through its members, say why a record is or is not on it, read what changed on it, or preview what a filter would select before a Live List is saved. Every count, member and reason is what the user you act for may see: a list shared with them never shows a member record they cannot read, so two users may see different counts for one list. A preview is logged as a read of those records. A list with health retired_field still works but filters on a retired custom field, named in retired_fields; its steward should replace that clause. search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the version for a later change, and next_cursor to read the next page. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -11032,6 +11032,18 @@
               "description": "For why: the record to explain",
               "format": "uuid",
               "type": "string"
+            },
+            "sharing": {
+              "description": "For find (optional): only lists with one of these sharing settings; private alone is the caller's own private lists",
+              "items": {
+                "enum": [
+                  "private",
+                  "team",
+                  "workspace"
+                ],
+                "type": "string"
+              },
+              "type": "array"
             }
           },
           "required": [

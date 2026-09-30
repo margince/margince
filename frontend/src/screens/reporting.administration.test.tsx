@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -44,17 +45,17 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
   );
   await user.click(await screen.findByRole("button", { name: "Set target" }));
   const dialog = within(await screen.findByRole("dialog"));
-  expect(dialog.getByRole("button", { name: "Targets" })).toBeDisabled();
+  expect(dialog.getByRole("button", { name: "Set target" })).toBeDisabled();
   await dialog.findByRole("combobox", { name: "Metrics" });
   fireEvent.change(dialog.getByLabelText(/First day of target period/), {
     target: { value: "2026-10-01" },
   });
-  await user.type(dialog.getByLabelText(/Target amount or count/), "1250.25");
   await user.type(
-    dialog.getByLabelText(/Reason for revision/),
-    "Agreed October commitment",
+    dialog.getByRole("spinbutton", { name: /^Target/ }),
+    "1250.25",
   );
-  await user.click(dialog.getByRole("button", { name: "Targets" }));
+  await user.type(dialog.getByLabelText(/Reason/), "Agreed October commitment");
+  await user.click(dialog.getByRole("button", { name: "Set target" }));
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -92,15 +93,12 @@ it("revises a count target without rescaling it or changing its identity", async
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByLabelText(/First day of target period/)).toBeDisabled();
   expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeDisabled();
-  expect(dialog.getByLabelText(/Target amount or count/)).toHaveValue(40);
-  fireEvent.change(dialog.getByLabelText(/Target amount or count/), {
+  expect(dialog.getByRole("spinbutton", { name: /^Target/ })).toHaveValue(40);
+  fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
     target: { value: "45" },
   });
-  await user.type(
-    dialog.getByLabelText(/Reason for revision/),
-    "Additional capacity",
-  );
-  await user.click(dialog.getByRole("button", { name: "Targets" }));
+  await user.type(dialog.getByLabelText(/Reason/), "Additional capacity");
+  await user.click(dialog.getByRole("button", { name: "Revise target" }));
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -177,7 +175,7 @@ it("publishes stage qualification and capture contexts with a reason and version
     screen.getByRole("button", { name: "Publish framework" }),
   ).toBeDisabled();
   await user.type(
-    screen.getByLabelText(/Reason for revision/),
+    screen.getByLabelText(/Reason/),
     "Align qualification across markets",
   );
   await user.click(screen.getByRole("button", { name: "Publish framework" }));
@@ -245,7 +243,7 @@ it("creates a month-end schedule pinned to the selected report revision", async 
       frequency: "monthly",
       day: 31,
       local_time: "17:30",
-      enabled: true,
+      enabled: false,
     }),
   );
   expect(close).toHaveBeenCalledOnce();
@@ -289,4 +287,79 @@ it("resets an edited schedule's day when its cadence changes and can resume it",
     }),
   );
   expect(close).toHaveBeenCalledOnce();
+});
+
+it("lets an author pause an enabled schedule after retention becomes unavailable", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingSchedule));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/metrics": () =>
+      jsonResponse({ metrics: [], schedule_ready: false }),
+    [`PATCH /analytics/schedules/${reportingSchedule.id}`]: write,
+  });
+  render(
+    <StoryProviders>
+      <ReportingScheduleDialog
+        report={reportingStoryReport}
+        schedule={{
+          ...reportingSchedule,
+          definition: { ...reportingSchedule.definition, enabled: true },
+        }}
+        timezone={REPORTING_FIXTURE_ZONE}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  const enabled = await screen.findByRole("checkbox", {
+    name: "Schedule enabled",
+  });
+  expect(enabled).toBeEnabled();
+  await user.click(enabled);
+  await user.click(screen.getByRole("button", { name: "Schedule" }));
+  await waitFor(() =>
+    expect(write).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: false }),
+    ),
+  );
+});
+
+it("waits for readiness before claiming retention setup is needed", async () => {
+  let release: () => void = () => {
+    throw new Error("Readiness was not requested");
+  };
+  const response = new Promise<Response>((resolve) => {
+    release = () =>
+      resolve(jsonResponse({ metrics: [], schedule_ready: true }));
+  });
+  const readiness = vi.fn(() => response);
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/metrics": readiness,
+  });
+  render(
+    <StoryProviders>
+      <ReportingScheduleDialog
+        report={reportingStoryReport}
+        timezone={REPORTING_FIXTURE_ZONE}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await waitFor(() => expect(readiness).toHaveBeenCalledOnce());
+  const enabled = screen.getByRole("checkbox", { name: "Schedule enabled" });
+  expect(enabled).toBeDisabled();
+  expect(
+    screen.queryByText(/Enable snapshot retention/),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Retention settings" }),
+  ).not.toBeInTheDocument();
+  await act(async () => {
+    release();
+  });
+  await waitFor(() => expect(enabled).toBeEnabled());
+  expect(
+    screen.queryByText(/Enable snapshot retention/),
+  ).not.toBeInTheDocument();
 });

@@ -61,7 +61,20 @@ export function ReportingDefinitions() {
                       {t("reporting.revision", {
                         revision: String(metric.version),
                       })}{" "}
-                      · {metric.unit} · {metric.temporal_basis}
+                      ·{" "}
+                      {metric.unit === "count"
+                        ? t("reporting.countUnit")
+                        : metric.unit === "days"
+                          ? t("reporting.daysUnit")
+                          : metric.unit === "money"
+                            ? t("reporting.amountUnit")
+                            : "%"}{" "}
+                      ·{" "}
+                      {t(
+                        metric.temporal_basis === "event_period"
+                          ? "reporting.period"
+                          : "reporting.currentState",
+                      )}
                     </p>
                   </Disclosure>
                 ))}

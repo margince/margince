@@ -45,7 +45,8 @@ export function reportingStoryRoutes(
         as_of: interval.end_at,
         capabilities: {},
       }),
-    "GET /analytics/metrics": () => jsonResponse(reportingStoryCatalog),
+    "GET /analytics/metrics": () =>
+      jsonResponse({ ...reportingStoryCatalog, schedule_ready: true }),
     "GET /analytics/framework": () => jsonResponse(reportingStoryFramework),
     "GET /pipelines": () =>
       jsonResponse({

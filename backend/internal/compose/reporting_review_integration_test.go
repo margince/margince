@@ -37,7 +37,7 @@ func TestReportingCompanyKeepsUnattributedAndDepartedBookings(t *testing.T) {
 	found := false
 	for _, point := range result.Charts[0].Points {
 		if point.Key == (ids.UUID{}).String() {
-			found = point.Label == "Unassigned" && point.Target == nil && point.Value != nil && *point.Value == 10800000
+			found = point.Label == "Owner not recorded" && point.Target == nil && point.Value != nil && *point.Value == 10800000
 		}
 		if point.Key == f.env.Rep3.String() && point.Target != nil {
 			t.Fatal("departed owner has a live target")

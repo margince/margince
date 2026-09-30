@@ -4,17 +4,22 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { useCanWrite } from "../app/capability";
-import { Button, Field, TextInput } from "../design-system/atoms";
+import { useRecordZone } from "../app/recordzone";
+import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { DateInput, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Select } from "../design-system/select";
-import { formatNumber } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { useLocale, useT } from "../i18n";
-import { useAnalyticsContext } from "./analytics.context";
+import {
+  useAnalyticsContext,
+  useAnalyticsSelection,
+} from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { QueryGate, throwProblem } from "./common";
 import {
@@ -22,6 +27,9 @@ import {
   type ReportingMetricID,
   reportingAmount,
 } from "./reporting.model";
+import { useReportingPages } from "./reporting.pagination";
+import { useReportingPipelines } from "./reporting.queries";
+import { TargetHistory } from "./reporting.targethistory";
 
 type Target = components["schemas"]["ReportingTarget"];
 type TargetInput = components["schemas"]["ReportingTargetInput"];
@@ -29,9 +37,12 @@ export function ReportingTargets() {
   const t = useT();
   const { locale } = useLocale();
   const context = useAnalyticsContext();
+  const zone = useRecordZone();
+  const { selection } = useAnalyticsSelection(context.data);
+  const pipelines = useReportingPipelines();
   const canCreate = useCanWrite("sales_target", "create");
   const canUpdate = useCanWrite("sales_target", "update");
-  const [cursor, setCursor] = useState<string>();
+  const { cursor, next: setCursor, back, canBack } = useReportingPages();
   const [editing, setEditing] = useState<Target | "new" | null>(null);
   const query = useQuery({
     queryKey: ["reporting-targets", cursor],
@@ -82,10 +93,24 @@ export function ReportingTargets() {
                       target.definition.scope.kind,
                   },
                   {
+                    key: "pipeline",
+                    header: t("reporting.pipeline"),
+                    render: (target) =>
+                      target.definition.pipeline_id
+                        ? (pipelines.data?.data.find(
+                            (pipeline) =>
+                              pipeline.id === target.definition.pipeline_id,
+                          )?.name ??
+                          (pipelines.isPending
+                            ? t("common.loading")
+                            : t("reporting.restricted")))
+                        : t("reporting.allPipelines"),
+                  },
+                  {
                     key: "period",
                     header: t("reporting.period"),
                     render: (target) =>
-                      `${target.definition.period_start} · ${t(`reporting.${target.definition.period_kind}`)}`,
+                      `${formatDate(target.definition.period_start, locale, zone)} · ${t(`reporting.${target.definition.period_kind}`)}`,
                   },
                   {
                     key: "amount",
@@ -114,10 +139,17 @@ export function ReportingTargets() {
                   {
                     key: "revision",
                     header: t("reporting.details"),
-                    render: (target) =>
-                      t("reporting.revision", {
-                        revision: formatNumber(target.revision, locale),
-                      }),
+                    render: (target) => (
+                      <>
+                        {t("reporting.revision", {
+                          revision: formatNumber(target.revision, locale),
+                        })}
+                        <p>{target.definition.reason}</p>
+                        {target.definition.retired && (
+                          <p>{t("reporting.retired")}</p>
+                        )}
+                      </>
+                    ),
                   },
                   {
                     key: "edit",
@@ -134,6 +166,11 @@ export function ReportingTargets() {
                   },
                 ]}
               />
+              {canBack && (
+                <Button variant="ghost" onClick={back}>
+                  {t("reporting.back")}
+                </Button>
+              )}
               {result.next_cursor && (
                 <Button
                   variant="ghost"
@@ -148,7 +185,10 @@ export function ReportingTargets() {
         {editing && context.data && (
           <TargetDialog
             target={editing === "new" ? undefined : editing}
-            context={context.data}
+            context={{
+              ...context.data,
+              default_scope: selection?.scope ?? context.data.default_scope,
+            }}
             onClose={() => setEditing(null)}
           />
         )}
@@ -167,6 +207,7 @@ function TargetDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const actionLabel = t(target ? "reporting.revise" : "reporting.newTarget");
   const title = useId();
   const client = useQueryClient();
   const [metric, setMetric] = useState<ReportingMetricID>(
@@ -187,15 +228,10 @@ function TargetDialog({
   const [pipeline, setPipeline] = useState(
     target?.definition.pipeline_id ?? "",
   );
+  const [retired, setRetired] = useState(isRetired(target));
   const [reason, setReason] = useState("");
   const [amount, setAmount] = useState(
-    target
-      ? String(
-          target.unit !== "count"
-            ? toMajorUnits(target.definition.value, context.base_currency)
-            : target.definition.value,
-        )
-      : "",
+    targetAmount(target, context.base_currency),
   );
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
@@ -205,16 +241,7 @@ function TargetDialog({
       return data;
     },
   });
-  const pipelines = useQuery({
-    queryKey: ["reporting-target-pipelines"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
+  const pipelines = useReportingPipelines();
   const definition = catalog.data?.metrics.find(
     (candidate) => candidate.id === metric,
   );
@@ -245,6 +272,8 @@ function TargetDialog({
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["reporting-targets"] });
       await client.invalidateQueries({ queryKey: ["reporting-evaluation"] });
+      await client.invalidateQueries({ queryKey: ["reporting-live"] });
+      await client.invalidateQueries({ queryKey: ["reporting-target"] });
       onClose();
     },
   });
@@ -264,12 +293,13 @@ function TargetDialog({
               period_start: periodStart,
               value,
               reason,
+              retired,
             },
           });
         }}
       >
         <Heading id={title} as="h2" size="medium">
-          {t(target ? "reporting.revise" : "reporting.newTarget")}
+          {actionLabel}
         </Heading>
         <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
           {(catalog) => (
@@ -346,20 +376,37 @@ function TargetDialog({
             />
           )}
         </Field>
-        <Field label={t("reporting.periodStart")} required>
+        <Field
+          label={t("reporting.periodStart")}
+          hint={
+            periodKind === "fiscal_quarter"
+              ? t("reporting.quarterStart")
+              : undefined
+          }
+          required
+        >
           {(field) => (
-            <TextInput
+            <DateInput
               {...field}
-              type="date"
-              value={periodStart}
+              value={isISODate(periodStart) ? periodStart : ""}
               disabled={!!target}
-              onChange={(event) => setPeriodStart(event.target.value)}
+              onChange={(event) =>
+                setPeriodStart(
+                  event.target.value
+                    ? `${event.target.value.slice(0, 7)}-01`
+                    : "",
+                )
+              }
             />
           )}
         </Field>
         <Field
           label={t("reporting.value")}
-          hint={t("reporting.moneyUnit", { currency: context.base_currency })}
+          hint={
+            definition?.unit === "money"
+              ? context.base_currency
+              : t("reporting.wholeCount")
+          }
           required
         >
           {(field) => (
@@ -367,7 +414,7 @@ function TargetDialog({
               {...field}
               type="number"
               min="0"
-              step="any"
+              step={definition?.unit === "money" ? "any" : "1"}
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
             />
@@ -382,6 +429,17 @@ function TargetDialog({
             />
           )}
         </Field>
+        {target && (
+          <>
+            <Checkbox
+              label={t("reporting.retired")}
+              checked={retired}
+              onChange={(event) => setRetired(event.target.checked)}
+            />
+            <p className="t-caption">{t("reporting.retiredHelp")}</p>
+            <TargetHistory target={target} />
+          </>
+        )}
         <ErrorLine error={write.error} />
         <div className="reporting-dialog-actions">
           <Button variant="ghost" onClick={onClose}>
@@ -393,17 +451,36 @@ function TargetDialog({
               write.isPending ||
               !definition ||
               !amount ||
-              !Number.isSafeInteger(value) ||
-              value < 0 ||
-              !reason.trim() ||
-              !periodStart ||
+              !validTargetNumber(value) ||
+              !targetPeriodReady(reason, periodStart) ||
               scope.kind === "managed_teams"
             }
           >
-            {t("reporting.targets")}
+            {actionLabel}
           </Button>
         </div>
       </form>
     </Modal>
   );
+}
+
+function targetAmount(target: Target | undefined, currency: string): string {
+  if (!target) return "";
+  return String(
+    target.unit === "count"
+      ? target.definition.value
+      : toMajorUnits(target.definition.value, currency),
+  );
+}
+
+function validTargetNumber(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function targetPeriodReady(reason: string, start: string): boolean {
+  return !!reason.trim() && !!start;
+}
+
+function isRetired(target: Target | undefined): boolean {
+  return target?.definition.retired === true;
 }

@@ -70,7 +70,8 @@ func TestReportingMarchComparisonStopsAtFebruaryBoundary(t *testing.T) {
 	if !previous.EndAt.Equal(start) {
 		t.Fatalf("February ended at %s", previous.EndAt)
 	}
-	chart := reportingTrend(&reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame}}, crmcontracts.ReportingChart{Metric: "bookings_won", Coverage: crmcontracts.ReportingCoverage{Status: "ok"}})
+	fact := reportingTestMoney(ids.NewV7(), previous.StartAt.Add(time.Hour), 100)
+	chart := reportingTrend(&reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame}, Facts: reportingCohorts(frame, []reporting.Fact{fact})}, crmcontracts.ReportingChart{Metric: "bookings_won", Coverage: crmcontracts.ReportingCoverage{Status: "ok"}})
 	if len(chart.Points) != 31 || chart.Points[27].Comparison == nil || chart.Points[28].Comparison != nil || chart.Points[30].Comparison != nil {
 		t.Fatal("the trend invented observations for missing February days")
 	}
@@ -161,5 +162,41 @@ func TestReportingFrozenWinRateUsesOnlyItsPermittedClosedCohort(t *testing.T) {
 	metric := result.Metrics[0]
 	if metric.Value == nil || *metric.Value != 60 || metric.Numerator == nil || *metric.Numerator != 3 || metric.Denominator == nil || *metric.Denominator != 5 || !metric.Coverage.Withheld {
 		t.Fatalf("restricted ratio: %+v", metric)
+	}
+}
+
+func TestReportingOutcomesUseTheSelectedIntervalAcrossMonths(t *testing.T) {
+	zone := reportingTestZone(t)
+	start := time.Date(2026, 9, 28, 0, 0, 0, 0, zone)
+	frame := crmcontracts.ReportingContext{Timezone: zone.String(), PeriodKind: "last_week", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 7)}, EvaluatedAt: start.AddDate(0, 0, 8)}
+	facts := []reporting.Fact{}
+	for _, offset := range []int{-10, 1, 4, 8} {
+		fact := reportingTestMoney(ids.NewV7(), start.AddDate(0, 0, offset), 1)
+		fact.Metric = "meetings_held"
+		facts = append(facts, fact)
+	}
+	chart := reportingWeekly(&reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame}, Facts: reportingCohorts(frame, facts)}, crmcontracts.ReportingChart{Metric: "meetings_held"})
+	if chart.Interval == nil || !chart.Interval.StartAt.Equal(start) || !chart.Interval.EndAt.Equal(frame.Interval.EndAt) || len(chart.Points) != 1 || chart.Points[0].Value == nil || *chart.Points[0].Value != 2 || chart.Points[0].Evidence.ContextId != "interval" {
+		t.Fatalf("outcomes did not preserve the requested week: %+v", chart)
+	}
+}
+
+func TestReportingTrendOmitsMissingOrPartialComparisonHistory(t *testing.T) {
+	start := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	frame := crmcontracts.ReportingContext{PeriodKind: "this_month", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 3)}, EvaluatedAt: start.AddDate(0, 0, 3)}
+	for _, status := range []crmcontracts.ReportingStatus{"ok", "partial"} {
+		out := reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame}}
+		if status == "partial" {
+			out.Facts = reportingCohorts(frame, []reporting.Fact{reportingTestMoney(ids.NewV7(), start.AddDate(0, -1, 1), 100)})
+		}
+		chart := reportingTrend(&out, crmcontracts.ReportingChart{Metric: "bookings_won", Coverage: crmcontracts.ReportingCoverage{Status: status}})
+		if chart.ComparisonInterval != nil {
+			t.Fatal("unreliable baseline has a comparison interval")
+		}
+		for _, point := range chart.Points {
+			if point.Comparison != nil {
+				t.Fatal("missing history rendered as a measured zero")
+			}
+		}
 	}
 }

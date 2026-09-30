@@ -213,3 +213,40 @@ func TestNarrowingKeepsTheOtherSourcesInReach(t *testing.T) {
 	}
 	t.Fatal("narrowing erased the task source from reach — it reads as no tasks at all")
 }
+
+// Reading `all` says which sources did not widen with it: `all` reaches every
+// shared record the reader may see PLUS their own personal queue, and a short
+// personal lane is otherwise indistinguishable from a quiet team.
+func TestReachSaysWhichSourcesDidNotWidenWithAll(t *testing.T) {
+	notices := []crmcontracts.AttentionItem{item("n1", "notice")}
+	day := crmcontracts.Attention{
+		AsOf:        rankInstant,
+		Notices:     &notices,
+		ThisMorning: []crmcontracts.AttentionItem{item("t1", "task")},
+	}
+
+	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+
+	seen := map[crmcontracts.WorklistReachSource]*bool{}
+	for _, reach := range got.Reach {
+		seen[reach.Source] = reach.Personal
+	}
+	notice, ok := seen["notice"]
+	if !ok {
+		t.Fatal("the notice source is absent from reach")
+	}
+	if notice == nil || !*notice {
+		t.Error("notices did not say they answer for the actor only — a reader asking for `all` is " +
+			"shown their own unread notices and told nothing that distinguishes them from the " +
+			"team's")
+	}
+	task, ok := seen["task"]
+	if !ok {
+		t.Fatal("the task source is absent from reach")
+	}
+	if task == nil || *task {
+		t.Error("tasks claimed to answer for the actor only, but the task lane takes a scope and an " +
+			"owner and widens with them — saying otherwise tells a reader their `all` did less " +
+			"than it did")
+	}
+}

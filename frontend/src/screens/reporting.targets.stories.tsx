@@ -31,3 +31,27 @@ export const Empty: Story = {
     );
   },
 };
+
+export const RetiredAllocation: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/targets": () =>
+        jsonResponse({
+          data: reportingTargets.map((target) => ({
+            ...target,
+            definition: {
+              ...target.definition,
+              retired: true,
+              reason: "Incorrect allocation retired",
+            },
+          })),
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ReportingTargets />
+      </StoryProviders>
+    );
+  },
+};

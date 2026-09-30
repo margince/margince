@@ -75,7 +75,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       );
       await page.goto("/#/analytics");
       const graph = page.getByRole("figure", {
-        name: "Bookings progress",
+        name: "Won deal value over time",
       });
       await expect(graph).toBeVisible();
       await expect(page.locator(".reporting-headline").first()).toHaveText(

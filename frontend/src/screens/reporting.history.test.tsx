@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { ReportingComparison } from "./reporting.comparison";
@@ -106,7 +107,7 @@ it("compares frozen editions and opens evidence from the selected side", async (
       <ReportingComparison editions={reportingEditions} onClose={() => {}} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Bookings won" });
+  await screen.findByRole("heading", { name: "Won deal value" });
   expect(screen.getByText(/25%/)).toBeVisible();
   const bar = document.querySelector<HTMLButtonElement>(".report-chart-column");
   if (!bar) throw new Error("Missing comparison observation");
@@ -151,9 +152,9 @@ it("renders captured editions without requesting the current live evaluation", a
       <ReportingReportDetail reportId="report" editionId="edition-september" />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Bookings progress" });
+  await screen.findByRole("heading", { name: "Won deal value over time" });
   expect(
-    await screen.findByRole("button", { name: "Compare editions" }),
+    await screen.findByRole("button", { name: "Compare snapshots" }),
   ).toBeEnabled();
   expect(
     screen.getByRole("button", { name: "Monthly · Revision 3" }),
@@ -165,7 +166,7 @@ it("renders captured editions without requesting the current live evaluation", a
     ),
   ).toBe(false);
   expect(
-    screen.getByText(/Frozen edition.*Privacy redaction applied/i),
+    screen.getByText(/Saved snapshot.*Privacy redaction applied/i),
   ).toBeVisible();
 });
 
@@ -188,7 +189,7 @@ it("duplicates a shared report into a private definition", async () => {
   );
   await waitFor(() =>
     expect(duplicate).toHaveBeenCalledWith({
-      name: reportingStoryReport.name,
+      name: `Copy of ${reportingStoryReport.name}`,
       audience: "private",
       selection: reportingStoryReport.selection,
     }),
@@ -243,7 +244,12 @@ it("saves edited layout order, metric selection and team audience", async () => 
     "Selected team",
   );
   await user.click(
-    await screen.findByRole("button", { name: "Move down: Bookings progress" }),
+    screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Move down: Won deal value over time",
+    }),
   );
   await user.click(
     within(screen.getByRole("group", { name: "Charts and order" })).getByRole(
@@ -264,7 +270,7 @@ it("saves edited layout order, metric selection and team audience", async () => 
   );
 });
 
-it("disables comparison when both selectors name the same edition", async () => {
+it("clears the comparison when the earlier snapshot changes", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub({
     ...reportingStoryRoutes(),
@@ -282,20 +288,19 @@ it("disables comparison when both selectors name the same edition", async () => 
       <ReportingComparison editions={reportingEditions} onClose={() => {}} />
     </StoryProviders>,
   );
-  await screen.findByRole("heading", { name: "Bookings won" });
+  await screen.findByRole("heading", { name: "Won deal value" });
   const selectors = screen.getAllByRole("combobox");
   const rightLabel = selectors[1].textContent;
   if (!rightLabel) throw new Error("Missing edition date label");
   const count = fetch.mock.calls.length;
   await pickOption(user, selectors[0], rightLabel);
   expect(
-    screen.queryByRole("heading", { name: "Bookings won" }),
+    screen.queryByRole("heading", { name: "Won deal value" }),
   ).not.toBeInTheDocument();
   expect(fetch.mock.calls).toHaveLength(count);
 });
 
-it("keeps incompatible currencies separate and binds evidence to each edition", async () => {
-  const user = userEvent.setup({ delay: null });
+it("does not draw a comparison for incompatible currencies", async () => {
   const before = {
     ...reportingEditions[1],
     evaluation: {
@@ -347,14 +352,7 @@ it("keeps incompatible currencies separate and binds evidence to each edition", 
   );
   await screen.findByText("Reporting currencies differ");
   expect(document.querySelector(".report-chart-column")).toBeNull();
-  await user.click(screen.getByRole("button", { name: /216,000/ }));
-  expect(await screen.findByText("Dollar-denominated order")).toBeVisible();
-  await user.click(
-    within(screen.getAllByRole("dialog")[1]).getByRole("button", {
-      name: "Close",
-    }),
-  );
-  await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1));
+  expect(document.querySelector(".report-chart")).not.toBeInTheDocument();
 });
 
 it.each([
@@ -385,10 +383,106 @@ it.each([
         />
       </StoryProviders>,
     );
-    const banner = await screen.findByText(/Frozen edition/);
+    const banner = await screen.findByText(/Saved snapshot/, {
+      selector: "p.reporting-archive-banner",
+    });
     expect(banner).toHaveTextContent(message);
     expect(
-      screen.queryByRole("heading", { name: "Bookings progress" }),
+      screen.queryByRole("heading", { name: "Won deal value over time" }),
     ).not.toBeInTheDocument();
   },
 );
+
+it("clears capture feedback when publication finishes before the execution refetch", async () => {
+  const user = userEvent.setup({ delay: null });
+  const freeze = vi.fn(() =>
+    jsonResponse({ ...reportingExecutions[0], status: "succeeded" }),
+  );
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports/report/editions": freeze,
+    "GET /analytics/reports/report/executions": () =>
+      jsonResponse({
+        data: [{ ...reportingExecutions[0], status: "succeeded" }],
+      }),
+  });
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  const capture = await screen.findByRole("button", {
+    name: "Save snapshot",
+  });
+  await user.click(capture);
+  await waitFor(() => expect(freeze).toHaveBeenCalledOnce());
+  await waitFor(() => expect(capture).toBeEnabled());
+  expect(
+    screen.queryByText("Snapshot queued. It will appear here when ready."),
+  ).not.toBeInTheDocument();
+});
+
+it("recovers capture after retrying unavailable execution status", async () => {
+  const user = userEvent.setup({ delay: null });
+  let unavailable = true;
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/reports/report/executions": () =>
+      unavailable
+        ? jsonResponse(
+            { title: "Execution status unavailable", status: 503 },
+            503,
+          )
+        : jsonResponse({ data: [] }),
+  });
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await screen.findByRole("alert");
+  const capture = screen.getByRole("button", { name: "Save snapshot" });
+  expect(capture).toBeDisabled();
+  unavailable = false;
+  await user.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(capture).toBeEnabled());
+});
+
+it("selects an adjacent comparison when older history supplies the first pair", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/editions/compare": () =>
+      jsonResponse({
+        left: reportingEditions[1],
+        right: reportingEditions[0],
+        compatible: true,
+        deltas: [],
+      }),
+  });
+  function History() {
+    const [loaded, setLoaded] = useState(false);
+    return (
+      <ReportingComparison
+        editions={loaded ? reportingEditions : [reportingEditions[0]]}
+        hasMore={!loaded}
+        onLoadMore={() => setLoaded(true)}
+        onClose={() => {}}
+      />
+    );
+  }
+  render(
+    <StoryProviders>
+      <History />
+    </StoryProviders>,
+  );
+  expect(
+    screen.queryByRole("heading", { name: "Won deal value" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    screen.getByRole("button", { name: "Load older snapshots" }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Won deal value" }),
+  ).toBeVisible();
+});

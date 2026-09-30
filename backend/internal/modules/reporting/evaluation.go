@@ -27,7 +27,17 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return crmcontracts.ReportingCatalog{}, err
 	}
-	return s.evaluator.Catalog(ctx)
+	out, err := s.evaluator.Catalog(ctx)
+	canSchedule := auth.Allows(ctx, "report_schedule", principal.ActionCreate) || auth.Allows(ctx, "report_schedule", principal.ActionUpdate)
+	if err != nil || !canSchedule {
+		return out, err
+	}
+	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		ready, err := scheduleReady(ctx, tx)
+		out.ScheduleReady = &ready
+		return err
+	})
+	return out, err
 }
 
 // Evaluate uses a repeatable-read snapshot for values and their evidence.

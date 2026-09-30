@@ -1,9 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import { navigate } from "../app/router";
-import { Button, Disclosure } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
@@ -18,6 +24,8 @@ import { ReportingComparison } from "./reporting.comparison";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExecutions } from "./reporting.executions";
 import {
+  editionLabel,
+  executionLabel,
   type ReportingEvidenceRef,
   type ReportingReport,
   reportingAmount,
@@ -25,10 +33,15 @@ import {
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
 
+function firstPage(): string | undefined {
+  return undefined;
+}
+
 type ReportAction = {
   kind: "duplicate" | "archive" | "freeze";
   report: ReportingReport;
   key: string;
+  name?: string;
 };
 export function ReportingReportDetail({
   reportId,
@@ -37,12 +50,14 @@ export function ReportingReportDetail({
   const t = useT();
   const { locale } = useLocale();
   const client = useQueryClient();
-  const [cursor, setCursor] = useState<string>();
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [comparing, setComparing] = useState(false);
+  const [capturePending, setCapturePending] = useState<boolean | undefined>(
+    undefined,
+  );
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const canEdit = useCanWrite("report_definition", "update");
   const canCreate = useCanWrite("report_definition", "create");
@@ -84,10 +99,14 @@ export function ReportingReportDetail({
       return data;
     },
   });
-  const editions = useQuery({
+  const editions = useInfiniteQuery({
     enabled: canReadEditions,
-    queryKey: ["reporting-editions", reportId, cursor],
-    queryFn: async () => {
+    queryKey: ["reporting-editions", reportId],
+    initialPageParam: firstPage(),
+    getNextPageParam: (
+      lastPage: components["schemas"]["ReportingEditionList"],
+    ) => lastPage.next_cursor,
+    queryFn: async ({ pageParam: cursor }) => {
       const { data, error } = await api.GET(
         "/analytics/reports/{id}/editions",
         { params: { path: { id: reportId }, query: { cursor, limit: 5 } } },
@@ -114,7 +133,7 @@ export function ReportingReportDetail({
         case "duplicate": {
           const { data, error } = await api.POST("/analytics/reports", {
             body: {
-              name: action.report.name,
+              name: (action.name ?? action.report.name).slice(0, 160),
               audience: "private",
               selection: action.report.selection,
             },
@@ -141,7 +160,8 @@ export function ReportingReportDetail({
         }
       }
     },
-    onSuccess: async (result) => {
+    onSuccess: async (result, action) => {
+      if (action.kind === "freeze") setCapturePending(true);
       await client.invalidateQueries({ queryKey: ["reporting-reports"] });
       await client.invalidateQueries({
         queryKey: ["reporting-executions", reportId],
@@ -150,7 +170,24 @@ export function ReportingReportDetail({
       navigate({ screen: "analytics", id: "reports", id2: result.reportId });
     },
   });
+  const allEditions = editions.data?.pages.flatMap((page) => page.data) ?? [];
+  const canManage = report.data?.can_manage === true;
+  const canEditReport = canEdit && canManage;
+  const canArchiveReport = canArchive && canManage;
+  const canScheduleReport = canSchedule && canManage;
+  const canFreezeReport = canFreeze && canReadEditions && canManage;
+  const canCompare = allEditions.length >= 2;
   const evaluation = editionId ? edition.data?.evaluation : live.data;
+  const evidencePanel =
+    evidence && evaluation ? (
+      <ReportingEvidenceDrawer
+        key={`${editionId}:${JSON.stringify(evidence)}`}
+        evaluation={evaluation}
+        reference={evidence}
+        editionId={editionId}
+        onClose={() => setEvidence(null)}
+      />
+    ) : null;
   const openEdition = (id?: string) => {
     setEvidence(null);
     navigate({ screen: "analytics", id: "reports", id2: reportId, id3: id });
@@ -175,7 +212,7 @@ export function ReportingReportDetail({
               <Button variant="ghost" onClick={() => openEdition()}>
                 {t("reporting.live")}
               </Button>
-              {canEdit && report.can_manage && (
+              {canEditReport && (
                 <Button variant="ghost" onClick={() => setEditing(true)}>
                   {t("reporting.edit")}
                 </Button>
@@ -185,13 +222,18 @@ export function ReportingReportDetail({
                   variant="ghost"
                   disabled={write.isPending}
                   onClick={() =>
-                    write.mutate({ kind: "duplicate", report, key: requestKey })
+                    write.mutate({
+                      kind: "duplicate",
+                      report,
+                      key: requestKey,
+                      name: t("reporting.copyName", { name: report.name }),
+                    })
                   }
                 >
                   {t("reporting.duplicate")}
                 </Button>
               )}
-              {canArchive && report.can_manage && (
+              {canArchiveReport && (
                 <Button
                   variant="ghost"
                   disabled={write.isPending}
@@ -200,14 +242,14 @@ export function ReportingReportDetail({
                   {t("reporting.archive")}
                 </Button>
               )}
-              {canSchedule && report.can_manage && (
+              {canScheduleReport && (
                 <Button variant="ghost" onClick={() => setScheduleId("new")}>
                   {t("reporting.schedule")}
                 </Button>
               )}
-              {canFreeze && report.can_manage && (
+              {canFreezeReport && (
                 <Button
-                  disabled={write.isPending}
+                  disabled={write.isPending || capturePending !== false}
                   onClick={() =>
                     write.mutate({ kind: "freeze", report, key: requestKey })
                   }
@@ -232,6 +274,9 @@ export function ReportingReportDetail({
             <ErrorLine error={write.error} />
           </ConfirmModal>
           <ErrorLine error={write.error} />
+          {capturePending && (
+            <p role="status">{t("reporting.capturePending")}</p>
+          )}
           {canReadSchedules && (
             <QueryGate query={schedules} pendingLabel={t("reporting.schedule")}>
               {(result) => (
@@ -261,7 +306,8 @@ export function ReportingReportDetail({
                             ),
                           })
                         : t("reporting.pause")}{" "}
-                      · {schedule.timezone} · {schedule.last_status}
+                      · {schedule.timezone} ·{" "}
+                      {executionLabel(schedule.last_status, t)}
                     </p>
                   ))}
                 </>
@@ -274,27 +320,26 @@ export function ReportingReportDetail({
                 <QueryGate
                   query={editions}
                   pendingLabel={t("reporting.editions")}
-                  empty={(result) => result.data.length === 0}
+                  empty={(result) =>
+                    result.pages.every((page) => page.data.length === 0)
+                  }
                 >
-                  {(result) => (
+                  {() => (
                     <>
                       <BarList
                         label={t("reporting.editions")}
                         onSelect={openEdition}
-                        rows={result.data.flatMap((edition) => {
+                        rows={allEditions.flatMap((edition) => {
                           const reading = edition.evaluation.metrics.find(
-                            (metric) => metric.id === "bookings_won",
+                            (metric) =>
+                              metric.id === report.selection.metrics[0],
                           );
                           return reading?.value == null
                             ? []
                             : [
                                 {
                                   key: edition.id,
-                                  label: formatDateTime(
-                                    edition.intended_due_at,
-                                    locale,
-                                    edition.evaluation.context.timezone,
-                                  ),
+                                  label: editionLabel(edition, locale),
                                   value: reading.value,
                                   amount: reportingAmount(
                                     reading.value,
@@ -308,7 +353,7 @@ export function ReportingReportDetail({
                       />
                       <DataTable
                         label={t("reporting.editions")}
-                        rows={result.data}
+                        rows={allEditions}
                         rowKey={(edition) => edition.id}
                         columns={[
                           {
@@ -319,11 +364,7 @@ export function ReportingReportDetail({
                                 variant="link"
                                 onClick={() => openEdition(edition.id)}
                               >
-                                {formatDateTime(
-                                  edition.intended_due_at,
-                                  locale,
-                                  edition.evaluation.context.timezone,
-                                )}
+                                {editionLabel(edition, locale)}
                               </Button>
                             ),
                           },
@@ -340,18 +381,19 @@ export function ReportingReportDetail({
                           },
                         ]}
                       />
-                      {result.next_cursor && (
+                      {editions.hasNextPage && (
                         <Button
                           variant="ghost"
-                          onClick={() => setCursor(result.next_cursor)}
+                          pending={editions.isFetchingNextPage}
+                          onClick={() => editions.fetchNextPage()}
                         >
-                          {t("reporting.next")}
+                          {t("reporting.loadOlder")}
                         </Button>
                       )}
                       <Button
                         variant="ghost"
                         onClick={() => setComparing(true)}
-                        disabled={result.data.length < 2}
+                        disabled={!canCompare}
                       >
                         {t("reporting.compare")}
                       </Button>
@@ -404,19 +446,18 @@ export function ReportingReportDetail({
             </QueryGate>
           )}
           {canReadEditions && (
-            <Disclosure summary={t("reporting.executions")}>
-              <ReportingExecutions reportId={reportId} canRetry={canFreeze} />
-            </Disclosure>
+            <Panel title={t("reporting.executions")}>
+              <PanelBody>
+                <ReportingExecutions
+                  reportId={reportId}
+                  canRetry={canFreeze}
+                  key={requestKey}
+                  onPendingChange={setCapturePending}
+                />
+              </PanelBody>
+            </Panel>
           )}
-          {evidence && evaluation && (
-            <ReportingEvidenceDrawer
-              key={`${editionId}:${JSON.stringify(evidence)}`}
-              evaluation={evaluation}
-              reference={evidence}
-              editionId={editionId}
-              onClose={() => setEvidence(null)}
-            />
-          )}
+          {evidencePanel}
           {editing && (
             <SaveReportingDialog
               report={report}
@@ -437,7 +478,10 @@ export function ReportingReportDetail({
           )}
           {comparing && (
             <ReportingComparison
-              editions={editions.data?.data ?? []}
+              editions={allEditions}
+              hasMore={editions.hasNextPage}
+              loadingMore={editions.isFetchingNextPage}
+              onLoadMore={() => editions.fetchNextPage()}
               onClose={() => setComparing(false)}
             />
           )}

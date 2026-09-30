@@ -171,10 +171,14 @@ export function MyOutcomesView({
                 key={status.key}
                 narrow="row"
                 label={t(status.labelKey)}
-                value={formatNumber(
-                  meetingsByStatus.get(status.key) ?? 0,
-                  locale,
-                )}
+                value={
+                  meetingsQuery.isSuccess
+                    ? formatNumber(
+                        meetingsByStatus.get(status.key) ?? 0,
+                        locale,
+                      )
+                    : t(absentReading(meetingsQuery))
+                }
               />
             ))}
           </StatStrip>
