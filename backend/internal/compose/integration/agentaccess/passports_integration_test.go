@@ -103,6 +103,7 @@ func (e *passportsEnv) identityFor(user ids.UUID, roles []string) identity.Ident
 
 func (e *passportsEnv) ctx() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:passports"})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 

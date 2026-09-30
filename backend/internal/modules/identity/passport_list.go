@@ -100,10 +100,11 @@ const listPassportsSQL = `
 // (RevokePassport) is offboarding, and does not make the list a directory of
 // whose agents act for whom.
 func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow, error) {
-	ctx = actorCtx(ctx, id)
+	// Asked of the caller as bound, before actorCtx restamps it as human.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return nil, err
 	}
+	ctx = actorCtx(ctx, id)
 	var out []PassportRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, listPassportsSQL, id.UserID)

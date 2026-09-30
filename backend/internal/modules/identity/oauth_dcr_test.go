@@ -143,7 +143,7 @@ func TestRegistrationRefusesWhatItCannotHonour(t *testing.T) {
 	}
 }
 
-func TestRegisterEndpointAcceptsAThirdPartyDocument(t *testing.T) {
+func TestRegisterEndpointParsesAThirdPartyDocumentBeforeResolvingTheWorkspace(t *testing.T) {
 	rec := httptest.NewRecorder()
 	workspacelessHandlers().oauthRegister(rec,
 		httptest.NewRequest(http.MethodPost, "/oauth/register", strings.NewReader(thirdPartyRegistration)))
@@ -154,8 +154,8 @@ func TestRegisterEndpointAcceptsAThirdPartyDocument(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("register body is not an oauth document: %v", err)
 	}
-	if body.Error != "invalid_request" {
-		t.Errorf("register error = %q, want the workspace refusal %q", body.Error, "invalid_request")
+	if rec.Code != http.StatusBadRequest || body.Error != "invalid_request" {
+		t.Errorf("register → %d %q, want the workspace refusal 400 %q", rec.Code, body.Error, "invalid_request")
 	}
 }
 
