@@ -29,6 +29,11 @@ import {
 } from "./filterdata";
 import { canExportFilter, ExportFilterMenu } from "./filterexport";
 import { SaveFilterListAction } from "./filterlist";
+import {
+  PlainWordsFilter,
+  type UnusedPhrase,
+  UnusedPhrases,
+} from "./filterpropose";
 import { FilterResults } from "./filterresults";
 import { ListLibrary } from "./listlibrary";
 import { ListScreen } from "./listpage";
@@ -177,6 +182,9 @@ function FilterBuildScreen({
   // nothing on a deal — carrying the tree across would offer the human a filter
   // the new vocabulary refuses.
   const [tree, setTree] = useState<Node>(() => newGroup("and"));
+  // What the last plain-words proposal could not use, kept until the next one
+  // or until the reader puts it away.
+  const [unused, setUnused] = useState<readonly UnusedPhrase[]>([]);
   const opening = useOpenViewFromAddress(VIEW_OF[tab], view, setTree);
 
   const resource = RESOURCE_OF[tab];
@@ -189,6 +197,7 @@ function FilterBuildScreen({
     // address changed, not beside it — `id` is what this screen renders from.
     navigate({ screen: "filters", id: next });
     setTree(newGroup("and"));
+    setUnused([]);
   };
 
   return (
@@ -252,6 +261,21 @@ function FilterBuildScreen({
           <SaveFilterListAction resource={resource} tree={tree} />
         </PanelBody>
         <PanelBody>
+          {/* Keyed by object so a sentence typed for contacts is not offered
+              to deals, whose vocabulary it was never read against. */}
+          <PlainWordsFilter
+            key={resource}
+            resource={resource}
+            tree={tree}
+            onApply={(next, phrases) => {
+              if (next !== null) {
+                setTree(next);
+              }
+              setUnused(phrases);
+            }}
+          />
+        </PanelBody>
+        <PanelBody>
           <SurfaceState
             state={
               opening
@@ -270,6 +294,15 @@ function FilterBuildScreen({
             />
           </SurfaceState>
         </PanelBody>
+        {unused.length > 0 && (
+          <PanelBody>
+            <UnusedPhrases
+              unused={unused}
+              fields={vocabulary.data?.fields ?? []}
+              onDismiss={() => setUnused([])}
+            />
+          </PanelBody>
+        )}
       </Panel>
 
       <PreviewSection

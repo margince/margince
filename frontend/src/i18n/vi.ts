@@ -10042,6 +10042,39 @@ export const vi = {
   "filters.saveListTitle":
     "L\u01b0u b\u1ed9 l\u1ecdc n\u00e0y th\u00e0nh danh s\u00e1ch \u0111\u1ed9ng",
   "filters.saveListConfirm": "L\u01b0u danh s\u00e1ch",
+  "filters.propose.label":
+    "M\u00f4 t\u1ea3 danh s\u00e1ch b\u1eb1ng l\u1eddi th\u01b0\u1eddng",
+  "filters.propose.hint":
+    "Margince \u0111\u1ec1 xu\u1ea5t \u0111i\u1ec1u ki\u1ec7n cho b\u1ed9 l\u1ecdc b\u00ean d\u01b0\u1edbi. Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c l\u01b0u cho \u0111\u1ebfn khi b\u1ea1n b\u1ea5m L\u01b0u.",
+  "filters.propose.placeholder":
+    "C\u00f4ng ty \u1edf \u0110\u1ee9c kh\u00f4ng c\u00f3 ho\u1ea1t \u0111\u1ed9ng trong 45 ng\u00e0y qua",
+  "filters.propose.submit": "\u0110\u1ec1 xu\u1ea5t b\u1ed9 l\u1ecdc",
+  "filters.propose.busy":
+    "\u0110ang \u0111\u1ecdc m\u00f4 t\u1ea3 c\u1ee7a b\u1ea1n",
+  "filters.propose.noModel":
+    "B\u1ed9 l\u1ecdc b\u1eb1ng l\u1eddi th\u01b0\u1eddng c\u1ea7n m\u1ed9t m\u00f4 h\u00ecnh AI \u0111\u00e3 \u0111\u01b0\u1ee3c c\u1ea5u h\u00ecnh. B\u1ea1n v\u1eabn c\u00f3 th\u1ec3 t\u1ef1 x\u00e2y d\u1ef1ng b\u1ed9 l\u1ecdc.",
+  "filters.propose.unreadable":
+    "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c \u0111\u1ec1 xu\u1ea5t. H\u00e3y th\u1eed m\u00f4 t\u1ea3 danh s\u00e1ch theo c\u00e1ch kh\u00e1c.",
+  "filters.propose.readyTitle":
+    "B\u1ed9 l\u1ecdc \u0111\u00e3 s\u1eb5n s\u00e0ng",
+  "filters.propose.readyBody":
+    "B\u1ed9 l\u1ecdc c\u1ee7a b\u1ea1n \u0111\u00e3 c\u00f3 \u0111i\u1ec1u ki\u1ec7n. Thay ch\u00fang b\u1eb1ng \u0111\u1ec1 xu\u1ea5t, ho\u1eb7c th\u00eam \u0111\u1ec1 xu\u1ea5t v\u00e0o.",
+  "filters.propose.replace": "Thay b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
+  "filters.propose.add":
+    "Th\u00eam v\u00e0o b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i",
+  "filters.propose.discard": "B\u1ecf \u0111\u1ec1 xu\u1ea5t",
+  "filters.propose.unusedTitle": "Kh\u00f4ng d\u00f9ng \u0111\u01b0\u1ee3c",
+  "filters.propose.unusedDismiss": "\u1ea8n",
+  "filters.propose.unusedItem":
+    "C\u1ee5m t\u1eeb \u201c{phrase}\u201d: {reason}",
+  "filters.propose.reason.unknownField":
+    "Kh\u00f4ng c\u00f3 tr\u01b0\u1eddng n\u00e0o b\u1ea1n c\u00f3 th\u1ec3 l\u1ecdc \u1edf \u0111\u00e2y ghi nh\u1eadn \u0111i\u1ec1u n\u00e0y.",
+  "filters.propose.reason.operator":
+    "{field} kh\u00f4ng th\u1ec3 so s\u00e1nh theo c\u00e1ch \u0111\u00f3.",
+  "filters.propose.reason.value":
+    "{field} kh\u00f4ng nh\u1eadn gi\u00e1 tr\u1ecb \u0111\u00f3.",
+  "filters.propose.reason.tooMany":
+    "B\u1ed9 l\u1ecdc \u0111\u00e3 ch\u1ee9a nhi\u1ec1u \u0111i\u1ec1u ki\u1ec7n nh\u1ea5t c\u00f3 th\u1ec3.",
   "lists.page": "Danh s\u00e1ch",
   "lists.section.label": "Hi\u1ec3n th\u1ecb",
   "lists.section.views": "Ch\u1ebf \u0111\u1ed9 xem c\u1ee7a t\u00f4i",

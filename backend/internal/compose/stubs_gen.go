@@ -1619,6 +1619,10 @@ func (stubs) PreviewFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewFilter")
 }
 
+func (stubs) ProposeFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ProposeFilter")
+}
+
 func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFilterVocabularyParams) {
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
 }

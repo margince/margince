@@ -1,0 +1,36 @@
+name: nl_search_reads_a_country_as_its_iso_code
+task: nl_search
+site: filter_propose
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  resource: contact
+  text: contacts in Germany
+  today: '2026-09-30'
+  lang: en
+  fields:
+  - {name: name, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: email, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: title, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: country, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
+  - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: last_activity_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
+  - {name: owner_id, type: id, operators: [eq, neq, in, exists]}
+  - {name: tag, type: id, operators: [eq, neq, in, exists]}
+expect:
+  outcome: accepted
+  answer:
+    filter:
+      and:
+      - field: country
+        op: eq
+        value: DE
+    unsupported: 0
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: 'The only passing filter is one clause: country equals DE. The field holds a two-letter ISO code, so a
+    clause comparing it to the word ''Germany'' selects nothing and fails. Nothing in the sentence is inexpressible,
+    so any phrase named as unsupported is a failure.'

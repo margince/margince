@@ -8869,6 +8869,102 @@ func (e FilterPreviewRequestResource) Valid() bool {
 	}
 }
 
+// Defines values for FilterProposalResource.
+const (
+	FilterProposalResourceCompany FilterProposalResource = "company"
+	FilterProposalResourceContact FilterProposalResource = "contact"
+	FilterProposalResourceDeal    FilterProposalResource = "deal"
+	FilterProposalResourceLead    FilterProposalResource = "lead"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalResource enum.
+func (e FilterProposalResource) Valid() bool {
+	switch e {
+	case FilterProposalResourceCompany:
+		return true
+	case FilterProposalResourceContact:
+		return true
+	case FilterProposalResourceDeal:
+		return true
+	case FilterProposalResourceLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterProposalRequestLocale.
+const (
+	FilterProposalRequestLocaleDe FilterProposalRequestLocale = "de"
+	FilterProposalRequestLocaleEn FilterProposalRequestLocale = "en"
+	FilterProposalRequestLocaleVi FilterProposalRequestLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalRequestLocale enum.
+func (e FilterProposalRequestLocale) Valid() bool {
+	switch e {
+	case FilterProposalRequestLocaleDe:
+		return true
+	case FilterProposalRequestLocaleEn:
+		return true
+	case FilterProposalRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterProposalRequestResource.
+const (
+	FilterProposalRequestResourceCompany FilterProposalRequestResource = "company"
+	FilterProposalRequestResourceContact FilterProposalRequestResource = "contact"
+	FilterProposalRequestResourceDeal    FilterProposalRequestResource = "deal"
+	FilterProposalRequestResourceLead    FilterProposalRequestResource = "lead"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalRequestResource enum.
+func (e FilterProposalRequestResource) Valid() bool {
+	switch e {
+	case FilterProposalRequestResourceCompany:
+		return true
+	case FilterProposalRequestResourceContact:
+		return true
+	case FilterProposalRequestResourceDeal:
+		return true
+	case FilterProposalRequestResourceLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterProposalUnsupportedCode.
+const (
+	FilterProposalUnsupportedCodeNotExpressible     FilterProposalUnsupportedCode = "not_expressible"
+	FilterProposalUnsupportedCodeOperatorNotAllowed FilterProposalUnsupportedCode = "operator_not_allowed"
+	FilterProposalUnsupportedCodeTooManyConditions  FilterProposalUnsupportedCode = "too_many_conditions"
+	FilterProposalUnsupportedCodeUnknownField       FilterProposalUnsupportedCode = "unknown_field"
+	FilterProposalUnsupportedCodeValueNotAllowed    FilterProposalUnsupportedCode = "value_not_allowed"
+)
+
+// Valid indicates whether the value is a known member of the FilterProposalUnsupportedCode enum.
+func (e FilterProposalUnsupportedCode) Valid() bool {
+	switch e {
+	case FilterProposalUnsupportedCodeNotExpressible:
+		return true
+	case FilterProposalUnsupportedCodeOperatorNotAllowed:
+		return true
+	case FilterProposalUnsupportedCodeTooManyConditions:
+		return true
+	case FilterProposalUnsupportedCodeUnknownField:
+		return true
+	case FilterProposalUnsupportedCodeValueNotAllowed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FilterVocabularyResource.
 const (
 	FilterVocabularyResourceCompany FilterVocabularyResource = "company"
@@ -32440,6 +32536,71 @@ type FilterPreviewRequest struct {
 // FilterPreviewRequestResource defines model for FilterPreviewRequest.Resource.
 type FilterPreviewRequestResource string
 
+// FilterProposal Filter clauses proposed from plain words, already checked against the
+// caller's vocabulary. Not saved.
+type FilterProposal struct {
+	// Filter The proposed tree in the canonical filter shape `POST /filters/preview`
+	// and a dynamic list's `definition` take, with a group at its root. Null
+	// when nothing in the sentence could be expressed.
+	Filter *map[string]interface{} `json:"filter,omitempty"`
+
+	// ModelUsed The model that answered, when its provider named it.
+	ModelUsed *string                `json:"model_used,omitempty"`
+	Resource  FilterProposalResource `json:"resource"`
+
+	// Unsupported Every phrase that did not become a clause, and why.
+	Unsupported []FilterProposalUnsupported `json:"unsupported"`
+}
+
+// FilterProposalResource defines model for FilterProposal.Resource.
+type FilterProposalResource string
+
+// FilterProposalRequest A list described in plain words, to be turned into filter clauses.
+type FilterProposalRequest struct {
+	// Locale The reader's interface language, which the reasons in `unsupported` are
+	// written in. Absent means the installation's base language.
+	Locale   *FilterProposalRequestLocale  `json:"locale,omitempty"`
+	Resource FilterProposalRequestResource `json:"resource"`
+
+	// Text What the reader typed. Only this and the vocabulary reach the model.
+	Text string `json:"text"`
+}
+
+// FilterProposalRequestLocale The reader's interface language, which the reasons in `unsupported` are
+// written in. Absent means the installation's base language.
+type FilterProposalRequestLocale string
+
+// FilterProposalRequestResource defines model for FilterProposalRequest.Resource.
+type FilterProposalRequestResource string
+
+// FilterProposalUnsupported defines model for FilterProposalUnsupported.
+type FilterProposalUnsupported struct {
+	// Code `not_expressible` — the model found no field or operator for the phrase;
+	// `reason` is its explanation in the reader's language. Every other code is
+	// a clause the model proposed and the server dropped: a field this caller
+	// cannot filter on, an operator the field's type refuses, a value the field
+	// does not accept (including one outside a picklist's options), or a clause
+	// past the engine's limit. For those `reason` is the server's English detail,
+	// and `field` names the field so a client can say it in its own words.
+	Code FilterProposalUnsupportedCode `json:"code"`
+
+	// Field The field a dropped clause named. Absent for `not_expressible`.
+	Field *string `json:"field,omitempty"`
+
+	// Phrase The words of the request this is about.
+	Phrase string `json:"phrase"`
+	Reason string `json:"reason"`
+}
+
+// FilterProposalUnsupportedCode `not_expressible` — the model found no field or operator for the phrase;
+// `reason` is its explanation in the reader's language. Every other code is
+// a clause the model proposed and the server dropped: a field this caller
+// cannot filter on, an operator the field's type refuses, a value the field
+// does not accept (including one outside a picklist's options), or a clause
+// past the engine's limit. For those `reason` is the server's English detail,
+// and `field` names the field so a client can say it in its own words.
+type FilterProposalUnsupportedCode string
+
 // FilterVocabulary What a filter may say about one record type (LVS-EXT-8). Read from the
 // engine that evaluates filters, so the set here and the set the engine
 // accepts are the same set.
@@ -51957,6 +52118,9 @@ type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
 
+// ProposeFilterJSONRequestBody defines body for ProposeFilter for application/json ContentType.
+type ProposeFilterJSONRequestBody = FilterProposalRequest
+
 // ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
 type ResolveInputCheckJSONRequestBody = ResolveInputCheck
 
@@ -63843,6 +64007,9 @@ type ServerInterface interface {
 	// Count and sample what a filter would select, before it is saved (LVS-EXT-9).
 	// (POST /filters/preview)
 	PreviewFilter(w http.ResponseWriter, r *http.Request)
+	// Propose filter clauses for a list described in plain words.
+	// (POST /filters/propose)
+	ProposeFilter(w http.ResponseWriter, r *http.Request)
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
@@ -67326,6 +67493,12 @@ func (_ Unimplemented) GetFieldHistory(w http.ResponseWriter, r *http.Request, p
 // Count and sample what a filter would select, before it is saved (LVS-EXT-9).
 // (POST /filters/preview)
 func (_ Unimplemented) PreviewFilter(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Propose filter clauses for a list described in plain words.
+// (POST /filters/propose)
+func (_ Unimplemented) ProposeFilter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87045,6 +87218,26 @@ func (siw *ServerInterfaceWrapper) PreviewFilter(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ProposeFilter operation middleware
+func (siw *ServerInterfaceWrapper) ProposeFilter(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeFilter(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetFilterVocabulary operation middleware
 func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r *http.Request) {
 
@@ -103480,6 +103673,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/filters/preview", wrapper.PreviewFilter)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/filters/propose", wrapper.ProposeFilter)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)

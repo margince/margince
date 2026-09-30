@@ -207,6 +207,14 @@ To build a detailed filter in Margince, open **Filters and views** in the sideba
 Groups nest at most 4 levels deep.
 Also called: advanced search, segment, query builder.
 
+### How do I build a filter by describing it in plain words?
+To build a filter from a sentence in Margince, open **Filters and views**, type the list under **Describe the list in plain words** ("companies in Germany with no activity in the last 45 days") and press **Propose filter**.
+1. The proposed conditions appear in the builder as ordinary clauses you can edit. If your filter already has conditions, choose **Replace current filter** or **Add to current filter**.
+2. Anything the fields cannot express, such as "likely to buy", is listed under **Could not use** with the reason.
+3. Check the match count, then save. Nothing is saved until you press **Save view** or **Save as Live List**.
+This needs an AI model configured under **Settings** → **AI models**; the AI never sees your records, only the field list.
+Also called: natural-language filter, AI filter, describe a segment.
+
 ### What can I filter on in Filters and views?
 The fields on **Filters and views** in Margince are, for **Contacts**: **Owner**, **Owner team**, **Tag** and custom fields. **Companies** add **Industry**, **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**). **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Forecast category**, **Company industry**, **Company size** and **Company lifecycle**. Custom fields carry a **Custom field** badge. Your own company is never in a company filter.
 Also called: filter fields, which attributes can I filter.

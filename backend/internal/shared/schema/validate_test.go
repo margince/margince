@@ -98,6 +98,19 @@ func TestValidateJSONHoldsAnIntegerToWhatAnIntReaderTakes(t *testing.T) {
 	}
 }
 
+// A boolean field takes true and false and nothing that merely reads as one.
+func TestValidateJSONHoldsABooleanToTrueAndFalse(t *testing.T) {
+	sch := schema.Must(schema.Array(schema.Boolean()))
+	if err := schema.ValidateJSON(sch, `[true, false]`); err != nil {
+		t.Fatalf("booleans refused: %v", err)
+	}
+	for _, value := range []string{`["true"]`, `[1]`, `[null]`} {
+		if err := schema.ValidateJSON(sch, value); err == nil {
+			t.Errorf("%s accepted as a list of booleans", value)
+		}
+	}
+}
+
 // A number field takes any JSON number, integral or not.
 func TestValidateJSONAdmitsAnyNumberForANumberField(t *testing.T) {
 	sch := schema.Must(schema.Array(schema.Number()))

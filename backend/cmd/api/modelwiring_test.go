@@ -216,7 +216,7 @@ var coldStartSurfaces = []string{
 	"cold-start", "scrape", "morning brief", "account brief", "company dossier",
 	"growth fit", "reply draft", "account draft", "contact draft", "lead draft",
 	"next move", "meeting brief", "relationship brief", "role proposals",
-	"intro request", "intro note",
+	"plain-words filter", "intro request", "intro note",
 }
 
 // TestColdStartOptionsRespectsResolvedPath proves coldStartOptions is a pure

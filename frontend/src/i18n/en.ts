@@ -10303,6 +10303,32 @@ export const en = {
   "filters.saveList": "Save as Live List",
   "filters.saveListTitle": "Save this filter as a Live List",
   "filters.saveListConfirm": "Save list",
+  "filters.propose.label": "Describe the list in plain words",
+  "filters.propose.hint":
+    "Margince proposes conditions for the filter below. Nothing is saved until you press Save.",
+  "filters.propose.placeholder":
+    "Companies in Germany with no activity in the last 45 days",
+  "filters.propose.submit": "Propose filter",
+  "filters.propose.busy": "Reading your description",
+  "filters.propose.noModel":
+    "Plain-words filters need an AI model configured. You can still build the filter by hand.",
+  "filters.propose.unreadable":
+    "The proposal could not be read. Try describing the list another way.",
+  "filters.propose.readyTitle": "A filter is ready",
+  "filters.propose.readyBody":
+    "Your filter already has conditions. Replace them with the proposal, or add the proposal to them.",
+  "filters.propose.replace": "Replace current filter",
+  "filters.propose.add": "Add to current filter",
+  "filters.propose.discard": "Discard proposal",
+  "filters.propose.unusedTitle": "Could not use",
+  "filters.propose.unusedDismiss": "Dismiss",
+  "filters.propose.unusedItem": "“{phrase}”: {reason}",
+  "filters.propose.reason.unknownField":
+    "No field you can filter on here records this.",
+  "filters.propose.reason.operator": "{field} cannot be compared that way.",
+  "filters.propose.reason.value": "{field} does not take that value.",
+  "filters.propose.reason.tooMany":
+    "The filter already holds as many conditions as it can.",
   "lists.page": "List",
   "lists.section.label": "Show",
   "lists.section.views": "My views",

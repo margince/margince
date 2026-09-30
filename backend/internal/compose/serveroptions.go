@@ -421,3 +421,11 @@ func WithSendAuthority(authority activities.SendAuthority) Option {
 		s.rebuildToolRegistry(pool)
 	}
 }
+
+// WithFilterProposals binds the lane that reads a list described in plain
+// words into filter clauses. Unbound, the endpoint answers 409 ai_not_configured.
+func WithFilterProposals(brain completer) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.filterProposalHandlers = s.withFilterProposalLane(brain)
+	}
+}

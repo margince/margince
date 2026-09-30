@@ -312,6 +312,12 @@ func (s *Server) wireExportSurface(pool *pgxpool.Pool, log *slog.Logger) {
 		pool:        pool,
 		collections: collectionsStore,
 	}
+	// The lane stays nil until WithFilterProposals binds one, which is the
+	// no-model answer: a 409 saying a model is needed, never a 500.
+	s.filterProposalHandlers = filterProposalHandlers{
+		pool: pool, collections: collectionsStore, now: time.Now,
+		labels: catalogLabels(customfields.NewService(pool, nil)),
+	}
 	s.exportBundleHandlers = newExportBundleHandlers(pool, log)
 }
 

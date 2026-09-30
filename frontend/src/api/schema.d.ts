@@ -7009,6 +7009,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/filters/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose filter clauses for a list described in plain words.
+         * @description Reads a sentence ("companies in Germany with no activity in the last 45 days")
+         *     and answers the filter tree it describes, for the builder to show as ordinary
+         *     editable clauses. Nothing is saved: a human reads the proposal, sees the match
+         *     count the preview answers for it, and presses Save themselves.
+         *
+         *     **The model proposes, the engine decides.** The model sees the record type,
+         *     the sentence, this caller's own filter vocabulary (field names, types,
+         *     operators, picklist options, custom-field labels), today's date and the
+         *     reader's language — never a record. Membership is decided later by the
+         *     predicate engine evaluating the tree, exactly as for a hand-built filter.
+         *
+         *     **Every clause is checked before it is answered.** A clause naming a field
+         *     this caller cannot filter on, an operator its type refuses, a value outside a
+         *     picklist's options or a value of the wrong type is DROPPED and named in
+         *     `unsupported` instead, so a proposal never fails because one phrase could not
+         *     be expressed. So is a phrase the model itself could not express ("who are
+         *     likely to buy").
+         *
+         *     A deployment with no AI model answers 409 `ai_not_configured`; a model that
+         *     was asked and did not answer is 503 `assistant_unavailable`.
+         */
+        post: operations["proposeFilter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/reporting/pause": {
         parameters: {
             query?: never;
@@ -30896,6 +30935,57 @@ export interface components {
              */
             truncated: boolean;
         };
+        /** @description A list described in plain words, to be turned into filter clauses. */
+        FilterProposalRequest: {
+            /** @enum {string} */
+            resource: "contact" | "company" | "deal" | "lead";
+            /** @description What the reader typed. Only this and the vocabulary reach the model. */
+            text: string;
+            /**
+             * @description The reader's interface language, which the reasons in `unsupported` are
+             *     written in. Absent means the installation's base language.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
+        };
+        /**
+         * @description Filter clauses proposed from plain words, already checked against the
+         *     caller's vocabulary. Not saved.
+         */
+        FilterProposal: {
+            /** @enum {string} */
+            resource: "contact" | "company" | "deal" | "lead";
+            /**
+             * @description The proposed tree in the canonical filter shape `POST /filters/preview`
+             *     and a dynamic list's `definition` take, with a group at its root. Null
+             *     when nothing in the sentence could be expressed.
+             */
+            filter?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Every phrase that did not become a clause, and why. */
+            unsupported: components["schemas"]["FilterProposalUnsupported"][];
+            /** @description The model that answered, when its provider named it. */
+            model_used?: string;
+        };
+        FilterProposalUnsupported: {
+            /** @description The words of the request this is about. */
+            phrase: string;
+            /**
+             * @description `not_expressible` — the model found no field or operator for the phrase;
+             *     `reason` is its explanation in the reader's language. Every other code is
+             *     a clause the model proposed and the server dropped: a field this caller
+             *     cannot filter on, an operator the field's type refuses, a value the field
+             *     does not accept (including one outside a picklist's options), or a clause
+             *     past the engine's limit. For those `reason` is the server's English detail,
+             *     and `field` names the field so a client can say it in its own words.
+             * @enum {string}
+             */
+            code: "not_expressible" | "unknown_field" | "operator_not_allowed" | "value_not_allowed" | "too_many_conditions";
+            reason: string;
+            /** @description The field a dropped clause named. Absent for `not_expressible`. */
+            field?: string;
+        };
         /**
          * @description What a filter may say about one record type (LVS-EXT-8). Read from the
          *     engine that evaluates filters, so the set here and the set the engine
@@ -53067,6 +53157,43 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeFilter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FilterProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposed tree and every phrase that could not be used. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilterProposal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     pauseReportingSchedules: {

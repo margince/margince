@@ -10561,6 +10561,58 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /filters/propose:
+    post:
+      tags: [Views, AI]
+      operationId: proposeFilter
+      x-waits-on-model: always
+      # Human-only: it spends the workspace's model budget on somebody typing, and
+      # an agent is itself a model that reads the vocabulary and writes the tree.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Propose filter clauses for a list described in plain words.
+      description: |
+        Reads a sentence ("companies in Germany with no activity in the last 45 days")
+        and answers the filter tree it describes, for the builder to show as ordinary
+        editable clauses. Nothing is saved: a human reads the proposal, sees the match
+        count the preview answers for it, and presses Save themselves.
+
+        **The model proposes, the engine decides.** The model sees the record type,
+        the sentence, this caller's own filter vocabulary (field names, types,
+        operators, picklist options, custom-field labels), today's date and the
+        reader's language — never a record. Membership is decided later by the
+        predicate engine evaluating the tree, exactly as for a hand-built filter.
+
+        **Every clause is checked before it is answered.** A clause naming a field
+        this caller cannot filter on, an operator its type refuses, a value outside a
+        picklist's options or a value of the wrong type is DROPPED and named in
+        `unsupported` instead, so a proposal never fails because one phrase could not
+        be expressed. So is a phrase the model itself could not express ("who are
+        likely to buy").
+
+        A deployment with no AI model answers 409 `ai_not_configured`; a model that
+        was asked and did not answer is 503 `assistant_unavailable`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FilterProposalRequest' }
+      responses:
+        '200':
+          description: The proposed tree and every phrase that could not be used.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FilterProposal' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'The model was asked and did not answer (`code: assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # ------------------------------ /views ------------------------------------
   /admin/reporting/pause:
     post:
@@ -42067,6 +42119,75 @@ components:
           description: |
             Whether `match_count` exceeds the rows returned — so a caller can say
             "showing 25 of 812" without comparing lengths and guessing.
+
+    FilterProposalRequest:
+      type: object
+      description: A list described in plain words, to be turned into filter clauses.
+      required: [resource, text]
+      properties:
+        resource:
+          type: string
+          enum: [contact, company, deal, lead]
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: What the reader typed. Only this and the vocabulary reach the model.
+        locale:
+          type: string
+          enum: [en, de, vi]
+          description: |
+            The reader's interface language, which the reasons in `unsupported` are
+            written in. Absent means the installation's base language.
+
+    FilterProposal:
+      type: object
+      description: |
+        Filter clauses proposed from plain words, already checked against the
+        caller's vocabulary. Not saved.
+      required: [resource, unsupported]
+      properties:
+        resource:
+          type: string
+          enum: [contact, company, deal, lead]
+        filter:
+          type: [object, 'null']
+          additionalProperties: true
+          description: |
+            The proposed tree in the canonical filter shape `POST /filters/preview`
+            and a dynamic list's `definition` take, with a group at its root. Null
+            when nothing in the sentence could be expressed.
+        unsupported:
+          type: array
+          description: Every phrase that did not become a clause, and why.
+          items: { $ref: '#/components/schemas/FilterProposalUnsupported' }
+        model_used:
+          type: string
+          description: The model that answered, when its provider named it.
+
+    FilterProposalUnsupported:
+      type: object
+      required: [phrase, code, reason]
+      properties:
+        phrase:
+          type: string
+          description: The words of the request this is about.
+        code:
+          type: string
+          enum: [not_expressible, unknown_field, operator_not_allowed, value_not_allowed, too_many_conditions]
+          description: |
+            `not_expressible` — the model found no field or operator for the phrase;
+            `reason` is its explanation in the reader's language. Every other code is
+            a clause the model proposed and the server dropped: a field this caller
+            cannot filter on, an operator the field's type refuses, a value the field
+            does not accept (including one outside a picklist's options), or a clause
+            past the engine's limit. For those `reason` is the server's English detail,
+            and `field` names the field so a client can say it in its own words.
+        reason:
+          type: string
+        field:
+          type: string
+          description: The field a dropped clause named. Absent for `not_expressible`.
 
     FilterVocabulary:
       type: object

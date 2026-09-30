@@ -614,6 +614,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/employment-import/backfill":                                   {Op: "backfillEmploymentImport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/exports":                                                      {Op: "createFilteredExport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/filters/preview":                                              {Op: "previewFilter", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/filters/propose":                                              {Op: "proposeFilter", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/forecast/assurance/exceptions/{id}/resolve":                   {Op: "resolveInputCheck", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/forecast/assurance/runs":                                      {Op: "startForecastAssuranceRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/forecast/calls":                                               {Op: "recordForecastCall", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
