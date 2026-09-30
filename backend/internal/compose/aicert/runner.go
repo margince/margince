@@ -241,27 +241,54 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	return records, errors.Join(runErrs...)
 }
 
-// certifyAndWrite certifies one task and writes its records: the LLM record,
-// then — when the run binds a decisions lane — each decision site's beside it.
-// It returns what it wrote even when a later step failed, so a decision leg
-// that fails never costs the task the LLM record already on disk.
+// certifyAndWrite certifies one task on each of its candidates and writes a
+// record per candidate as soon as it is certified, so a fallback that fails
+// never costs the task the record of the rung that answers.
 func certifyAndWrite(ctx context.Context, cfg RunnerConfig, task ai.Task, scenarios []Scenario, repeats int,
 	trace *payloadTrace, journal *runJournal, log *slog.Logger,
 ) ([]Record, error) {
-	binding, judge, err := taskBindings(ctx, cfg, task, log)
+	cands, skipped, err := taskCandidates(cfg, task)
 	if err != nil {
 		return nil, err
 	}
-	hooks := &certifyHooks{trace: trace, journal: journal.forTask(task, binding, judge)}
-	rec, err := certifyTask(ctx, task, scenarios, cfg.Census, binding, judge, cfg.recordProfile(), repeats, log, hooks)
+	for _, s := range skipped {
+		log.WarnContext(ctx, "aicert: skipped fallback", "task", string(s.Task), "model", s.Model, "reason", s.Reason)
+	}
+	var written []Record
+	var errs []error
+	for _, c := range cands {
+		recs, err := certifyCandidate(ctx, cfg, task, scenarios, repeats, trace, journal, c, log)
+		written = append(written, recs...)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return written, errors.Join(errs...)
+}
+
+// certifyCandidate certifies one task on one candidate and writes its records:
+// the LLM record, then — on the rung that answers, when the run binds a
+// decisions lane — each decision site's beside it. It returns what it wrote even
+// when a later step failed, so a decision leg that fails never costs the task
+// the LLM record already on disk.
+func certifyCandidate(ctx context.Context, cfg RunnerConfig, task ai.Task, scenarios []Scenario, repeats int,
+	trace *payloadTrace, journal *runJournal, c candidate, log *slog.Logger,
+) ([]Record, error) {
+	log.InfoContext(ctx, "aicert: certifying", "task", string(task), "tier", string(c.Tier), "rung", c.Rung,
+		"model", c.Binding.Model, "judge", c.Judge.Model)
+	hooks := &certifyHooks{trace: trace, journal: journal.forTask(task, c.Binding, c.Judge)}
+	rec, err := certifyTask(ctx, task, scenarios, cfg.Census, c.Binding, c.Judge, cfg.recordProfile(), repeats, log, hooks)
 	if err != nil {
-		log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "err", err)
-		return nil, fmt.Errorf("task %s: %w", task, err)
+		log.ErrorContext(ctx, "aicert: task certification failed — no record written", "task", string(task), "model", c.Binding.Model, "err", err)
+		return nil, fmt.Errorf("task %s on %s: %w", task, c.Binding.Model, err)
 	}
 	if err := WriteRecord(cfg.RecordDir, rec); err != nil {
-		return nil, fmt.Errorf("task %s: writing record: %w", task, err)
+		return nil, fmt.Errorf("task %s on %s: writing record: %w", task, c.Binding.Model, err)
 	}
-	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, binding, rec, hooks, log)
+	if c.Rung != 0 {
+		return []Record{rec}, nil
+	}
+	decisions, err := certifyDecisionsFor(ctx, cfg, task, scenarios, c.Binding, rec, hooks, log)
 	if err != nil {
 		log.ErrorContext(ctx, "aicert: decision leg failed — no decision record written", "task", string(task), "err", err)
 		return []Record{rec}, fmt.Errorf("task %s: %w", task, err)

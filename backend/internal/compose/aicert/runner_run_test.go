@@ -382,3 +382,39 @@ func TestARunThatReplaysEveryRunSkipsThePreflight(t *testing.T) {
 		t.Errorf("a run replaying every run from the journal still paid for a pre-flight, or did not say it skipped one:\n%s", second)
 	}
 }
+
+// A routed run writes the answering rung's record before it tries the fallback,
+// so a fallback that cannot run costs its own record and names itself, never
+// the record of the model a buyer is answered by.
+func TestAFailingFallbackKeepsTheAnsweringRungsRecord(t *testing.T) {
+	ladder := ai.TaskLadder(ai.TaskSummarize)
+	if len(ladder) != 2 {
+		t.Fatalf("%s's ladder is %v; this test needs two rungs", ai.TaskSummarize, ladder)
+	}
+	dir := t.TempDir()
+	corpusDir := filepath.Join(dir, "corpus")
+	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
+	routing := ai.RoutingConfig{Profile: ai.ProfileCloudFrontier, Tiers: map[ai.Tier]ai.ProviderConfig{
+		ladder[0]: {Provider: ai.ProviderFake, Model: "answers"},
+		// openai_compatible fails closed without a base_url: a fallback that cannot run.
+		ladder[1]: {Provider: "openai_compatible", Model: "vendor/unreachable"},
+	}}
+	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
+		Census:       censusFor(t, ai.TaskSummarize),
+		Routing:      &routing,
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "grader"},
+		CorpusDir:    corpusDir,
+		RecordDir:    filepath.Join(dir, "records"),
+		Repeats:      1,
+	}, quietTestLogger())
+	if len(records) != 1 || records[0].Provider != ai.ProviderFake {
+		t.Fatalf("records = %+v, want the answering rung's alone", records)
+	}
+	onDisk, loadErr := aicert.LoadRecords(filepath.Join(dir, "records"))
+	if loadErr != nil || len(onDisk) != 1 {
+		t.Fatalf("records on disk = %d (%v), want the answering rung's record kept", len(onDisk), loadErr)
+	}
+	if err == nil || !strings.Contains(err.Error(), "vendor/unreachable") {
+		t.Errorf("err = %v, want the fallback named", err)
+	}
+}

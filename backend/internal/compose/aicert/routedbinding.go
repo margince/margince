@@ -11,10 +11,10 @@ package aicert
 // the run was pointed at a config instead of a model.
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -61,27 +61,58 @@ func boundLadder(routing ai.RoutingConfig, task ai.Task) []boundRung {
 	return rungs
 }
 
-// taskBindings is the candidate one task is certified against and the judge
-// that grades it. An error costs that task its record and no other: another
-// task's rung may be bound perfectly well, and one gap must not cost every
-// record.
-func taskBindings(ctx context.Context, cfg RunnerConfig, task ai.Task, log *slog.Logger) (candidate, judge ai.ProviderConfig, err error) {
-	candidate = cfg.Binding
-	if cfg.Routing != nil {
-		resolved, rung, ok := resolveBinding(*cfg.Routing, task)
-		if !ok {
-			return ai.ProviderConfig{}, ai.ProviderConfig{}, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
-				task, ai.TaskLadder(task))
+// candidate is one model a run certifies a task against, and the judge that
+// grades it. Rung 0 is the model that answers; a higher rung is a fallback.
+type candidate struct {
+	Binding ai.ProviderConfig
+	Tier    ai.Tier
+	Rung    int
+	Judge   ai.ProviderConfig
+}
+
+// skippedCandidate is a fallback the run cannot grade, named so the gap is read
+// rather than silent.
+type skippedCandidate struct {
+	Task   ai.Task
+	Model  string
+	Reason string
+}
+
+// taskCandidates is every model a run certifies task against, in the order the
+// router walks them. A routed run measures each distinct bound rung, because a
+// failed call on the first reaches the next and a buyer's answer then comes from
+// it; a rung binding a model above it has no record of its own. A fallback the
+// judge cannot grade is skipped, while the answering rung still refuses the run.
+func taskCandidates(cfg RunnerConfig, task ai.Task) ([]candidate, []skippedCandidate, error) {
+	if cfg.Routing == nil {
+		judge, err := cfg.judgeFor(cfg.Binding)
+		if err != nil {
+			return nil, nil, fmt.Errorf("task %s: %w", task, err)
 		}
-		candidate = resolved
-		log.InfoContext(ctx, "aicert: routed", "task", string(task), "tier", string(rung), "model", resolved.Model)
+		return []candidate{{Binding: cfg.Binding, Judge: judge}}, nil, nil
 	}
-	judge, err = cfg.judgeFor(candidate)
-	if err != nil {
-		return ai.ProviderConfig{}, ai.ProviderConfig{}, fmt.Errorf("task %s: %w", task, err)
+	rungs := boundLadder(*cfg.Routing, task)
+	if len(rungs) == 0 {
+		return nil, nil, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
+			task, ai.TaskLadder(task))
 	}
-	log.InfoContext(ctx, "aicert: judged by", "task", string(task), "judge", judge.Model)
-	return candidate, judge, nil
+	var cands []candidate
+	var skipped []skippedCandidate
+	for i, rung := range rungs {
+		if slices.ContainsFunc(rungs[:i], func(above boundRung) bool { return sameModel(above.Binding, rung.Binding) }) {
+			continue
+		}
+		judge, err := cfg.judgeFor(rung.Binding)
+		switch {
+		case err != nil && i == 0:
+			return nil, nil, fmt.Errorf("task %s: %w", task, err)
+		case err != nil:
+			skipped = append(skipped, skippedCandidate{Task: task, Model: rung.Binding.Model, Reason: "the judge's own family"})
+			continue
+		}
+		cands = append(cands, candidate{Binding: rung.Binding, Tier: rung.Tier, Rung: i, Judge: judge})
+	}
+	return cands, skipped, nil
 }
 
 // validateRoutedBindings refuses a routed run that could not produce a

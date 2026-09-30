@@ -143,22 +143,20 @@ type preflightProbe struct {
 }
 
 // preflightProbes is each distinct candidate the tasks resolve to, then the one
-// judge. A task whose rung is unbound is left to taskBindings to report.
+// judge. A task whose rung is unbound is left to taskCandidates to report.
 func preflightProbes(cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks) []preflightProbe {
 	var probes []preflightProbe
 	seen := map[string]bool{}
 	for _, task := range tasks {
-		candidate := cfg.Binding
-		if cfg.Routing != nil {
-			resolved, _, ok := resolveBinding(*cfg.Routing, task)
-			if !ok {
-				continue
-			}
-			candidate = resolved
+		cands, _, err := taskCandidates(cfg, task)
+		if err != nil {
+			continue // a binding that cannot be set up is certifyTask's to report, per task
 		}
-		if key := bindingKey(candidate); !seen[key] {
-			seen[key] = true
-			probes = append(probes, preflightProbe{candidateRole, candidate, task, task, hooks.candidateOpts})
+		for _, c := range cands {
+			if key := bindingKey(c.Binding); !seen[key] {
+				seen[key] = true
+				probes = append(probes, preflightProbe{candidateRole, c.Binding, task, task, hooks.candidateOpts})
+			}
 		}
 	}
 	if len(tasks) > 0 {
@@ -181,7 +179,7 @@ func preflightDecisions(ctx context.Context, cfg RunnerConfig, byTask map[ai.Tas
 	for _, task := range sortedTasks(byTask) {
 		candidate, _, bound := resolveBinding(*cfg.Routing, task)
 		if !bound {
-			continue // taskBindings reports it, per task
+			continue // taskCandidates reports it, per task
 		}
 		sc, found := firstDecisionScenario(byTask[task], cfg.Census)
 		if !found {
