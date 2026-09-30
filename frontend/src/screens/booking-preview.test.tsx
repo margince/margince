@@ -124,6 +124,14 @@ it("keeps a paused public page unavailable to visitors", async () => {
   expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
 });
 
+// A day's own read asks for at most one day; a month's asks for far more.
+function isDayRead(request: Request) {
+  const query = new URL(request.url).searchParams;
+  const span =
+    Date.parse(query.get("to") ?? "") - Date.parse(query.get("from") ?? "");
+  return span <= 86_400_000;
+}
+
 function availabilityReads(calls: readonly Parameters<typeof fetch>[]) {
   return calls
     .map(([input, init]) =>
@@ -136,13 +144,11 @@ function availabilityReads(calls: readonly Parameters<typeof fetch>[]) {
 
 it("reads the whole month on show, following a truncated answer from its last time", async () => {
   inBookingMonth();
-  const availability = vi.fn(() =>
-    jsonResponse({ slots: bookingSlots, truncated: true }),
-  );
   installFetchStub({
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false }),
-    "GET /availability": availability,
+    "GET /availability": () =>
+      jsonResponse({ slots: bookingSlots, truncated: true }),
   });
   const requests = vi.spyOn(globalThis, "fetch");
   render(
@@ -162,23 +168,37 @@ it("reads the whole month on show, following a truncated answer from its last ti
     "2026-10-05T11:15:00.000Z",
   );
   // A bounded number of pages, however often the server says there is more.
-  expect(availability.mock.calls.length).toBeLessThanOrEqual(4);
+  expect(reads.filter((read) => !isDayRead(read)).length).toBeLessThanOrEqual(
+    4,
+  );
 });
 
-it("reads a day past where a truncated month stopped, and offers its times", async () => {
+it("reads the day a truncated month stopped in, and the days after it, on their own", async () => {
   inBookingMonth();
   const user = userEvent.setup();
+  const rest = { start: "2026-10-05T15:00:00Z", end: "2026-10-05T15:30:00Z" };
   const late = { start: "2026-10-14T10:00:00Z", end: "2026-10-14T10:30:00Z" };
-  let reads = 0;
+  // The month's read is always told there is more, so it stops at its page
+  // bound partway through 5 October; each day's own read answers in full.
+  const answer = (request: Request) => {
+    if (!isDayRead(request))
+      return jsonResponse({ slots: bookingSlots, truncated: true });
+    const from = new URL(request.url).searchParams.get("from") ?? "";
+    const day = dayInZone(Date.parse(from), viewerZone());
+    return jsonResponse({
+      slots: day === "2026-10-05" ? [...bookingSlots, rest] : [late],
+      truncated: false,
+    });
+  };
   installFetchStub({
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false }),
-    // The month's read is always told there is more, so it stops at its page
-    // bound knowing nothing past 5 October; any read after that is the day's.
-    "GET /availability": () =>
-      ++reads > 4
-        ? jsonResponse({ slots: [late], truncated: false })
-        : jsonResponse({ slots: bookingSlots, truncated: true }),
+    "GET /availability": () => {
+      const [input, init] = requests.mock.lastCall ?? [""];
+      return answer(
+        input instanceof Request ? input : new Request(input, init),
+      );
+    },
   });
   const requests = vi.spyOn(globalThis, "fetch");
   render(
@@ -186,18 +206,17 @@ it("reads a day past where a truncated month stopped, and offers its times", asy
       <BookingScreen hostSlug="preview" />
     </StoryProviders>,
   );
-  await screen.findByRole("button", { name: slotName(0) });
+  const timeOf = (slot: { start: string }) =>
+    formatTimeOfDay(slot.start, "en", viewerZone());
+  expect(
+    await screen.findByRole("button", { name: timeOf(rest) }),
+  ).toBeTruthy();
   await user.click(
     screen.getByRole("button", { name: "Wednesday, 14 October 2026" }),
   );
   expect(
-    await screen.findByRole("button", {
-      name: formatTimeOfDay(late.start, "en", viewerZone()),
-    }),
+    await screen.findByRole("button", { name: timeOf(late) }),
   ).toBeTruthy();
-  const dayRead = availabilityReads(requests.mock.calls).at(-1);
-  const from = new URL(dayRead?.url ?? "").searchParams.get("from") ?? "";
-  expect(dayInZone(Date.parse(from), viewerZone())).toBe("2026-10-14");
 });
 
 it("refuses days with nothing free and clears the time when another day is chosen", async () => {

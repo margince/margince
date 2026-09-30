@@ -98,12 +98,15 @@ export function monthDays(
   return { byDay, free, knownUntil };
 }
 
-/** A day the month's read stopped short of, so its times need a read of their own. */
+/**
+ * A day the month's read did not finish, so its times need a read of their
+ * own: the day the last page stopped in is as partial as any after it.
+ */
 export function pastKnown(
   day: ISODay | "",
   days: ReturnType<typeof monthDays> | undefined,
 ): day is ISODay {
-  return day !== "" && !!days?.knownUntil && day > days.knownUntil;
+  return day !== "" && !!days?.knownUntil && day >= days.knownUntil;
 }
 
 /** Whether a day in the grid can be chosen, given what the month's read said. */
